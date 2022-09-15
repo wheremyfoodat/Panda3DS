@@ -14,6 +14,7 @@ std::optional<u32> Memory::loadELF(std::filesystem::path& path) {
 
     auto segNum = reader.segments.size();
     printf("Number of segments: %d\n", segNum);
+    printf(" #  Perms       Vaddr           File Size       Mem Size\n");
     for (int i = 0; i < segNum; ++i) {
         const auto seg = reader.segments[i];
         const auto flags = seg->get_flags();
@@ -27,7 +28,6 @@ std::optional<u32> Memory::loadELF(std::filesystem::path& path) {
         const bool w = (flags & 0b010) != 0;
         const bool x = (flags & 0b001) != 0;
 
-        printf(" #  Perms       Vaddr           File Size       Mem Size\n");
         printf("[%d] (%c%c%c)\t%08X\t%08X\t%08X\n", i, r ? 'r' : '-', w ? 'w' : '-', x ? 'x' : '-', vaddr, fileSize, memorySize);
     
         // Assert that the segment will be loaded in the executable region. If it isn't then panic.

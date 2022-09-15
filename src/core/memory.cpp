@@ -46,7 +46,6 @@ u32 Memory::read32(u32 vaddr) {
 
 	uintptr_t pointer = readTable[page];
 	if (pointer != 0) [[likely]] {
-		printf("Read %08X from %08X\n", *(u32*)(pointer + offset), vaddr);
 		return *(u32*)(pointer + offset);
 	} else {
 		Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
@@ -67,7 +66,6 @@ void Memory::write32(u32 vaddr, u32 value) {
 
 	uintptr_t pointer = writeTable[page];
 	if (pointer != 0) [[likely]] {
-		printf("Wrote %08X to %08X\n", value, vaddr);
 		*(u32*)(pointer + offset) = value;
 	} else {
 		Helpers::panic("Unimplemented 32-bit write, addr: %08X, val: %08X", vaddr, value);
