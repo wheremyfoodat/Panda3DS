@@ -38,6 +38,7 @@ bool Emulator::loadELF(std::filesystem::path& path) {
     if (!entrypoint.has_value())
         return false;
 
+    cpu.setReg(13, VirtualAddrs::StackTop); // Set initial SP
     cpu.setReg(15, entrypoint.value()); // Set initial PC
     return true;
 }

@@ -5,6 +5,8 @@ Memory::Memory() {
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
 
+	constexpr u32 fcramPageCount = 128_MB / pageSize;
+
 	// Map 63MB of FCRAM in the executable section as read/write
 	// TODO: This should probably be read-only, but making it r/w shouldn't hurt?
 	// Because if that were the case then writes would cause data aborts, so games wouldn't write to read-only memory
@@ -14,6 +16,19 @@ Memory::Memory() {
 		const auto pointer = (uintptr_t)&fcram[i * pageSize];
 		readTable[page] = pointer;
 		writeTable[page++] = pointer;
+	}
+
+	// Map stack pages as R/W
+	// We have 16KB for the stack, so we allocate the last 4 pages of FCRAM for the stack
+	u32 stackPageCount = VirtualAddrs::StackSize / pageSize;
+	u32 fcramStackPage = fcramPageCount - 4;
+	page = VirtualAddrs::StackBottom / pageSize;
+
+	for (u32 i = 0; i < 4; i++) {
+		auto pointer = (uintptr_t)&fcram[fcramStackPage * pageSize];
+		readTable[page] = pointer;
+		writeTable[page++] = pointer;
+		fcramStackPage++;
 	}
 }
 

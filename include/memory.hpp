@@ -11,8 +11,10 @@ namespace VirtualAddrs {
 		ExecutableEnd = 0x00100000 + 0x03F00000,
 
 		// Stack for main ARM11 thread.
-		// Typically 0x4000 bytes
-		StackTop = 0x10000000
+		// Typically 0x4000 bytes, determined by exheader
+		StackTop = 0x10000000,
+		StackBottom = 0x0FFFC000,
+		StackSize = 0x4000
 	};
 }
 
