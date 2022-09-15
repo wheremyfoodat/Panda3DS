@@ -43,9 +43,11 @@ else()
     message(FATAL_ERROR "THIS IS NOT x64 WAIT FOR THE KVM IMPLEMENTATION")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp src/core/elf.cpp)
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp src/core/elf.cpp
+                 src/core/kernel.cpp
+                 )
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
-                 include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp
+                 include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

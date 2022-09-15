@@ -3,12 +3,14 @@
 #include "dynarmic/interface/A32/a32.h"
 #include "dynarmic/interface/A32/config.h"
 #include "helpers.hpp"
+#include "kernel.hpp"
 #include "memory.hpp"
 
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
 public:
     u64 ticks_left = 0;
     Memory& mem;
+    Kernel& kernel;
 
     u8 MemoryRead8(u32 vaddr) override {
         return mem.read8(vaddr);
@@ -49,7 +51,7 @@ public:
     }
 
     void CallSVC(u32 swi) override {
-        Helpers::panic("Called SVC %d", swi);
+        kernel.serviceSVC(swi);
     }
 
     void ExceptionRaised(u32 pc, Dynarmic::A32::Exception exception) override {
@@ -68,7 +70,7 @@ public:
         return ticks_left;
     }
 
-    MyEnvironment(Memory& mem) : mem(mem) {}
+    MyEnvironment(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 };
 
 class CPU {
@@ -77,7 +79,7 @@ class CPU {
     Memory& mem;
 
 public:
-    CPU(Memory& mem);
+    CPU(Memory& mem, Kernel& kernel);
     void reset();
 
     void setReg(int index, u32 value) {

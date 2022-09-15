@@ -2,6 +2,7 @@
 
 void Emulator::reset() {
     cpu.reset();
+    kernel.reset();
 }
 
 void Emulator::step() {}
