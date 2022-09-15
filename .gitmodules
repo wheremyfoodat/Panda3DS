@@ -1,3 +1,6 @@
 [submodule "third_party/boost"]
 	path = third_party/boost
 	url = https://github.com/citra-emu/ext-boost
+[submodule "third_party/elfio"]
+	path = third_party/elfio
+	url = https://github.com/serge1/ELFIO
