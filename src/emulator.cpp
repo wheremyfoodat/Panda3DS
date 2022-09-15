@@ -30,10 +30,7 @@ void Emulator::run() {
 }
 
 void Emulator::runFrame() {
-    constexpr u32 freq = 268 * 1024 * 1024;
-    for (u32 i = 0; i < freq; i += 2) {
-        step();
-    }
+    cpu.runFrame();
 }
 
 bool Emulator::loadELF(std::filesystem::path& path) {
@@ -41,5 +38,6 @@ bool Emulator::loadELF(std::filesystem::path& path) {
     if (!entrypoint.has_value())
         return false;
 
-    Helpers::panic("Entrypoint: %08X\n", entrypoint.value());
+    cpu.setReg(15, entrypoint.value()); // Set initial PC
+    return true;
 }

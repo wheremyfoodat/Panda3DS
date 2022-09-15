@@ -8,21 +8,18 @@
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
 public:
     u64 ticks_left = 0;
-    std::array<u8, 2048> memory{};
+    Memory& mem;
 
     u8 MemoryRead8(u32 vaddr) override {
-        if (vaddr >= memory.size()) {
-            return 0;
-        }
-        return memory[vaddr];
+        return mem.read8(vaddr);
     }
 
     u16 MemoryRead16(u32 vaddr) override {
-        return u16(MemoryRead8(vaddr)) | u16(MemoryRead8(vaddr + 1)) << 8;
+        return mem.read16(vaddr);
     }
 
     u32 MemoryRead32(u32 vaddr) override {
-        return u32(MemoryRead16(vaddr)) | u32(MemoryRead16(vaddr + 2)) << 16;
+        return mem.read32(vaddr);
     }
 
     u64 MemoryRead64(u32 vaddr) override {
@@ -30,20 +27,15 @@ public:
     }
 
     void MemoryWrite8(u32 vaddr, u8 value) override {
-        if (vaddr >= memory.size()) {
-            return;
-        }
-        memory[vaddr] = value;
+        mem.write8(vaddr, value);
     }
 
     void MemoryWrite16(u32 vaddr, u16 value) override {
-        MemoryWrite8(vaddr, u8(value));
-        MemoryWrite8(vaddr + 1, u8(value >> 8));
+        mem.write16(vaddr, value);
     }
 
     void MemoryWrite32(u32 vaddr, u32 value) override {
-        MemoryWrite16(vaddr, u16(value));
-        MemoryWrite16(vaddr + 2, u16(value >> 16));
+        mem.write32(vaddr, value);
     }
 
     void MemoryWrite64(u32 vaddr, u64 value) override {
@@ -75,6 +67,8 @@ public:
     u64 GetTicksRemaining() override {
         return ticks_left;
     }
+
+    MyEnvironment(Memory& mem) : mem(mem) {}
 };
 
 class CPU {
@@ -104,5 +98,11 @@ public:
 
     u32 getCPSR() {
         return jit.Cpsr();
+    }
+
+    void runFrame() {
+        env.ticks_left = 268111856 / 60;
+        const auto exitReason = jit.Run();
+        Helpers::panic("Exit reason: %d", (u32)exitReason);
     }
 };

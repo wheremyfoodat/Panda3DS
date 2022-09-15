@@ -4,6 +4,18 @@
 #include <vector>
 #include "helpers.hpp"
 
+namespace VirtualAddrs {
+	enum : u32 {
+		ExecutableStart = 0x00100000,
+		MaxExeSize = 0x03F00000,
+		ExecutableEnd = 0x00100000 + 0x03F00000,
+
+		// Stack for main ARM11 thread.
+		// Typically 0x4000 bytes
+		StackTop = 0x10000000
+	};
+}
+
 class Memory {
 	u8* fcram;
 
@@ -12,11 +24,19 @@ class Memory {
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
 	static constexpr u32 pageMask = pageSize - 1;
+	static constexpr u32 totalPageCount = 1 << (32 - pageShift);
 
 public:
 	Memory();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
-	
 	std::optional<u32> loadELF(std::filesystem::path& path);
+
+	u8 read8(u32 vaddr);
+	u16 read16(u32 vaddr);
+	u32 read32(u32 vaddr);
+
+	void write8(u32 vaddr, u8 value);
+	void write16(u32 vaddr, u16 value);
+	void write32(u32 vaddr, u32 value);
 };
