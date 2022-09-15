@@ -35,12 +35,16 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x
     #set(DYNARMIC_NO_BUNDLED_FMT ON)
     set(DYNARMIC_FRONTENDS "A32" CACHE STRING "")
     add_subdirectory(third_party/dynarmic)
+    add_compile_definitions(CPU_DYNARMIC)
 else()
+    add_compile_definitions(CPU_KVM)
     message(FATAL_ERROR "THIS IS NOT x64 WAIT FOR THE KVM IMPLEMENTATION")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp)
-set(INCLUDE_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp include/opengl.hpp)
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/cpu/cpu_dynarmic.cpp)
+set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
+                 include/cpu.hpp include/cpu_dynarmic.hpp
+)
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/imgui/imgui_draw.cpp
@@ -50,9 +54,10 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/gl3w/gl3w.cpp
 )
 
+#add_library(Alber ${HEADER_FILES})
+source_group("Header Files\\Core" FILES ${HEADER_FILES})
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
-source_group("Include Files\\Core" FILES ${INCLUDE_FILES})
-source_group("Source Files\\Third_Party" FILES ${THIRD_PARTY_SOURCE_FILES})
+source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
-add_executable(Alber ${SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES})
+add_executable(Alber ${SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(Alber PRIVATE sfml-system sfml-network sfml-graphics sfml-window dynarmic)
