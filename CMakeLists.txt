@@ -30,6 +30,7 @@ set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_NO_SYSTEM_PATHS ON)
 add_library(boost INTERFACE)
 target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
+add_compile_definitions(NOMINMAX)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64")
     set(DYNARMIC_TESTS OFF)
@@ -42,7 +43,7 @@ else()
     message(FATAL_ERROR "THIS IS NOT x64 WAIT FOR THE KVM IMPLEMENTATION")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp)
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp src/core/elf.cpp)
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp
 )

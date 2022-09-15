@@ -1,4 +1,6 @@
 #pragma once
+#include <filesystem>
+#include <optional>
 #include <vector>
 #include "helpers.hpp"
 
@@ -15,4 +17,6 @@ public:
 	Memory();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
+	
+	std::optional<u32> loadELF(std::filesystem::path& path);
 };

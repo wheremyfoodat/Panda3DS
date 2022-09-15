@@ -35,3 +35,11 @@ void Emulator::runFrame() {
         step();
     }
 }
+
+bool Emulator::loadELF(std::filesystem::path& path) {
+    std::optional<u32> entrypoint = memory.loadELF(path);
+    if (!entrypoint.has_value())
+        return false;
+
+    Helpers::panic("Entrypoint: %08X\n", entrypoint.value());
+}

@@ -9,7 +9,7 @@ CPU::CPU(Memory& mem) : mem(mem) {
     // Write some code to memory.
     env.MemoryWrite16(0, 0x0088); // lsls r0, r1, #2
     env.MemoryWrite16(2, 0x3045); // adds r0, #69
-    env.MemoryWrite16(4, 0xdf45); // swi #69
+    env.MemoryWrite16(4, 0x3845); // subs r0, #69
     env.MemoryWrite16(6, 0xE7FE); // b +#0 (infinite loop)
 
     // Setup registers.

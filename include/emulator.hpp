@@ -1,5 +1,7 @@
 #pragma once
-#define NOMINMAX // Windows why
+
+#include <filesystem>
+
 #include "cpu.hpp"
 #include "helpers.hpp"
 #include "opengl.hpp"
@@ -25,4 +27,6 @@ public:
     void reset();
     void run();
     void runFrame();
+
+    bool loadELF(std::filesystem::path& path);
 };
