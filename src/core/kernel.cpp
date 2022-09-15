@@ -3,7 +3,7 @@
 void Kernel::serviceSVC(u32 svc) {
 	switch (svc) {
 		case 0x21: createAddressArbiter(); break;
-		default: Helpers::panic("Unimplemented svc: %x", svc); break;
+		default: Helpers::panic("Unimplemented svc: %x @ %08X", svc, regs[15]); break;
 	}
 }
 
