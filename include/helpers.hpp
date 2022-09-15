@@ -17,8 +17,7 @@ using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
 
-class Helpers {
-public:
+namespace Helpers {
     [[noreturn]] static void panic(const char* fmt, ...) {
         std::va_list args;
         va_start(args, fmt);
@@ -132,6 +131,19 @@ public:
         return ((value & 0xf) == 0x9) ? value + 7 : value + 1;
     }
 };
+
+// UDLs for memory size values
+constexpr size_t operator""_KB(unsigned long long int x) {
+    return 1024ULL * x;
+}
+
+constexpr size_t operator""_MB(unsigned long long int x) {
+    return 1024_KB * x;
+}
+
+constexpr size_t operator""_GB(unsigned long long int x) {
+    return 1024_MB * x;
+}
 
 // useful macros
 // likely/unlikely

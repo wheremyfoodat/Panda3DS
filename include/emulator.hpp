@@ -8,12 +8,14 @@
 
 class Emulator {
     CPU cpu;
+    Memory memory;
     sf::RenderWindow window;
     static constexpr u32 width = 400;
     static constexpr u32 height = 240 * 2; // * 2 because 2 screens
 
 public:
-    Emulator() : window(sf::VideoMode(width, height), "Alber", sf::Style::Default, sf::ContextSettings(0, 0, 0, 4, 3))  {
+    Emulator() : window(sf::VideoMode(width, height), "Alber", sf::Style::Default, sf::ContextSettings(0, 0, 0, 4, 3)),
+                 cpu(memory) {
         reset();
         window.setActive(true);
     }

@@ -1,6 +1,8 @@
 #include "emulator.hpp"
 
-void Emulator::reset() {}
+void Emulator::reset() {
+    cpu.reset();
+}
 
 void Emulator::step() {}
 

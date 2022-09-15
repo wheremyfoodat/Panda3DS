@@ -3,6 +3,7 @@
 #include "dynarmic/interface/A32/a32.h"
 #include "dynarmic/interface/A32/config.h"
 #include "helpers.hpp"
+#include "memory.hpp"
 
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
 public:
@@ -79,9 +80,11 @@ public:
 class CPU {
     MyEnvironment env;
     Dynarmic::A32::Jit jit{ {.callbacks = &env} };
+    Memory& mem;
 
 public:
-    CPU();
+    CPU(Memory& mem);
+    void reset();
 
     void setReg(int index, u32 value) {
         jit.Regs()[index] = value;
