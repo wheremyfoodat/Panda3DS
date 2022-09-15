@@ -4,6 +4,7 @@
 #include "dynarmic/interface/A32/config.h"
 #include "dynarmic/interface/A32/coprocessor.h"
 #include "helpers.hpp"
+#include "memory.hpp"
 
 class CP15 final : public Dynarmic::A32::Coprocessor {
     using Callback = Dynarmic::A32::Coprocessor::Callback;
@@ -11,7 +12,7 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
     using CallbackOrAccessOneWord = Dynarmic::A32::Coprocessor::CallbackOrAccessOneWord;
     using CallbackOrAccessTwoWords = Dynarmic::A32::Coprocessor::CallbackOrAccessTwoWords;
 
-    u32 threadStoragePointer = 0x696966969; // Pointer to thread-local storage
+    u32 threadStoragePointer; // Pointer to thread-local storage
 
     std::optional<Callback> CompileInternalOperation(bool two, unsigned opc1,
         CoprocReg CRd, CoprocReg CRn,
@@ -30,6 +31,11 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
 
     CallbackOrAccessOneWord CompileGetOneWord(bool two, unsigned opc1, CoprocReg CRn,
         CoprocReg CRm, unsigned opc2) override {
+        // Some sort of pointer to TLS, accessed via mrc p15, 0, rd, c13, c0, 3
+        if (!two && CRn == CoprocReg::C13 && opc1 == 0 && CRm == CoprocReg::C0 && opc2 == 3) {
+            return &threadStoragePointer;
+        }
+
         Helpers::panic("CP15: CompileGetOneWord");
     }
 
@@ -47,7 +53,8 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
         return std::nullopt;
     }
 
+public:
     void reset() {
-
+        threadStoragePointer = VirtualAddrs::TLSBase;
     }
 };

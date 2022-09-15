@@ -14,7 +14,10 @@ namespace VirtualAddrs {
 		// Typically 0x4000 bytes, determined by exheader
 		StackTop = 0x10000000,
 		StackBottom = 0x0FFFC000,
-		StackSize = 0x4000
+		StackSize = 0x4000,
+
+		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x1000, and so on
+		TLSBase = 0xFF400000
 	};
 }
 

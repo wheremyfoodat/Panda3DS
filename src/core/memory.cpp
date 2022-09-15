@@ -30,6 +30,14 @@ Memory::Memory() {
 		writeTable[page++] = pointer;
 		fcramStackPage++;
 	}
+
+	// Map 1 page of FCRAM for thread-local storage
+	u32 fcramTLSPage = fcramPageCount - 5;
+	page = VirtualAddrs::TLSBase / pageSize;
+
+	auto pointer = (uintptr_t)&fcram[fcramTLSPage * pageSize];
+	readTable[page] = pointer;
+	writeTable[page++] = pointer;
 }
 
 u8 Memory::read8(u32 vaddr) {
@@ -53,7 +61,16 @@ u32 Memory::read32(u32 vaddr) {
 }
 
 void Memory::write8(u32 vaddr, u8 value) {
-	Helpers::panic("Unimplemented 8-bit write, addr: %08X, val: %02X", vaddr, value);
+	const u32 page = vaddr >> pageShift;
+	const u32 offset = vaddr & pageMask;
+
+	uintptr_t pointer = writeTable[page];
+	if (pointer != 0) [[likely]] {
+		*(u8*)(pointer + offset) = value;
+	}
+	else {
+		Helpers::panic("Unimplemented 8-bit write, addr: %08X, val: %02X", vaddr, value);
+	}
 }
 
 void Memory::write16(u32 vaddr, u16 value) {

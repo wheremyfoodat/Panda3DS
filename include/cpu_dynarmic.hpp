@@ -76,6 +76,7 @@ public:
 
 class CPU {
     std::unique_ptr<Dynarmic::A32::Jit> jit;
+    std::shared_ptr<CP15> cp15;
     MyEnvironment env;
     Memory& mem;
 
