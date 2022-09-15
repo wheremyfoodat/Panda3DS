@@ -1,0 +1,3 @@
+[submodule "third_party/boost"]
+	path = third_party/boost
+	url = https://github.com/citra-emu/ext-boost
