@@ -40,8 +40,10 @@ public:
 	u8 read8(u32 vaddr);
 	u16 read16(u32 vaddr);
 	u32 read32(u32 vaddr);
+	u64 read64(u32 vaddr);
 
 	void write8(u32 vaddr, u8 value);
 	void write16(u32 vaddr, u16 value);
 	void write32(u32 vaddr, u32 value);
+	void write64(u32 vaddr, u64 value);
 };

@@ -42,8 +42,7 @@ public:
     }
 
     void MemoryWrite64(u32 vaddr, u64 value) override {
-        MemoryWrite32(vaddr, u32(value));
-        MemoryWrite32(vaddr + 4, u32(value >> 32));
+        mem.write64(vaddr, value);
     }
 
     void InterpreterFallback(u32 pc, size_t num_instructions) override {

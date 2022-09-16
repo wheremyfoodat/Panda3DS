@@ -46,6 +46,8 @@ using Handle = u32;
 
 struct ResourceLimits {
     Handle handle;
+
+    s32 currentCommit = 0;
 };
 
 struct ProcessData {

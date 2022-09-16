@@ -60,6 +60,12 @@ u32 Memory::read32(u32 vaddr) {
 	}
 }
 
+u64 Memory::read64(u32 vaddr) {
+	u64 bottom = u64(read32(vaddr));
+	u64 top = u64(read32(vaddr + 4));
+	return (top << 32) | bottom;
+}
+
 void Memory::write8(u32 vaddr, u8 value) {
 	const u32 page = vaddr >> pageShift;
 	const u32 offset = vaddr & pageMask;
@@ -87,6 +93,11 @@ void Memory::write32(u32 vaddr, u32 value) {
 	} else {
 		Helpers::panic("Unimplemented 32-bit write, addr: %08X, val: %08X", vaddr, value);
 	}
+}
+
+void Memory::write64(u32 vaddr, u64 value) {
+	write32(vaddr, u32(value));
+	write32(vaddr + 4, u32(value >> 32));
 }
 
 void* Memory::getReadPointer(u32 address) {

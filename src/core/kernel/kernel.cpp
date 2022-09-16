@@ -7,7 +7,8 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x21: createAddressArbiter(); break;
 		case 0x38: getResourceLimit(); break;
 		case 0x39: getResourceLimitLimitValues(); break;
-		default: Helpers::panic("Unimplemented svc: %x @ %08X", svc, regs[15]); break;
+		case 0x3A: getResourceLimitCurrentValues(); break;
+		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
 }
 
@@ -54,31 +55,6 @@ void Kernel::reset() {
 void Kernel::createAddressArbiter() {
 	printf("Stubbed call to CreateAddressArbiter. Handle address: %08X\n", regs[0]);
 	regs[0] = SVCResult::Success;
-}
-
-// Result GetResourceLimit(Handle* resourceLimit, Handle process)
-// out: r0 -> result
-void Kernel::getResourceLimit() {
-	const auto handlePointer = regs[0];
-	const auto pid = regs[1];
-	const auto process = getProcessFromPID(pid);
-
-	if (process == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
-		return;
-	}
-
-	const auto processData = static_cast<ProcessData*>(process->data);
-
-	printf("GetResourceLimit (Handle pointer = %08X, process: %s)\n", handlePointer, getProcessName(pid).c_str());
-	mem.write32(handlePointer, processData->limits.handle);
-	regs[0] = SVCResult::Success;
-	// Is the handle meant to be output through both r1 and memory? Libctru breaks otherwise.
-	regs[1] = processData->limits.handle;
-}
-
-void Kernel::getResourceLimitLimitValues() {
-	Helpers::panic("Trying to getResourceLimitLimitValues from resourceLimit with handle %08X\n", regs[1]);
 }
 
 std::string Kernel::getProcessName(u32 pid) {

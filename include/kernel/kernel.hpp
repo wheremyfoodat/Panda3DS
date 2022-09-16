@@ -48,11 +48,15 @@ class Kernel {
 
 	Handle makeProcess();
 	KernelObject* getProcessFromPID(Handle handle);
+	s32 getCurrentResourceValue(const KernelObject* limit, u32 resourceName);
+	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
+	std::string getProcessName(u32 pid);
 
+	// SVC implementations
 	void createAddressArbiter();
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
-	std::string getProcessName(u32 pid);
+	void getResourceLimitCurrentValues();
 
 public:
 	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0) {
