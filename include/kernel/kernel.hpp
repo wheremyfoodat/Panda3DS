@@ -57,6 +57,7 @@ class Kernel {
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();
+	void svcCloseHandle();
 
 public:
 	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0) {

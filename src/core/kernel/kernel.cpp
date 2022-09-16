@@ -5,6 +5,7 @@
 void Kernel::serviceSVC(u32 svc) {
 	switch (svc) {
 		case 0x21: createAddressArbiter(); break;
+		case 0x23: svcCloseHandle(); break;
 		case 0x38: getResourceLimit(); break;
 		case 0x39: getResourceLimitLimitValues(); break;
 		case 0x3A: getResourceLimitCurrentValues(); break;
@@ -51,9 +52,14 @@ void Kernel::reset() {
 }
 
 // Result CreateAddressArbiter(Handle* arbiter)
-// out: r0 -> result
 void Kernel::createAddressArbiter() {
 	printf("Stubbed call to CreateAddressArbiter. Handle address: %08X\n", regs[0]);
+	regs[0] = SVCResult::Success;
+}
+
+// Result CloseHandle(Handle handle)
+void Kernel::svcCloseHandle() {
+	printf("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
 	regs[0] = SVCResult::Success;
 }
 
