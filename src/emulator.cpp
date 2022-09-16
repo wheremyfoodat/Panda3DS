@@ -1,8 +1,14 @@
 #include "emulator.hpp"
 
 void Emulator::reset() {
+    memory.reset();
     cpu.reset();
     kernel.reset();
+
+    cpu.setReg(13, VirtualAddrs::StackTop); // Set initial SP
+    if (romType == ROMType::ELF) { // Reload ELF if we're using one
+        loadELF(loadedROM);
+    }
 }
 
 void Emulator::step() {}
@@ -35,11 +41,21 @@ void Emulator::runFrame() {
 }
 
 bool Emulator::loadELF(std::filesystem::path& path) {
-    std::optional<u32> entrypoint = memory.loadELF(path);
+    loadedROM.open(path, std::ios_base::binary); // Open ROM in binary mode
+    romType = ROMType::ELF;
+
+    return loadELF(loadedROM);
+}
+
+bool Emulator::loadELF(std::ifstream& file) {
+    // Rewind ifstream
+    loadedROM.clear();
+    loadedROM.seekg(0);
+
+    std::optional<u32> entrypoint = memory.loadELF(loadedROM);
     if (!entrypoint.has_value())
         return false;
 
-    cpu.setReg(13, VirtualAddrs::StackTop); // Set initial SP
     cpu.setReg(15, entrypoint.value()); // Set initial PC
     return true;
 }

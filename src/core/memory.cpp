@@ -1,43 +1,116 @@
 #include "memory.hpp"
+#include <cassert>
 
 Memory::Memory() {
-	fcram = new uint8_t[128_MB]();
+	fcram = new uint8_t[FCRAM_SIZE]();
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
+}
 
-	constexpr u32 fcramPageCount = 128_MB / pageSize;
+void Memory::reset() {
+	// Unallocate all memory
+	usedFCRAMPages.reset();
+	usedUserMemory = 0_MB;
 
-	// Map 63MB of FCRAM in the executable section as read/write
-	// TODO: This should probably be read-only, but making it r/w shouldn't hurt?
-	// Because if that were the case then writes would cause data aborts, so games wouldn't write to read-only memory
-	u32 executablePageCount = VirtualAddrs::MaxExeSize / pageSize;
-	u32 page = VirtualAddrs::ExecutableStart / pageSize;
-	for (u32 i = 0; i < executablePageCount; i++) {
-		const auto pointer = (uintptr_t)&fcram[i * pageSize];
-		readTable[page] = pointer;
-		writeTable[page++] = pointer;
+	for (u32 i = 0; i < totalPageCount; i++) {
+		readTable[i] = 0;
+		writeTable[i] = 0;
 	}
 
 	// Map stack pages as R/W
-	// We have 16KB for the stack, so we allocate the last 4 pages of FCRAM for the stack
-	u32 stackPageCount = VirtualAddrs::StackSize / pageSize;
-	u32 fcramStackPage = fcramPageCount - 4;
-	page = VirtualAddrs::StackBottom / pageSize;
+	// We have 16KB for the stack, so we allocate the last 16KB of APPLICATION FCRAM for the stack
+	u32 basePaddrForStack = FCRAM_APPLICATION_SIZE - VirtualAddrs::StackSize;
+	allocateMemory(VirtualAddrs::StackBottom, basePaddrForStack, VirtualAddrs::StackSize, true);
 
-	for (u32 i = 0; i < 4; i++) {
-		auto pointer = (uintptr_t)&fcram[fcramStackPage * pageSize];
-		readTable[page] = pointer;
-		writeTable[page++] = pointer;
-		fcramStackPage++;
+	// And map 4KB of FCRAM before the stack for TLS
+	u32 basePaddrForTLS = basePaddrForStack - VirtualAddrs::TLSSize;
+	allocateMemory(VirtualAddrs::TLSBase, basePaddrForTLS, VirtualAddrs::TLSSize, true);
+}
+
+std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r, bool w, bool x) {
+	// Kernel-allocated memory & size must always be aligned to a page boundary
+	// Additionally assert we don't OoM and that we don't try to allocate physical FCRAM past what's available to userland
+	assert(isAligned(vaddr) && isAligned(paddr) && isAligned(size));
+	assert(size <= FCRAM_APPLICATION_SIZE);
+	assert(usedUserMemory + size <= FCRAM_APPLICATION_SIZE);
+	assert(paddr + size <= FCRAM_APPLICATION_SIZE);
+
+	// Amount of available user FCRAM pages and FCRAM pages to allocate respectively
+	const u32 availablePageCount = (FCRAM_APPLICATION_SIZE - usedUserMemory) / pageSize;
+	const u32 neededPageCount = size / pageSize;
+
+	assert(availablePageCount >= neededPageCount);
+
+	// If the vaddr is 0 that means we need to select our own
+	// Depending on whether our mapping should be linear or not we allocate from one of the 2 typical heap spaces
+	// We don't plan on implementing freeing any time soon, so we can pick added userUserMemory to the vaddr base to
+	// Get the full vaddr.
+	// TODO: Fix this
+	if (vaddr == 0) {
+		vaddr = usedUserMemory + (linear ? VirtualAddrs::LinearHeapStart : VirtualAddrs::NormalHeapStart);
 	}
 
-	// Map 1 page of FCRAM for thread-local storage
-	u32 fcramTLSPage = fcramPageCount - 5;
-	page = VirtualAddrs::TLSBase / pageSize;
+	usedUserMemory += size;
 
-	auto pointer = (uintptr_t)&fcram[fcramTLSPage * pageSize];
-	readTable[page] = pointer;
-	writeTable[page++] = pointer;
+	// If the paddr is 0, that means we need to select our own
+	// TODO: Fix. This method always tries to allocate blocks linearly.
+	// However, if the allocation is non-linear, the panic will trigger when it shouldn't.
+	// Non-linear allocation needs special handling
+	if (paddr == 0) {
+		std::optional<u32> newPaddr = findPaddr(size);
+		if (!newPaddr.has_value())
+			Helpers::panic("Failed to find paddr");
+
+		paddr = newPaddr.value();
+		assert(paddr + size <= FCRAM_APPLICATION_SIZE);
+	}
+
+	// Do linear mapping
+	u32 virtualPage = vaddr >> pageShift;
+	u32 physPage = paddr >> pageShift; // TODO: Special handle when non-linear mapping is necessary
+	for (u32 i = 0; i < neededPageCount; i++) {
+		if (r) {
+			readTable[virtualPage] = uintptr_t(&fcram[physPage * pageSize]);
+		}
+		if (w) {
+			writeTable[virtualPage] = uintptr_t(&fcram[physPage * pageSize]);
+		}
+		
+		// Mark FCRAM page as allocated and go on
+		usedFCRAMPages[physPage] = true;
+		virtualPage++;
+		physPage++;
+	}
+	
+	return vaddr;
+}
+
+// Find a paddr which we can use for allocating "size" bytes
+std::optional<u32> Memory::findPaddr(u32 size) {
+	const u32 neededPages = size / pageSize;
+
+	// The FCRAM page we're testing to see if it's appropriate to use
+	u32 candidatePage = 0;
+	// The number of linear available pages we could find starting from this candidate page.
+	// If this ends up >= than neededPages then the paddr is good (ie we can use the candidate page as a base address)
+	u32 counter = 0;
+
+	for (u32 i = 0; i < FCRAM_PAGE_COUNT; i++) {
+		if (usedFCRAMPages[i]) { // Page is occupied already, go to new candidate
+			candidatePage = i + 1;
+			counter = 0;
+		}
+		else { // Our candidate page has 1 mor 
+			counter++;
+			// Check if there's enough free memory to use this page
+			if (counter == neededPages) {
+				return candidatePage * pageSize;
+			}
+		}
+	}
+
+	// Couldn't find any page :(
+	return std::nullopt;
 }
 
 u8 Memory::read8(u32 vaddr) {

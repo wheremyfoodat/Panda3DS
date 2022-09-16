@@ -23,6 +23,7 @@ static constexpr bool isAligned(u32 value) {
 // Result ControlMemory(u32* outaddr, u32 addr0, u32 addr1, u32 size, 
 //						MemoryOperation operation, MemoryPermission permissions)
 // This has a weird ABI documented here https://www.3dbrew.org/wiki/Kernel_ABI
+// TODO: Does this need to write to outaddr?
 void Kernel::controlMemory() {
 	u32 operation = regs[0]; // The base address is written here
 	u32 addr0 = regs[1];
@@ -48,17 +49,22 @@ void Kernel::controlMemory() {
 		Helpers::panic("ControlMemory: Unaligned parameters\nAddr0: %08X\nAddr1: %08X\nSize: %08X", addr0, addr1, size);
 	}
 	
-	printf("ControlMemory(addr0 = %08X, addr1 = %08X, size = %X, operation = %X (%c%c%c)%s\n",
+	printf("ControlMemory(addr0 = %08X, addr1 = %08X, size = %08X, operation = %X (%c%c%c)%s\n",
 			addr0, addr1, size, operation, r ? 'r' : '-', w ? 'w' : '-', x ? 'x' : '-', linear ? ", linear" : ""
 	);
 
 	switch (operation & 0xFF) {
-		case Operation::Commit:
+		case Operation::Commit: {
+			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear);
+			if (!address.has_value())
+				Helpers::panic("ControlMemory: Failed to allocate memory");
+
+			regs[1] = address.value();
 			break;
+		}
 
 		default: Helpers::panic("ControlMemory: unknown operation %X\n", operation);
 	}
 
 	regs[0] = SVCResult::Success;
-	regs[1] = 0xF3180131;
 }

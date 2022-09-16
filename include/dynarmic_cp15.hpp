@@ -13,6 +13,7 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
     using CallbackOrAccessTwoWords = Dynarmic::A32::Coprocessor::CallbackOrAccessTwoWords;
 
     u32 threadStoragePointer; // Pointer to thread-local storage
+    u32 dummy; // MCR writes here for registers whose values are ignored
 
     std::optional<Callback> CompileInternalOperation(bool two, unsigned opc1,
         CoprocReg CRd, CoprocReg CRn,
@@ -22,7 +23,10 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
 
     CallbackOrAccessOneWord CompileSendOneWord(bool two, unsigned opc1, CoprocReg CRn,
         CoprocReg CRm, unsigned opc2) override {
-        Helpers::panic("CP15: CompileSendOneWord\n");
+        if (!two && opc1 == 0 && CRn == CoprocReg::C7 && CRm == CoprocReg::C10 && opc2 == 5) {
+            return &dummy; // TODO: Find out what this is. Some sort of memory barrier reg.
+        }
+        Helpers::panic("CP15: CompileSendOneWord\nopc1: %d CRn: %d CRm: %d opc2: %d\n", opc1, (int)CRn, (int)CRm, opc2);
     }
 
     CallbackOrAccessTwoWords CompileSendTwoWords(bool two, unsigned opc, CoprocReg CRm) override {
@@ -36,7 +40,7 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
             return &threadStoragePointer;
         }
 
-        Helpers::panic("CP15: CompileGetOneWord");
+        Helpers::panic("CP15: CompileGetOneWord\nopc1: %d CRn: %d CRm: %d opc2: %d\n", opc1, (int)CRn, (int)CRm, opc2);
     }
 
     CallbackOrAccessTwoWords CompileGetTwoWords(bool two, unsigned opc, CoprocReg CRm) override {

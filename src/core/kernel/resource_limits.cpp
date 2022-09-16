@@ -83,7 +83,7 @@ void Kernel::getResourceLimitCurrentValues() {
 s32 Kernel::getCurrentResourceValue(const KernelObject* limit, u32 resourceName) {
 	const auto data = static_cast<ResourceLimits*>(limit->data);
 	switch (resourceName) {
-		case ResourceType::Commit: return data->currentCommit;
+		case ResourceType::Commit: return mem.usedUserMemory;
 		default: Helpers::panic("Attempted to get current value of unknown kernel resource: %d\n", resourceName);
 	}
 }

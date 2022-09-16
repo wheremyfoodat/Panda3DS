@@ -5,9 +5,9 @@
 
 using namespace ELFIO;
 
-std::optional<u32> Memory::loadELF(std::filesystem::path& path) {
+std::optional<u32> Memory::loadELF(std::ifstream& file) {
 	elfio reader;
-	if (!reader.load(path.string())) {
+	if (!file.good() || !reader.load(file)) {
 		printf("Woops failed to load ELF\n");
 		return std::nullopt;
 	}
@@ -39,8 +39,17 @@ std::optional<u32> Memory::loadELF(std::filesystem::path& path) {
             return std::nullopt;
         }
 
-        u32 fcramAddr = vaddr - VirtualAddrs::ExecutableStart;
+        if (memorySize & pageMask) {
+            // Round up the size of the ELF segment to a page (4KB) boundary, as the OS can only alloc this way
+            memorySize = (memorySize + pageSize - 1) & -pageSize;
+            Helpers::warn("Rounding ELF segment size to %08X\n", memorySize);
+        }
+
+        u32 fcramAddr = findPaddr(memorySize).value();
         std::memcpy(&fcram[fcramAddr], data, fileSize);
+
+        // Allocate the segment on the OS side
+        allocateMemory(vaddr, fcramAddr, memorySize, true);
     }
 
     return static_cast<u32>(reader.get_entry());
