@@ -53,6 +53,7 @@ class Kernel {
 	std::string getProcessName(u32 pid);
 
 	// SVC implementations
+	void controlMemory();
 	void createAddressArbiter();
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
