@@ -114,7 +114,16 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 }
 
 u8 Memory::read8(u32 vaddr) {
-	Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
+	const u32 page = vaddr >> pageShift;
+	const u32 offset = vaddr & pageMask;
+
+	uintptr_t pointer = readTable[page];
+	if (pointer != 0) [[likely]] {
+		return *(u8*)(pointer + offset);
+	}
+	else {
+		Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
+	}
 }
 
 u16 Memory::read16(u32 vaddr) {

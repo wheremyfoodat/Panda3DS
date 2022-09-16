@@ -2,6 +2,7 @@
 
 #include "dynarmic/interface/A32/a32.h"
 #include "dynarmic/interface/A32/config.h"
+#include "dynarmic/interface/exclusive_monitor.h"
 #include "dynarmic_cp15.hpp"
 #include "helpers.hpp"
 #include "kernel.hpp"
@@ -45,6 +46,26 @@ public:
         mem.write64(vaddr, value);
     }
 
+    bool MemoryWriteExclusive8(u32 addr, u8 value, u8 expected) override {
+        mem.write8(addr, value);
+        return true;
+    }
+
+    bool MemoryWriteExclusive16(u32 addr, u16 value, u16 expected) override {
+        mem.write16(addr, value);
+        return true;
+    }
+
+    bool MemoryWriteExclusive32(u32 addr, u32 value, u32 expected) override {
+        mem.write32(addr, value);
+        return true;
+    }
+
+    bool MemoryWriteExclusive64(u32 addr, u64 value, u64 expected) override {
+        mem.write64(addr, value);
+        return true;
+    }
+
     void InterpreterFallback(u32 pc, size_t num_instructions) override {
         // This is never called in practice.
         std::terminate();
@@ -76,6 +97,9 @@ public:
 class CPU {
     std::unique_ptr<Dynarmic::A32::Jit> jit;
     std::shared_ptr<CP15> cp15;
+
+    // Make exclusive monitor with only 1 CPU core
+    Dynarmic::ExclusiveMonitor exclusiveMonitor{1};
     MyEnvironment env;
     Memory& mem;
 
@@ -106,6 +130,7 @@ public:
     void runFrame() {
         env.ticksLeft = 268111856 / 60;
         const auto exitReason = jit->Run();
-        Helpers::panic("Exit reason: %d", (u32)exitReason);
+        for (u32 i = 0; i < 4; i++)printf("r%d: %08X\n", i, getReg(i));
+        Helpers::panic("Exit reason: %d\nPC: %08X", (u32)exitReason, getReg(15));
     }
 };
