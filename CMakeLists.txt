@@ -18,6 +18,7 @@ if(NOT SFML_FOUND)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
+include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${SFML_INCLUDE_DIR})
 include_directories (${FMT_INCLUDE_DIR})
 include_directories(third_party/elfio/)
@@ -44,11 +45,12 @@ else()
 endif()
 
 set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp src/core/elf.cpp
-                 src/core/kernel.cpp
+                 
                  )
+set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp)
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
-                 include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel.hpp
-                 include/dynarmic_cp15.hpp
+                 include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel/kernel.hpp
+                 include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -62,7 +64,8 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
 #add_library(Alber ${HEADER_FILES})
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
+source_group("Source Files\\Core\\Kernel" FILES ${KERNEL_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
-add_executable(Alber ${SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+add_executable(Alber ${SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(Alber PRIVATE sfml-system sfml-network sfml-graphics sfml-window dynarmic)
