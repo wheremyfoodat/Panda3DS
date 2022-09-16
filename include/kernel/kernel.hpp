@@ -59,6 +59,7 @@ class Kernel {
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();
 	void svcCloseHandle();
+	void connectToPort();
 
 public:
 	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0) {

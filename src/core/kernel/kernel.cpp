@@ -7,6 +7,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x01: controlMemory(); break;
 		case 0x21: createAddressArbiter(); break;
 		case 0x23: svcCloseHandle(); break;
+		case 0x2D: connectToPort(); break;
 		case 0x38: getResourceLimit(); break;
 		case 0x39: getResourceLimitLimitValues(); break;
 		case 0x3A: getResourceLimitCurrentValues(); break;
@@ -62,6 +63,14 @@ void Kernel::createAddressArbiter() {
 void Kernel::svcCloseHandle() {
 	printf("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
 	regs[0] = SVCResult::Success;
+}
+
+void Kernel::connectToPort() {
+	const u32 handlePointer = regs[0];
+	const char* port = static_cast<const char*>(mem.getReadPointer(regs[1]));
+
+	printf("ConnectToPort(handle pointer = %08X, port = \"%s\")\n", handlePointer, port);
+	Helpers::panic("Unimplemented IPC");
 }
 
 std::string Kernel::getProcessName(u32 pid) {

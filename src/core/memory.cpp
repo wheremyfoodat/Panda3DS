@@ -1,5 +1,7 @@
 #include "memory.hpp"
+#include "config_mem.hpp"
 #include <cassert>
+
 
 Memory::Memory() {
 	fcram = new uint8_t[FCRAM_SIZE]();
@@ -122,7 +124,10 @@ u8 Memory::read8(u32 vaddr) {
 		return *(u8*)(pointer + offset);
 	}
 	else {
-		Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
+		switch (vaddr) {
+			case ConfigMem::KernelVersionMinor: return 38;
+			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
+		}
 	}
 }
 
