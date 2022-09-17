@@ -48,13 +48,13 @@ set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
                         src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
 )
-set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp)
+set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp)
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel/kernel.hpp
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
                  include/kernel/config_mem.hpp include/services/service_manager.hpp include/services/apt.hpp
-                 include/kernel/handles.hpp
+                 include/kernel/handles.hpp include/services/hid.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

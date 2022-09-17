@@ -1,6 +1,6 @@
 #include "services/service_manager.hpp"
 
-ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem) {}
+ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), apt(mem) {}
 
 void ServiceManager::reset() {
 	apt.reset();
