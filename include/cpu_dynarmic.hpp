@@ -46,25 +46,23 @@ public:
         mem.write64(vaddr, value);
     }
 
-    bool MemoryWriteExclusive8(u32 addr, u8 value, u8 expected) override {
-        mem.write8(addr, value);
-        return true;
+    #define makeExclusiveWriteHandler(size) \
+    bool MemoryWriteExclusive##size(u32 vaddr, u##size value, u##size expected) override { \
+        u##size current = mem.read##size(vaddr); /* Get current value */                   \
+        if (current == expected) {   /* Perform the write if current == expected */        \
+            mem.write##size(vaddr, value);                                                 \
+            return true; /* Exclusive write succeeded */                                   \
+        }                                                                                  \
+                                                                                           \
+        return false; /* Exclusive write failed */                                         \
     }
 
-    bool MemoryWriteExclusive16(u32 addr, u16 value, u16 expected) override {
-        mem.write16(addr, value);
-        return true;
-    }
+    makeExclusiveWriteHandler(8)
+    makeExclusiveWriteHandler(16)
+    makeExclusiveWriteHandler(32)
+    makeExclusiveWriteHandler(64)
 
-    bool MemoryWriteExclusive32(u32 addr, u32 value, u32 expected) override {
-        mem.write32(addr, value);
-        return true;
-    }
-
-    bool MemoryWriteExclusive64(u32 addr, u64 value, u64 expected) override {
-        mem.write64(addr, value);
-        return true;
-    }
+    #undef makeExclusiveWriteHandler
 
     void InterpreterFallback(u32 pc, size_t num_instructions) override {
         // This is never called in practice.
