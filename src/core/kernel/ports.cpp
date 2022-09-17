@@ -43,7 +43,7 @@ void Kernel::connectToPort() {
 	}
 
 	const auto portHandle = getPortHandle(port);
-	if (!portHandle.has_value()) {
+	if (!portHandle.has_value()) [[unlikely]] {
 		Helpers::panic("ConnectToPort: Port doesn't exist\n");
 		regs[0] = SVCResult::ObjectNotFound;
 		return;
@@ -52,6 +52,26 @@ void Kernel::connectToPort() {
 	// TODO: Actually create session
 	Handle sessionHandle = makeObject(KernelObjectType::Session);
 
+	// TODO: Should the result be written back to [r0]?
 	regs[0] = SVCResult::Success;
 	regs[1] = sessionHandle;
+}
+
+// Result SendSyncRequest(Handle session)
+void Kernel::sendSyncRequest() {
+	const auto handle = regs[0];
+	const auto session = getObject(handle, KernelObjectType::Session);
+	printf("SendSyncRequest(session handle = %d)\n", handle);
+
+	if (session == nullptr) [[unlikely]] {
+		Helpers::panic("SendSyncRequest: Invalid session handle");
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	const auto sessionData = static_cast<SessionData*>(session->data);
+	const u32 messagePointer = VirtualAddrs::TLSBase + 0x80;
+
+	Helpers::panic("SendSyncRequest: Message header: %08X", mem.read32(messagePointer));
+	regs[0] = SVCResult::Success;
 }

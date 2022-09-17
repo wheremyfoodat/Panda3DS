@@ -8,6 +8,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x21: createAddressArbiter(); break;
 		case 0x23: svcCloseHandle(); break;
 		case 0x2D: connectToPort(); break;
+		case 0x32: sendSyncRequest(); break;
 		case 0x38: getResourceLimit(); break;
 		case 0x39: getResourceLimitLimitValues(); break;
 		case 0x3A: getResourceLimitCurrentValues(); break;
