@@ -11,9 +11,10 @@ namespace KernelHandles {
 		CurrentThread = 0xFFFF8000,  // Used by the original kernel
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
 		APT = 0xFFFF8002,            // App Title something service?
+		HID = 0xFFFF8003,            // Handles everything input-related including gyro
 
 		MinServiceHandle = APT,
-		MaxServiceHandle = APT
+		MaxServiceHandle = HID
 	};
 
 	// Returns whether "handle" belongs to one of the OS services
@@ -25,6 +26,7 @@ namespace KernelHandles {
 	static const char* getServiceName(Handle handle) {
 		switch (handle) {
 			case APT: return "APT";
+			case HID: return "HID";
 			default: return "Unknown";
 		}
 	}

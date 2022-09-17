@@ -1,9 +1,10 @@
 #include "services/service_manager.hpp"
 
-ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), apt(mem) {}
+ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), apt(mem), hid(mem) {}
 
 void ServiceManager::reset() {
 	apt.reset();
+	hid.reset();
 }
 
 // Match IPC messages to a "srv:" command based on their header
@@ -62,6 +63,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 
 	if (service == "APT:S") {
 		handle = KernelHandles::APT;
+	} else if (service == "hid:USER") {
+		handle = KernelHandles::HID;
 	} else {
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
 	}
@@ -73,6 +76,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
+		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n", handle);
 	}
 }

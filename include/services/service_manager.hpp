@@ -3,12 +3,14 @@
 #include "helpers.hpp"
 #include "memory.hpp"
 #include "services/apt.hpp"
+#include "services/hid.hpp"
 
 class ServiceManager {
 	std::array<u32, 16>& regs;
 	Memory& mem;
 
 	APTService apt;
+	HIDService hid;
 
 	// "srv:" commands
 	void getServiceHandle(u32 messagePointer);
