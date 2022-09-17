@@ -203,3 +203,19 @@ void* Memory::getWritePointer(u32 address) {
 	if (pointer == 0) return nullptr;
 	return (void*)(pointer + offset);
 }
+
+// Thank you Citra devs
+std::string Memory::readString(u32 address, u32 maxSize) {
+	std::string string;
+	string.reserve(maxSize);
+	
+	for (std::size_t i = 0; i < maxSize; ++i) {
+		char c = read8(address++);
+		if (c == '\0')
+			break;
+		string.push_back(c);
+	}
+	string.shrink_to_fit();
+
+	return string;
+}

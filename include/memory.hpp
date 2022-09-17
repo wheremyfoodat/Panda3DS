@@ -74,4 +74,6 @@ public:
 	static constexpr bool isAligned(u32 addr) {
 		return (addr & pageMask) == 0;
 	}
+
+	std::string readString(u32 vaddr, u32 maxCharacters);
 };

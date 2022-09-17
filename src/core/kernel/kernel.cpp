@@ -59,6 +59,7 @@ void Kernel::reset() {
 	}
 	objects.clear();
 	portHandles.clear();
+	serviceManager.reset();
 
 	// Allocate handle #0 to a dummy object and make a main process object
 	makeObject(KernelObjectType::Dummy);
@@ -66,6 +67,12 @@ void Kernel::reset() {
 
 	// Create global service manager port
 	makePort("srv:");
+}
+
+// Get pointer to thread-local storage
+// TODO: Every thread should have its own TLS. We need to adjust for this when we add threads
+u32 Kernel::getTLSPointer() {
+	return VirtualAddrs::TLSBase;
 }
 
 // Result CreateAddressArbiter(Handle* arbiter)

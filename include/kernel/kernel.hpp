@@ -6,6 +6,7 @@
 #include "kernel_types.hpp"
 #include "helpers.hpp"
 #include "memory.hpp"
+#include "services/service_manager.hpp"
 
 class Kernel {
 	std::array<u32, 16>& regs;
@@ -17,6 +18,7 @@ class Kernel {
 	std::vector<Handle> portHandles;
 
 	u32 currentProcess;
+	ServiceManager serviceManager;
 
 	// Get pointer to the object with the specified handle
 	KernelObject* getObject(u32 handle) {
@@ -49,12 +51,14 @@ class Kernel {
 
 	Handle makeProcess();
 	Handle makePort(const char* name);
+	Handle makeSession(Handle port);
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);
 
 	KernelObject* getProcessFromPID(Handle handle);
 	s32 getCurrentResourceValue(const KernelObject* limit, u32 resourceName);
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
+	u32 getTLSPointer();
 	std::string getProcessName(u32 pid);
 
 	// SVC implementations
@@ -68,7 +72,7 @@ class Kernel {
 	void connectToPort();
 
 public:
-	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0) {
+	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0), serviceManager(regs, mem) {
 		objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
 		portHandles.reserve(32);
 	}

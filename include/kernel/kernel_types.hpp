@@ -57,15 +57,21 @@ struct ProcessData {
     ResourceLimits limits;
 };
 
+enum class PortType {
+    Generic,
+    ServiceManager // For the service manager port "srv:"
+};
+
 struct PortData {
     static constexpr u32 maxNameLen = 11;
 
     char name[maxNameLen + 1] = {};
     bool isPublic = false; // Setting name=NULL creates a private port not accessible from svcConnectToPort.
+    PortType type = PortType::Generic;
 };
 
 struct SessionData {
-
+    Handle portHandle; // The port this session is subscribed to
 };
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {

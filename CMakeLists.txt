@@ -44,17 +44,16 @@ else()
     message(FATAL_ERROR "THIS IS NOT x64 WAIT FOR THE KVM IMPLEMENTATION")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp src/core/elf.cpp
-                 
-                 )
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp src/core/elf.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
                         src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
 )
+set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp)
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel/kernel.hpp
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
-                 include/kernel/config_mem.hpp
+                 include/kernel/config_mem.hpp include/services/service_manager.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -69,7 +68,8 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
 source_group("Source Files\\Core\\Kernel" FILES ${KERNEL_SOURCE_FILES})
+source_group("Source Files\\Core\\Services" FILES ${SERVICE_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
-add_executable(Alber ${SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+add_executable(Alber ${SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(Alber PRIVATE sfml-system sfml-network sfml-graphics sfml-window dynarmic)
