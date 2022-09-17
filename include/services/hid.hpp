@@ -7,6 +7,9 @@ class HIDService {
 	Handle handle = KernelHandles::HID;
 	Memory& mem;
 
+	// Service commands
+	void getIPCHandles(u32 messagePointer);
+
 public:
 	HIDService(Memory& mem) : mem(mem) {}
 	void reset();

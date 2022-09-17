@@ -64,7 +64,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	if (service == "APT:S") {
 		handle = KernelHandles::APT;
 	} else if (service == "hid:USER") {
-		handle = KernelHandles::HID;
+		handle = KernelHandles::HID;	
 	} else {
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
 	}
@@ -77,6 +77,6 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
-		default: Helpers::panic("Sent IPC message to unknown service %08X\n", handle);
+		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
 }
