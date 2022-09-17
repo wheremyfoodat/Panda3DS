@@ -5,9 +5,11 @@ namespace SVCResult {
 	enum : u32 {
 		Success = 0,
 		Failure = 0xFFFFFFFF,
+        ObjectNotFound = 0xD88007FA,
         // Different calls return a different value
         BadHandle = 0xD8E007F7,
-        BadHandleAlt = 0xD9001BF7
+        BadHandleAlt = 0xD9001BF7,
+        PortNameTooLong = 0xE0E0181E
 	};
 }
 
@@ -19,7 +21,7 @@ namespace KernelHandles {
 }
 
 enum class KernelObjectType : u8 {
-    ResourceLimit, Process
+    Port, Process, ResourceLimit, Session, Dummy
 };
 
 enum class ResourceLimitCategory : int {
@@ -55,10 +57,24 @@ struct ProcessData {
     ResourceLimits limits;
 };
 
+struct PortData {
+    static constexpr u32 maxNameLen = 11;
+
+    char name[maxNameLen + 1] = {};
+    bool isPublic = false; // Setting name=NULL creates a private port not accessible from svcConnectToPort.
+};
+
+struct SessionData {
+
+};
+
 static const char* kernelObjectTypeToString(KernelObjectType t) {
     switch (t) {
+        case KernelObjectType::Port: return "port";
         case KernelObjectType::Process: return "process";
         case KernelObjectType::ResourceLimit: return "resource limit";
+        case KernelObjectType::Session: return "session";
+        case KernelObjectType::Dummy: return "dummy";
         default: return "unknown";
     }
 }

@@ -48,7 +48,7 @@ set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src
                  
                  )
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
-                        src/core/kernel/memory_management.cpp
+                        src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
 )
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp

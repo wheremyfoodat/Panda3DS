@@ -14,6 +14,7 @@ class Kernel {
 	// The handle number for the next kernel object to be created
 	u32 handleCounter;
 	std::vector<KernelObject> objects;
+	std::vector<Handle> portHandles;
 
 	u32 currentProcess;
 
@@ -47,6 +48,10 @@ class Kernel {
 	}
 
 	Handle makeProcess();
+	Handle makePort(const char* name);
+	std::optional<Handle> getPortHandle(const char* name);
+	void deleteObjectData(KernelObject& object);
+
 	KernelObject* getProcessFromPID(Handle handle);
 	s32 getCurrentResourceValue(const KernelObject* limit, u32 resourceName);
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
@@ -64,6 +69,7 @@ class Kernel {
 public:
 	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0) {
 		objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
+		portHandles.reserve(32);
 	}
 	void serviceSVC(u32 svc);
 	void reset();

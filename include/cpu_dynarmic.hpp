@@ -130,7 +130,6 @@ public:
     void runFrame() {
         env.ticksLeft = 268111856 / 60;
         const auto exitReason = jit->Run();
-        for (u32 i = 0; i < 4; i++)printf("r%d: %08X\n", i, getReg(i));
         Helpers::panic("Exit reason: %d\nPC: %08X", (u32)exitReason, getReg(15));
     }
 };

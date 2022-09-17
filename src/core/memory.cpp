@@ -2,7 +2,6 @@
 #include "config_mem.hpp"
 #include <cassert>
 
-
 Memory::Memory() {
 	fcram = new uint8_t[FCRAM_SIZE]();
 	readTable.resize(totalPageCount, 0);

@@ -39,18 +39,32 @@ KernelObject* Kernel::getProcessFromPID(Handle handle) {
 	}
 }
 
+void Kernel::deleteObjectData(KernelObject& object) {
+	// Resource limit and dummy objects do not allocate heap data, so we don't delete anything
+	if (object.type == KernelObjectType::ResourceLimit || object.type == KernelObjectType::Dummy) {
+		return;
+	}
+
+	if (object.data != nullptr) {
+		delete object.data;
+	}
+}
+
 void Kernel::reset() {
 	handleCounter = 0;
 
 	for (auto& object : objects) {
-		if (object.data != nullptr) {
-			delete object.data;
-		}
+		deleteObjectData(object);
 	}
 	objects.clear();
+	portHandles.clear();
 
-	// Make a main process object
+	// Allocate handle #0 to a dummy object and make a main process object
+	makeObject(KernelObjectType::Dummy);
 	currentProcess = makeProcess();
+
+	// Create global service manager port
+	makePort("srv:");
 }
 
 // Result CreateAddressArbiter(Handle* arbiter)
@@ -63,14 +77,6 @@ void Kernel::createAddressArbiter() {
 void Kernel::svcCloseHandle() {
 	printf("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
 	regs[0] = SVCResult::Success;
-}
-
-void Kernel::connectToPort() {
-	const u32 handlePointer = regs[0];
-	const char* port = static_cast<const char*>(mem.getReadPointer(regs[1]));
-
-	printf("ConnectToPort(handle pointer = %08X, port = \"%s\")\n", handlePointer, port);
-	Helpers::panic("Unimplemented IPC");
 }
 
 std::string Kernel::getProcessName(u32 pid) {
