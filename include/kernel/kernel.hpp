@@ -40,7 +40,7 @@ class Kernel {
 	}
 
 	Handle makeObject(KernelObjectType type) {
-		if (handleCounter == std::numeric_limits<Handle>::max()) [[unlikely]] {
+		if (handleCounter > KernelHandles::Max) [[unlikely]] {
 			Helpers::panic("Hlep we somehow created enough kernel objects to overflow this thing");
 		}
 
@@ -52,6 +52,7 @@ class Kernel {
 	Handle makeProcess();
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
+
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);
 

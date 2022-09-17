@@ -3,7 +3,7 @@
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem) {}
 
 void ServiceManager::reset() {
-
+	apt.reset();
 }
 
 // Match IPC messages to a "srv:" command based on their header
@@ -26,12 +26,16 @@ namespace Commands {
 	};
 }
 
+namespace Result {
+	enum : u32 {
+		Success = 0
+	};
+}
+
 // Handle an IPC message issued using the SendSyncRequest SVC
 // The parameters are stored in thread-local storage in this format: https://www.3dbrew.org/wiki/IPC#Message_Structure
-// TLSPointer: The base pointer for this thread's thread-local storage
-void ServiceManager::handleSyncRequest(u32 TLSPointer) {
-	// The message is stored at TLS+0x80 in this format: https://www.3dbrew.org/wiki/IPC#Message_Structure
-	const u32 messagePointer = TLSPointer + 0x80;
+// messagePointer: The base pointer for the IPC message
+void ServiceManager::handleSyncRequest(u32 messagePointer) {
 	const u32 header = mem.read32(messagePointer);
 
 	switch (header) {
@@ -41,19 +45,34 @@ void ServiceManager::handleSyncRequest(u32 TLSPointer) {
 	}
 }
 
+// https://www.3dbrew.org/wiki/SRV:RegisterClient
 void ServiceManager::registerClient(u32 messagePointer) {
 	printf("srv: registerClient (Stubbed)\n");
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
+// https://www.3dbrew.org/wiki/SRV:GetServiceHandle
 void ServiceManager::getServiceHandle(u32 messagePointer) {
-	printf("srv: getServiceHandle\n");
+	u32 nameLength = mem.read32(messagePointer + 12);
+	u32 flags = mem.read32(messagePointer + 16);
+	u32 handle = 0;
 
-	std::string myBalls;
-	myBalls.resize(8);
+	std::string service = mem.readString(messagePointer + 4, 8);
+	printf("srv: getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
-	for (int i = 0; i < 8; i++) {
-		myBalls[i] = mem.read8(messagePointer + 4 + i);
+	if (service == "APT:S") {
+		handle = KernelHandles::APT;
+	} else {
+		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
 	}
 
-	std::cout << "Requested handle for service " << myBalls << "\n";
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 12, handle);
+}
+
+void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
+	switch (handle) {
+		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
+		default: Helpers::panic("Sent IPC message to unknown service %08X\n", handle);
+	}
 }

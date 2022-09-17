@@ -41,14 +41,14 @@ KernelObject* Kernel::getProcessFromPID(Handle handle) {
 }
 
 void Kernel::deleteObjectData(KernelObject& object) {
-	// Resource limit and dummy objects do not allocate heap data, so we don't delete anything
-	if (object.type == KernelObjectType::ResourceLimit || object.type == KernelObjectType::Dummy) {
+	using enum KernelObjectType;
+
+	// Resource limit, service and dummy objects do not allocate heap data, so we don't delete anything
+	if (object.data == nullptr || object.type == ResourceLimit || object.type == Dummy) {
 		return;
 	}
 
-	if (object.data != nullptr) {
-		delete object.data;
-	}
+	delete object.data;
 }
 
 void Kernel::reset() {

@@ -1,4 +1,5 @@
 #pragma once
+#include "handles.hpp"
 #include "helpers.hpp"
 
 namespace SVCResult {
@@ -10,13 +11,6 @@ namespace SVCResult {
         BadHandle = 0xD8E007F7,
         BadHandleAlt = 0xD9001BF7,
         PortNameTooLong = 0xE0E0181E
-	};
-}
-
-namespace KernelHandles {
-	enum : u32 {
-		CurrentThread = 0xFFFF8000,
-		CurrentProcess = 0xFFFF8001
 	};
 }
 
@@ -43,8 +37,6 @@ enum ResourceTypes {
     ADDRESS_ARBITER = 8,
     CPU_TIME = 9
 };
-
-using Handle = u32;
 
 struct ResourceLimits {
     Handle handle;

@@ -91,11 +91,21 @@ void Kernel::connectToPort() {
 }
 
 // Result SendSyncRequest(Handle session)
+// Send an IPC message to a port (typically "srv:") or a service
 void Kernel::sendSyncRequest() {
 	const auto handle = regs[0];
-	const auto session = getObject(handle, KernelObjectType::Session);
-	printf("SendSyncRequest(session handle = %d)\n", handle);
+	u32 messagePointer = getTLSPointer() + 0x80; // The message is stored starting at TLS+0x80
 
+	printf("SendSyncRequest(session handle = %X)\n", handle);
+
+	// The sync request is being sent at a service rather than whatever port, so have the service manager intercept it
+	if (KernelHandles::isServiceHandle(handle)) {
+		serviceManager.sendCommandToService(messagePointer, handle);
+		regs[0] = SVCResult::Success;
+		return;
+	}
+
+	const auto session = getObject(handle, KernelObjectType::Session);
 	if (session == nullptr) [[unlikely]] {
 		Helpers::panic("SendSyncRequest: Invalid session handle");
 		regs[0] = SVCResult::BadHandle;
@@ -107,7 +117,7 @@ void Kernel::sendSyncRequest() {
 	const auto portData = static_cast<PortData*>(port.data);
 
 	if (portData->type == PortType::ServiceManager) { // Special-case SendSyncRequest targetting "srv:"
-		serviceManager.handleSyncRequest(getTLSPointer());
+		serviceManager.handleSyncRequest(messagePointer);
 	} else {
 		Helpers::panic("SendSyncRequest targetting port %s\n", portData->name);
 	}
