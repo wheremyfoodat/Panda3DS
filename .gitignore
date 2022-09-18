@@ -52,3 +52,8 @@ fb.bat
 *.nam
 *.til
 *.idb
+
+# 3DS files
+*.3dsx
+*.elf
+*.smdh
