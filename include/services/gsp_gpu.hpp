@@ -16,6 +16,7 @@ class GPUService {
 	void acquireRight(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
 	void writeHwRegs(u32 messagePointer);
+	void writeHwRegsWithMask(u32 messagePointer);
 
 public:
 	GPUService(Memory& mem, u32& currentPID) : mem(mem), currentPID(currentPID) {}
