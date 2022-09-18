@@ -26,11 +26,49 @@ namespace VirtualAddrs {
 	};
 }
 
+// Types for svcQueryMemory
+namespace KernelMemoryTypes {
+	// This makes no sense
+	enum MemoryState : u32 {
+		Free = 0,
+		Reserved = 1,
+		IO = 2,
+		Static = 3,
+		Code = 4,
+		Private = 5,
+		Shared = 6,
+		Continuous = 7,
+		Aliased = 8,
+		Alias = 9,
+		AliasCode = 10,
+		Locked = 11,
+
+		PERMISSION_R = 1 << 0,
+		PERMISSION_W = 1 << 1,
+		PERMISSION_X = 1 << 2
+	};
+	
+	// I assume this is referring to a single piece of allocated memory? If it's for pages, it makes no sense.
+	// If it's for multiple allocations, it also makes no sense
+	struct MemoryInfo {
+		u32 baseVaddr; // Base process virtual address. TODO: What even is this
+		u32 size;      // Of what?
+		u32 perms;     // Is this referring to a single page or?
+		u32 state;
+
+		u32 end() { return baseVaddr + size; }
+		MemoryInfo(u32 baseVaddr, u32 size, u32 perms, u32 state) : baseVaddr(baseVaddr), size(size)
+			, perms(perms), state(state) {}
+	};
+}
+
 class Memory {
 	u8* fcram;
 
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
 	std::vector<uintptr_t> readTable, writeTable;
+	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
+
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
 	static constexpr u32 pageMask = pageSize - 1;
@@ -76,4 +114,5 @@ public:
 	}
 
 	std::string readString(u32 vaddr, u32 maxCharacters);
+	KernelMemoryTypes::MemoryInfo queryMemory(u32 vaddr);
 };

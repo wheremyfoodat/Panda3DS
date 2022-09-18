@@ -68,3 +68,25 @@ void Kernel::controlMemory() {
 
 	regs[0] = SVCResult::Success;
 }
+
+// Result QueryMemory(MemoryInfo* memInfo, PageInfo* pageInfo, u32 addr)
+void Kernel::queryMemory() {
+	const u32 memInfo = regs[0];
+	const u32 pageInfo = regs[1];
+	const u32 addr = regs[2];
+
+	if (addr & 0xfff) {
+		Helpers::panic("QueryMemory: Address not page aligned\n");
+	}
+
+	printf("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
+
+	const auto info = mem.queryMemory(addr);
+	regs[0] = SVCResult::Success;
+
+	mem.write32(memInfo, info.baseVaddr); // Set memInfo->baseVaddr
+	mem.write32(memInfo + 4, info.size); // Set memInfo->size
+	mem.write32(memInfo + 8, info.baseVaddr); // Set memInfo->perms
+	mem.write32(memInfo + 12, info.state); // Set memInfo->state
+	mem.write32(pageInfo, 0); // Set pageInfo->flags to 0
+}

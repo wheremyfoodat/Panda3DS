@@ -69,6 +69,8 @@ class Kernel {
 	void createAddressArbiter();
 	void createEvent();
 	void controlMemory();
+	void mapMemoryBlock();
+	void queryMemory();
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();

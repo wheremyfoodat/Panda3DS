@@ -12,7 +12,7 @@ namespace GPUCommands {
 namespace Result {
 	enum : u32 {
 		Success = 0,
-		SuccessRegisterIRQ = 0x2A07
+		SuccessRegisterIRQ = 0x2A07 // TODO: Is this a reference to the Ricoh 2A07 used in PAL NES systems?
 	};
 }
 

@@ -2,14 +2,18 @@
 #include "config_mem.hpp"
 #include <cassert>
 
+using namespace KernelMemoryTypes;
+
 Memory::Memory() {
 	fcram = new uint8_t[FCRAM_SIZE]();
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
+	memoryInfo.reserve(32); // Pre-allocate some room for memory allocation info to avoid dynamic allocs
 }
 
 void Memory::reset() {
 	// Unallocate all memory
+	memoryInfo.clear();
 	usedFCRAMPages.reset();
 	usedUserMemory = 0_MB;
 
@@ -76,13 +80,17 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 		if (w) {
 			writeTable[virtualPage] = uintptr_t(&fcram[physPage * pageSize]);
 		}
-		
+
 		// Mark FCRAM page as allocated and go on
 		usedFCRAMPages[physPage] = true;
 		virtualPage++;
 		physPage++;
 	}
-	
+
+	// Back up the info for this allocation in our memoryInfo vector
+	u32 perms = (r ? PERMISSION_R : 0) | (w ? PERMISSION_W : 0) | (x ? PERMISSION_X : 0);
+	memoryInfo.push_back(std::move(MemoryInfo(vaddr, size, perms, KernelMemoryTypes::Reserved)));
+
 	return vaddr;
 }
 
@@ -218,4 +226,20 @@ std::string Memory::readString(u32 address, u32 maxSize) {
 	string.shrink_to_fit();
 
 	return string;
+}
+
+// The way I understand how the kernel's QueryMemory is supposed to work is that you give it a vaddr
+// And the kernel looks up the memory allocations it's performed, finds which one it belongs in and returns its info?
+// TODO: Verify this
+MemoryInfo Memory::queryMemory(u32 vaddr) {
+	// Check each allocation
+	for (auto& alloc : memoryInfo) {
+		// Check if the memory address belongs in this allocation and return the info if so
+		if (vaddr >= alloc.baseVaddr && vaddr < alloc.end()) {
+			return alloc;
+		}
+	}
+
+	// Otherwise, if this vaddr was never allocated
+	return MemoryInfo(vaddr, 0, 0, KernelMemoryTypes::Free);
 }
