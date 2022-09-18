@@ -45,11 +45,12 @@ std::optional<u32> Memory::loadELF(std::ifstream& file) {
             Helpers::warn("Rounding ELF segment size to %08X\n", memorySize);
         }
 
+        // This should also assert that findPaddr doesn't fail
         u32 fcramAddr = findPaddr(memorySize).value();
         std::memcpy(&fcram[fcramAddr], data, fileSize);
 
         // Allocate the segment on the OS side
-        allocateMemory(vaddr, fcramAddr, memorySize, true);
+        allocateMemory(vaddr, fcramAddr, memorySize, true, r, w, x);
     }
 
     return static_cast<u32>(reader.get_entry());

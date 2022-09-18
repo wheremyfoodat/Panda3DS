@@ -55,7 +55,7 @@ void Kernel::controlMemory() {
 
 	switch (operation & 0xFF) {
 		case Operation::Commit: {
-			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear);
+			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear, r, w, x);
 			if (!address.has_value())
 				Helpers::panic("ControlMemory: Failed to allocate memory");
 
