@@ -4,6 +4,7 @@
 #include "memory.hpp"
 #include "services/apt.hpp"
 #include "services/hid.hpp"
+#include "services/fs.hpp"
 
 class ServiceManager {
 	std::array<u32, 16>& regs;
@@ -11,6 +12,7 @@ class ServiceManager {
 
 	APTService apt;
 	HIDService hid;
+	FSService fs;
 
 	// "srv:" commands
 	void getServiceHandle(u32 messagePointer);

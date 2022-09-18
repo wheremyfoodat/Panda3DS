@@ -12,9 +12,10 @@ namespace KernelHandles {
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
 		APT = 0xFFFF8002,            // App Title something service?
 		HID = 0xFFFF8003,            // Handles everything input-related including gyro
+		FS  = 0xFFFF8004,            // Filesystem service
 
 		MinServiceHandle = APT,
-		MaxServiceHandle = HID
+		MaxServiceHandle = FS
 	};
 
 	// Returns whether "handle" belongs to one of the OS services
@@ -27,6 +28,7 @@ namespace KernelHandles {
 		switch (handle) {
 			case APT: return "APT";
 			case HID: return "HID";
+			case FS: return "FS";
 			default: return "Unknown";
 		}
 	}
