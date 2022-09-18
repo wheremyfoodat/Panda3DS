@@ -71,6 +71,7 @@ class Kernel {
 	void sendSyncRequest();
 	void svcCloseHandle();
 	void connectToPort();
+	void outputDebugString();
 
 public:
 	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0), serviceManager(regs, mem) {
