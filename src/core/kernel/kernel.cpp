@@ -5,6 +5,7 @@
 void Kernel::serviceSVC(u32 svc) {
 	switch (svc) {
 		case 0x01: controlMemory(); break;
+		case 0x17: createEvent(); break;
 		case 0x21: createAddressArbiter(); break;
 		case 0x23: svcCloseHandle(); break;
 		case 0x2D: connectToPort(); break;

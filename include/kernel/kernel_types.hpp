@@ -15,7 +15,7 @@ namespace SVCResult {
 }
 
 enum class KernelObjectType : u8 {
-    Port, Process, ResourceLimit, Session, Dummy
+    Event, Port, Process, ResourceLimit, Session, Dummy
 };
 
 enum class ResourceLimitCategory : int {
@@ -68,6 +68,7 @@ struct SessionData {
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {
     switch (t) {
+        case KernelObjectType::Event: return "event";
         case KernelObjectType::Port: return "port";
         case KernelObjectType::Process: return "process";
         case KernelObjectType::ResourceLimit: return "resource limit";

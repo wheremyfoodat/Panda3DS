@@ -49,6 +49,7 @@ class Kernel {
 		return handleCounter++;
 	}
 
+	Handle makeEvent(u32 resetType);
 	Handle makeProcess();
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
@@ -63,8 +64,9 @@ class Kernel {
 	std::string getProcessName(u32 pid);
 
 	// SVC implementations
-	void controlMemory();
 	void createAddressArbiter();
+	void createEvent();
+	void controlMemory();
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();
