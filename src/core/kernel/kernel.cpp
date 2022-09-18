@@ -88,8 +88,8 @@ void Kernel::svcCloseHandle() {
 	regs[0] = SVCResult::Success;
 }
 
-// OutputDebugString(const char* str, int size)
-// TODO: Does this actually write an error code in r0?
+// Result OutputDebugString(const char* str, s32 size)
+// TODO: Does this actually write an error code in r0 and is the above signature correct?
 void Kernel::outputDebugString() {
 	const u32 pointer = regs[0];
 	const u32 size = regs[1];
