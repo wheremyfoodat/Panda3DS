@@ -331,6 +331,17 @@ namespace OpenGL {
         }
     };
 
+    enum DepthFunc {
+        Never = GL_NEVER,       // Depth test never passes
+        Always = GL_ALWAYS,     // Depth test always passes
+        Equal = GL_EQUAL,       // Depth test passes if frag z == depth buffer z
+        NotEqual = GL_NOTEQUAL, // Depth test passes if frag z != depth buffer z
+        Less = GL_LESS,         // Depth test passes if frag z < depth buffer z
+        Lequal = GL_LEQUAL,     // Depth test passes if frag z <= depth buffer z
+        Greater = GL_GREATER,   // Depth test passes if frag z > depth buffer z
+        Gequal = GL_GEQUAL,     // Depth test passes if frag z >= depth buffer z 
+    };
+
     static void setClearColor(float val) { glClearColor(val, val, val, val); }
     static void setClearColor(float r, float g, float b, float a) { glClearColor(r, g, b, a); }
     static void setClearDepth(float depth) { glClearDepthf(depth); }
@@ -358,6 +369,8 @@ namespace OpenGL {
     static void disableDepth() { glDisable(GL_DEPTH_TEST); }
     static void enableStencil() { glEnable(GL_STENCIL_TEST); }
     static void disableStencil() { glDisable(GL_STENCIL_TEST); }
+
+    static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
 
     enum Primitives {
         Triangle = GL_TRIANGLES,

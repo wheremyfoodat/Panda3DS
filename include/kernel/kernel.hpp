@@ -74,7 +74,8 @@ class Kernel {
 	void outputDebugString();
 
 public:
-	Kernel(std::array<u32, 16>& regs, Memory& mem) : regs(regs), mem(mem), handleCounter(0), serviceManager(regs, mem) {
+	Kernel(std::array<u32, 16>& regs, Memory& mem) 
+		: regs(regs), mem(mem), handleCounter(0), serviceManager(regs, mem, currentProcess) {
 		objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
 		portHandles.reserve(32);
 	}
