@@ -49,7 +49,7 @@ class Kernel {
 		return handleCounter++;
 	}
 
-	Handle makeEvent(u32 resetType);
+	Handle makeEvent(ResetType resetType);
 	Handle makeProcess();
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
@@ -61,7 +61,9 @@ class Kernel {
 	s32 getCurrentResourceValue(const KernelObject* limit, u32 resourceName);
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
 	u32 getTLSPointer();
+
 	std::string getProcessName(u32 pid);
+	const char* resetTypeToString(u32 type);
 
 	// SVC implementations
 	void createAddressArbiter();

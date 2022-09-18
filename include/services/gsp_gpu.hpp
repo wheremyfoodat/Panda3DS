@@ -14,6 +14,7 @@ class GPUService {
 
 	// Service commands
 	void acquireRight(u32 messagePointer);
+	void registerInterruptRelayQueue(u32 messagePointer);
 
 public:
 	GPUService(Memory& mem, u32& currentPID) : mem(mem), currentPID(currentPID) {}

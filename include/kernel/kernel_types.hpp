@@ -38,6 +38,13 @@ enum ResourceTypes {
     CPU_TIME = 9
 };
 
+// Reset types (for use with events and timers)
+enum ResetType {
+    RESET_ONESHOT = 0, // When the primitive is signaled, it will wake up exactly one thread and will clear itself automatically.
+    RESET_STICKY = 1, // When the primitive is signaled, it will wake up all threads and it won't clear itself automatically.
+    RESET_PULSE = 2, // Only meaningful for timers: same as ONESHOT but it will periodically signal the timer instead of just once.
+};
+
 struct ResourceLimits {
     Handle handle;
 
@@ -47,6 +54,10 @@ struct ResourceLimits {
 struct ProcessData {
     // Resource limits for this process
     ResourceLimits limits;
+};
+
+struct EventData {
+    ResetType resetType = RESET_ONESHOT;
 };
 
 enum class PortType {
