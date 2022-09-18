@@ -5,6 +5,8 @@
 #include "services/apt.hpp"
 #include "services/hid.hpp"
 #include "services/fs.hpp"
+#include "services/gsp_gpu.hpp"
+#include "services/gsp_lcd.hpp"
 
 class ServiceManager {
 	std::array<u32, 16>& regs;
@@ -13,6 +15,8 @@ class ServiceManager {
 	APTService apt;
 	HIDService hid;
 	FSService fs;
+	GPUService gsp_gpu;
+	LCDService gsp_lcd;
 
 	// "srv:" commands
 	void getServiceHandle(u32 messagePointer);

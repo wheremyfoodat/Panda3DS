@@ -13,9 +13,11 @@ namespace KernelHandles {
 		APT = 0xFFFF8002,            // App Title something service?
 		HID = 0xFFFF8003,            // Handles everything input-related including gyro
 		FS  = 0xFFFF8004,            // Filesystem service
+		GPU = 0xFFFF8005,            // GPU service
+		LCD = 0xFFFF8006,            // LCD service
 
 		MinServiceHandle = APT,
-		MaxServiceHandle = FS
+		MaxServiceHandle = LCD
 	};
 
 	// Returns whether "handle" belongs to one of the OS services
@@ -29,6 +31,8 @@ namespace KernelHandles {
 			case APT: return "APT";
 			case HID: return "HID";
 			case FS: return "FS";
+			case GPU: return "GPU";
+			case LCD: return "LCD";
 			default: return "Unknown";
 		}
 	}
