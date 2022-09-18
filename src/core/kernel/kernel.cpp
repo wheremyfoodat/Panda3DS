@@ -95,7 +95,7 @@ void Kernel::outputDebugString() {
 	const u32 size = regs[1];
 
 	std::string message = mem.readString(pointer, size);
-	printf("OutputDebugString(message = \"%s\")\n", message.c_str());
+	printf("[OutputDebugString] %s\n", message.c_str());
 	regs[0] = SVCResult::Success;
 }
 
