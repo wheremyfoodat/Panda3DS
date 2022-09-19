@@ -17,7 +17,9 @@ class Kernel {
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 
-	u32 currentProcess;
+	Handle currentProcess;
+	Handle currentThread;
+	u32 threadCount;
 	ServiceManager serviceManager;
 
 	// Get pointer to the object with the specified handle
@@ -53,6 +55,7 @@ class Kernel {
 	Handle makeProcess();
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
+	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id);
 
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);
@@ -68,6 +71,7 @@ class Kernel {
 	// SVC implementations
 	void createAddressArbiter();
 	void createEvent();
+	void createThread();
 	void controlMemory();
 	void mapMemoryBlock();
 	void queryMemory();

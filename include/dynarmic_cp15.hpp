@@ -23,8 +23,12 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
 
     CallbackOrAccessOneWord CompileSendOneWord(bool two, unsigned opc1, CoprocReg CRn,
         CoprocReg CRm, unsigned opc2) override {
+        if (!two && opc1 == 0 && CRn == CoprocReg::C7 && CRm == CoprocReg::C10 && opc2 == 4) {
+            return &dummy; // Normally inserts a "Data Synchronization Barrier"
+        }
+
         if (!two && opc1 == 0 && CRn == CoprocReg::C7 && CRm == CoprocReg::C10 && opc2 == 5) {
-            return &dummy; // TODO: Find out what this is. Some sort of memory barrier reg.
+            return &dummy; // Normally inserts a "Data Memory Barrier"
         }
         Helpers::panic("CP15: CompileSendOneWord\nopc1: %d CRn: %d CRm: %d opc2: %d\n", opc1, (int)CRn, (int)CRm, opc2);
     }

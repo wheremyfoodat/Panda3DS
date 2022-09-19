@@ -5,6 +5,8 @@ void Emulator::reset() {
     cpu.reset();
     kernel.reset();
 
+    // Reloading r13 and r15 needs to happen after everything has been reset
+    // Otherwise resetting the kernel or cpu might nuke them
     cpu.setReg(13, VirtualAddrs::StackTop); // Set initial SP
     if (romType == ROMType::ELF) { // Reload ELF if we're using one
         loadELF(loadedROM);

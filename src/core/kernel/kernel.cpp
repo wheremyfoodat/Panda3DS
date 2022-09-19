@@ -6,6 +6,7 @@ void Kernel::serviceSVC(u32 svc) {
 	switch (svc) {
 		case 0x01: controlMemory(); break;
 		case 0x02: queryMemory(); break;
+		case 0x08: createThread(); break;
 		case 0x17: createEvent(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
@@ -57,6 +58,7 @@ void Kernel::deleteObjectData(KernelObject& object) {
 
 void Kernel::reset() {
 	handleCounter = 0;
+	threadCount = 0;
 
 	for (auto& object : objects) {
 		deleteObjectData(object);
@@ -68,6 +70,9 @@ void Kernel::reset() {
 	// Allocate handle #0 to a dummy object and make a main process object
 	makeObject(KernelObjectType::Dummy);
 	currentProcess = makeProcess();
+	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
+	// Main thread seems to have a priority of 0x30
+	currentThread = makeThread(0, 0, 0x30, 0);
 
 	// Create global service manager port
 	makePort("srv:");

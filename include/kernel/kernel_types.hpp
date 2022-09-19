@@ -10,12 +10,14 @@ namespace SVCResult {
         // Different calls return a different value
         BadHandle = 0xD8E007F7,
         BadHandleAlt = 0xD9001BF7,
-        PortNameTooLong = 0xE0E0181E
+
+        BadThreadPriority = 0xE0E01BFD,
+        PortNameTooLong = 0xE0E0181E,
 	};
 }
 
 enum class KernelObjectType : u8 {
-    Event, Port, Process, ResourceLimit, Session, Dummy
+    Event, Port, Process, ResourceLimit, Session, Thread, Dummy
 };
 
 enum class ResourceLimitCategory : int {
@@ -84,6 +86,7 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
         case KernelObjectType::Process: return "process";
         case KernelObjectType::ResourceLimit: return "resource limit";
         case KernelObjectType::Session: return "session";
+        case KernelObjectType::Thread: return "thread";
         case KernelObjectType::Dummy: return "dummy";
         default: return "unknown";
     }
