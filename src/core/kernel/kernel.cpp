@@ -10,6 +10,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x17: createEvent(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
+		case 0x22: arbitrateAddress(); break;
 		case 0x23: svcCloseHandle(); break;
 		case 0x2D: connectToPort(); break;
 		case 0x32: sendSyncRequest(); break;
@@ -58,6 +59,7 @@ void Kernel::deleteObjectData(KernelObject& object) {
 
 void Kernel::reset() {
 	handleCounter = 0;
+	arbiterCount = 0;
 	threadCount = 0;
 
 	for (auto& object : objects) {
@@ -83,12 +85,6 @@ void Kernel::reset() {
 // TODO: Every thread should have its own TLS. We need to adjust for this when we add threads
 u32 Kernel::getTLSPointer() {
 	return VirtualAddrs::TLSBase;
-}
-
-// Result CreateAddressArbiter(Handle* arbiter)
-void Kernel::createAddressArbiter() {
-	printf("Stubbed call to CreateAddressArbiter. Handle address: %08X\n", regs[0]);
-	regs[0] = SVCResult::Success;
 }
 
 // Result CloseHandle(Handle handle)

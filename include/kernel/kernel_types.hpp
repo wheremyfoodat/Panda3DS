@@ -88,7 +88,13 @@ struct Session {
 };
 
 struct Thread {
+    u32 initialSP;  // Initial r13 value
+    u32 entrypoint; // Initial r15 value
+    u32 priority;
+    u32 processorID;
 
+    Thread(u32 initialSP, u32 entrypoint, u32 priority, u32 processorID) : initialSP(initialSP), entrypoint(entrypoint),
+        priority(priority), processorID(processorID) {}
 };
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {

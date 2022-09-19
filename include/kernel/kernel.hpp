@@ -21,11 +21,12 @@ class Kernel {
 	Handle currentThread;
 	Handle mainThread;
 	Handle srvHandle; // Handle for the special service manager port "srv:"
+	u32 arbiterCount;
 	u32 threadCount;
 	ServiceManager serviceManager;
 
 	// Get pointer to the object with the specified handle
-	KernelObject* getObject(u32 handle) {
+	KernelObject* getObject(Handle handle) {
 		// Accessing an object that has not been created
 		if (handle >= objects.size()) [[unlikely]] {
 			return nullptr;
@@ -35,7 +36,7 @@ class Kernel {
 	}
 
 	// Get pointer to the object with the specified handle and type
-	KernelObject* getObject(u32 handle, KernelObjectType type) {
+	KernelObject* getObject(Handle handle, KernelObjectType type) {
 		if (handle >= objects.size() || objects[handle].type != type) [[unlikely]] {
 			return nullptr;
 		}
@@ -53,6 +54,7 @@ class Kernel {
 		return handleCounter++;
 	}
 
+	Handle makeArbiter();
 	Handle makeEvent(ResetType resetType);
 	Handle makeProcess();
 	Handle makePort(const char* name);
@@ -71,6 +73,7 @@ class Kernel {
 	const char* resetTypeToString(u32 type);
 
 	// SVC implementations
+	void arbitrateAddress();
 	void createAddressArbiter();
 	void createEvent();
 	void createThread();

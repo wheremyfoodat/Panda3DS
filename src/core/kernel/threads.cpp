@@ -8,8 +8,9 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id) {
 	}
 	threadCount++;
 
-	// TODO: Actually create the thread
-	return makeObject(KernelObjectType::Thread);
+	Handle ret = makeObject(KernelObjectType::Thread);
+	objects[ret].data = new Thread(initialSP, entrypoint, priority, id);
+	return ret;
 }
 
 // Result CreateThread(s32 priority, ThreadFunc entrypoint, u32 arg, u32 stacktop, s32 threadPriority, s32 processorID)	

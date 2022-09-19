@@ -25,7 +25,6 @@ void Kernel::createEvent() {
 
 	printf("CreateEvent(handle pointer = %08X, resetType = %s)\n", outPointer, resetTypeToString(resetType));
 
-	Handle handle = makeEvent(static_cast<ResetType>(resetType));
 	regs[0] = SVCResult::Success;
-	regs[1] = handle;
+	regs[1] = makeEvent(static_cast<ResetType>(resetType));
 }

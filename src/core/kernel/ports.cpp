@@ -56,7 +56,7 @@ void Kernel::connectToPort() {
 	}
 
 	Handle portHandle = optionalHandle.value();
-	printf("ConnectToPort(handle pointer = %08X, port = \"%s\")\n", handlePointer, port.c_str());
+	printf("ConnectToPort(handle pointer = %X, port = \"%s\")\n", handlePointer, port.c_str());
 
 	const auto portData = objects[portHandle].getData<Port>();
 	if (!portData->isPublic) {
