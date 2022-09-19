@@ -55,7 +55,7 @@ void Kernel::controlMemory() {
 
 	switch (operation & 0xFF) {
 		case Operation::Commit: {
-			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear, r, w, x);
+			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear, r, w, x, true);
 			if (!address.has_value())
 				Helpers::panic("ControlMemory: Failed to allocate memory");
 
@@ -70,6 +70,7 @@ void Kernel::controlMemory() {
 }
 
 // Result QueryMemory(MemoryInfo* memInfo, PageInfo* pageInfo, u32 addr)
+// TODO: Is this SVC supposed to write to memory or...?
 void Kernel::queryMemory() {
 	const u32 memInfo = regs[0];
 	const u32 pageInfo = regs[1];
@@ -83,10 +84,38 @@ void Kernel::queryMemory() {
 
 	const auto info = mem.queryMemory(addr);
 	regs[0] = SVCResult::Success;
+	regs[1] = info.baseAddr;
+	regs[2] = info.size;
+	regs[3] = info.perms;
+	regs[4] = info.state;
+	regs[5] = 0; // page flags
 
-	mem.write32(memInfo, info.baseVaddr); // Set memInfo->baseVaddr
+	/*
+	mem.write32(memInfo, info.baseAddr); // Set memInfo->baseVaddr
 	mem.write32(memInfo + 4, info.size); // Set memInfo->size
-	mem.write32(memInfo + 8, info.baseVaddr); // Set memInfo->perms
+	mem.write32(memInfo + 8, info.perms); // Set memInfo->perms
 	mem.write32(memInfo + 12, info.state); // Set memInfo->state
 	mem.write32(pageInfo, 0); // Set pageInfo->flags to 0
+	*/
+}
+
+// Result MapMemoryBlock(Handle memblock, u32 addr, MemoryPermission myPermissions, MemoryPermission otherPermission)	
+void Kernel::mapMemoryBlock() {
+	const Handle block = regs[0];
+	const u32 addr = regs[1];
+	const u32 myPerms = regs[2];
+	const u32 otherPerms = regs[3];
+	printf("MapMemoryBlock(block = %d, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
+
+	if (!isAligned(addr)) [[unlikely]] {
+		Helpers::panic("MapMemoryBlock: Unaligned address");
+	}
+
+	if (block == KernelHandles::GSPSharedMemHandle) {
+		mem.mapGSPSharedMemory(addr, myPerms, otherPerms);
+	} else {
+		Helpers::panic("MapMemoryBlock where the handle does not refer to GSP memory");
+	}
+
+	regs[0] = SVCResult::Success;
 }

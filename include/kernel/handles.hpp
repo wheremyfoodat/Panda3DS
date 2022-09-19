@@ -17,7 +17,9 @@ namespace KernelHandles {
 		LCD = 0xFFFF8006,            // LCD service
 
 		MinServiceHandle = APT,
-		MaxServiceHandle = LCD
+		MaxServiceHandle = LCD,
+
+		GSPSharedMemHandle = MaxServiceHandle + 1 // Handle for the GSP shared memory
 	};
 
 	// Returns whether "handle" belongs to one of the OS services

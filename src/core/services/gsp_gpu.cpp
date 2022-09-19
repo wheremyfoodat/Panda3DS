@@ -58,9 +58,9 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 	printf("GSP::GPU::RegisterInterruptRelayQueue (flags = %X, event handle = %X)\n", flags, eventHandle);
 
 	mem.write32(messagePointer + 4, Result::SuccessRegisterIRQ);
-	mem.write32(messagePointer + 8, 0); // TODO: GSP module thread index
+	mem.write32(messagePointer + 8, 79797979); // TODO: GSP module thread index
 	mem.write32(messagePointer + 12, 0); // Translation descriptor
-	mem.write32(messagePointer + 16, 0); // TODO: shared memory handle
+	mem.write32(messagePointer + 16, KernelHandles::GSPSharedMemHandle); // TODO: GSP shared memory handle
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {
