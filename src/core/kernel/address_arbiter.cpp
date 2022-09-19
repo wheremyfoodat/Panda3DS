@@ -34,7 +34,7 @@ void Kernel::arbitrateAddress() {
 	const Handle handle = regs[0];
 	const u32 address = regs[1];
 	const u32 type = regs[2];
-	const u32 value = regs[3];
+	const s32 value = regs[3];
 	const s64 ns = s64(u64(regs[4]) | (u64(regs[5]) << 32));
 
 	printf("ArbitrateAddress(Handle = %X, address = %08X, type = %s, value = %d, ns = %lld)\n", handle, address,
@@ -46,13 +46,25 @@ void Kernel::arbitrateAddress() {
 		return;
 	}
 
-	if (value > 4) {
-		Helpers::panic("ArbitrateAddress: invalid arbitration type");
+	if (address & 3) {
+		Helpers::panic("ArbitrateAddres:: Unaligned address");
+	}
+
+	if (value > 4) [[unlikely]] {
+		regs[0] = SVCResult::InvalidEnumValueAlt;
+		return;
 	}
 
 	switch (static_cast<ArbitrationType>(type)) {
-		case ArbitrationType::WaitIfLess:
-			Helpers::panic("Uwu");
+		// Puts this thread to sleep if word < value until another thread signals the address with the type SIGNAL
+		case ArbitrationType::WaitIfLess: {
+			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed 
+			if (word < value) {
+				Helpers::panic("Needa sleep");
+			}
+			break;
+		}
+
 		default:
 			Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
 	}

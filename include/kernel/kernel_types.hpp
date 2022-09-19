@@ -8,12 +8,16 @@ namespace SVCResult {
 		Success = 0,
 		Failure = 0xFFFFFFFF,
         ObjectNotFound = 0xD88007FA,
-        // Different calls return a different value
+
+        // Different calls return a different value for these ones
+        InvalidEnumValue = 0xD8E007ED,
+        InvalidEnumValueAlt = 0xD8E093ED,
         BadHandle = 0xD8E007F7,
         BadHandleAlt = 0xD9001BF7,
 
         BadThreadPriority = 0xE0E01BFD,
         PortNameTooLong = 0xE0E0181E,
+
 	};
 }
 
