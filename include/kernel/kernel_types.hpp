@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include "handles.hpp"
 #include "helpers.hpp"
 
@@ -57,24 +58,33 @@ struct ResourceLimits {
     s32 currentCommit = 0;
 };
 
-struct ProcessData {
+struct Process {
     // Resource limits for this process
     ResourceLimits limits;
 };
 
-struct EventData {
+struct Event {
     ResetType resetType = RESET_ONESHOT;
+
+    Event(ResetType resetType) : resetType(resetType) {}
 };
 
-struct PortData {
+struct Port {
     static constexpr u32 maxNameLen = 11;
 
     char name[maxNameLen + 1] = {};
     bool isPublic = false; // Setting name=NULL creates a private port not accessible from svcConnectToPort.
+
+    Port(const char* name) {
+        // If the name is empty (ie the first char is the null terminator) then the port is private
+        isPublic = name[0] != '\0';
+        std::strncpy(this->name, name, maxNameLen);
+    }
 };
 
-struct SessionData {
+struct Session {
     Handle portHandle; // The port this session is subscribed to
+    Session(Handle portHandle) : portHandle(portHandle) {}
 };
 
 struct Thread {
@@ -106,4 +116,9 @@ struct KernelObject {
     // Our destructor does not free the data in order to avoid it being freed when our std::vector is expanded
     // Thus, the kernel needs to delete it when appropriate
     ~KernelObject() {}
+
+    template <typename T>
+    T* getData() {
+        return static_cast<T*>(data);
+    }
 };

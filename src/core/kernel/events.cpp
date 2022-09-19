@@ -11,11 +11,7 @@ const char* Kernel::resetTypeToString(u32 type) {
 
 Handle Kernel::makeEvent(ResetType resetType) {
 	Handle ret = makeObject(KernelObjectType::Event);
-	objects[ret].data = new EventData();
-
-	auto eventData = static_cast<EventData*>(objects[ret].data);
-	eventData->resetType = resetType;
-
+	objects[ret].data = new Event(resetType);
 	return ret;
 }
 

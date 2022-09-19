@@ -14,7 +14,7 @@ void Kernel::getResourceLimit() {
 		return;
 	}
 
-	const auto processData = static_cast<ProcessData*>(process->data);
+	const auto processData = static_cast<Process*>(process->data);
 
 	regs[0] = SVCResult::Success;
 	regs[1] = processData->limits.handle;

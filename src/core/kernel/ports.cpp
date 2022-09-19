@@ -4,13 +4,7 @@
 Handle Kernel::makePort(const char* name) {
 	Handle ret = makeObject(KernelObjectType::Port);
 	portHandles.push_back(ret); // Push the port handle to our cache of port handles
-
-	objects[ret].data = new PortData();
-	const auto data = static_cast<PortData*>(objects[ret].data);
-	std::strncpy(data->name, name, PortData::maxNameLen);
-
-	// If the name is empty (ie the first char is the null terminator) then the port is private
-	data->isPublic = name[0] != '\0';
+	objects[ret].data = new Port(name);
 
 	// printf("Created %s port \"%s\" with handle %d\n", data->isPublic ? "public" : "private", data->name, ret);
 	return ret;
@@ -24,11 +18,7 @@ Handle Kernel::makeSession(Handle portHandle) {
 
 	// Allocate data for session
 	const Handle ret = makeObject(KernelObjectType::Session);
-	objects[ret].data = new SessionData();
-	auto sessionData = static_cast<SessionData*>(objects[ret].data);
-
-	// Link session with its parent port
-	sessionData->portHandle = portHandle;
+	objects[ret].data = new Session(portHandle);
 	return ret;
 }
 
@@ -36,8 +26,8 @@ Handle Kernel::makeSession(Handle portHandle) {
 // If there's no such port, return nullopt
 std::optional<Handle> Kernel::getPortHandle(const char* name) {
 	for (auto handle : portHandles) {
-		const auto data = static_cast<PortData*>(objects[handle].data);
-		if (std::strncmp(name, data->name, PortData::maxNameLen) == 0) {
+		const auto data = objects[handle].getData<Port>();
+		if (std::strncmp(name, data->name, Port::maxNameLen) == 0) {
 			return handle;
 		}
 	}
@@ -49,9 +39,9 @@ std::optional<Handle> Kernel::getPortHandle(const char* name) {
 void Kernel::connectToPort() {
 	const u32 handlePointer = regs[0];
 	// Read up to max + 1 characters to see if the name is too long
-	std::string port = mem.readString(regs[1], PortData::maxNameLen + 1);
+	std::string port = mem.readString(regs[1], Port::maxNameLen + 1);
 
-	if (port.size() > PortData::maxNameLen) {
+	if (port.size() > Port::maxNameLen) {
 		Helpers::panic("ConnectToPort: Port name too long\n");
 		regs[0] = SVCResult::PortNameTooLong;
 		return;
@@ -68,7 +58,7 @@ void Kernel::connectToPort() {
 	Handle portHandle = optionalHandle.value();
 	printf("ConnectToPort(handle pointer = %08X, port = \"%s\")\n", handlePointer, port.c_str());
 
-	const auto portData = static_cast<PortData*>(objects[portHandle].data);
+	const auto portData = objects[portHandle].getData<Port>();
 	if (!portData->isPublic) {
 		Helpers::panic("ConnectToPort: Attempted to connect to private port");
 	}
@@ -102,13 +92,13 @@ void Kernel::sendSyncRequest() {
 		return;
 	}
 
-	const auto sessionData = static_cast<SessionData*>(session->data);
+	const auto sessionData = static_cast<Session*>(session->data);
 	const Handle portHandle = sessionData->portHandle;
 
 	if (portHandle == srvHandle) { // Special-case SendSyncRequest targetting the "srv: port"
 		serviceManager.handleSyncRequest(messagePointer);
 	} else {
-		const auto portData = static_cast<PortData*>(objects[portHandle].data);
+		const auto portData = objects[portHandle].getData<Port>();
 		Helpers::panic("SendSyncRequest targetting port %s\n", portData->name);
 	}
 

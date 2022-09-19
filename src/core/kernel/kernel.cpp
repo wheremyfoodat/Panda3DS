@@ -26,8 +26,8 @@ Handle Kernel::makeProcess() {
 	const Handle resourceLimitHandle = makeObject(KernelObjectType::ResourceLimit);
 
 	// Allocate data
-	objects[processHandle].data = new ProcessData();
-	const auto processData = static_cast<ProcessData*>(objects[processHandle].data);
+	objects[processHandle].data = new Process();
+	const auto processData = objects[processHandle].getData<Process>();
 
 	// Link resource limit object with its parent process
 	objects[resourceLimitHandle].data = &processData->limits;
