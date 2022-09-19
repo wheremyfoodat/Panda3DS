@@ -76,7 +76,7 @@ void Kernel::queryMemory() {
 	const u32 pageInfo = regs[1];
 	const u32 addr = regs[2];
 
-	if (addr & 0xfff) {
+	if (!isAligned(addr)) [[unlikely]] {
 		Helpers::panic("QueryMemory: Address not page aligned\n");
 	}
 
@@ -89,14 +89,6 @@ void Kernel::queryMemory() {
 	regs[3] = info.perms;
 	regs[4] = info.state;
 	regs[5] = 0; // page flags
-
-	/*
-	mem.write32(memInfo, info.baseAddr); // Set memInfo->baseVaddr
-	mem.write32(memInfo + 4, info.size); // Set memInfo->size
-	mem.write32(memInfo + 8, info.perms); // Set memInfo->perms
-	mem.write32(memInfo + 12, info.state); // Set memInfo->state
-	mem.write32(pageInfo, 0); // Set pageInfo->flags to 0
-	*/
 }
 
 // Result MapMemoryBlock(Handle memblock, u32 addr, MemoryPermission myPermissions, MemoryPermission otherPermission)	

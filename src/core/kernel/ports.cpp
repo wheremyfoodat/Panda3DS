@@ -12,14 +12,6 @@ Handle Kernel::makePort(const char* name) {
 	// If the name is empty (ie the first char is the null terminator) then the port is private
 	data->isPublic = name[0] != '\0';
 
-	// Check if this a special port (Like the service manager port) or not, and cache its type
-	if (std::strncmp(name, "srv:", PortData::maxNameLen) == 0) {
-		data->type = PortType::ServiceManager;
-	} else {
-		data->type = PortType::Generic;
-		Helpers::panic("Created generic port %s\n", name);
-	}
-
 	// printf("Created %s port \"%s\" with handle %d\n", data->isPublic ? "public" : "private", data->name, ret);
 	return ret;
 }
@@ -37,7 +29,6 @@ Handle Kernel::makeSession(Handle portHandle) {
 
 	// Link session with its parent port
 	sessionData->portHandle = portHandle;
-
 	return ret;
 }
 
@@ -85,7 +76,6 @@ void Kernel::connectToPort() {
 	// TODO: Actually create session
 	Handle sessionHandle = makeSession(portHandle);
 
-	// TODO: Should the result be written back to [r0]?
 	regs[0] = SVCResult::Success;
 	regs[1] = sessionHandle;
 }
@@ -113,12 +103,12 @@ void Kernel::sendSyncRequest() {
 	}
 
 	const auto sessionData = static_cast<SessionData*>(session->data);
-	const auto port = objects[sessionData->portHandle]; // Get parent port object
-	const auto portData = static_cast<PortData*>(port.data);
+	const Handle portHandle = sessionData->portHandle;
 
-	if (portData->type == PortType::ServiceManager) { // Special-case SendSyncRequest targetting "srv:"
+	if (portHandle == srvHandle) { // Special-case SendSyncRequest targetting the "srv: port"
 		serviceManager.handleSyncRequest(messagePointer);
 	} else {
+		const auto portData = static_cast<PortData*>(objects[portHandle].data);
 		Helpers::panic("SendSyncRequest targetting port %s\n", portData->name);
 	}
 

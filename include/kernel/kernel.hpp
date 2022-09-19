@@ -19,6 +19,8 @@ class Kernel {
 
 	Handle currentProcess;
 	Handle currentThread;
+	Handle mainThread;
+	Handle srvHandle; // Handle for the special service manager port "srv:"
 	u32 threadCount;
 	ServiceManager serviceManager;
 

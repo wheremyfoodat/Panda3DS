@@ -7,6 +7,7 @@ void Kernel::getResourceLimit() {
 	const auto handlePointer = regs[0];
 	const auto pid = regs[1];
 	const auto process = getProcessFromPID(pid);
+	printf("GetResourceLimit (handle pointer = %08X, process: %s)\n", handlePointer, getProcessName(pid).c_str());
 
 	if (process == nullptr) [[unlikely]] {
 		regs[0] = SVCResult::BadHandle;
@@ -15,10 +16,7 @@ void Kernel::getResourceLimit() {
 
 	const auto processData = static_cast<ProcessData*>(process->data);
 
-	printf("GetResourceLimit (handle pointer = %08X, process: %s)\n", handlePointer, getProcessName(pid).c_str());
-	mem.write32(handlePointer, processData->limits.handle);
 	regs[0] = SVCResult::Success;
-	// Is the handle meant to be output through both r1 and memory? Libctru breaks otherwise.
 	regs[1] = processData->limits.handle;
 }
 

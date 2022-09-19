@@ -17,7 +17,7 @@ namespace SVCResult {
 }
 
 enum class KernelObjectType : u8 {
-    Event, Port, Process, ResourceLimit, Session, Thread, Dummy
+    AddressArbiter, Event, Port, Process, ResourceLimit, Session, Thread, Dummy
 };
 
 enum class ResourceLimitCategory : int {
@@ -47,6 +47,10 @@ enum ResetType {
     RESET_PULSE = 2, // Only meaningful for timers: same as ONESHOT but it will periodically signal the timer instead of just once.
 };
 
+struct AddressArbiter {
+
+};
+
 struct ResourceLimits {
     Handle handle;
 
@@ -62,25 +66,24 @@ struct EventData {
     ResetType resetType = RESET_ONESHOT;
 };
 
-enum class PortType {
-    Generic,
-    ServiceManager // For the service manager port "srv:"
-};
-
 struct PortData {
     static constexpr u32 maxNameLen = 11;
 
     char name[maxNameLen + 1] = {};
     bool isPublic = false; // Setting name=NULL creates a private port not accessible from svcConnectToPort.
-    PortType type = PortType::Generic;
 };
 
 struct SessionData {
     Handle portHandle; // The port this session is subscribed to
 };
 
+struct Thread {
+
+};
+
 static const char* kernelObjectTypeToString(KernelObjectType t) {
     switch (t) {
+        case KernelObjectType::AddressArbiter: return "address arbiter";
         case KernelObjectType::Event: return "event";
         case KernelObjectType::Port: return "port";
         case KernelObjectType::Process: return "process";
