@@ -28,24 +28,19 @@ enum class ResourceLimitCategory : int {
     Misc = 3
 };
 
-enum ResourceTypes {
-    PRIORITY = 0,
-    COMMIT = 1,
-    THREAD = 2,
-    EVENT = 3,
-    MUTEX = 4,
-    SEMAPHORE = 5,
-    TIMER = 6,
-    SHARED_MEMORY = 7,
-    ADDRESS_ARBITER = 8,
-    CPU_TIME = 9
+// Reset types (for use with events and timers)
+enum class ResetType {
+    OneShot = 0, // When the primitive is signaled, it will wake up exactly one thread and will clear itself automatically.
+    Sticky = 1, // When the primitive is signaled, it will wake up all threads and it won't clear itself automatically.
+    Pulse = 2, // Only meaningful for timers: same as ONESHOT but it will periodically signal the timer instead of just once.
 };
 
-// Reset types (for use with events and timers)
-enum ResetType {
-    RESET_ONESHOT = 0, // When the primitive is signaled, it will wake up exactly one thread and will clear itself automatically.
-    RESET_STICKY = 1, // When the primitive is signaled, it will wake up all threads and it won't clear itself automatically.
-    RESET_PULSE = 2, // Only meaningful for timers: same as ONESHOT but it will periodically signal the timer instead of just once.
+enum class ArbitrationType {
+    Signal = 0,
+    WaitIfLess = 1,
+    DecrementAndWaitIfLess = 2,
+    WaitIfLessTimeout = 3,
+    DecrementAndWaitIfLessTimeout = 4
 };
 
 struct AddressArbiter {
@@ -64,7 +59,7 @@ struct Process {
 };
 
 struct Event {
-    ResetType resetType = RESET_ONESHOT;
+    ResetType resetType = ResetType::OneShot;
 
     Event(ResetType resetType) : resetType(resetType) {}
 };

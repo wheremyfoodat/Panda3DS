@@ -1,6 +1,17 @@
 #include "kernel.hpp"
 #include "resource_limits.hpp"
 
+static const char* arbitrationTypeToString(u32 type) {
+	switch (type) {
+		case 0: return "Signal";
+		case 1: return "Wait if less";
+		case 2: return "Decrement and wait if less";
+		case 3: return "Wait if less with timeout";
+		case 4: return "Decrement and wait if less with timeout";
+		default: return "Unknown arbitration type";
+	}
+}
+
 Handle Kernel::makeArbiter() {
 	if (arbiterCount >= appResourceLimits.maxAddressArbiters) {
 		Helpers::panic("Overflowed the number of address arbiters");
@@ -26,8 +37,8 @@ void Kernel::arbitrateAddress() {
 	const u32 value = regs[3];
 	const s64 ns = s64(u64(regs[4]) | (u64(regs[5]) << 32));
 
-	printf("ArbitrateAddress(Handle = %X, address = %08X, type = %d, value = %d, ns = %lld)\n", handle, address, type,
-		value, ns);
+	printf("ArbitrateAddress(Handle = %X, address = %08X, type = %s, value = %d, ns = %lld)\n", handle, address,
+		arbitrationTypeToString(type), value, ns);
 
 	const auto arbiter = getObject(handle, KernelObjectType::AddressArbiter);
 	if (arbiter == nullptr) [[unlikely]] {
@@ -35,6 +46,16 @@ void Kernel::arbitrateAddress() {
 		return;
 	}
 
-	Helpers::panic("My balls\n");
+	if (value > 4) {
+		Helpers::panic("ArbitrateAddress: invalid arbitration type");
+	}
+
+	switch (static_cast<ArbitrationType>(type)) {
+		case ArbitrationType::WaitIfLess:
+			Helpers::panic("Uwu");
+		default:
+			Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
+	}
+
 	regs[0] = SVCResult::Success;
 }

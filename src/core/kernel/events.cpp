@@ -2,9 +2,9 @@
 
 const char* Kernel::resetTypeToString(u32 type) {
 	switch (type) {
-		case 0: return "RESET_ONESHOT";
-		case 1: return "RESET_STICKY";
-		case 2: return "RESET_PULSE";
+		case 0: return "One shot";
+		case 1: return "Sticky";
+		case 2: return "Pulse";
 		default: return "Invalid";
 	}
 }
