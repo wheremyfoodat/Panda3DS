@@ -20,10 +20,12 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x02: queryMemory(); break;
 		case 0x08: createThread(); break;
 		case 0x17: createEvent(); break;
+		case 0x19: clearEvent(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
 		case 0x22: arbitrateAddress(); break;
 		case 0x23: svcCloseHandle(); break;
+		case 0x24: waitSynchronization1(); break;
 		case 0x2D: connectToPort(); break;
 		case 0x32: sendSyncRequest(); break;
 		case 0x38: getResourceLimit(); break;

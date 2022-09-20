@@ -28,3 +28,34 @@ void Kernel::createEvent() {
 	regs[0] = SVCResult::Success;
 	regs[1] = makeEvent(static_cast<ResetType>(resetType));
 }
+
+// Result ClearEvent(Handle event)	
+void Kernel::clearEvent() {
+	const Handle handle = regs[0];
+	const auto event = getObject(handle, KernelObjectType::Event);
+	printf("ClearEvent(event handle = %d)\n", event);
+
+	if (event == nullptr) [[unlikely]] {
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	event->getData<Event>()->fired = false;
+	regs[0] = SVCResult::Success;
+}
+
+// Result WaitSynchronization1(Handle handle, s64 timeout_nanoseconds)	
+void Kernel::waitSynchronization1() {
+	const Handle handle = regs[0];
+	const s64 ns = s64(u64(regs[1]) | (u64(regs[2]) << 32));
+	const auto event = getObject(handle, KernelObjectType::Event);
+
+	if (event == nullptr) [[unlikely]] {
+		Helpers::panic("WaitSynchronization1: Bad event handle");
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	printf("WaitSynchronization1(handle = %X, ns = %lld) (STUBBED)\n", handle, ns);
+	regs[0] = SVCResult::Success;
+}

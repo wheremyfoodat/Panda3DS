@@ -65,6 +65,7 @@ struct Process {
 
 struct Event {
     ResetType resetType = ResetType::OneShot;
+    bool fired = false;
 
     Event(ResetType resetType) : resetType(resetType) {}
 };

@@ -92,5 +92,5 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 
 	t.status = ThreadStatus::WaitArbiter;
 	t.waitingAddress = waitingAddress;
-	switchThread(1);
+	switchThread(1); // TODO: Properly change threads
 }

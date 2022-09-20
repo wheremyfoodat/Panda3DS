@@ -82,6 +82,7 @@ class Kernel {
 
 	// SVC implementations
 	void arbitrateAddress();
+	void clearEvent();
 	void createAddressArbiter();
 	void createEvent();
 	void createThread();
@@ -95,6 +96,7 @@ class Kernel {
 	void svcCloseHandle();
 	void connectToPort();
 	void outputDebugString();
+	void waitSynchronization1();
 
 public:
 	Kernel(CPU& cpu, Memory& mem);
