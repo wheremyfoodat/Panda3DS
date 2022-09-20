@@ -32,7 +32,7 @@ void Kernel::switchThread(int newThreadIndex) {
 }
 
 // Internal OS function to spawn a thread
-Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, ThreadStatus status) {
+Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg, ThreadStatus status) {
 	if (threadCount >= appResourceLimits.maxThreads) {
 		Helpers::panic("Overflowed the number of threads");
 	}
@@ -47,17 +47,21 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, T
 	t.fprs.fill(0);
 
 	t.initialSP = initialSP;
-	t.gprs[13] = initialSP;
 	t.entrypoint = entrypoint;
+
+	t.gprs[0] = arg;
+	t.gprs[13] = initialSP;
 	t.gprs[15] = entrypoint;
 	t.priority = priority;
 	t.processorID = id;
 	t.status = status;
 	t.handle = ret;
+	t.waitingAddress = 0;
 
 	t.cpsr = CPSR::UserMode | (isThumb ? CPSR::Thumb : 0);
 	t.fpscr = FPSCR::ThreadDefault;
 	// Initial TLS base has already been set in Kernel::Kernel()
+	// TODO: Does svcCreateThread zero-set the TLS of the new thread?
 
 	return ret;
 }
@@ -66,8 +70,9 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, T
 void Kernel::createThread() {
 	u32 priority = regs[0];
 	u32 entrypoint = regs[1];
+	u32 arg = regs[2]; // An argument value stored in r0 of the new thread
 	u32 initialSP = regs[3] & ~7; // SP is force-aligned to 8 bytes
-	u32 id = regs[4];
+	s32 id = static_cast<s32>(regs[4]);
 
 	printf("CreateThread(entry = %08X, stacktop = %08X, priority = %X, processor ID = %d)\n", entrypoint,
 		initialSP, priority, id);
@@ -79,7 +84,7 @@ void Kernel::createThread() {
 	}
 
 	regs[0] = SVCResult::Success;
-	regs[1] = makeThread(entrypoint, initialSP, priority, id);
+	regs[1] = makeThread(entrypoint, initialSP, priority, id, arg, ThreadStatus::Ready);
 }
 
 void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
@@ -87,5 +92,5 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 
 	t.status = ThreadStatus::WaitArbiter;
 	t.waitingAddress = waitingAddress;
-	Helpers::panic("AOWPWOOOPDQ");
+	switchThread(1);
 }

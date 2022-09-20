@@ -1,5 +1,6 @@
 #include "memory.hpp"
 #include "config_mem.hpp"
+#include "resource_limits.hpp"
 #include <cassert>
 
 using namespace KernelMemoryTypes;
@@ -27,9 +28,13 @@ void Memory::reset() {
 	u32 basePaddrForStack = FCRAM_APPLICATION_SIZE - VirtualAddrs::StackSize;
 	allocateMemory(VirtualAddrs::StackBottom, basePaddrForStack, VirtualAddrs::StackSize, true);
 
-	// And map 4KB of FCRAM before the stack for TLS
-	u32 basePaddrForTLS = basePaddrForStack - VirtualAddrs::TLSSize;
-	allocateMemory(VirtualAddrs::TLSBase, basePaddrForTLS, VirtualAddrs::TLSSize, true);
+	// And map (4 * 32)KB of FCRAM before the stack for the TLS of each thread
+	u32 basePaddrForTLS = basePaddrForStack;
+	for (int i = 0; i < appResourceLimits.maxThreads; i++) {
+		u32 vaddr = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
+		basePaddrForTLS -= VirtualAddrs::TLSSize;
+		allocateMemory(vaddr, basePaddrForTLS, VirtualAddrs::TLSSize, true);
+	}
 
 	// Reserve 4KB of memory for GSP shared memory
 	constexpr u32 gspMemSize = 0x1000;

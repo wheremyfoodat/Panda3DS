@@ -64,7 +64,7 @@ class Kernel {
 	Handle makeProcess();
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
-	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, ThreadStatus status = ThreadStatus::Dormant);
+	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
 
 	void sleepThreadOnArbiter(u32 waitingAddress);
 	void switchThread(int newThreadIndex);

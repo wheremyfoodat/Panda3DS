@@ -84,9 +84,11 @@ void Kernel::reset() {
 	// Allocate handle #0 to a dummy object and make a main process object
 	makeObject(KernelObjectType::Dummy);
 	currentProcess = makeProcess();
+
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
-	// Main thread seems to have a priority of 0x30
-	mainThread = makeThread(0, 0, 0x30, 0, ThreadStatus::Running);
+	// Main thread seems to have a priority of 0x30. TODO: This creates a dummy context for thread 0,
+	// which is thankfully not used. Maybe we should prevent this
+	mainThread = makeThread(0, 0, 0x30, -2, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
 
 	// Create global service manager port
