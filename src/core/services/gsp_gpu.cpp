@@ -5,7 +5,8 @@ namespace GPUCommands {
 		AcquireRight = 0x00160042,
 		RegisterInterruptRelayQueue = 0x00130042,
 		WriteHwRegs = 0x00010082,
-		WriteHwRegsWithMask = 0x00020084
+		WriteHwRegsWithMask = 0x00020084,
+		SetLCDForceBlack = 0x000B0040
 	};
 }
 
@@ -26,6 +27,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case GPUCommands::AcquireRight: acquireRight(messagePointer); break;
 		case GPUCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
+		case GPUCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
 		case GPUCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case GPUCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
 ;		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
@@ -144,4 +146,12 @@ void GPUService::writeHwRegsWithMask(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void GPUService::setLCDForceBlack(u32 messagePointer) {
+	u32 flag = mem.read32(messagePointer + 4);
+
+	if (flag != 0) {
+		printf("Filled both LCDs with black\n");
+	}
 }

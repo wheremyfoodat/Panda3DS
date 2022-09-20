@@ -67,6 +67,11 @@ void Kernel::arbitrateAddress() {
 			break;
 		}
 
+		case ArbitrationType::Signal:
+			printf("Broken ArbitrateAddress (type == SIGNAL)\n");
+			switchThread(0);
+			break;
+
 		default:
 			Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
 	}
