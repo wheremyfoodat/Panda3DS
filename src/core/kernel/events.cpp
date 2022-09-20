@@ -57,5 +57,6 @@ void Kernel::waitSynchronization1() {
 	}
 
 	printf("WaitSynchronization1(handle = %X, ns = %lld) (STUBBED)\n", handle, ns);
+	serviceManager.requestGPUInterrupt(GPUInterrupt::VBlank0);
 	regs[0] = SVCResult::Success;
 }

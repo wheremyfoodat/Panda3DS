@@ -105,6 +105,7 @@ void Kernel::mapMemoryBlock() {
 
 	if (block == KernelHandles::GSPSharedMemHandle) {
 		mem.mapGSPSharedMemory(addr, myPerms, otherPerms);
+		serviceManager.setGSPSharedMem(static_cast<u8*>(mem.getReadPointer(addr)));
 	} else {
 		Helpers::panic("MapMemoryBlock where the handle does not refer to GSP memory");
 	}

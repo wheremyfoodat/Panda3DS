@@ -29,4 +29,6 @@ public:
 
 	// Forward a SendSyncRequest IPC message to the service with the respective handle
 	void sendCommandToService(u32 messagePointer, Handle handle);
+	void requestGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }
+	void setGSPSharedMem(u8* ptr) { gsp_gpu.setSharedMem(ptr); }
 };

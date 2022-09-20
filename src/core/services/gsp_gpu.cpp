@@ -18,6 +18,7 @@ namespace Result {
 
 void GPUService::reset() {
 	privilegedProcess = 0xFFFFFFFF; // Set the privileged process to an invalid handle
+	sharedMem = nullptr;
 }
 
 void GPUService::handleSyncRequest(u32 messagePointer) {
@@ -61,6 +62,19 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 	mem.write32(messagePointer + 8, 0); // TODO: GSP module thread index
 	mem.write32(messagePointer + 12, 0); // Translation descriptor
 	mem.write32(messagePointer + 16, KernelHandles::GSPSharedMemHandle);
+}
+
+void GPUService::requestInterrupt(GPUInterrupt type) {
+	if (sharedMem == nullptr) [[unlikely]] { // Shared memory hasn't been set up yet
+		return;
+	}
+
+	u8 index = sharedMem[0];
+	u8& interruptCount = sharedMem[1];
+	u8 flagIndex = (index + interruptCount) % 0x34;
+	interruptCount++;
+	
+	sharedMem[0xC + flagIndex] = static_cast<u8>(type);
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {
