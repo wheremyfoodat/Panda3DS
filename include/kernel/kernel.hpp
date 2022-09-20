@@ -92,6 +92,7 @@ class Kernel {
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();
+	void getSystemTick();
 	void sendSyncRequest();
 	void svcCloseHandle();
 	void connectToPort();

@@ -13,6 +13,7 @@ class CPU;
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
 public:
     u64 ticksLeft = 0;
+    u64 totalTicks = 0;
     Memory& mem;
     Kernel& kernel;
 
@@ -80,6 +81,8 @@ public:
     }
 
     void AddTicks(u64 ticks) override {
+        totalTicks += ticks;
+
         if (ticks > ticksLeft) {
             ticksLeft = 0;
             return;
@@ -146,6 +149,10 @@ public:
     // Set the base pointer to thread-local storage, stored in a CP15 register on the 3DS
     void setTLSBase(u32 value) {
         cp15->setTLSBase(value);
+    }
+
+    u64 getTicks() {
+        return env.totalTicks;
     }
 
     void runFrame() {

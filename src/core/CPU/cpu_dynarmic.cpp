@@ -19,6 +19,7 @@ CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
 void CPU::reset() {
     setCPSR(CPSR::UserMode);
     setFPSCR(FPSCR::ThreadDefault);
+    env.totalTicks = 0;
 
     cp15->reset();
     cp15->setTLSBase(VirtualAddrs::TLSBase); // Set cp15 TLS pointer to the main thread's thread-local storage

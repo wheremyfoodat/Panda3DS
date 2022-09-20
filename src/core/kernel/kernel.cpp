@@ -26,6 +26,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x22: arbitrateAddress(); break;
 		case 0x23: svcCloseHandle(); break;
 		case 0x24: waitSynchronization1(); break;
+		case 0x28: getSystemTick(); break;
 		case 0x2D: connectToPort(); break;
 		case 0x32: sendSyncRequest(); break;
 		case 0x38: getResourceLimit(); break;
@@ -106,6 +107,15 @@ u32 Kernel::getTLSPointer() {
 void Kernel::svcCloseHandle() {
 	printf("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
 	regs[0] = SVCResult::Success;
+}
+
+// u64 GetSystemTick()
+void Kernel::getSystemTick() {
+	printf("GetSystemTick()\n");
+
+	u64 ticks = cpu.getTicks();
+	regs[0] = u32(ticks);
+	regs[1] = u32(ticks >> 32);
 }
 
 // Result OutputDebugString(const char* str, s32 size)
