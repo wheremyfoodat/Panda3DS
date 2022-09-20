@@ -33,7 +33,7 @@ void Kernel::createEvent() {
 void Kernel::clearEvent() {
 	const Handle handle = regs[0];
 	const auto event = getObject(handle, KernelObjectType::Event);
-	printf("ClearEvent(event handle = %d)\n", event);
+	printf("ClearEvent(event handle = %d)\n", handle);
 
 	if (event == nullptr) [[unlikely]] {
 		regs[0] = SVCResult::BadHandle;
@@ -58,5 +58,6 @@ void Kernel::waitSynchronization1() {
 
 	printf("WaitSynchronization1(handle = %X, ns = %lld) (STUBBED)\n", handle, ns);
 	serviceManager.requestGPUInterrupt(GPUInterrupt::VBlank0);
+	serviceManager.requestGPUInterrupt(GPUInterrupt::VBlank1);
 	regs[0] = SVCResult::Success;
 }
