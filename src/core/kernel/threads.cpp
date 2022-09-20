@@ -1,5 +1,6 @@
 #include <cstring>
 #include "kernel.hpp"
+#include "arm_defs.hpp"
 // This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each other
 #include "cpu.hpp"
 #include "resource_limits.hpp"

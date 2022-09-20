@@ -1,5 +1,6 @@
 #ifdef CPU_DYNARMIC
 #include "cpu_dynarmic.hpp"
+#include "arm_defs.hpp"
 
 CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
     cp15 = std::make_shared<CP15>();
@@ -16,8 +17,8 @@ CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
 }
 
 void CPU::reset() {
-    // ARM mode, all flags disabled, interrupts and aborts all enabled, user mode
-    setCPSR(0x00000010);
+    setCPSR(CPSR::UserMode);
+    setFPSCR(FPSCR::ThreadDefault);
 
     cp15->reset();
     cp15->setTLSBase(VirtualAddrs::TLSBase); // Set cp15 TLS pointer to the main thread's thread-local storage

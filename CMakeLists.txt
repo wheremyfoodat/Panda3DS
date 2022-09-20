@@ -59,7 +59,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
                  include/kernel/config_mem.hpp include/services/service_manager.hpp include/services/apt.hpp
                  include/kernel/handles.hpp include/services/hid.hpp include/services/fs.hpp
-                 include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp
+                 include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
