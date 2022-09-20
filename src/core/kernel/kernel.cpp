@@ -98,9 +98,8 @@ void Kernel::reset() {
 }
 
 // Get pointer to thread-local storage
-// TODO: Every thread should have its own TLS. We need to adjust for this when we add threads
 u32 Kernel::getTLSPointer() {
-	return VirtualAddrs::TLSBase;
+	return VirtualAddrs::TLSBase + currentThreadIndex * VirtualAddrs::TLSSize;
 }
 
 // Result CloseHandle(Handle handle)
