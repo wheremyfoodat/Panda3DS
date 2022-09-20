@@ -63,7 +63,16 @@ u8 Memory::read8(u32 vaddr) {
 }
 
 u16 Memory::read16(u32 vaddr) {
-	Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
+	const u32 page = vaddr >> pageShift;
+	const u32 offset = vaddr & pageMask;
+
+	uintptr_t pointer = readTable[page];
+	if (pointer != 0) [[likely]] {
+		return *(u16*)(pointer + offset);
+	}
+	else {
+		Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
+	}
 }
 
 u32 Memory::read32(u32 vaddr) {
