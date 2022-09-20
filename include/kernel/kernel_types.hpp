@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstring>
 #include "handles.hpp"
 #include "helpers.hpp"
@@ -101,11 +102,15 @@ struct Thread {
     u32 entrypoint; // Initial r15 value
     u32 priority;
     u32 processorID;
-
     ThreadStatus status;
+    Handle handle;  // OS handle for this thread
 
-    Thread(u32 initialSP, u32 entrypoint, u32 priority, u32 processorID, ThreadStatus status = ThreadStatus::Dormant)
-        : initialSP(initialSP), entrypoint(entrypoint), priority(priority), processorID(processorID), status(status) {}
+    // Thread context used for switching between threads
+    std::array<u32, 16> gprs;
+    std::array<u32, 32> fprs; // Stored as u32 because dynarmic does it
+    u32 cpsr;
+    u32 fpscr;
+    u32 tlsBase; // Base pointer for thread-local storage
 };
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {

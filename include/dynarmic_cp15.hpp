@@ -62,7 +62,10 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
     }
 
 public:
-    void reset() {
-        threadStoragePointer = VirtualAddrs::TLSBase;
+    void setTLSBase(u32 value) {
+        threadStoragePointer = value;
     }
+
+    // Currently does nothing but may be needed in the future
+    void reset() {}
 };

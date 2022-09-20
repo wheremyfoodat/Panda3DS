@@ -20,6 +20,7 @@ void CPU::reset() {
     setCPSR(0x00000010);
 
     cp15->reset();
+    cp15->setTLSBase(VirtualAddrs::TLSBase); // Set cp15 TLS pointer to the main thread's thread-local storage
     jit->Reset();
     jit->ClearCache();
     jit->Regs().fill(0);

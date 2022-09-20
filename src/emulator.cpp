@@ -59,5 +59,8 @@ bool Emulator::loadELF(std::ifstream& file) {
         return false;
 
     cpu.setReg(15, entrypoint.value()); // Set initial PC
+    if (entrypoint.value() & 1) {
+        Helpers::panic("Misaligned ELF entrypoint. TODO: Check if ELFs can boot in thumb mode");
+    }
     return true;
 }

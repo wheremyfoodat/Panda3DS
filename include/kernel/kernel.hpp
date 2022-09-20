@@ -6,6 +6,7 @@
 #include "kernel_types.hpp"
 #include "helpers.hpp"
 #include "memory.hpp"
+#include "resource_limits.hpp"
 #include "services/service_manager.hpp"
 
 class CPU;
@@ -17,12 +18,13 @@ class Kernel {
 
 	// The handle number for the next kernel object to be created
 	u32 handleCounter;
+	std::array<Thread, appResourceLimits.maxThreads> threads;
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 
 	Handle currentProcess;
-	Handle currentThread;
 	Handle mainThread;
+	int currentThreadIndex;
 	Handle srvHandle; // Handle for the special service manager port "srv:"
 	u32 arbiterCount;
 	u32 threadCount;
@@ -63,6 +65,8 @@ class Kernel {
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, ThreadStatus status = ThreadStatus::Dormant);
+
+	void switchThread(int newThreadIndex);
 
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);

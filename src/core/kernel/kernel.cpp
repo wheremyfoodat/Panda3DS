@@ -7,6 +7,11 @@ Kernel::Kernel(CPU& cpu, Memory& mem)
 	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, currentProcess) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
 	portHandles.reserve(32);
+
+	for (int i = 0; i < threads.size(); i++) {
+		threads[i].tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
+		threads[i].status = ThreadStatus::Dead;
+	}
 }
 
 void Kernel::serviceSVC(u32 svc) {
@@ -56,8 +61,8 @@ KernelObject* Kernel::getProcessFromPID(Handle handle) {
 void Kernel::deleteObjectData(KernelObject& object) {
 	using enum KernelObjectType;
 
-	// Resource limit, service and dummy objects do not allocate heap data, so we don't delete anything
-	if (object.data == nullptr || object.type == ResourceLimit || object.type == Dummy) {
+	// Resource limit and thread objects do not allocate heap data, so we don't delete anything
+	if (object.data == nullptr || object.type == ResourceLimit || object.type == Thread) {
 		return;
 	}
 
@@ -82,7 +87,7 @@ void Kernel::reset() {
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30
 	mainThread = makeThread(0, 0, 0x30, 0, ThreadStatus::Running);
-	currentThread = mainThread;
+	currentThreadIndex = 0;
 
 	// Create global service manager port
 	srvHandle = makePort("srv:");

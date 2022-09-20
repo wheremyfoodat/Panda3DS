@@ -1,17 +1,63 @@
+#include <cstring>
 #include "kernel.hpp"
 // This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each other
 #include "cpu.hpp"
 #include "resource_limits.hpp"
+
+// Switch to another thread
+// newThread: Index of the newThread in the thread array (NOT a handle).
+void Kernel::switchThread(int newThreadIndex) {
+	if (currentThreadIndex == newThreadIndex) { // Bail early if the new thread is actually the old thread
+		return;
+	}
+
+	auto& oldThread = threads[currentThreadIndex];
+	const auto& newThread = threads[newThreadIndex];
+
+	// Backup context
+	std::memcpy(&oldThread.gprs[0], &cpu.regs()[0], 16 * sizeof(u32)); // Backup the 16 GPRs
+	std::memcpy(&oldThread.fprs[0], &cpu.fprs()[0], 32 * sizeof(u32)); // Backup the 32 FPRs
+	oldThread.cpsr = cpu.getCPSR();   // Backup CPSR
+	oldThread.fpscr = cpu.getFPSCR(); // Backup FPSCR
+
+	// Load new context
+	std::memcpy(&cpu.regs()[0], &newThread.gprs[0], 16 * sizeof(u32)); // Load 16 GPRs
+	std::memcpy(&cpu.fprs()[0], &newThread.fprs[0], 32 * sizeof(u32)); // Load 32 FPRs
+	cpu.setCPSR(newThread.cpsr);   // Load CPSR
+	cpu.setFPSCR(newThread.fpscr); // Load FPSCR
+	cpu.setTLSBase(newThread.tlsBase); // Load CP15 thread-local-storage pointer register
+
+	currentThreadIndex = newThreadIndex;
+}
 
 // Internal OS function to spawn a thread
 Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, ThreadStatus status) {
 	if (threadCount >= appResourceLimits.maxThreads) {
 		Helpers::panic("Overflowed the number of threads");
 	}
-	threadCount++;
-
+	Thread& t = threads[threadCount++]; // Reference to thread data
 	Handle ret = makeObject(KernelObjectType::Thread);
-	objects[ret].data = new Thread(initialSP, entrypoint, priority, id, status);
+	objects[ret].data = &t;
+
+	const bool isThumb = (entrypoint & 1) != 0; // Whether the thread starts in thumb mode or not
+
+	// Set up initial thread context
+	t.gprs.fill(0);
+	t.fprs.fill(0);
+
+	t.initialSP = initialSP;
+	t.gprs[13] = initialSP;
+	t.entrypoint = entrypoint;
+	t.gprs[15] = entrypoint;
+	t.priority = priority;
+	t.processorID = id;
+	t.status = status;
+	t.handle = ret;
+
+	t.cpsr = CPSR::UserMode | (isThumb ? CPSR::Thumb : 0);
+	t.fpscr = FPSCR::ThreadDefault;
+	// Initial TLS base has already been set in Kernel::Kernel()
+
 	return ret;
 }
 

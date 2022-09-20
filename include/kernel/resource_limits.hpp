@@ -1,5 +1,5 @@
 #pragma once
-#include "kernel_types.hpp"
+#include "helpers.hpp"
 
 // Values and resource limit structure taken from Citra
 
