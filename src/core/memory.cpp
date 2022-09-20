@@ -302,7 +302,7 @@ void Memory::mapGSPSharedMemory(u32 vaddr, u32 myPerms, u32 otherPerms) {
 
 	// Wipe the GSP memory allocation from existence
 	gspMemIndex = std::nullopt;
-	//std::erase(lockedMemoryInfo, index);
+	lockedMemoryInfo.erase(lockedMemoryInfo.begin() + index);
 
 	if (myPerms == 0x10000000) {
 		myPerms = 3;

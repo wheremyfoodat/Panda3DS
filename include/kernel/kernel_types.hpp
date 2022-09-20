@@ -88,13 +88,13 @@ struct Session {
 };
 
 enum class ThreadStatus {
-    Running,      // Currently running
-    Ready,        // Ready to run
-    WaitArb,      // Waiting on an address arbiter
-    WaitSleep,    // Waiting due to a SleepThread SVC
-    WaitIPC,      // Waiting for the reply from an IPC request
-    Dormant,      // Created but not yet made ready
-    Dead          // Run to completion, or forcefully terminated
+    Running,     // Currently running
+    Ready,       // Ready to run
+    WaitArbiter, // Waiting on an address arbiter
+    WaitSleep,   // Waiting due to a SleepThread SVC
+    WaitIPC,     // Waiting for the reply from an IPC request
+    Dormant,     // Created but not yet made ready
+    Dead         // Run to completion, or forcefully terminated
 };
 
 struct Thread {
@@ -104,6 +104,9 @@ struct Thread {
     u32 processorID;
     ThreadStatus status;
     Handle handle;  // OS handle for this thread
+ 
+    // The waiting address for threads that are waiting on an AddressArbiter
+    u32 waitingAddress;
 
     // Thread context used for switching between threads
     std::array<u32, 16> gprs;

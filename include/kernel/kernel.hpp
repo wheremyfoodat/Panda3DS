@@ -66,6 +66,7 @@ class Kernel {
 	Handle makeSession(Handle port);
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, ThreadStatus status = ThreadStatus::Dormant);
 
+	void sleepThreadOnArbiter(u32 waitingAddress);
 	void switchThread(int newThreadIndex);
 
 	std::optional<Handle> getPortHandle(const char* name);

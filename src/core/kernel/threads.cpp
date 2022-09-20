@@ -81,3 +81,11 @@ void Kernel::createThread() {
 	regs[0] = SVCResult::Success;
 	regs[1] = makeThread(entrypoint, initialSP, priority, id);
 }
+
+void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
+	Thread& t = threads[currentThreadIndex];
+
+	t.status = ThreadStatus::WaitArbiter;
+	t.waitingAddress = waitingAddress;
+	Helpers::panic("AOWPWOOOPDQ");
+}
