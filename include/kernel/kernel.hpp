@@ -59,7 +59,7 @@ class Kernel {
 	Handle makeProcess();
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
-	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id);
+	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, ThreadStatus status = ThreadStatus::Dormant);
 
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);

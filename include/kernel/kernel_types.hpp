@@ -86,14 +86,26 @@ struct Session {
     Session(Handle portHandle) : portHandle(portHandle) {}
 };
 
+enum class ThreadStatus {
+    Running,      // Currently running
+    Ready,        // Ready to run
+    WaitArb,      // Waiting on an address arbiter
+    WaitSleep,    // Waiting due to a SleepThread SVC
+    WaitIPC,      // Waiting for the reply from an IPC request
+    Dormant,      // Created but not yet made ready
+    Dead          // Run to completion, or forcefully terminated
+};
+
 struct Thread {
     u32 initialSP;  // Initial r13 value
     u32 entrypoint; // Initial r15 value
     u32 priority;
     u32 processorID;
 
-    Thread(u32 initialSP, u32 entrypoint, u32 priority, u32 processorID) : initialSP(initialSP), entrypoint(entrypoint),
-        priority(priority), processorID(processorID) {}
+    ThreadStatus status;
+
+    Thread(u32 initialSP, u32 entrypoint, u32 priority, u32 processorID, ThreadStatus status = ThreadStatus::Dormant)
+        : initialSP(initialSP), entrypoint(entrypoint), priority(priority), processorID(processorID), status(status) {}
 };
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {

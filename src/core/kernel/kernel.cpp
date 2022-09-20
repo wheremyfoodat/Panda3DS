@@ -74,7 +74,7 @@ void Kernel::reset() {
 	currentProcess = makeProcess();
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30
-	mainThread = makeThread(0, 0, 0x30, 0);
+	mainThread = makeThread(0, 0, 0x30, 0, ThreadStatus::Running);
 	currentThread = mainThread;
 
 	// Create global service manager port

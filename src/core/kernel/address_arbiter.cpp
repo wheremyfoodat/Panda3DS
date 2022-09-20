@@ -46,7 +46,7 @@ void Kernel::arbitrateAddress() {
 		return;
 	}
 
-	if (address & 3) {
+	if (address & 3) [[unlikely]] {
 		Helpers::panic("ArbitrateAddres:: Unaligned address");
 	}
 

@@ -2,14 +2,14 @@
 #include "resource_limits.hpp"
 
 // Internal OS function to spawn a thread
-Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id) {
+Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, u32 id, ThreadStatus status) {
 	if (threadCount >= appResourceLimits.maxThreads) {
 		Helpers::panic("Overflowed the number of threads");
 	}
 	threadCount++;
 
 	Handle ret = makeObject(KernelObjectType::Thread);
-	objects[ret].data = new Thread(initialSP, entrypoint, priority, id);
+	objects[ret].data = new Thread(initialSP, entrypoint, priority, id, status);
 	return ret;
 }
 
@@ -23,7 +23,7 @@ void Kernel::createThread() {
 	printf("CreateThread(entry = %08X, stacktop = %08X, priority = %X, processor ID = %d)\n", entrypoint,
 		initialSP, priority, id);
 
-	if (!(priority <= 0x3F)) [[unlikely]] {
+	if (priority > 0x3F) [[unlikely]] {
 		Helpers::panic("Created thread with bad priority value %X", priority);
 		regs[0] = SVCResult::BadThreadPriority;
 		return;
