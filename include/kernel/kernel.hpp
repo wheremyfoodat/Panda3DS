@@ -8,8 +8,11 @@
 #include "memory.hpp"
 #include "services/service_manager.hpp"
 
+class CPU;
+
 class Kernel {
 	std::array<u32, 16>& regs;
+	CPU& cpu;
 	Memory& mem;
 
 	// The handle number for the next kernel object to be created
@@ -89,11 +92,7 @@ class Kernel {
 	void outputDebugString();
 
 public:
-	Kernel(std::array<u32, 16>& regs, Memory& mem) 
-		: regs(regs), mem(mem), handleCounter(0), serviceManager(regs, mem, currentProcess) {
-		objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
-		portHandles.reserve(32);
-	}
+	Kernel(CPU& cpu, Memory& mem);
 	void serviceSVC(u32 svc);
 	void reset();
 };

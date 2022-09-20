@@ -1,7 +1,7 @@
 #ifdef CPU_DYNARMIC
 #include "cpu_dynarmic.hpp"
 
-CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel) {
+CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
     cp15 = std::make_shared<CP15>();
 
     Dynarmic::A32::UserConfig config;

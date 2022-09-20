@@ -1,6 +1,13 @@
 #include <cassert>
 #include "kernel.hpp"
 #include "kernel_types.hpp"
+#include "cpu.hpp"
+
+Kernel::Kernel(CPU& cpu, Memory& mem)
+	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, currentProcess) {
+	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
+	portHandles.reserve(32);
+}
 
 void Kernel::serviceSVC(u32 svc) {
 	switch (svc) {

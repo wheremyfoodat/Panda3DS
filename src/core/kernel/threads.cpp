@@ -1,4 +1,6 @@
 #include "kernel.hpp"
+// This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each other
+#include "cpu.hpp"
 #include "resource_limits.hpp"
 
 // Internal OS function to spawn a thread

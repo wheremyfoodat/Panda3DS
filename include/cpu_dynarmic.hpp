@@ -8,6 +8,8 @@
 #include "kernel.hpp"
 #include "memory.hpp"
 
+class CPU;
+
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
 public:
     u64 ticksLeft = 0;
@@ -89,7 +91,7 @@ public:
         return ticksLeft;
     }
 
-    MyEnvironment(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
+    MyEnvironment(Memory& mem, Kernel& kernel, CPU& cpu) : mem(mem), kernel(kernel) {}
 };
 
 class CPU {
