@@ -6,6 +6,7 @@ namespace GPUCommands {
 		RegisterInterruptRelayQueue = 0x00130042,
 		WriteHwRegs = 0x00010082,
 		WriteHwRegsWithMask = 0x00020084,
+		FlushDataCache = 0x00080082,
 		SetLCDForceBlack = 0x000B0040
 	};
 }
@@ -26,6 +27,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case GPUCommands::AcquireRight: acquireRight(messagePointer); break;
+		case GPUCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case GPUCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
 		case GPUCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
 		case GPUCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
@@ -148,8 +150,16 @@ void GPUService::writeHwRegsWithMask(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void GPUService::flushDataCache(u32 messagePointer) {
+	u32 address = mem.read32(messagePointer + 4);
+	u32 size = mem.read32(messagePointer + 8);
+	u32 processHandle = handle = mem.read32(messagePointer + 16);
+	printf("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
+}
+
 void GPUService::setLCDForceBlack(u32 messagePointer) {
 	u32 flag = mem.read32(messagePointer + 4);
+	printf("GSP::GPU::SetLCDForceBlank(flag = %d)\n", flag);
 
 	if (flag != 0) {
 		printf("Filled both LCDs with black\n");

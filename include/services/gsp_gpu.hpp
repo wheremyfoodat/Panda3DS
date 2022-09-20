@@ -26,6 +26,7 @@ class GPUService {
 
 	// Service commands
 	void acquireRight(u32 messagePointer);
+	void flushDataCache(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
 	void setLCDForceBlack(u32 messagePointer);
 	void writeHwRegs(u32 messagePointer);
