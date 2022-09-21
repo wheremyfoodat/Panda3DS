@@ -84,7 +84,12 @@ u32 Memory::read32(u32 vaddr) {
 	if (pointer != 0) [[likely]] {
 		return *(u32*)(pointer + offset);
 	} else {
-		Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
+		switch (vaddr) {
+			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
+			default:
+				Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
+				break;
+		}
 	}
 }
 
