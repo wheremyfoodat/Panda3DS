@@ -24,7 +24,7 @@ void HIDService::handleSyncRequest(u32 messagePointer) {
 }
 
 void HIDService::getIPCHandles(u32 messagePointer) {
-	printf("HID: getIPCHandles (Failure)\n");
+	printf("HID::GetIPCHandles (Failure)\n");
 	mem.write32(messagePointer + 4, Result::Failure); // Result code
 	mem.write32(messagePointer + 8, 0x14000000); // Translation descriptor
 }

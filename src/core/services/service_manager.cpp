@@ -1,7 +1,7 @@
 #include "services/service_manager.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID)
-	: regs(regs), mem(mem), apt(mem), hid(mem), fs(mem), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem) {}
+	: regs(regs), mem(mem), apt(mem), hid(mem), fs(mem), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), ndm(mem) {}
 
 void ServiceManager::reset() {
 	apt.reset();
@@ -9,6 +9,7 @@ void ServiceManager::reset() {
 	fs.reset();
 	gsp_gpu.reset();
 	gsp_lcd.reset();
+	ndm.reset();
 }
 
 // Match IPC messages to a "srv:" command based on their header
@@ -44,6 +45,7 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 	const u32 header = mem.read32(messagePointer);
 
 	switch (header) {
+		case Commands::EnableNotification: enableNotification(messagePointer); break;
 		case Commands::RegisterClient: registerClient(messagePointer); break;
 		case Commands::GetServiceHandle: getServiceHandle(messagePointer); break;
 		default: Helpers::panic("Unknown \"srv:\" command: %08X", header);
@@ -52,7 +54,7 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 
 // https://www.3dbrew.org/wiki/SRV:RegisterClient
 void ServiceManager::registerClient(u32 messagePointer) {
-	printf("srv: registerClient (Stubbed)\n");
+	printf("srv::registerClient (Stubbed)\n");
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -63,9 +65,11 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	u32 handle = 0;
 
 	std::string service = mem.readString(messagePointer + 4, 8);
-	printf("srv: getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
+	printf("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
 	if (service == "APT:S") {
+		handle = KernelHandles::APT;
+	} else if (service == "APT:A") { // TODO: APT:A and APT:S are slightly different
 		handle = KernelHandles::APT;
 	} else if (service == "hid:USER") {
 		handle = KernelHandles::HID;	
@@ -75,12 +79,23 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::GPU;
 	} else if (service == "gsp::Lcd") {
 		handle = KernelHandles::LCD;
-	} else {
+	} else if (service == "ndm:u") {
+		handle = KernelHandles::NDM;
+	}else {
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
 	}
 
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 12, handle);
+}
+
+void ServiceManager::enableNotification(u32 messagePointer) {
+	printf("srv::EnableNotification()\n");
+
+	mem.write32(messagePointer + 4, Result::Success); // Result code
+	mem.write32(messagePointer + 8, 0); // Translation descriptor
+	// TODO: Unstub. Handle to semaphore signaled on process notification
+	mem.write32(messagePointer + 12, 0x69696979);
 }
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
@@ -90,6 +105,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::FS: fs.handleSyncRequest(messagePointer); break;
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
+		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
 }

@@ -7,6 +7,7 @@
 #include "services/fs.hpp"
 #include "services/gsp_gpu.hpp"
 #include "services/gsp_lcd.hpp"
+#include "services/ndm.hpp"
 
 class ServiceManager {
 	std::array<u32, 16>& regs;
@@ -17,8 +18,10 @@ class ServiceManager {
 	FSService fs;
 	GPUService gsp_gpu;
 	LCDService gsp_lcd;
+	NDMService ndm;
 
 	// "srv:" commands
+	void enableNotification(u32 messagePointer);
 	void getServiceHandle(u32 messagePointer);
 	void registerClient(u32 messagePointer);
 

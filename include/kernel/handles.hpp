@@ -15,9 +15,10 @@ namespace KernelHandles {
 		FS  = 0xFFFF8004,            // Filesystem service
 		GPU = 0xFFFF8005,            // GPU service
 		LCD = 0xFFFF8006,            // LCD service
+		NDM = 0xFFFF8007,            // ?????
 
 		MinServiceHandle = APT,
-		MaxServiceHandle = LCD,
+		MaxServiceHandle = NDM,
 
 		GSPSharedMemHandle = MaxServiceHandle + 1 // Handle for the GSP shared memory
 	};
