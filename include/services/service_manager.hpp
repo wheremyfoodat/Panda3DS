@@ -23,7 +23,7 @@ class ServiceManager {
 	void registerClient(u32 messagePointer);
 
 public:
-	ServiceManager(std::array<u32, 16>& regs, Memory& mem, u32& currentPID);
+	ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID);
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 

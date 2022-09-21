@@ -4,7 +4,8 @@
 #include <fstream>
 
 #include "cpu.hpp"
-#include "helpers.hpp"
+#include "gpu.hpp"
+#include "memory.hpp"
 #include "opengl.hpp"
 #include "SFML/Window.hpp"
 #include "SFML/Graphics.hpp"
@@ -15,6 +16,7 @@ enum class ROMType {
 
 class Emulator {
     CPU cpu;
+    GPU gpu;
     Memory memory;
     Kernel kernel;
 
@@ -28,7 +30,7 @@ class Emulator {
 
 public:
     Emulator() : window(sf::VideoMode(width, height), "Alber", sf::Style::Default, sf::ContextSettings(0, 0, 0, 4, 3)),
-                 kernel(cpu, memory), cpu(memory, kernel) {
+                 kernel(cpu, memory, gpu), cpu(memory, kernel) {
         reset();
         window.setActive(true);
     }

@@ -1,8 +1,9 @@
 #pragma once
+#include <cstring>
+#include "gpu.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "memory.hpp"
-#include <cstring>
 
 enum class GPUInterrupt : u8 {
 	PSC0 = 0, // Memory fill completed
@@ -17,6 +18,7 @@ enum class GPUInterrupt : u8 {
 class GPUService {
 	Handle handle = KernelHandles::GPU;
 	Memory& mem;
+	GPU& gpu;
 	u32& currentPID; // Process ID of the current process
 	u8* sharedMem; // Pointer to GSP shared memory
 
@@ -24,16 +26,22 @@ class GPUService {
 	// This is the PID of that process
 	u32 privilegedProcess;
 
+	void processCommands();
+
 	// Service commands
 	void acquireRight(u32 messagePointer);
 	void flushDataCache(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
 	void setLCDForceBlack(u32 messagePointer);
+	void triggerCmdReqQueue(u32 messagePointer);
 	void writeHwRegs(u32 messagePointer);
 	void writeHwRegsWithMask(u32 messagePointer);
 
+	// GPU commands processed via TriggerCmdReqQueue
+	void memoryFill(u32* cmd);
+
 public:
-	GPUService(Memory& mem, u32& currentPID) : mem(mem), currentPID(currentPID) {}
+	GPUService(Memory& mem, GPU& gpu, u32& currentPID) : mem(mem), gpu(gpu), currentPID(currentPID) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	void requestInterrupt(GPUInterrupt type);

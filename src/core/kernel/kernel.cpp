@@ -3,8 +3,8 @@
 #include "kernel_types.hpp"
 #include "cpu.hpp"
 
-Kernel::Kernel(CPU& cpu, Memory& mem)
-	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, currentProcess) {
+Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
+	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
 	portHandles.reserve(32);
 

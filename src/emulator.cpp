@@ -1,8 +1,10 @@
 #include "emulator.hpp"
 
 void Emulator::reset() {
-    memory.reset();
     cpu.reset();
+    gpu.reset();
+    memory.reset();
+    // Kernel must be reset last because it depends on CPU/Memory state
     kernel.reset();
 
     // Reloading r13 and r15 needs to happen after everything has been reset

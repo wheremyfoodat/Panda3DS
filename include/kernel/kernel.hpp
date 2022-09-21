@@ -100,7 +100,7 @@ class Kernel {
 	void waitSynchronization1();
 
 public:
-	Kernel(CPU& cpu, Memory& mem);
+	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
 	void serviceSVC(u32 svc);
 	void reset();
 };
