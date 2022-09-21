@@ -46,6 +46,7 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u
 	t.gprs.fill(0);
 	t.fprs.fill(0);
 
+	t.arg = arg;
 	t.initialSP = initialSP;
 	t.entrypoint = entrypoint;
 
@@ -93,4 +94,25 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	t.status = ThreadStatus::WaitArbiter;
 	t.waitingAddress = waitingAddress;
 	switchThread(1); // TODO: Properly change threads
+}
+
+
+void Kernel::getThreadID() {
+	Handle handle = regs[1];
+	printf("GetThreadID(handle = %X)\n", handle);
+
+	if (handle == KernelHandles::CurrentThread) {
+		regs[0] = SVCResult::Success;
+		regs[1] = currentThreadIndex;
+		return;
+	}
+
+	const auto thread = getObject(handle, KernelObjectType::Thread);
+	if (thread == nullptr) [[unlikely]] {
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	regs[0] = SVCResult::Success;
+	regs[1] = thread->getData<Thread>()->index;
 }

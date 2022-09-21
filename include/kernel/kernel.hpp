@@ -90,6 +90,7 @@ class Kernel {
 	void createEvent();
 	void createThread();
 	void controlMemory();
+	void duplicateHandle();
 	void mapMemoryBlock();
 	void queryMemory();
 	void getProcessInfo();
@@ -97,6 +98,7 @@ class Kernel {
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();
 	void getSystemTick();
+	void getThreadID();
 	void sendSyncRequest();
 	void svcCloseHandle();
 	void connectToPort();

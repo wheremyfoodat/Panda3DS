@@ -70,15 +70,10 @@ void Kernel::controlMemory() {
 }
 
 // Result QueryMemory(MemoryInfo* memInfo, PageInfo* pageInfo, u32 addr)
-// TODO: Is this SVC supposed to write to memory or...?
 void Kernel::queryMemory() {
 	const u32 memInfo = regs[0];
 	const u32 pageInfo = regs[1];
 	const u32 addr = regs[2];
-
-	if (!isAligned(addr)) [[unlikely]] {
-		Helpers::panic("QueryMemory: Address not page aligned\n");
-	}
 
 	printf("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
 

@@ -9,6 +9,7 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 	portHandles.reserve(32);
 
 	for (int i = 0; i < threads.size(); i++) {
+		threads[i].index = i;
 		threads[i].tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
 		threads[i].status = ThreadStatus::Dead;
 	}
@@ -28,10 +29,12 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x22: arbitrateAddress(); break;
 		case 0x23: svcCloseHandle(); break;
 		case 0x24: waitSynchronization1(); break;
+		case 0x27: duplicateHandle(); break;
 		case 0x28: getSystemTick(); break;
 		case 0x2B: getProcessInfo(); break;
 		case 0x2D: connectToPort(); break;
 		case 0x32: sendSyncRequest(); break;
+		case 0x37: getThreadID(); break;
 		case 0x38: getResourceLimit(); break;
 		case 0x39: getResourceLimitLimitValues(); break;
 		case 0x3A: getResourceLimitCurrentValues(); break;
@@ -101,7 +104,7 @@ void Kernel::reset() {
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30. TODO: This creates a dummy context for thread 0,
 	// which is thankfully not used. Maybe we should prevent this
-	mainThread = makeThread(0, 0, 0x30, -2, 0, ThreadStatus::Running);
+	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, -2, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
 
 	// Create global service manager port
@@ -139,6 +142,7 @@ void Kernel::outputDebugString() {
 	regs[0] = SVCResult::Success;
 }
 
+// Result GetProcessInfo(s64* out, Handle process, ProcessInfoType type)
 void Kernel::getProcessInfo() {
 	const auto pid = regs[1];
 	const auto type = regs[2];
@@ -161,6 +165,21 @@ void Kernel::getProcessInfo() {
 	}
 
 	regs[0] = SVCResult::Success;
+}
+
+// Result GetThreadId(u32* threadId, Handle thread)
+void Kernel::duplicateHandle() {
+	Handle original = regs[1];
+	printf("DuplicateHandle(handle = %X)\n", original);
+
+	if (original == KernelHandles::CurrentThread) {
+		printf("[Warning] Duplicated current thread. This might be horribly broken!\n");
+		const auto& t = threads[currentThreadIndex];
+		regs[0] = SVCResult::Success;
+		regs[1] = makeThread(t.entrypoint, t.initialSP, t.priority, t.processorID, t.arg, t.status);
+	} else {
+		Helpers::panic("DuplicateHandle: unimplemented handle type");
+	}
 }
 
 std::string Kernel::getProcessName(u32 pid) {

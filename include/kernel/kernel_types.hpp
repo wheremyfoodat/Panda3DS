@@ -102,9 +102,11 @@ struct Thread {
     u32 initialSP;  // Initial r13 value
     u32 entrypoint; // Initial r15 value
     u32 priority;
+    u32 arg;
     s32 processorID;
     ThreadStatus status;
     Handle handle;  // OS handle for this thread
+    int index; // Index of the thread. 0 for the first thread, 1 for the second, and so on
  
     // The waiting address for threads that are waiting on an AddressArbiter
     u32 waitingAddress;
