@@ -16,6 +16,7 @@ namespace ServiceCommands {
 // Commands written to shared memory and processed by TriggerCmdReqQueue
 namespace GPUCommands {
 	enum : u32 {
+		ProcessCommandList = 1,
 		MemoryFill = 2
 	};
 }
@@ -186,14 +187,14 @@ void GPUService::setLCDForceBlack(u32 messagePointer) {
 }
 
 void GPUService::triggerCmdReqQueue(u32 messagePointer) {
-	processCommands();
+	processCommandBuffer();
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 #include <chrono>
 #include <thread>
 using namespace std::chrono_literals;
-void GPUService::processCommands() {
+void GPUService::processCommandBuffer() {
 	if (sharedMem == nullptr) [[unlikely]] { // Shared memory hasn't been set up yet
 		return;
 	}
@@ -211,6 +212,7 @@ void GPUService::processCommands() {
 		while (commandsLeft != 0) {
 			u32 cmdID = cmd[0] & 0xff;
 			switch (cmdID) {
+				case GPUCommands::ProcessCommandList: processCommandList(cmd); break;
 				case GPUCommands::MemoryFill: memoryFill(cmd); break;
 				default: Helpers::panic("GSP::GPU::ProcessCommands: Unknown cmd ID %d", cmdID);
 			}
@@ -243,4 +245,14 @@ void GPUService::memoryFill(u32* cmd) {
 	if (start1 != 0) {
 		gpu.clearBuffer(start1, end1, value1, control1);
 	}
+}
+
+// Actually send command list (aka display list) to GPU
+void GPUService::processCommandList(u32* cmd) {
+	u32 address = cmd[1]; // Buffer address
+	u32 size = cmd[2]; // Buffer size
+	bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
+	bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
+
+	Helpers::panic("GPU::GSP::processCommandList. Address: %08X, size: %08X", address, size);
 }

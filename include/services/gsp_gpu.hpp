@@ -26,7 +26,7 @@ class GPUService {
 	// This is the PID of that process
 	u32 privilegedProcess;
 
-	void processCommands();
+	void processCommandBuffer();
 
 	// Service commands
 	void acquireRight(u32 messagePointer);
@@ -37,7 +37,8 @@ class GPUService {
 	void writeHwRegs(u32 messagePointer);
 	void writeHwRegsWithMask(u32 messagePointer);
 
-	// GPU commands processed via TriggerCmdReqQueue
+	// GSP commands processed via TriggerCmdReqQueue
+	void processCommandList(u32* cmd);
 	void memoryFill(u32* cmd);
 
 public:
