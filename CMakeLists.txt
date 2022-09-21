@@ -53,7 +53,7 @@ set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limi
 set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp
 )
-set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp)
+set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp)
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel/kernel.hpp

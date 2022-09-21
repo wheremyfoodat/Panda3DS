@@ -2,7 +2,8 @@
 #include <cstdio>
 
 void GPU::reset() {
-
+	regs.fill(0);
+	// TODO: Reset blending, texturing, etc here
 }
 
 void GPU::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
