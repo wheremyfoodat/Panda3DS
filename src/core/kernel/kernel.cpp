@@ -12,6 +12,8 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 		threads[i].tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
 		threads[i].status = ThreadStatus::Dead;
 	}
+
+	setVersion(1, 69);
 }
 
 void Kernel::serviceSVC(u32 svc) {
@@ -27,6 +29,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x23: svcCloseHandle(); break;
 		case 0x24: waitSynchronization1(); break;
 		case 0x28: getSystemTick(); break;
+		case 0x2B: getProcessInfo(); break;
 		case 0x2D: connectToPort(); break;
 		case 0x32: sendSyncRequest(); break;
 		case 0x38: getResourceLimit(); break;
@@ -35,6 +38,13 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x3D: outputDebugString(); break;
 		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
+}
+
+void Kernel::setVersion(u8 major, u8 minor) {
+	u16 descriptor = (u16(major) << 8) | u16(minor);
+
+	kernelVersion = descriptor;
+	mem.kernelVersion = descriptor; // The memory objects needs a copy because you can read the kernel ver from config mem
 }
 
 Handle Kernel::makeProcess() {
@@ -126,6 +136,30 @@ void Kernel::outputDebugString() {
 
 	std::string message = mem.readString(pointer, size);
 	printf("[OutputDebugString] %s\n", message.c_str());
+	regs[0] = SVCResult::Success;
+}
+
+void Kernel::getProcessInfo() {
+	const auto pid = regs[1];
+	const auto type = regs[2];
+	const auto process = getProcessFromPID(pid);
+	printf("GetProcessInfo(process: %s, type = %d)\n", getProcessName(pid).c_str(), type);
+
+	if (process == nullptr) [[unlikely]] {
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	switch (type) {
+		case 20:
+			regs[1] = PhysicalAddrs::FCRAM - mem.getLinearHeapVaddr();
+			regs[2] = 0;
+			break;
+
+		default:
+			Helpers::panic("GetProcessInfo: unimplemented type %d", type);
+	}
+
 	regs[0] = SVCResult::Success;
 }
 

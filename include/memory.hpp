@@ -5,6 +5,12 @@
 #include <vector>
 #include "helpers.hpp"
 
+namespace PhysicalAddrs {
+	enum : u32 {
+		FCRAM = 0x20000000
+	};
+}
+
 namespace VirtualAddrs {
 	enum : u32 {
 		ExecutableStart = 0x00100000,
@@ -18,7 +24,8 @@ namespace VirtualAddrs {
 		StackSize = 0x4000,
 
 		NormalHeapStart = 0x08000000,
-		LinearHeapStart = 0x14000000,
+		LinearHeapStartOld = 0x14000000, // If kernel version <
+		LinearHeapStartNew = 0x30000000,
 
 		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x1000, and so on
 		TLSBase = 0xFF400000,
@@ -87,6 +94,7 @@ class Memory {
 	std::optional<u32> findPaddr(u32 size);
 
 public:
+	u16 kernelVersion = 0;
 	u32 usedUserMemory = 0;
 	std::optional<int> gspMemIndex; // Index of GSP shared mem in lockedMemoryInfo or nullopt if it's already reserved
 
@@ -106,6 +114,8 @@ public:
 	void write16(u32 vaddr, u16 value);
 	void write32(u32 vaddr, u32 value);
 	void write64(u32 vaddr, u64 value);
+
+	u32 getLinearHeapVaddr();
 
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
 	static constexpr bool isAligned(u32 addr) {

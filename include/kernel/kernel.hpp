@@ -30,6 +30,9 @@ class Kernel {
 	u32 threadCount;
 	ServiceManager serviceManager;
 
+	// Top 8 bits are the major version, bottom 8 are the minor version
+	u16 kernelVersion = 0;
+
 	// Get pointer to the object with the specified handle
 	KernelObject* getObject(Handle handle) {
 		// Accessing an object that has not been created
@@ -89,6 +92,7 @@ class Kernel {
 	void controlMemory();
 	void mapMemoryBlock();
 	void queryMemory();
+	void getProcessInfo();
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();
@@ -101,6 +105,7 @@ class Kernel {
 
 public:
 	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
+	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);
 	void reset();
 };

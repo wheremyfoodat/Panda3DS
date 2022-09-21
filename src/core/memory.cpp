@@ -56,7 +56,8 @@ u8 Memory::read8(u32 vaddr) {
 	}
 	else {
 		switch (vaddr) {
-			case ConfigMem::KernelVersionMinor: return 38;
+			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
+			case ConfigMem::KernelVersionMajor: return u8(kernelVersion >> 8);
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -169,6 +170,12 @@ std::string Memory::readString(u32 address, u32 maxSize) {
 	return string;
 }
 
+// Return a pointer to the linear heap vaddr based on the kernel ver, because it needed to be moved
+// thanks to the New 3DS having more FCRAM
+u32 Memory::getLinearHeapVaddr() {
+	return (kernelVersion < 0x22C) ? VirtualAddrs::LinearHeapStartOld : VirtualAddrs::LinearHeapStartNew;
+}
+
 std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r, bool w, bool x,
 	bool adjustAddrs) {
 	// Kernel-allocated memory & size must always be aligned to a page boundary
@@ -190,7 +197,7 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 	// Get the full vaddr.
 	// TODO: Fix this
 	if (vaddr == 0 && adjustAddrs) {
-		vaddr = usedUserMemory + (linear ? VirtualAddrs::LinearHeapStart : VirtualAddrs::NormalHeapStart);
+		vaddr = usedUserMemory + (linear ? getLinearHeapVaddr() : VirtualAddrs::NormalHeapStart);
 	}
 
 	usedUserMemory += size;
@@ -234,6 +241,7 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 
 // Find a paddr which we can use for allocating "size" bytes
 std::optional<u32> Memory::findPaddr(u32 size) {
+	assert(isAligned(size));
 	const u32 neededPages = size / pageSize;
 
 	// The FCRAM page we're testing to see if it's appropriate to use
@@ -250,7 +258,8 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 		else { // Our candidate page has 1 mor 
 			counter++;
 			// Check if there's enough free memory to use this page
-			if (counter == neededPages) {
+			// We use == instead of >= because some software does 0-byte allocations
+			if (counter >= neededPages) {
 				return candidatePage * pageSize;
 			}
 		}

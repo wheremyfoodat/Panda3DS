@@ -35,8 +35,9 @@ std::optional<u32> Memory::loadELF(std::ifstream& file) {
         u64 endAddress = (u64)vaddr + (u64)fileSize;
         const bool isGood = vaddr >= VirtualAddrs::ExecutableStart && endAddress < VirtualAddrs::ExecutableEnd;
         if (!isGood) {
-            Helpers::panic("ELF is loaded at invalid place");
-            return std::nullopt;
+            // We're ignoring this for now because some ELFs define a segment at the vaddr for IPC buffer mapping
+            // Helpers::panic("ELF is loaded at invalid place");
+            // return std::nullopt;
         }
 
         if (memorySize & pageMask) {
