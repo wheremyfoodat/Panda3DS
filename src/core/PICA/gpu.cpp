@@ -71,7 +71,9 @@ void GPU::drawArrays() {
 		for (int attrCount = 0; attrCount < totalAttribCount; attrCount++) {
 			// Check if attribute is fixed or not
 			if (fixedAttribMask & (1 << attrCount)) { // Fixed attribute
-
+				vec4f& fixedAttr = shaderUnit.vs.fixedAttributes[attrCount]; // TODO: Is this how it works?
+				vec4f& inputAttr = shaderUnit.vs.attributes[attrCount];
+				std::memcpy(&inputAttr, &fixedAttr, sizeof(vec4f)); // Copy fixed attr to input attr
 			} else { // Non-fixed attribute
 				auto& attr = attributeInfo[attrCount]; // Get information for this attribute
 				u64 attrCfg = attr.getConfigFull(); // Get config1 | (config2 << 32)
@@ -113,5 +115,7 @@ void GPU::drawArrays() {
 				printf("Attribute %d, type: %d, component count: %d\n", attrCount, attribType, componentCount);
 			}
 		}
+
+		shaderUnit.vs.run(); // Run vertex shader for vertex
 	}
 }

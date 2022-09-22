@@ -10,11 +10,12 @@ enum class ShaderType {
 	Vertex, Geometry
 };
 
-template <ShaderType type>
 class PICAShader {
-	int bufferIndex; // Index of the next instruction to overwrite
 	using f24 = Floats::f24;
 	using vec4f = OpenGL::Vector<f24, 4>;
+
+	int bufferIndex; // Index of the next instruction to overwrite for shader uploads
+	ShaderType type;
 
 public:
 	std::array<u32, 512> loadedShader; // Currently loaded & active shader
@@ -27,6 +28,8 @@ public:
 	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
 	std::array<vec4f, 16> attributes; // Attributes past to the shader
 	std::array<vec4f, 16> outputs;
+
+	PICAShader(ShaderType type) : type(type) {}
 
 	void reset() {
 		loadedShader.fill(0);
@@ -55,4 +58,6 @@ public:
 		bufferedShader[bufferIndex++] = word;
 		bufferIndex &= 511;
 	}
+
+	void run();
 };
