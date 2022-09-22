@@ -4,6 +4,7 @@ namespace PICAInternalRegs {
 	enum : u32 {
 		// Geometry pipelin regs
 		VertexAttribLoc = 0x200,
+		AttribFormatHigh = 0x202,
 		IndexBufferConfig = 0x227,
 		VertexCountReg = 0x228,
 		VertexOffsetReg = 0x22A,

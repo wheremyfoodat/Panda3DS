@@ -47,6 +47,11 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			if (value != 0) drawArrays(true);
 			break;
 
+		case AttribFormatHigh:
+			totalAttribCount = (value >> 28) + 1; // Total number of vertex attributes
+			fixedAttribMask = (value >> 16) & 0xfff; // Determines which vertex attributes are fixed for all vertices
+			break;
+
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;

@@ -9,11 +9,13 @@ class GPU {
 	ShaderUnit shaderUnit;
 	u8* vram = nullptr;
 
-	static constexpr u32 totalAttribCount = 12; // Up to 12 vertex attributes
+	static constexpr u32 maxAttribCount = 12; // Up to 12 vertex attributes
 	static constexpr u32 regNum = 0x300;
 	static constexpr u32 vramSize = 6_MB;
 	std::array<u32, regNum> regs; // GPU internal registers
 	
+	// Read a value of type T from physical address paddr
+	// This is necessary because vertex attribute fetching uses physical addresses
 	template<typename T>
 	T readPhysical(u32 paddr) {
 		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
@@ -23,6 +25,20 @@ class GPU {
 			return *(T*)&fcram[index];
 		} else {
 			Helpers::panic("[PICA] Read unimplemented paddr %08X", paddr);
+		}
+	}
+
+	// Get a pointer of type T* to the data starting from physical address paddr
+	template<typename T>
+	T* getPointerPhys(u32 paddr) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+			u8* fcram = mem.getFCRAM();
+			u32 index = paddr - PhysicalAddrs::FCRAM;
+
+			return (T*)&fcram[index];
+		}
+		else {
+			Helpers::panic("[PICA] Pointer to unimplemented paddr %08X", paddr);
 		}
 	}
 
@@ -37,7 +53,9 @@ class GPU {
 		int size = 0; // Bytes per vertex
 	};
 
-	std::array<AttribInfo, totalAttribCount> attributeInfo;
+	std::array<AttribInfo, maxAttribCount> attributeInfo; // Info for each of the 12 attributes
+	u32 totalAttribCount = 0; // Number of vertex attributes to send to VS
+	u32 fixedAttribMask = 0;
 
 public:
 	GPU(Memory& mem);
