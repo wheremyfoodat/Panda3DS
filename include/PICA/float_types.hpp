@@ -23,13 +23,13 @@ namespace Floats {
     template <unsigned M, unsigned E>
     struct Float {
     public:
-        static Float<M, E> FromFloat32(float val) {
+        static Float<M, E> fromFloat32(float val) {
             Float<M, E> ret;
             ret.value = val;
             return ret;
         }
 
-        static Float<M, E> FromRaw(u32 hex) {
+        static Float<M, E> fromRaw(u32 hex) {
             Float<M, E> res;
 
             const int width = M + E + 1;
@@ -54,34 +54,34 @@ namespace Floats {
             return res;
         }
 
-        static Float<M, E> Zero() {
-            return FromFloat32(0.f);
+        static Float<M, E> zero() {
+            return fromFloat32(0.f);
         }
 
         // Not recommended for anything but logging
-        float ToFloat32() const {
+        float toFloat32() const {
             return value;
         }
 
         Float<M, E> operator*(const Float<M, E>& flt) const {
-            float result = value * flt.ToFloat32();
+            float result = value * flt.toFloat32();
             // PICA gives 0 instead of NaN when multiplying by inf
             if (std::isnan(result))
-                if (!std::isnan(value) && !std::isnan(flt.ToFloat32()))
+                if (!std::isnan(value) && !std::isnan(flt.toFloat32()))
                     result = 0.f;
-            return Float<M, E>::FromFloat32(result);
+            return Float<M, E>::fromFloat32(result);
         }
 
         Float<M, E> operator/(const Float<M, E>& flt) const {
-            return Float<M, E>::FromFloat32(ToFloat32() / flt.ToFloat32());
+            return Float<M, E>::fromFloat32(toFloat32() / flt.toFloat32());
         }
 
         Float<M, E> operator+(const Float<M, E>& flt) const {
-            return Float<M, E>::FromFloat32(ToFloat32() + flt.ToFloat32());
+            return Float<M, E>::fromFloat32(toFloat32() + flt.toFloat32());
         }
 
         Float<M, E> operator-(const Float<M, E>& flt) const {
-            return Float<M, E>::FromFloat32(ToFloat32() - flt.ToFloat32());
+            return Float<M, E>::fromFloat32(toFloat32() - flt.toFloat32());
         }
 
         Float<M, E>& operator*=(const Float<M, E>& flt) {
@@ -90,46 +90,46 @@ namespace Floats {
         }
 
         Float<M, E>& operator/=(const Float<M, E>& flt) {
-            value /= flt.ToFloat32();
+            value /= flt.toFloat32();
             return *this;
         }
 
         Float<M, E>& operator+=(const Float<M, E>& flt) {
-            value += flt.ToFloat32();
+            value += flt.toFloat32();
             return *this;
         }
 
         Float<M, E>& operator-=(const Float<M, E>& flt) {
-            value -= flt.ToFloat32();
+            value -= flt.toFloat32();
             return *this;
         }
 
         Float<M, E> operator-() const {
-            return Float<M, E>::FromFloat32(-ToFloat32());
+            return Float<M, E>::fromFloat32(-toFloat32());
         }
 
         bool operator<(const Float<M, E>& flt) const {
-            return ToFloat32() < flt.ToFloat32();
+            return toFloat32() < flt.toFloat32();
         }
 
         bool operator>(const Float<M, E>& flt) const {
-            return ToFloat32() > flt.ToFloat32();
+            return toFloat32() > flt.toFloat32();
         }
 
         bool operator>=(const Float<M, E>& flt) const {
-            return ToFloat32() >= flt.ToFloat32();
+            return toFloat32() >= flt.toFloat32();
         }
 
         bool operator<=(const Float<M, E>& flt) const {
-            return ToFloat32() <= flt.ToFloat32();
+            return toFloat32() <= flt.toFloat32();
         }
 
         bool operator==(const Float<M, E>& flt) const {
-            return ToFloat32() == flt.ToFloat32();
+            return toFloat32() == flt.toFloat32();
         }
 
         bool operator!=(const Float<M, E>& flt) const {
-            return ToFloat32() != flt.ToFloat32();
+            return toFloat32() != flt.toFloat32();
         }
 
     private:
@@ -142,8 +142,8 @@ namespace Floats {
         float value;
     };
 
-    using float24 = Float<16, 7>;
-    using float20 = Float<12, 7>;
-    using float16 = Float<10, 5>;
+    using f24 = Float<16, 7>;
+    using f20 = Float<12, 7>;
+    using f16 = Float<10, 5>;
 
 } // namespace Pica
