@@ -2,9 +2,13 @@
 #include <array>
 #include "helpers.hpp"
 #include "memory.hpp"
+#include "opengl.hpp"
+#include "PICA/float_types.hpp"
 #include "PICA/shader_unit.hpp"
 
 class GPU {
+	using vec4f = OpenGL::Vector<Floats::f24, 4>;
+
 	Memory& mem;
 	ShaderUnit shaderUnit;
 	u8* vram = nullptr;

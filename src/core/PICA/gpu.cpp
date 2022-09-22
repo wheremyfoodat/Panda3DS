@@ -75,12 +75,37 @@ void GPU::drawArrays() {
 				if (index >= 12) Helpers::panic("[PICA] Vertex attribute used as padding");
 
 				u32 attribInfo = (vertexCfg >> (index * 4)) & 0xf;
-				u32 attribType = attribInfo & 0x3;
-				u32 attribSize = (attribInfo >> 2) + 1;
+				u32 attribType = attribInfo & 0x3; //  Type of attribute(sbyte/ubyte/short/float)
+				u32 componentCount = (attribInfo >> 2) + 1; // Total number of components
 
 				// Address to fetch the attribute from
 				u32 attrAddress = vertexBase + attr.offset + (vertexIndex * attr.size);
-				printf("Attribute %d, type: %d, size: %d\n", attrCount, attribType, attribSize);
+				vec4f& attribute = shaderUnit.vs.attributes[attrCount];
+				uint component; // Current component
+
+				switch (attribType) {
+					case 3: { // Float
+						float* ptr = getPointerPhys<float>(attrAddress);
+						for (component = 0; component < componentCount; component++) {
+							float val = *ptr++;
+							attribute[component] = f24::fromFloat32(val);
+							printf("Component %d: %f\n", component, (double)val);
+						}
+						break;
+					}
+
+					default: Helpers::panic("[PICA] Unimplemented component type %d", attribType);
+				}
+
+				// Fill the remaining attribute lanes with default parameters (1.0 for alpha/w, 0.0) for everything else
+				// Corgi does this although I'm not sure if it's actually needed for anything.
+				// TODO: Find out
+				while (component < 4) {
+					attribute[component] = (component == 3) ? f24::fromFloat32(1.0) : f24::fromFloat32(0.0);
+					component++;
+				}
+
+				printf("Attribute %d, type: %d, component count: %d\n", attrCount, attribType, componentCount);
 			}
 		}
 	}
