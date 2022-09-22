@@ -34,10 +34,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 	u32 currentValue = regs[index];
 	u32 newValue = (currentValue & ~mask) | (value & mask); // Only overwrite the bits specified by "mask"
+	regs[index] = newValue;
 
 	// TODO: Figure out if things like the shader index use the unmasked value or the masked one
 	// We currently use the unmasked value like Citra does
 	switch (index) {
+		case SignalDrawArrays:
+			if (value != 0) drawArrays();
+			break;
+
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;

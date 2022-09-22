@@ -10,6 +10,8 @@ class GPU {
 	ShaderUnit shaderUnit;
 	std::array<u32, regNum> regs; // GPU internal registers
 
+	void drawArrays();
+
 public:
 	GPU(Memory& mem) : mem(mem) {}
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);
