@@ -41,6 +41,12 @@ namespace PICAInternalRegs {
 		AttribInfoStart = Attrib0Offset,
 		AttribInfoEnd = Attrib11Config2,
 
+		// Fixed attribute registers
+		FixedAttribIndex = 0x232,
+		FixedAttribData0 = 0x233,
+		FixedAttribData1 = 0x234,
+		FixedAttribData2 = 0x235,
+
 		// Vertex shader registers
 		VertexShaderTransferEnd = 0x2BF,
 		VertexShaderTransferIndex = 0x2CB,

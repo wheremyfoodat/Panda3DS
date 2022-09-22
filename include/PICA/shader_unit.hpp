@@ -4,8 +4,8 @@
 class ShaderUnit {
 
 public:
-	PICAShader vs; // Vertex shader
-	PICAShader gs; // Geometry shader
+	PICAShader<ShaderType::Vertex> vs; // Vertex shader
+	PICAShader<ShaderType::Geometry> gs; // Geometry shader
 
 	void reset();
 };

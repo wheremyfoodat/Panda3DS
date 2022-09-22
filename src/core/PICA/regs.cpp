@@ -1,6 +1,8 @@
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
 
+using namespace Floats;
+
 u32 GPU::readReg(u32 address) {
 	printf("Ignoring read from GPU register %08X\n", address);
 	return 0;
@@ -50,6 +52,34 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case AttribFormatHigh:
 			totalAttribCount = (value >> 28) + 1; // Total number of vertex attributes
 			fixedAttribMask = (value >> 16) & 0xfff; // Determines which vertex attributes are fixed for all vertices
+			break;
+
+		case FixedAttribIndex:
+			fixedAttribCount = 0;
+			fixedAttribIndex = value & 0xf;
+
+			if (fixedAttribIndex == 0xf) Helpers::panic("[PICA] Immediate mode vertex submission");
+			break;
+
+		case FixedAttribData0: case FixedAttribData1: case FixedAttribData2:
+			if (fixedAttribIndex >= 12) Helpers::panic("[PICA] Tried to write to fixed attribute %d", fixedAttribIndex);
+
+			fixedAttrBuff[fixedAttribCount++] = value;
+			if (fixedAttribCount == 3) {
+				fixedAttribCount = 0;
+
+				vec4f& attr = shaderUnit.vs.fixedAttributes[fixedAttribIndex];
+				// These are stored in the reverse order anyone would expect them to be in
+				attr.x() = f24::fromRaw(fixedAttrBuff[2] & 0xffffff);
+				attr.y() = f24::fromRaw(((fixedAttrBuff[1] & 0xffff) << 8) | (fixedAttrBuff[2] >> 24));
+				attr.z() = f24::fromRaw(((fixedAttrBuff[0] & 0xff) << 16) | (fixedAttrBuff[1] >> 16));
+				attr.w() = f24::fromRaw(fixedAttrBuff[0] >> 8);
+
+				printf("r: %f g: %f b: %f a: %f\n", (double)attr.r().toFloat32(), (double)attr.g().toFloat32(), (double)attr.b().toFloat32(), (double)attr.a().toFloat32());
+
+				fixedAttribIndex++;
+			}
+
 			break;
 
 		case VertexShaderTransferEnd:

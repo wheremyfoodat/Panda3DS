@@ -6,6 +6,11 @@
 #include "opengl.hpp"
 #include "PICA/float_types.hpp"
 
+enum class ShaderType {
+	Vertex, Geometry
+};
+
+template <ShaderType type>
 class PICAShader {
 	int bufferIndex; // Index of the next instruction to overwrite
 	using f24 = Floats::f24;
@@ -19,7 +24,8 @@ public:
 	std::array<u32, 4> intUniforms;
 	std::array<vec4f, 8> floatUniforms;
 
-	std::array<vec4f, 16> attributes;
+	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
+	std::array<vec4f, 16> attributes; // Attributes past to the shader
 	std::array<vec4f, 16> outputs;
 
 	void reset() {

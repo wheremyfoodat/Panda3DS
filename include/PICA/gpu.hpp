@@ -65,7 +65,11 @@ class GPU {
 
 	std::array<AttribInfo, maxAttribCount> attributeInfo; // Info for each of the 12 attributes
 	u32 totalAttribCount = 0; // Number of vertex attributes to send to VS
-	u32 fixedAttribMask = 0;
+	u32 fixedAttribMask = 0; // Which attributes are fixed?
+	
+	u32 fixedAttribIndex = 0; // Which fixed attribute are we writing to ([0, 12] range)
+	u32 fixedAttribCount = 0; // How many attribute components have we written? When we get to 4 the attr will actually get submitted
+	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
 public:
 	GPU(Memory& mem);

@@ -7,8 +7,18 @@ using namespace Floats;
 
 GPU::GPU(Memory& mem) : mem(mem) {
 	vram = new u8[vramSize];
+}
+
+void GPU::reset() {
+	regs.fill(0);
+	shaderUnit.reset();
+	std::memset(vram, 0, vramSize);
+
 	totalAttribCount = 0;
 	fixedAttribMask = 0;
+	fixedAttribIndex = 0;
+	fixedAttribCount = 0;
+	fixedAttrBuff.fill(0);
 
 	for (auto& e : attributeInfo) {
 		e.offset = 0;
@@ -16,12 +26,7 @@ GPU::GPU(Memory& mem) : mem(mem) {
 		e.config1 = 0;
 		e.config2 = 0;
 	}
-}
 
-void GPU::reset() {
-	regs.fill(0);
-	shaderUnit.reset();
-	std::memset(vram, 0, vramSize);
 	// TODO: Reset blending, texturing, etc here
 }
 
