@@ -1,6 +1,6 @@
 #pragma once
 #include <cstring>
-#include "gpu.hpp"
+#include "PICA/gpu.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "memory.hpp"

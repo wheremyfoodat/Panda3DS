@@ -4,9 +4,9 @@
 #include <fstream>
 
 #include "cpu.hpp"
-#include "gpu.hpp"
 #include "memory.hpp"
 #include "opengl.hpp"
+#include "PICA/gpu.hpp"
 #include "SFML/Window.hpp"
 #include "SFML/Graphics.hpp"
 

@@ -252,7 +252,7 @@ void GPUService::memoryFill(u32* cmd) {
 // Actually send command list (aka display list) to GPU
 void GPUService::processCommandList(u32* cmd) {
 	u32 address = cmd[1] & ~7; // Buffer address
-	u32 size = cmd[2] * 8; // Buffer size in bytes
+	u32 size = cmd[2] & ~3; // Buffer size in bytes
 	bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
 	bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
 
@@ -305,5 +305,5 @@ void GPUService::processCommandList(u32* cmd) {
 		}
 	}
 
-	Helpers::panic("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X", address, size);
+	printf("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
 }

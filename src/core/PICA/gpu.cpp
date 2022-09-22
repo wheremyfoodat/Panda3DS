@@ -1,8 +1,9 @@
-#include "gpu.hpp"
+#include "PICA/gpu.hpp"
 #include <cstdio>
 
 void GPU::reset() {
 	regs.fill(0);
+	shaderUnit.reset();
 	// TODO: Reset blending, texturing, etc here
 }
 

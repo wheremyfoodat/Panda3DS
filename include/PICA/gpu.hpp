@@ -2,10 +2,12 @@
 #include <array>
 #include "helpers.hpp"
 #include "memory.hpp"
+#include "PICA/shader_unit.hpp"
 
 class GPU {
 	Memory& mem;
 	static constexpr u32 regNum = 0x300;
+	ShaderUnit shaderUnit;
 	std::array<u32, regNum> regs; // GPU internal registers
 
 public:
