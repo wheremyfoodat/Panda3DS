@@ -196,17 +196,6 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 
 	assert(availablePageCount >= neededPageCount);
 
-	// If the vaddr is 0 that means we need to select our own
-	// Depending on whether our mapping should be linear or not we allocate from one of the 2 typical heap spaces
-	// We don't plan on implementing freeing any time soon, so we can pick added userUserMemory to the vaddr base to
-	// Get the full vaddr.
-	// TODO: Fix this
-	if (vaddr == 0 && adjustAddrs) {
-		vaddr = usedUserMemory + (linear ? getLinearHeapVaddr() : VirtualAddrs::NormalHeapStart);
-	}
-
-	usedUserMemory += size;
-
 	// If the paddr is 0, that means we need to select our own
 	// TODO: Fix. This method always tries to allocate blocks linearly.
 	// However, if the allocation is non-linear, the panic will trigger when it shouldn't.
@@ -219,6 +208,23 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 		paddr = newPaddr.value();
 		assert(paddr + size <= FCRAM_APPLICATION_SIZE);
 	}
+
+	// If the vaddr is 0 that means we need to select our own
+	// Depending on whether our mapping should be linear or not we allocate from one of the 2 typical heap spaces
+	// We don't plan on implementing freeing any time soon, so we can pick added userUserMemory to the vaddr base to
+	// Get the full vaddr.
+	// TODO: Fix this
+	if (vaddr == 0 && adjustAddrs) {
+		// Linear memory needs to be allocated in a way where you can easily get the paddr by subtracting the linear heap base
+		// In order to be able to easily send data to hardware like the GPU
+		if (linear) {
+			vaddr = getLinearHeapVaddr() + paddr;
+		} else {
+			vaddr = usedUserMemory + VirtualAddrs::NormalHeapStart;
+		}
+	}
+
+	usedUserMemory += size;
 
 	// Do linear mapping
 	u32 virtualPage = vaddr >> pageShift;
