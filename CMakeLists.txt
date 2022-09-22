@@ -63,7 +63,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/kernel/handles.hpp include/services/hid.hpp include/services/fs.hpp
                  include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp
                  include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
-                 include/PICA/shader.hpp include/PICA/shader_unit.hpp
+                 include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

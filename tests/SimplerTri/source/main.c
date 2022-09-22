@@ -46,7 +46,7 @@ static void sceneInit(void)
 	AttrInfo_AddFixed(attrInfo, 1); // v1=color
 
 	// Set the fixed attribute (color) to solid white
-	C3D_FixedAttribSet(1, 1.0, 1.0, 1.0, 1.0);
+	C3D_FixedAttribSet(1, 1.0, 0.5, 0.2, 1.0);
 
 	// Compute the projection matrix
 	Mtx_OrthoTilt(&projection, 0.0, 400.0, 0.0, 240.0, 0.0, 1.0, true);
