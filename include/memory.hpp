@@ -7,7 +7,8 @@
 
 namespace PhysicalAddrs {
 	enum : u32 {
-		FCRAM = 0x20000000
+		FCRAM = 0x20000000,
+		FCRAMEnd = FCRAM + 0x07FFFFFF
 	};
 }
 
@@ -24,7 +25,7 @@ namespace VirtualAddrs {
 		StackSize = 0x4000,
 
 		NormalHeapStart = 0x08000000,
-		LinearHeapStartOld = 0x14000000, // If kernel version <
+		LinearHeapStartOld = 0x14000000, // If kernel version < 0x22C
 		LinearHeapStartNew = 0x30000000,
 
 		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x1000, and so on
@@ -116,13 +117,14 @@ public:
 	void write64(u32 vaddr, u64 value);
 
 	u32 getLinearHeapVaddr();
+	u8* getFCRAM() { return fcram; }
 
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
 	static constexpr bool isAligned(u32 addr) {
 		return (addr & pageMask) == 0;
 	}
 
-	// Allocate "size" bytes of RAM starting from physical FCRAM address "paddr" (We pick it ourself if paddr == 0)
+	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
 	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).
 	// If the "linear" flag is on, the paddr pages must be adjacent in FCRAM
 	// r, w, x: Permissions for the allocated memory

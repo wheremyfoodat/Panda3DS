@@ -155,7 +155,7 @@ void Kernel::getProcessInfo() {
 	}
 
 	switch (type) {
-		case 20:
+		case 20: // Returns 0x20000000 - <linear memory base vaddr for process>
 			regs[1] = PhysicalAddrs::FCRAM - mem.getLinearHeapVaddr();
 			regs[2] = 0;
 			break;
