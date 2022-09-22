@@ -146,4 +146,4 @@ namespace Floats {
     using f20 = Float<12, 7>;
     using f16 = Float<10, 5>;
 
-} // namespace Pica
+} // namespace Floats

@@ -3,9 +3,13 @@
 #include <array>
 #include <cstring>
 #include "helpers.hpp"
+#include "opengl.hpp"
+#include "PICA/float_types.hpp"
 
 class PICAShader {
 	int bufferIndex; // Index of the next instruction to overwrite
+	using f24 = Floats::f24;
+	using vec4f = OpenGL::Vector<f24, 4>;
 
 public:
 	std::array<u32, 512> loadedShader; // Currently loaded & active shader
@@ -13,16 +17,23 @@ public:
 	
 	u32 boolUniform;
 	std::array<u32, 4> intUniforms;
-	std::array<u32, 8> floatUniforms;
+	std::array<vec4f, 8> floatUniforms;
+
+	std::array<vec4f, 16> attributes;
+	std::array<vec4f, 16> outputs;
 
 	void reset() {
 		loadedShader.fill(0);
 		bufferedShader.fill(0);
 
 		intUniforms.fill(0);
-		floatUniforms.fill(0);
 		boolUniform = 0;
 		bufferIndex = 0;
+
+		const vec4f zero = vec4f({ f24::fromFloat32(0.0), f24::fromFloat32(0.0), f24::fromFloat32(0.0), f24::fromFloat32(0.0) });
+		attributes.fill(zero);
+		floatUniforms.fill(zero);
+		outputs.fill(zero);
 	}
 
 	void finalize() {

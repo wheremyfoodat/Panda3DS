@@ -51,6 +51,12 @@ class GPU {
 	struct AttribInfo {
 		u32 offset = 0; // Offset from base vertex array
 		int size = 0; // Bytes per vertex
+		u32 config1 = 0;
+		u32 config2 = 0;
+
+		u64 getConfigFull() {
+			return u64(config1) | (u64(config2) << 32);
+		}
 	};
 
 	std::array<AttribInfo, maxAttribCount> attributeInfo; // Info for each of the 12 attributes

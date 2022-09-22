@@ -74,8 +74,11 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 				switch (reg) {
 					case 0: attr.offset = value & 0xfffffff; break; // Attribute offset
-					case 1: break; // We don't handle this yet
-					case 2: // We don't handle most of this yet
+					case 1: 
+						attr.config1 = value;
+						break;
+					case 2:
+						attr.config2 = value;
 						attr.size = (value >> 16) & 0xff;
 						break;
 				}
