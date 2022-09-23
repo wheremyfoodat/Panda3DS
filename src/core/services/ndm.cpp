@@ -25,11 +25,11 @@ void NDMService::handleSyncRequest(u32 messagePointer) {
 }
 
 void NDMService::overrideDefaultDaemons(u32 messagePointer) {
-	printf("NDM::OverrideDefaultDaemons(stubbed)\n");
+	log("NDM::OverrideDefaultDaemons(stubbed)\n");
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NDMService::suspendDaemons(u32 messagePointer) {
-	printf("NDM::SuspendDaemons(stubbed)\n");
+	log("NDM::SuspendDaemons(stubbed)\n");
 	mem.write32(messagePointer + 4, Result::Success);
 }

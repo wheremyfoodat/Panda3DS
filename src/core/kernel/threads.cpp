@@ -75,7 +75,7 @@ void Kernel::createThread() {
 	u32 initialSP = regs[3] & ~7; // SP is force-aligned to 8 bytes
 	s32 id = static_cast<s32>(regs[4]);
 
-	printf("CreateThread(entry = %08X, stacktop = %08X, priority = %X, processor ID = %d)\n", entrypoint,
+	logSVC("CreateThread(entry = %08X, stacktop = %08X, priority = %X, processor ID = %d)\n", entrypoint,
 		initialSP, priority, id);
 
 	if (priority > 0x3F) [[unlikely]] {
@@ -99,7 +99,7 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 
 void Kernel::getThreadID() {
 	Handle handle = regs[1];
-	printf("GetThreadID(handle = %X)\n", handle);
+	logSVC("GetThreadID(handle = %X)\n", handle);
 
 	if (handle == KernelHandles::CurrentThread) {
 		regs[0] = SVCResult::Success;

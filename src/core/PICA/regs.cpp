@@ -4,7 +4,7 @@
 using namespace Floats;
 
 u32 GPU::readReg(u32 address) {
-	printf("Ignoring read from GPU register %08X\n", address);
+	log("Ignoring read from GPU register %08X\n", address);
 	return 0;
 }
 
@@ -13,13 +13,13 @@ void GPU::writeReg(u32 address, u32 value) {
 		const u32 index = (address - 0x1EF01000) / sizeof(u32);
 		writeInternalReg(index, value, 0xffffffff);
 	} else {
-		printf("Ignoring write to external GPU register %08X. Value: %08X\n", address, value);
+		log("Ignoring write to external GPU register %08X. Value: %08X\n", address, value);
 	}
 }
 
 u32 GPU::readInternalReg(u32 index) {
 	if (index > regNum) {
-		printf("Tried to read invalid GPU register. Index: %X\n", index);
+		Helpers::panic("Tried to read invalid GPU register. Index: %X\n", index);
 		return 0;
 	}
 
@@ -131,7 +131,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						break;
 				}
 			} else {
-				printf("GPU: Wrote to unimplemented internal reg: %X, value: %08X\n", index, newValue);
+				log("GPU: Wrote to unimplemented internal reg: %X, value: %08X\n", index, newValue);
 			}
 			break;
 	}

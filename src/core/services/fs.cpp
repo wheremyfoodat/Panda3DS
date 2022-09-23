@@ -26,11 +26,11 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 }
 
 void FSService::initialize(u32 messagePointer) {
-	printf("FS::Initialize (failure)\n");
+	log("FS::Initialize (failure)\n");
 	mem.write32(messagePointer + 4, Result::Failure);
 }
 
 void FSService::openArchive(u32 messagePointer) {
-	printf("FS::OpenArchive (failure)\n");
+	log("FS::OpenArchive (failure)\n");
 	mem.write32(messagePointer + 4, Result::Failure);
 }

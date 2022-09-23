@@ -54,7 +54,7 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 
 // https://www.3dbrew.org/wiki/SRV:RegisterClient
 void ServiceManager::registerClient(u32 messagePointer) {
-	printf("srv::registerClient (Stubbed)\n");
+	log("srv::registerClient (Stubbed)\n");
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -65,7 +65,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	u32 handle = 0;
 
 	std::string service = mem.readString(messagePointer + 4, 8);
-	printf("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
+	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
 	if (service == "APT:S") {
 		handle = KernelHandles::APT;
@@ -90,7 +90,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 }
 
 void ServiceManager::enableNotification(u32 messagePointer) {
-	printf("srv::EnableNotification()\n");
+	log("srv::EnableNotification()\n");
 
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // Translation descriptor

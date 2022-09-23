@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include "helpers.hpp"
+#include "logger.hpp"
 #include "memory.hpp"
 #include "opengl.hpp"
 #include "PICA/float_types.hpp"
@@ -12,11 +13,17 @@ class GPU {
 	Memory& mem;
 	ShaderUnit shaderUnit;
 	u8* vram = nullptr;
+	MAKE_LOG_FUNCTION(log, gpuLogger)
 
 	static constexpr u32 maxAttribCount = 12; // Up to 12 vertex attributes
 	static constexpr u32 regNum = 0x300;
 	static constexpr u32 vramSize = 6_MB;
 	std::array<u32, regNum> regs; // GPU internal registers
+
+	struct Vertex {
+		OpenGL::vec4 position;
+		OpenGL::vec4 colour;
+	};
 	
 	// Read a value of type T from physical address paddr
 	// This is necessary because vertex attribute fetching uses physical addresses
@@ -71,8 +78,27 @@ class GPU {
 	u32 fixedAttribCount = 0; // How many attribute components have we written? When we get to 4 the attr will actually get submitted
 	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
+	OpenGL::Framebuffer fbo;
+	OpenGL::Texture fboTexture;
+	OpenGL::Program triangleProgram;
+	OpenGL::Program displayProgram;
+
+	OpenGL::VertexArray vao;
+	OpenGL::VertexBuffer vbo;
+
+	// Dummy VAO/VBO for blitting the final output
+	OpenGL::VertexArray dummyVAO;
+	OpenGL::VertexBuffer dummyVBO;
+
+	static constexpr u32 vertexBufferSize = 0x1000;
+	void drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count);
+
 public:
 	GPU(Memory& mem);
+	void initGraphicsContext(); // Initialize graphics context
+	void getGraphicsContext(); // Set up the graphics context for rendering
+	void display(); // Display the screen contents onto our window
+
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);
 	void reset();
 

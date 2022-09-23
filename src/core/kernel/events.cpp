@@ -23,7 +23,7 @@ void Kernel::createEvent() {
 	if (resetType > 2)
 		Helpers::panic("Invalid reset type for event %d", resetType);
 
-	printf("CreateEvent(handle pointer = %08X, resetType = %s)\n", outPointer, resetTypeToString(resetType));
+	logSVC("CreateEvent(handle pointer = %08X, resetType = %s)\n", outPointer, resetTypeToString(resetType));
 
 	regs[0] = SVCResult::Success;
 	regs[1] = makeEvent(static_cast<ResetType>(resetType));
@@ -33,7 +33,7 @@ void Kernel::createEvent() {
 void Kernel::clearEvent() {
 	const Handle handle = regs[0];
 	const auto event = getObject(handle, KernelObjectType::Event);
-	printf("ClearEvent(event handle = %d)\n", handle);
+	logSVC("ClearEvent(event handle = %d)\n", handle);
 
 	if (event == nullptr) [[unlikely]] {
 		regs[0] = SVCResult::BadHandle;
@@ -56,8 +56,6 @@ void Kernel::waitSynchronization1() {
 		return;
 	}
 
-	printf("WaitSynchronization1(handle = %X, ns = %lld) (STUBBED)\n", handle, ns);
-	serviceManager.requestGPUInterrupt(GPUInterrupt::VBlank0);
-	serviceManager.requestGPUInterrupt(GPUInterrupt::VBlank1);
+	logSVC("WaitSynchronization1(handle = %X, ns = %lld) (STUBBED)\n", handle, ns);
 	regs[0] = SVCResult::Success;
 }

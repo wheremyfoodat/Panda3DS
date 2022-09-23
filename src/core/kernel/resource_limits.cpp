@@ -7,7 +7,7 @@ void Kernel::getResourceLimit() {
 	const auto handlePointer = regs[0];
 	const auto pid = regs[1];
 	const auto process = getProcessFromPID(pid);
-	printf("GetResourceLimit (handle pointer = %08X, process: %s)\n", handlePointer, getProcessName(pid).c_str());
+	logSVC("GetResourceLimit (handle pointer = %08X, process: %s)\n", handlePointer, getProcessName(pid).c_str());
 
 	if (process == nullptr) [[unlikely]] {
 		regs[0] = SVCResult::BadHandle;
@@ -33,7 +33,7 @@ void Kernel::getResourceLimitLimitValues() {
 		return;
 	}
 
-	printf("GetResourceLimitLimitValues(values = %08X, handle = %X, names = %08X, count = %d)\n", values, resourceLimit, names, count);
+	logSVC("GetResourceLimitLimitValues(values = %08X, handle = %X, names = %08X, count = %d)\n", values, resourceLimit, names, count);
 	// printf("[Warning] We do not currently support any resource maximum aside from the application ones");
 	while (count != 0) {
 		const u32 name = mem.read32(names);
@@ -62,7 +62,7 @@ void Kernel::getResourceLimitCurrentValues() {
 		return;
 	}
 
-	printf("GetResourceLimitCurrentValues(values = %08X, handle = %X, names = %08X, count = %d)\n", values, resourceLimit, names, count);
+	logSVC("GetResourceLimitCurrentValues(values = %08X, handle = %X, names = %08X, count = %d)\n", values, resourceLimit, names, count);
 	while (count != 0) {
 		const u32 name = mem.read32(names);
 		// TODO: Unsure if this is supposed to be s32 or u32. Shouldn't matter as the kernel can't create so many resources

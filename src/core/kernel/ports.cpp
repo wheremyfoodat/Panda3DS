@@ -56,7 +56,7 @@ void Kernel::connectToPort() {
 	}
 
 	Handle portHandle = optionalHandle.value();
-	printf("ConnectToPort(handle pointer = %X, port = \"%s\")\n", handlePointer, port.c_str());
+	logSVC("ConnectToPort(handle pointer = %X, port = \"%s\")\n", handlePointer, port.c_str());
 
 	const auto portData = objects[portHandle].getData<Port>();
 	if (!portData->isPublic) {
@@ -76,7 +76,7 @@ void Kernel::sendSyncRequest() {
 	const auto handle = regs[0];
 	u32 messagePointer = getTLSPointer() + 0x80; // The message is stored starting at TLS+0x80
 
-	printf("SendSyncRequest(session handle = %X)\n", handle);
+	logSVC("SendSyncRequest(session handle = %X)\n", handle);
 
 	// The sync request is being sent at a service rather than whatever port, so have the service manager intercept it
 	if (KernelHandles::isServiceHandle(handle)) {

@@ -23,20 +23,29 @@ void Emulator::render() {
 
 void Emulator::run() {
     while (window.isOpen()) {
-        runFrame();
-        OpenGL::setClearColor(1.0, 0.0, 0.0, 1.0);
-        OpenGL::setViewport(400, 240 * 2);
+        // Clear window to black
+        OpenGL::bindScreenFramebuffer();
         OpenGL::disableScissor();
+        OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
         OpenGL::clearColor();
+        
+        gpu.getGraphicsContext(); // Give the GPU a rendering context
+        runFrame(); // Run 1 frame of instructions
+        gpu.display();
+
+        // Send VBlank interrupts
+        kernel.sendGPUInterrupt(GPUInterrupt::VBlank0);
+        kernel.sendGPUInterrupt(GPUInterrupt::VBlank1);
+        window.display();
 
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
-                Helpers::panic("Bye :(");
+                printf("Bye :(\n");
+                window.close();
+                return;
             }
         }
-
-        window.display();
     }
 }
 

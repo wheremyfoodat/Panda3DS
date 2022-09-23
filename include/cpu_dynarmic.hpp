@@ -158,6 +158,8 @@ public:
     void runFrame() {
         env.ticksLeft = 268111856 / 60;
         const auto exitReason = jit->Run();
-        Helpers::panic("Exit reason: %d\nPC: %08X", (u32)exitReason, getReg(15));
+        if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
+            Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
+        }
     }
 };

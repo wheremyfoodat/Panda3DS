@@ -57,7 +57,7 @@ namespace OpenGL {
         void bind() { glBindVertexArray(m_handle); }
 
         template <typename T>
-        void setAttributeFloat(GLuint index, GLint size, GLsizei stride, const void* offset, bool normalized = false) {
+        void setAttributeFloat(GLuint index, GLint size, GLsizei stride, const void* offset, bool normalized = GL_FALSE) {
             if constexpr (std::is_same<T, GLfloat>()) {
                 glVertexAttribPointer(index, size, GL_FLOAT, normalized, stride, offset);
             }

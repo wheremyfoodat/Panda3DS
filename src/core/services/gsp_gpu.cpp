@@ -14,10 +14,11 @@ namespace ServiceCommands {
 }
 
 // Commands written to shared memory and processed by TriggerCmdReqQueue
-namespace GPUCommands {
+namespace GXCommands {
 	enum : u32 {
 		ProcessCommandList = 1,
-		MemoryFill = 2
+		MemoryFill = 2,
+		TriggerDisplayTransfer = 3
 	};
 }
 
@@ -50,7 +51,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 void GPUService::acquireRight(u32 messagePointer) {
 	const u32 flag = mem.read32(messagePointer + 4);
 	const u32 pid = mem.read32(messagePointer + 12);
-	printf("GSP::GPU::AcquireRight (flag = %X, pid = %X)\n", flag, pid);
+	log("GSP::GPU::AcquireRight (flag = %X, pid = %X)\n", flag, pid);
 
 	if (flag != 0) {
 		Helpers::panic("GSP::GPU::acquireRight with flag != 0 needs to perform additional initialization");
@@ -76,7 +77,7 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 
 	const u32 flags = mem.read32(messagePointer + 4);
 	const u32 eventHandle = mem.read32(messagePointer + 12);
-	printf("GSP::GPU::RegisterInterruptRelayQueue (flags = %X, event handle = %X)\n", flags, eventHandle);
+	log("GSP::GPU::RegisterInterruptRelayQueue (flags = %X, event handle = %X)\n", flags, eventHandle);
 
 	mem.write32(messagePointer + 4, Result::SuccessRegisterIRQ);
 	mem.write32(messagePointer + 8, 0); // TODO: GSP module thread index
@@ -101,7 +102,7 @@ void GPUService::writeHwRegs(u32 messagePointer) {
 	u32 ioAddr = mem.read32(messagePointer + 4); // GPU address based at 0x1EB00000, word aligned
 	const u32 size = mem.read32(messagePointer + 8); // Size in bytes
 	u32 dataPointer = mem.read32(messagePointer + 16);
-	printf("GSP::GPU::writeHwRegs (GPU address = %08X, size = %X, data address = %08X)\n", ioAddr, size, dataPointer);
+	log("GSP::GPU::writeHwRegs (GPU address = %08X, size = %X, data address = %08X)\n", ioAddr, size, dataPointer);
 
 	// Check for alignment
 	if ((size & 3) || (ioAddr & 3) || (dataPointer & 3)) {
@@ -135,7 +136,7 @@ void GPUService::writeHwRegsWithMask(u32 messagePointer) {
 	u32 dataPointer = mem.read32(messagePointer + 16); // Data pointer
 	u32 maskPointer = mem.read32(messagePointer + 24); // Mask pointer
 
-	printf("GSP::GPU::writeHwRegsWithMask (GPU address = %08X, size = %X, data address = %08X, mask address = %08X)\n", 
+	log("GSP::GPU::writeHwRegsWithMask (GPU address = %08X, size = %X, data address = %08X, mask address = %08X)\n", 
 		ioAddr, size, dataPointer, maskPointer);
 
 	// Check for alignment
@@ -172,14 +173,14 @@ void GPUService::flushDataCache(u32 messagePointer) {
 	u32 address = mem.read32(messagePointer + 4);
 	u32 size = mem.read32(messagePointer + 8);
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
-	printf("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
+	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
 
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void GPUService::setLCDForceBlack(u32 messagePointer) {
 	u32 flag = mem.read32(messagePointer + 4);
-	printf("GSP::GPU::SetLCDForceBlank(flag = %d)\n", flag);
+	log("GSP::GPU::SetLCDForceBlank(flag = %d)\n", flag);
 
 	if (flag != 0) {
 		printf("Filled both LCDs with black\n");
@@ -193,9 +194,6 @@ void GPUService::triggerCmdReqQueue(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-#include <chrono>
-#include <thread>
-using namespace std::chrono_literals;
 void GPUService::processCommandBuffer() {
 	if (sharedMem == nullptr) [[unlikely]] { // Shared memory hasn't been set up yet
 		return;
@@ -208,14 +206,14 @@ void GPUService::processCommandBuffer() {
 		// Commands start at byte 0x20 of the command buffer, each being 0x20 bytes long
 		u32* cmd = reinterpret_cast<u32*>(&cmdBuffer[0x20]);
 
-		printf("Processing %d GPU commands\n", commandsLeft);
-		std::this_thread::sleep_for(1000ms);
+		log("Processing %d GPU commands\n", commandsLeft);
 
 		while (commandsLeft != 0) {
 			u32 cmdID = cmd[0] & 0xff;
 			switch (cmdID) {
-				case GPUCommands::ProcessCommandList: processCommandList(cmd); break;
-				case GPUCommands::MemoryFill: memoryFill(cmd); break;
+				case GXCommands::ProcessCommandList: processCommandList(cmd); break;
+				case GXCommands::MemoryFill: memoryFill(cmd); break;
+				case GXCommands::TriggerDisplayTransfer: triggerDisplayTransfer(cmd); break;
 				default: Helpers::panic("GSP::GPU::ProcessCommands: Unknown cmd ID %d", cmdID);
 			}
 
@@ -247,6 +245,11 @@ void GPUService::memoryFill(u32* cmd) {
 	if (start1 != 0) {
 		gpu.clearBuffer(start1, end1, value1, control1);
 	}
+}
+
+void GPUService::triggerDisplayTransfer(u32* cmd) {
+	log("GSP::GPU::TriggerDisplayTransfer (Stubbed)\n");
+	requestInterrupt(GPUInterrupt::PPF); // Send "Display transfer finished" interrupt
 }
 
 // Actually send command list (aka display list) to GPU
@@ -305,5 +308,6 @@ void GPUService::processCommandList(u32* cmd) {
 		}
 	}
 
-	printf("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
+	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
+	requestInterrupt(GPUInterrupt::P3D); // Send an IRQ when command list processing is over
 }

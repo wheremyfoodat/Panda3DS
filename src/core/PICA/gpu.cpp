@@ -30,10 +30,6 @@ void GPU::reset() {
 	// TODO: Reset blending, texturing, etc here
 }
 
-void GPU::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
-	printf("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
-}
-
 void GPU::drawArrays(bool indexed) {
 	if (indexed)
 		drawArrays<true>();
@@ -48,13 +44,22 @@ void GPU::drawArrays() {
 	const u32 vertexBase = ((regs[PICAInternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
 	const u32 vertexCount = regs[PICAInternalRegs::VertexCountReg]; // Total # of vertices to transfer
 
+	// Configures the type of primitive and the number of vertex shader outputs
+	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
+	const u32 primType = (primConfig >> 8) & 3;
+	if (primType != 0) Helpers::panic("[PICA] Tried to draw non-triangle shape %d\n", primType);
+	if (vertexCount % 3) Helpers::panic("[PICA] Vertex count not a multiple of 3");
+	if (vertexCount > vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
+
+	Vertex vertices[vertexBufferSize];
+
 	// Stuff the global attribute config registers in one u64 to make attr parsing easier
 	// TODO: Cache this when the vertex attribute format registers are written to 
 	u64 vertexCfg = u64(regs[PICAInternalRegs::AttribFormatLow]) | (u64(regs[PICAInternalRegs::AttribFormatHigh]) << 32);
 
 	if constexpr (!indexed) {
 		u32 offset = regs[PICAInternalRegs::VertexOffsetReg];
-		printf("PICA::DrawArrays(vertex count = %d, vertexOffset = %d)\n", vertexCount, offset);
+		log("PICA::DrawArrays(vertex count = %d, vertexOffset = %d)\n", vertexCount, offset);
 	} else {
 		Helpers::panic("[PICA] Indexed drawing");
 	}
@@ -96,7 +101,6 @@ void GPU::drawArrays() {
 						for (component = 0; component < componentCount; component++) {
 							float val = *ptr++;
 							attribute[component] = f24::fromFloat32(val);
-							printf("Component %d: %f\n", component, (double)val);
 						}
 						break;
 					}
@@ -111,11 +115,13 @@ void GPU::drawArrays() {
 					attribute[component] = (component == 3) ? f24::fromFloat32(1.0) : f24::fromFloat32(0.0);
 					component++;
 				}
-
-				printf("Attribute %d, type: %d, component count: %d\n", attrCount, attribType, componentCount);
 			}
 		}
 
-		shaderUnit.vs.run(); // Run vertex shader for vertex
+		shaderUnit.vs.run();
+		std::memcpy(&vertices[i].position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
+		std::memcpy(&vertices[i].colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
 	}
+
+	drawVertices(OpenGL::Triangle, vertices, vertexCount);
 }

@@ -5,6 +5,7 @@
 #include <vector>
 #include "kernel_types.hpp"
 #include "helpers.hpp"
+#include "logger.hpp"
 #include "memory.hpp"
 #include "resource_limits.hpp"
 #include "services/service_manager.hpp"
@@ -58,7 +59,7 @@ class Kernel {
 		}
 
 		objects.push_back(KernelObject(handleCounter, type));
-		printf("Created %s object with handle %d\n", kernelObjectTypeToString(type), handleCounter);
+		log("Created %s object with handle %d\n", kernelObjectTypeToString(type), handleCounter);
 		return handleCounter++;
 	}
 
@@ -82,6 +83,9 @@ class Kernel {
 
 	std::string getProcessName(u32 pid);
 	const char* resetTypeToString(u32 type);
+
+	MAKE_LOG_FUNCTION(log, kernelLogger)
+	MAKE_LOG_FUNCTION(logSVC, svcLogger)
 
 	// SVC implementations
 	void arbitrateAddress();
@@ -110,4 +114,6 @@ public:
 	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);
 	void reset();
+
+	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.requestGPUInterrupt(type); }
 };

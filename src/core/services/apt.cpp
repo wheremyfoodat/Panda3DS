@@ -24,7 +24,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 }
 
 void APTService::getLockHandle(u32 messagePointer) {
-	printf("APT::GetLockHandle (Failure)\n");
+	log("APT::GetLockHandle (Failure)\n");
 	mem.write32(messagePointer + 4, Result::Failure); // Result code
 	mem.write32(messagePointer + 16, 0); // Translation descriptor
 }

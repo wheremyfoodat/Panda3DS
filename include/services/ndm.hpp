@@ -1,11 +1,13 @@
 #pragma once
 #include "helpers.hpp"
 #include "kernel_types.hpp"
+#include "logger.hpp"
 #include "memory.hpp"
 
 class NDMService {
 	Handle handle = KernelHandles::NDM;
 	Memory& mem;
+	MAKE_LOG_FUNCTION(log, ndmLogger)
 
 	// Service commands
 	void overrideDefaultDaemons(u32 messagePointer);

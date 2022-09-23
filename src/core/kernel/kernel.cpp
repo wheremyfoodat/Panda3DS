@@ -118,13 +118,13 @@ u32 Kernel::getTLSPointer() {
 
 // Result CloseHandle(Handle handle)
 void Kernel::svcCloseHandle() {
-	printf("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
+	logSVC("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
 	regs[0] = SVCResult::Success;
 }
 
 // u64 GetSystemTick()
 void Kernel::getSystemTick() {
-	printf("GetSystemTick()\n");
+	logSVC("GetSystemTick()\n");
 
 	u64 ticks = cpu.getTicks();
 	regs[0] = u32(ticks);
@@ -138,7 +138,7 @@ void Kernel::outputDebugString() {
 	const u32 size = regs[1];
 
 	std::string message = mem.readString(pointer, size);
-	printf("[OutputDebugString] %s\n", message.c_str());
+	logSVC("[OutputDebugString] %s\n", message.c_str());
 	regs[0] = SVCResult::Success;
 }
 
@@ -147,7 +147,7 @@ void Kernel::getProcessInfo() {
 	const auto pid = regs[1];
 	const auto type = regs[2];
 	const auto process = getProcessFromPID(pid);
-	printf("GetProcessInfo(process: %s, type = %d)\n", getProcessName(pid).c_str(), type);
+	logSVC("GetProcessInfo(process: %s, type = %d)\n", getProcessName(pid).c_str(), type);
 
 	if (process == nullptr) [[unlikely]] {
 		regs[0] = SVCResult::BadHandle;
@@ -170,7 +170,7 @@ void Kernel::getProcessInfo() {
 // Result GetThreadId(u32* threadId, Handle thread)
 void Kernel::duplicateHandle() {
 	Handle original = regs[1];
-	printf("DuplicateHandle(handle = %X)\n", original);
+	logSVC("DuplicateHandle(handle = %X)\n", original);
 
 	if (original == KernelHandles::CurrentThread) {
 		printf("[Warning] Duplicated current thread. This might be horribly broken!\n");

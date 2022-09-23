@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include "helpers.hpp"
+#include "logger.hpp"
 #include "memory.hpp"
 #include "services/apt.hpp"
 #include "services/hid.hpp"
@@ -12,6 +13,7 @@
 class ServiceManager {
 	std::array<u32, 16>& regs;
 	Memory& mem;
+	MAKE_LOG_FUNCTION(log, srvLogger)
 
 	APTService apt;
 	HIDService hid;

@@ -37,7 +37,7 @@ void Kernel::arbitrateAddress() {
 	const s32 value = s32(regs[3]);
 	const s64 ns = s64(u64(regs[4]) | (u64(regs[5]) << 32));
 
-	printf("ArbitrateAddress(Handle = %X, address = %08X, type = %s, value = %d, ns = %lld)\n", handle, address,
+	logSVC("ArbitrateAddress(Handle = %X, address = %08X, type = %s, value = %d, ns = %lld)\n", handle, address,
 		arbitrationTypeToString(type), value, ns);
 
 	const auto arbiter = getObject(handle, KernelObjectType::AddressArbiter);
@@ -68,7 +68,7 @@ void Kernel::arbitrateAddress() {
 		}
 
 		case ArbitrationType::Signal:
-			printf("Broken ArbitrateAddress (type == SIGNAL)\n");
+			logSVC("Broken ArbitrateAddress (type == SIGNAL)\n");
 			switchThread(0);
 			break;
 

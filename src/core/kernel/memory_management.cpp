@@ -49,7 +49,7 @@ void Kernel::controlMemory() {
 		Helpers::panic("ControlMemory: Unaligned parameters\nAddr0: %08X\nAddr1: %08X\nSize: %08X", addr0, addr1, size);
 	}
 	
-	printf("ControlMemory(addr0 = %08X, addr1 = %08X, size = %08X, operation = %X (%c%c%c)%s\n",
+	logSVC("ControlMemory(addr0 = %08X, addr1 = %08X, size = %08X, operation = %X (%c%c%c)%s\n",
 			addr0, addr1, size, operation, r ? 'r' : '-', w ? 'w' : '-', x ? 'x' : '-', linear ? ", linear" : ""
 	);
 
@@ -75,7 +75,7 @@ void Kernel::queryMemory() {
 	const u32 pageInfo = regs[1];
 	const u32 addr = regs[2];
 
-	printf("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
+	logSVC("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
 
 	const auto info = mem.queryMemory(addr);
 	regs[0] = SVCResult::Success;
@@ -92,7 +92,7 @@ void Kernel::mapMemoryBlock() {
 	const u32 addr = regs[1];
 	const u32 myPerms = regs[2];
 	const u32 otherPerms = regs[3];
-	printf("MapMemoryBlock(block = %d, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
+	logSVC("MapMemoryBlock(block = %d, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
 
 	if (!isAligned(addr)) [[unlikely]] {
 		Helpers::panic("MapMemoryBlock: Unaligned address");

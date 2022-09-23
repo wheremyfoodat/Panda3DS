@@ -47,6 +47,8 @@ namespace PICAInternalRegs {
 		FixedAttribData1 = 0x234,
 		FixedAttribData2 = 0x235,
 
+		PrimitiveConfig = 0x25E,
+
 		// Vertex shader registers
 		VertexShaderTransferEnd = 0x2BF,
 		VertexFloatUniformIndex = 0x2C0,

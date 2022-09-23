@@ -3,6 +3,7 @@
 #include "PICA/gpu.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
+#include "logger.hpp"
 #include "memory.hpp"
 
 enum class GPUInterrupt : u8 {
@@ -26,6 +27,7 @@ class GPUService {
 	// This is the PID of that process
 	u32 privilegedProcess;
 
+	MAKE_LOG_FUNCTION(log, gspGPULogger)
 	void processCommandBuffer();
 
 	// Service commands
@@ -40,6 +42,7 @@ class GPUService {
 	// GSP commands processed via TriggerCmdReqQueue
 	void processCommandList(u32* cmd);
 	void memoryFill(u32* cmd);
+	void triggerDisplayTransfer(u32* cmd);
 
 public:
 	GPUService(Memory& mem, GPU& gpu, u32& currentPID) : mem(mem), gpu(gpu), currentPID(currentPID) {}

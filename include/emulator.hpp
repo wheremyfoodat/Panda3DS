@@ -43,4 +43,5 @@ public:
 
     bool loadELF(std::filesystem::path& path);
     bool loadELF(std::ifstream& file);
+    void initGraphicsContext() { gpu.initGraphicsContext(); }
 };
