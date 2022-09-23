@@ -12,7 +12,9 @@ enum class ShaderType {
 
 namespace ShaderOpcodes {
 	enum : u32 {
-		MOV = 0x13
+		DP4 = 0x02,
+		MOV = 0x13,
+		END = 0x22
 	};
 }
 
@@ -31,10 +33,12 @@ class PICAShader {
 	std::array<vec4f, 16> tempRegisters;
 	ShaderType type;
 
-	// Shader opcodes
-	void mov(u32 instruction);
 	vec4f getSource(u32 source);
 	vec4f& getDest(u32 dest);
+
+	// Shader opcodes
+	void dp4(u32 instruction);
+	void mov(u32 instruction);
 
 	// src1, src2 and src3 have different negation & component swizzle bits in the operand descriptor
 	// https://problemkaputt.github.io/gbatek.htm#3dsgpushaderinstructionsetopcodesummary in the
@@ -73,6 +77,14 @@ class PICAShader {
 		}
 
 		return ret;
+	}
+
+	template <int sourceIndex>
+	vec4f getSourceSwizzled(u32 source, u32 opDescriptor) {
+		vec4f srcVector = getSource(source);
+		srcVector = swizzle<sourceIndex>(srcVector, opDescriptor);
+
+		return srcVector;
 	}
 
 public:
