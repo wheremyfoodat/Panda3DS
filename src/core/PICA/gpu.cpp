@@ -96,6 +96,15 @@ void GPU::drawArrays() {
 				uint component; // Current component
 
 				switch (attribType) {
+					case 2: { // Short
+						s16* ptr = getPointerPhys<s16>(attrAddress);
+						for (component = 0; component < componentCount; component++) {
+							float val = static_cast<float>(*ptr++);
+							attribute[component] = f24::fromFloat32(val);
+						}
+						break;
+					}
+
 					case 3: { // Float
 						float* ptr = getPointerPhys<float>(attrAddress);
 						for (component = 0; component < componentCount; component++) {
@@ -105,7 +114,7 @@ void GPU::drawArrays() {
 						break;
 					}
 
-					default: Helpers::panic("[PICA] Unimplemented component type %d", attribType);
+					default: Helpers::panic("[PICA] Unimplemented attribute type %d", attribType);
 				}
 
 				// Fill the remaining attribute lanes with default parameters (1.0 for alpha/w, 0.0) for everything else
