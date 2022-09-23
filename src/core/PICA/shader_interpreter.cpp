@@ -17,6 +17,9 @@ void PICAShader::run() {
 PICAShader::vec4f PICAShader::getSource(u32 source) {
 	if (source < 16)
 		return attributes[source];
+	else if (source >= 0x20 && source <= 0x7f)
+		return floatUniforms[source - 0x20];
+
 	Helpers::panic("[PICA] Unimplemented source value: %X", source);
 }
 

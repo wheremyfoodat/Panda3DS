@@ -85,8 +85,6 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 				attr.z() = f24::fromRaw(((fixedAttrBuff[0] & 0xff) << 16) | (fixedAttrBuff[1] >> 16));
 				attr.w() = f24::fromRaw(fixedAttrBuff[0] >> 8);
 
-				printf("r: %f g: %f b: %f a: %f\n", (double)attr.r().toFloat32(), (double)attr.g().toFloat32(), (double)attr.b().toFloat32(), (double)attr.a().toFloat32());
-
 				fixedAttribIndex++;
 			}
 

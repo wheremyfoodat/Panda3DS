@@ -129,10 +129,10 @@ public:
 			floatUniformWordCount = 0;
 
 			if (f32UniformTransfer) {
-				uniform.x() = f24::fromFloat32(*(float*)floatUniformBuffer[3]);
-				uniform.y() = f24::fromFloat32(*(float*)floatUniformBuffer[2]);
-				uniform.z() = f24::fromFloat32(*(float*)floatUniformBuffer[1]);
-				uniform.w() = f24::fromFloat32(*(float*)floatUniformBuffer[0]);
+				uniform.x() = f24::fromFloat32(*(float*)&floatUniformBuffer[3]);
+				uniform.y() = f24::fromFloat32(*(float*)&floatUniformBuffer[2]);
+				uniform.z() = f24::fromFloat32(*(float*)&floatUniformBuffer[1]);
+				uniform.w() = f24::fromFloat32(*(float*)&floatUniformBuffer[0]);
 			} else {
 				uniform.x() = f24::fromRaw(floatUniformBuffer[2] & 0xffffff);
 				uniform.y() = f24::fromRaw(((floatUniformBuffer[1] & 0xffff) << 8) | (floatUniformBuffer[2] >> 24));
