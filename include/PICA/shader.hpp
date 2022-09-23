@@ -76,7 +76,7 @@ public:
 	
 	u32 boolUniform;
 	std::array<u32, 4> intUniforms;
-	std::array<vec4f, 8> floatUniforms;
+	std::array<vec4f, 96> floatUniforms;
 
 	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
 	std::array<vec4f, 16> attributes; // Attributes past to the shader
