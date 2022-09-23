@@ -49,6 +49,16 @@ namespace PICAInternalRegs {
 
 		// Vertex shader registers
 		VertexShaderTransferEnd = 0x2BF,
+		VertexFloatUniformIndex = 0x2C0,
+		VertexFloatUniformData0 = 0x2C1,
+		VertexFloatUniformData1 = 0x2C2,
+		VertexFloatUniformData2 = 0x2C3,
+		VertexFloatUniformData3 = 0x2C4,
+		VertexFloatUniformData4 = 0x2C5,
+		VertexFloatUniformData5 = 0x2C6,
+		VertexFloatUniformData6 = 0x2C7,
+		VertexFloatUniformData7 = 0x2C8,
+
 		VertexShaderTransferIndex = 0x2CB,
 		VertexShaderData0 = 0x2CC,
 		VertexShaderData1 = 0x2CD,

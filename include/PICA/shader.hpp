@@ -22,6 +22,11 @@ class PICAShader {
 
 	int bufferIndex; // Index of the next instruction to overwrite for shader uploads
 	int opDescriptorIndex; // Index of the next operand descriptor we'll overwrite
+	u32 floatUniformIndex = 0; // Which float uniform are we writing to? ([0, 95] range)
+	u32 floatUniformWordCount = 0; // How many words have we buffered for the current uniform transfer?
+	bool f32UniformTransfer = false; // Are we transferring an f32 uniform or an f24 uniform?
+
+	std::array<u32, 4> floatUniformBuffer; // Buffer for temporarily caching float uniform data
 	std::array<u32, 128> operandDescriptors;
 	std::array<vec4f, 16> tempRegisters;
 	ShaderType type;
@@ -84,34 +89,18 @@ public:
 
 	PICAShader(ShaderType type) : type(type) {}
 
-	void reset() {
-		loadedShader.fill(0);
-		bufferedShader.fill(0);
-		operandDescriptors.fill(0);
-
-		intUniforms.fill(0);
-		boolUniform = 0;
-		bufferIndex = 0;
-		opDescriptorIndex = 0;
-
-		const vec4f zero = vec4f({ f24::fromFloat32(0.0), f24::fromFloat32(0.0), f24::fromFloat32(0.0), f24::fromFloat32(0.0) });
-		attributes.fill(zero);
-		floatUniforms.fill(zero);
-		outputs.fill(zero);
-		tempRegisters.fill(zero);
-	}
-
+	// Theese functions are in the header to be inlined more easily, though with LTO I hope I'll be able to move them
 	void finalize() {
 		std::memcpy(&loadedShader[0], &bufferedShader[0], 512 * sizeof(u32));
 	}
 
-	void setBufferIndex(u32 offset) {
-		if (offset != 0) Helpers::panic("Is this register 9 or 11 bit?");
-		bufferIndex = (offset >> 2) & 0x1ff;
+	void setBufferIndex(u32 index) {
+		if (index != 0) Helpers::panic("Is this register 9 or 11 bit?");
+		bufferIndex = (index >> 2) & 0x1ff;
 	}
 
-	void setOpDescriptorIndex(u32 offset) {
-		opDescriptorIndex = offset & 0x7f;
+	void setOpDescriptorIndex(u32 index) {
+		opDescriptorIndex = index & 0x7f;
 	}
 
 	void uploadWord(u32 word) {
@@ -124,5 +113,35 @@ public:
 		opDescriptorIndex &= 0x7f;
 	}
 
+	void setFloatUniformIndex(u32 word) {
+		floatUniformIndex = word & 0xff;
+		floatUniformWordCount = 0;
+		f32UniformTransfer = (word & 0x80000000) != 0;
+	}
+
+	void uploadFloatUniform(u32 word) {
+		floatUniformBuffer[floatUniformWordCount++] = word;
+		if (floatUniformIndex >= 96)
+			Helpers::panic("[PICA] Tried to write float uniform %d", floatUniformIndex);
+
+		if ((f32UniformTransfer && floatUniformWordCount == 4) || (!f32UniformTransfer && floatUniformWordCount == 3)) {
+			vec4f& uniform = floatUniforms[floatUniformIndex++];
+			floatUniformWordCount = 0;
+
+			if (f32UniformTransfer) {
+				uniform.x() = f24::fromFloat32(*(float*)floatUniformBuffer[3]);
+				uniform.y() = f24::fromFloat32(*(float*)floatUniformBuffer[2]);
+				uniform.z() = f24::fromFloat32(*(float*)floatUniformBuffer[1]);
+				uniform.w() = f24::fromFloat32(*(float*)floatUniformBuffer[0]);
+			} else {
+				uniform.x() = f24::fromRaw(floatUniformBuffer[2] & 0xffffff);
+				uniform.y() = f24::fromRaw(((floatUniformBuffer[1] & 0xffff) << 8) | (floatUniformBuffer[2] >> 24));
+				uniform.z() = f24::fromRaw(((floatUniformBuffer[0] & 0xff) << 16) | (floatUniformBuffer[1] >> 16));
+				uniform.w() = f24::fromRaw(floatUniformBuffer[0] >> 8);
+			}
+		}
+	}
+
 	void run();
+	void reset();
 };

@@ -54,6 +54,16 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			fixedAttribMask = (value >> 16) & 0xfff; // Determines which vertex attributes are fixed for all vertices
 			break;
 
+		case VertexFloatUniformIndex:
+			shaderUnit.vs.setFloatUniformIndex(value);
+			break;
+
+		case VertexFloatUniformData0: case VertexFloatUniformData1: case VertexFloatUniformData2:
+		case VertexFloatUniformData3: case VertexFloatUniformData4: case VertexFloatUniformData5:
+		case VertexFloatUniformData6: case VertexFloatUniformData7:
+			shaderUnit.vs.uploadFloatUniform(value);
+			break;
+
 		case FixedAttribIndex:
 			fixedAttribCount = 0;
 			fixedAttribIndex = value & 0xf;

@@ -63,6 +63,18 @@ namespace Floats {
             return value;
         }
 
+        double toFloat64() const {
+            return static_cast<double>(value);
+        }
+
+        operator float() {
+            return toFloat32();
+        }
+
+        operator double() {
+            return toFloat64();
+        }
+
         Float<M, E> operator*(const Float<M, E>& flt) const {
             float result = value * flt.toFloat32();
             // PICA gives 0 instead of NaN when multiplying by inf
