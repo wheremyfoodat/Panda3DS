@@ -58,5 +58,14 @@ namespace PICAInternalRegs {
 		VertexShaderData5 = 0x2D1,
 		VertexShaderData6 = 0x2D2,
 		VertexShaderData7 = 0x2D3,
+		VertexShaderOpDescriptorIndex = 0x2D5,
+		VertexShaderOpDescriptorData0 = 0x2D6,
+		VertexShaderOpDescriptorData1 = 0x2D7,
+		VertexShaderOpDescriptorData2 = 0x2D8,
+		VertexShaderOpDescriptorData3 = 0x2D9,
+		VertexShaderOpDescriptorData4 = 0x2DA,
+		VertexShaderOpDescriptorData5 = 0x2DB,
+		VertexShaderOpDescriptorData6 = 0x2DC,
+		VertexShaderOpDescriptorData7 = 0x2DD,
 	};
 }

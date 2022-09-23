@@ -82,6 +82,16 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 			break;
 
+		case VertexShaderOpDescriptorIndex:
+			shaderUnit.vs.setOpDescriptorIndex(value);
+			break;
+
+		case VertexShaderOpDescriptorData0: case VertexShaderOpDescriptorData1: case VertexShaderOpDescriptorData2:
+		case VertexShaderOpDescriptorData3: case VertexShaderOpDescriptorData4: case VertexShaderOpDescriptorData5:
+		case VertexShaderOpDescriptorData6: case VertexShaderOpDescriptorData7:
+			shaderUnit.vs.uploadDescriptor(value);
+			break;
+
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;
