@@ -12,6 +12,7 @@ enum class ShaderType {
 
 namespace ShaderOpcodes {
 	enum : u32 {
+		ADD = 0x00,
 		DP4 = 0x02,
 		MOV = 0x13,
 		END = 0x22
@@ -37,6 +38,7 @@ class PICAShader {
 	vec4f& getDest(u32 dest);
 
 	// Shader opcodes
+	void add(u32 instruction);
 	void dp4(u32 instruction);
 	void mov(u32 instruction);
 
