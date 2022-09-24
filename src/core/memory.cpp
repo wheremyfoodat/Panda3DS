@@ -2,6 +2,7 @@
 #include "config_mem.hpp"
 #include "resource_limits.hpp"
 #include <cassert>
+#include <chrono> // For time since epoch
 
 using namespace KernelMemoryTypes;
 
@@ -85,7 +86,11 @@ u32 Memory::read32(u32 vaddr) {
 		return *(u32*)(pointer + offset);
 	} else {
 		switch (vaddr) {
+			case ConfigMem::Datetime0: return u32(timeSince3DSEpoch()); // ms elapsed since Jan 1 1900, bottom 32 bits
+			case ConfigMem::Datetime0 + 4: return u32(timeSince3DSEpoch() >> 32); // top 32 bits
+
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
+			case 0x1FF81000: return 0; // TODO: Figure out what this config mem address does
 			default:
 				Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
 				break;
@@ -350,4 +355,15 @@ void Memory::mapGSPSharedMemory(u32 vaddr, u32 myPerms, u32 otherPerms) {
 	const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x);
 	if (!result.has_value())
 		Helpers::panic("Failed to allocated GSP shared memory");
+}
+
+// Get the number of ms since Jan 1 1900
+u64 Memory::timeSince3DSEpoch() {
+	using namespace std::chrono;
+	
+	// ms since Jan 1 1970
+	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	// ms between Jan 1 1900 and Jan 1 1970 (2208988800 seconds elapsed between the two)
+	const u64 offset = 2208988800ull * 1000;
+	return ms.count() + offset;
 }

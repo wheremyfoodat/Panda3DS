@@ -118,6 +118,7 @@ public:
 
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
+	u64 timeSince3DSEpoch();
 
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
 	static constexpr bool isAligned(u32 addr) {
