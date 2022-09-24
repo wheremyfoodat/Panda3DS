@@ -14,6 +14,7 @@ namespace ShaderOpcodes {
 	enum : u32 {
 		ADD = 0x00,
 		DP4 = 0x02,
+		MUL = 0x08,
 		MOV = 0x13,
 		END = 0x22
 	};
@@ -41,6 +42,7 @@ class PICAShader {
 	void add(u32 instruction);
 	void dp4(u32 instruction);
 	void mov(u32 instruction);
+	void mul(u32 instruction);
 
 	// src1, src2 and src3 have different negation & component swizzle bits in the operand descriptor
 	// https://problemkaputt.github.io/gbatek.htm#3dsgpushaderinstructionsetopcodesummary in the
