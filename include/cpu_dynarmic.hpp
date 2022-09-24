@@ -155,6 +155,11 @@ public:
         return env.totalTicks;
     }
 
+    // Get reference to tick count. Memory needs access to this
+    u64& getTicksRef() {
+        return env.totalTicks;
+    }
+
     void runFrame() {
         env.ticksLeft = 268111856 / 60;
         const auto exitReason = jit->Run();

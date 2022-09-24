@@ -72,6 +72,7 @@ namespace KernelMemoryTypes {
 
 class Memory {
 	u8* fcram;
+	u64& cpuTicks; // Reference to the CPU tick counter
 
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
 	std::vector<uintptr_t> readTable, writeTable;
@@ -93,13 +94,14 @@ class Memory {
 
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
+	u64 timeSince3DSEpoch();
 
 public:
 	u16 kernelVersion = 0;
 	u32 usedUserMemory = 0;
 	std::optional<int> gspMemIndex; // Index of GSP shared mem in lockedMemoryInfo or nullopt if it's already reserved
 
-	Memory();
+	Memory(u64& cpuTicks);
 	void reset();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
@@ -118,7 +120,6 @@ public:
 
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
-	u64 timeSince3DSEpoch();
 
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
 	static constexpr bool isAligned(u32 addr) {

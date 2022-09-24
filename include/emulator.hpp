@@ -30,7 +30,7 @@ class Emulator {
 
 public:
     Emulator() : window(sf::VideoMode(width, height), "Alber", sf::Style::Default, sf::ContextSettings(0, 0, 0, 4, 3)),
-                 kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory) {
+                 kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory), memory(cpu.getTicksRef()) {
         reset();
         window.setActive(true);
     }

@@ -6,7 +6,7 @@
 
 using namespace KernelMemoryTypes;
 
-Memory::Memory() {
+Memory::Memory(u64& cpuTicks) : cpuTicks(cpuTicks) {
 	fcram = new uint8_t[FCRAM_SIZE]();
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
@@ -88,6 +88,12 @@ u32 Memory::read32(u32 vaddr) {
 		switch (vaddr) {
 			case ConfigMem::Datetime0: return u32(timeSince3DSEpoch()); // ms elapsed since Jan 1 1900, bottom 32 bits
 			case ConfigMem::Datetime0 + 4: return u32(timeSince3DSEpoch() >> 32); // top 32 bits
+			// Ticks since time was last updated. For now we return the current tick count
+			case ConfigMem::Datetime0 + 8: return u32(cpuTicks);
+			case ConfigMem::Datetime0 + 12: return u32(cpuTicks >> 32);
+			case ConfigMem::Datetime0 + 16: return 0xFFB0FF0; // Unknown, set by PTM
+			case ConfigMem::Datetime0 + 20: case ConfigMem::Datetime0 + 24: case ConfigMem::Datetime0 + 28:
+				return 0; // Set to 0 by PTM
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case 0x1FF81000: return 0; // TODO: Figure out what this config mem address does
@@ -360,7 +366,7 @@ void Memory::mapGSPSharedMemory(u32 vaddr, u32 myPerms, u32 otherPerms) {
 // Get the number of ms since Jan 1 1900
 u64 Memory::timeSince3DSEpoch() {
 	using namespace std::chrono;
-	
+
 	// ms since Jan 1 1970
 	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 	// ms between Jan 1 1900 and Jan 1 1970 (2208988800 seconds elapsed between the two)
