@@ -11,10 +11,24 @@ void PICAShader::run() {
 			case ShaderOpcodes::ADD: add(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
+			case ShaderOpcodes::LOOP: loop(instruction); break;
 			case ShaderOpcodes::MOV: mov(instruction); break;
 			case ShaderOpcodes::MOVA: mova(instruction); break;
 			case ShaderOpcodes::MUL: mul(instruction); break;
 			default:Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
+		}
+
+		// Handle loop
+		if (loopIndex != 0) {
+			auto& loop = loopInfo[loopIndex - 1];
+			if (pc == loop.endingPC) { // Check if the loop needs to start over
+				loop.iterations -= 1;
+				if (loop.iterations == 0) // If the loop ended, go one level down on the loop stack
+					loopIndex -= 1;
+
+				loopCounter += loop.increment;
+				pc = loop.startingPC;
+			}
 		}
 	}
 }
@@ -153,4 +167,19 @@ void PICAShader::dp4(u32 instruction) {
 			destVector[3 - i] = dot;
 		}
 	}
+}
+
+void PICAShader::loop(u32 instruction) {
+	if (loopIndex >= 4) [[unlikely]]
+		Helpers::panic("[PICA] Overflowed loop stack");
+
+	u32 dest = (instruction >> 10) & 0xfff;
+	auto& uniform = intUniforms[(instruction >> 22) & 3]; // The uniform we'll get loop info from
+	loopCounter = uniform.y();
+	auto& loop = loopInfo[loopIndex++];
+
+	loop.startingPC = pc;
+	loop.endingPC = dest + 1; // Loop is inclusive so we need + 1 here
+	loop.iterations = uniform.x() + 1;
+	loop.increment = uniform.z();
 }

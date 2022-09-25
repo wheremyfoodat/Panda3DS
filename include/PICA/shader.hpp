@@ -17,13 +17,21 @@ namespace ShaderOpcodes {
 		MUL = 0x08,
 		MOVA = 0x12,
 		MOV = 0x13,
-		END = 0x22
+		END = 0x22,
+		LOOP = 0x29
 	};
 }
 
 class PICAShader {
 	using f24 = Floats::f24;
 	using vec4f = OpenGL::Vector<f24, 4>;
+
+	struct Loop {
+		u32 startingPC; // PC at the start of the loop
+		u32 endingPC;   // PC at the end of the loop
+		u32 iterations; // How many iterations of the loop to run
+		u32 increment;  // How much to increment the loop counter after each iteration
+	};
 
 	int bufferIndex; // Index of the next instruction to overwrite for shader uploads
 	int opDescriptorIndex; // Index of the next operand descriptor we'll overwrite
@@ -35,9 +43,12 @@ class PICAShader {
 	std::array<u32, 128> operandDescriptors;
 	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
 	OpenGL::Vector<s32, 2> addrRegister; // Address register
-	u32 pc = 0; // Program counter: Index of the next instruction we're going to execute
-	
 	u32 loopCounter;
+
+	u32 pc = 0; // Program counter: Index of the next instruction we're going to execute
+	u32 loopIndex = 0; // The index of our loop stack (0 = empty, 4 = full)
+	std::array<Loop, 4> loopInfo;
+
 	ShaderType type;
 
 	vec4f getSource(u32 source);
@@ -46,6 +57,7 @@ class PICAShader {
 	// Shader opcodes
 	void add(u32 instruction);
 	void dp4(u32 instruction);
+	void loop(u32 instruction);
 	void mov(u32 instruction);
 	void mova(u32 instruction);
 	void mul(u32 instruction);
