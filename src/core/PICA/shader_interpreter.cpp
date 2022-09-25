@@ -27,11 +27,14 @@ u8 PICAShader::getIndexedSource(u32 source, u32 index) {
 		return source;
 
 	switch (index) {
-		case 0: return u8(source); // No offset applied
+		case 0: [[likely]] return u8(source); // No offset applied
 		case 1: return u8(source + addrRegister.x());
 		case 2: return u8(source + addrRegister.y());
 		case 3: return u8(source + loopCounter);
 	}
+
+	Helpers::panic("Reached unreachable path in PICAShader::getIndexedSource");
+	return 0;
 }
 
 PICAShader::vec4f PICAShader::getSource(u32 source) {
