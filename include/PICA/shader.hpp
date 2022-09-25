@@ -19,7 +19,10 @@ namespace ShaderOpcodes {
 		MOVA = 0x12,
 		MOV = 0x13,
 		END = 0x22,
-		LOOP = 0x29
+		IFC = 0x28,
+		LOOP = 0x29,
+		CMP1 = 0x2E, // Both of these instructions are CMP
+		CMP2 = 0x2F
 	};
 }
 
@@ -34,6 +37,12 @@ class PICAShader {
 		u32 increment;  // How much to increment the loop counter after each iteration
 	};
 
+	// Info for ifc/ifu stack
+	struct ConditionalInfo {
+		u32 endingPC; // PC at the end of the if block (= DST)
+		u32 newPC; // PC after the if block is done executing (= DST + NUM)
+	};
+
 	int bufferIndex; // Index of the next instruction to overwrite for shader uploads
 	int opDescriptorIndex; // Index of the next operand descriptor we'll overwrite
 	u32 floatUniformIndex = 0; // Which float uniform are we writing to? ([0, 95] range)
@@ -44,11 +53,15 @@ class PICAShader {
 	std::array<u32, 128> operandDescriptors;
 	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
 	OpenGL::Vector<s32, 2> addrRegister; // Address register
+	bool cmpRegister[2]; // Comparison registers where the result of CMP is stored in
 	u32 loopCounter;
 
 	u32 pc = 0; // Program counter: Index of the next instruction we're going to execute
 	u32 loopIndex = 0; // The index of our loop stack (0 = empty, 4 = full)
+	u32 ifIndex = 0; // The index of our IF stack
+
 	std::array<Loop, 4> loopInfo;
+	std::array<ConditionalInfo, 8> conditionalInfo;
 
 	ShaderType type;
 
@@ -57,8 +70,10 @@ class PICAShader {
 
 	// Shader opcodes
 	void add(u32 instruction);
+	void cmp(u32 instruction);
 	void dp3(u32 instruction);
 	void dp4(u32 instruction);
+	void ifc(u32 instruction);
 	void loop(u32 instruction);
 	void mov(u32 instruction);
 	void mova(u32 instruction);
@@ -112,6 +127,7 @@ class PICAShader {
 	}
 
 	u8 getIndexedSource(u32 source, u32 index);
+	bool isCondTrue(u32 instruction);
 
 public:
 	std::array<u32, 512> loadedShader; // Currently loaded & active shader

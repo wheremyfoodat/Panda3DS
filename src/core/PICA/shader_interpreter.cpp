@@ -3,6 +3,7 @@
 void PICAShader::run() {
 	pc = 0;
 	loopIndex = 0;
+	ifIndex = 0;
 
 	while (true) {
 		const u32 instruction = loadedShader[pc++];
@@ -10,9 +11,13 @@ void PICAShader::run() {
 
 		switch (opcode) {
 			case ShaderOpcodes::ADD: add(instruction); break;
+			case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2: 
+				cmp(instruction);
+				break;
 			case ShaderOpcodes::DP3: dp3(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
+			case ShaderOpcodes::IFC: ifc(instruction); break;
 			case ShaderOpcodes::LOOP: loop(instruction); break;
 			case ShaderOpcodes::MOV: mov(instruction); break;
 			case ShaderOpcodes::MOVA: mova(instruction); break;
@@ -20,6 +25,7 @@ void PICAShader::run() {
 			default:Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
 		}
 
+		// Handle control flow statements. The ordering is important as the priority goes: LOOP > IF > CALL
 		// Handle loop
 		if (loopIndex != 0) {
 			auto& loop = loopInfo[loopIndex - 1];
@@ -30,6 +36,15 @@ void PICAShader::run() {
 
 				loopCounter += loop.increment;
 				pc = loop.startingPC;
+			}
+		}
+
+		// Handle ifs
+		if (ifIndex != 0) {
+			auto& info = conditionalInfo[ifIndex - 1];
+			if (pc == info.endingPC) { // Check if the IF block ended
+				pc = info.newPC;
+				ifIndex -= 1;
 			}
 		}
 	}
@@ -71,6 +86,23 @@ PICAShader::vec4f& PICAShader::getDest(u32 dest) {
 		return tempRegisters[dest - 0x10];
 	}
 	Helpers::panic("[PICA] Unimplemented dest: %X", dest);
+}
+
+bool PICAShader::isCondTrue(u32 instruction) {
+	u32 condition = (instruction >> 22) & 3;
+	bool refX = ((instruction >> 24) & 1) != 0;
+	bool refY = ((instruction >> 25) & 1) != 0;
+
+	switch (condition) {
+		case 0: // Either cmp register matches 
+			return cmpRegister[0] == refX || cmpRegister[1] == refY;
+		case 1: // Both cmp registers match
+			return cmpRegister[0] == refX && cmpRegister[1] == refY;
+		case 2: // At least cmp.x matches
+			return cmpRegister[0] == refX;
+		case 3: // At least cmp.y matches
+			return cmpRegister[1] == refY;
+	}
 }
 
 void PICAShader::add(u32 instruction) {
@@ -190,6 +222,69 @@ void PICAShader::dp4(u32 instruction) {
 		if (componentMask & (1 << i)) {
 			destVector[3 - i] = dot;
 		}
+	}
+}
+
+void PICAShader::cmp(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 cmpX = (instruction >> 21) & 7;
+	const u32 cmpY = (instruction >> 24) & 7;
+	const u32 cmpOperations[2] = { cmpX, cmpY };
+
+	if (idx) Helpers::panic("[PICA] CMP: idx != 0");
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+
+	for (int i = 0; i < 2; i++) {
+		switch (cmpOperations[i]) {
+			case 0: // Equal
+				cmpRegister[i] = srcVec1[i] == srcVec2[i];
+				break;
+
+			case 1: // Not equal
+				cmpRegister[i] = srcVec1[i] != srcVec2[i];
+				break;
+
+			case 2: // Less than
+				cmpRegister[i] = srcVec1[i] < srcVec2[i];
+				break;
+
+			case 3: // Less than or equal
+				cmpRegister[i] = srcVec1[i] <= srcVec2[i];
+				break;
+
+			case 4: // Greater than
+				cmpRegister[i] = srcVec1[i] > srcVec2[i];
+				break;
+
+			case 5: // Greater than or equal
+				cmpRegister[i] = srcVec1[i] >= srcVec2[i];
+				break;
+
+			default:
+				cmpRegister[i] = true;
+				break;
+		}
+	}
+}
+
+void PICAShader::ifc(u32 instruction) {
+	const u32 dest = (instruction >> 10) & 0xfff;
+
+	if (isCondTrue(instruction)) {
+		if (ifIndex >= 8) [[unlikely]]
+			Helpers::panic("[PICA] Overflowed IF stack");
+
+		const u32 num = instruction & 0xff;
+
+		auto& block = conditionalInfo[ifIndex++];
+		block.endingPC = dest;
+		block.newPC = dest + num;
+	} else {
+		pc = dest;
 	}
 }
 
