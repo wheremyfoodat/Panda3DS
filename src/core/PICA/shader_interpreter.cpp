@@ -1,7 +1,7 @@
 #include "PICA/shader.hpp"
 
 void PICAShader::run() {
-	u32 pc = 0; // Program counter
+	pc = 0;
 
 	while (true) {
 		const u32 instruction = loadedShader[pc++];

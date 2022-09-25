@@ -100,6 +100,10 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			shaderUnit.vs.uploadDescriptor(value);
 			break;
 
+		case VertexIntUniform0: case VertexIntUniform1: case VertexIntUniform2: case VertexIntUniform3:
+			shaderUnit.vs.uploadIntUniform(index - VertexIntUniform0, value);
+			break;
+
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;

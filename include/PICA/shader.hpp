@@ -35,6 +35,8 @@ class PICAShader {
 	std::array<u32, 128> operandDescriptors;
 	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
 	OpenGL::Vector<s32, 2> addrRegister; // Address register
+	u32 pc = 0; // Program counter: Index of the next instruction we're going to execute
+	
 	u32 loopCounter;
 	ShaderType type;
 
@@ -102,7 +104,7 @@ public:
 	std::array<u32, 512> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
 	
 	u32 boolUniform;
-	std::array<u32, 4> intUniforms;
+	std::array<OpenGL::Vector<u8, 4>, 4> intUniforms;
 	std::array<vec4f, 96> floatUniforms;
 
 	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
@@ -162,6 +164,14 @@ public:
 				uniform.w() = f24::fromRaw(floatUniformBuffer[0] >> 8);
 			}
 		}
+	}
+
+	void uploadIntUniform(int index, u32 word) {
+		auto& u = intUniforms[index];
+		u.x() = word & 0xff;
+		u.y() = (word >> 8) & 0xff;
+		u.z() = (word >> 16) & 0xff;
+		u.w() = (word >> 24) & 0xff;
 	}
 
 	void run();

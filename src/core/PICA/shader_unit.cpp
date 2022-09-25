@@ -10,7 +10,6 @@ void PICAShader::reset() {
 	bufferedShader.fill(0);
 	operandDescriptors.fill(0);
 
-	intUniforms.fill(0);
 	boolUniform = 0;
 	bufferIndex = 0;
 	floatUniformIndex = 0;
@@ -23,6 +22,10 @@ void PICAShader::reset() {
 	floatUniforms.fill(zero);
 	outputs.fill(zero);
 	tempRegisters.fill(zero);
+
+	for (auto& e : intUniforms) {
+		e.x() = e.y() = e.z() = e.w() = 0;
+	}
 
 	addrRegister.x() = 0;
 	addrRegister.y() = 0;
