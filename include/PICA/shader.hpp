@@ -13,6 +13,7 @@ enum class ShaderType {
 namespace ShaderOpcodes {
 	enum : u32 {
 		ADD = 0x00,
+		DP3 = 0x01,
 		DP4 = 0x02,
 		MUL = 0x08,
 		MOVA = 0x12,
@@ -56,6 +57,7 @@ class PICAShader {
 
 	// Shader opcodes
 	void add(u32 instruction);
+	void dp3(u32 instruction);
 	void dp4(u32 instruction);
 	void loop(u32 instruction);
 	void mov(u32 instruction);

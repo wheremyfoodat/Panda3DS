@@ -2,6 +2,7 @@
 
 void PICAShader::run() {
 	pc = 0;
+	loopIndex = 0;
 
 	while (true) {
 		const u32 instruction = loadedShader[pc++];
@@ -9,6 +10,7 @@ void PICAShader::run() {
 
 		switch (opcode) {
 			case ShaderOpcodes::ADD: add(instruction); break;
+			case ShaderOpcodes::DP3: dp3(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
 			case ShaderOpcodes::LOOP: loop(instruction); break;
@@ -145,6 +147,28 @@ void PICAShader::mova(u32 instruction) {
 		addrRegister.x() = static_cast<s32>(srcVector.x().toFloat32());
 	if (componentMask & 0b0100) // y component
 		addrRegister.y() = static_cast<s32>(srcVector.y().toFloat32());
+}
+
+void PICAShader::dp3(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	if (idx) Helpers::panic("[PICA] DP3: idx != 0");
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+	f24 dot = srcVec1[0] * srcVec2[0] + srcVec1[1] * srcVec2[1] + srcVec1[2] * srcVec2[2];
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = dot;
+		}
+	}
 }
 
 void PICAShader::dp4(u32 instruction) {
