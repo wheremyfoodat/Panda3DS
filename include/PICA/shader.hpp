@@ -17,14 +17,18 @@ namespace ShaderOpcodes {
 		DP4 = 0x02,
 		MUL = 0x08,
 		MIN = 0x0D,
+		RSQ = 0x0F,
 		MOVA = 0x12,
 		MOV = 0x13,
 		NOP = 0x21,
 		END = 0x22,
+		CALLU = 0x26,
+		IFU = 0x27,
 		IFC = 0x28,
 		LOOP = 0x29,
 		CMP1 = 0x2E, // Both of these instructions are CMP
-		CMP2 = 0x2F
+		CMP2 = 0x2F,
+		MAD = 0x38 // Everything between 0x38-0x3F is a MAD but fuck it
 	};
 }
 
@@ -45,6 +49,11 @@ class PICAShader {
 		u32 newPC; // PC after the if block is done executing (= DST + NUM)
 	};
 
+	struct CallInfo {
+		u32 endingPC; // PC at the end of the function
+		u32 returnPC; // PC to return to after the function ends
+	};
+
 	int bufferIndex; // Index of the next instruction to overwrite for shader uploads
 	int opDescriptorIndex; // Index of the next operand descriptor we'll overwrite
 	u32 floatUniformIndex = 0; // Which float uniform are we writing to? ([0, 95] range)
@@ -61,9 +70,11 @@ class PICAShader {
 	u32 pc = 0; // Program counter: Index of the next instruction we're going to execute
 	u32 loopIndex = 0; // The index of our loop stack (0 = empty, 4 = full)
 	u32 ifIndex = 0; // The index of our IF stack
+	u32 callIndex = 0; // The index of our CALL stack
 
 	std::array<Loop, 4> loopInfo;
 	std::array<ConditionalInfo, 8> conditionalInfo;
+	std::array<CallInfo, 8> callInfo;
 
 	ShaderType type;
 
@@ -72,15 +83,19 @@ class PICAShader {
 
 	// Shader opcodes
 	void add(u32 instruction);
+	void callu(u32 instruction);
 	void cmp(u32 instruction);
 	void dp3(u32 instruction);
 	void dp4(u32 instruction);
 	void ifc(u32 instruction);
+	void ifu(u32 instruction);
 	void loop(u32 instruction);
+	void mad(u32 instruction);
 	void min(u32 instruction);
 	void mov(u32 instruction);
 	void mova(u32 instruction);
 	void mul(u32 instruction);
+	void rsq(u32 instruction);
 
 	// src1, src2 and src3 have different negation & component swizzle bits in the operand descriptor
 	// https://problemkaputt.github.io/gbatek.htm#3dsgpushaderinstructionsetopcodesummary in the

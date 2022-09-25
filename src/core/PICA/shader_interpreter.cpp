@@ -1,9 +1,11 @@
 #include "PICA/shader.hpp"
+#include <cmath>
 
 void PICAShader::run() {
 	pc = 0;
 	loopIndex = 0;
 	ifIndex = 0;
+	callIndex = 0;
 
 	while (true) {
 		const u32 instruction = loadedShader[pc++];
@@ -11,6 +13,7 @@ void PICAShader::run() {
 
 		switch (opcode) {
 			case ShaderOpcodes::ADD: add(instruction); break;
+			case ShaderOpcodes::CALLU: callu(instruction); break;
 			case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2: 
 				cmp(instruction);
 				break;
@@ -18,12 +21,19 @@ void PICAShader::run() {
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
 			case ShaderOpcodes::IFC: ifc(instruction); break;
+			case ShaderOpcodes::IFU: ifu(instruction); break;
 			case ShaderOpcodes::LOOP: loop(instruction); break;
 			case ShaderOpcodes::MIN: min(instruction); break;
 			case ShaderOpcodes::MOV: mov(instruction); break;
 			case ShaderOpcodes::MOVA: mova(instruction); break;
 			case ShaderOpcodes::MUL: mul(instruction); break;
 			case ShaderOpcodes::NOP: break; // Do nothing
+			case ShaderOpcodes::RSQ: rsq(instruction); break;
+
+			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
+				mad(instruction);
+				break;
+
 			default:Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
 		}
 
@@ -47,6 +57,15 @@ void PICAShader::run() {
 			if (pc == info.endingPC) { // Check if the IF block ended
 				pc = info.newPC;
 				ifIndex -= 1;
+			}
+		}
+
+		// Handle calls
+		if (callIndex != 0) {
+			auto& info = callInfo[callIndex - 1];
+			if (pc == info.endingPC) { // Check if the IF block ended
+				pc = info.returnPC;
+				callIndex -= 1;
 			}
 		}
 	}
@@ -249,6 +268,49 @@ void PICAShader::dp4(u32 instruction) {
 	}
 }
 
+void PICAShader::rsq(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	if (idx) Helpers::panic("[PICA] RSQ: idx != 0");
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+	f24 res = f24::fromFloat32(1.0f / std::sqrt(srcVec1[0].toFloat32()));
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = res;
+		}
+	}
+}
+
+void PICAShader::mad(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x1f];
+	const u32 src1 = (instruction >> 17) & 0x1f;
+	u32 src2 = (instruction >> 10) & 0x7f;
+	const u32 src3 = (instruction >> 5) & 0x1f;
+	const u32 idx = (instruction >> 22) & 3;
+	const u32 dest = (instruction >> 24) & 0x1f;
+
+	src2 = getIndexedSource(src2, idx);
+
+	auto src1Vec = getSourceSwizzled<1>(src1, operandDescriptor);
+	auto src2Vec = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto src3Vec = getSourceSwizzled<3>(src3, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = src1Vec[3 - i] * src2Vec[3 - i] + src3Vec[3 - i];
+		}
+	}
+}
+
 void PICAShader::cmp(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = (instruction >> 12) & 0x7f;
@@ -299,6 +361,42 @@ void PICAShader::ifc(u32 instruction) {
 	const u32 dest = (instruction >> 10) & 0xfff;
 
 	if (isCondTrue(instruction)) {
+		if (ifIndex >= 8) [[unlikely]]
+			Helpers::panic("[PICA] Overflowed IF stack");
+
+		const u32 num = instruction & 0xff;
+
+		auto& block = conditionalInfo[ifIndex++];
+		block.endingPC = dest;
+		block.newPC = dest + num;
+	} else {
+		pc = dest;
+	}
+}
+
+void PICAShader::callu(u32 instruction) {
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
+
+	if (boolUniform & (1 << bit)) {
+		if (callIndex >= 4) [[unlikely]]
+			Helpers::panic("[PICA] Overflowed CALL stack");
+
+		const u32 num = instruction & 0xff;
+
+		auto& block = callInfo[callIndex++];
+		block.endingPC = dest + num;
+		block.returnPC = pc;
+
+		pc = dest;
+	}
+}
+
+void PICAShader::ifu(u32 instruction) {
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
+
+	if (boolUniform & (1 << bit)) {
 		if (ifIndex >= 8) [[unlikely]]
 			Helpers::panic("[PICA] Overflowed IF stack");
 

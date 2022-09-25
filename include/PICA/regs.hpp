@@ -50,6 +50,7 @@ namespace PICAInternalRegs {
 		PrimitiveConfig = 0x25E,
 
 		// Vertex shader registers
+		VertexBoolUniform = 0x2B0,
 		VertexIntUniform0 = 0x2B1,
 		VertexIntUniform1 = 0x2B2,
 		VertexIntUniform2 = 0x2B3,
