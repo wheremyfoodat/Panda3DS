@@ -23,4 +23,8 @@ void PICAShader::reset() {
 	floatUniforms.fill(zero);
 	outputs.fill(zero);
 	tempRegisters.fill(zero);
+
+	addrRegister.x() = 0;
+	addrRegister.y() = 0;
+	loopCounter = 0;
 }

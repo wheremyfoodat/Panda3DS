@@ -34,7 +34,8 @@ class PICAShader {
 	std::array<u32, 4> floatUniformBuffer; // Buffer for temporarily caching float uniform data
 	std::array<u32, 128> operandDescriptors;
 	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
-	OpenGL::Vector<u32, 2> addrRegister; // Address register
+	OpenGL::Vector<s32, 2> addrRegister; // Address register
+	u32 loopCounter;
 	ShaderType type;
 
 	vec4f getSource(u32 source);
@@ -93,6 +94,8 @@ class PICAShader {
 
 		return srcVector;
 	}
+
+	u8 getIndexedSource(u32 source, u32 index);
 
 public:
 	std::array<u32, 512> loadedShader; // Currently loaded & active shader

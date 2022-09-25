@@ -19,6 +19,21 @@ void PICAShader::run() {
 	}
 }
 
+// Calculate the actual source value using an instruction's source field and it's respective index value
+// The index value is used to apply relative addressing when index != 0 by adding one of the 3 addr registers to the
+// source field, but only with the original source field is pointing at a vector uniform register 
+u8 PICAShader::getIndexedSource(u32 source, u32 index) {
+	if (source < 0x20) // No offset is applied if the source isn't pointing to a vector uniform reg
+		return source;
+
+	switch (index) {
+		case 0: return u8(source); // No offset applied
+		case 1: return u8(source + addrRegister.x());
+		case 2: return u8(source + addrRegister.y());
+		case 3: return u8(source + loopCounter);
+	}
+}
+
 PICAShader::vec4f PICAShader::getSource(u32 source) {
 	if (source < 0x10)
 		return attributes[source];
@@ -83,11 +98,11 @@ void PICAShader::mul(u32 instruction) {
 
 void PICAShader::mov(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src = (instruction >> 12) & 0x7f;
+	u32 src = (instruction >> 12) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	if (idx) Helpers::panic("[PICA] MOV: idx != 0");
+	src = getIndexedSource(src, idx);
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
 	vec4f& destVector = getDest(dest);
 
@@ -110,9 +125,9 @@ void PICAShader::mova(u32 instruction) {
 
 	u32 componentMask = operandDescriptor & 0xf;
 	if (componentMask & 0b1000) // x component
-		addrRegister.x() = static_cast<u32>(srcVector.x().toFloat32());
+		addrRegister.x() = static_cast<s32>(srcVector.x().toFloat32());
 	if (componentMask & 0b0100) // y component
-		addrRegister.y() = static_cast<u32>(srcVector.y().toFloat32());
+		addrRegister.y() = static_cast<s32>(srcVector.y().toFloat32());
 }
 
 void PICAShader::dp4(u32 instruction) {
