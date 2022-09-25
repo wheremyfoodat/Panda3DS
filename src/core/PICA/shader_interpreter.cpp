@@ -12,6 +12,7 @@ void PICAShader::run() {
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
 			case ShaderOpcodes::MOV: mov(instruction); break;
+			case ShaderOpcodes::MOVA: mova(instruction); break;
 			case ShaderOpcodes::MUL: mul(instruction); break;
 			default:Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
 		}
@@ -96,6 +97,22 @@ void PICAShader::mov(u32 instruction) {
 			destVector[3 - i] = srcVector[3 - i];
 		}
 	}
+}
+
+void PICAShader::mova(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	if (idx) Helpers::panic("[PICA] MOVA: idx != 0");
+	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	if (componentMask & 0b1000) // x component
+		addrRegister.x() = static_cast<u32>(srcVector.x().toFloat32());
+	if (componentMask & 0b0100) // y component
+		addrRegister.y() = static_cast<u32>(srcVector.y().toFloat32());
 }
 
 void PICAShader::dp4(u32 instruction) {

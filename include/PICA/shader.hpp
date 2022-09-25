@@ -15,6 +15,7 @@ namespace ShaderOpcodes {
 		ADD = 0x00,
 		DP4 = 0x02,
 		MUL = 0x08,
+		MOVA = 0x12,
 		MOV = 0x13,
 		END = 0x22
 	};
@@ -32,7 +33,8 @@ class PICAShader {
 
 	std::array<u32, 4> floatUniformBuffer; // Buffer for temporarily caching float uniform data
 	std::array<u32, 128> operandDescriptors;
-	std::array<vec4f, 16> tempRegisters;
+	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
+	OpenGL::Vector<u32, 2> addrRegister; // Address register
 	ShaderType type;
 
 	vec4f getSource(u32 source);
@@ -42,6 +44,7 @@ class PICAShader {
 	void add(u32 instruction);
 	void dp4(u32 instruction);
 	void mov(u32 instruction);
+	void mova(u32 instruction);
 	void mul(u32 instruction);
 
 	// src1, src2 and src3 have different negation & component swizzle bits in the operand descriptor
