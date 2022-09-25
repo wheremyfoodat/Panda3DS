@@ -10,7 +10,7 @@ namespace FSCommands {
 namespace Result {
 	enum : u32 {
 		Success = 0,
-		Failure = 0xFFFF'FFFF
+		Failure = 0xFFFFFFFF
 	};
 }
 

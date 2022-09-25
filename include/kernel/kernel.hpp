@@ -86,6 +86,7 @@ class Kernel {
 
 	MAKE_LOG_FUNCTION(log, kernelLogger)
 	MAKE_LOG_FUNCTION(logSVC, svcLogger)
+	MAKE_LOG_FUNCTION(logDebugString, debugStringLogger)
 
 	// SVC implementations
 	void arbitrateAddress();

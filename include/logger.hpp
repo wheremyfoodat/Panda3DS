@@ -19,6 +19,7 @@ namespace Log {
 
     // Our loggers here. Enable/disable by toggling the template param
     static Logger<false> kernelLogger;
+    static Logger<true> debugStringLogger; // Enables output for the outputDebugString SVC
     static Logger<false> svcLogger;
     static Logger<false> gpuLogger;
 

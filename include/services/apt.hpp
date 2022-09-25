@@ -11,6 +11,7 @@ class APTService {
 
 	// Service commands
 	void getLockHandle(u32 messagePointer);
+	void checkNew3DS(u32 messagePointer);
 
 public:
 	APTService(Memory& mem) : mem(mem) {}

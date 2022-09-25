@@ -6,7 +6,6 @@ Handle Kernel::makePort(const char* name) {
 	portHandles.push_back(ret); // Push the port handle to our cache of port handles
 	objects[ret].data = new Port(name);
 
-	// printf("Created %s port \"%s\" with handle %d\n", data->isPublic ? "public" : "private", data->name, ret);
 	return ret;
 }
 

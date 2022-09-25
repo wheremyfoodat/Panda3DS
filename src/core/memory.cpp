@@ -37,14 +37,18 @@ void Memory::reset() {
 		allocateMemory(vaddr, basePaddrForTLS, VirtualAddrs::TLSSize, true);
 	}
 
-	// Reserve 4KB of memory for GSP shared memory
-	constexpr u32 gspMemSize = 0x1000;
-	const std::optional<u32> gspMemPaddr = findPaddr(gspMemSize);
-	if (!gspMemPaddr.has_value()) Helpers::panic("Couldn't find paddr for GSP shared memory");
-	
-	auto temp = reserveMemory(gspMemPaddr.value(), gspMemSize, true, true, false);
-	if (!temp.has_value()) Helpers::panic("Couldn't reserve FCRAM for GSP shared memory");
-	gspMemIndex = temp.value();
+	// Initialize shared memory blocks and reserve memory for them
+	for (auto& e : sharedMemBlocks) {
+		e.mapped = false;
+		
+		std::optional<u32> possiblePaddr = findPaddr(e.size);
+		if (!possiblePaddr.has_value()) Helpers::panic("Failed to find paddr for shared memory block");
+
+		e.paddr = possiblePaddr.value();
+		if (!reserveMemory(e.paddr, e.size)) {
+			Helpers::panic("Failed to reserve memory for shared memory block");
+		}
+	}
 }
 
 u8 Memory::read8(u32 vaddr) {
@@ -291,7 +295,7 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 	return std::nullopt;
 }
 
-std::optional<int> Memory::reserveMemory(u32 paddr, u32 size, bool r, bool w, bool x) {
+bool Memory::reserveMemory(u32 paddr, u32 size) {
 	if (!isAligned(paddr) || !isAligned(size)) {
 		Helpers::panic("Memory::reserveMemory: Physical address or size is not page aligned. Paddr: %08X, size: %08X", paddr, size);
 ;	}
@@ -303,18 +307,11 @@ std::optional<int> Memory::reserveMemory(u32 paddr, u32 size, bool r, bool w, bo
 	for (u32 i = 0; i < pageCount; i++) {
 		if (usedFCRAMPages[startingPage + i])
 			Helpers::panic("Memory::reserveMemory: Trying to reserve already reserved memory");
-		usedFCRAMPages[i] = true;
+		usedFCRAMPages[startingPage + i] = true;
 	}
 
-	// Back up the info for this allocation in our memoryInfo vector
-	u32 perms = (r ? PERMISSION_R : 0) | (w ? PERMISSION_W : 0) | (x ? PERMISSION_X : 0);
-	u32 ret = lockedMemoryInfo.size();
-
-	// When we reserve but don't map memory, we store the alloc info in lockedMemoryInfo instead of memoryInfo
-	lockedMemoryInfo.push_back(std::move(MemoryInfo(paddr, size, perms, KernelMemoryTypes::Locked)));
-
 	usedUserMemory += size;
-	return ret;
+	return true;
 }
 
 // The way I understand how the kernel's QueryMemory is supposed to work is that you give it a vaddr
@@ -334,33 +331,42 @@ MemoryInfo Memory::queryMemory(u32 vaddr) {
 	return MemoryInfo(vaddr, pageSize, 0, KernelMemoryTypes::Free);
 }
 
-void Memory::mapGSPSharedMemory(u32 vaddr, u32 myPerms, u32 otherPerms) {
-	if (!gspMemIndex.has_value())
-		Helpers::panic("Tried to map already mapped GSP memory");
+u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms) {
+	for (auto& e : sharedMemBlocks) {
+		if (e.handle == handle) {
+			if (e.mapped) Helpers::panic("Allocated shared memory block twice. Is this allowed?");
 
-	const u32 index = gspMemIndex.value(); // Index of GSP shared memory in lockedMemoryInfo
-	const u32 paddr = lockedMemoryInfo[index].baseAddr;
-	const u32 size = lockedMemoryInfo[index].size;
-	// This memory was not actually used, we just didn't want QueryMemory, getResourceLimitCurrentValues and such
-	// To report memory sizes wrongly. We subtract the size from the usedUserMemory size so allocateMemory won't break
-	usedUserMemory -= size;
+			const u32 paddr = e.paddr;
+			const u32 size = e.size;
 
-	// Wipe the GSP memory allocation from existence
-	gspMemIndex = std::nullopt;
-	lockedMemoryInfo.erase(lockedMemoryInfo.begin() + index);
+			if (myPerms == 0x10000000) {
+				myPerms = 3;
+				Helpers::panic("Memory::mapSharedMemory with DONTCARE perms");
+			}
 
-	if (myPerms == 0x10000000) {
-		myPerms = 3;
-		Helpers::panic("Memory::mapGSPSharedMemory with DONTCARE perms");
+			bool r = myPerms & 0b001;
+			bool w = myPerms & 0b010;
+			bool x = myPerms & 0b100;
+
+			// This memory was not actually used, we just didn't want QueryMemory, getResourceLimitCurrentValues and such
+			// To report memory sizes wrongly. We subtract the size from the usedUserMemory size so
+			// allocateMemory won't break
+			usedUserMemory -= size;
+
+			const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x);
+			e.mapped = true;
+			if (!result.has_value()) {
+				Helpers::panic("Memory::mapSharedMemory: Failed to map shared memory block");
+				return nullptr;
+			}
+
+			return &fcram[paddr];
+		}
 	}
 
-	bool r = myPerms & 0b001;
-	bool w = myPerms & 0b010;
-	bool x = myPerms & 0b100;
-
-	const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x);
-	if (!result.has_value())
-		Helpers::panic("Failed to allocated GSP shared memory");
+	// This should be unreachable but better safe than sorry
+	Helpers::panic("Memory::mapSharedMemory: Unknown shared memory handle %08X", handle);
+	return nullptr;
 }
 
 // Get the number of ms since Jan 1 1900

@@ -92,15 +92,23 @@ void Kernel::mapMemoryBlock() {
 	const u32 addr = regs[1];
 	const u32 myPerms = regs[2];
 	const u32 otherPerms = regs[3];
-	logSVC("MapMemoryBlock(block = %d, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
+	logSVC("MapMemoryBlock(block = %X, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
 
 	if (!isAligned(addr)) [[unlikely]] {
 		Helpers::panic("MapMemoryBlock: Unaligned address");
 	}
 
-	if (block == KernelHandles::GSPSharedMemHandle) {
-		mem.mapGSPSharedMemory(addr, myPerms, otherPerms);
-		serviceManager.setGSPSharedMem(static_cast<u8*>(mem.getReadPointer(addr)));
+	if (KernelHandles::isSharedMemHandle(block)) {
+		u8* ptr = mem.mapSharedMemory(block, addr, myPerms, otherPerms); // Map shared memory block
+
+		// Pass pointer to shared memory to the appropriate service
+		if (block == KernelHandles::HIDSharedMemHandle) {
+			serviceManager.setHIDSharedMem(ptr);
+		} else if (block == KernelHandles::GSPSharedMemHandle) {
+			serviceManager.setGSPSharedMem(ptr);
+		} else {
+			Helpers::panic("Mapping unknown shared memory block: %X", block);
+		}
 	} else {
 		Helpers::panic("MapMemoryBlock where the handle does not refer to GSP memory");
 	}

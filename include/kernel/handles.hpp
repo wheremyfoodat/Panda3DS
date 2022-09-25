@@ -20,12 +20,27 @@ namespace KernelHandles {
 		MinServiceHandle = APT,
 		MaxServiceHandle = NDM,
 
-		GSPSharedMemHandle = MaxServiceHandle + 1 // Handle for the GSP shared memory
+		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
+		HIDSharedMemHandle,
+
+		MinSharedMemHandle = GSPSharedMemHandle,
+		MaxSharedMemHandle = HIDSharedMemHandle,
+
+		HIDEvent0,
+		HIDEvent1,
+		HIDEvent2,
+		HIDEvent3,
+		HIDEvent4
 	};
 
 	// Returns whether "handle" belongs to one of the OS services
 	static constexpr bool isServiceHandle(Handle handle) {
 		return handle >= MinServiceHandle && handle <= MaxServiceHandle;
+	}
+
+	// Returns whether "handle" belongs to one of the OS services' shared memory areas
+	static constexpr bool isSharedMemHandle(Handle handle) {
+		return handle >= MinSharedMemHandle && handle <= MaxSharedMemHandle;
 	}
 
 	// Returns the name of a handle as a string based on the given handle
@@ -36,6 +51,7 @@ namespace KernelHandles {
 			case FS: return "FS";
 			case GPU: return "GPU";
 			case LCD: return "LCD";
+			case NDM: return "NDM";
 			default: return "Unknown";
 		}
 	}

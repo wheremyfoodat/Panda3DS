@@ -1,9 +1,11 @@
 #pragma once
+#include <array>
 #include <bitset>
 #include <fstream>
 #include <optional>
 #include <vector>
 #include "helpers.hpp"
+#include "handles.hpp"
 
 namespace PhysicalAddrs {
 	enum : u32 {
@@ -68,19 +70,33 @@ namespace KernelMemoryTypes {
 		MemoryInfo(u32 baseAddr, u32 size, u32 perms, u32 state) : baseAddr(baseAddr), size(size)
 			, perms(perms), state(state) {}
 	};
+
+	// Shared memory block for HID, GSP:GPU etc
+	struct SharedMemoryBlock {
+		u32 paddr; // Physical address of this block's memory
+		u32 size; // Size of block
+		u32 handle; // The handle of the shared memory block
+		bool mapped; // Has this block been mapped at least once?
+
+		SharedMemoryBlock(u32 paddr, u32 size, u32 handle) : paddr(paddr), size(size), handle(handle), mapped(false) {}
+	};
 }
 
 class Memory {
 	u8* fcram;
 	u64& cpuTicks; // Reference to the CPU tick counter
+	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
 	std::vector<uintptr_t> readTable, writeTable;
 
 	// This tracks our OS' memory allocations
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
-	// This tracks our physical memory reservations when the memory is not actually mapped to a vaddr
-	std::vector<KernelMemoryTypes::MemoryInfo> lockedMemoryInfo;
+
+	std::array<SharedMemoryBlock, 2> sharedMemBlocks = {
+		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
+		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
+	};
 
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
@@ -99,7 +115,6 @@ class Memory {
 public:
 	u16 kernelVersion = 0;
 	u32 usedUserMemory = 0;
-	std::optional<int> gspMemIndex; // Index of GSP shared mem in lockedMemoryInfo or nullopt if it's already reserved
 
 	Memory(u64& cpuTicks);
 	void reset();
@@ -139,12 +154,12 @@ public:
 	// For internal use:
 	// Reserve FCRAM linearly starting from physical address "paddr" (paddr == 0 is NOT special) with a size of "size"
 	// Without actually mapping the memory to a vaddr
-	// r, w, x: Permissions for the reserved memory
-	// Returns the index of the allocation in lockedMemoryInfo if allocation succeeded and nullopt if it failed
-	std::optional<int> reserveMemory(u32 paddr, u32 size, bool r, bool w, bool x);
+	// Returns true if the reservation succeeded and false if not
+	bool reserveMemory(u32 paddr, u32 size);
 
-	// Map GSP shared memory to virtual address vaddr with permissions "myPerms"
+	// Map a shared memory block to virtual address vaddr with permissions "myPerms"
 	// The kernel has a second permission parameter in MapMemoryBlock but not sure what's used for
 	// TODO: Find out
-	void mapGSPSharedMemory(u32 vaddr, u32 myPerms, u32 otherPerms);
+	// Returns a pointer to the FCRAM block used for the memory if allocation succeeded
+	u8* mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms);
 };
