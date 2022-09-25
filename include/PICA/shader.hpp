@@ -16,8 +16,10 @@ namespace ShaderOpcodes {
 		DP3 = 0x01,
 		DP4 = 0x02,
 		MUL = 0x08,
+		MIN = 0x0D,
 		MOVA = 0x12,
 		MOV = 0x13,
+		NOP = 0x21,
 		END = 0x22,
 		IFC = 0x28,
 		LOOP = 0x29,
@@ -75,6 +77,7 @@ class PICAShader {
 	void dp4(u32 instruction);
 	void ifc(u32 instruction);
 	void loop(u32 instruction);
+	void min(u32 instruction);
 	void mov(u32 instruction);
 	void mova(u32 instruction);
 	void mul(u32 instruction);
