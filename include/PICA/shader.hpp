@@ -150,7 +150,8 @@ class PICAShader {
 public:
 	std::array<u32, 512> loadedShader; // Currently loaded & active shader
 	std::array<u32, 512> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
-	
+
+	u32 entrypoint = 0; // Initial shader PC
 	u32 boolUniform;
 	std::array<OpenGL::Vector<u8, 4>, 4> intUniforms;
 	std::array<vec4f, 96> floatUniforms;

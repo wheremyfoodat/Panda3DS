@@ -113,6 +113,10 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			shaderUnit.vs.uploadWord(value);
 			break;
 
+		case VertexShaderEntrypoint:
+			shaderUnit.vs.entrypoint = value & 0xffff;
+			break;
+
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;

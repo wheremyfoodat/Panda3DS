@@ -2,7 +2,7 @@
 #include <cmath>
 
 void PICAShader::run() {
-	pc = 0;
+	pc = entrypoint;
 	loopIndex = 0;
 	ifIndex = 0;
 	callIndex = 0;
@@ -63,7 +63,7 @@ void PICAShader::run() {
 		// Handle calls
 		if (callIndex != 0) {
 			auto& info = callInfo[callIndex - 1];
-			if (pc == info.endingPC) { // Check if the IF block ended
+			if (pc == info.endingPC) { // Check if the CALL block ended
 				pc = info.returnPC;
 				callIndex -= 1;
 			}
@@ -121,7 +121,7 @@ bool PICAShader::isCondTrue(u32 instruction) {
 			return cmpRegister[0] == refX && cmpRegister[1] == refY;
 		case 2: // At least cmp.x matches
 			return cmpRegister[0] == refX;
-		case 3: // At least cmp.y matches
+		default: // At least cmp.y matches
 			return cmpRegister[1] == refY;
 	}
 }
