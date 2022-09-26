@@ -111,8 +111,8 @@ PICAShader::vec4f& PICAShader::getDest(u32 dest) {
 
 bool PICAShader::isCondTrue(u32 instruction) {
 	u32 condition = (instruction >> 22) & 3;
-	bool refX = ((instruction >> 24) & 1) != 0;
-	bool refY = ((instruction >> 25) & 1) != 0;
+	bool refY = ((instruction >> 24) & 1) != 0;
+	bool refX = ((instruction >> 25) & 1) != 0;
 
 	switch (condition) {
 		case 0: // Either cmp register matches 
@@ -142,7 +142,7 @@ void PICAShader::add(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			destVector[3 - i] = srcVec1[3 - i] + srcVec2[3 - 1];
+			destVector[3 - i] = srcVec1[3 - i] + srcVec2[3 - i];
 		}
 	}
 }
@@ -163,7 +163,7 @@ void PICAShader::mul(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - 1];
+			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i];
 		}
 	}
 }
@@ -278,7 +278,7 @@ void PICAShader::rsq(u32 instruction) {
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 
 	vec4f& destVector = getDest(dest);
-	f24 res = f24::fromFloat32(1.0f / std::sqrt(srcVec1[0].toFloat32()));
+	f24 res = f24::fromFloat32(1.0f / std::sqrtf(srcVec1[0].toFloat32()));
 
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
@@ -316,8 +316,8 @@ void PICAShader::cmp(u32 instruction) {
 	const u32 src1 = (instruction >> 12) & 0x7f;
 	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
 	const u32 idx = (instruction >> 19) & 3;
-	const u32 cmpX = (instruction >> 21) & 7;
-	const u32 cmpY = (instruction >> 24) & 7;
+	const u32 cmpY = (instruction >> 21) & 7;
+	const u32 cmpX = (instruction >> 24) & 7;
 	const u32 cmpOperations[2] = { cmpX, cmpY };
 
 	if (idx) Helpers::panic("[PICA] CMP: idx != 0");
@@ -375,7 +375,6 @@ void PICAShader::ifc(u32 instruction) {
 }
 
 void PICAShader::callu(u32 instruction) {
-	const u32 dest = (instruction >> 10) & 0xfff;
 	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
 
 	if (boolUniform & (1 << bit)) {
@@ -383,6 +382,7 @@ void PICAShader::callu(u32 instruction) {
 			Helpers::panic("[PICA] Overflowed CALL stack");
 
 		const u32 num = instruction & 0xff;
+		const u32 dest = (instruction >> 10) & 0xfff;
 
 		auto& block = callInfo[callIndex++];
 		block.endingPC = dest + num;

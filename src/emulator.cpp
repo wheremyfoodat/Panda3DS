@@ -23,15 +23,9 @@ void Emulator::render() {
 
 void Emulator::run() {
     while (window.isOpen()) {
-        // Clear window to black
-        OpenGL::bindScreenFramebuffer();
-        OpenGL::disableScissor();
-        OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
-        OpenGL::clearColor();
-        
         gpu.getGraphicsContext(); // Give the GPU a rendering context
         runFrame(); // Run 1 frame of instructions
-        gpu.display();
+        gpu.display(); // Display graphics
 
         // Send VBlank interrupts
         kernel.sendGPUInterrupt(GPUInterrupt::VBlank0);

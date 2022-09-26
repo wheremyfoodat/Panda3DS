@@ -130,6 +130,8 @@ void GPU::drawArrays() {
 		shaderUnit.vs.run();
 		std::memcpy(&vertices[i].position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
 		std::memcpy(&vertices[i].colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
+
+		printf("(x, y, z) = (%f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z());
 	}
 
 	drawVertices(OpenGL::Triangle, vertices, vertexCount);

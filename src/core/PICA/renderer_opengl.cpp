@@ -1,4 +1,5 @@
 #include "PICA/gpu.hpp"
+#include "PICA/regs.hpp"
 #include "opengl.hpp"
 
 // This is all hacked up to display our first triangle
@@ -75,7 +76,16 @@ void GPU::initGraphicsContext() {
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	fbo.createWithDrawTexture(fboTexture);
-	fbo.bind(OpenGL::DrawFramebuffer);
+	fbo.bind(OpenGL::DrawAndReadFramebuffer);
+
+	GLuint rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 400, 240); // use a single renderbuffer object for both a depth AND stencil buffer.
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		Helpers::panic("Incomplete framebuffer");
+	//glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	OpenGL::setViewport(400, 240);
 	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
@@ -106,7 +116,6 @@ void GPU::initGraphicsContext() {
 }
 
 void GPU::getGraphicsContext() {
-	OpenGL::disableDepth();
 	OpenGL::disableScissor();
 	OpenGL::setViewport(400, 240);
 	fbo.bind(OpenGL::DrawAndReadFramebuffer);
@@ -117,6 +126,34 @@ void GPU::getGraphicsContext() {
 }
 
 void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
+	// Adjust depth buffer
+	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
+	bool depthEnable = depthControl & 1;
+	bool depthWriteEnable = (depthControl >> 12) & 1;
+	int depthFunc = (depthControl >> 4) & 7;
+	int colourMask = (depthControl >> 8) & 0xf;
+
+	static constexpr std::array<GLenum, 8> depthModes = {
+		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
+	};
+
+	printf("Depth enable: %d, func: %d, writeEnable: %d\n", depthEnable, depthFunc, depthWriteEnable);
+
+	if (depthEnable) {
+		OpenGL::enableDepth();
+		glDepthFunc(depthModes[depthFunc]);
+		glDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+	} else {
+		if (depthWriteEnable) {
+			OpenGL::enableDepth();
+			glDepthFunc(GL_ALWAYS);
+		} else {
+			OpenGL::disableDepth();
+		}
+	}
+
+	if (colourMask != 0xf) Helpers::panic("[PICA] Colour mask = %X != 0xf", colourMask);
+
 	vbo.bufferVertsSub(vertices, count);
 	OpenGL::draw(primType, count);
 }
@@ -126,15 +163,16 @@ constexpr u32 bottomScreenBuffer = 0x1f300000;
 
 // Quick hack to display top screen for now
 void GPU::display() {
+	OpenGL::disableDepth();
 	OpenGL::disableScissor();
 	OpenGL::bindScreenFramebuffer();
 	fboTexture.bind();
 	displayProgram.use();
 
-	dummyVBO.bind();
 	dummyVAO.bind();
-	OpenGL::setViewport(0, 240, 400, 240);
-
+	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0); // Clear screen colour
+	OpenGL::clearColor();
+	OpenGL::setViewport(0, 240, 400, 240); // Actually draw our 3DS screen
 	OpenGL::draw(OpenGL::TriangleStrip, 4);
 }
 

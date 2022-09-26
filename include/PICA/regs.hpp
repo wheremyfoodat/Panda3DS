@@ -2,7 +2,10 @@
 
 namespace PICAInternalRegs {
 	enum : u32 {
-		// Geometry pipeline regs
+		// Framebuffer registers
+		DepthAndColorMask = 0x107,
+
+		// Geometry pipeline registers
 		VertexAttribLoc = 0x200,
 		AttribFormatLow = 0x201,
 		AttribFormatHigh = 0x202,
