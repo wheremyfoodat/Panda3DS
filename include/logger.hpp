@@ -21,7 +21,7 @@ namespace Log {
     static Logger<false> kernelLogger;
     static Logger<true> debugStringLogger; // Enables output for the outputDebugString SVC
     static Logger<false> svcLogger;
-    static Logger<false> gpuLogger;
+    static Logger<true> gpuLogger;
 
     // Service loggers
     static Logger<false> aptLogger;

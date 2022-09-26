@@ -4,3 +4,6 @@
 [submodule "third_party/elfio"]
 	path = third_party/elfio
 	url = https://github.com/serge1/ELFIO
+[submodule "third_party/dynarmic"]
+	path = third_party/dynarmic
+	url = https://github.com/merryhime/dynarmic/tree/master/src/dynarmic

@@ -108,17 +108,17 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			shaderUnit.vs.uploadIntUniform(index - VertexIntUniform0, value);
 			break;
 
+		case VertexShaderData0: case VertexShaderData1: case VertexShaderData2: case VertexShaderData3:
+		case VertexShaderData4: case VertexShaderData5: case VertexShaderData6: case VertexShaderData7:
+			shaderUnit.vs.uploadWord(value);
+			break;
+
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;
 
 		case VertexShaderTransferIndex:
 			shaderUnit.vs.setBufferIndex(value);
-			break;
-
-		case VertexShaderData0: case VertexShaderData1: case VertexShaderData2: case VertexShaderData3:
-		case VertexShaderData4: case VertexShaderData5: case VertexShaderData6: case VertexShaderData7:
-			shaderUnit.vs.uploadWord(value);
 			break;
 
 		default:
