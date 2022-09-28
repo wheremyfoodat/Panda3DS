@@ -10,28 +10,28 @@ endif()
 project(Alber)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-set(SFML_STATIC_LIBRARIES TRUE)
-find_package(SFML COMPONENTS system window graphics CONFIG REQUIRED)
-
-if(NOT SFML_FOUND)
-  message(FATAL_ERROR "SFML couldn't be located!")
-endif()
-
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
-include_directories (${SFML_INCLUDE_DIR})
 include_directories (${FMT_INCLUDE_DIR})
 include_directories(third_party/elfio/)
 include_directories(third_party/gl3w/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 
+add_compile_definitions(NOMINMAX)
+add_compile_definitions(SDL_MAIN_HANDLED)
+
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/SDL2)
+include_directories(${SDL2_INCLUDE_DIR})
+
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_NO_SYSTEM_PATHS ON)
 add_library(boost INTERFACE)
 target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
-add_compile_definitions(NOMINMAX)
+
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64")
     set(DYNARMIC_TESTS OFF)
@@ -87,4 +87,4 @@ source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
 add_executable(Alber ${SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${PICA_SOURCE_FILES}
 ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
-target_link_libraries(Alber PRIVATE sfml-system sfml-network sfml-graphics sfml-window dynarmic)
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static)

@@ -22,7 +22,7 @@ void Emulator::render() {
 }
 
 void Emulator::run() {
-    while (window.isOpen()) {
+    while (running) {
         gpu.getGraphicsContext(); // Give the GPU a rendering context
         runFrame(); // Run 1 frame of instructions
         gpu.display(); // Display graphics
@@ -30,16 +30,17 @@ void Emulator::run() {
         // Send VBlank interrupts
         kernel.sendGPUInterrupt(GPUInterrupt::VBlank0);
         kernel.sendGPUInterrupt(GPUInterrupt::VBlank1);
-        window.display();
 
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
                 printf("Bye :(\n");
-                window.close();
+                running = false;
                 return;
             }
         }
+
+        SDL_GL_SwapWindow(window);
     }
 }
 

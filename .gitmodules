@@ -4,6 +4,9 @@
 [submodule "third_party/dynarmic"]
 	path = third_party/dynarmic
 	url = https://github.com/merryhime/dynarmic
+[submodule "third_party/SDL2"]
+	path = third_party/SDL2
+	url = https://github.com/libsdl-org/SDL
 [submodule "third_party/boost"]
 	path = third_party/boost
 	url = https://github.com/citra-emu/ext-boost

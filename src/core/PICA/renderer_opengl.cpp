@@ -159,7 +159,7 @@ void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count)
 }
 
 constexpr u32 topScreenBuffer = 0x1f000000;
-constexpr u32 bottomScreenBuffer = 0x1f300000;
+constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 // Quick hack to display top screen for now
 void GPU::display() {
