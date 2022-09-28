@@ -39,7 +39,7 @@ class CP15 final : public Dynarmic::A32::Coprocessor {
 
     CallbackOrAccessOneWord CompileGetOneWord(bool two, unsigned opc1, CoprocReg CRn,
         CoprocReg CRm, unsigned opc2) override {
-        // Some sort of pointer to TLS, accessed via mrc p15, 0, rd, c13, c0, 3
+        // Stores a pointer to thread-local storage, accessed via mrc p15, 0, rd, c13, c0, 3
         if (!two && CRn == CoprocReg::C13 && opc1 == 0 && CRm == CoprocReg::C0 && opc2 == 3) {
             return &threadStoragePointer;
         }
