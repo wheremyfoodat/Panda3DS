@@ -2,7 +2,7 @@
 // impl/redirect_error.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2019 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,8 +16,7 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
-#include <boost/asio/associated_executor.hpp>
-#include <boost/asio/associated_allocator.hpp>
+#include <boost/asio/associator.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
@@ -56,7 +55,7 @@ public:
 
   void operator()()
   {
-    handler_();
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)();
   }
 
 #if defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
@@ -67,7 +66,8 @@ public:
   >::type
   operator()(BOOST_ASIO_MOVE_ARG(Arg) arg, BOOST_ASIO_MOVE_ARG(Args)... args)
   {
-    handler_(BOOST_ASIO_MOVE_CAST(Arg)(arg),
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        BOOST_ASIO_MOVE_CAST(Arg)(arg),
         BOOST_ASIO_MOVE_CAST(Args)(args)...);
   }
 
@@ -76,7 +76,8 @@ public:
       BOOST_ASIO_MOVE_ARG(Args)... args)
   {
     ec_ = ec;
-    handler_(BOOST_ASIO_MOVE_CAST(Args)(args)...);
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        BOOST_ASIO_MOVE_CAST(Args)(args)...);
   }
 
 #else // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
@@ -87,13 +88,14 @@ public:
   >::type
   operator()(BOOST_ASIO_MOVE_ARG(Arg) arg)
   {
-    handler_(BOOST_ASIO_MOVE_CAST(Arg)(arg));
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        BOOST_ASIO_MOVE_CAST(Arg)(arg));
   }
 
   void operator()(const boost::system::error_code& ec)
   {
     ec_ = ec;
-    handler_();
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)();
   }
 
 #define BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF(n) \
@@ -103,7 +105,8 @@ public:
   >::type \
   operator()(BOOST_ASIO_MOVE_ARG(Arg) arg, BOOST_ASIO_VARIADIC_MOVE_PARAMS(n)) \
   { \
-    handler_(BOOST_ASIO_MOVE_CAST(Arg)(arg), \
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)( \
+        BOOST_ASIO_MOVE_CAST(Arg)(arg), \
         BOOST_ASIO_VARIADIC_MOVE_ARGS(n)); \
   } \
   \
@@ -112,7 +115,8 @@ public:
       BOOST_ASIO_VARIADIC_MOVE_PARAMS(n)) \
   { \
     ec_ = ec; \
-    handler_(BOOST_ASIO_VARIADIC_MOVE_ARGS(n)); \
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)( \
+        BOOST_ASIO_VARIADIC_MOVE_ARGS(n)); \
   } \
   /**/
   BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF)
@@ -126,19 +130,29 @@ public:
 };
 
 template <typename Handler>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     redirect_error_handler<Handler>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     redirect_error_handler<Handler>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler>
@@ -150,19 +164,27 @@ inline bool asio_handler_is_continuation(
 }
 
 template <typename Function, typename Handler>
-inline void asio_handler_invoke(Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(Function& function,
     redirect_error_handler<Handler>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Function, typename Handler>
-inline void asio_handler_invoke(const Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(const Function& function,
     redirect_error_handler<Handler>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Signature>
@@ -185,6 +207,78 @@ struct redirect_error_signature<R(const boost::system::error_code&, Args...)>
   typedef R type(Args...);
 };
 
+# if defined(BOOST_ASIO_HAS_REF_QUALIFIED_FUNCTIONS)
+
+template <typename R, typename... Args>
+struct redirect_error_signature<R(boost::system::error_code, Args...) &>
+{
+  typedef R type(Args...) &;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<R(const boost::system::error_code&, Args...) &>
+{
+  typedef R type(Args...) &;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<R(boost::system::error_code, Args...) &&>
+{
+  typedef R type(Args...) &&;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<R(const boost::system::error_code&, Args...) &&>
+{
+  typedef R type(Args...) &&;
+};
+
+#  if defined(BOOST_ASIO_HAS_NOEXCEPT_FUNCTION_TYPE)
+
+template <typename R, typename... Args>
+struct redirect_error_signature<
+  R(boost::system::error_code, Args...) noexcept>
+{
+  typedef R type(Args...) & noexcept;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<
+  R(const boost::system::error_code&, Args...) noexcept>
+{
+  typedef R type(Args...) & noexcept;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<
+  R(boost::system::error_code, Args...) & noexcept>
+{
+  typedef R type(Args...) & noexcept;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<
+  R(const boost::system::error_code&, Args...) & noexcept>
+{
+  typedef R type(Args...) & noexcept;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<
+  R(boost::system::error_code, Args...) && noexcept>
+{
+  typedef R type(Args...) && noexcept;
+};
+
+template <typename R, typename... Args>
+struct redirect_error_signature<
+  R(const boost::system::error_code&, Args...) && noexcept>
+{
+  typedef R type(Args...) && noexcept;
+};
+
+#  endif // defined(BOOST_ASIO_HAS_NOEXCEPT_FUNCTION_TYPE)
+# endif // defined(BOOST_ASIO_HAS_REF_QUALIFIED_FUNCTIONS)
 #else // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
 template <typename R>
@@ -217,6 +311,161 @@ struct redirect_error_signature<R(const boost::system::error_code&)>
   BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF)
 #undef BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF
 
+# if defined(BOOST_ASIO_HAS_REF_QUALIFIED_FUNCTIONS)
+
+template <typename R>
+struct redirect_error_signature<R(boost::system::error_code) &>
+{
+  typedef R type() &;
+};
+
+template <typename R>
+struct redirect_error_signature<R(const boost::system::error_code&) &>
+{
+  typedef R type() &;
+};
+
+template <typename R>
+struct redirect_error_signature<R(boost::system::error_code) &&>
+{
+  typedef R type() &&;
+};
+
+template <typename R>
+struct redirect_error_signature<R(const boost::system::error_code&) &&>
+{
+  typedef R type() &&;
+};
+
+#define BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF(n) \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(boost::system::error_code, BOOST_ASIO_VARIADIC_TARGS(n)) &> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) &; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(const boost::system::error_code&, BOOST_ASIO_VARIADIC_TARGS(n)) &> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) &; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(boost::system::error_code, BOOST_ASIO_VARIADIC_TARGS(n)) &&> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) &&; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(const boost::system::error_code&, BOOST_ASIO_VARIADIC_TARGS(n)) &&> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) &&; \
+  }; \
+  /**/
+  BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF)
+#undef BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF
+
+#  if defined(BOOST_ASIO_HAS_NOEXCEPT_FUNCTION_TYPE)
+
+template <typename R>
+struct redirect_error_signature<
+  R(boost::system::error_code) noexcept>
+{
+  typedef R type() noexcept;
+};
+
+template <typename R>
+struct redirect_error_signature<
+  R(const boost::system::error_code&) noexcept>
+{
+  typedef R type() noexcept;
+};
+
+template <typename R>
+struct redirect_error_signature<
+  R(boost::system::error_code) & noexcept>
+{
+  typedef R type() & noexcept;
+};
+
+template <typename R>
+struct redirect_error_signature<
+  R(const boost::system::error_code&) & noexcept>
+{
+  typedef R type() & noexcept;
+};
+
+template <typename R>
+struct redirect_error_signature<
+  R(boost::system::error_code) && noexcept>
+{
+  typedef R type() && noexcept;
+};
+
+template <typename R>
+struct redirect_error_signature<
+  R(const boost::system::error_code&) && noexcept>
+{
+  typedef R type() && noexcept;
+};
+
+#define BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF(n) \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(boost::system::error_code, BOOST_ASIO_VARIADIC_TARGS(n)) noexcept> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) noexcept; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(const boost::system::error_code&, \
+        BOOST_ASIO_VARIADIC_TARGS(n)) noexcept> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) noexcept; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(boost::system::error_code, \
+        BOOST_ASIO_VARIADIC_TARGS(n)) & noexcept> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) & noexcept; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(const boost::system::error_code&, \
+        BOOST_ASIO_VARIADIC_TARGS(n)) & noexcept> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) & noexcept; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(boost::system::error_code, \
+        BOOST_ASIO_VARIADIC_TARGS(n)) && noexcept> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) && noexcept; \
+  }; \
+  \
+  template <typename R, BOOST_ASIO_VARIADIC_TPARAMS(n)> \
+  struct redirect_error_signature< \
+      R(const boost::system::error_code&, \
+        BOOST_ASIO_VARIADIC_TARGS(n)) && noexcept> \
+  { \
+    typedef R type(BOOST_ASIO_VARIADIC_TARGS(n)) && noexcept; \
+  }; \
+  /**/
+  BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF)
+#undef BOOST_ASIO_PRIVATE_REDIRECT_ERROR_DEF
+
+#  endif // defined(BOOST_ASIO_HAS_NOEXCEPT_FUNCTION_TYPE)
+# endif // defined(BOOST_ASIO_HAS_REF_QUALIFIED_FUNCTIONS)
 #endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
 } // namespace detail
@@ -338,29 +587,17 @@ struct async_result<redirect_error_t<CompletionToken>, Signature>
 #endif // defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 };
 
-template <typename Handler, typename Executor>
-struct associated_executor<detail::redirect_error_handler<Handler>, Executor>
+template <template <typename, typename> class Associator,
+    typename Handler, typename DefaultCandidate>
+struct associator<Associator,
+    detail::redirect_error_handler<Handler>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
 {
-  typedef typename associated_executor<Handler, Executor>::type type;
-
-  static type get(
+  static typename Associator<Handler, DefaultCandidate>::type get(
       const detail::redirect_error_handler<Handler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_executor<Handler, Executor>::get(h.handler_, ex);
-  }
-};
-
-template <typename Handler, typename Allocator>
-struct associated_allocator<detail::redirect_error_handler<Handler>, Allocator>
-{
-  typedef typename associated_allocator<Handler, Allocator>::type type;
-
-  static type get(
-      const detail::redirect_error_handler<Handler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
-  {
-    return associated_allocator<Handler, Allocator>::get(h.handler_, a);
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 

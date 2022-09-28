@@ -2,7 +2,7 @@
 // detail/bind_handler.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2019 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -16,8 +16,7 @@
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
 #include <boost/asio/detail/config.hpp>
-#include <boost/asio/associated_allocator.hpp>
-#include <boost/asio/associated_executor.hpp>
+#include <boost/asio/associator.hpp>
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
 #include <boost/asio/detail/handler_invoke_helpers.hpp>
@@ -28,6 +27,113 @@
 namespace boost {
 namespace asio {
 namespace detail {
+
+template <typename Handler>
+class binder0
+{
+public:
+  template <typename T>
+  binder0(int, BOOST_ASIO_MOVE_ARG(T) handler)
+    : handler_(BOOST_ASIO_MOVE_CAST(T)(handler))
+  {
+  }
+
+  binder0(Handler& handler)
+    : handler_(BOOST_ASIO_MOVE_CAST(Handler)(handler))
+  {
+  }
+
+#if defined(BOOST_ASIO_HAS_MOVE)
+  binder0(const binder0& other)
+    : handler_(other.handler_)
+  {
+  }
+
+  binder0(binder0&& other)
+    : handler_(BOOST_ASIO_MOVE_CAST(Handler)(other.handler_))
+  {
+  }
+#endif // defined(BOOST_ASIO_HAS_MOVE)
+
+  void operator()()
+  {
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)();
+  }
+
+  void operator()() const
+  {
+    handler_();
+  }
+
+//private:
+  Handler handler_;
+};
+
+template <typename Handler>
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
+    binder0<Handler>* this_handler)
+{
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
+  return boost_asio_handler_alloc_helpers::allocate(
+      size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
+}
+
+template <typename Handler>
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
+    binder0<Handler>* this_handler)
+{
+  boost_asio_handler_alloc_helpers::deallocate(
+      pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
+}
+
+template <typename Handler>
+inline bool asio_handler_is_continuation(
+    binder0<Handler>* this_handler)
+{
+  return boost_asio_handler_cont_helpers::is_continuation(
+      this_handler->handler_);
+}
+
+template <typename Function, typename Handler>
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(Function& function,
+    binder0<Handler>* this_handler)
+{
+  boost_asio_handler_invoke_helpers::invoke(
+      function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
+}
+
+template <typename Function, typename Handler>
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(const Function& function,
+    binder0<Handler>* this_handler)
+{
+  boost_asio_handler_invoke_helpers::invoke(
+      function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
+}
+
+template <typename Handler>
+inline binder0<typename decay<Handler>::type> bind_handler(
+    BOOST_ASIO_MOVE_ARG(Handler) handler)
+{
+  return binder0<typename decay<Handler>::type>(
+      0, BOOST_ASIO_MOVE_CAST(Handler)(handler));
+}
 
 template <typename Handler, typename Arg1>
 class binder1
@@ -62,7 +168,8 @@ public:
 
   void operator()()
   {
-    handler_(static_cast<const Arg1&>(arg1_));
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        static_cast<const Arg1&>(arg1_));
   }
 
   void operator()() const
@@ -76,19 +183,29 @@ public:
 };
 
 template <typename Handler, typename Arg1>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     binder1<Handler, Arg1>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     binder1<Handler, Arg1>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1>
@@ -100,19 +217,27 @@ inline bool asio_handler_is_continuation(
 }
 
 template <typename Function, typename Handler, typename Arg1>
-inline void asio_handler_invoke(Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(Function& function,
     binder1<Handler, Arg1>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Function, typename Handler, typename Arg1>
-inline void asio_handler_invoke(const Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(const Function& function,
     binder1<Handler, Arg1>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1>
@@ -161,7 +286,8 @@ public:
 
   void operator()()
   {
-    handler_(static_cast<const Arg1&>(arg1_),
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        static_cast<const Arg1&>(arg1_),
         static_cast<const Arg2&>(arg2_));
   }
 
@@ -177,19 +303,29 @@ public:
 };
 
 template <typename Handler, typename Arg1, typename Arg2>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     binder2<Handler, Arg1, Arg2>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     binder2<Handler, Arg1, Arg2>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2>
@@ -201,19 +337,27 @@ inline bool asio_handler_is_continuation(
 }
 
 template <typename Function, typename Handler, typename Arg1, typename Arg2>
-inline void asio_handler_invoke(Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(Function& function,
     binder2<Handler, Arg1, Arg2>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Function, typename Handler, typename Arg1, typename Arg2>
-inline void asio_handler_invoke(const Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(const Function& function,
     binder2<Handler, Arg1, Arg2>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2>
@@ -267,8 +411,10 @@ public:
 
   void operator()()
   {
-    handler_(static_cast<const Arg1&>(arg1_),
-        static_cast<const Arg2&>(arg2_), static_cast<const Arg3&>(arg3_));
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        static_cast<const Arg1&>(arg1_),
+        static_cast<const Arg2&>(arg2_),
+        static_cast<const Arg3&>(arg3_));
   }
 
   void operator()() const
@@ -284,19 +430,29 @@ public:
 };
 
 template <typename Handler, typename Arg1, typename Arg2, typename Arg3>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     binder3<Handler, Arg1, Arg2, Arg3>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2, typename Arg3>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     binder3<Handler, Arg1, Arg2, Arg3>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2, typename Arg3>
@@ -309,20 +465,28 @@ inline bool asio_handler_is_continuation(
 
 template <typename Function, typename Handler,
     typename Arg1, typename Arg2, typename Arg3>
-inline void asio_handler_invoke(Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(Function& function,
     binder3<Handler, Arg1, Arg2, Arg3>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Function, typename Handler,
     typename Arg1, typename Arg2, typename Arg3>
-inline void asio_handler_invoke(const Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(const Function& function,
     binder3<Handler, Arg1, Arg2, Arg3>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2, typename Arg3>
@@ -382,8 +546,10 @@ public:
 
   void operator()()
   {
-    handler_(static_cast<const Arg1&>(arg1_),
-        static_cast<const Arg2&>(arg2_), static_cast<const Arg3&>(arg3_),
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        static_cast<const Arg1&>(arg1_),
+        static_cast<const Arg2&>(arg2_),
+        static_cast<const Arg3&>(arg3_),
         static_cast<const Arg4&>(arg4_));
   }
 
@@ -402,20 +568,30 @@ public:
 
 template <typename Handler, typename Arg1,
     typename Arg2, typename Arg3, typename Arg4>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     binder4<Handler, Arg1, Arg2, Arg3, Arg4>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1,
     typename Arg2, typename Arg3, typename Arg4>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     binder4<Handler, Arg1, Arg2, Arg3, Arg4>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1,
@@ -429,20 +605,28 @@ inline bool asio_handler_is_continuation(
 
 template <typename Function, typename Handler, typename Arg1,
     typename Arg2, typename Arg3, typename Arg4>
-inline void asio_handler_invoke(Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(Function& function,
     binder4<Handler, Arg1, Arg2, Arg3, Arg4>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Function, typename Handler, typename Arg1,
     typename Arg2, typename Arg3, typename Arg4>
-inline void asio_handler_invoke(const Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(const Function& function,
     binder4<Handler, Arg1, Arg2, Arg3, Arg4>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1,
@@ -507,9 +691,12 @@ public:
 
   void operator()()
   {
-    handler_(static_cast<const Arg1&>(arg1_),
-        static_cast<const Arg2&>(arg2_), static_cast<const Arg3&>(arg3_),
-        static_cast<const Arg4&>(arg4_), static_cast<const Arg5&>(arg5_));
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        static_cast<const Arg1&>(arg1_),
+        static_cast<const Arg2&>(arg2_),
+        static_cast<const Arg3&>(arg3_),
+        static_cast<const Arg4&>(arg4_),
+        static_cast<const Arg5&>(arg5_));
   }
 
   void operator()() const
@@ -528,20 +715,30 @@ public:
 
 template <typename Handler, typename Arg1, typename Arg2,
     typename Arg3, typename Arg4, typename Arg5>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     binder5<Handler, Arg1, Arg2, Arg3, Arg4, Arg5>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2,
     typename Arg3, typename Arg4, typename Arg5>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     binder5<Handler, Arg1, Arg2, Arg3, Arg4, Arg5>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2,
@@ -555,20 +752,28 @@ inline bool asio_handler_is_continuation(
 
 template <typename Function, typename Handler, typename Arg1,
     typename Arg2, typename Arg3, typename Arg4, typename Arg5>
-inline void asio_handler_invoke(Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(Function& function,
     binder5<Handler, Arg1, Arg2, Arg3, Arg4, Arg5>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Function, typename Handler, typename Arg1,
     typename Arg2, typename Arg3, typename Arg4, typename Arg5>
-inline void asio_handler_invoke(const Function& function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(const Function& function,
     binder5<Handler, Arg1, Arg2, Arg3, Arg4, Arg5>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2,
@@ -602,7 +807,8 @@ public:
 
   void operator()()
   {
-    handler_(BOOST_ASIO_MOVE_CAST(Arg1)(arg1_));
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        BOOST_ASIO_MOVE_CAST(Arg1)(arg1_));
   }
 
 //private:
@@ -611,19 +817,29 @@ public:
 };
 
 template <typename Handler, typename Arg1>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     move_binder1<Handler, Arg1>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     move_binder1<Handler, Arg1>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1>
@@ -635,11 +851,15 @@ inline bool asio_handler_is_continuation(
 }
 
 template <typename Function, typename Handler, typename Arg1>
-inline void asio_handler_invoke(BOOST_ASIO_MOVE_ARG(Function) function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(BOOST_ASIO_MOVE_ARG(Function) function,
     move_binder1<Handler, Arg1>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       BOOST_ASIO_MOVE_CAST(Function)(function), this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2>
@@ -663,7 +883,8 @@ public:
 
   void operator()()
   {
-    handler_(static_cast<const Arg1&>(arg1_),
+    BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
+        static_cast<const Arg1&>(arg1_),
         BOOST_ASIO_MOVE_CAST(Arg2)(arg2_));
   }
 
@@ -674,19 +895,29 @@ public:
 };
 
 template <typename Handler, typename Arg1, typename Arg2>
-inline void* asio_handler_allocate(std::size_t size,
+inline asio_handler_allocate_is_deprecated
+asio_handler_allocate(std::size_t size,
     move_binder2<Handler, Arg1, Arg2>* this_handler)
 {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+  return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
   return boost_asio_handler_alloc_helpers::allocate(
       size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2>
-inline void asio_handler_deallocate(void* pointer, std::size_t size,
+inline asio_handler_deallocate_is_deprecated
+asio_handler_deallocate(void* pointer, std::size_t size,
     move_binder2<Handler, Arg1, Arg2>* this_handler)
 {
   boost_asio_handler_alloc_helpers::deallocate(
       pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 template <typename Handler, typename Arg1, typename Arg2>
@@ -698,113 +929,137 @@ inline bool asio_handler_is_continuation(
 }
 
 template <typename Function, typename Handler, typename Arg1, typename Arg2>
-inline void asio_handler_invoke(BOOST_ASIO_MOVE_ARG(Function) function,
+inline asio_handler_invoke_is_deprecated
+asio_handler_invoke(BOOST_ASIO_MOVE_ARG(Function) function,
     move_binder2<Handler, Arg1, Arg2>* this_handler)
 {
   boost_asio_handler_invoke_helpers::invoke(
       BOOST_ASIO_MOVE_CAST(Function)(function), this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+  return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
 }
 
 #endif // defined(BOOST_ASIO_HAS_MOVE)
 
 } // namespace detail
 
-template <typename Handler, typename Arg1, typename Allocator>
-struct associated_allocator<detail::binder1<Handler, Arg1>, Allocator>
+template <template <typename, typename> class Associator,
+    typename Handler, typename DefaultCandidate>
+struct associator<Associator,
+    detail::binder0<Handler>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
 {
-  typedef typename associated_allocator<Handler, Allocator>::type type;
-
-  static type get(const detail::binder1<Handler, Arg1>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::binder0<Handler>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_allocator<Handler, Allocator>::get(h.handler_, a);
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
-template <typename Handler, typename Arg1, typename Arg2, typename Allocator>
-struct associated_allocator<detail::binder2<Handler, Arg1, Arg2>, Allocator>
+template <template <typename, typename> class Associator,
+    typename Handler, typename Arg1, typename DefaultCandidate>
+struct associator<Associator,
+    detail::binder1<Handler, Arg1>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
 {
-  typedef typename associated_allocator<Handler, Allocator>::type type;
-
-  static type get(const detail::binder2<Handler, Arg1, Arg2>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::binder1<Handler, Arg1>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_allocator<Handler, Allocator>::get(h.handler_, a);
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
-template <typename Handler, typename Arg1, typename Executor>
-struct associated_executor<detail::binder1<Handler, Arg1>, Executor>
+template <template <typename, typename> class Associator,
+    typename Handler, typename Arg1, typename Arg2,
+    typename DefaultCandidate>
+struct associator<Associator,
+    detail::binder2<Handler, Arg1, Arg2>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
 {
-  typedef typename associated_executor<Handler, Executor>::type type;
-
-  static type get(const detail::binder1<Handler, Arg1>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::binder2<Handler, Arg1, Arg2>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_executor<Handler, Executor>::get(h.handler_, ex);
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
-template <typename Handler, typename Arg1, typename Arg2, typename Executor>
-struct associated_executor<detail::binder2<Handler, Arg1, Arg2>, Executor>
+template <template <typename, typename> class Associator,
+    typename Handler, typename Arg1, typename Arg2, typename Arg3,
+    typename DefaultCandidate>
+struct associator<Associator,
+    detail::binder3<Handler, Arg1, Arg2, Arg3>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
 {
-  typedef typename associated_executor<Handler, Executor>::type type;
-
-  static type get(const detail::binder2<Handler, Arg1, Arg2>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::binder3<Handler, Arg1, Arg2, Arg3>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_executor<Handler, Executor>::get(h.handler_, ex);
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
+  }
+};
+
+template <template <typename, typename> class Associator,
+    typename Handler, typename Arg1, typename Arg2, typename Arg3,
+    typename Arg4, typename DefaultCandidate>
+struct associator<Associator,
+    detail::binder4<Handler, Arg1, Arg2, Arg3, Arg4>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
+{
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::binder4<Handler, Arg1, Arg2, Arg3, Arg4>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
+  }
+};
+
+template <template <typename, typename> class Associator,
+    typename Handler, typename Arg1, typename Arg2, typename Arg3,
+    typename Arg4, typename Arg5, typename DefaultCandidate>
+struct associator<Associator,
+    detail::binder5<Handler, Arg1, Arg2, Arg3, Arg4, Arg5>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
+{
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::binder5<Handler, Arg1, Arg2, Arg3, Arg4, Arg5>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
+  {
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #if defined(BOOST_ASIO_HAS_MOVE)
 
-template <typename Handler, typename Arg1, typename Allocator>
-struct associated_allocator<detail::move_binder1<Handler, Arg1>, Allocator>
+template <template <typename, typename> class Associator,
+    typename Handler, typename Arg1, typename DefaultCandidate>
+struct associator<Associator,
+    detail::move_binder1<Handler, Arg1>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
 {
-  typedef typename associated_allocator<Handler, Allocator>::type type;
-
-  static type get(const detail::move_binder1<Handler, Arg1>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::move_binder1<Handler, Arg1>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_allocator<Handler, Allocator>::get(h.handler_, a);
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
-template <typename Handler, typename Arg1, typename Arg2, typename Allocator>
-struct associated_allocator<
-    detail::move_binder2<Handler, Arg1, Arg2>, Allocator>
+template <template <typename, typename> class Associator,
+    typename Handler, typename Arg1, typename Arg2,
+    typename DefaultCandidate>
+struct associator<Associator,
+    detail::move_binder2<Handler, Arg1, Arg2>, DefaultCandidate>
+  : Associator<Handler, DefaultCandidate>
 {
-  typedef typename associated_allocator<Handler, Allocator>::type type;
-
-  static type get(const detail::move_binder2<Handler, Arg1, Arg2>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+  static typename Associator<Handler, DefaultCandidate>::type get(
+      const detail::move_binder2<Handler, Arg1, Arg2>& h,
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_allocator<Handler, Allocator>::get(h.handler_, a);
-  }
-};
-
-template <typename Handler, typename Arg1, typename Executor>
-struct associated_executor<detail::move_binder1<Handler, Arg1>, Executor>
-{
-  typedef typename associated_executor<Handler, Executor>::type type;
-
-  static type get(const detail::move_binder1<Handler, Arg1>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
-  {
-    return associated_executor<Handler, Executor>::get(h.handler_, ex);
-  }
-};
-
-template <typename Handler, typename Arg1, typename Arg2, typename Executor>
-struct associated_executor<detail::move_binder2<Handler, Arg1, Arg2>, Executor>
-{
-  typedef typename associated_executor<Handler, Executor>::type type;
-
-  static type get(const detail::move_binder2<Handler, Arg1, Arg2>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
-  {
-    return associated_executor<Handler, Executor>::get(h.handler_, ex);
+    return Associator<Handler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 

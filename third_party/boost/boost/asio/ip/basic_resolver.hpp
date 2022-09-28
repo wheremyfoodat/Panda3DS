@@ -2,7 +2,7 @@
 // ip/basic_resolver.hpp
 // ~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2019 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,6 +17,7 @@
 
 #include <boost/asio/detail/config.hpp>
 #include <string>
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/handler_type_requirements.hpp>
 #include <boost/asio/detail/io_object_impl.hpp>
@@ -25,7 +26,6 @@
 #include <boost/asio/detail/throw_error.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/execution_context.hpp>
-#include <boost/asio/executor.hpp>
 #include <boost/asio/ip/basic_resolver_iterator.hpp>
 #include <boost/asio/ip/basic_resolver_query.hpp>
 #include <boost/asio/ip/basic_resolver_results.hpp>
@@ -50,7 +50,7 @@ namespace ip {
 #define BOOST_ASIO_IP_BASIC_RESOLVER_FWD_DECL
 
 // Forward declaration with defaulted arguments.
-template <typename InternetProtocol, typename Executor = executor>
+template <typename InternetProtocol, typename Executor = any_io_executor>
 class basic_resolver;
 
 #endif // !defined(BOOST_ASIO_IP_BASIC_RESOLVER_FWD_DECL)
@@ -68,9 +68,20 @@ template <typename InternetProtocol, typename Executor>
 class basic_resolver
   : public resolver_base
 {
+private:
+  class initiate_async_resolve;
+
 public:
   /// The type of the executor associated with the object.
   typedef Executor executor_type;
+
+  /// Rebinds the resolver type to another executor.
+  template <typename Executor1>
+  struct rebind_executor
+  {
+    /// The resolver type when rebound to the specified executor.
+    typedef basic_resolver<InternetProtocol, Executor1> other;
+  };
 
   /// The protocol type.
   typedef InternetProtocol protocol_type;
@@ -98,7 +109,7 @@ public:
    * resolver.
    */
   explicit basic_resolver(const executor_type& ex)
-    : impl_(ex)
+    : impl_(0, ex)
   {
   }
 
@@ -112,10 +123,10 @@ public:
    */
   template <typename ExecutionContext>
   explicit basic_resolver(ExecutionContext& context,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
   }
 
@@ -135,6 +146,29 @@ public:
   {
   }
 
+  // All resolvers have access to each other's implementations.
+  template <typename InternetProtocol1, typename Executor1>
+  friend class basic_resolver;
+
+  /// Move-construct a basic_resolver from another.
+  /**
+   * This constructor moves a resolver from one object to another.
+   *
+   * @param other The other basic_resolver object from which the move will
+   * occur.
+   *
+   * @note Following the move, the moved-from object is in the same state as if
+   * constructed using the @c basic_resolver(const executor_type&) constructor.
+   */
+  template <typename Executor1>
+  basic_resolver(basic_resolver<InternetProtocol, Executor1>&& other,
+      typename constraint<
+          is_convertible<Executor1, Executor>::value
+      >::type = 0)
+    : impl_(std::move(other.impl_))
+  {
+  }
+
   /// Move-assign a basic_resolver from another.
   /**
    * This assignment operator moves a resolver from one object to another.
@@ -150,6 +184,29 @@ public:
   basic_resolver& operator=(basic_resolver&& other)
   {
     impl_ = std::move(other.impl_);
+    return *this;
+  }
+
+  /// Move-assign a basic_resolver from another.
+  /**
+   * This assignment operator moves a resolver from one object to another.
+   * Cancels any outstanding asynchronous operations associated with the target
+   * object.
+   *
+   * @param other The other basic_resolver object from which the move will
+   * occur.
+   *
+   * @note Following the move, the moved-from object is in the same state as if
+   * constructed using the @c basic_resolver(const executor_type&) constructor.
+   */
+  template <typename Executor1>
+  typename constraint<
+    is_convertible<Executor1, Executor>::value,
+    basic_resolver&
+  >::type operator=(basic_resolver<InternetProtocol, Executor1>&& other)
+  {
+    basic_resolver tmp(std::move(other));
+    impl_ = std::move(tmp.impl_);
     return *this;
   }
 #endif // defined(BOOST_ASIO_HAS_MOVE) || defined(GENERATING_DOCUMENTATION)
@@ -594,34 +651,48 @@ public:
   /// Asynchronously perform forward resolution of a query to a list of entries.
   /**
    * This function is used to asynchronously resolve a query into a list of
-   * endpoint entries.
+   * endpoint entries. It is an initiating function for an @ref
+   * asynchronous_operation, and always returns immediately.
    *
    * @param q A query object that determines what endpoints will be returned.
    *
-   * @param handler The handler to be called when the resolve operation
-   * completes. Copies will be made of the handler as required. The function
-   * signature of the handler must be:
+   * @param token The @ref completion_token that will be used to produce a
+   * completion handler, which will be called when the resolve completes.
+   * Potential completion tokens include @ref use_future, @ref use_awaitable,
+   * @ref yield_context, or a function object with the correct completion
+   * signature. The function signature of the completion handler must be:
    * @code void handler(
    *   const boost::system::error_code& error, // Result of operation.
    *   resolver::results_type results // Resolved endpoints as a range.
    * ); @endcode
    * Regardless of whether the asynchronous operation completes immediately or
-   * not, the handler will not be invoked from within this function. On
-   * immediate completion, invocation of the handler will be performed in a
+   * not, the completion handler will not be invoked from within this function.
+   * On immediate completion, invocation of the handler will be performed in a
    * manner equivalent to using boost::asio::post().
    *
    * A successful resolve operation is guaranteed to pass a non-empty range to
    * the handler.
+   *
+   * @par Completion Signature
+   * @code void(boost::system::error_code, results_type) @endcode
    */
-  template <typename ResolveHandler>
-  BOOST_ASIO_INITFN_RESULT_TYPE(ResolveHandler,
+  template <
+      BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+        results_type)) ResolveToken
+          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const query& q,
-      BOOST_ASIO_MOVE_ARG(ResolveHandler) handler)
+      BOOST_ASIO_MOVE_ARG(ResolveToken) token
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token, q)))
   {
-    return boost::asio::async_initiate<ResolveHandler,
+    return boost::asio::async_initiate<ResolveToken,
       void (boost::system::error_code, results_type)>(
-        initiate_async_resolve(), handler, this, q);
+        initiate_async_resolve(this), token, q);
   }
 #endif // !defined(BOOST_ASIO_NO_DEPRECATED)
 
@@ -641,20 +712,25 @@ public:
    * be an empty string, in which case all resolved endpoints will have a port
    * number of 0.
    *
-   * @param handler The handler to be called when the resolve operation
-   * completes. Copies will be made of the handler as required. The function
-   * signature of the handler must be:
+   * @param token The @ref completion_token that will be used to produce a
+   * completion handler, which will be called when the resolve completes.
+   * Potential completion tokens include @ref use_future, @ref use_awaitable,
+   * @ref yield_context, or a function object with the correct completion
+   * signature. The function signature of the completion handler must be:
    * @code void handler(
    *   const boost::system::error_code& error, // Result of operation.
    *   resolver::results_type results // Resolved endpoints as a range.
    * ); @endcode
    * Regardless of whether the asynchronous operation completes immediately or
-   * not, the handler will not be invoked from within this function. On
-   * immediate completion, invocation of the handler will be performed in a
+   * not, the completion handler will not be invoked from within this function.
+   * On immediate completion, invocation of the handler will be performed in a
    * manner equivalent to using boost::asio::post().
    *
    * A successful resolve operation is guaranteed to pass a non-empty range to
    * the handler.
+   *
+   * @par Completion Signature
+   * @code void(boost::system::error_code, results_type) @endcode
    *
    * @note On POSIX systems, host names may be locally defined in the file
    * <tt>/etc/hosts</tt>. On Windows, host names may be defined in the file
@@ -667,21 +743,31 @@ public:
    * <tt>c:\\windows\\system32\\drivers\\etc\\services</tt>. Operating systems
    * may use additional locations when resolving service names.
    */
-  template <typename ResolveHandler>
-  BOOST_ASIO_INITFN_RESULT_TYPE(ResolveHandler,
+  template <
+      BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+        results_type)) ResolveToken
+          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(BOOST_ASIO_STRING_VIEW_PARAM host,
       BOOST_ASIO_STRING_VIEW_PARAM service,
-      BOOST_ASIO_MOVE_ARG(ResolveHandler) handler)
+      BOOST_ASIO_MOVE_ARG(ResolveToken) token
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     return async_resolve(host, service, resolver_base::flags(),
-        BOOST_ASIO_MOVE_CAST(ResolveHandler)(handler));
+        BOOST_ASIO_MOVE_CAST(ResolveToken)(token));
   }
 
   /// Asynchronously perform forward resolution of a query to a list of entries.
   /**
    * This function is used to resolve host and service names into a list of
-   * endpoint entries.
+   * endpoint entries. It is an initiating function for an @ref
+   * asynchronous_operation, and always returns immediately.
    *
    * @param host A string identifying a location. May be a descriptive name or
    * a numeric address string. If an empty string and the passive flag has been
@@ -699,20 +785,25 @@ public:
    * remote hosts. See the @ref resolver_base documentation for the set of
    * available flags.
    *
-   * @param handler The handler to be called when the resolve operation
-   * completes. Copies will be made of the handler as required. The function
-   * signature of the handler must be:
+   * @param token The @ref completion_token that will be used to produce a
+   * completion handler, which will be called when the resolve completes.
+   * Potential completion tokens include @ref use_future, @ref use_awaitable,
+   * @ref yield_context, or a function object with the correct completion
+   * signature. The function signature of the completion handler must be:
    * @code void handler(
    *   const boost::system::error_code& error, // Result of operation.
    *   resolver::results_type results // Resolved endpoints as a range.
    * ); @endcode
    * Regardless of whether the asynchronous operation completes immediately or
-   * not, the handler will not be invoked from within this function. On
-   * immediate completion, invocation of the handler will be performed in a
+   * not, the completion handler will not be invoked from within this function.
+   * On immediate completion, invocation of the handler will be performed in a
    * manner equivalent to using boost::asio::post().
    *
    * A successful resolve operation is guaranteed to pass a non-empty range to
    * the handler.
+   *
+   * @par Completion Signature
+   * @code void(boost::system::error_code, results_type) @endcode
    *
    * @note On POSIX systems, host names may be locally defined in the file
    * <tt>/etc/hosts</tt>. On Windows, host names may be defined in the file
@@ -725,26 +816,36 @@ public:
    * <tt>c:\\windows\\system32\\drivers\\etc\\services</tt>. Operating systems
    * may use additional locations when resolving service names.
    */
-  template <typename ResolveHandler>
-  BOOST_ASIO_INITFN_RESULT_TYPE(ResolveHandler,
+  template <
+      BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+        results_type)) ResolveToken
+          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(BOOST_ASIO_STRING_VIEW_PARAM host,
       BOOST_ASIO_STRING_VIEW_PARAM service,
       resolver_base::flags resolve_flags,
-      BOOST_ASIO_MOVE_ARG(ResolveHandler) handler)
+      BOOST_ASIO_MOVE_ARG(ResolveToken) token
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     basic_resolver_query<protocol_type> q(static_cast<std::string>(host),
         static_cast<std::string>(service), resolve_flags);
 
-    return boost::asio::async_initiate<ResolveHandler,
+    return boost::asio::async_initiate<ResolveToken,
       void (boost::system::error_code, results_type)>(
-        initiate_async_resolve(), handler, this, q);
+        initiate_async_resolve(this), token, q);
   }
 
   /// Asynchronously perform forward resolution of a query to a list of entries.
   /**
    * This function is used to resolve host and service names into a list of
-   * endpoint entries.
+   * endpoint entries. It is an initiating function for an @ref
+   * asynchronous_operation, and always returns immediately.
    *
    * @param protocol A protocol object, normally representing either the IPv4 or
    * IPv6 version of an internet protocol.
@@ -760,20 +861,25 @@ public:
    * be an empty string, in which case all resolved endpoints will have a port
    * number of 0.
    *
-   * @param handler The handler to be called when the resolve operation
-   * completes. Copies will be made of the handler as required. The function
-   * signature of the handler must be:
+   * @param token The @ref completion_token that will be used to produce a
+   * completion handler, which will be called when the resolve completes.
+   * Potential completion tokens include @ref use_future, @ref use_awaitable,
+   * @ref yield_context, or a function object with the correct completion
+   * signature. The function signature of the completion handler must be:
    * @code void handler(
    *   const boost::system::error_code& error, // Result of operation.
    *   resolver::results_type results // Resolved endpoints as a range.
    * ); @endcode
    * Regardless of whether the asynchronous operation completes immediately or
-   * not, the handler will not be invoked from within this function. On
-   * immediate completion, invocation of the handler will be performed in a
+   * not, the completion handler will not be invoked from within this function.
+   * On immediate completion, invocation of the handler will be performed in a
    * manner equivalent to using boost::asio::post().
    *
    * A successful resolve operation is guaranteed to pass a non-empty range to
    * the handler.
+   *
+   * @par Completion Signature
+   * @code void(boost::system::error_code, results_type) @endcode
    *
    * @note On POSIX systems, host names may be locally defined in the file
    * <tt>/etc/hosts</tt>. On Windows, host names may be defined in the file
@@ -786,21 +892,31 @@ public:
    * <tt>c:\\windows\\system32\\drivers\\etc\\services</tt>. Operating systems
    * may use additional locations when resolving service names.
    */
-  template <typename ResolveHandler>
-  BOOST_ASIO_INITFN_RESULT_TYPE(ResolveHandler,
+  template <
+      BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+        results_type)) ResolveToken
+          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const protocol_type& protocol,
       BOOST_ASIO_STRING_VIEW_PARAM host, BOOST_ASIO_STRING_VIEW_PARAM service,
-      BOOST_ASIO_MOVE_ARG(ResolveHandler) handler)
+      BOOST_ASIO_MOVE_ARG(ResolveToken) token
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     return async_resolve(protocol, host, service, resolver_base::flags(),
-        BOOST_ASIO_MOVE_CAST(ResolveHandler)(handler));
+        BOOST_ASIO_MOVE_CAST(ResolveToken)(token));
   }
 
   /// Asynchronously perform forward resolution of a query to a list of entries.
   /**
    * This function is used to resolve host and service names into a list of
-   * endpoint entries.
+   * endpoint entries. It is an initiating function for an @ref
+   * asynchronous_operation, and always returns immediately.
    *
    * @param protocol A protocol object, normally representing either the IPv4 or
    * IPv6 version of an internet protocol.
@@ -821,20 +937,25 @@ public:
    * remote hosts. See the @ref resolver_base documentation for the set of
    * available flags.
    *
-   * @param handler The handler to be called when the resolve operation
-   * completes. Copies will be made of the handler as required. The function
-   * signature of the handler must be:
+   * @param token The @ref completion_token that will be used to produce a
+   * completion handler, which will be called when the resolve completes.
+   * Potential completion tokens include @ref use_future, @ref use_awaitable,
+   * @ref yield_context, or a function object with the correct completion
+   * signature. The function signature of the completion handler must be:
    * @code void handler(
    *   const boost::system::error_code& error, // Result of operation.
    *   resolver::results_type results // Resolved endpoints as a range.
    * ); @endcode
    * Regardless of whether the asynchronous operation completes immediately or
-   * not, the handler will not be invoked from within this function. On
-   * immediate completion, invocation of the handler will be performed in a
+   * not, the completion handler will not be invoked from within this function.
+   * On immediate completion, invocation of the handler will be performed in a
    * manner equivalent to using boost::asio::post().
    *
    * A successful resolve operation is guaranteed to pass a non-empty range to
    * the handler.
+   *
+   * @par Completion Signature
+   * @code void(boost::system::error_code, results_type) @endcode
    *
    * @note On POSIX systems, host names may be locally defined in the file
    * <tt>/etc/hosts</tt>. On Windows, host names may be defined in the file
@@ -847,21 +968,30 @@ public:
    * <tt>c:\\windows\\system32\\drivers\\etc\\services</tt>. Operating systems
    * may use additional locations when resolving service names.
    */
-  template <typename ResolveHandler>
-  BOOST_ASIO_INITFN_RESULT_TYPE(ResolveHandler,
+  template <
+      BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+        results_type)) ResolveToken
+          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const protocol_type& protocol,
       BOOST_ASIO_STRING_VIEW_PARAM host, BOOST_ASIO_STRING_VIEW_PARAM service,
       resolver_base::flags resolve_flags,
-      BOOST_ASIO_MOVE_ARG(ResolveHandler) handler)
+      BOOST_ASIO_MOVE_ARG(ResolveToken) token
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token,
+          declval<basic_resolver_query<protocol_type>&>())))
   {
     basic_resolver_query<protocol_type> q(
         protocol, static_cast<std::string>(host),
         static_cast<std::string>(service), resolve_flags);
 
-    return boost::asio::async_initiate<ResolveHandler,
+    return boost::asio::async_initiate<ResolveToken,
       void (boost::system::error_code, results_type)>(
-        initiate_async_resolve(), handler, this, q);
+        initiate_async_resolve(this), token, q);
   }
 
   /// Perform reverse resolution of an endpoint to a list of entries.
@@ -910,35 +1040,49 @@ public:
   /// entries.
   /**
    * This function is used to asynchronously resolve an endpoint into a list of
-   * endpoint entries.
+   * endpoint entries. It is an initiating function for an @ref
+   * asynchronous_operation, and always returns immediately.
    *
    * @param e An endpoint object that determines what endpoints will be
    * returned.
    *
-   * @param handler The handler to be called when the resolve operation
-   * completes. Copies will be made of the handler as required. The function
-   * signature of the handler must be:
+   * @param token The @ref completion_token that will be used to produce a
+   * completion handler, which will be called when the resolve completes.
+   * Potential completion tokens include @ref use_future, @ref use_awaitable,
+   * @ref yield_context, or a function object with the correct completion
+   * signature. The function signature of the completion handler must be:
    * @code void handler(
    *   const boost::system::error_code& error, // Result of operation.
    *   resolver::results_type results // Resolved endpoints as a range.
    * ); @endcode
    * Regardless of whether the asynchronous operation completes immediately or
-   * not, the handler will not be invoked from within this function. On
-   * immediate completion, invocation of the handler will be performed in a
+   * not, the completion handler will not be invoked from within this function.
+   * On immediate completion, invocation of the handler will be performed in a
    * manner equivalent to using boost::asio::post().
    *
    * A successful resolve operation is guaranteed to pass a non-empty range to
    * the handler.
+   *
+   * @par Completion Signature
+   * @code void(boost::system::error_code, results_type) @endcode
    */
-  template <typename ResolveHandler>
-  BOOST_ASIO_INITFN_RESULT_TYPE(ResolveHandler,
+  template <
+      BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+        results_type)) ResolveToken
+          BOOST_ASIO_DEFAULT_COMPLETION_TOKEN_TYPE(executor_type)>
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(ResolveToken,
       void (boost::system::error_code, results_type))
   async_resolve(const endpoint_type& e,
-      BOOST_ASIO_MOVE_ARG(ResolveHandler) handler)
+      BOOST_ASIO_MOVE_ARG(ResolveToken) token
+        BOOST_ASIO_DEFAULT_COMPLETION_TOKEN(executor_type))
+    BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+      boost::asio::async_initiate<ResolveToken,
+        void (boost::system::error_code, results_type)>(
+          declval<initiate_async_resolve>(), token, e)))
   {
-    return boost::asio::async_initiate<ResolveHandler,
+    return boost::asio::async_initiate<ResolveToken,
       void (boost::system::error_code, results_type)>(
-        initiate_async_resolve(), handler, this, e);
+        initiate_async_resolve(this), token, e);
   }
 
 private:
@@ -946,11 +1090,24 @@ private:
   basic_resolver(const basic_resolver&) BOOST_ASIO_DELETED;
   basic_resolver& operator=(const basic_resolver&) BOOST_ASIO_DELETED;
 
-  struct initiate_async_resolve
+  class initiate_async_resolve
   {
+  public:
+    typedef Executor executor_type;
+
+    explicit initiate_async_resolve(basic_resolver* self)
+      : self_(self)
+    {
+    }
+
+    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    {
+      return self_->get_executor();
+    }
+
     template <typename ResolveHandler, typename Query>
     void operator()(BOOST_ASIO_MOVE_ARG(ResolveHandler) handler,
-        basic_resolver* self, const Query& q) const
+        const Query& q) const
     {
       // If you get an error on the following line it means that your handler
       // does not meet the documented type requirements for a ResolveHandler.
@@ -958,10 +1115,13 @@ private:
           ResolveHandler, handler, results_type) type_check;
 
       boost::asio::detail::non_const_lvalue<ResolveHandler> handler2(handler);
-      self->impl_.get_service().async_resolve(
-          self->impl_.get_implementation(), q, handler2.value,
-          self->impl_.get_implementation_executor());
+      self_->impl_.get_service().async_resolve(
+          self_->impl_.get_implementation(), q,
+          handler2.value, self_->impl_.get_executor());
     }
+
+  private:
+    basic_resolver* self_;
   };
 
 # if defined(BOOST_ASIO_WINDOWS_RUNTIME)

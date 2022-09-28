@@ -3,7 +3,7 @@
 // See http://www.boost.org for updates, documentation, and revision history.
 //-----------------------------------------------------------------------------
 //
-// Copyright (c) 2018-2019 Antony Polukhin
+// Copyright (c) 2018-2022 Antony Polukhin
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -24,7 +24,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // macro BOOST_VARIANT_DO_NOT_SPECIALIZE_STD_HASH
 //
-// Define this macro if you do not with to have a std::hash specialization for
+// Define this macro if you do not wish to have a std::hash specialization for
 // boost::variant.
 
 #if !defined(BOOST_VARIANT_DO_NOT_SPECIALIZE_STD_HASH) && !defined(BOOST_NO_CXX11_HDR_FUNCTIONAL)

@@ -2,7 +2,7 @@
 // windows/basic_overlapped_handle.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2019 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,13 +22,13 @@
   || defined(GENERATING_DOCUMENTATION)
 
 #include <cstddef>
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/detail/io_object_impl.hpp>
 #include <boost/asio/detail/throw_error.hpp>
 #include <boost/asio/detail/win_iocp_handle_service.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/execution_context.hpp>
-#include <boost/asio/executor.hpp>
 
 #if defined(BOOST_ASIO_HAS_MOVE)
 # include <utility>
@@ -51,12 +51,20 @@ namespace windows {
  * @e Distinct @e objects: Safe.@n
  * @e Shared @e objects: Unsafe.
  */
-template <typename Executor = executor>
+template <typename Executor = any_io_executor>
 class basic_overlapped_handle
 {
 public:
   /// The type of the executor associated with the object.
   typedef Executor executor_type;
+
+  /// Rebinds the handle type to another executor.
+  template <typename Executor1>
+  struct rebind_executor
+  {
+    /// The handle type when rebound to the specified executor.
+    typedef basic_overlapped_handle<Executor1> other;
+  };
 
   /// The native representation of a handle.
 #if defined(GENERATING_DOCUMENTATION)
@@ -78,7 +86,7 @@ public:
    * overlapped handle.
    */
   explicit basic_overlapped_handle(const executor_type& ex)
-    : impl_(ex)
+    : impl_(0, ex)
   {
   }
 
@@ -92,11 +100,11 @@ public:
    */
   template <typename ExecutionContext>
   explicit basic_overlapped_handle(ExecutionContext& context,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value,
-        basic_overlapped_handle
-      >::type* = 0)
-    : impl_(context)
+        defaulted_constraint
+      >::type = defaulted_constraint())
+    : impl_(0, 0, context)
   {
   }
 
@@ -115,7 +123,7 @@ public:
    */
   basic_overlapped_handle(const executor_type& ex,
       const native_handle_type& native_handle)
-    : impl_(ex)
+    : impl_(0, ex)
   {
     boost::system::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(), native_handle, ec);
@@ -138,10 +146,10 @@ public:
   template <typename ExecutionContext>
   basic_overlapped_handle(ExecutionContext& context,
       const native_handle_type& native_handle,
-      typename enable_if<
+      typename constraint<
         is_convertible<ExecutionContext&, execution_context&>::value
-      >::type* = 0)
-    : impl_(context)
+      >::type = 0)
+    : impl_(0, 0, context)
   {
     boost::system::error_code ec;
     impl_.get_service().assign(impl_.get_implementation(), native_handle, ec);
@@ -177,6 +185,53 @@ public:
    * constructor.
    */
   basic_overlapped_handle& operator=(basic_overlapped_handle&& other)
+  {
+    impl_ = std::move(other.impl_);
+    return *this;
+  }
+
+  // All overlapped handles have access to each other's implementations.
+  template <typename Executor1>
+  friend class basic_overlapped_handle;
+
+  /// Move-construct an overlapped handle from a handle of another executor
+  /// type.
+  /**
+   * This constructor moves a handle from one object to another.
+   *
+   * @param other The other overlapped handle object from which the move will
+   * occur.
+   *
+   * @note Following the move, the moved-from object is in the same state as if
+   * constructed using the @c overlapped_handle(const executor_type&)
+   * constructor.
+   */
+  template<typename Executor1>
+  basic_overlapped_handle(basic_overlapped_handle<Executor1>&& other,
+      typename constraint<
+        is_convertible<Executor1, Executor>::value,
+        defaulted_constraint
+      >::type = defaulted_constraint())
+    : impl_(std::move(other.impl_))
+  {
+  }
+
+  /// Move-assign an overlapped handle from a handle of another executor type.
+  /**
+   * This assignment operator moves a handle from one object to another.
+   *
+   * @param other The other overlapped handle object from which the move will
+   * occur.
+   *
+   * @note Following the move, the moved-from object is in the same state as if
+   * constructed using the @c overlapped_handle(const executor_type&)
+   * constructor.
+   */
+  template<typename Executor1>
+  typename constraint<
+    is_convertible<Executor1, Executor>::value,
+    basic_overlapped_handle&
+  >::type operator=(basic_overlapped_handle<Executor1>&& other)
   {
     impl_ = std::move(other.impl_);
     return *this;
@@ -280,6 +335,58 @@ public:
   {
     impl_.get_service().close(impl_.get_implementation(), ec);
     BOOST_ASIO_SYNC_OP_VOID_RETURN(ec);
+  }
+
+  /// Release ownership of the underlying native handle.
+  /**
+   * This function causes all outstanding asynchronous operations to finish
+   * immediately, and the handlers for cancelled operations will be passed the
+   * boost::asio::error::operation_aborted error. Ownership of the native handle
+   * is then transferred to the caller.
+   *
+   * @throws boost::system::system_error Thrown on failure.
+   *
+   * @note This function is unsupported on Windows versions prior to Windows
+   * 8.1, and will fail with boost::asio::error::operation_not_supported on
+   * these platforms.
+   */
+#if defined(BOOST_ASIO_MSVC) && (BOOST_ASIO_MSVC >= 1400) \
+  && (!defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0603)
+  __declspec(deprecated("This function always fails with "
+        "operation_not_supported when used on Windows versions "
+        "prior to Windows 8.1."))
+#endif
+  native_handle_type release()
+  {
+    boost::system::error_code ec;
+    native_handle_type s = impl_.get_service().release(
+        impl_.get_implementation(), ec);
+    boost::asio::detail::throw_error(ec, "release");
+    return s;
+  }
+
+  /// Release ownership of the underlying native handle.
+  /**
+   * This function causes all outstanding asynchronous operations to finish
+   * immediately, and the handlers for cancelled operations will be passed the
+   * boost::asio::error::operation_aborted error. Ownership of the native handle
+   * is then transferred to the caller.
+   *
+   * @param ec Set to indicate what error occurred, if any.
+   *
+   * @note This function is unsupported on Windows versions prior to Windows
+   * 8.1, and will fail with boost::asio::error::operation_not_supported on
+   * these platforms.
+   */
+#if defined(BOOST_ASIO_MSVC) && (BOOST_ASIO_MSVC >= 1400) \
+  && (!defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0603)
+  __declspec(deprecated("This function always fails with "
+        "operation_not_supported when used on Windows versions "
+        "prior to Windows 8.1."))
+#endif
+  native_handle_type release(boost::system::error_code& ec)
+  {
+    return impl_.get_service().release(impl_.get_implementation(), ec);
   }
 
   /// Get the native handle representation.

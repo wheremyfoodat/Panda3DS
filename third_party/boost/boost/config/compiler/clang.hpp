@@ -250,6 +250,11 @@
 
 #if !__has_feature(cxx_override_control)
 #  define BOOST_NO_CXX11_FINAL
+#  define BOOST_NO_CXX11_OVERRIDE
+#endif
+
+#if !__has_feature(cxx_unrestricted_unions)
+#  define BOOST_NO_CXX11_UNRESTRICTED_UNION
 #endif
 
 #if !(__has_feature(__cxx_binary_literals__) || __has_extension(__cxx_binary_literals__))
@@ -346,3 +351,5 @@
 // Macro used to identify the Clang compiler.
 #define BOOST_CLANG 1
 
+// BOOST_CLANG_VERSION
+#include <boost/config/compiler/clang_version.hpp>

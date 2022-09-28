@@ -10,34 +10,33 @@ Distributed under the Boost Software License, Version 1.0.
 
 #include <boost/config.hpp>
 #include <new>
-#include <climits>
-
-#if defined(BOOST_LIBSTDCXX_VERSION) && BOOST_LIBSTDCXX_VERSION < 60000
-#define BOOST_CORE_NO_CXX11_ALLOCATOR
-#endif
 
 namespace boost {
 
 #if defined(BOOST_NO_EXCEPTIONS)
-void throw_exception(const std::exception&);
+BOOST_NORETURN void throw_exception(const std::exception&);
 #endif
 
 namespace default_ {
 
-struct true_type {
+template<bool V>
+struct bool_constant {
     typedef bool value_type;
-    typedef true_type type;
+    typedef bool_constant type;
 
-    BOOST_STATIC_CONSTANT(bool, value = true);
+    static const bool value = V;
 
-    BOOST_CONSTEXPR operator bool() const BOOST_NOEXCEPT {
-        return true;
+    operator bool() const BOOST_NOEXCEPT {
+        return V;
     }
 
-    BOOST_CONSTEXPR bool operator()() const BOOST_NOEXCEPT {
-        return true;
+    bool operator()() const BOOST_NOEXCEPT {
+        return V;
     }
 };
+
+template<bool V>
+const bool bool_constant<V>::value;
 
 template<class T>
 struct add_reference {
@@ -63,8 +62,8 @@ struct default_allocator {
     typedef typename add_reference<const T>::type const_reference;
     typedef std::size_t size_type;
     typedef std::ptrdiff_t difference_type;
-    typedef true_type propagate_on_container_move_assignment;
-    typedef true_type is_always_equal;
+    typedef bool_constant<true> propagate_on_container_move_assignment;
+    typedef bool_constant<true> is_always_equal;
 
     template<class U>
     struct rebind {
@@ -81,16 +80,9 @@ struct default_allocator {
     BOOST_CONSTEXPR default_allocator(const default_allocator<U>&)
         BOOST_NOEXCEPT { }
 
-#if defined(PTRDIFF_MAX) && defined(SIZE_MAX)
     BOOST_CONSTEXPR std::size_t max_size() const BOOST_NOEXCEPT {
-        return PTRDIFF_MAX < SIZE_MAX / sizeof(T)
-            ? PTRDIFF_MAX : SIZE_MAX / sizeof(T);
+        return static_cast<std::size_t>(-1) / (2 < sizeof(T) ? sizeof(T) : 2);
     }
-#else
-    BOOST_CONSTEXPR std::size_t max_size() const BOOST_NOEXCEPT {
-        return ~static_cast<std::size_t>(0) / sizeof(T);
-    }
-#endif
 
 #if !defined(BOOST_NO_EXCEPTIONS)
     T* allocate(std::size_t n) {
@@ -120,7 +112,14 @@ struct default_allocator {
     }
 #endif
 
-#if defined(BOOST_NO_CXX11_ALLOCATOR) || defined(BOOST_CORE_NO_CXX11_ALLOCATOR)
+#if defined(BOOST_NO_CXX11_ALLOCATOR)
+    T* allocate(std::size_t n, const void*) {
+        return allocate(n);
+    }
+#endif
+
+#if (defined(BOOST_LIBSTDCXX_VERSION) && BOOST_LIBSTDCXX_VERSION < 60000) || \
+    defined(BOOST_NO_CXX11_ALLOCATOR)
     template<class U, class V>
     void construct(U* p, const V& v) {
         ::new(p) U(v);
@@ -129,6 +128,7 @@ struct default_allocator {
     template<class U>
     void destroy(U* p) {
         p->~U();
+        (void)p;
     }
 #endif
 };

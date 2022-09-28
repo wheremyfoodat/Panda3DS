@@ -4,7 +4,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (c) 2002-2003 Eric Friedman
-// Copyright (c) 2014-2019 Antony Polukhin
+// Copyright (c) 2014-2022 Antony Polukhin
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -130,8 +130,9 @@ struct result_wrapper1
 template <typename Visitor, typename Visitable>
 inline decltype(auto) apply_visitor(Visitor&& visitor, Visitable&& visitable,
     typename boost::disable_if<
-        boost::detail::variant::has_result_type<Visitor>
-    >::type* = 0)
+        boost::detail::variant::has_result_type<Visitor>,
+        bool
+    >::type = true)
 {
     boost::detail::variant::result_wrapper1<Visitor, Visitable> cpp14_vis(::boost::forward<Visitor>(visitor));
     return ::boost::forward<Visitable>(visitable).apply_visitor(cpp14_vis);

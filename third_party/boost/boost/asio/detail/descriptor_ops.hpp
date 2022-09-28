@@ -2,7 +2,7 @@
 // detail/descriptor_ops.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2019 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -24,6 +24,7 @@
 #include <cstddef>
 #include <boost/asio/error.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/asio/detail/cstdint.hpp>
 #include <boost/asio/detail/socket_types.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
@@ -51,16 +52,24 @@ enum
 
 typedef unsigned char state_type;
 
-template <typename ReturnType>
-inline ReturnType error_wrapper(ReturnType return_value,
-    boost::system::error_code& ec)
+inline void get_last_error(
+    boost::system::error_code& ec, bool is_error_condition)
 {
-  ec = boost::system::error_code(errno,
-      boost::asio::error::get_system_category());
-  return return_value;
+  if (!is_error_condition)
+  {
+    boost::asio::error::clear(ec);
+  }
+  else
+  {
+    ec = boost::system::error_code(errno,
+        boost::asio::error::get_system_category());
+  }
 }
 
 BOOST_ASIO_DECL int open(const char* path, int flags,
+    boost::system::error_code& ec);
+
+BOOST_ASIO_DECL int open(const char* path, int flags, unsigned mode,
     boost::system::error_code& ec);
 
 BOOST_ASIO_DECL int close(int d, state_type& state,
@@ -77,16 +86,65 @@ typedef iovec buf;
 BOOST_ASIO_DECL std::size_t sync_read(int d, state_type state, buf* bufs,
     std::size_t count, bool all_empty, boost::system::error_code& ec);
 
+BOOST_ASIO_DECL std::size_t sync_read1(int d, state_type state, void* data,
+    std::size_t size, boost::system::error_code& ec);
+
 BOOST_ASIO_DECL bool non_blocking_read(int d, buf* bufs, std::size_t count,
+    boost::system::error_code& ec, std::size_t& bytes_transferred);
+
+BOOST_ASIO_DECL bool non_blocking_read1(int d, void* data, std::size_t size,
     boost::system::error_code& ec, std::size_t& bytes_transferred);
 
 BOOST_ASIO_DECL std::size_t sync_write(int d, state_type state,
     const buf* bufs, std::size_t count, bool all_empty,
     boost::system::error_code& ec);
 
+BOOST_ASIO_DECL std::size_t sync_write1(int d, state_type state,
+    const void* data, std::size_t size, boost::system::error_code& ec);
+
 BOOST_ASIO_DECL bool non_blocking_write(int d,
     const buf* bufs, std::size_t count,
     boost::system::error_code& ec, std::size_t& bytes_transferred);
+
+BOOST_ASIO_DECL bool non_blocking_write1(int d,
+    const void* data, std::size_t size,
+    boost::system::error_code& ec, std::size_t& bytes_transferred);
+
+#if defined(BOOST_ASIO_HAS_FILE)
+
+BOOST_ASIO_DECL std::size_t sync_read_at(int d, state_type state,
+    uint64_t offset, buf* bufs, std::size_t count, bool all_empty,
+    boost::system::error_code& ec);
+
+BOOST_ASIO_DECL std::size_t sync_read_at1(int d, state_type state,
+    uint64_t offset, void* data, std::size_t size,
+    boost::system::error_code& ec);
+
+BOOST_ASIO_DECL bool non_blocking_read_at(int d, uint64_t offset,
+    buf* bufs, std::size_t count, boost::system::error_code& ec,
+    std::size_t& bytes_transferred);
+
+BOOST_ASIO_DECL bool non_blocking_read_at1(int d, uint64_t offset,
+    void* data, std::size_t size, boost::system::error_code& ec,
+    std::size_t& bytes_transferred);
+
+BOOST_ASIO_DECL std::size_t sync_write_at(int d, state_type state,
+    uint64_t offset, const buf* bufs, std::size_t count, bool all_empty,
+    boost::system::error_code& ec);
+
+BOOST_ASIO_DECL std::size_t sync_write_at1(int d, state_type state,
+    uint64_t offset, const void* data, std::size_t size,
+    boost::system::error_code& ec);
+
+BOOST_ASIO_DECL bool non_blocking_write_at(int d,
+    uint64_t offset, const buf* bufs, std::size_t count,
+    boost::system::error_code& ec, std::size_t& bytes_transferred);
+
+BOOST_ASIO_DECL bool non_blocking_write_at1(int d,
+    uint64_t offset, const void* data, std::size_t size,
+    boost::system::error_code& ec, std::size_t& bytes_transferred);
+
+#endif // defined(BOOST_ASIO_HAS_FILE)
 
 BOOST_ASIO_DECL int ioctl(int d, state_type& state, long cmd,
     ioctl_arg_type* arg, boost::system::error_code& ec);

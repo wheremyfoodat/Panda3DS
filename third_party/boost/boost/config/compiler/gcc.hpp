@@ -249,12 +249,12 @@
 #  define BOOST_NO_CXX11_TEMPLATE_ALIASES
 #  define BOOST_NO_CXX11_USER_DEFINED_LITERALS
 #  define BOOST_NO_CXX11_FIXED_LENGTH_VARIADIC_TEMPLATE_EXPANSION_PACKS
+#  define BOOST_NO_CXX11_OVERRIDE
 #endif
 
 // C++0x features in 4.8.n and later
 //
 #if (BOOST_GCC_VERSION < 40800) || !defined(BOOST_GCC_CXX11)
-#  define BOOST_NO_CXX11_ALIGNAS
 #  define BOOST_NO_CXX11_THREAD_LOCAL
 #  define BOOST_NO_CXX11_SFINAE_EXPR
 #endif
@@ -265,6 +265,20 @@
 #  define BOOST_NO_CXX11_DECLTYPE_N3276
 #  define BOOST_NO_CXX11_REF_QUALIFIERS
 #  define BOOST_NO_CXX14_BINARY_LITERALS
+#endif
+
+// C++0x features in 4.9.n and later
+//
+#if (BOOST_GCC_VERSION < 40900) || !defined(BOOST_GCC_CXX11)
+// Although alignas support is added in gcc 4.8, it does not accept
+// dependent constant expressions as an argument until gcc 4.9.
+#  define BOOST_NO_CXX11_ALIGNAS
+#endif
+
+// C++0x features in 5.1 and later
+//
+#if (BOOST_GCC_VERSION < 50100) || !defined(BOOST_GCC_CXX11)
+#  define BOOST_NO_CXX11_UNRESTRICTED_UNION
 #endif
 
 // C++14 features in 4.9.0 and later
@@ -309,9 +323,10 @@
 #  define BOOST_FALLTHROUGH __attribute__((fallthrough))
 #endif
 
-#if defined(__MINGW32__) && !defined(__MINGW64__)
-// Currently (March 2019) thread_local is broken on mingw for all current 32bit compiler releases, see
+#if (__GNUC__ < 11) && defined(__MINGW32__) && !defined(__MINGW64__)
+// thread_local was broken on mingw for all 32bit compiler releases prior to 11.x, see
 // https://sourceforge.net/p/mingw-w64/bugs/527/
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=83562
 // Not setting this causes program termination on thread exit.
 #define BOOST_NO_CXX11_THREAD_LOCAL
 #endif

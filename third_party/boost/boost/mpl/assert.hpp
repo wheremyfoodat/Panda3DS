@@ -39,7 +39,7 @@
 #include <boost/mpl/if.hpp>
 #endif
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x610)) \
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x610)) \
     || (BOOST_MPL_CFG_GCC != 0) \
     || BOOST_WORKAROUND(__IBMCPP__, <= 600)
 #   define BOOST_MPL_CFG_ASSERT_USE_RELATION_NAMES
@@ -47,16 +47,16 @@
 
 #if BOOST_WORKAROUND(__MWERKS__, < 0x3202) \
     || BOOST_WORKAROUND(__EDG_VERSION__, <= 238) \
-    || BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x610)) \
+    || BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x610)) \
     || BOOST_WORKAROUND(__DMC__, BOOST_TESTED_AT(0x840))
 #   define BOOST_MPL_CFG_ASSERT_BROKEN_POINTER_TO_POINTER_TO_MEMBER
 #endif
 
 // agurt, 10/nov/06: use enums for Borland (which cannot cope with static constants) 
-// and GCC (which issues "unused variable" warnings when static constants are used 
+// and GCC/PGI/Clang (which issues "unused variable" warnings when static constants are used 
 // at a function scope)
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x610)) \
-    || (BOOST_MPL_CFG_GCC != 0) || (BOOST_MPL_CFG_GPU != 0) || defined(__PGI)
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x610)) \
+    || (BOOST_MPL_CFG_GCC != 0) || (BOOST_MPL_CFG_GPU != 0) || defined(__PGI) || defined(__clang__)
 #   define BOOST_MPL_AUX_ASSERT_CONSTANT(T, expr) enum { expr }
 #else
 #   define BOOST_MPL_AUX_ASSERT_CONSTANT(T, expr) BOOST_STATIC_CONSTANT(T, expr)
@@ -184,7 +184,7 @@ template< typename P > struct assert_arg_pred_not
     typedef typename assert_arg_pred_impl<p>::type type;
 };
 
-#if defined(BOOST_GCC) && BOOST_GCC >= 80000
+#if BOOST_WORKAROUND(BOOST_GCC_VERSION, >= 80000)
 #define BOOST_MPL_IGNORE_PARENTHESES_WARNING
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wparentheses"

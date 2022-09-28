@@ -2,7 +2,7 @@
 // impl/write_at.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2019 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2022 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -15,11 +15,10 @@
 # pragma once
 #endif // defined(_MSC_VER) && (_MSC_VER >= 1200)
 
-#include <boost/asio/associated_allocator.hpp>
-#include <boost/asio/associated_executor.hpp>
+#include <boost/asio/associator.hpp>
 #include <boost/asio/buffer.hpp>
-#include <boost/asio/completion_condition.hpp>
 #include <boost/asio/detail/array_fwd.hpp>
+#include <boost/asio/detail/base_from_cancellation_state.hpp>
 #include <boost/asio/detail/base_from_completion_cond.hpp>
 #include <boost/asio/detail/bind_handler.hpp>
 #include <boost/asio/detail/consuming_buffers.hpp>
@@ -27,6 +26,7 @@
 #include <boost/asio/detail/handler_alloc_helpers.hpp>
 #include <boost/asio/detail/handler_cont_helpers.hpp>
 #include <boost/asio/detail/handler_invoke_helpers.hpp>
+#include <boost/asio/detail/handler_tracking.hpp>
 #include <boost/asio/detail/handler_type_requirements.hpp>
 #include <boost/asio/detail/non_const_lvalue.hpp>
 #include <boost/asio/detail/throw_error.hpp>
@@ -59,7 +59,7 @@ namespace detail
       else
         break;
     }
-    return tmp.total_consumed();;
+    return tmp.total_consumed();
   }
 } // namespace detail
 
@@ -161,14 +161,16 @@ namespace detail
       typename ConstBufferSequence, typename ConstBufferIterator,
       typename CompletionCondition, typename WriteHandler>
   class write_at_op
-    : detail::base_from_completion_cond<CompletionCondition>
+    : public base_from_cancellation_state<WriteHandler>,
+      base_from_completion_cond<CompletionCondition>
   {
   public:
     write_at_op(AsyncRandomAccessWriteDevice& device,
         uint64_t offset, const ConstBufferSequence& buffers,
         CompletionCondition& completion_condition, WriteHandler& handler)
-      : detail::base_from_completion_cond<
-          CompletionCondition>(completion_condition),
+      : base_from_cancellation_state<WriteHandler>(
+          handler, enable_partial_cancellation()),
+        base_from_completion_cond<CompletionCondition>(completion_condition),
         device_(device),
         offset_(offset),
         buffers_(buffers),
@@ -179,7 +181,8 @@ namespace detail
 
 #if defined(BOOST_ASIO_HAS_MOVE)
     write_at_op(const write_at_op& other)
-      : detail::base_from_completion_cond<CompletionCondition>(other),
+      : base_from_cancellation_state<WriteHandler>(other),
+        base_from_completion_cond<CompletionCondition>(other),
         device_(other.device_),
         offset_(other.offset_),
         buffers_(other.buffers_),
@@ -189,8 +192,11 @@ namespace detail
     }
 
     write_at_op(write_at_op&& other)
-      : detail::base_from_completion_cond<CompletionCondition>(
-          BOOST_ASIO_MOVE_CAST(detail::base_from_completion_cond<
+      : base_from_cancellation_state<WriteHandler>(
+          BOOST_ASIO_MOVE_CAST(base_from_cancellation_state<
+            WriteHandler>)(other)),
+        base_from_completion_cond<CompletionCondition>(
+          BOOST_ASIO_MOVE_CAST(base_from_completion_cond<
             CompletionCondition>)(other)),
         device_(other.device_),
         offset_(other.offset_),
@@ -201,7 +207,7 @@ namespace detail
     }
 #endif // defined(BOOST_ASIO_HAS_MOVE)
 
-    void operator()(const boost::system::error_code& ec,
+    void operator()(boost::system::error_code ec,
         std::size_t bytes_transferred, int start = 0)
     {
       std::size_t max_size;
@@ -209,19 +215,31 @@ namespace detail
       {
         case 1:
         max_size = this->check_for_completion(ec, buffers_.total_consumed());
-        do
+        for (;;)
         {
-          device_.async_write_some_at(
-              offset_ + buffers_.total_consumed(), buffers_.prepare(max_size),
-              BOOST_ASIO_MOVE_CAST(write_at_op)(*this));
+          {
+            BOOST_ASIO_HANDLER_LOCATION((__FILE__, __LINE__, "async_write_at"));
+            device_.async_write_some_at(
+                offset_ + buffers_.total_consumed(), buffers_.prepare(max_size),
+                BOOST_ASIO_MOVE_CAST(write_at_op)(*this));
+          }
           return; default:
           buffers_.consume(bytes_transferred);
           if ((!ec && bytes_transferred == 0) || buffers_.empty())
             break;
           max_size = this->check_for_completion(ec, buffers_.total_consumed());
-        } while (max_size > 0);
+          if (max_size == 0)
+            break;
+          if (this->cancelled() != cancellation_type::none)
+          {
+            ec = boost::asio::error::operation_aborted;
+            break;
+          }
+        }
 
-        handler_(ec, buffers_.total_consumed());
+        BOOST_ASIO_MOVE_OR_LVALUE(WriteHandler)(handler_)(
+            static_cast<const boost::system::error_code&>(ec),
+            static_cast<const std::size_t&>(buffers_.total_consumed()));
       }
     }
 
@@ -239,23 +257,33 @@ namespace detail
   template <typename AsyncRandomAccessWriteDevice,
       typename ConstBufferSequence, typename ConstBufferIterator,
       typename CompletionCondition, typename WriteHandler>
-  inline void* asio_handler_allocate(std::size_t size,
+  inline asio_handler_allocate_is_deprecated
+  asio_handler_allocate(std::size_t size,
       write_at_op<AsyncRandomAccessWriteDevice, ConstBufferSequence,
         ConstBufferIterator, CompletionCondition, WriteHandler>* this_handler)
   {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+    return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
     return boost_asio_handler_alloc_helpers::allocate(
         size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename AsyncRandomAccessWriteDevice,
       typename ConstBufferSequence, typename ConstBufferIterator,
       typename CompletionCondition, typename WriteHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
+  inline asio_handler_deallocate_is_deprecated
+  asio_handler_deallocate(void* pointer, std::size_t size,
       write_at_op<AsyncRandomAccessWriteDevice, ConstBufferSequence,
         ConstBufferIterator, CompletionCondition, WriteHandler>* this_handler)
   {
     boost_asio_handler_alloc_helpers::deallocate(
         pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename AsyncRandomAccessWriteDevice,
@@ -273,29 +301,37 @@ namespace detail
   template <typename Function, typename AsyncRandomAccessWriteDevice,
       typename ConstBufferSequence, typename ConstBufferIterator,
       typename CompletionCondition, typename WriteHandler>
-  inline void asio_handler_invoke(Function& function,
+  inline asio_handler_invoke_is_deprecated
+  asio_handler_invoke(Function& function,
       write_at_op<AsyncRandomAccessWriteDevice, ConstBufferSequence,
         ConstBufferIterator, CompletionCondition, WriteHandler>* this_handler)
   {
     boost_asio_handler_invoke_helpers::invoke(
         function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename Function, typename AsyncRandomAccessWriteDevice,
       typename ConstBufferSequence, typename ConstBufferIterator,
       typename CompletionCondition, typename WriteHandler>
-  inline void asio_handler_invoke(const Function& function,
+  inline asio_handler_invoke_is_deprecated
+  asio_handler_invoke(const Function& function,
       write_at_op<AsyncRandomAccessWriteDevice, ConstBufferSequence,
         ConstBufferIterator, CompletionCondition, WriteHandler>* this_handler)
   {
     boost_asio_handler_invoke_helpers::invoke(
         function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename AsyncRandomAccessWriteDevice,
       typename ConstBufferSequence, typename ConstBufferIterator,
       typename CompletionCondition, typename WriteHandler>
-  inline void start_write_at_buffer_sequence_op(AsyncRandomAccessWriteDevice& d,
+  inline void start_write_at_op(AsyncRandomAccessWriteDevice& d,
       uint64_t offset, const ConstBufferSequence& buffers,
       const ConstBufferIterator&, CompletionCondition& completion_condition,
       WriteHandler& handler)
@@ -306,13 +342,26 @@ namespace detail
           boost::system::error_code(), 0, 1);
   }
 
-  struct initiate_async_write_at_buffer_sequence
+  template <typename AsyncRandomAccessWriteDevice>
+  class initiate_async_write_at
   {
-    template <typename WriteHandler, typename AsyncRandomAccessWriteDevice,
-        typename ConstBufferSequence, typename CompletionCondition>
+  public:
+    typedef typename AsyncRandomAccessWriteDevice::executor_type executor_type;
+
+    explicit initiate_async_write_at(AsyncRandomAccessWriteDevice& device)
+      : device_(device)
+    {
+    }
+
+    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    {
+      return device_.get_executor();
+    }
+
+    template <typename WriteHandler, typename ConstBufferSequence,
+        typename CompletionCondition>
     void operator()(BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-        AsyncRandomAccessWriteDevice* d, uint64_t offset,
-        const ConstBufferSequence& buffers,
+        uint64_t offset, const ConstBufferSequence& buffers,
         BOOST_ASIO_MOVE_ARG(CompletionCondition) completion_cond) const
     {
       // If you get an error on the following line it means that your handler
@@ -321,84 +370,84 @@ namespace detail
 
       non_const_lvalue<WriteHandler> handler2(handler);
       non_const_lvalue<CompletionCondition> completion_cond2(completion_cond);
-      start_write_at_buffer_sequence_op(*d, offset, buffers,
+      start_write_at_op(device_, offset, buffers,
           boost::asio::buffer_sequence_begin(buffers),
           completion_cond2.value, handler2.value);
     }
+
+  private:
+    AsyncRandomAccessWriteDevice& device_;
   };
 } // namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncRandomAccessWriteDevice,
-    typename ConstBufferSequence, typename ConstBufferIterator,
-    typename CompletionCondition, typename WriteHandler, typename Allocator>
-struct associated_allocator<
+template <template <typename, typename> class Associator,
+    typename AsyncRandomAccessWriteDevice, typename ConstBufferSequence,
+    typename ConstBufferIterator, typename CompletionCondition,
+    typename WriteHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::write_at_op<AsyncRandomAccessWriteDevice, ConstBufferSequence,
       ConstBufferIterator, CompletionCondition, WriteHandler>,
-    Allocator>
+    DefaultCandidate>
+  : Associator<WriteHandler, DefaultCandidate>
 {
-  typedef typename associated_allocator<WriteHandler, Allocator>::type type;
-
-  static type get(
+  static typename Associator<WriteHandler, DefaultCandidate>::type get(
       const detail::write_at_op<AsyncRandomAccessWriteDevice,
         ConstBufferSequence, ConstBufferIterator,
         CompletionCondition, WriteHandler>& h,
-      const Allocator& a = Allocator()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_allocator<WriteHandler, Allocator>::get(h.handler_, a);
-  }
-};
-
-template <typename AsyncRandomAccessWriteDevice,
-    typename ConstBufferSequence, typename ConstBufferIterator,
-    typename CompletionCondition, typename WriteHandler, typename Executor>
-struct associated_executor<
-    detail::write_at_op<AsyncRandomAccessWriteDevice, ConstBufferSequence,
-      ConstBufferIterator, CompletionCondition, WriteHandler>,
-    Executor>
-{
-  typedef typename associated_executor<WriteHandler, Executor>::type type;
-
-  static type get(
-      const detail::write_at_op<AsyncRandomAccessWriteDevice,
-        ConstBufferSequence, ConstBufferIterator,
-        CompletionCondition, WriteHandler>& h,
-      const Executor& ex = Executor()) BOOST_ASIO_NOEXCEPT
-  {
-    return associated_executor<WriteHandler, Executor>::get(h.handler_, ex);
+    return Associator<WriteHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncRandomAccessWriteDevice, typename ConstBufferSequence,
-    typename CompletionCondition, typename WriteHandler>
-inline BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
+template <typename AsyncRandomAccessWriteDevice,
+    typename ConstBufferSequence, typename CompletionCondition,
+    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, const ConstBufferSequence& buffers,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_at<
+          AsyncRandomAccessWriteDevice> >(),
+        token, offset, buffers,
+        BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition))))
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_write_at_buffer_sequence(), handler, &d, offset,
-      buffers, BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
+      detail::initiate_async_write_at<AsyncRandomAccessWriteDevice>(d),
+      token, offset, buffers,
+      BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
 }
 
 template <typename AsyncRandomAccessWriteDevice, typename ConstBufferSequence,
-    typename WriteHandler>
-inline BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
+    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, const ConstBufferSequence& buffers,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_at<
+          AsyncRandomAccessWriteDevice> >(),
+        token, offset, buffers, transfer_all())))
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_write_at_buffer_sequence(),
-      handler, &d, offset, buffers, transfer_all());
+      detail::initiate_async_write_at<AsyncRandomAccessWriteDevice>(d),
+      token, offset, buffers, transfer_all());
 }
 
 #if !defined(BOOST_ASIO_NO_EXTENSIONS)
@@ -436,7 +485,7 @@ namespace detail
         const std::size_t bytes_transferred)
     {
       streambuf_.consume(bytes_transferred);
-      handler_(ec, bytes_transferred);
+      BOOST_ASIO_MOVE_OR_LVALUE(WriteHandler)(handler_)(ec, bytes_transferred);
     }
 
   //private:
@@ -445,19 +494,29 @@ namespace detail
   };
 
   template <typename Allocator, typename WriteHandler>
-  inline void* asio_handler_allocate(std::size_t size,
+  inline asio_handler_allocate_is_deprecated
+  asio_handler_allocate(std::size_t size,
       write_at_streambuf_op<Allocator, WriteHandler>* this_handler)
   {
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    boost_asio_handler_alloc_helpers::allocate(size, this_handler->handler_);
+    return asio_handler_allocate_is_no_longer_used();
+#else // defined(BOOST_ASIO_NO_DEPRECATED)
     return boost_asio_handler_alloc_helpers::allocate(
         size, this_handler->handler_);
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename Allocator, typename WriteHandler>
-  inline void asio_handler_deallocate(void* pointer, std::size_t size,
+  inline asio_handler_deallocate_is_deprecated
+  asio_handler_deallocate(void* pointer, std::size_t size,
       write_at_streambuf_op<Allocator, WriteHandler>* this_handler)
   {
     boost_asio_handler_alloc_helpers::deallocate(
         pointer, size, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    return asio_handler_deallocate_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename Allocator, typename WriteHandler>
@@ -469,28 +528,50 @@ namespace detail
   }
 
   template <typename Function, typename Allocator, typename WriteHandler>
-  inline void asio_handler_invoke(Function& function,
+  inline asio_handler_invoke_is_deprecated
+  asio_handler_invoke(Function& function,
       write_at_streambuf_op<Allocator, WriteHandler>* this_handler)
   {
     boost_asio_handler_invoke_helpers::invoke(
         function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
   template <typename Function, typename Allocator, typename WriteHandler>
-  inline void asio_handler_invoke(const Function& function,
+  inline asio_handler_invoke_is_deprecated
+  asio_handler_invoke(const Function& function,
       write_at_streambuf_op<Allocator, WriteHandler>* this_handler)
   {
     boost_asio_handler_invoke_helpers::invoke(
         function, this_handler->handler_);
+#if defined(BOOST_ASIO_NO_DEPRECATED)
+    return asio_handler_invoke_is_no_longer_used();
+#endif // defined(BOOST_ASIO_NO_DEPRECATED)
   }
 
-  struct initiate_async_write_at_streambuf
+  template <typename AsyncRandomAccessWriteDevice>
+  class initiate_async_write_at_streambuf
   {
-    template <typename WriteHandler, typename AsyncRandomAccessWriteDevice,
+  public:
+    typedef typename AsyncRandomAccessWriteDevice::executor_type executor_type;
+
+    explicit initiate_async_write_at_streambuf(
+        AsyncRandomAccessWriteDevice& device)
+      : device_(device)
+    {
+    }
+
+    executor_type get_executor() const BOOST_ASIO_NOEXCEPT
+    {
+      return device_.get_executor();
+    }
+
+    template <typename WriteHandler,
         typename Allocator, typename CompletionCondition>
     void operator()(BOOST_ASIO_MOVE_ARG(WriteHandler) handler,
-        AsyncRandomAccessWriteDevice* d, uint64_t offset,
-        basic_streambuf<Allocator>* b,
+        uint64_t offset, basic_streambuf<Allocator>* b,
         BOOST_ASIO_MOVE_ARG(CompletionCondition) completion_condition) const
     {
       // If you get an error on the following line it means that your handler
@@ -498,75 +579,82 @@ namespace detail
       BOOST_ASIO_WRITE_HANDLER_CHECK(WriteHandler, handler) type_check;
 
       non_const_lvalue<WriteHandler> handler2(handler);
-      async_write_at(*d, offset, b->data(),
+      async_write_at(device_, offset, b->data(),
           BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition),
           write_at_streambuf_op<Allocator, typename decay<WriteHandler>::type>(
             *b, handler2.value));
     }
+
+  private:
+    AsyncRandomAccessWriteDevice& device_;
   };
 } // namespace detail
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-template <typename Allocator, typename WriteHandler, typename Allocator1>
-struct associated_allocator<
-    detail::write_at_streambuf_op<Allocator, WriteHandler>,
-    Allocator1>
-{
-  typedef typename associated_allocator<WriteHandler, Allocator1>::type type;
-
-  static type get(
-      const detail::write_at_streambuf_op<Allocator, WriteHandler>& h,
-      const Allocator1& a = Allocator1()) BOOST_ASIO_NOEXCEPT
-  {
-    return associated_allocator<WriteHandler, Allocator1>::get(h.handler_, a);
-  }
-};
-
-template <typename Executor, typename WriteHandler, typename Executor1>
-struct associated_executor<
+template <template <typename, typename> class Associator,
+    typename Executor, typename WriteHandler, typename DefaultCandidate>
+struct associator<Associator,
     detail::write_at_streambuf_op<Executor, WriteHandler>,
-    Executor1>
+    DefaultCandidate>
+  : Associator<WriteHandler, DefaultCandidate>
 {
-  typedef typename associated_executor<WriteHandler, Executor1>::type type;
-
-  static type get(
+  static typename Associator<WriteHandler, DefaultCandidate>::type get(
       const detail::write_at_streambuf_op<Executor, WriteHandler>& h,
-      const Executor1& ex = Executor1()) BOOST_ASIO_NOEXCEPT
+      const DefaultCandidate& c = DefaultCandidate()) BOOST_ASIO_NOEXCEPT
   {
-    return associated_executor<WriteHandler, Executor1>::get(h.handler_, ex);
+    return Associator<WriteHandler, DefaultCandidate>::get(h.handler_, c);
   }
 };
 
 #endif // !defined(GENERATING_DOCUMENTATION)
 
-template <typename AsyncRandomAccessWriteDevice, typename Allocator,
-    typename CompletionCondition, typename WriteHandler>
-inline BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
+template <typename AsyncRandomAccessWriteDevice,
+    typename Allocator, typename CompletionCondition,
+    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, boost::asio::basic_streambuf<Allocator>& b,
     CompletionCondition completion_condition,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_at_streambuf<
+          AsyncRandomAccessWriteDevice> >(),
+        token, offset, &b,
+        BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition))))
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_write_at_streambuf(), handler, &d, offset,
-      &b, BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
+      detail::initiate_async_write_at_streambuf<
+        AsyncRandomAccessWriteDevice>(d),
+      token, offset, &b,
+      BOOST_ASIO_MOVE_CAST(CompletionCondition)(completion_condition));
 }
 
 template <typename AsyncRandomAccessWriteDevice, typename Allocator,
-    typename WriteHandler>
-inline BOOST_ASIO_INITFN_RESULT_TYPE(WriteHandler,
+    BOOST_ASIO_COMPLETION_TOKEN_FOR(void (boost::system::error_code,
+      std::size_t)) WriteToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_PREFIX(WriteToken,
     void (boost::system::error_code, std::size_t))
 async_write_at(AsyncRandomAccessWriteDevice& d,
     uint64_t offset, boost::asio::basic_streambuf<Allocator>& b,
-    BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
+    BOOST_ASIO_MOVE_ARG(WriteToken) token)
+  BOOST_ASIO_INITFN_AUTO_RESULT_TYPE_SUFFIX((
+    async_initiate<WriteToken,
+      void (boost::system::error_code, std::size_t)>(
+        declval<detail::initiate_async_write_at_streambuf<
+          AsyncRandomAccessWriteDevice> >(),
+        token, offset, &b, transfer_all())))
 {
-  return async_initiate<WriteHandler,
+  return async_initiate<WriteToken,
     void (boost::system::error_code, std::size_t)>(
-      detail::initiate_async_write_at_streambuf(),
-      handler, &d, offset, &b, transfer_all());
+      detail::initiate_async_write_at_streambuf<
+        AsyncRandomAccessWriteDevice>(d),
+      token, offset, &b, transfer_all());
 }
 
 #endif // !defined(BOOST_ASIO_NO_IOSTREAM)

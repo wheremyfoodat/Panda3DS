@@ -4,7 +4,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (c) 2002-2003 Eric Friedman, Itay Maman
-// Copyright (c) 2012-2019 Antony Polukhin
+// Copyright (c) 2012-2022 Antony Polukhin
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -36,14 +36,13 @@
 
 #include <boost/variant/detail/move.hpp>
 
-#include <boost/detail/no_exceptions_support.hpp>
 #include <boost/detail/reference_content.hpp>
-#include <boost/aligned_storage.hpp>
 #include <boost/blank.hpp>
 #include <boost/integer/common_factor_ct.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/repeat.hpp>
+#include <boost/type_traits/aligned_storage.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/type_traits/add_const.hpp>
 #include <boost/type_traits/has_nothrow_constructor.hpp>
@@ -55,8 +54,9 @@
 #include <boost/type_traits/is_rvalue_reference.hpp>
 #include <boost/type_traits/is_constructible.hpp>
 #include <boost/type_traits/add_lvalue_reference.hpp>
-#include <boost/utility/enable_if.hpp>
-#include <boost/utility/declval.hpp>
+#include <boost/type_traits/declval.hpp>
+#include <boost/core/no_exceptions_support.hpp>
+#include <boost/core/enable_if.hpp>
 #include <boost/variant/recursive_wrapper_fwd.hpp>
 #include <boost/variant/static_visitor.hpp>
 
@@ -130,7 +130,7 @@ private: // helpers, for metafunction result (below)
 
     typedef typename mpl::transform1<Sequence, F>::type transformed_;
     typedef typename mpl::max_element<transformed_
-          
+
         >::type max_it;
 
 public: // metafunction result
@@ -347,7 +347,7 @@ private: // helpers, for metafunction result (below)
           types, mpl::sizeof_<mpl::_1>
         >::type max_size;
 
-#if !BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x0551))
+#if !BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x0551))
 
     typedef typename mpl::fold<
           types
@@ -385,7 +385,7 @@ public: // visitor interfaces
     {
         operand.~T(); // must be noexcept
 
-#if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x0551)) || \
+#if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x0551)) || \
     BOOST_WORKAROUND(BOOST_MSVC, BOOST_TESTED_AT(1600))
         (void)operand; // suppresses warnings
 #endif
@@ -1018,7 +1018,7 @@ public: // internal visitor interfaces
     template <typename T>
     typename enable_if_c<MoveSemantics && is_same<T, T>::value, result_type>::type internal_visit(T&& operand, int)
     {
-        return visitor_(::boost::move<T>(operand));
+        return visitor_(::boost::move(operand));
     }
 
     //using workaround with is_same<T, T> to prenvent compilation error, because we need to use T in enable_if to make SFINAE work
@@ -1036,7 +1036,7 @@ public: // internal visitor interfaces
         return visitor_(operand);
     }
 
-#   if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x0564))
+#   if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x0564))
     template <typename T>
     result_type internal_visit(const T& operand, int)
     {
@@ -1372,15 +1372,15 @@ public: // structors
         destroy_content();
     }
 
-    variant() 
+    variant()
 #if !(defined(__SUNPRO_CC) && BOOST_WORKAROUND(__SUNPRO_CC, <= 0x5130))
               BOOST_NOEXCEPT_IF(boost::has_nothrow_constructor<internal_T0>::value)
 #endif
     {
 #ifdef _MSC_VER
 #pragma warning( push )
-// behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized 
-#pragma warning( disable : 4345 ) 
+// behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized
+#pragma warning( disable : 4345 )
 #endif
         // NOTE TO USER :
         // Compile error from here indicates that the first bound
@@ -1416,14 +1416,14 @@ private: // helpers, for structors, cont. (below)
         int internal_visit(T& operand, int) const
         {
             // NOTE TO USER :
-            // Compile error here indicates one of the source variant's types 
+            // Compile error here indicates one of the source variant's types
             // cannot be unambiguously converted to the destination variant's
             // types (or that no conversion exists).
             //
             return initializer::initialize(storage_, operand);
         }
 
-#   if BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x0564))
+#   if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x0564))
         template <typename T>
         result_type internal_visit(const T& operand, int) const
         {
@@ -1492,7 +1492,7 @@ private: // helpers, for structors, cont. (below)
         int internal_visit(T& operand, int) const
         {
             // NOTE TO USER :
-            // Compile error here indicates one of the source variant's types 
+            // Compile error here indicates one of the source variant's types
             // cannot be unambiguously converted to the destination variant's
             // types (or that no conversion exists).
             //
@@ -1539,7 +1539,7 @@ private: // helpers, for structors, cont. (below)
     friend class convert_move_into;
 #endif
 
-private: // helpers, for structors, below 
+private: // helpers, for structors, below
 
     template <typename T>
     void convert_construct(
@@ -1549,7 +1549,7 @@ private: // helpers, for structors, below
         )
     {
         // NOTE TO USER :
-        // Compile error here indicates that the given type is not 
+        // Compile error here indicates that the given type is not
         // unambiguously convertible to one of the variant's types
         // (or that no conversion exists).
         //
@@ -1570,7 +1570,7 @@ private: // helpers, for structors, below
         )
     {
         // NOTE TO USER :
-        // Compile error here indicates that the given type is not 
+        // Compile error here indicates that the given type is not
         // unambiguously convertible to one of the variant's types
         // (or that no conversion exists).
         //
@@ -1688,7 +1688,7 @@ private: // helpers, for structors, below
         , long
         )
     {
-        convert_construct_variant(operand);    
+        convert_construct_variant(operand);
     }
 
 #ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
@@ -1701,7 +1701,7 @@ private: // helpers, for structors, below
         , long
         )
     {
-        convert_construct_variant( detail::variant::move(operand) );    
+        convert_construct_variant( detail::variant::move(operand) );
     }
 #endif
 
@@ -1713,8 +1713,9 @@ public: // structors, cont.
             mpl::and_<
                 mpl::not_< boost::is_same<T, variant> >,
                 boost::detail::variant::is_variant_constructible_from<const T&, internal_types>
-            >, 
-            boost::is_same<T, boost::recursive_variant_> > >::type* = 0)
+            >,
+            boost::is_same<T, boost::recursive_variant_> >,
+            bool >::type = true)
     {
         convert_construct(operand, 1L);
     }
@@ -1728,7 +1729,8 @@ public: // structors, cont.
                 mpl::not_< boost::is_same<T, variant> >,
                 boost::detail::variant::is_variant_constructible_from<T&, internal_types>
             >,
-            boost::is_same<T, boost::recursive_variant_> > >::type* = 0
+            boost::is_same<T, boost::recursive_variant_> >,
+            bool >::type = true
         )
     {
         convert_construct(operand, 1L);
@@ -1744,7 +1746,8 @@ public: // structors, cont.
                 mpl::not_< boost::is_same<T, variant> >,
                 boost::detail::variant::is_variant_constructible_from<T&&, internal_types>
             >,
-            boost::is_same<T, boost::recursive_variant_> > >::type* = 0)
+            boost::is_same<T, boost::recursive_variant_> >,
+            bool >::type = true)
     {
         convert_construct( detail::variant::move(operand), 1L);
     }
@@ -1927,9 +1930,9 @@ private: // helpers, for modifiers (below)
         assigner& operator= (assigner const&);
 #endif
     };
-    
+
     friend class assigner;
-   
+
 #ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     // class move_assigner
     //
@@ -1948,7 +1951,7 @@ private: // helpers, for modifiers (below)
         }
 
     private: // helpers, for internal visitor interface (below)
-        
+
         template <typename RhsT, typename B2>
         void assign_impl(
               RhsT& rhs_content
@@ -2008,7 +2011,7 @@ private: // helpers, for modifiers (below)
             // In the event of success, indicate new content type:
             assigner::lhs_.indicate_which(assigner::rhs_which_); // nothrow
         }
-        
+
         template <typename RhsT>
         void assign_impl(
               RhsT& rhs_content
@@ -2063,7 +2066,7 @@ private: // helpers, for modifiers (below)
         {
             // Otherwise, perform general (copy-based) variant assignment:
             assigner visitor(*this, rhs.which());
-            rhs.internal_apply_visitor(visitor); 
+            rhs.internal_apply_visitor(visitor);
         }
     }
 
@@ -2081,7 +2084,7 @@ private: // helpers, for modifiers (below)
         {
             // Otherwise, perform general (move-based) variant assignment:
             move_assigner visitor(*this, rhs.which());
-            rhs.internal_apply_visitor(visitor); 
+            rhs.internal_apply_visitor(visitor);
         }
     }
 #endif // BOOST_NO_CXX11_RVALUE_REFERENCES
@@ -2137,7 +2140,7 @@ public: // modifiers
             boost::detail::variant::is_variant_constructible_from<T&&, internal_types>
         >,
         variant&
-    >::type operator=(T&& rhs) 
+    >::type operator=(T&& rhs)
     {
         move_assign( detail::variant::move(rhs) );
         return *this;
@@ -2165,7 +2168,7 @@ public: // modifiers
     }
 
 #ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
-    variant& operator=(variant&& rhs) 
+    variant& operator=(variant&& rhs)
 #if !defined(__GNUC__) || (__GNUC__ != 4) || (__GNUC_MINOR__ > 6) || defined(__clang__)
         BOOST_NOEXCEPT_IF(variant_move_noexcept_constructible::type::value && variant_move_noexcept_assignable::type::value)
 #endif

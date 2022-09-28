@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv) {
     // Put the string on the heap to make sure heap initialization works
-    const char* buffer = calloc(6969, sizeof(char));
+    char* buffer = calloc(6969, sizeof(char));
     strcpy(buffer, "Hello world\n");
 
     svcOutputDebugString(buffer, strlen(buffer));
