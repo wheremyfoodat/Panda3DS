@@ -16,7 +16,7 @@ const char* vertexShader = R"(
 	out vec4 colour;
 
 	void main() {
-		gl_Position = coords;
+		gl_Position = coords * vec4(1.0, 1.0, -1.0, 1.0);
 		colour = vertexColour;
 	}
 )";
@@ -31,7 +31,6 @@ const char* fragmentShader = R"(
 
 	void main() {
 		fragColour = colour;
-		gl_FragDepth *= -1.0;
 
 		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
 			uint func = (u_alphaControl >> 4u) & 7u;
@@ -193,7 +192,7 @@ void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count)
 	printf("Depth enable: %d, func: %d, writeEnable: %d\n", depthEnable, depthFunc, depthWriteEnable);
 
 	if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
-		Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from fragment shader");
+		Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
