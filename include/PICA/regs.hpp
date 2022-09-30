@@ -2,7 +2,17 @@
 
 namespace PICAInternalRegs {
 	enum : u32 {
+		// Rasterizer registers
+		ViewportWidth = 0x41,
+		ViewportInvw = 0x42,
+		ViewportHeight = 0x43,
+		ViewportInvh = 0x44,
+
+		DepthScale = 0x4D,
+		DepthOffset = 0x4E,
+
 		// Framebuffer registers
+		AlphaTestConfig = 0x104,
 		DepthAndColorMask = 0x107,
 
 		// Geometry pipeline registers

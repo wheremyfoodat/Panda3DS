@@ -101,9 +101,9 @@ PICAShader::vec4f PICAShader::getSource(u32 source) {
 }
 
 PICAShader::vec4f& PICAShader::getDest(u32 dest) {
-	if (dest <= 0x6) {
+	if (dest < 0x10) {
 		return outputs[dest];
-	} else if (dest >= 0x10 && dest <= 0x1f) { // Temporary registers
+	} else if (dest < 0x20) {
 		return tempRegisters[dest - 0x10];
 	}
 	Helpers::panic("[PICA] Unimplemented dest: %X", dest);
@@ -298,15 +298,15 @@ void PICAShader::mad(u32 instruction) {
 
 	src2 = getIndexedSource(src2, idx);
 
-	auto src1Vec = getSourceSwizzled<1>(src1, operandDescriptor);
-	auto src2Vec = getSourceSwizzled<2>(src2, operandDescriptor);
-	auto src3Vec = getSourceSwizzled<3>(src3, operandDescriptor);
+	auto srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	auto srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto srcVec3 = getSourceSwizzled<3>(src3, operandDescriptor);
 	auto& destVector = getDest(dest);
 
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			destVector[3 - i] = src1Vec[3 - i] * src2Vec[3 - i] + src3Vec[3 - i];
+			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i] + srcVec3[3 - i];
 		}
 	}
 }
@@ -374,6 +374,25 @@ void PICAShader::ifc(u32 instruction) {
 	}
 }
 
+void PICAShader::ifu(u32 instruction) {
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
+
+	if (boolUniform & (1 << bit)) {
+		if (ifIndex >= 8) [[unlikely]]
+			Helpers::panic("[PICA] Overflowed IF stack");
+
+		const u32 num = instruction & 0xff;
+
+		auto& block = conditionalInfo[ifIndex++];
+		block.endingPC = dest;
+		block.newPC = dest + num;
+	}
+	else {
+		pc = dest;
+	}
+}
+
 void PICAShader::callu(u32 instruction) {
 	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
 
@@ -388,24 +407,6 @@ void PICAShader::callu(u32 instruction) {
 		block.endingPC = dest + num;
 		block.returnPC = pc;
 
-		pc = dest;
-	}
-}
-
-void PICAShader::ifu(u32 instruction) {
-	const u32 dest = (instruction >> 10) & 0xfff;
-	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
-
-	if (boolUniform & (1 << bit)) {
-		if (ifIndex >= 8) [[unlikely]]
-			Helpers::panic("[PICA] Overflowed IF stack");
-
-		const u32 num = instruction & 0xff;
-
-		auto& block = conditionalInfo[ifIndex++];
-		block.endingPC = dest;
-		block.newPC = dest + num;
-	} else {
 		pc = dest;
 	}
 }

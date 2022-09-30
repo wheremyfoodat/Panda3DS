@@ -78,6 +78,7 @@ class GPU {
 	u32 fixedAttribCount = 0; // How many attribute components have we written? When we get to 4 the attr will actually get submitted
 	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
+	// OpenGL renderer state
 	OpenGL::Framebuffer fbo;
 	OpenGL::Texture fboTexture;
 	OpenGL::Program triangleProgram;
@@ -85,6 +86,8 @@ class GPU {
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
+	GLint alphaControlLoc = -1;
+	u32 oldAlphaControl = 0;
 
 	// Dummy VAO/VBO for blitting the final output
 	OpenGL::VertexArray dummyVAO;

@@ -74,7 +74,7 @@ class PICAShader {
 
 	std::array<Loop, 4> loopInfo;
 	std::array<ConditionalInfo, 8> conditionalInfo;
-	std::array<CallInfo, 8> callInfo;
+	std::array<CallInfo, 4> callInfo;
 
 	ShaderType type;
 
@@ -157,7 +157,7 @@ public:
 	std::array<vec4f, 96> floatUniforms;
 
 	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
-	std::array<vec4f, 16> attributes; // Attributes past to the shader
+	std::array<vec4f, 16> attributes; // Attributes passed to the shader
 	std::array<vec4f, 16> outputs;
 
 	PICAShader(ShaderType type) : type(type) {}
@@ -177,6 +177,7 @@ public:
 	}
 
 	void uploadWord(u32 word) {
+		if (bufferIndex >= 511) Helpers::panic("o no");
 		bufferedShader[bufferIndex++] = word;
 		bufferIndex &= 0x1ff;
 	}

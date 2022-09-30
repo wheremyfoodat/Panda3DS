@@ -1,6 +1,9 @@
+#include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
 #include "opengl.hpp"
+
+using namespace Floats;
 
 // This is all hacked up to display our first triangle
 
@@ -24,8 +27,46 @@ const char* fragmentShader = R"(
 	in vec4 colour;
 	out vec4 fragColour;
 
+	uniform uint u_alphaControl;
+
 	void main() {
 		fragColour = colour;
+		gl_FragDepth *= -1.0;
+
+		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
+			uint func = (u_alphaControl >> 4u) & 7u;
+			float reference = float((u_alphaControl >> 8u) & 0xffu) / 255.0;
+			float alpha = fragColour.a;
+
+			switch (func) {
+				case 0: discard; break; // Never pass alpha test
+				case 1: break;          // Always pass alpha test
+				case 2:                 // Pass if equal
+					if (alpha != reference)
+						discard;
+					break;
+				case 3:                 // Pass if not equal
+					if (alpha == reference)
+						discard;
+					break;
+				case 4:                 // Pass if less than
+					if (alpha >= reference)
+						discard;
+					break;
+				case 5:                 // Pass if less than or equal
+					if (alpha > reference)
+						discard;
+					break;
+				case 6:                 // Pass if greater than
+					if (alpha <= reference)
+						discard;
+					break;
+				case 7:                 // Pass if greater than or equal
+					if (alpha < reference)
+						discard;
+					break;
+			}
+		}
 	}
 )";
 
@@ -94,6 +135,10 @@ void GPU::initGraphicsContext() {
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({ vert, frag });
+	triangleProgram.use();
+	
+	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
+	glUniform1ui(alphaControlLoc, 0); // Default alpha control to 0
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
@@ -126,7 +171,13 @@ void GPU::getGraphicsContext() {
 }
 
 void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
-	// Adjust depth buffer
+	// Adjust alpha test if necessary
+	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
+	if (alphaControl != oldAlphaControl) {
+		oldAlphaControl = alphaControl;
+		glUniform1ui(alphaControlLoc, alphaControl);
+	}
+
 	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
 	bool depthEnable = depthControl & 1;
 	bool depthWriteEnable = (depthControl >> 12) & 1;
@@ -137,7 +188,16 @@ void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count)
 		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
 	};
 
+	f24 depthScale = f24::fromRaw(regs[PICAInternalRegs::DepthScale] & 0xffffff);
+	f24 depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff);
 	printf("Depth enable: %d, func: %d, writeEnable: %d\n", depthEnable, depthFunc, depthWriteEnable);
+
+	if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
+		Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from fragment shader");
+
+	// TODO: Actually use this
+	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
+	float viewportHeight = f24::fromRaw(regs[PICAInternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
 
 	if (depthEnable) {
 		OpenGL::enableDepth();
@@ -153,7 +213,6 @@ void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count)
 	}
 
 	if (colourMask != 0xf) Helpers::panic("[PICA] Colour mask = %X != 0xf", colourMask);
-
 	vbo.bufferVertsSub(vertices, count);
 	OpenGL::draw(primType, count);
 }
