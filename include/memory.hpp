@@ -1,11 +1,13 @@
 #pragma once
 #include <array>
 #include <bitset>
+#include <filesystem>
 #include <fstream>
 #include <optional>
 #include <vector>
 #include "helpers.hpp"
 #include "handles.hpp"
+#include "loader/ncsd.hpp"
 
 namespace PhysicalAddrs {
 	enum : u32 {
@@ -121,6 +123,7 @@ public:
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
 	std::optional<u32> loadELF(std::ifstream& file);
+	std::optional<NCSD> loadNCSD(const std::filesystem::path& path);
 
 	u8 read8(u32 vaddr);
 	u16 read16(u32 vaddr);

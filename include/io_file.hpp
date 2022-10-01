@@ -9,10 +9,12 @@
 #define fseeko _fseeki64
 #define ftello _ftelli64
 #define fileno _fileno
+
+#pragma warning(disable : 4996)
 #endif
 
-#ifdef _CRT_SECURE_NO_WARNINGS
-#undef _CRT_SECURE_NO_WARNINGS
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 #endif
 
 class IOFile {

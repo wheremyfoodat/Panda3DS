@@ -10,7 +10,7 @@
 #include "PICA/gpu.hpp"
 
 enum class ROMType {
-    None, ELF, Cart
+    None, ELF, NCSD
 };
 
 class Emulator {
@@ -28,7 +28,9 @@ class Emulator {
     bool running = true;
 
     // Keep the handle for the ROM here to reload when necessary and to prevent deleting it
-    std::ifstream loadedROM;
+    // This is currently only used for ELFs, NCSDs use the IOFile API instead
+    std::ifstream loadedELF;
+    NCSD loadedNCSD;
 
 public:
     Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory), memory(cpu.getTicksRef()) {
@@ -51,6 +53,7 @@ public:
     void runFrame();
 
     bool loadROM(const std::filesystem::path& path);
+    bool loadNCSD(const std::filesystem::path& path);
     bool loadELF(const std::filesystem::path& path);
     bool loadELF(std::ifstream& file);
     void initGraphicsContext() { gpu.initGraphicsContext(); }

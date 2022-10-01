@@ -9,10 +9,10 @@ int main (int argc, char *argv[]) {
 
     emu.initGraphicsContext();
 
-    auto elfPath = std::filesystem::current_path() / (argc > 1 ? argv[1] : "Metroid2.3ds");
-    if (!emu.loadROM(elfPath)) {
+    auto romPath = std::filesystem::current_path() / (argc > 1 ? argv[1] : "SuperMario3DLand.3ds");
+    if (!emu.loadROM(romPath)) {
         // For some reason just .c_str() doesn't show the proper path
-        Helpers::panic("Failed to load ROM file: %s", elfPath.string().c_str());
+        Helpers::panic("Failed to load ROM file: %s", romPath.string().c_str());
     }
 
     emu.run();

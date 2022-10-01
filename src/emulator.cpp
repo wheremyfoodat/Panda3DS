@@ -11,7 +11,7 @@ void Emulator::reset() {
     // Otherwise resetting the kernel or cpu might nuke them
     cpu.setReg(13, VirtualAddrs::StackTop); // Set initial SP
     if (romType == ROMType::ELF) { // Reload ELF if we're using one
-        loadELF(loadedROM);
+        loadELF(loadedELF);
     }
 }
 
@@ -54,26 +54,38 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
     if (extension == ".elf" || extension == ".axf")
         return loadELF(path);
     else if (extension == ".3ds")
-        Helpers::panic("3DS file");
+        return loadNCSD(path);
     else {
         printf("Unknown file type\n");
         return false;
     }
 }
 
+bool Emulator::loadNCSD(const std::filesystem::path& path) {
+    romType = ROMType::NCSD;
+    std::optional<NCSD> opt = memory.loadNCSD(path);
+
+    if (!opt.has_value()) {
+        return false;
+    }
+
+    loadedNCSD = opt.value();
+    return true;
+}
+
 bool Emulator::loadELF(const std::filesystem::path& path) {
-    loadedROM.open(path, std::ios_base::binary); // Open ROM in binary mode
+    loadedELF.open(path, std::ios_base::binary); // Open ROM in binary mode
     romType = ROMType::ELF;
 
-    return loadELF(loadedROM);
+    return loadELF(loadedELF);
 }
 
 bool Emulator::loadELF(std::ifstream& file) {
     // Rewind ifstream
-    loadedROM.clear();
-    loadedROM.seekg(0);
+    loadedELF.clear();
+    loadedELF.seekg(0);
 
-    std::optional<u32> entrypoint = memory.loadELF(loadedROM);
+    std::optional<u32> entrypoint = memory.loadELF(loadedELF);
     if (!entrypoint.has_value())
         return false;
 
