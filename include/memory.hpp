@@ -26,7 +26,7 @@ namespace VirtualAddrs {
 		// Typically 0x4000 bytes, determined by exheader
 		StackTop = 0x10000000,
 		StackBottom = 0x0FFFC000,
-		StackSize = 0x4000,
+		DefaultStackSize = 0x4000,
 
 		NormalHeapStart = 0x08000000,
 		LinearHeapStartOld = 0x14000000, // If kernel version < 0x22C

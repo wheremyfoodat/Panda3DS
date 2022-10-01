@@ -17,6 +17,7 @@ include_directories(third_party/elfio/)
 include_directories(third_party/gl3w/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
+include_directories(third_party/cryptopp/)
 
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(SDL_MAIN_HANDLED)
@@ -32,6 +33,7 @@ set(Boost_NO_SYSTEM_PATHS ON)
 add_library(boost INTERFACE)
 target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
+add_subdirectory(third_party/cryptopp)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64")
     set(DYNARMIC_TESTS OFF)

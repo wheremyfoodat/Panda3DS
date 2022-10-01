@@ -1,4 +1,6 @@
+#include <cryptopp/aes.h>
 #include "loader/ncch.hpp"
+#include "memory.hpp"
 
 bool NCCH::loadFromHeader(u8* header) {
     const u8* exheader = &header[0x200]; // Extended NCCH header
@@ -16,6 +18,14 @@ bool NCCH::loadFromHeader(u8* header) {
     encrypted = (header[0x188 + 7] & 0x4) != 0x4;
 
     compressExeFS = (exheader[0xD] & 1) != 0;
+    stackSize = *(u32*)&exheader[0x1C];
+    bssSize = *(u32*)&exheader[0x3C];
+
+    printf("Stack size: %08X\nBSS size: %08X\n", stackSize, bssSize);
+
+    if (stackSize != VirtualAddrs::DefaultStackSize) {
+        Helpers::panic("Stack size != 0x4000");
+    }
 
     if (compressExeFS) {
         Helpers::panic("Compressed ExeFS");

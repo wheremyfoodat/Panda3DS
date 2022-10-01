@@ -26,8 +26,8 @@ void Memory::reset() {
 
 	// Map stack pages as R/W
 	// We have 16KB for the stack, so we allocate the last 16KB of APPLICATION FCRAM for the stack
-	u32 basePaddrForStack = FCRAM_APPLICATION_SIZE - VirtualAddrs::StackSize;
-	allocateMemory(VirtualAddrs::StackBottom, basePaddrForStack, VirtualAddrs::StackSize, true);
+	u32 basePaddrForStack = FCRAM_APPLICATION_SIZE - VirtualAddrs::DefaultStackSize;
+	allocateMemory(VirtualAddrs::StackBottom, basePaddrForStack, VirtualAddrs::DefaultStackSize, true);
 
 	// And map (4 * 32)KB of FCRAM before the stack for the TLS of each thread
 	u32 basePaddrForTLS = basePaddrForStack;
