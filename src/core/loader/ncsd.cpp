@@ -64,5 +64,10 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
         }
     }
 
+    if (!ncsd.partitions[0].ncch.hasExtendedHeader()) {
+        printf("NCSD's CXI doesn't have exheader?\n");
+        return std::nullopt;
+    }
+
     return ncsd;
 }
