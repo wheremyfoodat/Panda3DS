@@ -48,7 +48,20 @@ void Emulator::runFrame() {
     cpu.runFrame();
 }
 
-bool Emulator::loadELF(std::filesystem::path& path) {
+bool Emulator::loadROM(const std::filesystem::path& path) {
+    auto extension = path.extension();
+    
+    if (extension == ".elf" || extension == ".axf")
+        return loadELF(path);
+    else if (extension == ".3ds")
+        Helpers::panic("3DS file");
+    else {
+        printf("Unknown file type\n");
+        return false;
+    }
+}
+
+bool Emulator::loadELF(const std::filesystem::path& path) {
     loadedROM.open(path, std::ios_base::binary); // Open ROM in binary mode
     romType = ROMType::ELF;
 
