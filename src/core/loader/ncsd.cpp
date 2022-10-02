@@ -42,8 +42,12 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
 
     for (int i = 0; i < 8; i++) {
         auto& partition = ncsd.partitions[i];
+        NCCH& ncch = partition.ncch;
         partition.offset = u64(partitionData[i * 2]) * NCSD::mediaUnit;
         partition.length = u64(partitionData[i * 2 + 1]) * NCSD::mediaUnit;
+
+        ncch.partitionIndex = i;
+        ncch.fileOffset = partition.offset;
 
         if (partition.length != 0) { // Initialize the NCCH of each partition
             ncsd.file.seek(partition.offset);
@@ -57,7 +61,7 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
                 return std::nullopt;
             }
 
-            if (!partition.ncch.loadFromHeader(ncchHeader)) {
+            if (!ncch.loadFromHeader(ncchHeader, ncsd.file)) {
                 printf("Invalid NCCH partition\n");
                 return std::nullopt;
             }
