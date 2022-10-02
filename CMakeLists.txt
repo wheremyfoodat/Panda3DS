@@ -70,6 +70,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
                  include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
                  include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/io_file.hpp
+                 include/loader/lz77.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

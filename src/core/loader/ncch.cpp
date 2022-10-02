@@ -1,4 +1,5 @@
 #include <vector>
+#include "loader/lz77.hpp"
 #include "loader/ncch.hpp"
 #include "memory.hpp"
 
@@ -68,8 +69,8 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
         }
 
         // ExeFS format allows up to 10 files
-        for (int file = 0; file < 10; file++) {
-            u8* fileInfo = &exeFSHeader[file * 16];
+        for (int i = 0; i < 10; i++) {
+            u8* fileInfo = &exeFSHeader[i * 16];
 
             char name[9];
             std::memcpy(name, fileInfo, 8); // Get file name as a string
@@ -79,15 +80,30 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
             u32 fileSize = *(u32*)&fileInfo[0xC];
 
             if (fileSize != 0) {
-                printf("File %d. Name: %s, Size: %08X, Offset: %08X\n", file, name, fileSize, fileOffset);
+                printf("File %d. Name: %s, Size: %08X, Offset: %08X\n", i, name, fileSize, fileOffset);
             }
 
             if (std::strcmp(name, ".code") == 0) {
-                std::vector<u8> buff;
+                std::vector<u8> code;
 
                 if (compressCode) {
-                    //Helpers::panic("Compressed .code file!");
+                    std::vector<u8> tmp;
+                    tmp.resize(fileSize);
+
+                    // A file offset of 0 means our file is located right after the ExeFS header
+                    // So in the ROM, files are located at (file offset + exeFS offset + exeFS header size)
+                    file.seek(exeFSOffset + exeFSHeaderSize + fileOffset); 
+                    file.readBytes(tmp.data(), fileSize);
+                    
+                    // Decompress .code file from the tmp vector to the "code" vector
+                    if (!CartLZ77::decompress(code, tmp)) {
+                        printf("Failed to decompress .code file\n");
+                        return false;
+                    }
                 } else {
+                    code.resize(fileSize);
+                    file.seek(exeFSOffset + exeFSHeaderSize + fileOffset);
+                    file.readBytes(code.data(), fileSize);
                     Helpers::panic("Uncompressed .code file!");
                 }
             }
