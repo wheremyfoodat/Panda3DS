@@ -1,4 +1,4 @@
-#include <cryptopp/aes.h>
+#include <vector>
 #include "loader/ncch.hpp"
 #include "memory.hpp"
 
@@ -45,7 +45,7 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
             Helpers::panic("Encrypted NCSD file");
         }
 
-        compressExeFS = (exheader[0xD] & 1) != 0;
+        compressCode = (exheader[0xD] & 1) != 0;
         stackSize = *(u32*)&exheader[0x1C];
         bssSize = *(u32*)&exheader[0x3C];
     }
@@ -54,8 +54,8 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
 
     // Read ExeFS
     if (hasExeFS()) {
-        printf("ExeFS offset: %08llX, size: %08llX\n", exeFS.offset, exeFS.size);
-        auto exeFSOffset = fileOffset + exeFS.offset;
+        u64 exeFSOffset = fileOffset + exeFS.offset; // Offset of ExeFS in the file = exeFS offset + ncch offset
+        printf("ExeFS offset: %08llX, size: %08llX (Offset in file = %08llX)\n", exeFS.offset, exeFS.size, exeFSOffset);
         constexpr size_t exeFSHeaderSize = 0x200;
 
         u8 exeFSHeader[exeFSHeaderSize];
@@ -81,6 +81,16 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
             if (fileSize != 0) {
                 printf("File %d. Name: %s, Size: %08X, Offset: %08X\n", file, name, fileSize, fileOffset);
             }
+
+            if (std::strcmp(name, ".code") == 0) {
+                std::vector<u8> buff;
+
+                if (compressCode) {
+                    //Helpers::panic("Compressed .code file!");
+                } else {
+                    Helpers::panic("Uncompressed .code file!");
+                }
+            }
         }
     }
 
@@ -88,16 +98,15 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
         printf("RomFS offset: %08llX, size: %08llX\n", romFS.offset, romFS.size);
     }
 
-    if (stackSize != VirtualAddrs::DefaultStackSize) {
+    if (stackSize != 0 && stackSize != VirtualAddrs::DefaultStackSize) {
         Helpers::panic("Stack size != 0x4000");
     }
 
-    if (compressExeFS) {
-        Helpers::panic("Compressed ExeFS");
-    }
-
     if (encrypted) {
-        Helpers::panic("Encrypted NCCH partition");
+        if (hasExeFS())
+            Helpers::panic("Encrypted NCCH partition with ExeFS");
+        else
+            printf("Encrypted NCCH partition. Hopefully not required because it doesn't have an ExeFS. Skipped\n");
     }
 
     initialized = true;

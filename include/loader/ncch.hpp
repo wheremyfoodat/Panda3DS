@@ -15,7 +15,7 @@ struct NCCH {
 
     bool isNew3DS = false;
     bool initialized = false;
-    bool compressExeFS = false;
+    bool compressCode = false; // Shows whether the .code file in the ExeFS is compressed
     bool mountRomFS = false;
     bool encrypted = false;
     bool fixedCryptoKey = false;
