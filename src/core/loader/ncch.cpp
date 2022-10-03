@@ -49,6 +49,10 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
         compressCode = (exheader[0xD] & 1) != 0;
         stackSize = *(u32*)&exheader[0x1C];
         bssSize = *(u32*)&exheader[0x3C];
+
+        text.extract(&exheader[0x10]);
+        rodata.extract(&exheader[0x20]);
+        data.extract(&exheader[0x30]);
     }
 
     printf("Stack size: %08X\nBSS size: %08X\n", stackSize, bssSize);
@@ -84,7 +88,9 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
             }
 
             if (std::strcmp(name, ".code") == 0) {
-                std::vector<u8> code;
+                if (hasCode()) {
+                    Helpers::panic("Second code file in a single NCCH partition. What should this do?\n");
+                }
 
                 if (compressCode) {
                     std::vector<u8> tmp;
@@ -96,15 +102,14 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
                     file.readBytes(tmp.data(), fileSize);
                     
                     // Decompress .code file from the tmp vector to the "code" vector
-                    if (!CartLZ77::decompress(code, tmp)) {
+                    if (!CartLZ77::decompress(codeFile, tmp)) {
                         printf("Failed to decompress .code file\n");
                         return false;
                     }
                 } else {
-                    code.resize(fileSize);
+                    codeFile.resize(fileSize);
                     file.seek(exeFSOffset + exeFSHeaderSize + fileOffset);
-                    file.readBytes(code.data(), fileSize);
-                    Helpers::panic("Uncompressed .code file!");
+                    file.readBytes(codeFile.data(), fileSize);
                 }
             }
         }

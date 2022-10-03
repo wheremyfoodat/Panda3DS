@@ -67,11 +67,20 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
             }
         }
     }
-
-    if (!ncsd.partitions[0].ncch.hasExtendedHeader()) {
-        printf("NCSD's CXI doesn't have exheader?\n");
+    
+    auto& cxi = ncsd.partitions[0].ncch;
+    if (!cxi.hasExtendedHeader() || !cxi.hasCode()) {
+        printf("NCSD with an invalid CXI in partition 0?\n");
         return std::nullopt;
     }
+    
+    // Map code file to memory
+    const auto& code = cxi.codeFile;
+    printf("Text address = %08X page count = %08X\n", cxi.text.address, cxi.text.size);
+    printf("Rodata address = %08X page count = %08X\n", cxi.rodata.address, cxi.rodata.size);
+    printf("Data address = %08X page count = %08X\n", cxi.data.address, cxi.data.size);
+
+    ncsd.entrypoint = cxi.text.address;
 
     return ncsd;
 }

@@ -70,6 +70,12 @@ bool Emulator::loadNCSD(const std::filesystem::path& path) {
     }
 
     loadedNCSD = opt.value();
+    cpu.setReg(15, loadedNCSD.entrypoint);
+
+    if (loadedNCSD.entrypoint & 1) {
+        Helpers::panic("Misaligned NCSD entrypoint; should this start the CPU in Thumb mode?");
+    }
+
     return true;
 }
 

@@ -16,4 +16,6 @@ struct NCSD {
     IOFile file;
     u64 size = 0; // Image size according to the header converted to bytes
     std::array<Partition, 8> partitions; // NCCH partitions
+
+    u32 entrypoint; // Initial ARM11 PC
 };
