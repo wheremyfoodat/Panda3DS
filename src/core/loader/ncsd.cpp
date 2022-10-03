@@ -73,14 +73,50 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
         printf("NCSD with an invalid CXI in partition 0?\n");
         return std::nullopt;
     }
+
+    printf("Text address = %08X, page count = %08X\n", cxi.text.address, cxi.text.size);
+    printf("Rodata address = %08X, page count = %08X\n", cxi.rodata.address, cxi.rodata.size);
+    printf("Data address = %08X, page count = %08X\n", cxi.data.address, cxi.data.size);
     
     // Map code file to memory
-    const auto& code = cxi.codeFile;
-    printf("Text address = %08X page count = %08X\n", cxi.text.address, cxi.text.size);
-    printf("Rodata address = %08X page count = %08X\n", cxi.rodata.address, cxi.rodata.size);
-    printf("Data address = %08X page count = %08X\n", cxi.data.address, cxi.data.size);
+    auto& code = cxi.codeFile;
+    u32 bssSize = (cxi.bssSize + 0xfff) & ~0xfff; // Round BSS size up to a page boundary
+    // Total memory to allocate for loading
+    u32 totalSize = (cxi.text.pageCount + cxi.rodata.pageCount + cxi.data.pageCount) * pageSize + bssSize;
+    code.resize(code.size() + bssSize, 0); // Pad the .code file with zeroes for the BSS segment
 
-    ncsd.entrypoint = cxi.text.address;
+    if (code.size() < totalSize) {
+        Helpers::panic("Total code size as reported by the exheader is larger than the .code file");
+        return std::nullopt;
+    }
+
+    const auto opt = findPaddr(totalSize);
+    if (!opt.has_value()) {
+        Helpers::panic("Failed to find paddr to map CXI file's code to");
+        return std::nullopt;
+    }
+
+    const auto paddr = opt.value();
+    std::memcpy(&fcram[paddr], &code[0], totalSize); // Copy the 3 segments + BSS to FCRAM
+
+    // Map the ROM on the kernel side
+    u32 textOffset = 0;
+    u32 textAddr = cxi.text.address;
+    u32 textSize = cxi.text.pageCount * pageSize;
+
+    u32 rodataOffset = textOffset + textSize;
+    u32 rodataAddr = cxi.rodata.address;
+    u32 rodataSize = cxi.rodata.pageCount * pageSize;
+
+    u32 dataOffset = rodataOffset + rodataSize;
+    u32 dataAddr = cxi.data.address;
+    u32 dataSize = cxi.data.pageCount * pageSize + bssSize; // We're merging the data and BSS segments, as BSS is just pre-initted .data
+
+    allocateMemory(textAddr, paddr + textOffset, textSize, true, true, false, true); // Text is R-X
+    allocateMemory(rodataAddr, paddr + rodataOffset, rodataSize, true, true, false, false); // Rodata is R--
+    allocateMemory(dataAddr, paddr + dataOffset, dataSize, true, true, true, false); // Data+BSS is RW-
+
+    ncsd.entrypoint = textAddr;
 
     return ncsd;
 }

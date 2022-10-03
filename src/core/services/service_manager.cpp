@@ -67,9 +67,11 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	std::string service = mem.readString(messagePointer + 4, 8);
 	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
-	if (service == "APT:S") {
+	if (service == "APT:S") { // TODO: APT:A, APT:S and APT:U are slightly different
 		handle = KernelHandles::APT;
-	} else if (service == "APT:A") { // TODO: APT:A and APT:S are slightly different
+	} else if (service == "APT:A") {
+		handle = KernelHandles::APT;
+	} else if (service == "APT:U") {
 		handle = KernelHandles::APT;
 	} else if (service == "hid:USER") {
 		handle = KernelHandles::HID;	
