@@ -12,6 +12,7 @@ class FSService {
 	// Service commands
 	void initialize(u32 messagePointer);
 	void openArchive(u32 messagePointer);
+	void openFileDirectly(u32 messagePointer);
 
 public:
 	FSService(Memory& mem) : mem(mem) {}

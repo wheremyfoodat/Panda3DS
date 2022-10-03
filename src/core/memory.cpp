@@ -281,7 +281,7 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 			candidatePage = i + 1;
 			counter = 0;
 		}
-		else { // Our candidate page has 1 mor 
+		else { // The paddr we're testing has 1 more free page
 			counter++;
 			// Check if there's enough free memory to use this page
 			// We use == instead of >= because some software does 0-byte allocations

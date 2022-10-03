@@ -173,10 +173,11 @@ void Kernel::duplicateHandle() {
 	logSVC("DuplicateHandle(handle = %X)\n", original);
 
 	if (original == KernelHandles::CurrentThread) {
-		printf("[Warning] Duplicated current thread. This might be horribly broken!\n");
-		const auto& t = threads[currentThreadIndex];
 		regs[0] = SVCResult::Success;
-		regs[1] = makeThread(t.entrypoint, t.initialSP, t.priority, t.processorID, t.arg, t.status);
+		Handle ret = makeObject(KernelObjectType::Thread);
+		objects[ret].data = &threads[currentThreadIndex];
+
+		regs[1] = ret;
 	} else {
 		Helpers::panic("DuplicateHandle: unimplemented handle type");
 	}

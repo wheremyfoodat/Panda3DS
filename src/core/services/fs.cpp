@@ -3,6 +3,7 @@
 namespace FSCommands {
 	enum : u32 {
 		Initialize = 0x08010002,
+		OpenFileDirectly = 0x08030204,
 		OpenArchive = 0x080C00C2
 	};
 }
@@ -21,6 +22,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case FSCommands::Initialize: initialize(messagePointer); break;
 		case FSCommands::OpenArchive: openArchive(messagePointer); break;
+		case FSCommands::OpenFileDirectly: openFileDirectly(messagePointer); break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
 }
@@ -33,4 +35,17 @@ void FSService::initialize(u32 messagePointer) {
 void FSService::openArchive(u32 messagePointer) {
 	log("FS::OpenArchive (failure)\n");
 	mem.write32(messagePointer + 4, Result::Failure);
+}
+
+void FSService::openFileDirectly(u32 messagePointer) {
+	const u32 archiveID = mem.read32(messagePointer + 8);
+	const u32 archivePathType = mem.read32(messagePointer + 12);
+	const u32 filePathType = mem.read32(messagePointer + 20);
+	const u32 archivePathPointer = mem.read32(messagePointer + 40);
+	const u32 filePathPointer = mem.read32(messagePointer + 48);
+
+	log("FS::OpenFileDirectly (failure)\n");
+
+	mem.write32(messagePointer + 4, Result::Failure);
+	Helpers::panic("[FS::OpenFileDirectly] Tried to open file. Archive ID = %d\n", archiveID);
 }
