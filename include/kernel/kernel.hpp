@@ -27,6 +27,8 @@ class Kernel {
 	Handle mainThread;
 	int currentThreadIndex;
 	Handle srvHandle; // Handle for the special service manager port "srv:"
+	Handle errorPortHandle; // Handle for the err:f port used for displaying errors
+
 	u32 arbiterCount;
 	u32 threadCount;
 	ServiceManager serviceManager;
@@ -65,7 +67,7 @@ class Kernel {
 
 	Handle makeArbiter();
 	Handle makeEvent(ResetType resetType);
-	Handle makeProcess();
+	Handle makeProcess(u32 id);
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
@@ -81,12 +83,17 @@ class Kernel {
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
 	u32 getTLSPointer();
 
+	// Functions for the err:f port
+	void handleErrorSyncRequest(u32 messagePointer);
+	void throwError(u32 messagePointer);
+
 	std::string getProcessName(u32 pid);
 	const char* resetTypeToString(u32 type);
 
 	MAKE_LOG_FUNCTION(log, kernelLogger)
 	MAKE_LOG_FUNCTION(logSVC, svcLogger)
 	MAKE_LOG_FUNCTION(logDebugString, debugStringLogger)
+	MAKE_LOG_FUNCTION(logError, errorLogger)
 
 	// SVC implementations
 	void arbitrateAddress();
@@ -98,6 +105,7 @@ class Kernel {
 	void duplicateHandle();
 	void mapMemoryBlock();
 	void queryMemory();
+	void getProcessID();
 	void getProcessInfo();
 	void getResourceLimit();
 	void getResourceLimitLimitValues();

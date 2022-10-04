@@ -34,6 +34,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x2B: getProcessInfo(); break;
 		case 0x2D: connectToPort(); break;
 		case 0x32: sendSyncRequest(); break;
+		case 0x35: getProcessID(); break;
 		case 0x37: getThreadID(); break;
 		case 0x38: getResourceLimit(); break;
 		case 0x39: getResourceLimitLimitValues(); break;
@@ -50,12 +51,12 @@ void Kernel::setVersion(u8 major, u8 minor) {
 	mem.kernelVersion = descriptor; // The memory objects needs a copy because you can read the kernel ver from config mem
 }
 
-Handle Kernel::makeProcess() {
+Handle Kernel::makeProcess(u32 id) {
 	const Handle processHandle = makeObject(KernelObjectType::Process);
 	const Handle resourceLimitHandle = makeObject(KernelObjectType::ResourceLimit);
 
 	// Allocate data
-	objects[processHandle].data = new Process();
+	objects[processHandle].data = new Process(id);
 	const auto processData = objects[processHandle].getData<Process>();
 
 	// Link resource limit object with its parent process
@@ -99,7 +100,7 @@ void Kernel::reset() {
 
 	// Allocate handle #0 to a dummy object and make a main process object
 	makeObject(KernelObjectType::Dummy);
-	currentProcess = makeProcess();
+	currentProcess = makeProcess(1); // Use ID = 1 for main process
 
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30. TODO: This creates a dummy context for thread 0,
@@ -107,8 +108,9 @@ void Kernel::reset() {
 	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, -2, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
 
-	// Create global service manager port
-	srvHandle = makePort("srv:");
+	// Create some of the OS ports
+	srvHandle = makePort("srv:"); // Service manager port
+	errorPortHandle = makePort("err:f"); // Error display port
 }
 
 // Get pointer to thread-local storage
@@ -140,6 +142,20 @@ void Kernel::outputDebugString() {
 	std::string message = mem.readString(pointer, size);
 	logDebugString("[OutputDebugString] %s\n", message.c_str());
 	regs[0] = SVCResult::Success;
+}
+
+void Kernel::getProcessID() {
+	const auto pid = regs[1];
+	const auto process = getProcessFromPID(pid);
+	logSVC("GetProcessID(process: %s)\n", getProcessName(pid).c_str());
+
+	if (process == nullptr) [[unlikely]] {
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	regs[0] = SVCResult::Success;
+	regs[1] = process->getData<Process>()->id;
 }
 
 // Result GetProcessInfo(s64* out, Handle process, ProcessInfoType type)

@@ -39,6 +39,7 @@ void Kernel::connectToPort() {
 	const u32 handlePointer = regs[0];
 	// Read up to max + 1 characters to see if the name is too long
 	std::string port = mem.readString(regs[1], Port::maxNameLen + 1);
+	logSVC("ConnectToPort(handle pointer = %X, port = \"%s\")\n", handlePointer, port.c_str());
 
 	if (port.size() > Port::maxNameLen) {
 		Helpers::panic("ConnectToPort: Port name too long\n");
@@ -55,7 +56,6 @@ void Kernel::connectToPort() {
 	}
 
 	Handle portHandle = optionalHandle.value();
-	logSVC("ConnectToPort(handle pointer = %X, port = \"%s\")\n", handlePointer, port.c_str());
 
 	const auto portData = objects[portHandle].getData<Port>();
 	if (!portData->isPublic) {
@@ -96,6 +96,8 @@ void Kernel::sendSyncRequest() {
 
 	if (portHandle == srvHandle) { // Special-case SendSyncRequest targetting the "srv: port"
 		serviceManager.handleSyncRequest(messagePointer);
+	} else if (portHandle == errorPortHandle) { // Special-case "err:f" for juicy logs too
+		handleErrorSyncRequest(messagePointer);
 	} else {
 		const auto portData = objects[portHandle].getData<Port>();
 		Helpers::panic("SendSyncRequest targetting port %s\n", portData->name);

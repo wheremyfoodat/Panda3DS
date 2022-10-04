@@ -50,7 +50,7 @@ set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
                         src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
                         src/core/kernel/events.cpp src/core/kernel/threads.cpp
-                        src/core/kernel/address_arbiter.cpp
+                        src/core/kernel/address_arbiter.cpp src/core/kernel/error.cpp
 )
 set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp

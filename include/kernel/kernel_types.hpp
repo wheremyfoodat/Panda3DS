@@ -61,6 +61,10 @@ struct ResourceLimits {
 struct Process {
     // Resource limits for this process
     ResourceLimits limits;
+    // Process ID
+    u32 id;
+
+    Process(u32 id) : id(id) {}
 };
 
 struct Event {
