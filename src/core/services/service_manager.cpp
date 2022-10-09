@@ -46,6 +46,7 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 
 	switch (header) {
 		case Commands::EnableNotification: enableNotification(messagePointer); break;
+		case Commands::ReceiveNotification: receiveNotification(messagePointer); break;
 		case Commands::RegisterClient: registerClient(messagePointer); break;
 		case Commands::GetServiceHandle: getServiceHandle(messagePointer); break;
 		default: Helpers::panic("Unknown \"srv:\" command: %08X", header);
@@ -92,12 +93,19 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 }
 
 void ServiceManager::enableNotification(u32 messagePointer) {
-	log("srv::EnableNotification()\n");
+	log("srv::EnableNotification() (STUBBED)\n");
 
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // Translation descriptor
 	// TODO: Unstub. Handle to semaphore signaled on process notification
 	mem.write32(messagePointer + 12, 0x69696979);
+}
+
+void ServiceManager::receiveNotification(u32 messagePointer) {
+	log("srv::ReceiveNotification() (STUBBED)\n");
+	printf("r15 = %08X", regs[15]);
+	mem.write32(messagePointer + 4, Result::Success); // Result code
+	mem.write32(messagePointer + 8, 0); // Notification ID
 }
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
