@@ -14,6 +14,7 @@ class APTService {
 	void checkNew3DS(u32 messagePointer);
 	void enable(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);
+	void receiveParameter(u32 messagePointer);
 
 public:
 	APTService(Memory& mem) : mem(mem) {}
