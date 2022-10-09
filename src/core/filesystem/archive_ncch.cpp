@@ -55,7 +55,6 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 
 	for (u64 i = 0; i < bytesRead; i++) {
 		mem.write8(dataPointer + i, data[i]);
-		printf("%x\n", data[i]);
 	}
 
 	return bytesRead;

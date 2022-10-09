@@ -103,11 +103,13 @@ class Kernel {
 	void getResourceLimitCurrentValues();
 	void getSystemTick();
 	void getThreadID();
+	void releaseMutex();
 	void sendSyncRequest();
 	void svcCloseHandle();
 	void connectToPort();
 	void outputDebugString();
 	void waitSynchronization1();
+	void waitSynchronizationN();
 
 	// File operations
 	void handleFileOperation(u32 messagePointer, Handle file);

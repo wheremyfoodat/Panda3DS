@@ -22,6 +22,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x01: controlMemory(); break;
 		case 0x02: queryMemory(); break;
 		case 0x08: createThread(); break;
+		case 0x14: releaseMutex(); break;
 		case 0x17: createEvent(); break;
 		case 0x19: clearEvent(); break;
 		case 0x1F: mapMemoryBlock(); break;
@@ -29,6 +30,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x22: arbitrateAddress(); break;
 		case 0x23: svcCloseHandle(); break;
 		case 0x24: waitSynchronization1(); break;
+		case 0x25: waitSynchronizationN(); break;
 		case 0x27: duplicateHandle(); break;
 		case 0x28: getSystemTick(); break;
 		case 0x2B: getProcessInfo(); break;

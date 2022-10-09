@@ -116,3 +116,10 @@ void Kernel::getThreadID() {
 	regs[0] = SVCResult::Success;
 	regs[1] = thread->getData<Thread>()->index;
 }
+
+void Kernel::releaseMutex() {
+	const Handle handle = regs[0];
+
+	logSVC("ReleaseMutex (handle = %x) (STUBBED)\n", handle);
+	regs[0] = SVCResult::Success;
+}

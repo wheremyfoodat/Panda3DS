@@ -59,3 +59,17 @@ void Kernel::waitSynchronization1() {
 	logSVC("WaitSynchronization1(handle = %X, ns = %lld) (STUBBED)\n", handle, ns);
 	regs[0] = SVCResult::Success;
 }
+
+// Result WaitSynchronizationN(s32* out, Handle* handles, s32 handlecount, bool waitAll, s64 timeout_nanoseconds)
+void Kernel::waitSynchronizationN() {
+	// TODO: Are these arguments even correct?
+	u32 ns1 = regs[0];
+	u32 handles = regs[1];
+	u32 handleCount = regs[2];
+	bool waitAll = regs[3] != 0;
+	u32 ns2 = regs[4];
+	u32 out = regs[5];
+
+	logSVC("WaitSynchronizationN (STUBBED)\n");
+	regs[0] = SVCResult::Success;
+}
