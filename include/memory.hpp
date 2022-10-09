@@ -139,6 +139,14 @@ public:
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
 
+	NCCH* getCXI() {
+		if (loadedCXI.has_value()) {
+			return &loadedCXI.value();
+		} else {
+			return nullptr;
+		}
+	}
+
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
 	static constexpr bool isAligned(u32 addr) {
 		return (addr & pageMask) == 0;
@@ -165,4 +173,9 @@ public:
 	// TODO: Find out
 	// Returns a pointer to the FCRAM block used for the memory if allocation succeeded
 	u8* mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms);
+
+	// Backup of the game's CXI partition info, if any
+	std::optional<NCCH> loadedCXI = std::nullopt;
+	// File handle for reading the loaded ncch
+	IOFile CXIFile;
 };

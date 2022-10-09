@@ -93,15 +93,6 @@ struct Session {
     Session(Handle portHandle) : portHandle(portHandle) {}
 };
 
-struct FileSession {
-    ArchiveBase* archive = nullptr;
-    FSPath path;
-
-    FileSession(ArchiveBase* archive, const FSPath& filePath) : archive(archive) {
-        path = filePath;
-    }
-};
-
 enum class ThreadStatus {
     Running,     // Currently running
     Ready,       // Ready to run

@@ -118,5 +118,9 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
 
     ncsd.entrypoint = textAddr;
 
+    // Back the IOFile for accessing the ROM, as well as the ROM's CXI partition, in the memory class.
+    CXIFile = ncsd.file;
+    loadedCXI = cxi;
+
     return ncsd;
 }

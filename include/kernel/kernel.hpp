@@ -84,6 +84,7 @@ class Kernel {
 	MAKE_LOG_FUNCTION(logSVC, svcLogger)
 	MAKE_LOG_FUNCTION(logDebugString, debugStringLogger)
 	MAKE_LOG_FUNCTION(logError, errorLogger)
+	MAKE_LOG_FUNCTION(logFileIO, fileIOLogger)
 
 	// SVC implementations
 	void arbitrateAddress();
@@ -110,6 +111,7 @@ class Kernel {
 
 	// File operations
 	void handleFileOperation(u32 messagePointer, Handle file);
+	void closeFile(u32 messagePointer, Handle file);
 	void readFile(u32 messagePointer, Handle file);
 
 public:

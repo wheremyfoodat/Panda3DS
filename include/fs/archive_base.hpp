@@ -44,6 +44,18 @@ struct FSPath {
     u32 pointer; // Pointer to the actual path data
 };
 
+class ArchiveBase;
+
+struct FileSession {
+    ArchiveBase* archive = nullptr;
+    FSPath path;
+    bool isOpen;
+
+    FileSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), isOpen(isOpen) {
+        path = filePath;
+    }
+};
+
 class ArchiveBase {
 protected:
     using Result = u32;
@@ -56,6 +68,10 @@ public:
     virtual bool openFile(const FSPath& path) = 0;
 
     virtual ArchiveBase* openArchive(FSPath& path) = 0;
+
+    // Read size bytes from a file starting at offset "offset" into a certain buffer in memory
+    // Returns the number of bytes read, or nullopt if the read failed
+    virtual std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) = 0;
     
     ArchiveBase(Memory& mem) : mem(mem) {}
 };
