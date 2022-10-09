@@ -4,9 +4,10 @@ namespace APTCommands {
 	enum : u32 {
 		GetLockHandle = 0x00010040,
 		Enable = 0x00030040,
-		CheckNew3DS = 0x01020000,
+		ReceiveParameter = 0x000D0080,
 		NotifyToWait = 0x00430040,
-		ReceiveParameter = 0x000D0080
+		AppletUtility = 0x004B00C2,
+		CheckNew3DS = 0x01020000
 	};
 }
 
@@ -29,6 +30,7 @@ void APTService::reset() {}
 void APTService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case APTCommands::AppletUtility: appletUtility(messagePointer); break;
 		case APTCommands::CheckNew3DS: checkNew3DS(messagePointer); break;
 		case APTCommands::Enable: enable(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
@@ -36,6 +38,17 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::ReceiveParameter: receiveParameter(messagePointer); break;
 		default: Helpers::panic("APT service requested. Command: %08X\n", command);
 	}
+}
+
+void APTService::appletUtility(u32 messagePointer) {
+	u32 utility = mem.read32(messagePointer + 4);
+	u32 inputSize = mem.read32(messagePointer + 8);
+	u32 outputSize = mem.read32(messagePointer + 12);
+	u32 inputPointer = mem.read32(messagePointer + 20);
+
+	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X)\n", utility, inputSize,
+		outputSize, inputPointer);
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void APTService::checkNew3DS(u32 messagePointer) {

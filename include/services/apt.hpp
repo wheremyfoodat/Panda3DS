@@ -10,6 +10,7 @@ class APTService {
 	MAKE_LOG_FUNCTION(log, aptLogger)
 
 	// Service commands
+	void appletUtility(u32 messagePointer);
 	void getLockHandle(u32 messagePointer);
 	void checkNew3DS(u32 messagePointer);
 	void enable(u32 messagePointer);
