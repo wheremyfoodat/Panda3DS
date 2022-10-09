@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstring>
+#include "fs/archive_base.hpp"
 #include "handles.hpp"
 #include "helpers.hpp"
 
@@ -23,7 +24,7 @@ namespace SVCResult {
 }
 
 enum class KernelObjectType : u8 {
-    AddressArbiter, Event, Port, Process, ResourceLimit, Session, Thread, Dummy
+    AddressArbiter, Event, File, Port, Process, ResourceLimit, Session, Thread, Dummy
 };
 
 enum class ResourceLimitCategory : int {
@@ -92,6 +93,15 @@ struct Session {
     Session(Handle portHandle) : portHandle(portHandle) {}
 };
 
+struct FileSession {
+    ArchiveBase* archive = nullptr;
+    FSPath path;
+
+    FileSession(ArchiveBase* archive, const FSPath& filePath) : archive(archive) {
+        path = filePath;
+    }
+};
+
 enum class ThreadStatus {
     Running,     // Currently running
     Ready,       // Ready to run
@@ -127,6 +137,7 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
     switch (t) {
         case KernelObjectType::AddressArbiter: return "address arbiter";
         case KernelObjectType::Event: return "event";
+        case KernelObjectType::File: return "file";
         case KernelObjectType::Port: return "port";
         case KernelObjectType::Process: return "process";
         case KernelObjectType::ResourceLimit: return "resource limit";

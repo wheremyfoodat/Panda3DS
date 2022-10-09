@@ -10,6 +10,8 @@
 #include "services/gsp_lcd.hpp"
 #include "services/ndm.hpp"
 
+class Kernel;
+
 class ServiceManager {
 	std::array<u32, 16>& regs;
 	Memory& mem;
@@ -28,7 +30,7 @@ class ServiceManager {
 	void registerClient(u32 messagePointer);
 
 public:
-	ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID);
+	ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel);
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 

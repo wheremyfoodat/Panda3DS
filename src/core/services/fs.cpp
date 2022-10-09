@@ -1,4 +1,5 @@
 #include "services/fs.hpp"
+#include "kernel/kernel.hpp"
 
 namespace FSCommands {
 	enum : u32 {
@@ -16,6 +17,28 @@ namespace Result {
 }
 
 void FSService::reset() {}
+
+ArchiveBase* FSService::getArchiveFromID(u32 id) {
+	switch (id) {
+		case ArchiveID::SelfNCCH: return &selfNcch;
+		default:
+			Helpers::panic("Unknown archive. ID: %d\n", id);
+			return nullptr;
+	}
+}
+
+std::optional<Handle> FSService::openFile(ArchiveBase* archive, const FSPath& path) {
+	bool opened = archive->openFile(path);
+	if (opened) {
+		auto handle = kernel.makeObject(KernelObjectType::File);
+		auto& file = kernel.getObjects()[handle];
+		file.data = new FileSession(archive, path);
+		
+		return handle;
+	} else {
+		return std::nullopt;
+	}
+}
 
 void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
@@ -48,9 +71,26 @@ void FSService::openFileDirectly(u32 messagePointer) {
 	const u32 archivePathPointer = mem.read32(messagePointer + 40);
 	const u32 filePathPointer = mem.read32(messagePointer + 48);
 
-	log("FS::OpenFileDirectly (failure)\n");
+	log("FS::OpenFileDirectly\n");
 
-	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 12, 69);
-	//Helpers::panic("[FS::OpenFileDirectly] Tried to open file. Archive ID = %d\n", archiveID);
+	ArchiveBase* archive = getArchiveFromID(archiveID);
+	if (archive == nullptr) [[unlikely]] {
+		Helpers::panic("OpenFileDirectly: Tried to open unknown archive %d.", archiveID);
+	}
+
+	FSPath archivePath { .type = archivePathType, .size = archivePathSize, .pointer = archivePathPointer };
+	FSPath filePath { .type = filePathType, .size = filePathSize, .pointer = filePathPointer };
+
+	archive = archive->openArchive(archivePath);
+	if (archive == nullptr) [[unlikely]] {
+		Helpers::panic("OpenFileDirectly: Failed to open archive with given path");
+	}
+
+	std::optional<Handle> handle = openFile(archive, filePath);
+	if (!handle.has_value()) {
+		Helpers::panic("OpenFileDirectly: Failed to open file with given path");
+	} else {
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 12, handle.value());
+	}
 }

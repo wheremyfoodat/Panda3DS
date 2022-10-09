@@ -18,19 +18,20 @@ namespace Log {
     };
 
     // Our loggers here. Enable/disable by toggling the template param
-    static Logger<false> kernelLogger;
+    static Logger<true> kernelLogger;
     static Logger<true> debugStringLogger; // Enables output for the outputDebugString SVC
-    static Logger<false> svcLogger;
-    static Logger<false> gpuLogger;
+    static Logger<true> errorLogger;
+    static Logger<true> svcLogger;
+    static Logger<true> gpuLogger;
 
     // Service loggers
-    static Logger<false> aptLogger;
-    static Logger<false> fsLogger;
-    static Logger<false> hidLogger;
-    static Logger<false> gspGPULogger;
-    static Logger<false> gspLCDLogger;
-    static Logger<false> ndmLogger;
-    static Logger<false> srvLogger;
+    static Logger<true> aptLogger;
+    static Logger<true> fsLogger;
+    static Logger<true> hidLogger;
+    static Logger<true> gspGPULogger;
+    static Logger<true> gspLCDLogger;
+    static Logger<true> ndmLogger;
+    static Logger<true> srvLogger;
 
     #define MAKE_LOG_FUNCTION(functionName, logger)      \
     template <typename... Args>                          \

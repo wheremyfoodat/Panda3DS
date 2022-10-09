@@ -84,9 +84,18 @@ void Kernel::sendSyncRequest() {
 		return;
 	}
 
+	// Check if our sync request is targetting a file instead of a service
+	bool isFileOperation = getObject(handle, KernelObjectType::File) != nullptr;
+	if (isFileOperation) {
+		handleFileOperation(messagePointer, handle);
+		regs[0] = SVCResult::Success;
+		return;
+	}
+
+	// If we're actually communicating with a port
 	const auto session = getObject(handle, KernelObjectType::Session);
 	if (session == nullptr) [[unlikely]] {
-		Helpers::panic("SendSyncRequest: Invalid session handle");
+		Helpers::panic("SendSyncRequest: Invalid handle");
 		regs[0] = SVCResult::BadHandle;
 		return;
 	}

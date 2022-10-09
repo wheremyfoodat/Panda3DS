@@ -51,6 +51,7 @@ set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limi
                         src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
                         src/core/kernel/events.cpp src/core/kernel/threads.cpp
                         src/core/kernel/address_arbiter.cpp src/core/kernel/error.cpp
+                        src/core/kernel/file_operations.cpp
 )
 set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp
@@ -70,7 +71,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
                  include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
                  include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/io_file.hpp
-                 include/loader/lz77.hpp
+                 include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_ncch.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

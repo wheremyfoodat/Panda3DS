@@ -55,16 +55,6 @@ class Kernel {
 		return &objects[handle];
 	}
 
-	Handle makeObject(KernelObjectType type) {
-		if (handleCounter > KernelHandles::Max) [[unlikely]] {
-			Helpers::panic("Hlep we somehow created enough kernel objects to overflow this thing");
-		}
-
-		objects.push_back(KernelObject(handleCounter, type));
-		log("Created %s object with handle %d\n", kernelObjectTypeToString(type), handleCounter);
-		return handleCounter++;
-	}
-
 	Handle makeArbiter();
 	Handle makeEvent(ResetType resetType);
 	Handle makeProcess(u32 id);
@@ -118,11 +108,29 @@ class Kernel {
 	void outputDebugString();
 	void waitSynchronization1();
 
+	// File operations
+	void handleFileOperation(u32 messagePointer, Handle file);
+	void readFile(u32 messagePointer, Handle file);
+
 public:
 	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
 	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);
 	void reset();
+
+	Handle makeObject(KernelObjectType type) {
+		if (handleCounter > KernelHandles::Max) [[unlikely]] {
+			Helpers::panic("Hlep we somehow created enough kernel objects to overflow this thing");
+		}
+
+		objects.push_back(KernelObject(handleCounter, type));
+		log("Created %s object with handle %d\n", kernelObjectTypeToString(type), handleCounter);
+		return handleCounter++;
+	}
+
+	std::vector<KernelObject>& getObjects() {
+		return objects;
+	}
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.requestGPUInterrupt(type); }
 };
