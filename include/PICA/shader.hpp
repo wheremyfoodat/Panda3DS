@@ -148,8 +148,8 @@ class PICAShader {
 	bool isCondTrue(u32 instruction);
 
 public:
-	std::array<u32, 512> loadedShader; // Currently loaded & active shader
-	std::array<u32, 512> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
+	std::array<u32, 4096> loadedShader; // Currently loaded & active shader
+	std::array<u32, 4096> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
 
 	u32 entrypoint = 0; // Initial shader PC
 	u32 boolUniform;
@@ -164,12 +164,12 @@ public:
 
 	// Theese functions are in the header to be inlined more easily, though with LTO I hope I'll be able to move them
 	void finalize() {
-		std::memcpy(&loadedShader[0], &bufferedShader[0], 512 * sizeof(u32));
+		std::memcpy(&loadedShader[0], &bufferedShader[0], 4096 * sizeof(u32));
 	}
 
 	void setBufferIndex(u32 index) {
-		if (index != 0) Helpers::panic("Is this register 9 or 11 bit?");
-		bufferIndex = (index >> 2) & 0x1ff;
+		if (index != 0) Helpers::panic("How many bits is the shader buffer index reg meant to be?");
+		bufferIndex = (index >> 2) & 0xfff;
 	}
 
 	void setOpDescriptorIndex(u32 index) {
@@ -177,9 +177,9 @@ public:
 	}
 
 	void uploadWord(u32 word) {
-		if (bufferIndex >= 511) Helpers::panic("o no");
+		if (bufferIndex >= 4095) Helpers::panic("o no, shader upload overflew");
 		bufferedShader[bufferIndex++] = word;
-		bufferIndex &= 0x1ff;
+		bufferIndex &= 0xfff;
 	}
 
 	void uploadDescriptor(u32 word) {

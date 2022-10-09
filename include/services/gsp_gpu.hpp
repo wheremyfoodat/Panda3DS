@@ -43,6 +43,7 @@ class GPUService {
 	void processCommandList(u32* cmd);
 	void memoryFill(u32* cmd);
 	void triggerDisplayTransfer(u32* cmd);
+	void flushCacheRegions(u32* cmd);
 
 public:
 	GPUService(Memory& mem, GPU& gpu, u32& currentPID) : mem(mem), gpu(gpu), currentPID(currentPID) {}

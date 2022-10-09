@@ -18,7 +18,8 @@ namespace GXCommands {
 	enum : u32 {
 		ProcessCommandList = 1,
 		MemoryFill = 2,
-		TriggerDisplayTransfer = 3
+		TriggerDisplayTransfer = 3,
+		FlushCacheRegions = 5
 	};
 }
 
@@ -214,6 +215,7 @@ void GPUService::processCommandBuffer() {
 				case GXCommands::ProcessCommandList: processCommandList(cmd); break;
 				case GXCommands::MemoryFill: memoryFill(cmd); break;
 				case GXCommands::TriggerDisplayTransfer: triggerDisplayTransfer(cmd); break;
+				case GXCommands::FlushCacheRegions: flushCacheRegions(cmd); break;
 				default: Helpers::panic("GSP::GPU::ProcessCommands: Unknown cmd ID %d", cmdID);
 			}
 
@@ -250,6 +252,10 @@ void GPUService::memoryFill(u32* cmd) {
 void GPUService::triggerDisplayTransfer(u32* cmd) {
 	log("GSP::GPU::TriggerDisplayTransfer (Stubbed)\n");
 	requestInterrupt(GPUInterrupt::PPF); // Send "Display transfer finished" interrupt
+}
+
+void GPUService::flushCacheRegions(u32* cmd) {
+	log("GSP::GPU::FlushCacheRegions (Stubbed)\n");
 }
 
 // Actually send command list (aka display list) to GPU
