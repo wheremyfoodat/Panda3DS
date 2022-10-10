@@ -4,6 +4,7 @@
 #include "logger.hpp"
 #include "memory.hpp"
 #include "services/apt.hpp"
+#include "services/cfg.hpp"
 #include "services/dsp.hpp"
 #include "services/hid.hpp"
 #include "services/fs.hpp"
@@ -19,6 +20,7 @@ class ServiceManager {
 	MAKE_LOG_FUNCTION(log, srvLogger)
 
 	APTService apt;
+	CFGService cfg;
 	DSPService dsp;
 	HIDService hid;
 	FSService fs;
