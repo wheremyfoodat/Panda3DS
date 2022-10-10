@@ -58,10 +58,21 @@ void Kernel::arbitrateAddress() {
 	regs[0] = SVCResult::Success;
 
 	switch (static_cast<ArbitrationType>(type)) {
-		// Puts this thread to sleep if word < value until another thread signals the address with the type SIGNAL
+		// Puts this thread to sleep if word < value until another thread arbitrates the address using SIGNAL
 		case ArbitrationType::WaitIfLess: {
 			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed 
 			if (word < value) {
+				sleepThreadOnArbiter(address);
+			}
+			break;
+		}
+
+		// Puts this thread to sleep if word < value until another thread arbitrates the address using SIGNAL
+		// If the thread is put to sleep, the arbiter address is decremented
+		case ArbitrationType::DecrementAndWaitIfLess: {
+			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed 
+			if (word < value) {
+				mem.write32(address, word - 1);
 				sleepThreadOnArbiter(address);
 			}
 			break;
