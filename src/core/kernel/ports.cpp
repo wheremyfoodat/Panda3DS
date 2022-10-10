@@ -74,7 +74,6 @@ void Kernel::connectToPort() {
 void Kernel::sendSyncRequest() {
 	const auto handle = regs[0];
 	u32 messagePointer = getTLSPointer() + 0x80; // The message is stored starting at TLS+0x80
-
 	logSVC("SendSyncRequest(session handle = %X)\n", handle);
 
 	// The sync request is being sent at a service rather than whatever port, so have the service manager intercept it

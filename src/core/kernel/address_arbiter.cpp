@@ -54,7 +54,7 @@ void Kernel::arbitrateAddress() {
 		regs[0] = SVCResult::InvalidEnumValueAlt;
 		return;
 	}
-	// This needs to put the error code in r0 before we change threats
+	// This needs to put the error code in r0 before we change threads
 	regs[0] = SVCResult::Success;
 
 	switch (static_cast<ArbitrationType>(type)) {
@@ -68,11 +68,32 @@ void Kernel::arbitrateAddress() {
 		}
 
 		case ArbitrationType::Signal:
-			logSVC("Broken ArbitrateAddress (type == SIGNAL)\n");
-			switchThread(0);
+			signalArbiter(address, value);
 			break;
 
 		default:
 			Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
+	}
+}
+
+// Signal up to "threadCount" threads waiting on the arbiter indicated by "waitingAddress"
+void Kernel::signalArbiter(u32 waitingAddress, s32 threadCount) {
+	if (threadCount == 0) [[unlikely]] return;
+	s32 count = 0; // Number of threads we've woken up
+
+	// Wake threads with the highest priority threads being woken up first
+	for (auto index : threadIndices) {
+		Thread& t = threads[index];
+		if (t.status == ThreadStatus::WaitArbiter && t.waitingAddress == waitingAddress) {
+			t.status = ThreadStatus::Ready;
+			count += 1;
+
+			// Check if we've reached the max number of. If count < 0 then all threads are released.
+			if (count == threadCount && threadCount > 0) break;
+		}
+	}
+
+	if (count != 0) {
+		rescheduleThreads();
 	}
 }

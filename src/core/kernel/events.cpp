@@ -72,4 +72,9 @@ void Kernel::waitSynchronizationN() {
 
 	logSVC("WaitSynchronizationN (STUBBED)\n");
 	regs[0] = SVCResult::Success;
+
+	if (currentThreadIndex == 1) {
+		printf("WaitSynchN OoT hack triggered\n");
+		switchThread(0);
+	}
 }

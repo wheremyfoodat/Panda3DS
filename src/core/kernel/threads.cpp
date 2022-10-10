@@ -8,12 +8,14 @@
 // Switch to another thread
 // newThread: Index of the newThread in the thread array (NOT a handle).
 void Kernel::switchThread(int newThreadIndex) {
-	if (currentThreadIndex == newThreadIndex) { // Bail early if the new thread is actually the old thread
+	auto& oldThread = threads[currentThreadIndex];
+	auto& newThread = threads[newThreadIndex];
+	newThread.status = ThreadStatus::Running;
+
+	// Bail early if the new thread is actually the old thread
+	if (currentThreadIndex == newThreadIndex) [[unlikely]] {
 		return;
 	}
-
-	auto& oldThread = threads[currentThreadIndex];
-	const auto& newThread = threads[newThreadIndex];
 
 	// Backup context
 	std::memcpy(&oldThread.gprs[0], &cpu.regs()[0], 16 * sizeof(u32)); // Backup the 16 GPRs
@@ -31,11 +33,69 @@ void Kernel::switchThread(int newThreadIndex) {
 	currentThreadIndex = newThreadIndex;
 }
 
+// Sort the threadIndices vector based on the priority of each thread
+// The threads with higher priority (aka the ones with a lower priority value) should come first in the vector
+void Kernel::sortThreads() {
+	std::vector<int>& v = threadIndices;
+	std::sort(v.begin(), v.end(), [&](int a, int b) {
+		return threads[a].priority < threads[b].priority;
+	});
+}
+
+bool Kernel::canThreadRun(const Thread& t) {
+	if (t.status == ThreadStatus::Ready) {
+		return true;
+	}
+
+	// Handle timeouts and stuff here
+	return false;
+}
+
+// Get the index of the next thread to run by iterating through the thread list and finding the free thread with the highest priority
+// Returns the thread index if a thread is found, or nullopt otherwise
+std::optional<int> Kernel::getNextThread() {
+	for (auto index : threadIndices) {
+		const Thread& t = threads[index];
+
+		// Thread is ready, return it
+		if (canThreadRun(t)) {
+			return index;
+		}
+
+		// TODO: Check timeouts here
+	}
+
+	// No thread was found
+	return std::nullopt;
+}
+
+void Kernel::switchToNextThread() {
+	std::optional<int> newThreadIndex = getNextThread();
+	
+	if (!newThreadIndex.has_value()) {
+		Helpers::panic("Kernel tried to switch to the next thread but none found");
+	} else {
+		switchThread(newThreadIndex.value());
+	}
+}
+
+// See if there;s a higher priority, ready thread and switch to that
+void Kernel::rescheduleThreads() {
+	std::optional<int> newThreadIndex = getNextThread();
+	
+	if (newThreadIndex.has_value()) {
+		threads[currentThreadIndex].status = ThreadStatus::Ready;
+		switchThread(newThreadIndex.value());
+	}
+}
+
 // Internal OS function to spawn a thread
 Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg, ThreadStatus status) {
 	if (threadCount >= appResourceLimits.maxThreads) {
 		Helpers::panic("Overflowed the number of threads");
 	}
+	threadIndices.push_back(threadCount);
+
 	Thread& t = threads[threadCount++]; // Reference to thread data
 	Handle ret = makeObject(KernelObjectType::Thread);
 	objects[ret].data = &t;
@@ -64,6 +124,7 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u
 	// Initial TLS base has already been set in Kernel::Kernel()
 	// TODO: Does svcCreateThread zero-set the TLS of the new thread?
 
+	sortThreads();
 	return ret;
 }
 
@@ -90,10 +151,10 @@ void Kernel::createThread() {
 
 void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	Thread& t = threads[currentThreadIndex];
-
 	t.status = ThreadStatus::WaitArbiter;
 	t.waitingAddress = waitingAddress;
-	switchThread(1); // TODO: Properly change threads
+
+	switchToNextThread();
 }
 
 

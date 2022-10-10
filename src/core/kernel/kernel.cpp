@@ -7,6 +7,7 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
 	portHandles.reserve(32);
+	threadIndices.reserve(appResourceLimits.maxThreads);
 
 	for (int i = 0; i < threads.size(); i++) {
 		threads[i].index = i;
@@ -98,6 +99,7 @@ void Kernel::reset() {
 	}
 	objects.clear();
 	portHandles.clear();
+	threadIndices.clear();
 	serviceManager.reset();
 
 	// Allocate handle #0 to a dummy object and make a main process object

@@ -23,6 +23,9 @@ class Kernel {
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 
+	// Thread indices, sorted by priority
+	std::vector<int> threadIndices;
+
 	Handle currentProcess;
 	Handle mainThread;
 	int currentThreadIndex;
@@ -62,8 +65,14 @@ class Kernel {
 	Handle makeSession(Handle port);
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
 
+	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThreadOnArbiter(u32 waitingAddress);
 	void switchThread(int newThreadIndex);
+	void sortThreads();
+	std::optional<int> getNextThread();
+	void switchToNextThread();
+	void rescheduleThreads();
+	bool canThreadRun(const Thread& t);
 
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);

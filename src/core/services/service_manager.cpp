@@ -103,7 +103,7 @@ void ServiceManager::enableNotification(u32 messagePointer) {
 
 void ServiceManager::receiveNotification(u32 messagePointer) {
 	log("srv::ReceiveNotification() (STUBBED)\n");
-	printf("r15 = %08X", regs[15]);
+
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // Notification ID
 }
