@@ -114,6 +114,7 @@ class Kernel {
 	void getThreadID();
 	void releaseMutex();
 	void sendSyncRequest();
+	void signalEvent();
 	void svcCloseHandle();
 	void connectToPort();
 	void outputDebugString();

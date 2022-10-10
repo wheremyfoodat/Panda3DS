@@ -10,12 +10,15 @@ namespace DSPCommands {
 		RegisterInterruptEvents = 0x00150082,
 		GetSemaphoreHandle = 0x00160000,
 		SetSemaphoreMask = 0x00170040,
+		GetHeadphoneStatus = 0x001F0000
 	};
 }
 
 namespace Result {
 	enum : u32 {
 		Success = 0,
+		HeadphonesNotInserted = 0,
+		HeadphonesInserted = 1
 	};
 }
 
@@ -27,6 +30,7 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case DSPCommands::ConvertProcessAddressFromDspDram: convertProcessAddressFromDspDram(messagePointer); break;
+		case DSPCommands::GetHeadphoneStatus: getHeadphoneStatus(messagePointer); break;
 		case DSPCommands::GetSemaphoreHandle: getSemaphoreHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
 		case DSPCommands::ReadPipeIfPossible: readPipeIfPossible(messagePointer); break;
@@ -92,6 +96,13 @@ void DSPService::registerInterruptEvents(u32 messagePointer) {
 
 	log("DSP::RegisterInterruptEvents (interrupt = %d, channel = %d, event = %d)\n", interrupt, channel, event);
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void DSPService::getHeadphoneStatus(u32 messagePointer) {
+	log("DSP::GetHeadphoneStatus\n");
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, Result::HeadphonesInserted); // This should be toggleable for shits and giggles
 }
 
 void DSPService::getSemaphoreHandle(u32 messagePointer) {

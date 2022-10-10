@@ -33,7 +33,7 @@ void Kernel::createEvent() {
 void Kernel::clearEvent() {
 	const Handle handle = regs[0];
 	const auto event = getObject(handle, KernelObjectType::Event);
-	logSVC("ClearEvent(event handle = %d)\n", handle);
+	logSVC("ClearEvent(event handle = %X)\n", handle);
 
 	if (event == nullptr) [[unlikely]] {
 		regs[0] = SVCResult::BadHandle;
@@ -41,6 +41,25 @@ void Kernel::clearEvent() {
 	}
 
 	event->getData<Event>()->fired = false;
+	regs[0] = SVCResult::Success;
+}
+
+// Result SignalEvent(Handle event)	
+void Kernel::signalEvent() {
+	const Handle handle = regs[0];
+	const auto event = getObject(handle, KernelObjectType::Event);
+	logSVC("SignalEvent(event handle = %X)\n", handle);
+	printf("Stubbed SignalEvent!!\n");
+
+	/*
+		if (event == nullptr) [[unlikely]] {
+			regs[0] = SVCResult::BadHandle;
+			return;
+		}
+
+		event->getData<Event>()->fired = true;
+	*/
+
 	regs[0] = SVCResult::Success;
 }
 
