@@ -2,13 +2,14 @@
 
 namespace DSPCommands {
 	enum : u32 {
+		SetSemaphore = 0x00070040,
+		ConvertProcessAddressFromDspDram = 0x000C0040,
+		WriteProcessPipe = 0x000D0082,
 		ReadPipeIfPossible = 0x001000C0,
 		LoadComponent = 0x001100C2,
 		RegisterInterruptEvents = 0x00150082,
 		GetSemaphoreHandle = 0x00160000,
 		SetSemaphoreMask = 0x00170040,
-		SetSemaphore = 0x00070040,
-		WriteProcessPipe = 0x000D0082
 	};
 }
 
@@ -25,6 +26,7 @@ void DSPService::reset() {
 void DSPService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case DSPCommands::ConvertProcessAddressFromDspDram: convertProcessAddressFromDspDram(messagePointer); break;
 		case DSPCommands::GetSemaphoreHandle: getSemaphoreHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
 		case DSPCommands::ReadPipeIfPossible: readPipeIfPossible(messagePointer); break;
@@ -34,6 +36,15 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 		case DSPCommands::WriteProcessPipe: [[likely]] writeProcessPipe(messagePointer); break;
 		default: Helpers::panic("DSP service requested. Command: %08X\n", command);
 	}
+}
+
+void DSPService::convertProcessAddressFromDspDram(u32 messagePointer) {
+	const u32 address = mem.read32(messagePointer + 4);
+	log("DSP::ConvertProcessAddressFromDspDram (address = %08X)\n", address);
+
+	const u32 converted = (address << 1) + 0x1FF40000;
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, converted); // Converted address
 }
 
 void DSPService::loadComponent(u32 messagePointer) {
