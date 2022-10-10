@@ -34,7 +34,9 @@ namespace VirtualAddrs {
 
 		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x1000, and so on
 		TLSBase = 0xFF400000,
-		TLSSize = 0x1000
+		TLSSize = 0x1000,
+
+		DSPMemStart = 0x1FF00000
 	};
 }
 
@@ -86,6 +88,8 @@ namespace KernelMemoryTypes {
 
 class Memory {
 	u8* fcram;
+	u8* dspRam;
+
 	u64& cpuTicks; // Reference to the CPU tick counter
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
@@ -109,6 +113,10 @@ class Memory {
 	static constexpr u32 FCRAM_APPLICATION_SIZE = 64_MB;
 	static constexpr u32 FCRAM_PAGE_COUNT = FCRAM_SIZE / pageSize;
 	static constexpr u32 FCRAM_APPLICATION_PAGE_COUNT = FCRAM_APPLICATION_SIZE / pageSize;
+
+	static constexpr u32 DSP_RAM_SIZE = 512_KB;
+	static constexpr u32 DSP_CODE_MEMORY_OFFSET = 0_KB;
+	static constexpr u32 DSP_DATA_MEMORY_OFFSET = 256_KB;
 
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
@@ -178,4 +186,8 @@ public:
 	std::optional<NCCH> loadedCXI = std::nullopt;
 	// File handle for reading the loaded ncch
 	IOFile CXIFile;
+
+	u8* getDSPMem() { return dspRam; }
+	u8* getDSPDataMem() { return &dspRam[DSP_DATA_MEMORY_OFFSET]; }
+	u8* getDSPCodeMem() { return &dspRam[DSP_CODE_MEMORY_OFFSET]; }
 };

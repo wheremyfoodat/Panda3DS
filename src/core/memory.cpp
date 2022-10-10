@@ -8,6 +8,8 @@ using namespace KernelMemoryTypes;
 
 Memory::Memory(u64& cpuTicks) : cpuTicks(cpuTicks) {
 	fcram = new uint8_t[FCRAM_SIZE]();
+	dspRam = new uint8_t[DSP_RAM_SIZE]();
+
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
 	memoryInfo.reserve(32); // Pre-allocate some room for memory allocation info to avoid dynamic allocs
@@ -48,6 +50,17 @@ void Memory::reset() {
 		if (!reserveMemory(e.paddr, e.size)) {
 			Helpers::panic("Failed to reserve memory for shared memory block");
 		}
+	}
+
+	// Map DSP RAM as R/W at [0x1FF00000, 0x1FF7FFFF]
+	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize; // Number of DSP RAM pages
+	constexpr u32 initialPage = VirtualAddrs::DSPMemStart / pageSize; // First page of DSP RAM in the virtual address space
+
+	for (u32 i = 0; i < dspRamPages; i++) {
+		auto pointer = uintptr_t(&dspRam[i * pageSize]);
+
+		readTable[i + initialPage] = pointer;
+		writeTable[i + initialPage] = pointer;
 	}
 }
 
