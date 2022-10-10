@@ -14,8 +14,9 @@ namespace KernelHandles {
 		HID = 0xFFFF8003,            // Handles everything input-related including gyro
 		FS  = 0xFFFF8004,            // Filesystem service
 		GPU = 0xFFFF8005,            // GPU service
-		LCD = 0xFFFF8006,            // LCD service
-		NDM = 0xFFFF8007,            // ?????
+		DSP = 0xFFFF8006,            // DSP service (Used for audio decoding and output)
+		LCD = 0xFFFF8007,            // LCD service (Used for configuring the displays)
+		NDM = 0xFFFF8008,            // ?????
 
 		MinServiceHandle = APT,
 		MaxServiceHandle = NDM,
@@ -49,6 +50,7 @@ namespace KernelHandles {
 			case APT: return "APT";
 			case HID: return "HID";
 			case FS: return "FS";
+			case DSP: return "DSP";
 			case GPU: return "GPU";
 			case LCD: return "LCD";
 			case NDM: return "NDM";

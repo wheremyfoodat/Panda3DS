@@ -1,10 +1,11 @@
 #include "services/service_manager.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), apt(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), ndm(mem) {}
+	: regs(regs), mem(mem), apt(mem), dsp(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), ndm(mem) {}
 
 void ServiceManager::reset() {
 	apt.reset();
+	dsp.reset();
 	hid.reset();
 	fs.reset();
 	gsp_gpu.reset();
@@ -74,6 +75,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::APT;
 	} else if (service == "APT:U") {
 		handle = KernelHandles::APT;
+	} else if (service == "dsp::DSP") {
+		handle = KernelHandles::DSP;
 	} else if (service == "hid:USER") {
 		handle = KernelHandles::HID;	
 	} else if (service == "fs:USER") {
@@ -111,6 +114,7 @@ void ServiceManager::receiveNotification(u32 messagePointer) {
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
+		case KernelHandles::DSP: dsp.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
 		case KernelHandles::FS: fs.handleSyncRequest(messagePointer); break;
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
