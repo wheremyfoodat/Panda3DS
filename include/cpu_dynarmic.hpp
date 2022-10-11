@@ -30,7 +30,7 @@ public:
     }
 
     u64 MemoryRead64(u32 vaddr) override {
-        return u64(MemoryRead32(vaddr)) | u64(MemoryRead32(vaddr + 4)) << 32;
+        return mem.read64(vaddr);
     }
 
     void MemoryWrite8(u32 vaddr, u8 value) override {
@@ -162,6 +162,7 @@ public:
 
     void runFrame() {
         env.ticksLeft = 268111856 / 60;
+
         const auto exitReason = jit->Run();
         if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
             Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));

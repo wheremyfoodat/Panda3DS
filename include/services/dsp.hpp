@@ -63,4 +63,10 @@ public:
 	DSPService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
+
+	enum class SoundOutputMode : u8 {
+		Mono = 0,
+		Stereo = 1,
+		Surround = 2
+	};
 };

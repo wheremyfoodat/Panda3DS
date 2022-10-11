@@ -42,7 +42,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 	}
 
 	IOFile& ioFile = mem.CXIFile;
-	if (!ioFile.seek(cxi->fileOffset + romFSOffset + offset)) {
+	if (!ioFile.seek(cxi->fileOffset + romFSOffset + offset + 0x1000)) {
 		Helpers::panic("Failed to seek while reading from RomFS");
 	}
 

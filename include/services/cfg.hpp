@@ -8,6 +8,9 @@ class CFGService {
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, cfgLogger)
 
+	// Service functions
+	void getConfigInfoBlk2(u32 messagePointer);
+
 public:
 	CFGService(Memory& mem) : mem(mem) {}
 	void reset();

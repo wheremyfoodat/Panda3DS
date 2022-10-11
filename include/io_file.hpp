@@ -71,7 +71,7 @@ public:
         return size;
     }
 
-    bool seek(std::int64_t offset, int origin = 0) {
+    bool seek(std::int64_t offset, int origin = SEEK_SET) {
         if (!isOpen() || fseeko(handle, offset, origin) != 0)
             return false;
 

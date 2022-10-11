@@ -11,6 +11,7 @@ void Kernel::switchThread(int newThreadIndex) {
 	auto& oldThread = threads[currentThreadIndex];
 	auto& newThread = threads[newThreadIndex];
 	newThread.status = ThreadStatus::Running;
+	printf("Switching from thread %d to %d\n", currentThreadIndex, newThreadIndex);
 
 	// Bail early if the new thread is actually the old thread
 	if (currentThreadIndex == newThreadIndex) [[unlikely]] {
@@ -136,8 +137,8 @@ void Kernel::createThread() {
 	u32 initialSP = regs[3] & ~7; // SP is force-aligned to 8 bytes
 	s32 id = static_cast<s32>(regs[4]);
 
-	logSVC("CreateThread(entry = %08X, stacktop = %08X, priority = %X, processor ID = %d)\n", entrypoint,
-		initialSP, priority, id);
+	logSVC("CreateThread(entry = %08X, stacktop = %08X, arg = %X, priority = %X, processor ID = %d)\n", entrypoint,
+		initialSP, arg, priority, id);
 
 	if (priority > 0x3F) [[unlikely]] {
 		Helpers::panic("Created thread with bad priority value %X", priority);
@@ -156,7 +157,6 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 
 	switchToNextThread();
 }
-
 
 void Kernel::getThreadID() {
 	Handle handle = regs[1];
