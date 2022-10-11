@@ -47,11 +47,19 @@ void GPU::drawArrays() {
 	// Configures the type of primitive and the number of vertex shader outputs
 	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
 	const u32 primType = (primConfig >> 8) & 3;
-	if (primType != 0) Helpers::panic("[PICA] Tried to draw non-triangle shape %d\n", primType);
-	if (vertexCount % 3) Helpers::panic("[PICA] Vertex count not a multiple of 3");
+	if (primType != 0 && primType != 1) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
+	if ((primType == 0 && vertexCount % 3) || (primType == 1 && vertexCount < 3)) {
+		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
+	}
+
 	Vertex vertices[vertexBufferSize];
+
+	// Get the configuration for the index buffer, used only for indexed drawing
+	u32 indexBufferConfig = regs[PICAInternalRegs::IndexBufferConfig];
+	u32 indexBufferPointer = vertexBase + (indexBufferConfig & 0xfffffff);
+	bool shortIndex = (indexBufferConfig >> 31) & 1; // Indicates whether vert indices are 16-bit or 8-bit
 
 	// Stuff the global attribute config registers in one u64 to make attr parsing easier
 	// TODO: Cache this when the vertex attribute format registers are written to 
@@ -61,15 +69,24 @@ void GPU::drawArrays() {
 		u32 offset = regs[PICAInternalRegs::VertexOffsetReg];
 		log("PICA::DrawArrays(vertex count = %d, vertexOffset = %d)\n", vertexCount, offset);
 	} else {
-		Helpers::panic("[PICA] Indexed drawing");
+		log("PICA::DrawElements(vertex count = %d, index buffer config = %08X)\n", vertexCount, indexBufferConfig);
 	}
 
 	for (u32 i = 0; i < vertexCount; i++) {
 		u32 vertexIndex; // Index of the vertex in the VBO
+
 		if constexpr (!indexed) {
 			vertexIndex = i + regs[PICAInternalRegs::VertexOffsetReg];
 		} else {
-			Helpers::panic("[PICA]: Unimplemented indexed rendering");
+			if (shortIndex) {
+				auto ptr = getPointerPhys<u16>(indexBufferPointer);
+				vertexIndex = *ptr; // TODO: This is very unsafe
+				indexBufferPointer += 2;
+			} else {
+				auto ptr = getPointerPhys<u8>(indexBufferPointer);
+				vertexIndex = *ptr; // TODO: This is also very unsafe
+				indexBufferPointer += 1;
+			}
 		}
 
 		int attrCount = 0; // Number of attributes we've passed to the shader
@@ -135,5 +152,10 @@ void GPU::drawArrays() {
 		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
 	}
 
-	drawVertices(OpenGL::Triangle, vertices, vertexCount);
+	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
+	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
+		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::LineStrip
+	};
+	const auto shape = primTypes[primType];
+	drawVertices(shape, vertices, vertexCount);
 }
