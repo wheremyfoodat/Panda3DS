@@ -17,6 +17,8 @@ class HIDService {
 	// Service commands
 	void enableAccelerometer(u32 messagePointer);
 	void enableGyroscopeLow(u32 messagePointer);
+	void getGyroscopeLowCalibrateParam(u32 messagePointer);
+	void getGyroscopeCoefficient(u32 messagePointer);
 	void getIPCHandles(u32 messagePointer);
 
 public:

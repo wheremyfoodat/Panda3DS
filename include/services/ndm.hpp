@@ -12,6 +12,7 @@ class NDMService {
 	// Service commands
 	void overrideDefaultDaemons(u32 messagePointer);
 	void suspendDaemons(u32 messagePointer);
+	void suspendScheduler(u32 messagePointer);
 
 public:
 	NDMService(Memory& mem) : mem(mem) {}
