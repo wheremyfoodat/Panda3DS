@@ -150,6 +150,7 @@ void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
 		Helpers::panic("Sleeping a thread for a negative amount of ns");
 	} else if (ns == 0) { // Used when we want to force a thread switch
+		threads[currentThreadIndex].status = ThreadStatus::Ready;
 		switchToNextThread();
 	} else { // If we're sleeping for > 0 ns
 		Thread& t = threads[currentThreadIndex];
