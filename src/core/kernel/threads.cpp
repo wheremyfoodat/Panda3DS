@@ -186,6 +186,7 @@ void Kernel::svcSleepThread() {
 	logSVC("SleepThread(ns = %lld)\n", ns);
 
 	sleepThread(ns);
+	regs[0] = SVCResult::Success;
 }
 
 void Kernel::getThreadID() {
