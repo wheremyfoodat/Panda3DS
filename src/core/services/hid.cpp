@@ -2,7 +2,9 @@
 
 namespace HIDCommands {
 	enum : u32 {
-		GetIPCHandles = 0x000A0000
+		GetIPCHandles = 0x000A0000,
+		EnableAccelerometer = 0x00110000,
+		EnableGyroscopeLow = 0x00130000
 	};
 }
 
@@ -15,14 +17,30 @@ namespace Result {
 
 void HIDService::reset() {
 	sharedMem = nullptr;
+	accelerometerEnabled = false;
+	gyroEnabled = false;
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case HIDCommands::EnableAccelerometer: enableAccelerometer(messagePointer); break;
+		case HIDCommands::EnableGyroscopeLow: enableGyroscopeLow(messagePointer); break;
 		case HIDCommands::GetIPCHandles: getIPCHandles(messagePointer); break;
 		default: Helpers::panic("HID service requested. Command: %08X\n", command);
 	}
+}
+
+void HIDService::enableAccelerometer(u32 messagePointer) {
+	log("HID::EnableAccelerometer\n");
+	mem.write32(messagePointer + 4, Result::Success);
+	accelerometerEnabled = true;
+}
+
+void HIDService::enableGyroscopeLow(u32 messagePointer) {
+	log("HID::EnableGyroscopeLow\n");
+	mem.write32(messagePointer + 4, Result::Success);
+	gyroEnabled = true;
 }
 
 void HIDService::getIPCHandles(u32 messagePointer) {

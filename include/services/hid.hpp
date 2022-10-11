@@ -9,9 +9,14 @@ class HIDService {
 	Memory& mem;
 	u8* sharedMem = nullptr; // Pointer to HID shared memory
 
+	bool accelerometerEnabled;
+	bool gyroEnabled;
+
 	MAKE_LOG_FUNCTION(log, hidLogger)
 
 	// Service commands
+	void enableAccelerometer(u32 messagePointer);
+	void enableGyroscopeLow(u32 messagePointer);
 	void getIPCHandles(u32 messagePointer);
 
 public:
