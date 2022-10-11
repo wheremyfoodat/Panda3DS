@@ -13,6 +13,7 @@ void PICAShader::run() {
 
 		switch (opcode) {
 			case ShaderOpcodes::ADD: add(instruction); break;
+			case ShaderOpcodes::CALL: call(instruction); break;
 			case ShaderOpcodes::CALLU: callu(instruction); break;
 			case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2: 
 				cmp(instruction);
@@ -391,6 +392,20 @@ void PICAShader::ifu(u32 instruction) {
 	else {
 		pc = dest;
 	}
+}
+
+void PICAShader::call(u32 instruction) {
+	if (callIndex >= 4) [[unlikely]]
+		Helpers::panic("[PICA] Overflowed CALL stack");
+
+	const u32 num = instruction & 0xff;
+	const u32 dest = (instruction >> 10) & 0xfff;
+
+	auto& block = callInfo[callIndex++];
+	block.endingPC = dest + num;
+	block.returnPC = pc;
+
+	pc = dest;
 }
 
 void PICAShader::callu(u32 instruction) {
