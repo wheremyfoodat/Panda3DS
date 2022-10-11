@@ -156,6 +156,8 @@ void Kernel::sleepThread(s64 ns) {
 		t.status = ThreadStatus::WaitSleep;
 		t.waitingNanoseconds = ns;
 		t.sleepTick = cpu.getTicks();
+
+		switchToNextThread();
 	}
 }
 
