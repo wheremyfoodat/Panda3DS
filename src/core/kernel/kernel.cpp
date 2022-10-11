@@ -23,6 +23,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x01: controlMemory(); break;
 		case 0x02: queryMemory(); break;
 		case 0x08: createThread(); break;
+		case 0x0A: svcSleepThread(); break;
 		case 0x14: releaseMutex(); break;
 		case 0x17: createEvent(); break;
 		case 0x18: signalEvent(); break;
@@ -94,6 +95,10 @@ void Kernel::reset() {
 	handleCounter = 0;
 	arbiterCount = 0;
 	threadCount = 0;
+
+	for (auto& t : threads) {
+		t.status = ThreadStatus::Dead;
+	}
 
 	for (auto& object : objects) {
 		deleteObjectData(object);

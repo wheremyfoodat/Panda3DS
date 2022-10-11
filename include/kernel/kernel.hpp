@@ -66,6 +66,7 @@ class Kernel {
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
 
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
+	void sleepThread(s64 ns);
 	void sleepThreadOnArbiter(u32 waitingAddress);
 	void switchThread(int newThreadIndex);
 	void sortThreads();
@@ -116,6 +117,7 @@ class Kernel {
 	void sendSyncRequest();
 	void signalEvent();
 	void svcCloseHandle();
+	void svcSleepThread();
 	void connectToPort();
 	void outputDebugString();
 	void waitSynchronization1();

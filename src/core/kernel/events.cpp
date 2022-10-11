@@ -94,5 +94,14 @@ void Kernel::waitSynchronizationN() {
 
 	printf("Hacky WaitSync stuff for OoT triggered!!!\n");
 	threads[currentThreadIndex].status = ThreadStatus::Ready;
-	switchThread(rand() % threadCount);
+
+	while (1) {
+		auto index = rand() % threadCount;
+		auto& thread = threads[index];
+
+		if (canThreadRun(thread)) {
+			switchThread(rand() % threadCount);
+			break;
+		}
+	}
 }

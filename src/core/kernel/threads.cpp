@@ -46,6 +46,14 @@ void Kernel::sortThreads() {
 bool Kernel::canThreadRun(const Thread& t) {
 	if (t.status == ThreadStatus::Ready) {
 		return true;
+	} else if (t.status == ThreadStatus::WaitSleep) {
+		const u64 elapsedTicks = cpu.getTicks() - t.sleepTick;
+
+		constexpr double ticksPerSec = double(CPU::ticksPerSec);
+		constexpr double nsPerTick = ticksPerSec / 1000000000.0;
+
+		const s64 elapsedNs = s64(double(elapsedTicks) * nsPerTick);
+		return elapsedNs >= t.waitingNanoseconds;
 	}
 
 	// Handle timeouts and stuff here
@@ -129,6 +137,28 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u
 	return ret;
 }
 
+void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
+	Thread& t = threads[currentThreadIndex];
+	t.status = ThreadStatus::WaitArbiter;
+	t.waitingAddress = waitingAddress;
+
+	switchToNextThread();
+}
+
+// Make a thread sleep for a certain amount of nanoseconds at minimum
+void Kernel::sleepThread(s64 ns) {
+	if (ns < 0) {
+		Helpers::panic("Sleeping a thread for a negative amount of ns");
+	} else if (ns == 0) { // Used when we want to force a thread switch
+		switchToNextThread();
+	} else { // If we're sleeping for > 0 ns
+		Thread& t = threads[currentThreadIndex];
+		t.status = ThreadStatus::WaitSleep;
+		t.waitingNanoseconds = ns;
+		t.sleepTick = cpu.getTicks();
+	}
+}
+
 // Result CreateThread(s32 priority, ThreadFunc entrypoint, u32 arg, u32 stacktop, s32 threadPriority, s32 processorID)	
 void Kernel::createThread() {
 	u32 priority = regs[0];
@@ -150,12 +180,12 @@ void Kernel::createThread() {
 	regs[1] = makeThread(entrypoint, initialSP, priority, id, arg, ThreadStatus::Ready);
 }
 
-void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
-	Thread& t = threads[currentThreadIndex];
-	t.status = ThreadStatus::WaitArbiter;
-	t.waitingAddress = waitingAddress;
+// void SleepThread(s64 nanoseconds)
+void Kernel::svcSleepThread() {
+	const s64 ns = s64(u64(regs[0]) | (u64(regs[1]) << 32));
+	logSVC("SleepThread(ns = %lld)\n", ns);
 
-	switchToNextThread();
+	sleepThread(ns);
 }
 
 void Kernel::getThreadID() {

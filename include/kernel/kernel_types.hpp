@@ -116,6 +116,11 @@ struct Thread {
     // The waiting address for threads that are waiting on an AddressArbiter
     u32 waitingAddress;
 
+    // The nanoseconds until a thread wakes up from being asleep or from timing out while waiting on an arbiter
+    s64 waitingNanoseconds;
+    // The tick this thread went to sleep on
+    u64 sleepTick;
+
     // Thread context used for switching between threads
     std::array<u32, 16> gprs;
     std::array<u32, 32> fprs; // Stored as u32 because dynarmic does it

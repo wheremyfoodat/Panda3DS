@@ -107,6 +107,8 @@ class CPU {
     Memory& mem;
 
 public:
+    static constexpr u64 ticksPerSec = 268111856;
+
     CPU(Memory& mem, Kernel& kernel);
     void reset();
 
@@ -161,7 +163,7 @@ public:
     }
 
     void runFrame() {
-        env.ticksLeft = 268111856 / 60;
+        env.ticksLeft = ticksPerSec / 60;
 
         const auto exitReason = jit->Run();
         if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
