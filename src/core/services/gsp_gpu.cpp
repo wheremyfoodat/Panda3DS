@@ -9,7 +9,8 @@ namespace ServiceCommands {
 		WriteHwRegsWithMask = 0x00020084,
 		FlushDataCache = 0x00080082,
 		SetLCDForceBlack = 0x000B0040,
-		TriggerCmdReqQueue = 0x000C0000
+		TriggerCmdReqQueue = 0x000C0000,
+		SetInternalPriorities = 0x001E0080
 	};
 }
 
@@ -41,6 +42,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::AcquireRight: acquireRight(messagePointer); break;
 		case ServiceCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
+		case ServiceCommands::SetInternalPriorities: setInternalPriorities(messagePointer); break;
 		case ServiceCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
 		case ServiceCommands::TriggerCmdReqQueue: triggerCmdReqQueue(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
@@ -192,6 +194,12 @@ void GPUService::setLCDForceBlack(u32 messagePointer) {
 
 void GPUService::triggerCmdReqQueue(u32 messagePointer) {
 	processCommandBuffer();
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// Seems to be completely undocumented, probably not very important or useful
+void GPUService::setInternalPriorities(u32 messagePointer) {
+	log("GSP::GPU::SetInternalPriorities\n");
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
