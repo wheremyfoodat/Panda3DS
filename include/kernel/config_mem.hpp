@@ -7,6 +7,7 @@ namespace ConfigMem {
 		KernelVersionMinor = 0x1FF80002,
 		KernelVersionMajor = 0x1FF80003,
 		AppMemAlloc = 0x1FF80040,
-		Datetime0 = 0x1FF81020
+		Datetime0 = 0x1FF81020,
+		LedState3D = 0x1FF81084
 	};
 }
