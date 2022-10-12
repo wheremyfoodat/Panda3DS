@@ -56,6 +56,16 @@ struct FileSession {
     }
 };
 
+struct ArchiveSession {
+    ArchiveBase* archive = nullptr;
+    FSPath path;
+    bool isOpen;
+
+    ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), isOpen(isOpen) {
+        path = filePath;
+    }
+};
+
 class ArchiveBase {
 protected:
     using Result = u32;
@@ -67,7 +77,7 @@ public:
     virtual u64 getFreeBytes() = 0;
     virtual bool openFile(const FSPath& path) = 0;
 
-    virtual ArchiveBase* openArchive(FSPath& path) = 0;
+    virtual ArchiveBase* openArchive(const FSPath& path) = 0;
 
     // Read size bytes from a file starting at offset "offset" into a certain buffer in memory
     // Returns the number of bytes read, or nullopt if the read failed

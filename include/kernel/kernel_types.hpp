@@ -19,12 +19,11 @@ namespace SVCResult {
 
         BadThreadPriority = 0xE0E01BFD,
         PortNameTooLong = 0xE0E0181E,
-
 	};
 }
 
 enum class KernelObjectType : u8 {
-    AddressArbiter, Event, File, Port, Process, ResourceLimit, Session, Thread, Dummy
+    AddressArbiter, Archive, Event, File, Port, Process, ResourceLimit, Session, Thread, Dummy
 };
 
 enum class ResourceLimitCategory : int {
@@ -49,9 +48,7 @@ enum class ArbitrationType {
     DecrementAndWaitIfLessTimeout = 4
 };
 
-struct AddressArbiter {
-
-};
+struct AddressArbiter {};
 
 struct ResourceLimits {
     Handle handle;
@@ -132,6 +129,7 @@ struct Thread {
 static const char* kernelObjectTypeToString(KernelObjectType t) {
     switch (t) {
         case KernelObjectType::AddressArbiter: return "address arbiter";
+        case KernelObjectType::Archive: return "archive";
         case KernelObjectType::Event: return "event";
         case KernelObjectType::File: return "file";
         case KernelObjectType::Port: return "port";

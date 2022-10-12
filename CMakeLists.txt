@@ -61,7 +61,7 @@ set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/renderer_opengl.cpp
 )
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp)
-set(FS_SOURCE_FILES src/core/filesystem/archive_ncch.cpp)
+set(FS_SOURCE_FILES src/core/fs/archive_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp)
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel/kernel.hpp
@@ -74,6 +74,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/io_file.hpp
                  include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_ncch.hpp
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
+                 include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

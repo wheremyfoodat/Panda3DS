@@ -150,6 +150,7 @@ void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
 		Helpers::panic("Sleeping a thread for a negative amount of ns");
 	} else if (ns == 0) { // Used when we want to force a thread switch
+		// TODO: Does sleep(0) always switch to another thread, or can it return to the same one if it's the highest prio one?
 		threads[currentThreadIndex].status = ThreadStatus::Ready;
 		switchToNextThread();
 	} else { // If we're sleeping for > 0 ns

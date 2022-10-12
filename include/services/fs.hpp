@@ -1,5 +1,7 @@
 #pragma once
 #include "fs/archive_ncch.hpp"
+#include "fs/archive_save_data.hpp"
+#include "fs/archive_sdmc.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -15,10 +17,14 @@ class FSService {
 
 	MAKE_LOG_FUNCTION(log, fsLogger)
 
+	// The different filesystem archives (Save data, RomFS+ExeFS, etc)
 	SelfNCCHArchive selfNcch;
+	SaveDataArchive saveData;
+	SDMCArchive sdmc;
 
 	ArchiveBase* getArchiveFromID(u32 id);
-	std::optional<Handle> openFile(ArchiveBase* archive, const FSPath& path);
+	std::optional<Handle> openArchiveHandle(u32 archiveID, const FSPath& path);
+	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path);
 
 	// Service commands
 	void initialize(u32 messagePointer);
@@ -26,7 +32,7 @@ class FSService {
 	void openFileDirectly(u32 messagePointer);
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), selfNcch(mem), kernel(kernel) {}
+	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), sdmc(mem), selfNcch(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

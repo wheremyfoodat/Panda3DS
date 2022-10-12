@@ -21,13 +21,15 @@ void FSService::reset() {}
 ArchiveBase* FSService::getArchiveFromID(u32 id) {
 	switch (id) {
 		case ArchiveID::SelfNCCH: return &selfNcch;
+		case ArchiveID::SaveData: return &saveData;
+		case ArchiveID::SDMC: return &sdmc;
 		default:
 			Helpers::panic("Unknown archive. ID: %d\n", id);
 			return nullptr;
 	}
 }
 
-std::optional<Handle> FSService::openFile(ArchiveBase* archive, const FSPath& path) {
+std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path) {
 	bool opened = archive->openFile(path);
 	if (opened) {
 		auto handle = kernel.makeObject(KernelObjectType::File);
@@ -36,6 +38,27 @@ std::optional<Handle> FSService::openFile(ArchiveBase* archive, const FSPath& pa
 		
 		return handle;
 	} else {
+		return std::nullopt;
+	}
+}
+
+std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
+	ArchiveBase* archive = getArchiveFromID(archiveID);
+
+	if (archive == nullptr) [[unlikely]] {
+		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
+		return std::nullopt;
+	}
+
+	bool opened = archive->openArchive(path);
+	if (opened) {
+		auto handle = kernel.makeObject(KernelObjectType::Archive);
+		auto& archiveObject = kernel.getObjects()[handle];
+		archiveObject.data = new ArchiveSession(archive, path);
+
+		return handle;
+	}
+	else {
 		return std::nullopt;
 	}
 }
@@ -56,8 +79,22 @@ void FSService::initialize(u32 messagePointer) {
 }
 
 void FSService::openArchive(u32 messagePointer) {
-	log("FS::OpenArchive (failure)\n");
-	mem.write32(messagePointer + 4, Result::Failure);
+	const u32 archiveID = mem.read32(messagePointer + 4);
+	const u32 archivePathType = mem.read32(messagePointer + 8);
+	const u32 archivePathSize = mem.read32(messagePointer + 12);
+	const u32 archivePathPointer = mem.read32(messagePointer + 20);
+	FSPath archivePath{ .type = archivePathType, .size = archivePathSize, .pointer = archivePathPointer };
+
+	log("FS::OpenArchive (archive ID = %d, archive path type = %d)\n", archiveID, archivePathType);
+	
+	std::optional<Handle> handle = openArchiveHandle(archiveID, archivePath);
+	if (handle.has_value()) {
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write64(messagePointer + 8, handle.value());
+	} else {
+		log("FS::OpenArchive: Failed to open archive with id = %d\n", archiveID);
+		mem.write32(messagePointer + 4, Result::Failure);
+	}
 }
 
 void FSService::openFileDirectly(u32 messagePointer) {
@@ -86,7 +123,7 @@ void FSService::openFileDirectly(u32 messagePointer) {
 		Helpers::panic("OpenFileDirectly: Failed to open archive with given path");
 	}
 
-	std::optional<Handle> handle = openFile(archive, filePath);
+	std::optional<Handle> handle = openFileHandle(archive, filePath);
 	if (!handle.has_value()) {
 		Helpers::panic("OpenFileDirectly: Failed to open file with given path");
 	} else {

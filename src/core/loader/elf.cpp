@@ -6,6 +6,8 @@
 using namespace ELFIO;
 
 std::optional<u32> Memory::loadELF(std::ifstream& file) {
+    loadedCXI = std::nullopt; // ELF files don't have a CXI, so set this to null
+
 	elfio reader;
 	if (!file.good() || !reader.load(file)) {
 		printf("Woops failed to load ELF\n");

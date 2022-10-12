@@ -1,13 +1,13 @@
 #pragma once
 #include "archive_base.hpp"
 
-class SelfNCCHArchive : public ArchiveBase {
+class SaveDataArchive : public ArchiveBase {
 
 public:
-	SelfNCCHArchive(Memory& mem) : ArchiveBase(mem) {}
+	SaveDataArchive(Memory& mem) : ArchiveBase(mem) {}
 
 	u64 getFreeBytes() override { return 0; }
-	const char* name() override { return "SelfNCCH"; }
+	const char* name() override { return "SaveData"; }
 
 	bool openFile(const FSPath& path) override;
 	ArchiveBase* openArchive(const FSPath& path) override;

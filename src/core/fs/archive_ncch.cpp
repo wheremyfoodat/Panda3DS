@@ -15,7 +15,7 @@ bool SelfNCCHArchive::openFile(const FSPath& path) {
 	return true;
 }
 
-ArchiveBase* SelfNCCHArchive::openArchive(FSPath& path) {
+ArchiveBase* SelfNCCHArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		printf("Invalid path type for SelfNCCH archive: %d\n", path.type);
 		return nullptr;
