@@ -98,6 +98,7 @@ class Kernel {
 	void getThreadPriority();
 	void releaseMutex();
 	void sendSyncRequest();
+	void setThreadPriority();
 	void signalEvent();
 	void svcCloseHandle();
 	void svcSleepThread();

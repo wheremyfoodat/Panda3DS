@@ -231,6 +231,33 @@ void Kernel::getThreadPriority() {
 	}
 }
 
+void Kernel::setThreadPriority() {
+	const Handle handle = regs[0];
+	const u32 priority = regs[1];
+	log("SetThreadPriority (handle = %X, priority = %X)\n", handle, priority);
+
+	if (priority > 0x3F) {
+		regs[0] = SVCResult::BadThreadPriority;
+		return;
+	}
+
+	if (handle == KernelHandles::CurrentThread) {
+		regs[0] = SVCResult::Success;
+		threads[currentThreadIndex].priority = priority;
+	} else {
+		auto object = getObject(handle, KernelObjectType::Thread);
+		if (object == nullptr) [[unlikely]] {
+			regs[0] = SVCResult::BadHandle;
+			return;
+		} else {
+			regs[0] = SVCResult::Success;
+			object->getData<Thread>()->priority = priority;
+		}
+	}
+
+	rescheduleThreads();
+}
+
 void Kernel::createMutex() {
 	bool locked = regs[1] != 0;
 	Helpers::panic("CreateMutex (initially locked: %s)\n", locked ? "yes" : "no");
