@@ -55,6 +55,7 @@ void Kernel::getResourceLimitCurrentValues() {
 	const Handle resourceLimit = regs[1];
 	u32 names = regs[2];  // Pointer to resources that we should return
 	u32 count = regs[3];  // Number of resources
+	logSVC("GetResourceLimitCurrentValues(values = %08X, handle = %X, names = %08X, count = %d)\n", values, resourceLimit, names, count);
 
 	const KernelObject* limit = getObject(resourceLimit, KernelObjectType::ResourceLimit);
 	if (limit == nullptr) [[unlikely]] {
@@ -62,7 +63,6 @@ void Kernel::getResourceLimitCurrentValues() {
 		return;
 	}
 
-	logSVC("GetResourceLimitCurrentValues(values = %08X, handle = %X, names = %08X, count = %d)\n", values, resourceLimit, names, count);
 	while (count != 0) {
 		const u32 name = mem.read32(names);
 		// TODO: Unsure if this is supposed to be s32 or u32. Shouldn't matter as the kernel can't create so many resources

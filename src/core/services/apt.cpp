@@ -5,8 +5,12 @@ namespace APTCommands {
 		GetLockHandle = 0x00010040,
 		Enable = 0x00030040,
 		ReceiveParameter = 0x000D0080,
+		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		AppletUtility = 0x004B00C2,
+		SetApplicationCpuTimeLimit = 0x004F0080,
+		GetApplicationCpuTimeLimit = 0x00500040,
+		CheckNew3DSApp = 0x01010000,
 		CheckNew3DS = 0x01020000
 	};
 }
@@ -25,17 +29,24 @@ namespace Result {
 	};
 }
 
-void APTService::reset() {}
+void APTService::reset() {
+	// Set the default CPU time limit to 30%. Seems safe, as this is what Metroid 2 uses by default
+	cpuTimeLimit = 30;
+}
 
 void APTService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case APTCommands::AppletUtility: appletUtility(messagePointer); break;
 		case APTCommands::CheckNew3DS: checkNew3DS(messagePointer); break;
+		case APTCommands::CheckNew3DSApp: checkNew3DSApp(messagePointer); break;
 		case APTCommands::Enable: enable(messagePointer); break;
+		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::ReceiveParameter: receiveParameter(messagePointer); break;
+		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
+		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
 		default: Helpers::panic("APT service requested. Command: %08X\n", command);
 	}
 }
@@ -55,6 +66,12 @@ void APTService::checkNew3DS(u32 messagePointer) {
 	log("APT::CheckNew3DS\n");
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, Model::Old3DS); // u8, Status (0 = Old 3DS, 1 = New 3DS)
+}
+
+// TODO: Figure out the slight way this differs from APT::CheckNew3DS
+void APTService::checkNew3DSApp(u32 messagePointer) {
+	log("APT::CheckNew3DSApp\n");
+	checkNew3DS(messagePointer);
 }
 
 void APTService::enable(u32 messagePointer) {
@@ -89,4 +106,28 @@ void APTService::receiveParameter(u32 messagePointer) {
 	mem.write32(messagePointer + 20, 0);
 	mem.write32(messagePointer + 24, 0);
 	mem.write32(messagePointer + 28, 0);
+}
+
+void APTService::replySleepQuery(u32 messagePointer) {
+	log("APT::ReplySleepQuery (Stubbed)\n");
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::setApplicationCpuTimeLimit(u32 messagePointer) {
+	u32 fixed = mem.read32(messagePointer + 4); // MUST be 1.
+	u32 percentage = mem.read32(messagePointer + 8); // CPU time percentage between 5% and 89%
+	log("APT::SetApplicationCpuTimeLimit (percentage = %d%%)\n", percentage);
+
+	if (percentage < 5 || percentage > 89 || fixed != 1) {
+		Helpers::panic("Invalid parameters passed to APT::SetApplicationCpuTimeLimit");
+	} else {
+		mem.write32(messagePointer + 4, Result::Success);
+		cpuTimeLimit = percentage;
+	}
+}
+
+void APTService::getApplicationCpuTimeLimit(u32 messagePointer) {
+	log("APT::GetApplicationCpuTimeLimit\n");
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, cpuTimeLimit);
 }
