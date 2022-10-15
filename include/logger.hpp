@@ -34,6 +34,7 @@ namespace Log {
     static Logger<true> gspGPULogger;
     static Logger<true> gspLCDLogger;
     static Logger<true> ndmLogger;
+    static Logger<true> ptmLogger;
     static Logger<true> srvLogger;
 
     #define MAKE_LOG_FUNCTION(functionName, logger)      \

@@ -11,6 +11,7 @@
 #include "services/gsp_gpu.hpp"
 #include "services/gsp_lcd.hpp"
 #include "services/ndm.hpp"
+#include "services/ptm.hpp"
 
 class Kernel;
 
@@ -27,6 +28,7 @@ class ServiceManager {
 	GPUService gsp_gpu;
 	LCDService gsp_lcd;
 	NDMService ndm;
+	PTMService ptm;
 
 	// "srv:" commands
 	void enableNotification(u32 messagePointer);

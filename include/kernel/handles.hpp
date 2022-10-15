@@ -10,17 +10,18 @@ namespace KernelHandles {
 		// Hardcoded handles
 		CurrentThread = 0xFFFF8000,  // Used by the original kernel
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
-		APT = 0xFFFF8002,            // App Title something service?
-		CFG = 0xFFFF8003,            // Console & region info
-		HID = 0xFFFF8004,            // Handles everything input-related including gyro
-		FS  = 0xFFFF8005,            // Filesystem service
-		GPU = 0xFFFF8006,            // GPU service
-		DSP = 0xFFFF8007,            // DSP service (Used for audio decoding and output)
-		LCD = 0xFFFF8008,            // LCD service (Used for configuring the displays)
-		NDM = 0xFFFF8009,            // ?????
+		APT,  // App Title something service?
+		CFG,  // CFG service (Console & region info)
+		HID,  // HID service (Handles everything input-related including gyro)
+		FS,   // Filesystem service
+		GPU,  // GPU service
+		DSP,  // DSP service (Used for audio decoding and output)
+		LCD,  // LCD service (Used for configuring the displays)
+		NDM,  // ?????
+		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 
 		MinServiceHandle = APT,
-		MaxServiceHandle = NDM,
+		MaxServiceHandle = PTM,
 
 		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
 		HIDSharedMemHandle,
@@ -56,6 +57,7 @@ namespace KernelHandles {
 			case GPU: return "GPU";
 			case LCD: return "LCD";
 			case NDM: return "NDM";
+			case PTM: return "PTM";
 			default: return "Unknown";
 		}
 	}

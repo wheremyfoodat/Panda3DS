@@ -2,7 +2,7 @@
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), apt(mem), cfg(mem), dsp(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID),
-	gsp_lcd(mem), ndm(mem) {}
+	gsp_lcd(mem), ndm(mem), ptm(mem) {}
 
 void ServiceManager::reset() {
 	apt.reset();
@@ -13,6 +13,7 @@ void ServiceManager::reset() {
 	gsp_gpu.reset();
 	gsp_lcd.reset();
 	ndm.reset();
+	ptm.reset();
 }
 
 // Match IPC messages to a "srv:" command based on their header
@@ -91,7 +92,9 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::LCD;
 	} else if (service == "ndm:u") {
 		handle = KernelHandles::NDM;
-	}else {
+	} else if (service == "ptm:u") {
+		handle = KernelHandles::PTM;
+	} else {
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
 	}
 
@@ -125,6 +128,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
+		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
 }
