@@ -17,6 +17,7 @@ namespace ServiceCommands {
 // Commands written to shared memory and processed by TriggerCmdReqQueue
 namespace GXCommands {
 	enum : u32 {
+		TriggerDMARequest = 0,
 		ProcessCommandList = 1,
 		MemoryFill = 2,
 		TriggerDisplayTransfer = 3,
@@ -223,6 +224,7 @@ void GPUService::processCommandBuffer() {
 				case GXCommands::ProcessCommandList: processCommandList(cmd); break;
 				case GXCommands::MemoryFill: memoryFill(cmd); break;
 				case GXCommands::TriggerDisplayTransfer: triggerDisplayTransfer(cmd); break;
+				case GXCommands::TriggerDMARequest: triggerDMARequest(cmd); break;
 				case GXCommands::FlushCacheRegions: flushCacheRegions(cmd); break;
 				default: Helpers::panic("GSP::GPU::ProcessCommands: Unknown cmd ID %d", cmdID);
 			}
@@ -260,6 +262,16 @@ void GPUService::memoryFill(u32* cmd) {
 void GPUService::triggerDisplayTransfer(u32* cmd) {
 	log("GSP::GPU::TriggerDisplayTransfer (Stubbed)\n");
 	requestInterrupt(GPUInterrupt::PPF); // Send "Display transfer finished" interrupt
+}
+
+void GPUService::triggerDMARequest(u32* cmd) {
+	u32 source = cmd[1];
+	u32 dest = cmd[2];
+	u32 size = cmd[3];
+	bool flush = cmd[7] == 1;
+
+	log("GSP::GPU::TriggerDMARequest (source = %08X, dest = %08X, size = %08X) (Unimplemented)\n", source, dest, size);
+	requestInterrupt(GPUInterrupt::DMA);
 }
 
 void GPUService::flushCacheRegions(u32* cmd) {

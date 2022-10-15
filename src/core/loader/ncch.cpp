@@ -9,6 +9,9 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
         return false;
     }
 
+    codeFile.clear();
+    saveData.clear();
+
     size = u64(*(u32*)&header[0x104]) * mediaUnit; // TODO: Maybe don't type pun because big endian will break
     exheaderSize = *(u32*)&header[0x180];
 
@@ -45,6 +48,9 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
         } else if (encrypted) {
             Helpers::panic("Encrypted NCSD file");
         }
+
+        const u64 saveDataSize = *(u64*)&exheader[0x1C0 + 0x0]; // Size of save data in bytes
+        saveData.resize(saveDataSize, 0xff);
 
         compressCode = (exheader[0xD] & 1) != 0;
         stackSize = *(u32*)&exheader[0x1C];

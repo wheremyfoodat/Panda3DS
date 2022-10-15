@@ -12,4 +12,10 @@ public:
 	bool openFile(const FSPath& path) override;
 	ArchiveBase* openArchive(const FSPath& path) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
+
+	// Returns whether the cart has a RomFS
+	bool hasRomFS() {
+		auto cxi = mem.getCXI();
+		return (cxi != nullptr && cxi->hasRomFS());
+	}
 };

@@ -47,6 +47,8 @@ struct NCCH {
 
     // Contents of the .code file in the ExeFS
     std::vector<u8> codeFile;
+    // Contains of the cart's save data
+    std::vector<u8> saveData;
 
     // Header: 0x200 + 0x800 byte NCCH header + exheadr
     // Returns true on success, false on failure
@@ -57,6 +59,7 @@ struct NCCH {
     bool hasExeFS() { return exeFS.size != 0; }
     bool hasRomFS() { return romFS.size != 0; }
     bool hasCode() { return codeFile.size() != 0; }
+    bool hasSaveData() { return saveData.size() != 0; }
 
 private:
     std::array<u8, 16> primaryKey = {}; // For exheader, ExeFS header and icons

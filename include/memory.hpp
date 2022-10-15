@@ -36,6 +36,8 @@ namespace VirtualAddrs {
 		TLSBase = 0xFF400000,
 		TLSSize = 0x1000,
 
+		VramStart = 0x1F000000,
+		VramSize = 0x00600000,
 		DSPMemStart = 0x1FF00000
 	};
 }

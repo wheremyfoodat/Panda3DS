@@ -9,7 +9,7 @@ namespace PathType {
         Empty = 1,
         Binary = 2,
         ASCII = 3,
-        UTF8 = 4,
+        UTF16 = 4,
     };
 }
 
@@ -68,7 +68,6 @@ struct ArchiveSession {
 
 class ArchiveBase {
 protected:
-    using Result = u32;
     using Handle = u32;
     Memory& mem;
 

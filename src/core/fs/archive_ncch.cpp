@@ -2,8 +2,13 @@
 #include <memory>
 
 bool SelfNCCHArchive::openFile(const FSPath& path) {
+	if (!hasRomFS()) {
+		printf("Tried to open a SelfNCCH file without a RomFS\n");
+		return false;
+	}
+
 	if (path.type != PathType::Binary) {
-		printf("Invalid SelfNCCH path type");
+		printf("Invalid SelfNCCH path type\n");
 		return false;
 	}
 
@@ -25,16 +30,17 @@ ArchiveBase* SelfNCCHArchive::openArchive(const FSPath& path) {
 }
 
 std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {
-	auto cxi = mem.getCXI();
-	if (cxi == nullptr) {
-		Helpers::panic("Tried to read file from non-existent CXI");
+	if (!hasRomFS()) {
+		Helpers::panic("Tried to read file from non-existent RomFS");
 		return std::nullopt;
 	}
 
-	if (!cxi->hasRomFS()) {
-		Helpers::panic("Tried to read from CXI without RomFS");
+	if (!file->isOpen) {
+		printf("Tried to read from closed SelfNCCH file session");
+		return std::nullopt;
 	}
 
+	auto cxi = mem.getCXI();
 	const u32 romFSSize = cxi->romFS.size;
 	const u32 romFSOffset = cxi->romFS.offset;
 	if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {

@@ -27,8 +27,10 @@ class FSService {
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path);
 
 	// Service commands
+	void closeArchive(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void openArchive(u32 messagePointer);
+	void openFile(u32 messagePointer);
 	void openFileDirectly(u32 messagePointer);
 
 public:

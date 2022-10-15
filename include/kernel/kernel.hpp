@@ -39,25 +39,6 @@ class Kernel {
 	// Top 8 bits are the major version, bottom 8 are the minor version
 	u16 kernelVersion = 0;
 
-	// Get pointer to the object with the specified handle
-	KernelObject* getObject(Handle handle) {
-		// Accessing an object that has not been created
-		if (handle >= objects.size()) [[unlikely]] {
-			return nullptr;
-		}
-
-		return &objects[handle];
-	}
-
-	// Get pointer to the object with the specified handle and type
-	KernelObject* getObject(Handle handle, KernelObjectType type) {
-		if (handle >= objects.size() || objects[handle].type != type) [[unlikely]] {
-			return nullptr;
-		}
-
-		return &objects[handle];
-	}
-
 	Handle makeArbiter();
 	Handle makeEvent(ResetType resetType);
 	Handle makeProcess(u32 id);
@@ -146,6 +127,25 @@ public:
 
 	std::vector<KernelObject>& getObjects() {
 		return objects;
+	}
+
+	// Get pointer to the object with the specified handle
+	KernelObject* getObject(Handle handle) {
+		// Accessing an object that has not been created
+		if (handle >= objects.size()) [[unlikely]] {
+			return nullptr;
+		}
+
+		return &objects[handle];
+	}
+
+	// Get pointer to the object with the specified handle and type
+	KernelObject* getObject(Handle handle, KernelObjectType type) {
+		if (handle >= objects.size() || objects[handle].type != type) [[unlikely]] {
+			return nullptr;
+		}
+
+		return &objects[handle];
 	}
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.requestGPUInterrupt(type); }
