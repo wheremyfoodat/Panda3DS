@@ -124,6 +124,10 @@ class Memory {
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
 
+	// https://www.3dbrew.org/wiki/Configuration_Memory#ENVINFO
+	// Report a retail unit without JTAG
+	static constexpr u32 envInfo = 1;
+
 public:
 	u16 kernelVersion = 0;
 	u32 usedUserMemory = 0;

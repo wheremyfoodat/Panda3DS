@@ -28,10 +28,16 @@ class FSService {
 
 	// Service commands
 	void closeArchive(u32 messagePointer);
+	void getPriority(u32 messagePointer);
 	void initialize(u32 messagePointer);
+	void initializeWithSdkVersion(u32 messagePointer);
 	void openArchive(u32 messagePointer);
 	void openFile(u32 messagePointer);
 	void openFileDirectly(u32 messagePointer);
+	void setPriority(u32 messagePointer);
+
+	// Used for set/get priority: Not sure what sort of priority this is referring to
+	u32 priority;
 
 public:
 	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), sdmc(mem), selfNcch(mem), kernel(kernel) {}

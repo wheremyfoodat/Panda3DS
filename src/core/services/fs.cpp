@@ -7,7 +7,10 @@ namespace FSCommands {
 		OpenFile = 0x080201C2,
 		OpenFileDirectly = 0x08030204,
 		OpenArchive = 0x080C00C2,
-		CloseArchive = 0x080E0080
+		CloseArchive = 0x080E0080,
+		InitializeWithSdkVersion = 0x08610042,
+		SetPriority = 0x08620040,
+		GetPriority = 0x08630000
 	};
 }
 
@@ -18,7 +21,9 @@ namespace Result {
 	};
 }
 
-void FSService::reset() {}
+void FSService::reset() {
+	priority = 0;
+}
 
 ArchiveBase* FSService::getArchiveFromID(u32 id) {
 	switch (id) {
@@ -69,10 +74,13 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
+		case FSCommands::GetPriority: getPriority(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
+		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
 		case FSCommands::OpenArchive: openArchive(messagePointer); break;
 		case FSCommands::OpenFile: openFile(messagePointer); break;
 		case FSCommands::OpenFileDirectly: openFileDirectly(messagePointer); break;
+		case FSCommands::SetPriority: setPriority(messagePointer); break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
 }
@@ -80,6 +88,14 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 void FSService::initialize(u32 messagePointer) {
 	log("FS::Initialize\n");
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// TODO: Figure out how this is different from Initialize
+void FSService::initializeWithSdkVersion(u32 messagePointer) {
+	const auto version = mem.read32(messagePointer + 4);
+	log("FS::InitializeWithSDKVersion(version = %d)\n", version);
+
+	initialize(messagePointer);
 }
 
 void FSService::closeArchive(u32 messagePointer) {
@@ -179,4 +195,19 @@ void FSService::openFileDirectly(u32 messagePointer) {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write32(messagePointer + 12, handle.value());
 	}
+}
+
+void FSService::getPriority(u32 messagePointer) {
+	log("FS::GetPriority\n");
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, priority);
+}
+
+void FSService::setPriority(u32 messagePointer) {
+	const u32 value = mem.read32(messagePointer + 4);
+	log("FS::SetPriority (priority = %d)\n", value);
+	
+	mem.write32(messagePointer + 4, Result::Success);
+	priority = value;
 }

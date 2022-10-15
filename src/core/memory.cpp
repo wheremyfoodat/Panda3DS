@@ -74,6 +74,7 @@ u8 Memory::read8(u32 vaddr) {
 	}
 	else {
 		switch (vaddr) {
+			case ConfigMem::EnvInfo: return envInfo;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
 			case ConfigMem::KernelVersionMajor: return u8(kernelVersion >> 8);
 			case ConfigMem::LedState3D: return 1; // Report the 3D LED as always off (non-zero) for now
