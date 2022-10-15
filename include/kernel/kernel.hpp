@@ -95,6 +95,7 @@ class Kernel {
 	void getResourceLimitCurrentValues();
 	void getSystemTick();
 	void getThreadID();
+	void getThreadPriority();
 	void releaseMutex();
 	void sendSyncRequest();
 	void signalEvent();

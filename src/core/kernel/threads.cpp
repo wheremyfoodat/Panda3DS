@@ -213,6 +213,24 @@ void Kernel::getThreadID() {
 	regs[1] = thread->getData<Thread>()->index;
 }
 
+void Kernel::getThreadPriority() {
+	const Handle handle = regs[1];
+	log("GetThreadPriority (handle = %X)\n", handle);
+
+	if (handle == KernelHandles::CurrentThread) {
+		regs[0] = SVCResult::Success;
+		regs[1] = threads[currentThreadIndex].priority;
+	} else {
+		auto object = getObject(handle, KernelObjectType::Thread);
+		if (object == nullptr) [[unlikely]] {
+			regs[0] = SVCResult::BadHandle;
+		} else {
+			regs[0] = SVCResult::Success;
+			regs[1] = object->getData<Thread>()->priority;
+		}
+	}
+}
+
 void Kernel::createMutex() {
 	bool locked = regs[1] != 0;
 	Helpers::panic("CreateMutex (initially locked: %s)\n", locked ? "yes" : "no");
