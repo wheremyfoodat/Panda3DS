@@ -3,6 +3,7 @@
 // Commands used with SendSyncRequest targetted to the GSP::GPU service
 namespace ServiceCommands {
 	enum : u32 {
+		SetAxiConfigQoSMode = 0x00100040,
 		AcquireRight = 0x00160042,
 		RegisterInterruptRelayQueue = 0x00130042,
 		WriteHwRegs = 0x00010082,
@@ -43,9 +44,10 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::AcquireRight: acquireRight(messagePointer); break;
 		case ServiceCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
+		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
 		case ServiceCommands::SetInternalPriorities: setInternalPriorities(messagePointer); break;
 		case ServiceCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
-		case ServiceCommands::TriggerCmdReqQueue: triggerCmdReqQueue(messagePointer); break;
+		case ServiceCommands::TriggerCmdReqQueue: [[likely]] triggerCmdReqQueue(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
 ;		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
@@ -199,6 +201,12 @@ void GPUService::triggerCmdReqQueue(u32 messagePointer) {
 }
 
 // Seems to be completely undocumented, probably not very important or useful
+void GPUService::setAxiConfigQoSMode(u32 messagePointer) {
+	log("GSP::GPU::SetAxiConfigQoSMode\n");
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// Seems to also be completely undocumented
 void GPUService::setInternalPriorities(u32 messagePointer) {
 	log("GSP::GPU::SetInternalPriorities\n");
 	mem.write32(messagePointer + 4, Result::Success);
