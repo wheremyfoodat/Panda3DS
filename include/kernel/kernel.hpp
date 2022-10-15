@@ -82,6 +82,7 @@ class Kernel {
 	void clearEvent();
 	void createAddressArbiter();
 	void createEvent();
+	void createMutex();
 	void createThread();
 	void controlMemory();
 	void duplicateHandle();

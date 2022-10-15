@@ -213,6 +213,13 @@ void Kernel::getThreadID() {
 	regs[1] = thread->getData<Thread>()->index;
 }
 
+void Kernel::createMutex() {
+	bool locked = regs[1] != 0;
+	Helpers::panic("CreateMutex (initially locked: %s)\n", locked ? "yes" : "no");
+
+	regs[0] = SVCResult::Success;
+}
+
 void Kernel::releaseMutex() {
 	const Handle handle = regs[0];
 
