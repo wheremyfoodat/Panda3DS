@@ -23,7 +23,9 @@ namespace SVCResult {
 }
 
 enum class KernelObjectType : u8 {
-    AddressArbiter, Archive, Event, File, Port, Process, ResourceLimit, Session, Thread, Dummy
+    AddressArbiter, Archive, File, Port, Process, ResourceLimit, Session, Dummy,
+    // Bundle waitable objects together in the enum to let the compiler optimize certain checks better
+    Event, Mutex, Semaphore, Thread
 };
 
 enum class ResourceLimitCategory : int {
@@ -95,6 +97,8 @@ enum class ThreadStatus {
     Ready,       // Ready to run
     WaitArbiter, // Waiting on an address arbiter
     WaitSleep,   // Waiting due to a SleepThread SVC
+    WaitSync1,   // Waiting for AT LEAST one sync object in its wait list to be ready
+    WaitSyncAll, // Waiting for ALL sync objects in its wait list to be ready
     WaitIPC,     // Waiting for the reply from an IPC request
     Dormant,     // Created but not yet made ready
     Dead         // Run to completion, or forcefully terminated
@@ -136,6 +140,8 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
         case KernelObjectType::Process: return "process";
         case KernelObjectType::ResourceLimit: return "resource limit";
         case KernelObjectType::Session: return "session";
+        case KernelObjectType::Mutex: return "mutex";
+        case KernelObjectType::Semaphore: return "semaphore";
         case KernelObjectType::Thread: return "thread";
         case KernelObjectType::Dummy: return "dummy";
         default: return "unknown";
