@@ -27,12 +27,14 @@ namespace Log {
 
     // Service loggers
     static Logger<true> aptLogger;
+    static Logger<true> cecdLogger;
     static Logger<true> cfgLogger;
     static Logger<true> dspServiceLogger;
     static Logger<true> fsLogger;
     static Logger<true> hidLogger;
     static Logger<true> gspGPULogger;
     static Logger<true> gspLCDLogger;
+    static Logger<true> micLogger;
     static Logger<true> ndmLogger;
     static Logger<true> ptmLogger;
     static Logger<true> srvLogger;

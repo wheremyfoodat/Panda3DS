@@ -11,12 +11,14 @@ namespace KernelHandles {
 		CurrentThread = 0xFFFF8000,  // Used by the original kernel
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
 		APT,  // App Title something service?
+		CECD, // Streetpass stuff?
 		CFG,  // CFG service (Console & region info)
 		HID,  // HID service (Handles everything input-related including gyro)
 		FS,   // Filesystem service
 		GPU,  // GPU service
 		DSP,  // DSP service (Used for audio decoding and output)
 		LCD,  // LCD service (Used for configuring the displays)
+		MIC,  // MIC service (Controls the microphone)
 		NDM,  // ?????
 		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 
@@ -50,12 +52,14 @@ namespace KernelHandles {
 	static const char* getServiceName(Handle handle) {
 		switch (handle) {
 			case APT: return "APT";
+			case CECD: return "CECD";
 			case CFG: return "CFG";
 			case HID: return "HID";
 			case FS: return "FS";
 			case DSP: return "DSP";
 			case GPU: return "GPU";
 			case LCD: return "LCD";
+			case MIC: return "MIC";
 			case NDM: return "NDM";
 			case PTM: return "PTM";
 			default: return "Unknown";

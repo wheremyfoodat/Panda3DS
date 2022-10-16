@@ -4,12 +4,14 @@
 #include "logger.hpp"
 #include "memory.hpp"
 #include "services/apt.hpp"
+#include "services/cecd.hpp"
 #include "services/cfg.hpp"
 #include "services/dsp.hpp"
 #include "services/hid.hpp"
 #include "services/fs.hpp"
 #include "services/gsp_gpu.hpp"
 #include "services/gsp_lcd.hpp"
+#include "services/mic.hpp"
 #include "services/ndm.hpp"
 #include "services/ptm.hpp"
 
@@ -21,12 +23,14 @@ class ServiceManager {
 	MAKE_LOG_FUNCTION(log, srvLogger)
 
 	APTService apt;
+	CECDService cecd;
 	CFGService cfg;
 	DSPService dsp;
 	HIDService hid;
 	FSService fs;
 	GPUService gsp_gpu;
 	LCDService gsp_lcd;
+	MICService mic;
 	NDMService ndm;
 	PTMService ptm;
 

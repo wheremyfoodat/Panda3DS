@@ -1,17 +1,19 @@
 #include "services/service_manager.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), apt(mem), cfg(mem), dsp(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID),
-	gsp_lcd(mem), ndm(mem), ptm(mem) {}
+	: regs(regs), mem(mem), apt(mem), cecd(mem), cfg(mem), dsp(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID),
+	gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
 
 void ServiceManager::reset() {
 	apt.reset();
+	cecd.reset();
 	cfg.reset();
 	dsp.reset();
 	hid.reset();
 	fs.reset();
 	gsp_gpu.reset();
 	gsp_lcd.reset();
+	mic.reset();
 	ndm.reset();
 	ptm.reset();
 }
@@ -78,6 +80,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::APT;
 	} else if (service == "APT:U") {
 		handle = KernelHandles::APT;
+	} else if (service == "cecd:u") {
+		handle = KernelHandles::CECD;
 	} else if (service == "cfg:u") {
 		handle = KernelHandles::CFG;
 	} else if (service == "dsp::DSP") {
@@ -90,6 +94,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::GPU;
 	} else if (service == "gsp::Lcd") {
 		handle = KernelHandles::LCD;
+	} else if (service == "mic:u") {
+		handle = KernelHandles::MIC;
 	} else if (service == "ndm:u") {
 		handle = KernelHandles::NDM;
 	} else if (service == "ptm:u") {
@@ -121,12 +127,14 @@ void ServiceManager::receiveNotification(u32 messagePointer) {
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
+		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DSP: dsp.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
 		case KernelHandles::FS: fs.handleSyncRequest(messagePointer); break;
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
+		case KernelHandles::MIC: mic.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
