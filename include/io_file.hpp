@@ -79,6 +79,6 @@ public:
     }
 
     bool rewind() {
-        return seek(0, 0);
+        return seek(0, SEEK_SET);
     }
 };
