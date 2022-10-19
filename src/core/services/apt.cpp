@@ -82,7 +82,10 @@ void APTService::enable(u32 messagePointer) {
 void APTService::getLockHandle(u32 messagePointer) {
 	log("APT::GetLockHandle (Failure)\n");
 	mem.write32(messagePointer + 4, Result::Failure); // Result code
+	mem.write32(messagePointer + 8, 0); // AppletAttr
+	mem.write32(messagePointer + 12, 0); // APT State (bit0 = Power Button State, bit1 = Order To Close State)
 	mem.write32(messagePointer + 16, 0); // Translation descriptor
+	mem.write32(messagePointer + 20, 0x34563456); // Lock handle
 }
 
 // This apparently does nothing on the original kernel either?
