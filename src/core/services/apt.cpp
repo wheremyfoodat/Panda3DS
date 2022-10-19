@@ -87,7 +87,7 @@ void APTService::getLockHandle(u32 messagePointer) {
 
 // This apparently does nothing on the original kernel either?
 void APTService::notifyToWait(u32 messagePointer) {
-	log("APT::NotifyToWat\n");
+	log("APT::NotifyToWait\n");
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
