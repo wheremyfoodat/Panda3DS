@@ -64,6 +64,8 @@ class Kernel {
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
 	u32 getTLSPointer();
 
+	bool isWaitable(const KernelObject* object);
+
 	// Functions for the err:f port
 	void handleErrorSyncRequest(u32 messagePointer);
 	void throwError(u32 messagePointer);

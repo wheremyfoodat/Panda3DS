@@ -13,6 +13,7 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 		threads[i].index = i;
 		threads[i].tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
 		threads[i].status = ThreadStatus::Dead;
+		threads[i].waitList.reserve(10); // Reserve some space for the wait list to avoid further memory allocs later
 	}
 
 	setVersion(1, 69);
@@ -101,6 +102,7 @@ void Kernel::reset() {
 
 	for (auto& t : threads) {
 		t.status = ThreadStatus::Dead;
+		t.waitList.clear();
 	}
 
 	for (auto& object : objects) {

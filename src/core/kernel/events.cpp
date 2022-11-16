@@ -1,4 +1,5 @@
 #include "kernel.hpp"
+#include "cpu.hpp"
 
 const char* Kernel::resetTypeToString(u32 type) {
 	switch (type) {
@@ -67,41 +68,68 @@ void Kernel::signalEvent() {
 void Kernel::waitSynchronization1() {
 	const Handle handle = regs[0];
 	const s64 ns = s64(u64(regs[1]) | (u64(regs[2]) << 32));
-	const auto event = getObject(handle, KernelObjectType::Event);
+	logSVC("WaitSynchronization1(handle = %X, ns = %lld)\n", handle, ns);
 
-	if (event == nullptr) [[unlikely]] {
+	const auto object = getObject(handle);
+
+	if (object == nullptr) [[unlikely]] {
 		Helpers::panic("WaitSynchronization1: Bad event handle");
 		regs[0] = SVCResult::BadHandle;
 		return;
 	}
 
-	logSVC("WaitSynchronization1(handle = %X, ns = %lld) (STUBBED)\n", handle, ns);
+	if (!isWaitable(object)) [[unlikely]] {
+		Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", kernelObjectTypeToString(object->type), handle);
+	}
+
 	regs[0] = SVCResult::Success;
+
+	auto& t = threads[currentThreadIndex];
+	t.waitList.resize(1);
+	t.status = ThreadStatus::WaitSync1;
+	t.sleepTick = cpu.getTicks();
+	t.waitingNanoseconds = ns;
+	t.waitList[0] = handle;
+	switchToNextThread();
 }
 
 // Result WaitSynchronizationN(s32* out, Handle* handles, s32 handlecount, bool waitAll, s64 timeout_nanoseconds)
 void Kernel::waitSynchronizationN() {
 	// TODO: Are these arguments even correct?
-	u32 ns1 = regs[0];
+	s32 ns1 = regs[0];
 	u32 handles = regs[1];
 	u32 handleCount = regs[2];
 	bool waitAll = regs[3] != 0;
 	u32 ns2 = regs[4];
-	u32 out = regs[5];
+	s32 pointer = regs[5];
+	s64 ns = s64(ns1) | (s64(ns2) << 32);
 
-	logSVC("WaitSynchronizationN (STUBBED)\n");
-	regs[0] = SVCResult::Success;
+	logSVC("WaitSynchronizationN (handle pointer: %08X, count: %d)\n", handles, handleCount);
+	ThreadStatus newStatus = waitAll ? ThreadStatus::WaitSyncAll : ThreadStatus::WaitSync1;
 
-	printf("Hacky WaitSync stuff for OoT triggered!!!\n");
-	threads[currentThreadIndex].status = ThreadStatus::Ready;
+	auto& t = threads[currentThreadIndex];
+	t.waitList.resize(handleCount);
+	
+	for (uint i = 0; i < handleCount; i++) {
+		Handle handle = mem.read32(handles);
+		handles += sizeof(Handle);
 
-	while (1) {
-		auto index = rand() % threadCount;
-		auto& thread = threads[index];
+		t.waitList[i] = handle;
 
-		if (canThreadRun(thread)) {
-			switchThread(rand() % threadCount);
-			break;
+		auto object = getObject(handle);
+		if (object == nullptr) [[unlikely]] {
+			Helpers::panic("WaitSynchronizationN: Bad object handle");
+			regs[0] = SVCResult::BadHandle;
+			return;
+		}
+
+		if (!isWaitable(object)) [[unlikely]] {
+			Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", kernelObjectTypeToString(object->type), handle);
 		}
 	}
+
+	regs[0] = SVCResult::Success;
+	t.status = newStatus;
+	t.waitingNanoseconds = ns;
+	switchToNextThread();
 }

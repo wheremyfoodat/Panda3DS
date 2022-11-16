@@ -23,9 +23,9 @@ namespace SVCResult {
 }
 
 enum class KernelObjectType : u8 {
-    AddressArbiter, Archive, File, Port, Process, ResourceLimit, Session, Dummy,
+    AddressArbiter, Archive, File, Process, ResourceLimit, Session, Dummy,
     // Bundle waitable objects together in the enum to let the compiler optimize certain checks better
-    Event, Mutex, Semaphore, Thread
+    Event, Mutex, Port, Semaphore, Timer, Thread
 };
 
 enum class ResourceLimitCategory : int {
@@ -121,6 +121,8 @@ struct Thread {
     s64 waitingNanoseconds;
     // The tick this thread went to sleep on
     u64 sleepTick;
+    // For WaitSynchronization: A vector of objects this thread is waiting for
+    std::vector<Handle> waitList;
 
     // Thread context used for switching between threads
     std::array<u32, 16> gprs;

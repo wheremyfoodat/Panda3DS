@@ -46,7 +46,7 @@ void Kernel::sortThreads() {
 bool Kernel::canThreadRun(const Thread& t) {
 	if (t.status == ThreadStatus::Ready) {
 		return true;
-	} else if (t.status == ThreadStatus::WaitSleep) {
+	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAll) {
 		const u64 elapsedTicks = cpu.getTicks() - t.sleepTick;
 
 		constexpr double ticksPerSec = double(CPU::ticksPerSec);
@@ -260,9 +260,10 @@ void Kernel::setThreadPriority() {
 
 void Kernel::createMutex() {
 	bool locked = regs[1] != 0;
-	Helpers::panic("CreateMutex (initially locked: %s)\n", locked ? "yes" : "no");
+//	Helpers::panic("CreateMutex (initially locked: %s)\n", locked ? "yes" : "no");
 
 	regs[0] = SVCResult::Success;
+	regs[1] = makeObject(KernelObjectType::Mutex);
 }
 
 void Kernel::releaseMutex() {
@@ -270,4 +271,14 @@ void Kernel::releaseMutex() {
 
 	logSVC("ReleaseMutex (handle = %x) (STUBBED)\n", handle);
 	regs[0] = SVCResult::Success;
+}
+
+// Returns whether an object is waitable or not
+// The KernelObject type enum is arranged in a specific order in kernel_types.hpp so this
+// can simply compile to a fast sub+cmp+set despite looking slow
+bool Kernel::isWaitable(const KernelObject* object) {
+	auto type = object->type;
+	using enum KernelObjectType;
+
+	return type == Event || type == Mutex || type == Port || type == Semaphore || type == Timer || type == Thread;
 }

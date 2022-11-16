@@ -80,8 +80,8 @@ void APTService::enable(u32 messagePointer) {
 }
 
 void APTService::getLockHandle(u32 messagePointer) {
-	log("APT::GetLockHandle (Failure)\n");
-	mem.write32(messagePointer + 4, Result::Failure); // Result code
+	log("APT::GetLockHandle");
+	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // AppletAttr
 	mem.write32(messagePointer + 12, 0); // APT State (bit0 = Power Button State, bit1 = Order To Close State)
 	mem.write32(messagePointer + 16, 0); // Translation descriptor
