@@ -150,6 +150,13 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
     }
 }
 
+struct Mutex {
+    Handle ownerThread = 0; // Index of the thread that holds the mutex if it's locked
+    bool locked;
+
+    Mutex(bool lock = false) : locked(lock) {}
+};
+
 // Generic kernel object class
 struct KernelObject {
     Handle handle = 0; // A u32 the OS will use to identify objects
@@ -165,5 +172,9 @@ struct KernelObject {
     template <typename T>
     T* getData() {
         return static_cast<T*>(data);
+    }
+
+    const char* getTypeName() {
+        return kernelObjectTypeToString(type);
     }
 };

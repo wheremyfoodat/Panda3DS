@@ -46,6 +46,10 @@ class Kernel {
 	Handle makeSession(Handle port);
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
 
+public:
+	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
+
+private:
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThread(s64 ns);
 	void sleepThreadOnArbiter(u32 waitingAddress);

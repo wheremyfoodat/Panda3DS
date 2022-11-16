@@ -137,6 +137,18 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u
 	return ret;
 }
 
+Handle Kernel::makeMutex(bool locked) {
+	Handle ret = makeObject(KernelObjectType::Mutex);
+	objects[ret].data = new Mutex(locked);
+
+	// If the mutex is initially locked, store the index of the thread that owns it
+	if (locked) {
+		objects[ret].getData<Mutex>()->ownerThread = currentThreadIndex;
+	}
+
+	return ret;
+}
+
 void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	Thread& t = threads[currentThreadIndex];
 	t.status = ThreadStatus::WaitArbiter;
@@ -260,10 +272,9 @@ void Kernel::setThreadPriority() {
 
 void Kernel::createMutex() {
 	bool locked = regs[1] != 0;
-//	Helpers::panic("CreateMutex (initially locked: %s)\n", locked ? "yes" : "no");
 
 	regs[0] = SVCResult::Success;
-	regs[1] = makeObject(KernelObjectType::Mutex);
+	regs[1] = makeMutex(locked);
 }
 
 void Kernel::releaseMutex() {

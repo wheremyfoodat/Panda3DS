@@ -1,4 +1,5 @@
 #include "services/apt.hpp"
+#include "kernel.hpp"
 
 namespace APTCommands {
 	enum : u32 {
@@ -32,6 +33,8 @@ namespace Result {
 void APTService::reset() {
 	// Set the default CPU time limit to 30%. Seems safe, as this is what Metroid 2 uses by default
 	cpuTimeLimit = 30;
+
+	lockHandle = std::nullopt;
 }
 
 void APTService::handleSyncRequest(u32 messagePointer) {
@@ -80,12 +83,18 @@ void APTService::enable(u32 messagePointer) {
 }
 
 void APTService::getLockHandle(u32 messagePointer) {
-	log("APT::GetLockHandle");
+	log("APT::GetLockHandle\n");
+
+	// Create a lock handle if none exists
+	if (!lockHandle.has_value() || kernel.getObject(lockHandle.value(), KernelObjectType::Mutex) == nullptr) {
+		lockHandle = kernel.makeMutex();
+	}
+
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // AppletAttr
 	mem.write32(messagePointer + 12, 0); // APT State (bit0 = Power Button State, bit1 = Order To Close State)
 	mem.write32(messagePointer + 16, 0); // Translation descriptor
-	mem.write32(messagePointer + 20, 0x34563456); // Lock handle
+	mem.write32(messagePointer + 20, lockHandle.value()); // Lock handle
 }
 
 // This apparently does nothing on the original kernel either?

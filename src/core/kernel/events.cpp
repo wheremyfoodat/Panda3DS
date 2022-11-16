@@ -79,7 +79,7 @@ void Kernel::waitSynchronization1() {
 	}
 
 	if (!isWaitable(object)) [[unlikely]] {
-		Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", kernelObjectTypeToString(object->type), handle);
+		Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", object->getTypeName(), handle);
 	}
 
 	regs[0] = SVCResult::Success;
@@ -124,7 +124,7 @@ void Kernel::waitSynchronizationN() {
 		}
 
 		if (!isWaitable(object)) [[unlikely]] {
-			Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", kernelObjectTypeToString(object->type), handle);
+			Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", object->getTypeName(), handle);
 		}
 	}
 

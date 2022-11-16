@@ -1,7 +1,7 @@
 #include "services/service_manager.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), apt(mem), cecd(mem), cfg(mem), dsp(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID),
+	: regs(regs), mem(mem), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID),
 	gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
 
 void ServiceManager::reset() {

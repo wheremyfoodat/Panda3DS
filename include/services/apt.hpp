@@ -1,12 +1,20 @@
 #pragma once
+#include <optional>
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
 
+// Yay, more circular dependencies
+class Kernel;
+
 class APTService {
 	Handle handle = KernelHandles::APT;
 	Memory& mem;
+	Kernel& kernel;
+
+	std::optional<Handle> lockHandle = std::nullopt;
+
 	MAKE_LOG_FUNCTION(log, aptLogger)
 
 	// Service commands
@@ -25,7 +33,7 @@ class APTService {
 	u32 cpuTimeLimit;
 
 public:
-	APTService(Memory& mem) : mem(mem) {}
+	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };
