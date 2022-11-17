@@ -23,21 +23,18 @@ namespace Helpers {
         va_start(args, fmt);
         std::cout << termcolor::on_red << "[FATAL] ";
         std::vprintf (fmt, args);
-        std::cout << termcolor::reset;
-        std::cout << std::endl;
+        std::cout << termcolor::reset << "\n";
         va_end(args);
 
         exit(1);
     }
 
     static void warn(const char* fmt, ...) {
-        return;
         std::va_list args;
         va_start(args, fmt);
         std::cout << termcolor::on_red << "[Warning] ";
         std::vprintf (fmt, args);
-        std::cout << termcolor::reset;
-        std::cout << "\n";
+        std::cout << termcolor::reset << "\n";
         va_end(args);
     }
 
