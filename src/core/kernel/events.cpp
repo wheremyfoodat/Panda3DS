@@ -73,7 +73,7 @@ void Kernel::waitSynchronization1() {
 	const auto object = getObject(handle);
 
 	if (object == nullptr) [[unlikely]] {
-		Helpers::panic("WaitSynchronization1: Bad event handle");
+		Helpers::panic("WaitSynchronization1: Bad event handle %X\n", handle);
 		regs[0] = SVCResult::BadHandle;
 		return;
 	}
@@ -104,7 +104,7 @@ void Kernel::waitSynchronizationN() {
 	s32 pointer = regs[5];
 	s64 ns = s64(ns1) | (s64(ns2) << 32);
 
-	logSVC("WaitSynchronizationN (handle pointer: %08X, count: %d)\n", handles, handleCount);
+	logSVC("WaitSynchronizationN (handle pointer: %08X, count: %d, timeout = %lld)\n", handles, handleCount, ns);
 	ThreadStatus newStatus = waitAll ? ThreadStatus::WaitSyncAll : ThreadStatus::WaitSync1;
 
 	auto& t = threads[currentThreadIndex];
@@ -118,7 +118,7 @@ void Kernel::waitSynchronizationN() {
 
 		auto object = getObject(handle);
 		if (object == nullptr) [[unlikely]] {
-			Helpers::panic("WaitSynchronizationN: Bad object handle");
+			Helpers::panic("WaitSynchronizationN: Bad object handle %X\n", handle);
 			regs[0] = SVCResult::BadHandle;
 			return;
 		}
@@ -131,5 +131,6 @@ void Kernel::waitSynchronizationN() {
 	regs[0] = SVCResult::Success;
 	t.status = newStatus;
 	t.waitingNanoseconds = ns;
+	t.sleepTick = cpu.getTicks();
 	switchToNextThread();
 }

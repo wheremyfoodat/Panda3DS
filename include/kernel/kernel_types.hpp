@@ -118,7 +118,7 @@ struct Thread {
     u32 waitingAddress;
 
     // The nanoseconds until a thread wakes up from being asleep or from timing out while waiting on an arbiter
-    s64 waitingNanoseconds;
+    u64 waitingNanoseconds;
     // The tick this thread went to sleep on
     u64 sleepTick;
     // For WaitSynchronization: A vector of objects this thread is waiting for
@@ -155,6 +155,13 @@ struct Mutex {
     bool locked;
 
     Mutex(bool lock = false) : locked(lock) {}
+};
+
+struct Semaphore {
+    u32 initialCount;
+    u32 maximumCount;
+
+    Semaphore(u32 initialCount, u32 maximumCount) : initialCount(initialCount), maximumCount(maximumCount) {}
 };
 
 // Generic kernel object class

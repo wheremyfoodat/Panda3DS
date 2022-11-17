@@ -1,8 +1,11 @@
 #include "services/service_manager.hpp"
+#include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem), hid(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID),
-	gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
+	: regs(regs), mem(mem), kernel(kernel), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem), hid(mem), 
+	fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
+
+static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
 void ServiceManager::reset() {
 	apt.reset();
@@ -16,6 +19,8 @@ void ServiceManager::reset() {
 	mic.reset();
 	ndm.reset();
 	ptm.reset();
+
+	notificationSemaphore = std::nullopt;
 }
 
 // Match IPC messages to a "srv:" command based on their header
@@ -109,12 +114,17 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 }
 
 void ServiceManager::enableNotification(u32 messagePointer) {
-	log("srv::EnableNotification() (STUBBED)\n");
+	log("srv::EnableNotification()\n");
+
+	// Make a semaphore for notifications if none exists currently
+	if (!notificationSemaphore.has_value() || kernel.getObject(notificationSemaphore.value(), KernelObjectType::Semaphore) == nullptr) {
+		notificationSemaphore = kernel.makeSemaphore(0, MAX_NOTIFICATION_COUNT);
+	}
 
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // Translation descriptor
-	// TODO: Unstub. Handle to semaphore signaled on process notification
-	mem.write32(messagePointer + 12, 0x69696979);
+	// Handle to semaphore signaled on process notification
+	mem.write32(messagePointer + 12, notificationSemaphore.value());
 }
 
 void ServiceManager::receiveNotification(u32 messagePointer) {

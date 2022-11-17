@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
-#include "helpers.hpp"
+#include <optional>
+#include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
 #include "services/apt.hpp"
@@ -15,11 +16,16 @@
 #include "services/ndm.hpp"
 #include "services/ptm.hpp"
 
+// More circular dependencies!!
 class Kernel;
 
 class ServiceManager {
 	std::array<u32, 16>& regs;
 	Memory& mem;
+	Kernel& kernel;
+
+	std::optional<Handle> notificationSemaphore;
+
 	MAKE_LOG_FUNCTION(log, srvLogger)
 
 	APTService apt;

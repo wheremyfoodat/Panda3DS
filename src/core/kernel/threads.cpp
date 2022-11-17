@@ -82,7 +82,8 @@ void Kernel::switchToNextThread() {
 	std::optional<int> newThreadIndex = getNextThread();
 	
 	if (!newThreadIndex.has_value()) {
-		Helpers::panic("Kernel tried to switch to the next thread but none found");
+		Helpers::warn("Kernel tried to switch to the next thread but none found. Switching to thread 0\n");
+		switchThread(0);
 	} else {
 		switchThread(newThreadIndex.value());
 	}
@@ -145,6 +146,13 @@ Handle Kernel::makeMutex(bool locked) {
 	if (locked) {
 		objects[ret].getData<Mutex>()->ownerThread = currentThreadIndex;
 	}
+
+	return ret;
+}
+
+Handle Kernel::makeSemaphore(u32 initialCount, u32 maximumCount) {
+	Handle ret = makeObject(KernelObjectType::Semaphore);
+	objects[ret].data = new Semaphore(initialCount, maximumCount);
 
 	return ret;
 }

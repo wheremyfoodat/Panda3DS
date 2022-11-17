@@ -48,6 +48,7 @@ class Kernel {
 
 public:
 	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
+	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
 
 private:
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
