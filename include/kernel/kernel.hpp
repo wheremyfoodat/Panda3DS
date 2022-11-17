@@ -40,13 +40,13 @@ class Kernel {
 	u16 kernelVersion = 0;
 
 	Handle makeArbiter();
-	Handle makeEvent(ResetType resetType);
 	Handle makeProcess(u32 id);
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
 
 public:
+	Handle makeEvent(ResetType resetType); // Needs to be public to be accessible to the APT/HID services
 	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
 	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
 

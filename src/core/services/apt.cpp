@@ -4,6 +4,7 @@
 namespace APTCommands {
 	enum : u32 {
 		GetLockHandle = 0x00010040,
+		Initialize = 0x00020080,
 		Enable = 0x00030040,
 		ReceiveParameter = 0x000D0080,
 		ReplySleepQuery = 0x003E0080,
@@ -34,7 +35,10 @@ void APTService::reset() {
 	// Set the default CPU time limit to 30%. Seems safe, as this is what Metroid 2 uses by default
 	cpuTimeLimit = 30;
 
+	// Reset the handles for the various service objects
 	lockHandle = std::nullopt;
+	notificationEvent = std::nullopt;
+	resumeEvent = std::nullopt;
 }
 
 void APTService::handleSyncRequest(u32 messagePointer) {
@@ -44,6 +48,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::CheckNew3DS: checkNew3DS(messagePointer); break;
 		case APTCommands::CheckNew3DSApp: checkNew3DSApp(messagePointer); break;
 		case APTCommands::Enable: enable(messagePointer); break;
+		case APTCommands::Initialize: initialize(messagePointer); break;
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
@@ -80,6 +85,18 @@ void APTService::checkNew3DSApp(u32 messagePointer) {
 void APTService::enable(u32 messagePointer) {
 	log("APT::Enable\n");
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::initialize(u32 messagePointer) {
+	log("APT::Initialize\n");
+
+	notificationEvent = kernel.makeEvent(ResetType::OneShot);
+	resumeEvent = kernel.makeEvent(ResetType::OneShot);
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0x04000000); // Translation descriptor
+	mem.write32(messagePointer + 12, notificationEvent.value()); // Notification Event Handle
+	mem.write32(messagePointer + 12, resumeEvent.value()); // Resume Event Handle
 }
 
 void APTService::getLockHandle(u32 messagePointer) {

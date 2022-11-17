@@ -14,6 +14,8 @@ class APTService {
 	Kernel& kernel;
 
 	std::optional<Handle> lockHandle = std::nullopt;
+	std::optional<Handle> notificationEvent = std::nullopt;
+	std::optional<Handle> resumeEvent = std::nullopt;
 
 	MAKE_LOG_FUNCTION(log, aptLogger)
 
@@ -24,6 +26,7 @@ class APTService {
 	void checkNew3DS(u32 messagePointer);
 	void checkNew3DSApp(u32 messagePointer);
 	void enable(u32 messagePointer);
+	void initialize(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);
 	void receiveParameter(u32 messagePointer);
 	void replySleepQuery(u32 messagePointer);
