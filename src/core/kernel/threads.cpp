@@ -280,6 +280,7 @@ void Kernel::setThreadPriority() {
 
 void Kernel::createMutex() {
 	bool locked = regs[1] != 0;
+	logSVC("CreateMutex (locked = %s)\n", locked ? "yes" : "no");
 
 	regs[0] = SVCResult::Success;
 	regs[1] = makeMutex(locked);
