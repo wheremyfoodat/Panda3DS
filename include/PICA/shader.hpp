@@ -16,6 +16,7 @@ namespace ShaderOpcodes {
 		DP3 = 0x01,
 		DP4 = 0x02,
 		MUL = 0x08,
+		MAX = 0x0C,
 		MIN = 0x0D,
 		RSQ = 0x0F,
 		MOVA = 0x12,
@@ -93,6 +94,7 @@ class PICAShader {
 	void ifu(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
+	void max(u32 instruction);
 	void min(u32 instruction);
 	void mov(u32 instruction);
 	void mova(u32 instruction);
