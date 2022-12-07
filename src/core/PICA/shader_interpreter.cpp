@@ -250,12 +250,12 @@ void PICAShader::mova(u32 instruction) {
 
 void PICAShader::dp3(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src1 = (instruction >> 12) & 0x7f;
+	u32 src1 = (instruction >> 12) & 0x7f;
 	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	if (idx) Helpers::panic("[PICA] DP3: idx != 0");
+	src1 = getIndexedSource(src1, idx);
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 
@@ -272,12 +272,12 @@ void PICAShader::dp3(u32 instruction) {
 
 void PICAShader::dp4(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src1 = (instruction >> 12) & 0x7f;
+	u32 src1 = (instruction >> 12) & 0x7f;
 	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	if (idx) Helpers::panic("[PICA] DP4: idx != 0");
+	src1 = getIndexedSource(src1, idx);
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 
