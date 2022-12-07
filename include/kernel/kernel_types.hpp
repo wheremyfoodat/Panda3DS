@@ -121,8 +121,12 @@ struct Thread {
     u64 waitingNanoseconds;
     // The tick this thread went to sleep on
     u64 sleepTick;
-    // For WaitSynchronization: A vector of objects this thread is waiting for
+    // For WaitSynchronization(N): A vector of objects this thread is waiting for
     std::vector<Handle> waitList;
+    // For WaitSynchronizationN: Shows whether the object should wait for all objects in the wait list or just one
+    bool waitAll;
+    // For WaitSynchronizationN: The "out" pointer
+    u32 outPointer;
 
     // Thread context used for switching between threads
     std::array<u32, 16> gprs;

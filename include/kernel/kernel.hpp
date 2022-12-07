@@ -60,6 +60,7 @@ private:
 	void switchToNextThread();
 	void rescheduleThreads();
 	bool canThreadRun(const Thread& t);
+	bool shouldWaitOnObject(KernelObject* object);
 
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);

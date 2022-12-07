@@ -117,6 +117,11 @@ u32 Memory::read32(u32 vaddr) {
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case 0x1FF81000: return 0; // TODO: Figure out what this config mem address does
 			default:
+				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
+					Helpers::warn("VRAM read!\n");
+					return 0;
+				}
+
 				Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
 				break;
 		}

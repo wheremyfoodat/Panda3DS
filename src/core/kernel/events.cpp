@@ -37,6 +37,7 @@ void Kernel::clearEvent() {
 	logSVC("ClearEvent(event handle = %X)\n", handle);
 
 	if (event == nullptr) [[unlikely]] {
+		Helpers::panic("Tried to clear non-existent event");
 		regs[0] = SVCResult::BadHandle;
 		return;
 	}
@@ -51,17 +52,35 @@ void Kernel::signalEvent() {
 	const auto event = getObject(handle, KernelObjectType::Event);
 	logSVC("SignalEvent(event handle = %X)\n", handle);
 	printf("Stubbed SignalEvent!!\n");
-
-	/*
-		if (event == nullptr) [[unlikely]] {
-			regs[0] = SVCResult::BadHandle;
-			return;
-		}
-
-		event->getData<Event>()->fired = true;
-	*/
+	
+	if (event == nullptr) [[unlikely]] {
+		Helpers::warn("Signalled non-existent event: %X\n", handle);
+		regs[0] = SVCResult::Success;
+		//regs[0] = SVCResult::BadHandle;
+		return;
+	}
 
 	regs[0] = SVCResult::Success;
+	auto eventData = event->getData<Event>();
+	eventData->fired = true;
+
+	switch (eventData->resetType) {
+		case ResetType::OneShot:
+			for (int i = 0; i < threadCount; i++) {
+				Thread& t = threads[i];
+
+				if (t.status == ThreadStatus::WaitSync1 && t.waitList[0] == handle) {
+					t.status = ThreadStatus::Ready;
+					break;
+				} else if (t.status == ThreadStatus::WaitSyncAll) {
+					Helpers::panic("Trying to SignalEvent when a thread is waiting on multiple objects");
+				}
+			}
+			break;
+
+		default:
+			Helpers::panic("Signaled event of unimplemented type: %d", eventData->resetType);
+	}
 }
 
 // Result WaitSynchronization1(Handle handle, s64 timeout_nanoseconds)	
@@ -82,15 +101,19 @@ void Kernel::waitSynchronization1() {
 		Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", object->getTypeName(), handle);
 	}
 
-	regs[0] = SVCResult::Success;
+	if (!shouldWaitOnObject(object)) {
+		regs[0] = SVCResult::Success;
+	} else {
+		regs[0] = SVCResult::Success;
 
-	auto& t = threads[currentThreadIndex];
-	t.waitList.resize(1);
-	t.status = ThreadStatus::WaitSync1;
-	t.sleepTick = cpu.getTicks();
-	t.waitingNanoseconds = ns;
-	t.waitList[0] = handle;
-	switchToNextThread();
+		auto& t = threads[currentThreadIndex];
+		t.waitList.resize(1);
+		t.status = ThreadStatus::WaitSync1;
+		t.sleepTick = cpu.getTicks();
+		t.waitingNanoseconds = ns;
+		t.waitList[0] = handle;
+		switchToNextThread();
+	}
 }
 
 // Result WaitSynchronizationN(s32* out, Handle* handles, s32 handlecount, bool waitAll, s64 timeout_nanoseconds)
@@ -101,11 +124,13 @@ void Kernel::waitSynchronizationN() {
 	u32 handleCount = regs[2];
 	bool waitAll = regs[3] != 0;
 	u32 ns2 = regs[4];
-	s32 pointer = regs[5];
+	s32 outPointer = regs[5]; // "out" pointer - shows which object got bonked if we're waiting on multiple objects
 	s64 ns = s64(ns1) | (s64(ns2) << 32);
 
 	logSVC("WaitSynchronizationN (handle pointer: %08X, count: %d, timeout = %lld)\n", handles, handleCount, ns);
-	ThreadStatus newStatus = waitAll ? ThreadStatus::WaitSyncAll : ThreadStatus::WaitSync1;
+
+	if (waitAll && handleCount > 1)
+		Helpers::panic("Trying to wait on more than 1 object");
 
 	auto& t = threads[currentThreadIndex];
 	t.waitList.resize(handleCount);
@@ -124,12 +149,14 @@ void Kernel::waitSynchronizationN() {
 		}
 
 		if (!isWaitable(object)) [[unlikely]] {
-			Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", object->getTypeName(), handle);
+			//Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", object->getTypeName(), handle);
 		}
 	}
 
 	regs[0] = SVCResult::Success;
-	t.status = newStatus;
+	t.status = ThreadStatus::WaitSyncAll;
+	t.waitAll = waitAll;
+	t.outPointer = outPointer;
 	t.waitingNanoseconds = ns;
 	t.sleepTick = cpu.getTicks();
 	switchToNextThread();

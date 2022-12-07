@@ -10,10 +10,15 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 	threadIndices.reserve(appResourceLimits.maxThreads);
 
 	for (int i = 0; i < threads.size(); i++) {
-		threads[i].index = i;
-		threads[i].tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
-		threads[i].status = ThreadStatus::Dead;
-		threads[i].waitList.reserve(10); // Reserve some space for the wait list to avoid further memory allocs later
+		Thread& t = threads[i];
+
+		t.index = i;
+		t.tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
+		t.status = ThreadStatus::Dead;
+		t.waitList.reserve(10); // Reserve some space for the wait list to avoid further memory allocs later
+		// The state below isn't necessary to initialize but we do it anyways out of caution
+		t.outPointer = 0;
+		t.waitAll = false;
 	}
 
 	setVersion(1, 69);

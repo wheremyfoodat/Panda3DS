@@ -82,8 +82,8 @@ void Kernel::switchToNextThread() {
 	std::optional<int> newThreadIndex = getNextThread();
 	
 	if (!newThreadIndex.has_value()) {
-		Helpers::warn("Kernel tried to switch to the next thread but none found. Switching to thread 0\n");
-		switchThread(0);
+		Helpers::warn("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
+		switchThread(rand() % threadCount);
 	} else {
 		switchThread(newThreadIndex.value());
 	}
@@ -301,4 +301,16 @@ bool Kernel::isWaitable(const KernelObject* object) {
 	using enum KernelObjectType;
 
 	return type == Event || type == Mutex || type == Port || type == Semaphore || type == Timer || type == Thread;
+}
+
+// Returns whether we should wait on a sync object or not
+bool Kernel::shouldWaitOnObject(KernelObject* object) {
+	switch (object->type) {
+		case KernelObjectType::Event: // We should wait on an event only if it has not been signalled
+			return !object->getData<Event>()->fired;
+
+		default:
+			Helpers::warn("Not sure whether to wait on object (type: %s)", object->getTypeName());
+			return true;
+	}
 }
