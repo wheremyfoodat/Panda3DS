@@ -203,7 +203,7 @@ void Kernel::getProcessInfo() {
 	regs[0] = SVCResult::Success;
 }
 
-// Result GetThreadId(u32* threadId, Handle thread)
+// Result DuplicateHandle(Handle* out, Handle original)
 void Kernel::duplicateHandle() {
 	Handle original = regs[1];
 	logSVC("DuplicateHandle(handle = %X)\n", original);
