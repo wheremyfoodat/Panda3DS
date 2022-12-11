@@ -11,6 +11,8 @@
 
 namespace PhysicalAddrs {
 	enum : u32 {
+		VRAM = 0x18000000,
+		VRAMEnd = VRAM + 0x005FFFFF,
 		FCRAM = 0x20000000,
 		FCRAMEnd = FCRAM + 0x07FFFFFF
 	};
@@ -38,6 +40,7 @@ namespace VirtualAddrs {
 
 		VramStart = 0x1F000000,
 		VramSize = 0x00600000,
+		FcramTotalSize = 128_MB,
 		DSPMemStart = 0x1FF00000
 	};
 }

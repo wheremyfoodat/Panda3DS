@@ -47,9 +47,11 @@ class GPU {
 			u32 index = paddr - PhysicalAddrs::FCRAM;
 
 			return (T*)&fcram[index];
-		}
-		else {
-			Helpers::panic("[PICA] Pointer to unimplemented paddr %08X", paddr);
+		} else if (paddr >= PhysicalAddrs::VRAM && paddr <= PhysicalAddrs::VRAMEnd) {
+			u32 index = paddr - PhysicalAddrs::VRAM;
+			return (T*)&vram[index];
+		} else [[unlikely]] {
+			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
 		}
 	}
 
@@ -102,6 +104,7 @@ public:
 	void getGraphicsContext(); // Set up the graphics context for rendering
 	void display(); // Display the screen contents onto our window
 
+	void fireDMA(u32 dest, u32 source, u32 size);
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);
 	void reset();
 

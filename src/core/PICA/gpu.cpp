@@ -159,3 +159,24 @@ void GPU::drawArrays() {
 	const auto shape = primTypes[primType];
 	drawVertices(shape, vertices, vertexCount);
 }
+
+void GPU::fireDMA(u32 dest, u32 source, u32 size) {
+	printf("[GPU] DMA of %08X bytes from %08X to %08X\n", size, source, dest);
+	constexpr u32 vramStart = VirtualAddrs::VramStart;
+	constexpr u32 vramSize = VirtualAddrs::VramSize;
+
+	const u32 fcramStart = mem.getLinearHeapVaddr();
+	constexpr u32 fcramSize = VirtualAddrs::FcramTotalSize;
+
+	if (dest - vramStart >= vramSize || size > (vramSize - (dest - vramStart))) [[unlikely]] {
+		Helpers::panic("GPU DMA does not target VRAM");
+	}
+
+	if (source - fcramStart >= fcramSize || size > (fcramSize - (dest - fcramStart))) {
+		Helpers::panic("GPU DMA does not have FCRAM as its source");
+	}
+
+	// Valid, optimized FCRAM->VRAM DMA. TODO: Is VRAM->VRAM DMA allowed?
+	u8* fcram = mem.getFCRAM();
+	std::memcpy(&vram[dest - vramStart], &fcram[source - fcramStart], size);
+}

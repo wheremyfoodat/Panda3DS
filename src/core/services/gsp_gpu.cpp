@@ -278,7 +278,8 @@ void GPUService::triggerDMARequest(u32* cmd) {
 	u32 size = cmd[3];
 	bool flush = cmd[7] == 1;
 
-	log("GSP::GPU::TriggerDMARequest (source = %08X, dest = %08X, size = %08X) (Unimplemented)\n", source, dest, size);
+	log("GSP::GPU::TriggerDMARequest (source = %08X, dest = %08X, size = %08X)\n", source, dest, size);
+	gpu.fireDMA(dest, source, size);
 	requestInterrupt(GPUInterrupt::DMA);
 }
 
