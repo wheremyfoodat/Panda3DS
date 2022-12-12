@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+#include <string>
 #include "helpers.hpp"
 #include "memory.hpp"
 
@@ -24,7 +25,7 @@ namespace ArchiveID {
         SDMCWriteOnly = 0xA
     };
 
-    static const char* toString(u32 id) {
+    static std::string toString(u32 id) {
         switch (id) {
             case SelfNCCH: return "SelfNCCH";
             case SaveData: return "SaveData";
@@ -72,7 +73,7 @@ protected:
     Memory& mem;
 
 public:
-    virtual const char* name() = 0;
+    virtual std::string name() = 0;
     virtual u64 getFreeBytes() = 0;
     virtual bool openFile(const FSPath& path) = 0;
 

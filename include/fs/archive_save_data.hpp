@@ -7,7 +7,7 @@ public:
 	SaveDataArchive(Memory& mem) : ArchiveBase(mem) {}
 
 	u64 getFreeBytes() override { return 0; }
-	const char* name() override { return "SaveData"; }
+	std::string name() override { return "SaveData"; }
 
 	bool openFile(const FSPath& path) override;
 	ArchiveBase* openArchive(const FSPath& path) override;

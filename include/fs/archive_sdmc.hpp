@@ -7,7 +7,7 @@ public:
 	SDMCArchive(Memory& mem) : ArchiveBase(mem) {}
 
 	u64 getFreeBytes() override { return 0; }
-	const char* name() override { return "SDMC"; }
+	std::string name() override { return "SDMC"; }
 
 	bool openFile(const FSPath& path) override;
 	ArchiveBase* openArchive(const FSPath& path) override;

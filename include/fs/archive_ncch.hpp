@@ -7,7 +7,7 @@ public:
 	SelfNCCHArchive(Memory& mem) : ArchiveBase(mem) {}
 
 	u64 getFreeBytes() override { return 0; }
-	const char* name() override { return "SelfNCCH"; }
+	std::string name() override { return "SelfNCCH"; }
 
 	bool openFile(const FSPath& path) override;
 	ArchiveBase* openArchive(const FSPath& path) override;
