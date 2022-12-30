@@ -38,7 +38,7 @@ const char* fragmentShader = R"(
 			float alpha = fragColour.a;
 
 			switch (func) {
-				case 0: discard; break; // Never pass alpha test
+				case 0: discard; // Never pass alpha test
 				case 1: break;          // Always pass alpha test
 				case 2:                 // Pass if equal
 					if (alpha != reference)
