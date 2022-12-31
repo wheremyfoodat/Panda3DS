@@ -62,6 +62,6 @@ namespace FPSCR {
 
         // Default FPSCR value for threads
         ThreadDefault = DefaultNan | FlushToZero | RoundToZero,
-        MainThreadDefault = ThreadDefault | IXC;
+        MainThreadDefault = ThreadDefault | IXC
     };
 }

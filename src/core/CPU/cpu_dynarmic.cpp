@@ -26,6 +26,7 @@ void CPU::reset() {
     jit->Reset();
     jit->ClearCache();
     jit->Regs().fill(0);
+    jit->ExtRegs().fill(0);
 }
 
 #endif // CPU_DYNARMIC
