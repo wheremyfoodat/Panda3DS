@@ -274,7 +274,7 @@ void Kernel::setThreadPriority() {
 			object->getData<Thread>()->priority = priority;
 		}
 	}
-
+	sortThreads();
 	rescheduleThreads();
 }
 
