@@ -4,8 +4,13 @@
 using namespace Floats;
 
 u32 GPU::readReg(u32 address) {
-	log("Ignoring read from GPU register %08X\n", address);
-	return 0;
+	if (address >= 0x1EF01000 && address < 0x1EF01C00) { // Internal registers
+		const u32 index = (address - 0x1EF01000) / sizeof(u32);
+		return readInternalReg(index);
+	} else {
+		log("Ignoring read to external GPU register %08X.\n", address);
+		return 0;
+	}
 }
 
 void GPU::writeReg(u32 address, u32 value) {

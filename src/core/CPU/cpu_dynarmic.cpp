@@ -9,7 +9,7 @@ CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
     config.arch_version = Dynarmic::A32::ArchVersion::v6K;
     config.callbacks = &env;
     config.coprocessors[15] = cp15;
-    // config.define_unpredictable_behaviour = true;
+    config.define_unpredictable_behaviour = true;
     config.global_monitor = &exclusiveMonitor;
     config.processor_id = 0;
     
@@ -18,7 +18,7 @@ CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
 
 void CPU::reset() {
     setCPSR(CPSR::UserMode);
-    setFPSCR(FPSCR::ThreadDefault);
+    setFPSCR(FPSCR::MainThreadDefault);
     env.totalTicks = 0;
 
     cp15->reset();
