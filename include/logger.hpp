@@ -25,6 +25,7 @@ namespace Log {
     static Logger<false> svcLogger;
     static Logger<false> threadLogger;
     static Logger<false> gpuLogger;
+    static Logger<false> rendererLogger;
 
     // Service loggers
     static Logger<false> aptLogger;

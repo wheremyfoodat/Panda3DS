@@ -3,9 +3,9 @@
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
-#include "opengl.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/shader_unit.hpp"
+#include "renderer_gl/renderer_gl.hpp"
 
 class GPU {
 	using vec4f = OpenGL::Vector<Floats::f24, 4>;
@@ -20,11 +20,6 @@ class GPU {
 	static constexpr u32 vramSize = 6_MB;
 	std::array<u32, regNum> regs; // GPU internal registers
 
-	struct Vertex {
-		OpenGL::vec4 position;
-		OpenGL::vec4 colour;
-	};
-	
 	// Read a value of type T from physical address paddr
 	// This is necessary because vertex attribute fetching uses physical addresses
 	template<typename T>
@@ -80,32 +75,15 @@ class GPU {
 	u32 fixedAttribCount = 0; // How many attribute components have we written? When we get to 4 the attr will actually get submitted
 	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
-	// OpenGL renderer state
-	OpenGL::Framebuffer fbo;
-	OpenGL::Texture fboTexture;
-	OpenGL::Program triangleProgram;
-	OpenGL::Program displayProgram;
-
-	OpenGL::VertexArray vao;
-	OpenGL::VertexBuffer vbo;
-	GLint alphaControlLoc = -1;
-	u32 oldAlphaControl = 0;
-
-	// Dummy VAO/VBO for blitting the final output
-	OpenGL::VertexArray dummyVAO;
-	OpenGL::VertexBuffer dummyVBO;
-
-	static constexpr u32 vertexBufferSize = 0x1000;
-	void drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count);
+	Renderer renderer;
 
 public:
 	GPU(Memory& mem);
-	void initGraphicsContext(); // Initialize graphics context
-	void getGraphicsContext(); // Set up the graphics context for rendering
-	void display(); // Display the screen contents onto our window
+	void initGraphicsContext() { renderer.initGraphicsContext(); }
+	void getGraphicsContext() { renderer.getGraphicsContext(); }
+	void display() { renderer.display(); }
 
 	void fireDMA(u32 dest, u32 source, u32 size);
-	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);
 	void reset();
 
 	// Used by the GSP GPU service for readHwRegs/writeHwRegs/writeHwRegsMasked
@@ -115,4 +93,8 @@ public:
 	// Used when processing GPU command lists
 	u32 readInternalReg(u32 index);
 	void writeInternalReg(u32 index, u32 value, u32 mask);
+
+	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+		renderer.clearBuffer(startAddress, endAddress, value, control);
+	}
 };

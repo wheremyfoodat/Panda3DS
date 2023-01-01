@@ -78,7 +78,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_ncch.hpp
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
-                 include/services/mic.hpp include/services/cecd.hpp
+                 include/services/mic.hpp include/services/cecd.hpp include/renderer_gl/renderer_gl.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

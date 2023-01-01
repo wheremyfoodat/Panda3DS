@@ -1,7 +1,6 @@
+#include "renderer_gl/renderer_gl.hpp"
 #include "PICA/float_types.hpp"
-#include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
-#include "opengl.hpp"
 
 using namespace Floats;
 
@@ -106,7 +105,7 @@ const char* displayFragmentShader = R"(
     }
 )";
 
-void GPU::initGraphicsContext() {
+void Renderer::initGraphicsContext() {
 	// Set up texture for top screen
 	fboTexture.create(400, 240, GL_RGBA8);
 	fboTexture.bind();
@@ -159,7 +158,7 @@ void GPU::initGraphicsContext() {
 	dummyVAO.create();
 }
 
-void GPU::getGraphicsContext() {
+void Renderer::getGraphicsContext() {
 	OpenGL::disableScissor();
 	OpenGL::setViewport(400, 240);
 	fbo.bind(OpenGL::DrawAndReadFramebuffer);
@@ -169,7 +168,7 @@ void GPU::getGraphicsContext() {
 	triangleProgram.use();
 }
 
-void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
+void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
@@ -220,7 +219,7 @@ constexpr u32 topScreenBuffer = 0x1f000000;
 constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 // Quick hack to display top screen for now
-void GPU::display() {
+void Renderer::display() {
 	OpenGL::disableDepth();
 	OpenGL::disableScissor();
 	OpenGL::bindScreenFramebuffer();
@@ -234,7 +233,7 @@ void GPU::display() {
 	OpenGL::draw(OpenGL::TriangleStrip, 4);
 }
 
-void GPU::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
 
 	const float r = float((value >> 24) & 0xff) / 255.0;
