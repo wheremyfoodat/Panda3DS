@@ -191,8 +191,8 @@ void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count)
 	f24 depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff);
 	printf("Depth enable: %d, func: %d, writeEnable: %d\n", depthEnable, depthFunc, depthWriteEnable);
 
-	if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
-		Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
+	//if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
+	//	Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;

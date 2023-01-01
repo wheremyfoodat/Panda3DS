@@ -81,6 +81,7 @@ private:
 
 	MAKE_LOG_FUNCTION(log, kernelLogger)
 	MAKE_LOG_FUNCTION(logSVC, svcLogger)
+	MAKE_LOG_FUNCTION(logThread, threadLogger)
 	MAKE_LOG_FUNCTION(logDebugString, debugStringLogger)
 	MAKE_LOG_FUNCTION(logError, errorLogger)
 	MAKE_LOG_FUNCTION(logFileIO, fileIOLogger)

@@ -18,26 +18,27 @@ namespace Log {
     };
 
     // Our loggers here. Enable/disable by toggling the template param
-    static Logger<true> kernelLogger;
-    static Logger<true> debugStringLogger; // Enables output for the outputDebugString SVC
-    static Logger<true> errorLogger;
-    static Logger<true> fileIOLogger;
-    static Logger<true> svcLogger;
-    static Logger<true> gpuLogger;
+    static Logger<false> kernelLogger;
+    static Logger<false> debugStringLogger; // Enables output for the outputDebugString SVC
+    static Logger<false> errorLogger;
+    static Logger<false> fileIOLogger;
+    static Logger<false> svcLogger;
+    static Logger<false> threadLogger;
+    static Logger<false> gpuLogger;
 
     // Service loggers
-    static Logger<true> aptLogger;
-    static Logger<true> cecdLogger;
-    static Logger<true> cfgLogger;
-    static Logger<true> dspServiceLogger;
-    static Logger<true> fsLogger;
-    static Logger<true> hidLogger;
-    static Logger<true> gspGPULogger;
-    static Logger<true> gspLCDLogger;
-    static Logger<true> micLogger;
-    static Logger<true> ndmLogger;
-    static Logger<true> ptmLogger;
-    static Logger<true> srvLogger;
+    static Logger<false> aptLogger;
+    static Logger<false> cecdLogger;
+    static Logger<false> cfgLogger;
+    static Logger<false> dspServiceLogger;
+    static Logger<false> fsLogger;
+    static Logger<false> hidLogger;
+    static Logger<false> gspGPULogger;
+    static Logger<false> gspLCDLogger;
+    static Logger<false> micLogger;
+    static Logger<false> ndmLogger;
+    static Logger<false> ptmLogger;
+    static Logger<false> srvLogger;
 
     #define MAKE_LOG_FUNCTION(functionName, logger)      \
     template <typename... Args>                          \
