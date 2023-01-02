@@ -3,6 +3,7 @@
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "opengl.hpp"
+#include "surface_cache.hpp"
 
 struct Vertex {
 	OpenGL::vec4 position;
@@ -21,12 +22,25 @@ class Renderer {
 	GLint alphaControlLoc = -1;
 	u32 oldAlphaControl = 0;
 
+	SurfaceCache<DepthBuffer, 10> depthBufferCache;
+	SurfaceCache<ColourBuffer, 10> colourBufferCache;
+	OpenGL::uvec2 fbSize; // The size of the framebuffer (ie both the colour and depth buffer)'
+
+	u32 colourBufferLoc; // Location in 3DS VRAM for the colour buffer
+	ColourBuffer::Formats colourBufferFormat; // Format of the colours stored in the colour buffer
+	
+	// Same for the depth/stencil buffer
+	u32 depthBufferLoc;
+	DepthBuffer::Formats depthBufferFormat;
+
 	// Dummy VAO/VBO for blitting the final output
 	OpenGL::VertexArray dummyVAO;
 	OpenGL::VertexBuffer dummyVBO;
 
 	static constexpr u32 regNum = 0x300; // Number of internal PICA registers
 	const std::array<u32, regNum>& regs;
+
+	OpenGL::Framebuffer getColourFBO();
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 
@@ -39,6 +53,20 @@ public:
 	void getGraphicsContext();  // Set up graphics context for rendering
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control); // Clear a GPU buffer in VRAM
 	void drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count); // Draw the given vertices
+
+	void setFBSize(u32 width, u32 height) {
+		fbSize.x() = width;
+		fbSize.y() = height;
+	}
+
+	void setColourFormat(ColourBuffer::Formats format) { colourBufferFormat = format; }
+	void setColourFormat(u32 format) { colourBufferFormat = static_cast<ColourBuffer::Formats>(format); }
+
+	void setDepthFormat(DepthBuffer::Formats format) { depthBufferFormat = format; }
+	void setDepthFormat(u32 format) { depthBufferFormat = static_cast<DepthBuffer::Formats>(format); }
+
+	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
+	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
 
 	static constexpr u32 vertexBufferSize = 0x1500;
 };

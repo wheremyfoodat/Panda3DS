@@ -13,6 +13,7 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${FMT_INCLUDE_DIR})
+include_directories(third_party/boost/)
 include_directories(third_party/elfio/)
 include_directories(third_party/gl3w/)
 include_directories(third_party/imgui/)
@@ -79,6 +80,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
                  include/services/mic.hpp include/services/cecd.hpp include/renderer_gl/renderer_gl.hpp
+                 include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

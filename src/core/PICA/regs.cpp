@@ -59,6 +59,31 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			fixedAttribMask = (value >> 16) & 0xfff; // Determines which vertex attributes are fixed for all vertices
 			break;
 
+		case ColourBufferLoc: {
+			u32 loc = (value & 0x0fffffff) << 3;
+			renderer.setColourBufferLoc(loc);
+			break;
+		};
+
+		case ColourBufferFormat: {
+			u32 format = (value >> 16) & 7;
+			renderer.setColourFormat(format);
+			break;
+		}
+
+		case DepthBufferLoc: {
+			u32 loc = (value & 0x0fffffff) << 3;
+			renderer.setDepthBufferLoc(loc);
+			break;
+		}
+
+		case FramebufferSize: {
+			const u32 width = value & 0x7ff;
+			const u32 height = ((value >> 12) & 0x3ff) + 1;
+			renderer.setFBSize(width, height);
+			break;
+		}
+
 		case VertexFloatUniformIndex:
 			shaderUnit.vs.setFloatUniformIndex(value);
 			break;

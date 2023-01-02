@@ -105,6 +105,18 @@ const char* displayFragmentShader = R"(
     }
 )";
 
+void Renderer::reset() {
+	depthBufferCache.reset();
+	colourBufferCache.reset();
+
+	// Init the colour/depth buffer settings to some random defaults on reset
+	colourBufferLoc = 0;
+	colourBufferFormat = ColourBuffer::Formats::RGBA8;
+
+	depthBufferLoc = 0;
+	depthBufferFormat = DepthBuffer::Formats::Depth16;
+}
+
 void Renderer::initGraphicsContext() {
 	// Set up texture for top screen
 	fboTexture.create(400, 240, GL_RGBA8);
@@ -156,6 +168,7 @@ void Renderer::initGraphicsContext() {
 
 	dummyVBO.create();
 	dummyVAO.create();
+	reset();
 }
 
 void Renderer::getGraphicsContext() {
@@ -168,6 +181,8 @@ void Renderer::getGraphicsContext() {
 	triangleProgram.use();
 }
 
+OpenGL::Framebuffer poop;
+
 void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
@@ -175,6 +190,8 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		oldAlphaControl = alphaControl;
 		glUniform1ui(alphaControlLoc, alphaControl);
 	}
+
+	poop = getColourFBO();
 
 	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
 	bool depthEnable = depthControl & 1;
@@ -252,4 +269,17 @@ void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 cont
 
 	OpenGL::setClearColor(r, g, b, a);
 	OpenGL::clearColor();
+}
+
+OpenGL::Framebuffer Renderer::getColourFBO() {
+	//We construct a colour buffer object and see if our cache has any matching colour buffers in it
+	// If not, we allocate a texture & FBO for our framebuffer and store it in the cache 
+	ColourBuffer sampleBuffer(colourBufferLoc, colourBufferFormat, fbSize.x(), fbSize.y());
+	auto buffer = colourBufferCache.find(sampleBuffer);
+
+	if (buffer.has_value()) {
+		return buffer.value().get().fbo;
+	} else {
+		return colourBufferCache.add(sampleBuffer).fbo;
+	}
 }
