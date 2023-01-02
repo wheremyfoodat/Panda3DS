@@ -115,6 +115,7 @@ u32 Memory::read32(u32 vaddr) {
 				return 0; // Set to 0 by PTM
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
+			case ConfigMem::SyscoreVer: return 2;
 			case 0x1FF81000: return 0; // TODO: Figure out what this config mem address does
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
