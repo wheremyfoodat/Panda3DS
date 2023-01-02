@@ -5,7 +5,6 @@
 
 using namespace Floats;
 
-GPU::GPU(Memory& mem) : mem(mem) {
 GPU::GPU(Memory& mem) : mem(mem), renderer(regs) {
 	vram = new u8[vramSize];
 }
@@ -28,7 +27,7 @@ void GPU::reset() {
 		e.config2 = 0;
 	}
 
-	// TODO: Reset blending, texturing, etc here
+	renderer.reset();
 }
 
 void GPU::drawArrays(bool indexed) {
