@@ -30,6 +30,9 @@
 
 #include "gl3w.h"
 
+// Uncomment the following define if you want GL objects to automatically free themselves when their lifetime ends
+// #define OPENGL_DESTRUCTORS
+
 namespace OpenGL {
 
     // Workaround for using static_assert inside constexpr if
@@ -51,7 +54,9 @@ namespace OpenGL {
             }
         }
 
-        ~VertexArray() { glDeleteVertexArrays(1, &m_handle); }
+#ifdef OPENGL_DESTRUCTORS
+        ~VertexArray() { free(); }
+#endif
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind() { glBindVertexArray(m_handle); }
@@ -121,6 +126,10 @@ namespace OpenGL {
 
         void enableAttribute(GLuint index) { glEnableVertexAttribArray(index); }
         void disableAttribute(GLuint index) { glDisableVertexAttribArray(index); }
+
+        void free() {
+            glDeleteVertexArrays(1, &m_handle);
+        }
     };
 
     enum FramebufferTypes {
@@ -165,12 +174,16 @@ namespace OpenGL {
             create(width, height, internalFormat, GL_TEXTURE_2D_MULTISAMPLE, samples);
         }
 
-        ~Texture() { glDeleteTextures(1, &m_handle); }
+#ifdef OPENGL_DESTRUCTORS
+        ~Texture() { free(); }
+#endif
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind() { glBindTexture(m_binding, m_handle); }
         int width() { return m_width; }
         int height() { return m_height; }
+
+       void free() { glDeleteTextures(1, &m_handle); }
     };
 
     struct Framebuffer {
@@ -189,11 +202,14 @@ namespace OpenGL {
             }
         }
 
-        ~Framebuffer() { glDeleteFramebuffers(1, &m_handle); }
+#ifdef OPENGL_DESTRUCTORS
+        ~Framebuffer() { free(); }
+#endif
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind(GLenum target) { glBindFramebuffer(target, m_handle); }
         void bind(FramebufferTypes target) { bind(static_cast<GLenum>(target)); }
+        void free() { glDeleteFramebuffers(1, &m_handle); }
 
         void createWithTexture(Texture& tex, GLenum mode = GL_FRAMEBUFFER, GLenum textureType = GL_TEXTURE_2D) {
             m_textureType = textureType;
@@ -313,10 +329,13 @@ namespace OpenGL {
             }
         }
 
-        ~VertexBuffer() { glDeleteBuffers(1, &m_handle); }
+#ifdef OPENGL_DESTRUCTORS
+        ~VertexBuffer() { free(); }
+#endif  
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind() { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
+        void free() { glDeleteBuffers(1, &m_handle); }
 
         // Reallocates the buffer on every call. Prefer the sub version if possible.
         template <typename VertType>
