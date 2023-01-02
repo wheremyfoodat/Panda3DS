@@ -51,12 +51,15 @@ public:
             if (!e.valid) {
                 e = surface;
                 e.allocate();
-                Sleep(2000);
                 return e;
             }
         }
 
         // This should be unreachable but helps to panic anyways
         Helpers::panic("Couldn't add surface to cache\n");
+    }
+
+    SurfaceType& operator[](size_t i) {
+        return buffer[i];
     }
 };
