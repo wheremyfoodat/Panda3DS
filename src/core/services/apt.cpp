@@ -6,12 +6,14 @@ namespace APTCommands {
 		GetLockHandle = 0x00010040,
 		Initialize = 0x00020080,
 		Enable = 0x00030040,
+		InquireNotification = 0x000B0040,
 		ReceiveParameter = 0x000D0080,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		AppletUtility = 0x004B00C2,
 		SetApplicationCpuTimeLimit = 0x004F0080,
 		GetApplicationCpuTimeLimit = 0x00500040,
+		SetScreencapPostPermission = 0x00550040,
 		CheckNew3DSApp = 0x01010000,
 		CheckNew3DS = 0x01020000
 	};
@@ -49,12 +51,14 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::CheckNew3DSApp: checkNew3DSApp(messagePointer); break;
 		case APTCommands::Enable: enable(messagePointer); break;
 		case APTCommands::Initialize: initialize(messagePointer); break;
+		case APTCommands::InquireNotification: inquireNotification(messagePointer); break;
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::ReceiveParameter: receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
+		case APTCommands::SetScreencapPostPermission: setScreencapPostPermission(messagePointer); break;
 		default: Helpers::panic("APT service requested. Command: %08X\n", command);
 	}
 }
@@ -97,6 +101,13 @@ void APTService::initialize(u32 messagePointer) {
 	mem.write32(messagePointer + 8, 0x04000000); // Translation descriptor
 	mem.write32(messagePointer + 12, notificationEvent.value()); // Notification Event Handle
 	mem.write32(messagePointer + 16, resumeEvent.value()); // Resume Event Handle
+}
+
+void APTService::inquireNotification(u32 messagePointer) {
+	log("APT::InquireNotification\n");
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, static_cast<u32>(NotificationType::None)); 
 }
 
 void APTService::getLockHandle(u32 messagePointer) {
@@ -159,4 +170,13 @@ void APTService::getApplicationCpuTimeLimit(u32 messagePointer) {
 	log("APT::GetApplicationCpuTimeLimit\n");
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, cpuTimeLimit);
+}
+
+void APTService::setScreencapPostPermission(u32 messagePointer) {
+	u32 perm = mem.read32(messagePointer + 4);
+	log("APT::SetScreencapPostPermission (perm = %d)\n");
+
+	// Apparently only 1-3 are valid values, but I see 0 used in some games like Pokemon Rumble
+	mem.write32(messagePointer, Result::Success);
+	screencapPostPermission = perm;
 }
