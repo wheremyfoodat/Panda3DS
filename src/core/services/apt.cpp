@@ -96,7 +96,7 @@ void APTService::initialize(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0x04000000); // Translation descriptor
 	mem.write32(messagePointer + 12, notificationEvent.value()); // Notification Event Handle
-	mem.write32(messagePointer + 12, resumeEvent.value()); // Resume Event Handle
+	mem.write32(messagePointer + 16, resumeEvent.value()); // Resume Event Handle
 }
 
 void APTService::getLockHandle(u32 messagePointer) {
