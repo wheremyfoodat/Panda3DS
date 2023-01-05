@@ -104,9 +104,12 @@ void APTService::initialize(u32 messagePointer) {
 }
 
 void APTService::inquireNotification(u32 messagePointer) {
-	log("APT::InquireNotification\n");
+	log("APT::InquireNotification (STUBBED TO FAIL)\n");
 
-	mem.write32(messagePointer + 4, Result::Success);
+	// Thanks to our silly WaitSynchronization hacks, sometimes games will switch to the APT thread without actually getting a notif
+	// After REing the APT code, I figured that making InquireNotification fail is one way of making games not crash when this happens
+	// We should fix this in the future, when the sync object implementation is less hacky.
+	mem.write32(messagePointer + 4, Result::Failure);
 	mem.write32(messagePointer + 8, static_cast<u32>(NotificationType::None)); 
 }
 

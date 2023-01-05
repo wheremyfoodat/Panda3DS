@@ -37,7 +37,7 @@ void Kernel::clearEvent() {
 	logSVC("ClearEvent(event handle = %X)\n", handle);
 
 	if (event == nullptr) [[unlikely]] {
-		Helpers::panic("Tried to clear non-existent event");
+		Helpers::panic("Tried to clear non-existent event (handle = %X)", handle);
 		regs[0] = SVCResult::BadHandle;
 		return;
 	}
@@ -154,6 +154,7 @@ void Kernel::waitSynchronizationN() {
 	}
 
 	regs[0] = SVCResult::Success;
+	regs[1] = waitAll ? handleCount - 1 : 0; // Index of the handle that triggered the exit. STUBBED
 	t.status = ThreadStatus::WaitSyncAll;
 	t.waitAll = waitAll;
 	t.outPointer = outPointer;
