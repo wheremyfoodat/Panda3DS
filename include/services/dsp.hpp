@@ -50,6 +50,7 @@ class DSPService {
 
 	// Service functions
 	void convertProcessAddressFromDspDram(u32 messagePointer); // Nice function name
+	void flushDataCache(u32 messagePointer);
 	void getHeadphoneStatus(u32 messagePointer);
 	void getSemaphoreHandle(u32 messagePointer);
 	void loadComponent(u32 messagePointer);

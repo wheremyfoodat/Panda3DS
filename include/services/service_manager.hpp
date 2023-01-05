@@ -49,6 +49,7 @@ class ServiceManager {
 	void getServiceHandle(u32 messagePointer);
 	void receiveNotification(u32 messagePointer);
 	void registerClient(u32 messagePointer);
+	void subscribe(u32 messagePointer);
 
 public:
 	ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel);

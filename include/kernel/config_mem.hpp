@@ -10,6 +10,8 @@ namespace ConfigMem {
 		EnvInfo = 0x1FF80014,
 		AppMemAlloc = 0x1FF80040,
 		Datetime0 = 0x1FF81020,
-		LedState3D = 0x1FF81084
+		LedState3D = 0x1FF81084,
+		BatteryState = 0x1FF81085,
+		HeadphonesConnectedMaybe = 0x1FF810C0 // TODO: What is actually stored here?
 	};
 }

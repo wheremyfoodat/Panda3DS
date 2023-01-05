@@ -11,7 +11,8 @@ namespace ServiceCommands {
 		FlushDataCache = 0x00080082,
 		SetLCDForceBlack = 0x000B0040,
 		TriggerCmdReqQueue = 0x000C0000,
-		SetInternalPriorities = 0x001E0080
+		SetInternalPriorities = 0x001E0080,
+		StoreDataCache = 0x001F0082
 	};
 }
 
@@ -47,6 +48,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
 		case ServiceCommands::SetInternalPriorities: setInternalPriorities(messagePointer); break;
 		case ServiceCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
+		case ServiceCommands::StoreDataCache: storeDataCache(messagePointer); break;
 		case ServiceCommands::TriggerCmdReqQueue: [[likely]] triggerCmdReqQueue(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
@@ -180,6 +182,15 @@ void GPUService::flushDataCache(u32 messagePointer) {
 	u32 size = mem.read32(messagePointer + 8);
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
 	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
+
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void GPUService::storeDataCache(u32 messagePointer) {
+	u32 address = mem.read32(messagePointer + 4);
+	u32 size = mem.read32(messagePointer + 8);
+	u32 processHandle = handle = mem.read32(messagePointer + 16);
+	log("GSP::GPU::StoreDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
 
 	mem.write32(messagePointer + 4, Result::Success);
 }

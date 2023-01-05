@@ -31,6 +31,7 @@ class FSService {
 	void getPriority(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void initializeWithSdkVersion(u32 messagePointer);
+	void isSdmcDetected(u32 messagePointer);
 	void openArchive(u32 messagePointer);
 	void openFile(u32 messagePointer);
 	void openFileDirectly(u32 messagePointer);

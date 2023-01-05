@@ -8,6 +8,7 @@ namespace FSCommands {
 		OpenFileDirectly = 0x08030204,
 		OpenArchive = 0x080C00C2,
 		CloseArchive = 0x080E0080,
+		IsSdmcDetected = 0x08170000,
 		InitializeWithSdkVersion = 0x08610042,
 		SetPriority = 0x08620040,
 		GetPriority = 0x08630000
@@ -77,6 +78,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
 		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
+		case FSCommands::IsSdmcDetected: isSdmcDetected(messagePointer); break;
 		case FSCommands::OpenArchive: openArchive(messagePointer); break;
 		case FSCommands::OpenFile: openFile(messagePointer); break;
 		case FSCommands::OpenFileDirectly: openFileDirectly(messagePointer); break;
@@ -210,4 +212,10 @@ void FSService::setPriority(u32 messagePointer) {
 	
 	mem.write32(messagePointer + 4, Result::Success);
 	priority = value;
+}
+
+void FSService::isSdmcDetected(u32 messagePointer) {
+	log("FS::IsSdmcDetected\n");
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0); // Whether SD is detected. For now we emulate a 3DS without an SD.
 }

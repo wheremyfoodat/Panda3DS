@@ -62,6 +62,7 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 		case Commands::ReceiveNotification: receiveNotification(messagePointer); break;
 		case Commands::RegisterClient: registerClient(messagePointer); break;
 		case Commands::GetServiceHandle: getServiceHandle(messagePointer); break;
+		case Commands::Subscribe: subscribe(messagePointer); break;
 		default: Helpers::panic("Unknown \"srv:\" command: %08X", header);
 	}
 }
@@ -138,6 +139,13 @@ void ServiceManager::receiveNotification(u32 messagePointer) {
 
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // Notification ID
+}
+
+void ServiceManager::subscribe(u32 messagePointer) {
+	u32 id = mem.read32(messagePointer + 4);
+	log("srv::Subscribe (id = %d) (stubbed)\n", id);
+
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
