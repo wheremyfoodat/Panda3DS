@@ -4,6 +4,7 @@
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
+#include "services/ac.hpp"
 #include "services/apt.hpp"
 #include "services/cecd.hpp"
 #include "services/cfg.hpp"
@@ -28,6 +29,7 @@ class ServiceManager {
 
 	MAKE_LOG_FUNCTION(log, srvLogger)
 
+    ACService ac;
 	APTService apt;
 	CECDService cecd;
 	CFGService cfg;

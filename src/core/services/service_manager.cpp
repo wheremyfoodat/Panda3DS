@@ -2,12 +2,13 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), kernel(kernel), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem), hid(mem), 
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem), hid(mem), 
 	fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
 void ServiceManager::reset() {
+    ac.reset();
 	apt.reset();
 	cecd.reset();
 	cfg.reset();
@@ -79,7 +80,9 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	std::string service = mem.readString(messagePointer + 4, 8);
 	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
-	if (service == "APT:S") { // TODO: APT:A, APT:S and APT:U are slightly different
+	if (service == "ac:u") {
+        handle = KernelHandles::AC;
+    } else if (service == "APT:S") { // TODO: APT:A, APT:S and APT:U are slightly different
 		handle = KernelHandles::APT;
 	} else if (service == "APT:A") {
 		handle = KernelHandles::APT;
@@ -136,6 +139,7 @@ void ServiceManager::receiveNotification(u32 messagePointer) {
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
+        case KernelHandles::AC: ac.handleSyncRequest(messagePointer); break;
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;

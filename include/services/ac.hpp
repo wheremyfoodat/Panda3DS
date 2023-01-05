@@ -4,15 +4,16 @@
 #include "logger.hpp"
 #include "memory.hpp"
 
-class CECDService {
-	Handle handle = KernelHandles::CECD;
+class ACService {
+	Handle handle = KernelHandles::AC;
 	Memory& mem;
-	MAKE_LOG_FUNCTION(log, cecdLogger)
+	MAKE_LOG_FUNCTION(log, acLogger)
 
 	// Service commands
+	void setClientVersion(u32 messagePointer);
 
 public:
-	CECDService(Memory& mem) : mem(mem) {}
+	ACService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

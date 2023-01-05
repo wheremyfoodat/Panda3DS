@@ -10,6 +10,7 @@ namespace KernelHandles {
 		// Hardcoded handles
 		CurrentThread = 0xFFFF8000,  // Used by the original kernel
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
+        AC,
 		APT,  // App Title something service?
 		CECD, // Streetpass stuff?
 		CFG,  // CFG service (Console & region info)
@@ -22,7 +23,7 @@ namespace KernelHandles {
 		NDM,  // ?????
 		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 
-		MinServiceHandle = APT,
+		MinServiceHandle = AC,
 		MaxServiceHandle = PTM,
 
 		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
