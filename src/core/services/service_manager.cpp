@@ -3,7 +3,7 @@
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem), hid(mem), 
-	fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
+	frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -14,6 +14,7 @@ void ServiceManager::reset() {
 	cfg.reset();
 	dsp.reset();
 	hid.reset();
+    frd.reset();
 	fs.reset();
 	gsp_gpu.reset();
 	gsp_lcd.reset();
@@ -96,7 +97,9 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::DSP;
 	} else if (service == "hid:USER") {
 		handle = KernelHandles::HID;	
-	} else if (service == "fs:USER") {
+	} else if (service == "frd:u") {
+        handle = KernelHandles::FRD;
+    } else if (service == "fs:USER") {
 		handle = KernelHandles::FS;
 	} else if (service == "gsp::Gpu") {
 		handle = KernelHandles::GPU;
@@ -145,6 +148,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DSP: dsp.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
+        case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::FS: fs.handleSyncRequest(messagePointer); break;
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;

@@ -10,11 +10,12 @@ namespace KernelHandles {
 		// Hardcoded handles
 		CurrentThread = 0xFFFF8000,  // Used by the original kernel
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
-        AC,
+        AC,   // Something network related
 		APT,  // App Title something service?
 		CECD, // Streetpass stuff?
 		CFG,  // CFG service (Console & region info)
 		HID,  // HID service (Handles everything input-related including gyro)
+        FRD,  // Friend service (Miiverse friend service)
 		FS,   // Filesystem service
 		GPU,  // GPU service
 		DSP,  // DSP service (Used for audio decoding and output)

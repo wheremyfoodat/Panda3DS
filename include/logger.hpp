@@ -28,10 +28,12 @@ namespace Log {
     static Logger<false> rendererLogger;
 
     // Service loggers
+    static Logger<false> acLogger;
     static Logger<false> aptLogger;
     static Logger<false> cecdLogger;
     static Logger<false> cfgLogger;
     static Logger<false> dspServiceLogger;
+    static Logger<false> frdLogger;
     static Logger<false> fsLogger;
     static Logger<false> hidLogger;
     static Logger<false> gspGPULogger;

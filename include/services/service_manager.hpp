@@ -10,6 +10,7 @@
 #include "services/cfg.hpp"
 #include "services/dsp.hpp"
 #include "services/hid.hpp"
+#include "services/frd.hpp"
 #include "services/fs.hpp"
 #include "services/gsp_gpu.hpp"
 #include "services/gsp_lcd.hpp"
@@ -35,6 +36,7 @@ class ServiceManager {
 	CFGService cfg;
 	DSPService dsp;
 	HIDService hid;
+	FRDService frd;
 	FSService fs;
 	GPUService gsp_gpu;
 	LCDService gsp_lcd;

@@ -58,7 +58,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp
                          src/core/services/ndm.cpp src/core/services/dsp.cpp src/core/services/cfg.cpp
                          src/core/services/ptm.cpp src/core/services/mic.cpp src/core/services/cecd.cpp
-                         src/core/services/ac.cpp
+                         src/core/services/ac.cpp src/core/services/frd.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp
@@ -82,6 +82,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
                  include/services/mic.hpp include/services/cecd.hpp include/renderer_gl/renderer_gl.hpp
                  include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp include/services/ac.hpp
+                 include/services/frd.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
