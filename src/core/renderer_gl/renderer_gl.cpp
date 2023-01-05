@@ -118,30 +118,6 @@ void Renderer::reset() {
 }
 
 void Renderer::initGraphicsContext() {
-	// Set up texture for top screen
-	fboTexture.create(400, 240, GL_RGBA8);
-	fboTexture.bind();
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	fbo.createWithDrawTexture(fboTexture);
-	fbo.bind(OpenGL::DrawAndReadFramebuffer);
-
-	GLuint rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 400, 240); // use a single renderbuffer object for both a depth AND stencil buffer.
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		Helpers::panic("Incomplete framebuffer");
-	//glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-	OpenGL::setViewport(400, 240);
-	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
-	OpenGL::clearColor();
-
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({ vert, frag });
@@ -174,14 +150,11 @@ void Renderer::initGraphicsContext() {
 void Renderer::getGraphicsContext() {
 	OpenGL::disableScissor();
 	OpenGL::setViewport(400, 240);
-	fbo.bind(OpenGL::DrawAndReadFramebuffer);
 
 	vbo.bind();
 	vao.bind();
 	triangleProgram.use();
 }
-
-OpenGL::Framebuffer poop;
 
 void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
 	// Adjust alpha test if necessary
@@ -191,7 +164,8 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		glUniform1ui(alphaControlLoc, alphaControl);
 	}
 
-	poop = getColourFBO();
+	OpenGL::Framebuffer poop = getColourFBO();
+	poop.bind(OpenGL::DrawAndReadFramebuffer);
 
 	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
 	bool depthEnable = depthControl & 1;
@@ -239,18 +213,21 @@ constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 void Renderer::display() {
 	OpenGL::disableDepth();
 	OpenGL::disableScissor();
+
 	OpenGL::bindScreenFramebuffer();
-	fboTexture.bind();
+	colourBufferCache[0].texture.bind();
+
 	displayProgram.use();
 
 	dummyVAO.bind();
-	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0); // Clear screen colour
+	OpenGL::setClearColor(0.0, 0.0, 1.0, 1.0); // Clear screen colour
 	OpenGL::clearColor();
 	OpenGL::setViewport(0, 240, 400, 240); // Actually draw our 3DS screen
 	OpenGL::draw(OpenGL::TriangleStrip, 4);
 }
 
 void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+	return;
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
 
 	const float r = float((value >> 24) & 0xff) / 255.0;

@@ -39,12 +39,39 @@ struct ColourBuffer {
     }
 
     void allocate() {
-        printf("Make this colour buffer allocate itself\n");
+        // Create texture for the FBO, setting up filters and the like
+        // Reading back the current texture is slow, but allocate calls should be and far between.
+        // If this becomes a bottleneck, we can fix it semi-easily
+        auto prevTexture = OpenGL::getTex2D();
+        texture.create(size.x(), size.y(), GL_RGBA8);
+        texture.bind();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, prevTexture);
+
+        //Helpers::panic("Creating FBO: %d, %d\n", size.x(), size.y());
+
+        fbo.createWithDrawTexture(texture);
+        fbo.bind(OpenGL::DrawAndReadFramebuffer);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            Helpers::panic("Incomplete framebuffer");
+        //glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+        // TODO: This should not clear the framebuffer contents. It should load them from VRAM.
+        GLint oldViewport[4];
+        glGetIntegerv(GL_VIEWPORT, oldViewport);
+        OpenGL::setViewport(size.x(), size.y());
+        OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
+        OpenGL::clearColor();
+        OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
     }
 
     void free() {
         valid = false;
-        printf("Make this colour buffer free itself\n");
+
+        if (texture.exists() || fbo.exists())
+            Helpers::panic("Make this buffer free itself");
     }
 
     bool matches(ColourBuffer& other) {

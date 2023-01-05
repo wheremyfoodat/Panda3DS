@@ -11,9 +11,6 @@ struct Vertex {
 };
 
 class Renderer {
-	// OpenGL renderer state
-	OpenGL::Framebuffer fbo;
-	OpenGL::Texture fboTexture;
 	OpenGL::Program triangleProgram;
 	OpenGL::Program displayProgram;
 
