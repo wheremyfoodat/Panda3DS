@@ -2,24 +2,28 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), boss(mem), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem),
-    hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), apt(mem, kernel), cecd(mem), cfg(mem), 
+	dsp(mem), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem),
+	nim(mem), ndm(mem), ptm(mem) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
+// Reset every single service
 void ServiceManager::reset() {
-    ac.reset();
+	ac.reset();
+	am.reset();
 	apt.reset();
-    boss.reset();
+	boss.reset();
 	cecd.reset();
 	cfg.reset();
 	dsp.reset();
 	hid.reset();
-    frd.reset();
+	frd.reset();
 	fs.reset();
 	gsp_gpu.reset();
 	gsp_lcd.reset();
 	mic.reset();
+	nim.reset();
 	ndm.reset();
 	ptm.reset();
 
@@ -85,6 +89,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 
 	if (service == "ac:u") {
         handle = KernelHandles::AC;
+    } else if (service == "am:app") {
+        handle = KernelHandles::AM;
     } else if (service == "APT:S") { // TODO: APT:A, APT:S and APT:U are slightly different
 		handle = KernelHandles::APT;
 	} else if (service == "APT:A") {
@@ -113,6 +119,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::MIC;
 	} else if (service == "ndm:u") {
 		handle = KernelHandles::NDM;
+	} else if (service == "nim:aoc") {
+		handle = KernelHandles::NIM;
 	} else if (service == "ptm:u") {
 		handle = KernelHandles::PTM;
 	} else {
@@ -154,6 +162,7 @@ void ServiceManager::subscribe(u32 messagePointer) {
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
         case KernelHandles::AC: ac.handleSyncRequest(messagePointer); break;
+        case KernelHandles::AM: am.handleSyncRequest(messagePointer); break;
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
         case KernelHandles::BOSS: boss.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
@@ -165,6 +174,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::MIC: mic.handleSyncRequest(messagePointer); break;
+        case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
