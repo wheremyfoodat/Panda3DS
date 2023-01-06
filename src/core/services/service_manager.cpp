@@ -2,14 +2,15 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem), hid(mem), 
-	frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), boss(mem), apt(mem, kernel), cecd(mem), cfg(mem), dsp(mem),
+    hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem), ndm(mem), ptm(mem) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
 void ServiceManager::reset() {
     ac.reset();
 	apt.reset();
+    boss.reset();
 	cecd.reset();
 	cfg.reset();
 	dsp.reset();
@@ -90,6 +91,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::APT;
 	} else if (service == "APT:U") {
 		handle = KernelHandles::APT;
+	} else if (service == "boss:U") {
+		handle = KernelHandles::BOSS;
 	} else if (service == "cecd:u") {
 		handle = KernelHandles::CECD;
 	} else if (service == "cfg:u") {
@@ -152,6 +155,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
         case KernelHandles::AC: ac.handleSyncRequest(messagePointer); break;
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
+        case KernelHandles::BOSS: boss.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DSP: dsp.handleSyncRequest(messagePointer); break;

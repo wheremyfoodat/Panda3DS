@@ -6,6 +6,7 @@
 #include "memory.hpp"
 #include "services/ac.hpp"
 #include "services/apt.hpp"
+#include "services/boss.hpp"
 #include "services/cecd.hpp"
 #include "services/cfg.hpp"
 #include "services/dsp.hpp"
@@ -32,6 +33,7 @@ class ServiceManager {
 
     ACService ac;
 	APTService apt;
+    BOSSService boss;
 	CECDService cecd;
 	CFGService cfg;
 	DSPService dsp;

@@ -12,7 +12,8 @@ namespace KernelHandles {
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
         AC,   // Something network related
 		APT,  // App Title something service?
-		CECD, // Streetpass stuff?
+		BOSS, // Streetpass stuff?
+		CECD, // More Streetpass stuff?
 		CFG,  // CFG service (Console & region info)
 		HID,  // HID service (Handles everything input-related including gyro)
         FRD,  // Friend service (Miiverse friend service)

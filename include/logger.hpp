@@ -30,6 +30,7 @@ namespace Log {
     // Service loggers
     static Logger<false> acLogger;
     static Logger<false> aptLogger;
+    static Logger<false> bossLogger;
     static Logger<false> cecdLogger;
     static Logger<false> cfgLogger;
     static Logger<false> dspServiceLogger;
