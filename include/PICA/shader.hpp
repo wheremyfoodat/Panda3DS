@@ -18,6 +18,7 @@ namespace ShaderOpcodes {
 		MUL = 0x08,
 		MAX = 0x0C,
 		MIN = 0x0D,
+		RCP = 0x0E,
 		RSQ = 0x0F,
 		MOVA = 0x12,
 		MOV = 0x13,
@@ -99,6 +100,7 @@ class PICAShader {
 	void mov(u32 instruction);
 	void mova(u32 instruction);
 	void mul(u32 instruction);
+	void rcp(u32 instruction);
 	void rsq(u32 instruction);
 
 	// src1, src2 and src3 have different negation & component swizzle bits in the operand descriptor
