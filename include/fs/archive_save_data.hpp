@@ -2,11 +2,10 @@
 #include "archive_base.hpp"
 
 class SaveDataArchive : public ArchiveBase {
-
 public:
 	SaveDataArchive(Memory& mem) : ArchiveBase(mem) {}
 
-	u64 getFreeBytes() override { return 0; }
+	u64 getFreeBytes() override { Helpers::panic("SaveData::GetFreeBytes unimplemented"); return 0; }
 	std::string name() override { return "SaveData"; }
 
 	bool openFile(const FSPath& path) override;

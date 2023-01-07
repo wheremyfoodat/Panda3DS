@@ -30,6 +30,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id) {
 	switch (id) {
 		case ArchiveID::SelfNCCH: return &selfNcch;
 		case ArchiveID::SaveData: return &saveData;
+		case ArchiveID::SharedExtSaveData: return &sharedExtSaveData;
 		case ArchiveID::SDMC: return &sdmc;
 		default:
 			Helpers::panic("Unknown archive. ID: %d\n", id);

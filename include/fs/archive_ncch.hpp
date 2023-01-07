@@ -2,7 +2,6 @@
 #include "archive_base.hpp"
 
 class SelfNCCHArchive : public ArchiveBase {
-
 public:
 	SelfNCCHArchive(Memory& mem) : ArchiveBase(mem) {}
 
