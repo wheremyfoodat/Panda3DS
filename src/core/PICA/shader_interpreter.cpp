@@ -30,6 +30,7 @@ void PICAShader::run() {
 			case ShaderOpcodes::MOVA: mova(instruction); break;
 			case ShaderOpcodes::MUL: mul(instruction); break;
 			case ShaderOpcodes::NOP: break; // Do nothing
+			case ShaderOpcodes::RCP: rcp(instruction); break;
 			case ShaderOpcodes::RSQ: rsq(instruction); break;
 
 			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
@@ -288,6 +289,26 @@ void PICAShader::dp4(u32 instruction) {
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
 			destVector[3 - i] = dot;
+		}
+	}
+}
+
+void PICAShader::rcp(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	if (idx) Helpers::panic("[PICA] RCP: idx != 0");
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+	f24 res = f24::fromFloat32(1.0f) / srcVec1[0];
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = res;
 		}
 	}
 }

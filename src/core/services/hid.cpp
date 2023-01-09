@@ -1,4 +1,5 @@
 #include "services/hid.hpp"
+#include <bit>
 
 namespace HIDCommands {
 	enum : u32 {
@@ -49,19 +50,25 @@ void HIDService::enableGyroscopeLow(u32 messagePointer) {
 
 void HIDService::getGyroscopeLowCalibrateParam(u32 messagePointer) {
 	log("HID::GetGyroscopeLowCalibrateParam\n");
+	constexpr s16 unit = 6700; // Approximately from Citra which took it from hardware
 
 	mem.write32(messagePointer + 4, Result::Success);
-	// Fill calibration data with 0s since we don't have gyro
-	for (int i = 0; i < 5; i++) {
-		mem.write32(messagePointer + 8 + i * 4, 0);
+	// Fill calibration data (for x/y/z depending on i)
+	for (int i = 0; i < 3; i++) {
+		const u32 pointer = messagePointer + 8 + i * 3 * sizeof(u16); // Pointer to write the calibration info for the current coordinate
+
+		mem.write16(pointer, 0); // Zero point
+		mem.write16(pointer + 1 * sizeof(u16), unit); // Positive unit point
+		mem.write16(pointer + 2 * sizeof(u16), -unit); // Negative unit point
 	}
 }
 
 void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 	log("HID::GetGyroscopeLowRawToDpsCoefficient\n");
 
+	constexpr float gyroscopeCoeff = 14.375f; // Same as retail 3DS
 	mem.write32(messagePointer + 4, Result::Success);
-	// This should write a coeff value here but we don't have gyro so
+	mem.write32(messagePointer + 8, std::bit_cast<u32, float>(gyroscopeCoeff));
 }
 
 void HIDService::getIPCHandles(u32 messagePointer) {

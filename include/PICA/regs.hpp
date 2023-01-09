@@ -14,6 +14,10 @@ namespace PICAInternalRegs {
 		// Framebuffer registers
 		AlphaTestConfig = 0x104,
 		DepthAndColorMask = 0x107,
+		ColourBufferFormat = 0x117,
+		DepthBufferLoc = 0x11C,
+		ColourBufferLoc = 0x11D,
+		FramebufferSize = 0x11E,
 
 		// Geometry pipeline registers
 		VertexAttribLoc = 0x200,

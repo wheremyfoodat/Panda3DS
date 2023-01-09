@@ -5,7 +5,7 @@
 
 using namespace Floats;
 
-GPU::GPU(Memory& mem) : mem(mem) {
+GPU::GPU(Memory& mem) : mem(mem), renderer(regs) {
 	vram = new u8[vramSize];
 }
 
@@ -27,7 +27,7 @@ void GPU::reset() {
 		e.config2 = 0;
 	}
 
-	// TODO: Reset blending, texturing, etc here
+	renderer.reset();
 }
 
 void GPU::drawArrays(bool indexed) {
@@ -49,12 +49,13 @@ void GPU::drawArrays() {
 	const u32 primType = (primConfig >> 8) & 3;
 	if (primType != 0 && primType != 1) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
+	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
 	if ((primType == 0 && vertexCount % 3) || (primType == 1 && vertexCount < 3)) {
 		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
 	}
 
-	Vertex vertices[vertexBufferSize];
+	Vertex vertices[Renderer::vertexBufferSize];
 
 	// Get the configuration for the index buffer, used only for indexed drawing
 	u32 indexBufferConfig = regs[PICAInternalRegs::IndexBufferConfig];
@@ -157,7 +158,7 @@ void GPU::drawArrays() {
 		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::LineStrip
 	};
 	const auto shape = primTypes[primType];
-	drawVertices(shape, vertices, vertexCount);
+	renderer.drawVertices(shape, vertices, vertexCount);
 }
 
 void GPU::fireDMA(u32 dest, u32 source, u32 size) {

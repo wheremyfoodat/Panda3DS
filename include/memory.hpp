@@ -156,6 +156,17 @@ public:
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
 
+	enum class BatteryLevel {
+		Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
+	};
+	u8 getBatteryState(bool adapterConnected, bool charging, BatteryLevel batteryLevel) {
+		u8 value = static_cast<u8>(batteryLevel) << 2; // Bits 2:4 are the battery level from 0 to 5
+		if (adapterConnected) value |= 1 << 0; // Bit 0 shows if the charger is connected
+		if (charging) value |= 1 << 1; // Bit 1 shows if we're charging
+
+		return value;
+	}
+
 	NCCH* getCXI() {
 		if (loadedCXI.has_value()) {
 			return &loadedCXI.value();

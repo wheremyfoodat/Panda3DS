@@ -10,19 +10,24 @@ namespace KernelHandles {
 		// Hardcoded handles
 		CurrentThread = 0xFFFF8000,  // Used by the original kernel
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
+		AC,   // Something network related
+		AM,   // Application manager
 		APT,  // App Title something service?
-		CECD, // Streetpass stuff?
+		BOSS, // Streetpass stuff?
+		CECD, // More Streetpass stuff?
 		CFG,  // CFG service (Console & region info)
 		HID,  // HID service (Handles everything input-related including gyro)
+        FRD,  // Friend service (Miiverse friend service)
 		FS,   // Filesystem service
 		GPU,  // GPU service
 		DSP,  // DSP service (Used for audio decoding and output)
 		LCD,  // LCD service (Used for configuring the displays)
 		MIC,  // MIC service (Controls the microphone)
+		NIM,  // Updates, DLC, etc
 		NDM,  // ?????
 		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 
-		MinServiceHandle = APT,
+		MinServiceHandle = AC,
 		MaxServiceHandle = PTM,
 
 		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory

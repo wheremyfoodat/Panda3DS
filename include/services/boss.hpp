@@ -4,15 +4,16 @@
 #include "logger.hpp"
 #include "memory.hpp"
 
-class CECDService {
-	Handle handle = KernelHandles::CECD;
+class BOSSService {
+	Handle handle = KernelHandles::BOSS;
 	Memory& mem;
-	MAKE_LOG_FUNCTION(log, cecdLogger)
+	MAKE_LOG_FUNCTION(log, bossLogger)
 
 	// Service commands
+	void initializeSession(u32 messagePointer);
 
 public:
-	CECDService(Memory& mem) : mem(mem) {}
+	BOSSService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

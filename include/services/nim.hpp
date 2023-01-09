@@ -4,15 +4,16 @@
 #include "logger.hpp"
 #include "memory.hpp"
 
-class CECDService {
-	Handle handle = KernelHandles::CECD;
+class NIMService {
+	Handle handle = KernelHandles::NIM;
 	Memory& mem;
-	MAKE_LOG_FUNCTION(log, cecdLogger)
+	MAKE_LOG_FUNCTION(log, nimLogger)
 
 	// Service commands
+	void initialize(u32 messagePointer);
 
 public:
-	CECDService(Memory& mem) : mem(mem) {}
+	NIMService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

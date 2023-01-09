@@ -74,10 +74,12 @@ u8 Memory::read8(u32 vaddr) {
 	}
 	else {
 		switch (vaddr) {
+			case ConfigMem::BatteryState: return getBatteryState(true, true, BatteryLevel::FourBars);
 			case ConfigMem::EnvInfo: return envInfo;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
 			case ConfigMem::KernelVersionMajor: return u8(kernelVersion >> 8);
 			case ConfigMem::LedState3D: return 1; // Report the 3D LED as always off (non-zero) for now
+			case ConfigMem::HeadphonesConnectedMaybe: return 0;
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -115,6 +117,7 @@ u32 Memory::read32(u32 vaddr) {
 				return 0; // Set to 0 by PTM
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
+			case ConfigMem::SyscoreVer: return 2;
 			case 0x1FF81000: return 0; // TODO: Figure out what this config mem address does
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {

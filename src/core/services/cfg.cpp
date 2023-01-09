@@ -37,7 +37,12 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		mem.write8(output, static_cast<u8>(DSPService::SoundOutputMode::Stereo));
 	} else if (size == 1 && blockID == 0xA0002){ // System language
 		mem.write8(output, static_cast<u8>(LanguageCodes::English));
-	} else if (size == 0x20 && blockID == 0x50005) {
+	} else if (size == 4 && blockID == 0xB0000) { // Country info
+		mem.write8(output, 0); // Unknown
+		mem.write8(output + 1, 0); // Unknown
+		mem.write8(output + 2, 2); // Province (Temporarily stubbed to Washington DC like Citra)
+		mem.write8(output + 3, 49); // Country code (Temporarily stubbed to USA like Citra)
+	}else if (size == 0x20 && blockID == 0x50005) {
 		printf("[Unimplemented] Read stereo display settings from NAND\n");
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration");

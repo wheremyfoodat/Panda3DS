@@ -13,6 +13,7 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${FMT_INCLUDE_DIR})
+include_directories(third_party/boost/)
 include_directories(third_party/elfio/)
 include_directories(third_party/gl3w/)
 include_directories(third_party/imgui/)
@@ -57,12 +58,18 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp
                          src/core/services/ndm.cpp src/core/services/dsp.cpp src/core/services/cfg.cpp
                          src/core/services/ptm.cpp src/core/services/mic.cpp src/core/services/cecd.cpp
+                         src/core/services/ac.cpp src/core/services/am.cpp src/core/services/boss.cpp
+                         src/core/services/frd.cpp src/core/services/nim.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
-                      src/core/PICA/shader_interpreter.cpp src/core/PICA/renderer_opengl.cpp
+                      src/core/PICA/shader_interpreter.cpp
 )
+set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp)
+
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp)
-set(FS_SOURCE_FILES src/core/fs/archive_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp)
+set(FS_SOURCE_FILES src/core/fs/archive_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
+                    src/core/fs/archive_ext_save_data.cpp
+)
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel/kernel.hpp
@@ -76,7 +83,10 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_ncch.hpp
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
-                 include/services/mic.hpp include/services/cecd.hpp
+                 include/services/mic.hpp include/services/cecd.hpp include/renderer_gl/renderer_gl.hpp
+                 include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp include/services/ac.hpp
+                 include/services/am.hpp include/services/boss.hpp include/services/frd.hpp include/services/nim.hpp
+                 include/fs/archive_ext_save_data.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -95,8 +105,9 @@ source_group("Source Files\\Core\\Kernel" FILES ${KERNEL_SOURCE_FILES})
 source_group("Source Files\\Core\\Loader" FILES ${LOADER_SOURCE_FILES})
 source_group("Source Files\\Core\\Services" FILES ${SERVICE_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
+source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
 add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
-${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static)

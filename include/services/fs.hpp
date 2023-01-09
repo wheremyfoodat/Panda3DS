@@ -1,4 +1,5 @@
 #pragma once
+#include "fs/archive_ext_save_data.hpp"
 #include "fs/archive_ncch.hpp"
 #include "fs/archive_save_data.hpp"
 #include "fs/archive_sdmc.hpp"
@@ -20,6 +21,7 @@ class FSService {
 	// The different filesystem archives (Save data, RomFS+ExeFS, etc)
 	SelfNCCHArchive selfNcch;
 	SaveDataArchive saveData;
+	ExtSaveDataArchive sharedExtSaveData;
 	SDMCArchive sdmc;
 
 	ArchiveBase* getArchiveFromID(u32 id);
@@ -31,6 +33,7 @@ class FSService {
 	void getPriority(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void initializeWithSdkVersion(u32 messagePointer);
+	void isSdmcDetected(u32 messagePointer);
 	void openArchive(u32 messagePointer);
 	void openFile(u32 messagePointer);
 	void openFileDirectly(u32 messagePointer);
@@ -40,7 +43,12 @@ class FSService {
 	u32 priority;
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), sdmc(mem), selfNcch(mem), kernel(kernel) {}
+	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), sharedExtSaveData(mem), sdmc(mem), selfNcch(mem),
+		kernel(kernel)
+	{
+		sharedExtSaveData.isShared = true; // Need to do this here because templates and virtual classes do not mix well
+	}
+	
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

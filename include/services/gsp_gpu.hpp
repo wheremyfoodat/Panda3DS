@@ -37,6 +37,7 @@ class GPUService {
 	void setAxiConfigQoSMode(u32 messagePointer);
 	void setInternalPriorities(u32 messagePointer);
 	void setLCDForceBlack(u32 messagePointer);
+	void storeDataCache(u32 messagePointer);
 	void triggerCmdReqQueue(u32 messagePointer);
 	void writeHwRegs(u32 messagePointer);
 	void writeHwRegsWithMask(u32 messagePointer);

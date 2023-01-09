@@ -1,7 +1,6 @@
+#include "renderer_gl/renderer_gl.hpp"
 #include "PICA/float_types.hpp"
-#include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
-#include "opengl.hpp"
 
 using namespace Floats;
 
@@ -38,7 +37,7 @@ const char* fragmentShader = R"(
 			float alpha = fragColour.a;
 
 			switch (func) {
-				case 0: discard; break; // Never pass alpha test
+				case 0: discard; // Never pass alpha test
 				case 1: break;          // Always pass alpha test
 				case 2:                 // Pass if equal
 					if (alpha != reference)
@@ -106,31 +105,19 @@ const char* displayFragmentShader = R"(
     }
 )";
 
-void GPU::initGraphicsContext() {
-	// Set up texture for top screen
-	fboTexture.create(400, 240, GL_RGBA8);
-	fboTexture.bind();
+void Renderer::reset() {
+	depthBufferCache.reset();
+	colourBufferCache.reset();
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	// Init the colour/depth buffer settings to some random defaults on reset
+	colourBufferLoc = 0;
+	colourBufferFormat = ColourBuffer::Formats::RGBA8;
 
-	fbo.createWithDrawTexture(fboTexture);
-	fbo.bind(OpenGL::DrawAndReadFramebuffer);
+	depthBufferLoc = 0;
+	depthBufferFormat = DepthBuffer::Formats::Depth16;
+}
 
-	GLuint rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 400, 240); // use a single renderbuffer object for both a depth AND stencil buffer.
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		Helpers::panic("Incomplete framebuffer");
-	//glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-	OpenGL::setViewport(400, 240);
-	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
-	OpenGL::clearColor();
-
+void Renderer::initGraphicsContext() {
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({ vert, frag });
@@ -157,25 +144,28 @@ void GPU::initGraphicsContext() {
 
 	dummyVBO.create();
 	dummyVAO.create();
+	reset();
 }
 
-void GPU::getGraphicsContext() {
+void Renderer::getGraphicsContext() {
 	OpenGL::disableScissor();
 	OpenGL::setViewport(400, 240);
-	fbo.bind(OpenGL::DrawAndReadFramebuffer);
 
 	vbo.bind();
 	vao.bind();
 	triangleProgram.use();
 }
 
-void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
+void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
 		oldAlphaControl = alphaControl;
 		glUniform1ui(alphaControlLoc, alphaControl);
 	}
+
+	OpenGL::Framebuffer poop = getColourFBO();
+	poop.bind(OpenGL::DrawAndReadFramebuffer);
 
 	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
 	bool depthEnable = depthControl & 1;
@@ -191,8 +181,8 @@ void GPU::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count)
 	f24 depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff);
 	printf("Depth enable: %d, func: %d, writeEnable: %d\n", depthEnable, depthFunc, depthWriteEnable);
 
-	if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
-		Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
+	//if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
+	//	Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
@@ -220,21 +210,24 @@ constexpr u32 topScreenBuffer = 0x1f000000;
 constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 // Quick hack to display top screen for now
-void GPU::display() {
+void Renderer::display() {
 	OpenGL::disableDepth();
 	OpenGL::disableScissor();
+
 	OpenGL::bindScreenFramebuffer();
-	fboTexture.bind();
+	colourBufferCache[0].texture.bind();
+
 	displayProgram.use();
 
 	dummyVAO.bind();
-	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0); // Clear screen colour
+	OpenGL::setClearColor(0.0, 0.0, 1.0, 1.0); // Clear screen colour
 	OpenGL::clearColor();
 	OpenGL::setViewport(0, 240, 400, 240); // Actually draw our 3DS screen
 	OpenGL::draw(OpenGL::TriangleStrip, 4);
 }
 
-void GPU::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+	return;
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
 
 	const float r = float((value >> 24) & 0xff) / 255.0;
@@ -253,4 +246,17 @@ void GPU::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) 
 
 	OpenGL::setClearColor(r, g, b, a);
 	OpenGL::clearColor();
+}
+
+OpenGL::Framebuffer Renderer::getColourFBO() {
+	//We construct a colour buffer object and see if our cache has any matching colour buffers in it
+	// If not, we allocate a texture & FBO for our framebuffer and store it in the cache 
+	ColourBuffer sampleBuffer(colourBufferLoc, colourBufferFormat, fbSize.x(), fbSize.y());
+	auto buffer = colourBufferCache.find(sampleBuffer);
+
+	if (buffer.has_value()) {
+		return buffer.value().get().fbo;
+	} else {
+		return colourBufferCache.add(sampleBuffer).fbo;
+	}
 }

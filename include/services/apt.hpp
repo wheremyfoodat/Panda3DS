@@ -27,13 +27,32 @@ class APTService {
 	void checkNew3DSApp(u32 messagePointer);
 	void enable(u32 messagePointer);
 	void initialize(u32 messagePointer);
+	void inquireNotification(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);
 	void receiveParameter(u32 messagePointer);
 	void replySleepQuery(u32 messagePointer);
 	void setApplicationCpuTimeLimit(u32 messagePointer);
+	void setScreencapPostPermission(u32 messagePointer);
 
 	// Percentage of the syscore available to the application, between 5% and 89%
 	u32 cpuTimeLimit;
+
+	enum class NotificationType : u32 {
+		None = 0,
+		HomeButton1 = 1,
+		HomeButton2 = 2,
+		SleepQuery = 3,
+		SleepCanceledByOpen = 4,
+		SleepAccepted = 5,
+		SleepAwake = 6,
+		Shutdown = 7,
+		PowerButtonClick = 8,
+		PowerButtonClear = 9,
+		TrySleep = 10,
+		OrderToClose = 11
+	};
+
+	u32 screencapPostPermission;
 
 public:
 	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}

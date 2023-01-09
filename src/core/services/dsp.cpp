@@ -7,6 +7,7 @@ namespace DSPCommands {
 		WriteProcessPipe = 0x000D0082,
 		ReadPipeIfPossible = 0x001000C0,
 		LoadComponent = 0x001100C2,
+		FlushDataCache = 0x00130082,
 		RegisterInterruptEvents = 0x00150082,
 		GetSemaphoreHandle = 0x00160000,
 		SetSemaphoreMask = 0x00170040,
@@ -30,6 +31,7 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case DSPCommands::ConvertProcessAddressFromDspDram: convertProcessAddressFromDspDram(messagePointer); break;
+		case DSPCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case DSPCommands::GetHeadphoneStatus: getHeadphoneStatus(messagePointer); break;
 		case DSPCommands::GetSemaphoreHandle: getSemaphoreHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
@@ -132,5 +134,14 @@ void DSPService::writeProcessPipe(u32 messagePointer) {
 	u32 buffer = mem.read32(messagePointer + 16);
 
 	log("DSP::writeProcessPipe (channel = %d, size = %X, buffer = %08X)\n", channel, size, buffer);
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void DSPService::flushDataCache(u32 messagePointer) {
+	u32 address = mem.read32(messagePointer + 4);
+	u32 size = mem.read32(messagePointer + 8);
+	u32 process = mem.read32(messagePointer + 16);
+
+	log("DSP::FlushDataCache (addr = %08X, size = %08X, process = %X)\n", address, size, process);
 	mem.write32(messagePointer + 4, Result::Success);
 }

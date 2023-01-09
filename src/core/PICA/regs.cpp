@@ -4,8 +4,13 @@
 using namespace Floats;
 
 u32 GPU::readReg(u32 address) {
-	log("Ignoring read from GPU register %08X\n", address);
-	return 0;
+	if (address >= 0x1EF01000 && address < 0x1EF01C00) { // Internal registers
+		const u32 index = (address - 0x1EF01000) / sizeof(u32);
+		return readInternalReg(index);
+	} else {
+		log("Ignoring read to external GPU register %08X.\n", address);
+		return 0;
+	}
 }
 
 void GPU::writeReg(u32 address, u32 value) {
@@ -53,6 +58,31 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			totalAttribCount = (value >> 28) + 1; // Total number of vertex attributes
 			fixedAttribMask = (value >> 16) & 0xfff; // Determines which vertex attributes are fixed for all vertices
 			break;
+
+		case ColourBufferLoc: {
+			u32 loc = (value & 0x0fffffff) << 3;
+			renderer.setColourBufferLoc(loc);
+			break;
+		};
+
+		case ColourBufferFormat: {
+			u32 format = (value >> 16) & 7;
+			renderer.setColourFormat(format);
+			break;
+		}
+
+		case DepthBufferLoc: {
+			u32 loc = (value & 0x0fffffff) << 3;
+			renderer.setDepthBufferLoc(loc);
+			break;
+		}
+
+		case FramebufferSize: {
+			const u32 width = value & 0x7ff;
+			const u32 height = ((value >> 12) & 0x3ff) + 1;
+			renderer.setFBSize(width, height);
+			break;
+		}
 
 		case VertexFloatUniformIndex:
 			shaderUnit.vs.setFloatUniformIndex(value);

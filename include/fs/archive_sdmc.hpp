@@ -2,11 +2,10 @@
 #include "archive_base.hpp"
 
 class SDMCArchive : public ArchiveBase {
-
 public:
 	SDMCArchive(Memory& mem) : ArchiveBase(mem) {}
 
-	u64 getFreeBytes() override { return 0; }
+	u64 getFreeBytes() override { Helpers::panic("SDMC::GetFreeBytes unimplemented"); return 0;  }
 	std::string name() override { return "SDMC"; }
 
 	bool openFile(const FSPath& path) override;

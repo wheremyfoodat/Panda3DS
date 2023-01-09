@@ -11,7 +11,7 @@ void Kernel::switchThread(int newThreadIndex) {
 	auto& oldThread = threads[currentThreadIndex];
 	auto& newThread = threads[newThreadIndex];
 	newThread.status = ThreadStatus::Running;
-	printf("Switching from thread %d to %d\n", currentThreadIndex, newThreadIndex);
+	logThread("Switching from thread %d to %d\n", currentThreadIndex, newThreadIndex);
 
 	// Bail early if the new thread is actually the old thread
 	if (currentThreadIndex == newThreadIndex) [[unlikely]] {
@@ -70,8 +70,6 @@ std::optional<int> Kernel::getNextThread() {
 		if (canThreadRun(t)) {
 			return index;
 		}
-
-		// TODO: Check timeouts here
 	}
 
 	// No thread was found
@@ -274,7 +272,7 @@ void Kernel::setThreadPriority() {
 			object->getData<Thread>()->priority = priority;
 		}
 	}
-
+	sortThreads();
 	rescheduleThreads();
 }
 
