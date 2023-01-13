@@ -72,6 +72,16 @@ std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& 
 	}
 }
 
+FSPath FSService::readPath(u32 type, u32 pointer, u32 size) {
+	std::vector<u8> data;
+	data.resize(size);
+
+	for (u32 i = 0; i < size; i++)
+		data[i] = mem.read8(pointer + i);
+
+	return FSPath(type, data);
+}
+
 void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
@@ -120,8 +130,8 @@ void FSService::openArchive(u32 messagePointer) {
 	const u32 archivePathType = mem.read32(messagePointer + 8);
 	const u32 archivePathSize = mem.read32(messagePointer + 12);
 	const u32 archivePathPointer = mem.read32(messagePointer + 20);
-	FSPath archivePath{ .type = archivePathType, .size = archivePathSize, .pointer = archivePathPointer };
 
+	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
 	log("FS::OpenArchive(archive ID = %d, archive path type = %d)\n", archiveID, archivePathType);
 	
 	std::optional<Handle> handle = openArchiveHandle(archiveID, archivePath);
@@ -152,7 +162,7 @@ void FSService::openFile(u32 messagePointer) {
 	}
 
 	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
-	FSPath filePath{ .type = filePathType, .size = filePathSize, .pointer = filePathPointer };
+	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
 	std::optional<Handle> handle = openFileHandle(archive, filePath);
 	if (!handle.has_value()) {
@@ -183,8 +193,8 @@ void FSService::openFileDirectly(u32 messagePointer) {
 		Helpers::panic("OpenFileDirectly: Tried to open unknown archive %d.", archiveID);
 	}
 
-	FSPath archivePath { .type = archivePathType, .size = archivePathSize, .pointer = archivePathPointer };
-	FSPath filePath { .type = filePathType, .size = filePathSize, .pointer = filePathPointer };
+	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
+	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
 	archive = archive->openArchive(archivePath);
 	if (archive == nullptr) [[unlikely]] {

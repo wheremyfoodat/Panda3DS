@@ -1,6 +1,7 @@
 #pragma once
 #include <optional>
 #include <string>
+#include <vector>
 #include "helpers.hpp"
 #include "memory.hpp"
 
@@ -40,9 +41,33 @@ namespace ArchiveID {
 }
 
 struct FSPath {
-    u32 type;
-    u32 size;
-    u32 pointer; // Pointer to the actual path data
+    u32 type = PathType::Invalid;
+
+    std::vector<u8> binary; // Path data for binary paths
+    std::string string; // Path data for ASCII paths
+    std::u16string utf16_string;
+
+    FSPath() {}
+
+    FSPath(u32 type, std::vector<u8> vec) : type(type) {
+        switch (type) {
+            case PathType::Binary:
+                binary = std::move(vec);
+                break;
+
+            case PathType::ASCII:
+                string.resize(vec.size() - 1); // -1 because of the null terminator
+                std::memcpy(string.data(), vec.data(), vec.size() - 1); // Copy string data
+                break;
+
+            case PathType::UTF16: {
+                const size_t size = vec.size() / sizeof(u16) - 1; // Character count. -1 because null terminator here too
+                utf16_string.resize(size);
+                std::memcpy(utf16_string.data(), vec.data(), size * sizeof(u16));
+                break;
+            }
+;        }
+    }
 };
 
 class ArchiveBase;
@@ -52,9 +77,7 @@ struct FileSession {
     FSPath path;
     bool isOpen;
 
-    FileSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), isOpen(isOpen) {
-        path = filePath;
-    }
+    FileSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(path), isOpen(isOpen) {}
 };
 
 struct ArchiveSession {
@@ -62,9 +85,7 @@ struct ArchiveSession {
     FSPath path;
     bool isOpen;
 
-    ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), isOpen(isOpen) {
-        path = filePath;
-    }
+    ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(path), isOpen(isOpen) {}
 };
 
 class ArchiveBase {

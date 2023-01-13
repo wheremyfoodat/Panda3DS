@@ -7,13 +7,15 @@ bool SelfNCCHArchive::openFile(const FSPath& path) {
 		return false;
 	}
 
-	if (path.type != PathType::Binary) {
+	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		printf("Invalid SelfNCCH path type\n");
 		return false;
 	}
 
-	// We currently only know how to read from an NCCH's RomFS
-	if (mem.read32(path.pointer) != 0) {
+	// Where to read the file from. (https://www.3dbrew.org/wiki/Filesystem_services#SelfNCCH_File_Path_Data_Format)
+	// We currently only know how to read from an NCCH's RomFS, ie type = 0
+	const u32 type = *(u32*)&path.binary[0]; // TODO: Get rid of UB here
+	if (type != 0) {
 		Helpers::panic("Read from NCCH's non-RomFS section!");
 	}
 

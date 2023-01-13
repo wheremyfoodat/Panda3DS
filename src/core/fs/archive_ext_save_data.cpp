@@ -11,12 +11,12 @@ bool ExtSaveDataArchive::openFile(const FSPath& path) {
 }
 
 ArchiveBase* ExtSaveDataArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Binary || path.size != 12) {
+	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
-	u32 mediaType = mem.read32(path.pointer);
-	u64 saveID = mem.read64(path.pointer + 4);
+	u32 mediaType = *(u32*)&path.binary[0];
+	u64 saveID = *(u64*)&path.binary[4]; // TODO: Get rid of UB here.
 
 	Helpers::panic("ExtSaveData: media type = %d\n", mediaType);
 

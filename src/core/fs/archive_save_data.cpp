@@ -8,8 +8,8 @@ bool SaveDataArchive::openFile(const FSPath& path) {
 		return false;
 	}
 
-	if (path.type == PathType::UTF16 && mem.readString(path.pointer, path.size) == "/") {
-		printf("Reading root save data dir\n");
+	if (path.type == PathType::UTF16 /* && path.utf16_string == u"/game_header" */) {
+		printf("Opened file from the SaveData archive \n");
 		return true;
 	}
 
