@@ -51,10 +51,9 @@ void Kernel::signalEvent() {
 	const Handle handle = regs[0];
 	const auto event = getObject(handle, KernelObjectType::Event);
 	logSVC("SignalEvent(event handle = %X)\n", handle);
-	printf("Stubbed SignalEvent!!\n");
 	
 	if (event == nullptr) [[unlikely]] {
-		Helpers::warn("Signalled non-existent event: %X\n", handle);
+		logThread("Signalled non-existent event: %X\n", handle);
 		regs[0] = SVCResult::Success;
 		//regs[0] = SVCResult::BadHandle;
 		return;

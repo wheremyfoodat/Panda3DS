@@ -80,7 +80,7 @@ void Kernel::switchToNextThread() {
 	std::optional<int> newThreadIndex = getNextThread();
 	
 	if (!newThreadIndex.has_value()) {
-		Helpers::warn("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
+		log("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
 		switchThread(rand() % threadCount);
 	} else {
 		switchThread(newThreadIndex.value());
@@ -308,7 +308,7 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 			return !object->getData<Event>()->fired;
 
 		default:
-			Helpers::warn("Not sure whether to wait on object (type: %s)", object->getTypeName());
+			logThread("Not sure whether to wait on object (type: %s)", object->getTypeName());
 			return true;
 	}
 }

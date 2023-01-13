@@ -10,6 +10,7 @@ class AMService {
 	MAKE_LOG_FUNCTION(log, amLogger)
 
 	// Service commands
+	void getDLCTitleInfo(u32 messagePointer);
 	void listTitleInfo(u32 messagePointer);
 
 public:
