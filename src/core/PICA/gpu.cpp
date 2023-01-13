@@ -48,7 +48,6 @@ void GPU::drawArrays() {
 	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
 	const u32 primType = (primConfig >> 8) & 3;
 	if (primType != 0 && primType != 1) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
-	if (vertexCount > vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
 	if ((primType == 0 && vertexCount % 3) || (primType == 1 && vertexCount < 3)) {
