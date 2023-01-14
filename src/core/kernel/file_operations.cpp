@@ -3,6 +3,7 @@
 namespace FileOps {
 	enum : u32 {
 		Read = 0x080200C2,
+		GetSize = 0x08040000,
 		Close = 0x08080000
 	};
 }
@@ -18,6 +19,7 @@ void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 	const u32 cmd = mem.read32(messagePointer);
 	switch (cmd) {
 		case FileOps::Close: closeFile(messagePointer, file); break;
+		case FileOps::GetSize: getFileSize(messagePointer, file); break;
 		case FileOps::Read: readFile(messagePointer, file); break;
 		default: Helpers::panic("Unknown file operation: %08X", cmd);
 	}
@@ -62,4 +64,22 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write32(messagePointer + 8, bytesRead.value());
 	}
+}
+
+void Kernel::getFileSize(u32 messagePointer, Handle fileHandle) {
+	logFileIO("Getting size of file %X\n", fileHandle);
+
+	const auto p = getObject(fileHandle, KernelObjectType::File);
+	if (p == nullptr) [[unlikely]] {
+		Helpers::panic("Called GetFileSize on non-existent file");
+	}
+
+	FileSession* file = p->getData<FileSession>();
+	if (!file->isOpen) {
+		Helpers::panic("Tried to get size of closed file");
+	}
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write64(messagePointer + 8, 0); // Size here
+	Helpers::panic("TODO: Implement FileOp::GetSize");
 }
