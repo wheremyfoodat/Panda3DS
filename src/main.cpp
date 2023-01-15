@@ -9,7 +9,7 @@ int main (int argc, char *argv[]) {
 
     emu.initGraphicsContext();
 
-    auto romPath = std::filesystem::current_path() / (argc > 1 ? argv[1] : "Pokemon Mystery Dungeon - Gates to Infinity (USA).3ds");
+    auto romPath = std::filesystem::current_path() / (argc > 1 ? argv[1] : "Pokemon Rumble Blast (USA).3ds");
     if (!emu.loadROM(romPath)) {
         // For some reason just .c_str() doesn't show the proper path
         Helpers::panic("Failed to load ROM file: %s", romPath.string().c_str());

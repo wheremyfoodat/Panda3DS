@@ -1,9 +1,16 @@
 #include "fs/archive_ext_save_data.hpp"
 #include <memory>
 
+namespace fs = std::filesystem;
+
 bool ExtSaveDataArchive::openFile(const FSPath& path) {
-	if (path.type != PathType::Binary) {
-		Helpers::panic("ExtSaveData accessed with a non-binary path in OpenFile. Type: %d", path.type);
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in ExtSaveData::OpenFile");
+
+		fs::path p = IOFile::getAppData() / "NAND";
+		p += fs::path(path.utf16_string).make_preferred();
+		return false;
 	}
 
 	Helpers::panic("ExtSaveDataArchive::OpenFile: Failed");
@@ -14,11 +21,6 @@ ArchiveBase* ExtSaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
-
-	u32 mediaType = *(u32*)&path.binary[0];
-	u64 saveID = *(u64*)&path.binary[4]; // TODO: Get rid of UB here.
-
-	Helpers::panic("ExtSaveData: media type = %d\n", mediaType);
 
 	return this;
 }

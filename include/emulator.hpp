@@ -5,6 +5,7 @@
 #include <SDL.h>
 
 #include "cpu.hpp"
+#include "io_file.hpp"
 #include "memory.hpp"
 #include "opengl.hpp"
 #include "PICA/gpu.hpp"
@@ -43,6 +44,12 @@ public:
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
         window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
         glContext = SDL_GL_CreateContext(window);
+
+        // Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
+        char* appData = SDL_GetPrefPath(nullptr, "Alber");
+        IOFile::setAppDataDir(appData);
+        SDL_free(appData);
+
         reset();
     }
 

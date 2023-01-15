@@ -18,7 +18,8 @@ namespace FSCommands {
 namespace Result {
 	enum : u32 {
 		Success = 0,
-		Failure = 0xFFFFFFFF
+		FileNotFound = 0xC8804464, // TODO: Verify this
+		Failure = 0xFFFFFFFF,
 	};
 }
 
@@ -166,9 +167,9 @@ void FSService::openFile(u32 messagePointer) {
 
 	std::optional<Handle> handle = openFileHandle(archive, filePath);
 	if (!handle.has_value()) {
-		Helpers::panic("OpenFile: Failed to open file with given path");
-	}
-	else {
+		printf("OpenFile failed\n");
+		mem.write32(messagePointer + 4, Result::FileNotFound);
+	} else {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write32(messagePointer + 8, 0x10); // "Move handle descriptor"
 		mem.write32(messagePointer + 12, handle.value());

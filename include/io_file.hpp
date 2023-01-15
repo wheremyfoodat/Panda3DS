@@ -19,6 +19,7 @@
 
 class IOFile {
     FILE* handle = nullptr;
+    static inline std::filesystem::path appData = ""; // Directory for holding app data. AppData on Windows
 
 public:
     bool isOpen() {
@@ -81,4 +82,11 @@ public:
     bool rewind() {
         return seek(0, SEEK_SET);
     }
+
+    static void setAppDataDir(const char* dir) {
+        if (!dir) Helpers::panic("Failed to set app data directory");
+        appData = std::filesystem::path(dir);
+    }
+
+    static std::filesystem::path getAppData() { return IOFile::appData; }
 };
