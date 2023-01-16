@@ -22,6 +22,9 @@ class IOFile {
     static inline std::filesystem::path appData = ""; // Directory for holding app data. AppData on Windows
 
 public:
+    IOFile() {}
+    IOFile(FILE* handle) : handle(handle) {}
+
     bool isOpen() {
         return handle != nullptr;
     }
