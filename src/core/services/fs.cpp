@@ -1,11 +1,16 @@
 #include "services/fs.hpp"
 #include "kernel/kernel.hpp"
 
+#ifdef CreateFile // windows.h defines this because of course it does.
+#undef CreateFile
+#endif
+
 namespace FSCommands {
 	enum : u32 {
 		Initialize = 0x08010002,
 		OpenFile = 0x080201C2,
 		OpenFileDirectly = 0x08030204,
+		CreateFile = 0x08080202,
 		OpenArchive = 0x080C00C2,
 		CloseArchive = 0x080E0080,
 		IsSdmcDetected = 0x08170000,
@@ -87,6 +92,7 @@ FSPath FSService::readPath(u32 type, u32 pointer, u32 size) {
 void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case FSCommands::CreateFile: createFile(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
@@ -212,6 +218,30 @@ void FSService::openFileDirectly(u32 messagePointer) {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write32(messagePointer + 12, handle.value());
 	}
+}
+
+void FSService::createFile(u32 messagePointer) {
+	const u32 archiveHandle = mem.read64(messagePointer + 8);
+	const u32 filePathType = mem.read32(messagePointer + 16);
+	const u32 filePathSize = mem.read32(messagePointer + 20);
+	const u32 attributes = mem.read32(messagePointer + 24);
+	const u64 bytesToZero = mem.read64(messagePointer + 28); // Bytes to fill with zeroes in the file
+	const u32 filePathPointer = mem.read32(messagePointer + 40);
+
+	log("FS::CreateFile\n");
+
+	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
+	if (archiveObject == nullptr) [[unlikely]] {
+		log("FS::OpenFile: Invalid archive handle %d\n", archiveHandle);
+		mem.write32(messagePointer + 4, Result::Failure);
+		return;
+	}
+
+	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
+	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
+
+	for (auto c : filePath.utf16_string) std::cout << (char)c;
+	Helpers::panic("Tried to create file");
 }
 
 void FSService::getPriority(u32 messagePointer) {

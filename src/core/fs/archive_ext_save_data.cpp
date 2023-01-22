@@ -9,13 +9,13 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 			Helpers::panic("Unsafe path in ExtSaveData::OpenFile");
 
 		if (perms.create())
-			Helpers::panic("[ExtSaveData] CAn't open file with create flag");
+			Helpers::panic("[ExtSaveData] Can't open file with create flag");
 
 		fs::path p = IOFile::getAppData() / "NAND";
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::exists(p)) { // Return file descriptor if the file exists
-			IOFile file(p.string().c_str(), "r+b"); // According to Citra, this ignores the OpenFile flags and always opens as r+b? TODO: Check
+			IOFile file(p.string().c_str(), "r+b"); // According to Citra, this ignores the OpenFlags field and always opens as r+b? TODO: Check
 			return file.isOpen() ? file.getHandle() : FileError;
 		} else {
 			return FileError;

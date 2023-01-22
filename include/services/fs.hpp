@@ -30,6 +30,7 @@ class FSService {
 	FSPath readPath(u32 type, u32 pointer, u32 size);
 
 	// Service commands
+	void createFile(u32 messagePointer);
 	void closeArchive(u32 messagePointer);
 	void getPriority(u32 messagePointer);
 	void initialize(u32 messagePointer);
