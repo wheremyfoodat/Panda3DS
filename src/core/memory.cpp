@@ -399,6 +399,6 @@ u64 Memory::timeSince3DSEpoch() {
 	// ms since Jan 1 1970
 	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 	// ms between Jan 1 1900 and Jan 1 1970 (2208988800 seconds elapsed between the two)
-	const u64 offset = 2208988800ull * 1000;
+	constexpr u64 offset = 2208988800ull * 1000;
 	return ms.count() + offset;
 }
