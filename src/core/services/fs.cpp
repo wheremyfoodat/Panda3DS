@@ -39,12 +39,13 @@ ArchiveBase* FSService::getArchiveFromID(u32 id) {
 	}
 }
 
-std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path) {
-	bool opened = archive->openFile(path);
-	if (opened) {
+std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path, const FilePerms& perms) {
+	FileDescriptor opened = archive->openFile(path, perms);
+	if (opened.has_value()) { // If opened doesn't have a value, we failed to open the file
 		auto handle = kernel.makeObject(KernelObjectType::File);
+
 		auto& file = kernel.getObjects()[handle];
-		file.data = new FileSession(archive, path);
+		file.data = new FileSession(archive, path, opened.value());
 		
 		return handle;
 	} else {
@@ -164,8 +165,9 @@ void FSService::openFile(u32 messagePointer) {
 
 	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
+	const FilePerms perms(openFlags);
 
-	std::optional<Handle> handle = openFileHandle(archive, filePath);
+	std::optional<Handle> handle = openFileHandle(archive, filePath, perms);
 	if (!handle.has_value()) {
 		printf("OpenFile failed\n");
 		mem.write32(messagePointer + 4, Result::FileNotFound);
@@ -196,13 +198,14 @@ void FSService::openFileDirectly(u32 messagePointer) {
 
 	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
+	const FilePerms perms(openFlags);
 
 	archive = archive->openArchive(archivePath);
 	if (archive == nullptr) [[unlikely]] {
 		Helpers::panic("OpenFileDirectly: Failed to open archive with given path");
 	}
 
-	std::optional<Handle> handle = openFileHandle(archive, filePath);
+	std::optional<Handle> handle = openFileHandle(archive, filePath, perms);
 	if (!handle.has_value()) {
 		Helpers::panic("OpenFileDirectly: Failed to open file with given path");
 	} else {

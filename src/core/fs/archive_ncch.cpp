@@ -1,15 +1,15 @@
 #include "fs/archive_ncch.hpp"
 #include <memory>
 
-bool SelfNCCHArchive::openFile(const FSPath& path) {
+FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (!hasRomFS()) {
 		printf("Tried to open a SelfNCCH file without a RomFS\n");
-		return false;
+		return FileError;
 	}
 
 	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		printf("Invalid SelfNCCH path type\n");
-		return false;
+		return FileError;
 	}
 
 	// Where to read the file from. (https://www.3dbrew.org/wiki/Filesystem_services#SelfNCCH_File_Path_Data_Format)
@@ -19,7 +19,7 @@ bool SelfNCCHArchive::openFile(const FSPath& path) {
 		Helpers::panic("Read from NCCH's non-RomFS section!");
 	}
 
-	return true;
+	return NoFile; // No file descriptor needed for RomFS
 }
 
 ArchiveBase* SelfNCCHArchive::openArchive(const FSPath& path) {

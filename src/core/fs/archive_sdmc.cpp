@@ -1,9 +1,9 @@
 #include "fs/archive_sdmc.hpp"
 #include <memory>
 
-bool SDMCArchive::openFile(const FSPath& path) {
+FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	printf("SDMCArchive::OpenFile: Failed");
-	return false;
+	return FileError;
 }
 
 ArchiveBase* SDMCArchive::openArchive(const FSPath& path) {

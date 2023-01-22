@@ -2,23 +2,23 @@
 #include <algorithm>
 #include <memory>
 
-bool SaveDataArchive::openFile(const FSPath& path) {
+FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (!cartHasSaveData()) {
 		printf("Tried to read SaveData FS without save data\n");
-		return false;
+		return FileError;
 	}
 
 	if (path.type == PathType::UTF16 /* && path.utf16_string == u"/game_header" */) {
 		printf("Opened file from the SaveData archive \n");
-		return true;
+		return NoFile;
 	}
 
 	if (path.type != PathType::Binary) {
 		printf("Unimplemented SaveData path type: %d\n", path.type);
-		return false;
+		return FileError;
 	}
 
-	return true;
+	return NoFile;
 }
 
 ArchiveBase* SaveDataArchive::openArchive(const FSPath& path) {

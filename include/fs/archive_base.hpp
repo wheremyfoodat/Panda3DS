@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+#include <cstdio>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -72,14 +73,24 @@ struct FSPath {
     }
 };
 
-class ArchiveBase;
+struct FilePerms {
+    u32 raw;
 
+    FilePerms(u32 val) : raw(val) {}
+    bool read() const { return (raw & 1) != 0; }
+    bool write() const { return (raw & 2) != 0; }
+    bool create() const { return (raw & 4) != 0; }
+};
+
+class ArchiveBase;
 struct FileSession {
     ArchiveBase* archive = nullptr;
+    FILE* fd = nullptr; // File descriptor for file sessions that require them.
     FSPath path;
     bool isOpen;
 
-    FileSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(path), isOpen(isOpen) {}
+    FileSession(ArchiveBase* archive, const FSPath& filePath, FILE* fd, bool isOpen = true) : 
+        archive(archive), path(path), fd(fd), isOpen(isOpen) {}
 };
 
 struct ArchiveSession {
@@ -90,9 +101,16 @@ struct ArchiveSession {
     ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(path), isOpen(isOpen) {}
 };
 
+// Represents a file descriptor obtained from OpenFile. If the optional is nullopt, opening the file failed.
+// Otherwise the fd of the opened file is returned (or nullptr if the opened file doesn't require one)
+using FileDescriptor = std::optional<FILE*>;
+
 class ArchiveBase {
 protected:
     using Handle = u32;
+    static constexpr FileDescriptor NoFile = nullptr;
+    static constexpr FileDescriptor FileError = std::nullopt;
+
     Memory& mem;
 
     // Returns if a specified 3DS path in UTF16 or ASCII format is safe or not
@@ -143,7 +161,8 @@ protected:
 public:
     virtual std::string name() = 0;
     virtual u64 getFreeBytes() = 0;
-    virtual bool openFile(const FSPath& path) = 0;
+    // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)
+    virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
 
     virtual ArchiveBase* openArchive(const FSPath& path) = 0;
 

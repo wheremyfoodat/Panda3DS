@@ -24,6 +24,9 @@ class IOFile {
 public:
     IOFile() {}
     IOFile(FILE* handle) : handle(handle) {}
+    IOFile(const std::filesystem::path& path, const char* permissions = "rb") {
+        open(path, permissions);
+    }
 
     bool isOpen() {
         return handle != nullptr;
@@ -84,6 +87,10 @@ public:
 
     bool rewind() {
         return seek(0, SEEK_SET);
+    }
+
+    FILE* getHandle() {
+        return handle;
     }
 
     static void setAppDataDir(const char* dir) {

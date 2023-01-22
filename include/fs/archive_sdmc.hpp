@@ -8,7 +8,7 @@ public:
 	u64 getFreeBytes() override { Helpers::panic("SDMC::GetFreeBytes unimplemented"); return 0;  }
 	std::string name() override { return "SDMC"; }
 
-	bool openFile(const FSPath& path) override;
 	ArchiveBase* openArchive(const FSPath& path) override;
+	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
 };
