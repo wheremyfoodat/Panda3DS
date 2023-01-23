@@ -26,6 +26,7 @@ class APTService {
 	void checkNew3DS(u32 messagePointer);
 	void checkNew3DSApp(u32 messagePointer);
 	void enable(u32 messagePointer);
+	void getSharedFont(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void inquireNotification(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);

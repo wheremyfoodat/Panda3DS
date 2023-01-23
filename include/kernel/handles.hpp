@@ -31,6 +31,7 @@ namespace KernelHandles {
 		MaxServiceHandle = PTM,
 
 		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
+		FontSharedMemHandle,
 		HIDSharedMemHandle,
 
 		MinSharedMemHandle = GSPSharedMemHandle,
@@ -56,16 +57,21 @@ namespace KernelHandles {
 	// Returns the name of a handle as a string based on the given handle
 	static const char* getServiceName(Handle handle) {
 		switch (handle) {
+			case AC: return "AC";
+			case AM: return "AM";
 			case APT: return "APT";
+			case BOSS: return "BOSS";
 			case CECD: return "CECD";
 			case CFG: return "CFG";
 			case HID: return "HID";
+			case FRD: return "FRD";
 			case FS: return "FS";
 			case DSP: return "DSP";
 			case GPU: return "GPU";
 			case LCD: return "LCD";
 			case MIC: return "MIC";
 			case NDM: return "NDM";
+			case NIM: return "NIM";
 			case PTM: return "PTM";
 			default: return "Unknown";
 		}

@@ -10,6 +10,7 @@ namespace APTCommands {
 		ReceiveParameter = 0x000D0080,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
+		GetSharedFont = 0x00440000,
 		AppletUtility = 0x004B00C2,
 		SetApplicationCpuTimeLimit = 0x004F0080,
 		GetApplicationCpuTimeLimit = 0x00500040,
@@ -50,6 +51,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::CheckNew3DS: checkNew3DS(messagePointer); break;
 		case APTCommands::CheckNew3DSApp: checkNew3DSApp(messagePointer); break;
 		case APTCommands::Enable: enable(messagePointer); break;
+		case APTCommands::GetSharedFont: getSharedFont(messagePointer); break;
 		case APTCommands::Initialize: initialize(messagePointer); break;
 		case APTCommands::InquireNotification: inquireNotification(messagePointer); break;
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
@@ -182,4 +184,13 @@ void APTService::setScreencapPostPermission(u32 messagePointer) {
 	// Apparently only 1-3 are valid values, but I see 0 used in some games like Pokemon Rumble
 	mem.write32(messagePointer, Result::Success);
 	screencapPostPermission = perm;
+}
+
+void APTService::getSharedFont(u32 messagePointer) {
+	log("APT::GetSharedFont\n");
+
+	constexpr u32 fontVaddr = 0x18000000;
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, fontVaddr);
+	mem.write32(messagePointer + 16, KernelHandles::FontSharedMemHandle);
 }
