@@ -1,4 +1,5 @@
 #include "kernel.hpp"
+#include "services/shared_font.hpp"
 
 namespace Operation {
 	enum : u32 {
@@ -89,7 +90,7 @@ void Kernel::queryMemory() {
 // Result MapMemoryBlock(Handle memblock, u32 addr, MemoryPermission myPermissions, MemoryPermission otherPermission)	
 void Kernel::mapMemoryBlock() {
 	const Handle block = regs[0];
-	const u32 addr = regs[1];
+	u32 addr = regs[1];
 	const u32 myPerms = regs[2];
 	const u32 otherPerms = regs[3];
 	logSVC("MapMemoryBlock(block = %X, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
@@ -99,15 +100,24 @@ void Kernel::mapMemoryBlock() {
 	}
 
 	if (KernelHandles::isSharedMemHandle(block)) {
+		if (block == KernelHandles::FontSharedMemHandle && addr == 0) addr = 0x18000000;
 		u8* ptr = mem.mapSharedMemory(block, addr, myPerms, otherPerms); // Map shared memory block
 
 		// Pass pointer to shared memory to the appropriate service
-		if (block == KernelHandles::HIDSharedMemHandle) {
-			serviceManager.setHIDSharedMem(ptr);
-		} else if (block == KernelHandles::GSPSharedMemHandle) {
-			serviceManager.setGSPSharedMem(ptr);
-		} else {
-			Helpers::panic("Mapping unknown shared memory block: %X", block);
+		switch (block) {
+			case KernelHandles::HIDSharedMemHandle:
+				serviceManager.setHIDSharedMem(ptr);
+				break;
+
+			case KernelHandles::GSPSharedMemHandle:
+				serviceManager.setGSPSharedMem(ptr);
+				break;
+
+			case KernelHandles::FontSharedMemHandle:
+				std::memcpy(ptr, _shared_font_bin, _shared_font_len);
+				break;
+
+			default: Helpers::panic("Mapping unknown shared memory block: %X", block);
 		}
 	} else {
 		Helpers::panic("MapMemoryBlock where the handle does not refer to GSP memory");

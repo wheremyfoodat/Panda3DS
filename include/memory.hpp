@@ -8,6 +8,7 @@
 #include "helpers.hpp"
 #include "handles.hpp"
 #include "loader/ncsd.hpp"
+#include "services/shared_font.hpp"
 
 namespace PhysicalAddrs {
 	enum : u32 {
@@ -104,10 +105,11 @@ class Memory {
 	// This tracks our OS' memory allocations
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
-	std::array<SharedMemoryBlock, 2> sharedMemBlocks = {
+	std::array<SharedMemoryBlock, 3> sharedMemBlocks = {
+		SharedMemoryBlock(0, _shared_font_len, KernelHandles::FontSharedMemHandle), // Shared memory for the system font
 		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
 		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
-	};
+ 	};
 
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;

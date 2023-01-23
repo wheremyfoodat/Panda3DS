@@ -43,11 +43,11 @@ void Memory::reset() {
 	for (auto& e : sharedMemBlocks) {
 		e.mapped = false;
 		
-		std::optional<u32> possiblePaddr = findPaddr(e.size);
+		std::optional<u32> possiblePaddr = findPaddr(e.size); // Find a physical FCRAM index to allocate for the shared memory block
 		if (!possiblePaddr.has_value()) Helpers::panic("Failed to find paddr for shared memory block");
 
 		e.paddr = possiblePaddr.value();
-		if (!reserveMemory(e.paddr, e.size)) {
+		if (!reserveMemory(e.paddr, e.size)) { // Actually reserve the memory
 			Helpers::panic("Failed to reserve memory for shared memory block");
 		}
 	}

@@ -77,7 +77,13 @@ public:
     }
 
     void ExceptionRaised(u32 pc, Dynarmic::A32::Exception exception) override {
-        Helpers::panic("Fired exception oops");
+        switch (exception) {
+            case Dynarmic::A32::Exception::UnpredictableInstruction:
+                Helpers::panic("Unpredictable instruction at pc = %08X", pc);
+                break;
+
+            default: Helpers::panic("Fired exception oops");
+        }
     }
 
     void AddTicks(u64 ticks) override {
