@@ -56,9 +56,31 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	if (!file->isOpen) {
 		Helpers::panic("Tried to read closed file");
 	}
+	
+	// Handle files with their own file descriptors by just fread'ing the data
+	if (file->fd) {
+		std::unique_ptr<u8[]> data(new u8[size]);
+		IOFile f(file->fd);
 
+		auto [success, bytesRead] = f.readBytes(data.get(), size);
+
+		if (!success) {
+			Helpers::panic("Kernel::ReadFile with file descriptor failed");
+		}
+		else {
+			for (size_t i = 0; i < bytesRead; i++) {
+				mem.write8(dataPointer + i, data[i]);
+			}
+
+			mem.write32(messagePointer + 4, Result::Success);
+			mem.write32(messagePointer + 8, bytesRead);
+		}
+
+		return;
+	}
+
+	// Handle files without their own FD, such as SelfNCCH files
 	auto archive = file->archive;
-
 	std::optional<u32> bytesRead = archive->readFile(file, offset, size, dataPointer);
 	if (!bytesRead.has_value()) {
 		Helpers::panic("Kernel::ReadFile failed");
