@@ -75,17 +75,17 @@ public:
         return write(data, count, sizeof(std::uint8_t));
     }
 
-    std::uint64_t size() {
-        if (!isOpen()) return 0;
+    std::optional<std::uint64_t> size() {
+        if (!isOpen()) return {};
 
         std::uint64_t pos = ftello(handle);
         if (fseeko(handle, 0, SEEK_END) != 0) {
-            return 0;
+            return {};
         }
 
         std::uint64_t size = ftello(handle);
         if ((size != pos) && (fseeko(handle, pos, SEEK_SET) != 0)) {
-            return 0;
+            return {};
         }
 
         return size;

@@ -3,6 +3,7 @@
 namespace FileOps {
 	enum : u32 {
 		Read = 0x080200C2,
+		Write = 0x08030102,
 		GetSize = 0x08040000,
 		Close = 0x08080000
 	};
@@ -21,6 +22,7 @@ void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 		case FileOps::Close: closeFile(messagePointer, file); break;
 		case FileOps::GetSize: getFileSize(messagePointer, file); break;
 		case FileOps::Read: readFile(messagePointer, file); break;
+		case FileOps::Write: writeFile(messagePointer, file); break;
 		default: Helpers::panic("Unknown file operation: %08X", cmd);
 	}
 }
@@ -66,6 +68,44 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	}
 }
 
+void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
+	u64 offset = mem.read64(messagePointer + 4);
+	u32 size = mem.read32(messagePointer + 12);
+	u32 writeOption = mem.read32(messagePointer + 16);
+	u32 dataPointer = mem.read32(messagePointer + 24);
+
+	logFileIO("Trying to write %X bytes to file %X, starting from file offset %llX and memory address %08X\n",
+		size, fileHandle, offset, dataPointer);
+
+	const auto p = getObject(fileHandle, KernelObjectType::File);
+	if (p == nullptr) [[unlikely]] {
+		Helpers::panic("Called ReadFile on non-existent file");
+	}
+
+	FileSession* file = p->getData<FileSession>();
+	if (!file->isOpen) {
+		Helpers::panic("Tried to write closed file");
+	}
+
+	if (!file->fd)
+		Helpers::panic("[Kernel::File::WriteFile] Tried to write to file without a valid file descriptor");
+
+	std::unique_ptr<u8[]> data(new u8[size]);
+	for (size_t i = 0; i < size; i++) {
+		data[i] = mem.read8(dataPointer + i);
+	}
+
+	IOFile f(file->fd);
+	auto [success, bytesWritten] = f.writeBytes(data.get(), size);
+
+	if (!success) {
+		Helpers::panic("Kernel::WriteFile failed");
+	} else {
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 8, bytesWritten);
+	}
+}
+
 void Kernel::getFileSize(u32 messagePointer, Handle fileHandle) {
 	logFileIO("Getting size of file %X\n", fileHandle);
 
@@ -79,7 +119,18 @@ void Kernel::getFileSize(u32 messagePointer, Handle fileHandle) {
 		Helpers::panic("Tried to get size of closed file");
 	}
 
-	mem.write32(messagePointer + 4, Result::Success);
-	mem.write64(messagePointer + 8, 0); // Size here
-	Helpers::panic("TODO: Implement FileOp::GetSize");
+	if (file->fd) {
+		IOFile f(file->fd);
+		std::optional<u64> size = f.size();
+
+		if (size.has_value()) {
+			mem.write32(messagePointer + 4, Result::Success);
+			mem.write64(messagePointer + 8, size.value());
+		} else {
+			Helpers::panic("FileOp::GetFileSize failed");
+		}
+	} else {
+		Helpers::panic("Tried to get file size of file without file descriptor");
+	}
+
 }

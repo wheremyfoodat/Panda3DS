@@ -120,6 +120,7 @@ private:
 	void handleFileOperation(u32 messagePointer, Handle file);
 	void closeFile(u32 messagePointer, Handle file);
 	void readFile(u32 messagePointer, Handle file);
+	void writeFile(u32 messagePointer, Handle file);
 	void getFileSize(u32 messagePointer, Handle file);
 
 public:

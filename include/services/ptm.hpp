@@ -10,6 +10,8 @@ class PTMService {
 	MAKE_LOG_FUNCTION(log, ptmLogger)
 
 	// Service commands
+	void getStepHistory(u32 messagePointer);
+	void getTotalStepCount(u32 messagePointer);
 
 public:
 	PTMService(Memory& mem) : mem(mem) {}
