@@ -9,6 +9,7 @@ public:
 	std::string name() override { return "ExtSaveData"; }
 
 	ArchiveBase* openArchive(const FSPath& path) override;
+	CreateFileResult createFile(const FSPath& path, u64 size) override;
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
 

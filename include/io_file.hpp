@@ -62,6 +62,19 @@ public:
         return read(data, count, sizeof(std::uint8_t));
     }
 
+    std::pair<bool, std::size_t> write(const void* data, std::size_t length, std::size_t dataSize) {
+        if (!isOpen()) {
+            return { false, std::numeric_limits<std::size_t>::max() };
+        }
+
+        if (length == 0) return { true, 0 };
+        return { true, std::fwrite(data, dataSize, length, handle) };
+    }
+
+    auto writeBytes(const void* data, std::size_t count) {
+        return write(data, count, sizeof(std::uint8_t));
+    }
+
     std::uint64_t size() {
         if (!isOpen()) return 0;
 

@@ -1,6 +1,11 @@
 #include "fs/archive_sdmc.hpp"
 #include <memory>
 
+CreateFileResult SDMCArchive::createFile(const FSPath& path, u64 size) {
+	Helpers::panic("[SDMC] CreateFile not yet supported");
+	return CreateFileResult::Success;
+}
+
 FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	printf("SDMCArchive::OpenFile: Failed");
 	return FileError;

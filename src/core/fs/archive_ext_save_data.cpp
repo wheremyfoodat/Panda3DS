@@ -3,6 +3,33 @@
 
 namespace fs = std::filesystem;
 
+CreateFileResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
+	if (size == 0)
+		Helpers::panic("ExtSaveData file does not support size == 0");
+
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in ExtSaveData::CreateFile");
+
+		fs::path p = IOFile::getAppData() / "NAND";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::exists(p))
+			return CreateFileResult::AlreadyExists;
+			
+		// Create a file of size "size" by creating an empty one, seeking to size - 1 and just writing a 0 there
+		IOFile file(p.string().c_str(), "wb");
+		if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
+			return CreateFileResult::Success;
+		}
+
+		return CreateFileResult::FileTooLarge;
+	}
+
+	Helpers::panic("ExtSaveDataArchive::OpenFile: Failed");
+	return CreateFileResult::Success;
+}
+
 FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))

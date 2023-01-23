@@ -2,6 +2,11 @@
 #include <algorithm>
 #include <memory>
 
+CreateFileResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
+	Helpers::panic("[SaveData] CreateFile not yet supported");
+	return CreateFileResult::Success;
+}
+
 FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (!cartHasSaveData()) {
 		printf("Tried to read SaveData FS without save data\n");

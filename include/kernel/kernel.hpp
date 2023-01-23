@@ -124,6 +124,7 @@ private:
 
 public:
 	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
+	void initializeFS() { return serviceManager.initializeFS(); }
 	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);
 	void reset();

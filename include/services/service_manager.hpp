@@ -60,6 +60,7 @@ class ServiceManager {
 public:
 	ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel);
 	void reset();
+	void initializeFS() { fs.initializeFilesystem(); }
 	void handleSyncRequest(u32 messagePointer);
 
 	// Forward a SendSyncRequest IPC message to the service with the respective handle

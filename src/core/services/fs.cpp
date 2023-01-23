@@ -1,5 +1,6 @@
 #include "services/fs.hpp"
 #include "kernel/kernel.hpp"
+#include "io_file.hpp"
 
 #ifdef CreateFile // windows.h defines this because of course it does.
 #undef CreateFile
@@ -30,6 +31,16 @@ namespace Result {
 
 void FSService::reset() {
 	priority = 0;
+}
+
+// Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
+void FSService::initializeFilesystem() {
+	const auto nandPath = IOFile::getAppData() / "NAND"; // Create NAND
+	// TODO: Savedata, SDMC, etc
+
+	if (!std::filesystem::is_directory(nandPath)) {
+		std::filesystem::create_directories(nandPath);
+	}
 }
 
 ArchiveBase* FSService::getArchiveFromID(u32 id) {
@@ -225,7 +236,7 @@ void FSService::createFile(u32 messagePointer) {
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 attributes = mem.read32(messagePointer + 24);
-	const u64 bytesToZero = mem.read64(messagePointer + 28); // Bytes to fill with zeroes in the file
+	const u64 size = mem.read64(messagePointer + 28);
 	const u32 filePathPointer = mem.read32(messagePointer + 40);
 
 	log("FS::CreateFile\n");
@@ -240,8 +251,8 @@ void FSService::createFile(u32 messagePointer) {
 	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
-	for (auto c : filePath.utf16_string) std::cout << (char)c;
-	Helpers::panic("Tried to create file");
+	CreateFileResult res = archive->createFile(filePath, size);
+	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
 
 void FSService::getPriority(u32 messagePointer) {

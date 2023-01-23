@@ -49,6 +49,7 @@ void Emulator::runFrame() {
 }
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
+    kernel.initializeFS();
     auto extension = path.extension();
     
     if (extension == ".elf" || extension == ".axf")

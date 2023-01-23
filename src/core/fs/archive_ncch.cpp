@@ -1,6 +1,11 @@
 #include "fs/archive_ncch.hpp"
 #include <memory>
 
+CreateFileResult SelfNCCHArchive::createFile(const FSPath& path, u64 size) {
+	Helpers::panic("[SelfNCCH] CreateFile not yet supported");
+	return CreateFileResult::Success;
+}
+
 FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (!hasRomFS()) {
 		printf("Tried to open a SelfNCCH file without a RomFS\n");

@@ -53,4 +53,6 @@ public:
 	
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
+	// Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
+	void initializeFilesystem();
 };
