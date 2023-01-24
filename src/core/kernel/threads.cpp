@@ -207,8 +207,8 @@ void Kernel::svcSleepThread() {
 	const s64 ns = s64(u64(regs[0]) | (u64(regs[1]) << 32));
 	logSVC("SleepThread(ns = %lld)\n", ns);
 
-	sleepThread(ns);
 	regs[0] = SVCResult::Success;
+	sleepThread(ns);
 }
 
 void Kernel::getThreadID() {
