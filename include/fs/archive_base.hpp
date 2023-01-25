@@ -52,7 +52,7 @@ struct FSPath {
 
     FSPath() {}
 
-    FSPath(u32 type, std::vector<u8> vec) : type(type) {
+    FSPath(u32 type, const std::vector<u8>& vec) : type(type) {
         switch (type) {
             case PathType::Binary:
                 binary = std::move(vec);
@@ -90,7 +90,7 @@ struct FileSession {
     bool isOpen;
 
     FileSession(ArchiveBase* archive, const FSPath& filePath, FILE* fd, bool isOpen = true) : 
-        archive(archive), path(path), fd(fd), isOpen(isOpen) {}
+        archive(archive), path(filePath), fd(fd), isOpen(isOpen) {}
 };
 
 struct ArchiveSession {

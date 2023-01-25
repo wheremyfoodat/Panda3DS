@@ -18,4 +18,10 @@ public:
 		auto cxi = mem.getCXI();
 		return (cxi != nullptr && cxi->hasRomFS());
 	}
+
+	// Returns whether the cart has an ExeFS (All executable carts should have an ExeFS. This is just here to be safe)
+	bool hasExeFS() {
+		auto cxi = mem.getCXI();
+		return (cxi != nullptr && cxi->hasExeFS());
+	}
 };
