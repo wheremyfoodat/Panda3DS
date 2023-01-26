@@ -33,7 +33,8 @@ class Kernel {
 	Handle errorPortHandle; // Handle for the err:f port used for displaying errors
 
 	u32 arbiterCount;
-	u32 threadCount;
+	u32 threadCount; // How many threads in our thread pool have been used as of now (Up to 32)
+	u32 aliveThreadCount; // How many of these threads are actually alive?
 	ServiceManager serviceManager;
 
 	// Top 8 bits are the major version, bottom 8 are the minor version
@@ -95,6 +96,7 @@ private:
 	void createThread();
 	void controlMemory();
 	void duplicateHandle();
+	void exitThread();
 	void mapMemoryBlock();
 	void queryMemory();
 	void getProcessID();

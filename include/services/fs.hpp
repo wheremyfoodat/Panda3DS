@@ -3,6 +3,7 @@
 #include "fs/archive_ncch.hpp"
 #include "fs/archive_save_data.hpp"
 #include "fs/archive_sdmc.hpp"
+#include "fs/archive_self_ncch.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -18,11 +19,12 @@ class FSService {
 
 	MAKE_LOG_FUNCTION(log, fsLogger)
 
-	// The different filesystem archives (Save data, RomFS+ExeFS, etc)
+	// The different filesystem archives (Save data, SelfNCCH, SDMC, NCCH, ExtData, etc)
 	SelfNCCHArchive selfNcch;
 	SaveDataArchive saveData;
 	ExtSaveDataArchive sharedExtSaveData;
 	SDMCArchive sdmc;
+	NCCHArchive ncch;
 
 	ArchiveBase* getArchiveFromID(u32 id);
 	std::optional<Handle> openArchiveHandle(u32 archiveID, const FSPath& path);
@@ -45,7 +47,7 @@ class FSService {
 	u32 priority;
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), sharedExtSaveData(mem), sdmc(mem), selfNcch(mem),
+	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), sharedExtSaveData(mem), sdmc(mem), selfNcch(mem), ncch(mem),
 		kernel(kernel)
 	{
 		sharedExtSaveData.isShared = true; // Need to do this here because templates and virtual classes do not mix well

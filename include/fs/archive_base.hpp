@@ -26,7 +26,9 @@ namespace ArchiveID {
         SharedExtSaveData = 7,
         SystemSaveData = 8,
         SDMC = 9,
-        SDMCWriteOnly = 0xA
+        SDMCWriteOnly = 0xA,
+
+        SavedataAndNcch = 0x2345678A
     };
 
     static std::string toString(u32 id) {
@@ -38,6 +40,7 @@ namespace ArchiveID {
             case SystemSaveData: return "SystemSaveData";
             case SDMC: return "SDMC";
             case SDMCWriteOnly: return "SDMC (Write-only)";
+            case SavedataAndNcch: return "Savedata & NCCH (archive 0x2345678A)";
             default: return "Unknown archive";
         }
     }

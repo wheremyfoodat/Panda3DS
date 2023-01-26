@@ -29,6 +29,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x01: controlMemory(); break;
 		case 0x02: queryMemory(); break;
 		case 0x08: createThread(); break;
+		case 0x09: exitThread(); break;
 		case 0x0A: svcSleepThread(); break;
 		case 0x0B: getThreadPriority(); break;
 		case 0x0C: setThreadPriority(); break;
@@ -104,6 +105,7 @@ void Kernel::reset() {
 	handleCounter = 0;
 	arbiterCount = 0;
 	threadCount = 0;
+	aliveThreadCount = 0;
 
 	for (auto& t : threads) {
 		t.status = ThreadStatus::Dead;

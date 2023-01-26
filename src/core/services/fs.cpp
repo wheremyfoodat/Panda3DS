@@ -49,6 +49,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id) {
 		case ArchiveID::SaveData: return &saveData;
 		case ArchiveID::SharedExtSaveData: return &sharedExtSaveData;
 		case ArchiveID::SDMC: return &sdmc;
+		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
 		default:
 			Helpers::panic("Unknown archive. ID: %d\n", id);
 			return nullptr;

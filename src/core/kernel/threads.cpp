@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstring>
 #include "kernel.hpp"
 #include "arm_defs.hpp"
@@ -81,7 +82,14 @@ void Kernel::switchToNextThread() {
 	
 	if (!newThreadIndex.has_value()) {
 		log("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
-		switchThread(rand() % threadCount);
+		assert(aliveThreadCount != 0);
+
+		int index;
+		do {
+			index = rand() % threadCount;
+		} while (threads[index].status == ThreadStatus::Dead); // TODO: Pray this doesn't hang
+
+		switchThread(index);
 	} else {
 		switchThread(newThreadIndex.value());
 	}
@@ -99,12 +107,25 @@ void Kernel::rescheduleThreads() {
 
 // Internal OS function to spawn a thread
 Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg, ThreadStatus status) {
-	if (threadCount >= appResourceLimits.maxThreads) {
-		Helpers::panic("Overflowed the number of threads");
-	}
-	threadIndices.push_back(threadCount);
+	int index; // Index of the created thread in the  threads array
 
-	Thread& t = threads[threadCount++]; // Reference to thread data
+	if (threadCount < appResourceLimits.maxThreads) [[likely]] { // If we have not yet created over too many threads
+		index = threadCount++;
+	} else if (aliveThreadCount < appResourceLimits.maxThreads) { // If we have created many threads but at least one is dead & reusable
+		for (int i = 0; i < threads.size(); i++) {
+			if (threads[i].status == ThreadStatus::Dead) {
+				index = i;
+				break;
+			}
+		}
+	} else { // There is no thread we can use, we're screwed
+		Helpers::panic("Overflowed thread count!!");
+	}
+
+	aliveThreadCount++;
+
+	threadIndices.push_back(index);
+	Thread& t = threads[index]; // Reference to thread data
 	Handle ret = makeObject(KernelObjectType::Thread);
 	objects[ret].data = &t;
 
@@ -233,7 +254,7 @@ void Kernel::getThreadID() {
 
 void Kernel::getThreadPriority() {
 	const Handle handle = regs[1];
-	log("GetThreadPriority (handle = %X)\n", handle);
+	logSVC("GetThreadPriority (handle = %X)\n", handle);
 
 	if (handle == KernelHandles::CurrentThread) {
 		regs[0] = SVCResult::Success;
@@ -252,7 +273,7 @@ void Kernel::getThreadPriority() {
 void Kernel::setThreadPriority() {
 	const Handle handle = regs[0];
 	const u32 priority = regs[1];
-	log("SetThreadPriority (handle = %X, priority = %X)\n", handle, priority);
+	logSVC("SetThreadPriority (handle = %X, priority = %X)\n", handle, priority);
 
 	if (priority > 0x3F) {
 		regs[0] = SVCResult::BadThreadPriority;
@@ -274,6 +295,22 @@ void Kernel::setThreadPriority() {
 	}
 	sortThreads();
 	rescheduleThreads();
+}
+
+void Kernel::exitThread() {
+	logSVC("ExitThread\n");
+
+	// Remove the index of this thread from the thread indices vector
+	for (int i = 0; i < threadIndices.size(); i++) {
+		if (threadIndices[i] == currentThreadIndex)
+			threadIndices.erase(threadIndices.begin() + i);
+	}
+
+	Thread& t = threads[currentThreadIndex];
+	t.status = ThreadStatus::Dead;
+	aliveThreadCount--;
+
+	switchToNextThread();
 }
 
 void Kernel::createMutex() {
