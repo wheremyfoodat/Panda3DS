@@ -5,7 +5,8 @@
 namespace CFGCommands {
 	enum : u32 {
 		GetConfigInfoBlk2 = 0x00010082,
-		SecureInfoGetRegion = 0x00020000
+		SecureInfoGetRegion = 0x00020000,
+		GenHashConsoleUnique = 0x00030040
 	};
 }
 
@@ -21,6 +22,7 @@ void CFGService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case CFGCommands::GetConfigInfoBlk2: getConfigInfoBlk2(messagePointer); break;
+		case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
 		case CFGCommands::SecureInfoGetRegion: secureInfoGetRegion(messagePointer); break;
 		default: Helpers::panic("CFG service requested. Command: %08X\n", command);
 	}
@@ -96,4 +98,15 @@ void CFGService::secureInfoGetRegion(u32 messagePointer) {
 
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, static_cast<u32>(Regions::USA)); // TODO: Detect the game region and report it
+}
+
+void CFGService::genUniqueConsoleHash(u32 messagePointer) {
+	log("CFG::GenUniqueConsoleHash (semi-stubbed)");
+	const u32 salt = mem.read32(messagePointer + 4) & 0x000FFFFF;
+
+	mem.write32(messagePointer + 4, Result::Success);
+	// We need to implement hash generation & the SHA-256 digest properly later on. We have cryptopp so the hashing isn't too hard to do
+	// Let's stub it for now
+	mem.write32(messagePointer + 8, 0x33646D6F ^ salt); // Lower word of hash
+	mem.write32(messagePointer + 12, 0xA3534841 ^ salt);  // Upper word of hash
 }

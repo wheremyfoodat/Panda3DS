@@ -13,6 +13,7 @@ class CFGService {
 
 	// Service functions
 	void getConfigInfoBlk2(u32 messagePointer);
+	void genUniqueConsoleHash(u32 messagePointer);
 	void secureInfoGetRegion(u32 messagePointer);
 
 public:
