@@ -12,4 +12,16 @@ public:
 	CreateFileResult createFile(const FSPath& path, u64 size) override;
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
+
+	// Returns whether the cart has a RomFS
+	bool hasRomFS() {
+		auto cxi = mem.getCXI();
+		return (cxi != nullptr && cxi->hasRomFS());
+	}
+
+	// Returns whether the cart has an ExeFS (All executable carts should have an ExeFS. This is just here to be safe)
+	bool hasExeFS() {
+		auto cxi = mem.getCXI();
+		return (cxi != nullptr && cxi->hasExeFS());
+	}
 };

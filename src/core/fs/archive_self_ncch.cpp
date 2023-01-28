@@ -93,13 +93,16 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 			}
 			break;
 		}
+
+		default:
+			Helpers::panic("Unimplemented file path type for SelfNCCH archive");
 	}
 
 	std::unique_ptr<u8[]> data(new u8[size]);
 	auto [success, bytesRead] = ioFile.readBytes(&data[0], size);
 
 	if (!success) {
-		Helpers::panic("Failed to read from NCCH archive");
+		Helpers::panic("Failed to read from SelfNCCH archive");
 	}
 
 	for (u64 i = 0; i < bytesRead; i++) {

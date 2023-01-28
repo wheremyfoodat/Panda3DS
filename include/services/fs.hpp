@@ -28,7 +28,7 @@ class FSService {
 
 	ArchiveBase* getArchiveFromID(u32 id);
 	std::optional<Handle> openArchiveHandle(u32 archiveID, const FSPath& path);
-	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FilePerms& perms);
+	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
 	FSPath readPath(u32 type, u32 pointer, u32 size);
 
 	// Service commands

@@ -90,10 +90,11 @@ struct FileSession {
     ArchiveBase* archive = nullptr;
     FILE* fd = nullptr; // File descriptor for file sessions that require them.
     FSPath path;
+    FSPath archivePath;
     bool isOpen;
 
-    FileSession(ArchiveBase* archive, const FSPath& filePath, FILE* fd, bool isOpen = true) : 
-        archive(archive), path(filePath), fd(fd), isOpen(isOpen) {}
+    FileSession(ArchiveBase* archive, const FSPath& filePath, const FSPath& archivePath, FILE* fd, bool isOpen = true) : 
+        archive(archive), path(filePath), archivePath(archivePath), fd(fd), isOpen(isOpen) {}
 };
 
 struct ArchiveSession {

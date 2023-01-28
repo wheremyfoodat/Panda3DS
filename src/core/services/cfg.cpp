@@ -101,7 +101,7 @@ void CFGService::secureInfoGetRegion(u32 messagePointer) {
 }
 
 void CFGService::genUniqueConsoleHash(u32 messagePointer) {
-	log("CFG::GenUniqueConsoleHash (semi-stubbed)");
+	log("CFG::GenUniqueConsoleHash (semi-stubbed)\n");
 	const u32 salt = mem.read32(messagePointer + 4) & 0x000FFFFF;
 
 	mem.write32(messagePointer + 4, Result::Success);
