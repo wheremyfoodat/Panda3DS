@@ -24,6 +24,11 @@ CreateFileResult NCCHArchive::createFile(const FSPath& path, u64 size) {
 	return CreateFileResult::Success;
 }
 
+DeleteFileResult NCCHArchive::deleteFile(const FSPath& path) {
+	Helpers::panic("[NCCH] Unimplemented DeleteFile");
+	return DeleteFileResult::Success;
+}
+
 FileDescriptor NCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (path.type != PathType::Binary || path.binary.size() != 20) {
 		Helpers::panic("NCCHArchive::OpenFile: Invalid path");

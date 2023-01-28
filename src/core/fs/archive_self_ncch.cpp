@@ -14,6 +14,11 @@ CreateFileResult SelfNCCHArchive::createFile(const FSPath& path, u64 size) {
 	return CreateFileResult::Success;
 }
 
+DeleteFileResult SelfNCCHArchive::deleteFile(const FSPath& path) {
+	Helpers::panic("[SelfNCCH] Unimplemented DeleteFile");
+	return DeleteFileResult::Success;
+}
+
 FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (!hasRomFS()) {
 		printf("Tried to open a SelfNCCH file without a RomFS\n");

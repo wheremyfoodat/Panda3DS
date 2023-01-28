@@ -115,6 +115,11 @@ enum class CreateFileResult : u32 {
     FileTooLarge = 0x86044D2
 };
 
+enum class DeleteFileResult : u32 {
+    Success = 0,
+    FileNotFound = 0xC8804470
+};
+
 class ArchiveBase {
 protected:
     using Handle = u32;
@@ -172,6 +177,8 @@ public:
     virtual std::string name() = 0;
     virtual u64 getFreeBytes() = 0;
     virtual CreateFileResult createFile(const FSPath& path, u64 size) = 0;
+    virtual DeleteFileResult deleteFile(const FSPath& path) = 0;
+
     // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
 

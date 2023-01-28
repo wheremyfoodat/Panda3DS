@@ -7,6 +7,11 @@ CreateFileResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 	return CreateFileResult::Success;
 }
 
+DeleteFileResult SaveDataArchive::deleteFile(const FSPath& path) {
+	Helpers::panic("[SaveData] Unimplemented DeleteFile");
+	return DeleteFileResult::Success;
+}
+
 FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (!cartHasSaveData()) {
 		printf("Tried to read SaveData FS without save data\n");

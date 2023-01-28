@@ -6,6 +6,11 @@ CreateFileResult SDMCArchive::createFile(const FSPath& path, u64 size) {
 	return CreateFileResult::Success;
 }
 
+DeleteFileResult SDMCArchive::deleteFile(const FSPath& path) {
+	Helpers::panic("[SDMC] Unimplemented DeleteFile");
+	return DeleteFileResult::Success;
+}
+
 FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	printf("SDMCArchive::OpenFile: Failed");
 	return FileError;

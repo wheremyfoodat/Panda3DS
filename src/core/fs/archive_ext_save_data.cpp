@@ -30,6 +30,22 @@ CreateFileResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 	return CreateFileResult::Success;
 }
 
+DeleteFileResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in ExtSaveData::DeleteFile");
+
+		fs::path p = IOFile::getAppData() / "NAND";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		bool success = fs::remove(p);
+		return success ? DeleteFileResult::Success : DeleteFileResult::FileNotFound;
+	}
+
+	Helpers::panic("ExtSaveDataArchive::DeleteFile: Failed");
+	return DeleteFileResult::Success;
+}
+
 FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))

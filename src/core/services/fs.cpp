@@ -2,8 +2,9 @@
 #include "kernel/kernel.hpp"
 #include "io_file.hpp"
 
-#ifdef CreateFile // windows.h defines this because of course it does.
+#ifdef CreateFile // windows.h defines CreateFile & DeleteFile because of course it does.
 #undef CreateFile
+#undef DeleteFile
 #endif
 
 namespace FSCommands {
@@ -11,6 +12,7 @@ namespace FSCommands {
 		Initialize = 0x08010002,
 		OpenFile = 0x080201C2,
 		OpenFileDirectly = 0x08030204,
+		DeleteFile = 0x08040142,
 		CreateFile = 0x08080202,
 		OpenArchive = 0x080C00C2,
 		CloseArchive = 0x080E0080,
@@ -106,6 +108,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case FSCommands::CreateFile: createFile(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
+		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
 		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
@@ -255,6 +258,27 @@ void FSService::createFile(u32 messagePointer) {
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
 	CreateFileResult res = archive->createFile(filePath, size);
+	mem.write32(messagePointer + 4, static_cast<u32>(res));
+}
+
+void FSService::deleteFile(u32 messagePointer) {
+	const u32 archiveHandle = mem.read64(messagePointer + 8);
+	const u32 filePathType = mem.read32(messagePointer + 16);
+	const u32 filePathSize = mem.read32(messagePointer + 20);
+	const u32 filePathPointer = mem.read32(messagePointer + 28);
+
+	log("FS::DeleteFile\n");
+	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
+	if (archiveObject == nullptr) [[unlikely]] {
+		log("FS::OpenFile: Invalid archive handle %d\n", archiveHandle);
+		mem.write32(messagePointer + 4, Result::Failure);
+		return;
+	}
+
+	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
+	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
+
+	DeleteFileResult res = archive->deleteFile(filePath);
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
 
