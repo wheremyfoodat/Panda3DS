@@ -10,7 +10,11 @@ class MICService {
 	MAKE_LOG_FUNCTION(log, micLogger)
 
 	// Service commands
+	void getGain(u32 messagePointer);
 	void mapSharedMem(u32 messagePointer);
+	void setGain(u32 messagePointer);
+
+	u8 gain = 0; // How loud our microphone input signal is
 
 public:
 	MICService(Memory& mem) : mem(mem) {}
