@@ -17,13 +17,17 @@ namespace SVCResult {
         BadHandle = 0xD8E007F7,
         BadHandleAlt = 0xD9001BF7,
 
+        InvalidCombination = 0xE0E01BEE, // Used for invalid memory permission combinations
+        UnalignedAddr = 0xE0E01BF1,
+        UnalignedSize = 0xE0E01BF2,
+
         BadThreadPriority = 0xE0E01BFD,
         PortNameTooLong = 0xE0E0181E,
 	};
 }
 
 enum class KernelObjectType : u8 {
-    AddressArbiter, Archive, File, Process, ResourceLimit, Session, Dummy,
+    AddressArbiter, Archive, File, MemoryBlock, Process, ResourceLimit, Session, Dummy,
     // Bundle waitable objects together in the enum to let the compiler optimize certain checks better
     Event, Mutex, Port, Semaphore, Timer, Thread
 };
@@ -142,6 +146,7 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
         case KernelObjectType::Archive: return "archive";
         case KernelObjectType::Event: return "event";
         case KernelObjectType::File: return "file";
+        case KernelObjectType::MemoryBlock: return "memory block";
         case KernelObjectType::Port: return "port";
         case KernelObjectType::Process: return "process";
         case KernelObjectType::ResourceLimit: return "resource limit";
@@ -166,6 +171,17 @@ struct Semaphore {
     u32 maximumCount;
 
     Semaphore(u32 initialCount, u32 maximumCount) : initialCount(initialCount), maximumCount(maximumCount) {}
+};
+
+struct MemoryBlock {
+    u32 addr = 0;
+    u32 size = 0;
+    u32 myPermission = 0;
+    u32 otherPermission = 0;
+    bool mapped = false;
+
+    MemoryBlock(u32 addr, u32 size, u32 myPerm, u32 otherPerm) : addr(addr), size(size), myPermission(myPerm), otherPermission(otherPerm),
+        mapped(false) {}
 };
 
 // Generic kernel object class

@@ -45,6 +45,7 @@ class Kernel {
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
 	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
+	Handle makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
 
 public:
 	Handle makeEvent(ResetType resetType); // Needs to be public to be accessible to the APT/HID services

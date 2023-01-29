@@ -10,6 +10,7 @@ class MICService {
 	MAKE_LOG_FUNCTION(log, micLogger)
 
 	// Service commands
+	void mapSharedMem(u32 messagePointer);
 
 public:
 	MICService(Memory& mem) : mem(mem) {}

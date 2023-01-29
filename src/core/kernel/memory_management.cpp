@@ -16,6 +16,21 @@ namespace Operation {
 	};
 }
 
+namespace MemoryPermissions {
+	enum : u32 {
+		None = 0,             // ---
+		Read = 1,             // R--
+		Write = 2,            // -W-
+		ReadWrite = 3,        // RW-
+		Execute = 4,          // --X
+		ReadExecute = 5,      // R-X
+		WriteExecute = 6,     // -WX
+		ReadWriteExecute = 7, // RWX
+
+		DontCare = 0x10000000
+	};
+}
+
 // Returns whether "value" is aligned to a page boundary (Ie a boundary of 4096 bytes)
 static constexpr bool isAligned(u32 value) {
 	return (value & 0xFFF) == 0;
@@ -32,8 +47,8 @@ void Kernel::controlMemory() {
 	u32 size = regs[3];
 	u32 perms = regs[4];
 
-	if (perms == 0x10000000) {
-		perms = 3; // We make "don't care" equivalent to read-write
+	if (perms == MemoryPermissions::DontCare) {
+		perms = MemoryPermissions::ReadWrite; // We make "don't care" equivalent to read-write
 		Helpers::panic("Unimplemented allocation permission: DONTCARE");
 	}
 
@@ -126,13 +141,56 @@ void Kernel::mapMemoryBlock() {
 	regs[0] = SVCResult::Success;
 }
 
+Handle Kernel::makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission) {
+	Handle ret = makeObject(KernelObjectType::MemoryBlock);
+	objects[ret].data = new MemoryBlock(addr, size, myPermission, otherPermission);
+
+	return ret;
+}
+
 void Kernel::createMemoryBlock() {
 	const u32 addr = regs[1];
 	const u32 size = regs[2];
-	const u32 myPermission = regs[3];
-	const u32 otherPermission = regs[4];
+	u32 myPermission = regs[3];
+	u32 otherPermission = mem.read32(regs[13] + 4); // This is placed on the stack rather than r4
 	logSVC("CreateMemoryBlock (addr = %08X, size = %08X, myPermission = %d, otherPermission = %d)\n", addr, size, myPermission, otherPermission);
 
-	regs[0] = SVCResult::Success; regs[1] = 0x66666666;
-	//Helpers::panic("Kernel::CreateMemoryBlock");
+	// Returns whether a permission is valid
+	auto isPermValid = [](u32 permission) {
+		switch (permission) {
+			case MemoryPermissions::None:
+			case MemoryPermissions::Read:
+			case MemoryPermissions::Write:
+			case MemoryPermissions::ReadWrite:
+			case MemoryPermissions::DontCare:
+				return true;
+
+			default: // Permissions with the executable flag enabled or invalid permissions are not allowed
+				return false;
+		}
+	};
+
+	// Throw error if the size of the shared memory block is not aligned to page boundary
+	if (!isAligned(size)) {
+		regs[0] = SVCResult::UnalignedSize;
+		return;
+	}
+
+	// Throw error if one of the permissions is not valid
+	if (!isPermValid(myPermission) || !isPermValid(otherPermission)) {
+		regs[0] = SVCResult::InvalidCombination;
+		return;
+	}
+
+	// TODO: The address needs to be in a specific range otherwise it throws an invalid address error
+
+	if (addr == 0)
+		Helpers::panic("CreateMemoryBlock: Tried to use addr = 0");
+
+	// Implement "Don't care" permission as RW
+	if (myPermission == MemoryPermissions::DontCare) myPermission = MemoryPermissions::ReadWrite;
+	if (otherPermission == MemoryPermissions::DontCare) otherPermission = MemoryPermissions::ReadWrite;
+
+	regs[0] = SVCResult::Success; 
+	regs[1] = makeMemoryBlock(addr, size, myPermission, otherPermission);
 }
