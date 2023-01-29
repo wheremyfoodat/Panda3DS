@@ -4,7 +4,9 @@ namespace MICCommands {
 	enum : u32 {
 		MapSharedMem = 0x00010042,
 		SetGain = 0x00080040,
-		GetGain = 0x00090000
+		GetGain = 0x00090000,
+		SetPower = 0x000A0040,
+		SetClamp = 0x000D0040
 	};
 }
 
@@ -15,6 +17,8 @@ namespace Result {
 }
 
 void MICService::reset() {
+	micEnabled = false;
+	shouldClamp = false;
 	gain = 0;
 }
 
@@ -23,7 +27,9 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case MICCommands::GetGain: getGain(messagePointer); break;
 		case MICCommands::MapSharedMem: mapSharedMem(messagePointer); break;
+		case MICCommands::SetClamp: setClamp(messagePointer); break;
 		case MICCommands::SetGain: setGain(messagePointer); break;
+		case MICCommands::SetPower: setPower(messagePointer); break;
 		default: Helpers::panic("MIC service requested. Command: %08X\n", command);
 	}
 }
@@ -46,5 +52,21 @@ void MICService::setGain(u32 messagePointer) {
 	gain = mem.read8(messagePointer + 4);
 	log("MIC::SetGain (value = %d)\n", gain);
 
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::setPower(u32 messagePointer) {
+	u8 val = mem.read8(messagePointer + 4);
+	log("MIC::SetPower (value = %d)\n", val);
+
+	micEnabled = val != 0;
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::setClamp(u32 messagePointer) {
+	u8 val = mem.read8(messagePointer + 4);
+	log("MIC::SetClamp (value = %d)\n", val);
+
+	shouldClamp = val != 0;
 	mem.write32(messagePointer + 4, Result::Success);
 }

@@ -12,9 +12,13 @@ class MICService {
 	// Service commands
 	void getGain(u32 messagePointer);
 	void mapSharedMem(u32 messagePointer);
+	void setClamp(u32 messagePointer);
 	void setGain(u32 messagePointer);
+	void setPower(u32 messagePointer);
 
 	u8 gain = 0; // How loud our microphone input signal is
+	bool micEnabled = false;
+	bool shouldClamp = false;
 
 public:
 	MICService(Memory& mem) : mem(mem) {}
