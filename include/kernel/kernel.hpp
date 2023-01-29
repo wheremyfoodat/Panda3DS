@@ -92,6 +92,7 @@ private:
 	void clearEvent();
 	void createAddressArbiter();
 	void createEvent();
+	void createMemoryBlock();
 	void createMutex();
 	void createThread();
 	void controlMemory();

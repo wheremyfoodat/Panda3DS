@@ -120,8 +120,19 @@ void Kernel::mapMemoryBlock() {
 			default: Helpers::panic("Mapping unknown shared memory block: %X", block);
 		}
 	} else {
-		Helpers::panic("MapMemoryBlock where the handle does not refer to GSP memory");
+		Helpers::panic("MapMemoryBlock where the handle does not refer to a known piece of kernel shared mem");
 	}
 
 	regs[0] = SVCResult::Success;
+}
+
+void Kernel::createMemoryBlock() {
+	const u32 addr = regs[1];
+	const u32 size = regs[2];
+	const u32 myPermission = regs[3];
+	const u32 otherPermission = regs[4];
+	logSVC("CreateMemoryBlock (addr = %08X, size = %08X, myPermission = %d, otherPermission = %d)\n", addr, size, myPermission, otherPermission);
+
+	regs[0] = SVCResult::Success; regs[1] = 0x66666666;
+	//Helpers::panic("Kernel::CreateMemoryBlock");
 }

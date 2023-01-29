@@ -10,6 +10,7 @@ class CECDService {
 	MAKE_LOG_FUNCTION(log, cecdLogger)
 
 	// Service commands
+	void getEventHandle(u32 messagePointer);
 
 public:
 	CECDService(Memory& mem) : mem(mem) {}
