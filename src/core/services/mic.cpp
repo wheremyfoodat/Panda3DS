@@ -3,6 +3,7 @@
 namespace MICCommands {
 	enum : u32 {
 		MapSharedMem = 0x00010042,
+		StartSampling = 0x00030140,
 		SetGain = 0x00080040,
 		GetGain = 0x00090000,
 		SetPower = 0x000A0040,
@@ -30,6 +31,7 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 		case MICCommands::SetClamp: setClamp(messagePointer); break;
 		case MICCommands::SetGain: setGain(messagePointer); break;
 		case MICCommands::SetPower: setPower(messagePointer); break;
+		case MICCommands::StartSampling: startSampling(messagePointer); break;
 		default: Helpers::panic("MIC service requested. Command: %08X\n", command);
 	}
 }
@@ -68,5 +70,19 @@ void MICService::setClamp(u32 messagePointer) {
 	log("MIC::SetClamp (value = %d)\n", val);
 
 	shouldClamp = val != 0;
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::startSampling(u32 messagePointer) {
+	u8 encoding = mem.read8(messagePointer + 4);
+	u8 sampleRate = mem.read8(messagePointer + 8);
+	u32 offset = mem.read32(messagePointer + 12);
+	u32 dataSize = mem.read32(messagePointer + 16);
+	bool loop = mem.read8(messagePointer + 20);
+
+	log("MIC::StartSampling (encoding = %d, sample rate = %d, offset = %08X, size = %08X, loop: %s) (stubbed)\n",
+		encoding, sampleRate, offset, dataSize, loop ? "yes" : "no"
+	);
+
 	mem.write32(messagePointer + 4, Result::Success);
 }

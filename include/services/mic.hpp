@@ -15,6 +15,7 @@ class MICService {
 	void setClamp(u32 messagePointer);
 	void setGain(u32 messagePointer);
 	void setPower(u32 messagePointer);
+	void startSampling(u32 messagePointer);
 
 	u8 gain = 0; // How loud our microphone input signal is
 	bool micEnabled = false;
