@@ -5,12 +5,16 @@
 #include "opengl.hpp"
 #include "surface_cache.hpp"
 
+// More circular dependencies!
+class GPU;
+
 struct Vertex {
 	OpenGL::vec4 position;
 	OpenGL::vec4 colour;
 };
 
 class Renderer {
+	GPU& gpu;
 	OpenGL::Program triangleProgram;
 	OpenGL::Program displayProgram;
 
@@ -42,7 +46,7 @@ class Renderer {
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 
 public:
-	Renderer(const std::array<u32, regNum>& internalRegs) : regs(internalRegs) {}
+	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
 
 	void reset();
 	void display(); // Display the 3DS screen contents to the window

@@ -20,36 +20,6 @@ class GPU {
 	static constexpr u32 vramSize = 6_MB;
 	std::array<u32, regNum> regs; // GPU internal registers
 
-	// Read a value of type T from physical address paddr
-	// This is necessary because vertex attribute fetching uses physical addresses
-	template<typename T>
-	T readPhysical(u32 paddr) {
-		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
-			u8* fcram = mem.getFCRAM();
-			u32 index = paddr - PhysicalAddrs::FCRAM;
-
-			return *(T*)&fcram[index];
-		} else {
-			Helpers::panic("[PICA] Read unimplemented paddr %08X", paddr);
-		}
-	}
-
-	// Get a pointer of type T* to the data starting from physical address paddr
-	template<typename T>
-	T* getPointerPhys(u32 paddr) {
-		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
-			u8* fcram = mem.getFCRAM();
-			u32 index = paddr - PhysicalAddrs::FCRAM;
-
-			return (T*)&fcram[index];
-		} else if (paddr >= PhysicalAddrs::VRAM && paddr <= PhysicalAddrs::VRAMEnd) {
-			u32 index = paddr - PhysicalAddrs::VRAM;
-			return (T*)&vram[index];
-		} else [[unlikely]] {
-			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
-		}
-	}
-
 	template <bool indexed>
 	void drawArrays();
 
@@ -96,5 +66,35 @@ public:
 
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
 		renderer.clearBuffer(startAddress, endAddress, value, control);
+	}
+
+	// Read a value of type T from physical address paddr
+	// This is necessary because vertex attribute fetching uses physical addresses
+	template <typename T>
+	T readPhysical(u32 paddr) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+			u8* fcram = mem.getFCRAM();
+			u32 index = paddr - PhysicalAddrs::FCRAM;
+
+			return *(T*)&fcram[index];
+		} else {
+			Helpers::panic("[PICA] Read unimplemented paddr %08X", paddr);
+		}
+	}
+
+	// Get a pointer of type T* to the data starting from physical address paddr
+	template <typename T>
+	T* getPointerPhys(u32 paddr) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+			u8* fcram = mem.getFCRAM();
+			u32 index = paddr - PhysicalAddrs::FCRAM;
+
+			return (T*)&fcram[index];
+		} else if (paddr >= PhysicalAddrs::VRAM && paddr <= PhysicalAddrs::VRAMEnd) {
+			u32 index = paddr - PhysicalAddrs::VRAM;
+			return (T*)&vram[index];
+		} else [[unlikely]] {
+			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
+		}
 	}
 };
