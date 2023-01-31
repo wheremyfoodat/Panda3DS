@@ -2,6 +2,7 @@
 #include <functional>
 #include <optional>
 #include "surfaces.hpp"
+#include "textures.hpp"
 
 // Surface cache class that can fit "capacity" instances of the "SurfaceType" class of surfaces
 // SurfaceType *must* have all of the following
@@ -16,8 +17,8 @@ template <typename SurfaceType, size_t capacity>
 class SurfaceCache {
     // Vanilla std::optional can't hold actual references
     using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
-    static_assert(std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>(),
-        "Invalid surface type");
+    static_assert(std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>()  ||
+        std::is_same<SurfaceType, Texture>(), "Invalid surface type");
 
     size_t size;
     std::array<SurfaceType, capacity> buffer;

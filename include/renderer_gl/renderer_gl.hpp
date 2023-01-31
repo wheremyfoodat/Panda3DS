@@ -4,6 +4,7 @@
 #include "logger.hpp"
 #include "opengl.hpp"
 #include "surface_cache.hpp"
+#include "textures.hpp"
 
 // More circular dependencies!
 class GPU;
@@ -25,6 +26,8 @@ class Renderer {
 
 	SurfaceCache<DepthBuffer, 10> depthBufferCache;
 	SurfaceCache<ColourBuffer, 10> colourBufferCache;
+	SurfaceCache<Texture, 16> textureCache;
+
 	OpenGL::uvec2 fbSize; // The size of the framebuffer (ie both the colour and depth buffer)'
 
 	u32 colourBufferLoc; // Location in 3DS VRAM for the colour buffer
