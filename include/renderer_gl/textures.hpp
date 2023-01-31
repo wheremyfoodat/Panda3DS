@@ -55,8 +55,11 @@ struct Texture {
     }
 
     void allocate();
+    void decodeTexture(void* data);
     void free();
     u64 sizeInBytes();
+
+    u32 decodeTexel(u32 u, u32 v, Formats fmt, void* data);
 
     // Get the morton interleave offset of a texel based on its U and V values
     static u32 mortonInterleave(u32 u, u32 v);

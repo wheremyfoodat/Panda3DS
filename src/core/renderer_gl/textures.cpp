@@ -1,4 +1,5 @@
 #include "renderer_gl/textures.hpp"
+#include "colour.hpp"
 
 void Texture::allocate() {
     Helpers::panic("Tried to allocate texture");
@@ -70,4 +71,37 @@ u32 Texture::getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel) {
     offset += mortonInterleave(u, v); // Add the in-tile offset of the texel
 
     return offset * bytesPerPixel;
+}
+
+u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, void* data) {
+    switch (fmt) {
+        case Formats::RGBA4: {
+            u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+            u8* ptr = static_cast<u8*>(data);
+            u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
+
+            u8 alpha = Colour::convert4To8Bit(texel & 0xf);
+            u8 b = Colour::convert4To8Bit((texel >> 4) & 0xf);
+            u8 g = Colour::convert4To8Bit((texel >> 8) & 0xf);
+            u8 r = Colour::convert4To8Bit((texel >> 12) & 0xf);
+
+            return (r << 24) | (g << 16) | (b << 8) | alpha;
+        }
+
+        default:
+            Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
+    }
+}
+
+void Texture::decodeTexture(void* data) {
+    std::vector<u32> decoded;
+    decoded.reserve(size.u() * size.v());
+
+    // Decode texels line by line
+    for (u32 v = 0; v < size.v(); v++) {
+        for (u32 u = 0; u < size.u(); u++) {
+            u32 colour = decodeTexel(u, v, format, data);
+            decoded.push_back(colour);
+        }
+    }
 }

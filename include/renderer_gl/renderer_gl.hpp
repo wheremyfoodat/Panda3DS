@@ -45,6 +45,7 @@ class Renderer {
 	const std::array<u32, regNum>& regs;
 
 	OpenGL::Framebuffer getColourFBO();
+	OpenGL::Texture getTexture(Texture& tex);
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 
