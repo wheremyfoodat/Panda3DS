@@ -41,7 +41,7 @@ public:
     }
 
     // Adds a surface object to the cache and returns it
-    SurfaceType add(const SurfaceType& surface) {
+    SurfaceType& add(const SurfaceType& surface) {
         if (size >= capacity) {
             Helpers::panic("Surface cache full! Add emptying!");
         }

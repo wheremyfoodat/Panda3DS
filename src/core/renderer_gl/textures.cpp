@@ -2,7 +2,7 @@
 #include "colour.hpp"
 
 void Texture::allocate() {
-    Helpers::panic("Tried to allocate texture");
+    printf("Tried to allocate texture\n");
 }
 
 void Texture::free() {
@@ -16,40 +16,40 @@ u64 Texture::sizeInBytes() {
     u64 pixelCount = u64(size.x()) * u64(size.y());
 
     switch (format) {
-    case Formats::RGBA8: // 4 bytes per pixel
-        return pixelCount * 4;
+        case Formats::RGBA8: // 4 bytes per pixel
+            return pixelCount * 4;
 
-    case Formats::RGB8: // 3 bytes per pixel
-        return pixelCount * 3;
+        case Formats::RGB8: // 3 bytes per pixel
+            return pixelCount * 3;
 
-    case Formats::RGBA5551: // 2 bytes per pixel
-    case Formats::RGB565:
-    case Formats::RGBA4:
-    case Formats::RG8:
-    case Formats::IA8:
-        return pixelCount * 2;
+        case Formats::RGBA5551: // 2 bytes per pixel
+        case Formats::RGB565:
+        case Formats::RGBA4:
+        case Formats::RG8:
+        case Formats::IA8:
+            return pixelCount * 2;
 
-    case Formats::A8: // 1 byte per pixel
-    case Formats::I8:
-    case Formats::IA4:
-        return pixelCount;
+        case Formats::A8: // 1 byte per pixel
+        case Formats::I8:
+        case Formats::IA4:
+            return pixelCount;
 
-    case Formats::I4: // 4 bits per pixel
-    case Formats::A4:
-        return pixelCount / 2;
+        case Formats::I4: // 4 bits per pixel
+        case Formats::A4:
+            return pixelCount / 2;
 
-    case Formats::ETC1: // Compressed formats
-    case Formats::ETC1A4: {
-        // Number of 8x8 tiles
-        const u64 tileCount = pixelCount / 64;
-        // Each 8x8 consists of 4 4x4 tiles, which are 8 bytes each on ETC1 and 16 bytes each on ETC1A4
-        const u64 tileSize = 4 * (format == Formats::ETC1 ? 8 : 16);
-        return tileCount * tileSize;
-    }
+        case Formats::ETC1: // Compressed formats
+        case Formats::ETC1A4: {
+            // Number of 4x4 tiles
+            const u64 tileCount = pixelCount / 16;
+            // Tiles are 8 bytes each on ETC1 and 16 bytes each on ETC1A4
+            const u64 tileSize = format == Formats::ETC1 ? 8 : 16;
+            return tileCount * tileSize;
+        }
 
-    default:
-        Helpers::panic("[PICA] Attempted to get size of invalid texture type");
-    }
+        default:
+            Helpers::panic("[PICA] Attempted to get size of invalid texture type");
+        }
 }
 
 // u and v are the UVs of the relevant texel
@@ -73,11 +73,14 @@ u32 Texture::getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel) {
     return offset * bytesPerPixel;
 }
 
-u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, void* data) {
+// Get the texel at position (u, v)
+// fmt: format of the texture
+// data: texture data of the texture
+u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
     switch (fmt) {
         case Formats::RGBA4: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-            u8* ptr = static_cast<u8*>(data);
+            auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
 
             u8 alpha = Colour::convert4To8Bit(texel & 0xf);
@@ -93,7 +96,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, void* data) {
     }
 }
 
-void Texture::decodeTexture(void* data) {
+void Texture::decodeTexture(const void* data) {
     std::vector<u32> decoded;
     decoded.reserve(size.u() * size.v());
 

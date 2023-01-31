@@ -1,5 +1,6 @@
 #include "renderer_gl/renderer_gl.hpp"
 #include "PICA/float_types.hpp"
+#include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
 
 using namespace Floats;
@@ -108,6 +109,7 @@ const char* displayFragmentShader = R"(
 void Renderer::reset() {
 	depthBufferCache.reset();
 	colourBufferCache.reset();
+	textureCache.reset();
 
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
@@ -183,6 +185,16 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 
 	//if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
 	//	Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
+	if (regs[0x80] & 1) {
+		u32 dim = regs[0x82];
+		u32 height = dim & 0x7ff;
+		u32 width = (dim >> 16) & 0x7ff;
+		u32 addr = (regs[0x85] & 0x0FFFFFFF) << 3;
+		u32 format = regs[0x8E] & 0xF;
+
+		Texture targetTex(addr, static_cast<Texture::Formats>(format), width, height);
+		OpenGL::Texture tex = getTexture(targetTex);
+	}
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
@@ -258,5 +270,20 @@ OpenGL::Framebuffer Renderer::getColourFBO() {
 		return buffer.value().get().fbo;
 	} else {
 		return colourBufferCache.add(sampleBuffer).fbo;
+	}
+}
+
+OpenGL::Texture Renderer::getTexture(Texture& tex) {
+	// Similar logic as the getColourFBO/getDepthBuffer functions
+	auto buffer = textureCache.find(tex);
+
+	if (buffer.has_value()) {
+		return buffer.value().get().texture;
+	} else {
+		const void* textureData = gpu.getPointerPhys<void*>(tex.location); // Get pointer to the texture data in 3DS memory
+		Texture& newTex = textureCache.add(tex);
+		newTex.decodeTexture(textureData);
+
+		return newTex.texture;
 	}
 }

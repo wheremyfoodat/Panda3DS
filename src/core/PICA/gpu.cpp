@@ -5,7 +5,7 @@
 
 using namespace Floats;
 
-GPU::GPU(Memory& mem) : mem(mem), renderer(regs) {
+GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
 	vram = new u8[vramSize];
 }
 
