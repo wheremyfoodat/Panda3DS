@@ -57,4 +57,9 @@ struct Texture {
     void allocate();
     void free();
     u64 sizeInBytes();
+
+    // Get the morton interleave offset of a texel based on its U and V values
+    static u32 mortonInterleave(u32 u, u32 v);
+    // Get the byte offset of texel (u, v) in the texture
+    static u32 getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel);
 };

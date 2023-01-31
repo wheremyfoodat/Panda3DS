@@ -50,3 +50,24 @@ u64 Texture::sizeInBytes() {
         Helpers::panic("[PICA] Attempted to get size of invalid texture type");
     }
 }
+
+// u and v are the UVs of the relevant texel
+// Texture data is stored interleaved in Morton order, ie in a Z - order curve as shown here
+// https://en.wikipedia.org/wiki/Z-order_curve
+// Textures are split into 8x8 tiles.This function returns the in - tile offset depending on the u & v of the texel
+// The in - tile offset is the sum of 2 offsets, one depending on the value of u % 8 and the other on the value of y % 8
+// As documented in this picture https ://en.wikipedia.org/wiki/File:Moser%E2%80%93de_Bruijn_addition.svg
+u32 Texture::mortonInterleave(u32 u, u32 v) {
+    static constexpr u32 xOffsets[] = { 0, 1, 4, 5, 16, 17, 20, 21 };
+    static constexpr u32 yOffsets[] = { 0, 2, 8, 10, 32, 34, 40, 42 };
+
+    return xOffsets[u & 7] + yOffsets[v & 7];
+}
+
+// Get the byte offset of texel (u, v) in the texture
+u32 Texture::getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel) {
+    u32 offset = ((u & ~7) * 8) + ((v & ~7) * width); // Offset of the 8x8 tile the texel belongs to
+    offset += mortonInterleave(u, v); // Add the in-tile offset of the texel
+
+    return offset * bytesPerPixel;
+}
