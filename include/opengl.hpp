@@ -138,6 +138,25 @@ namespace OpenGL {
         DrawAndReadFramebuffer = GL_FRAMEBUFFER
     };
 
+    // Texture filters
+    enum Filters {
+        Nearest = GL_NEAREST,
+        Linear = GL_LINEAR,
+        NearestMipmapNearest = GL_NEAREST_MIPMAP_NEAREST,
+        NearestMipmapLinear = GL_NEAREST_MIPMAP_LINEAR,
+        LinearMipmapNearest = GL_LINEAR_MIPMAP_NEAREST,
+        LinearMipmapLinear = GL_LINEAR_MIPMAP_LINEAR
+    };
+
+    // Wrapping mode for texture UVs
+    enum WrappingMode {
+        ClampToEdge = GL_CLAMP_TO_EDGE,
+        ClampToBorder = GL_CLAMP_TO_BORDER,
+        RepeatMirrored = GL_MIRRORED_REPEAT,
+        Repeat = GL_REPEAT,
+        MirrorClampToEdge = GL_MIRROR_CLAMP_TO_EDGE
+    };
+
     struct Texture {
         GLuint m_handle = 0;
         int m_width, m_height;
@@ -172,6 +191,26 @@ namespace OpenGL {
 
         void createMSAA(int width, int height, GLint internalFormat, int samples) {
             create(width, height, internalFormat, GL_TEXTURE_2D_MULTISAMPLE, samples);
+        }
+
+        void setWrapS(WrappingMode mode) {
+            glTexParameteri(m_binding, GL_TEXTURE_WRAP_S, static_cast<GLint>(mode));
+        }
+
+        void setWrapT(WrappingMode mode) {
+            glTexParameteri(m_binding, GL_TEXTURE_WRAP_T, static_cast<GLint>(mode));
+    }
+
+        void setWrapR(WrappingMode mode) {
+            glTexParameteri(m_binding, GL_TEXTURE_WRAP_R, static_cast<GLint>(mode));
+        }
+
+        void setMinFilter(Filters filter) {
+            glTexParameteri(m_binding, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(filter));
+        }
+
+        void setMagFilter(Filters filter) {
+            glTexParameteri(m_binding, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(filter));
         }
 
 #ifdef OPENGL_DESTRUCTORS
