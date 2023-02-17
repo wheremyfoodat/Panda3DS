@@ -323,7 +323,7 @@ void PICAShader::rsq(u32 instruction) {
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 
 	vec4f& destVector = getDest(dest);
-	f24 res = f24::fromFloat32(1.0f / std::sqrtf(srcVec1[0].toFloat32()));
+	f24 res = f24::fromFloat32(1.0f / std::sqrt(srcVec1[0].toFloat32()));
 
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {

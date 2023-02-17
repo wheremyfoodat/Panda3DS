@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <cstring>
 #include <vector>
 #include "helpers.hpp"
 

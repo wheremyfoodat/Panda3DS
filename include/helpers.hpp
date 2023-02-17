@@ -1,8 +1,9 @@
 #pragma once
-#include <iostream>
-#include <vector>
 #include <cstdarg>
 #include <fstream>
+#include <iostream>
+#include <iterator>
+#include <vector>
 #include "termcolor.hpp"
 
 using u8 = std::uint8_t;

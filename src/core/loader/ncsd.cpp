@@ -1,3 +1,4 @@
+#include <cstring>
 #include <optional>
 #include "loader/ncsd.hpp"
 #include "memory.hpp"
