@@ -12,12 +12,15 @@ const char* vertexShader = R"(
 	
 	layout (location = 0) in vec4 coords;
 	layout (location = 1) in vec4 vertexColour;
+	layout (location = 2) in vec2 inUVs;
 
 	out vec4 colour;
+	out vec2 UVs;
 
 	void main() {
 		gl_Position = coords * vec4(1.0, 1.0, -1.0, 1.0);
 		colour = vertexColour;
+		UVs = inUVs;
 	}
 )";
 
@@ -25,12 +28,16 @@ const char* fragmentShader = R"(
 	#version 420 core
 	
 	in vec4 colour;
+	in vec2 UVs;
+
 	out vec4 fragColour;
 
 	uniform uint u_alphaControl;
+	uniform sampler2D u_tex0;
 
 	void main() {
-		fragColour = colour;
+		//fragColour = colour;
+		fragColour = texture(u_tex0, UVs);
 
 		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
 			uint func = (u_alphaControl >> 4u) & 7u;
@@ -127,6 +134,7 @@ void Renderer::initGraphicsContext() {
 	
 	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
 	glUniform1ui(alphaControlLoc, 0); // Default alpha control to 0
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
@@ -143,6 +151,9 @@ void Renderer::initGraphicsContext() {
 	// Colour attribute
 	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, colour));
 	vao.enableAttribute(1);
+	// UV attribute
+	vao.setAttributeFloat<float>(2, 2, sizeof(Vertex), offsetof(Vertex, UVs));
+	vao.enableAttribute(2);
 
 	dummyVBO.create();
 	dummyVAO.create();
@@ -182,6 +193,8 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 	f24 depthScale = f24::fromRaw(regs[PICAInternalRegs::DepthScale] & 0xffffff);
 	f24 depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff);
 	printf("Depth enable: %d, func: %d, writeEnable: %d\n", depthEnable, depthFunc, depthWriteEnable);
+	printf("Blending enabled: %d\n", (regs[0x100] >> 8) & 1);
+	printf("Blend func: %08X\n", regs[0x101]);
 
 	//if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
 	//	Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
@@ -194,6 +207,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 
 		Texture targetTex(addr, static_cast<Texture::Formats>(format), width, height);
 		OpenGL::Texture tex = getTexture(targetTex);
+		tex.bind();
 	}
 
 	// TODO: Actually use this

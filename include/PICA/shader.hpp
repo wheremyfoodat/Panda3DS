@@ -163,7 +163,7 @@ public:
 	std::array<vec4f, 96> floatUniforms;
 
 	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
-	std::array<vec4f, 16> attributes; // Attributes passed to the shader
+	std::array<vec4f, 16> inputs; // Attributes passed to the shader
 	std::array<vec4f, 16> outputs;
 
 	PICAShader(ShaderType type) : type(type) {}

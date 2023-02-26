@@ -10,6 +10,7 @@ namespace PICAInternalRegs {
 
 		DepthScale = 0x4D,
 		DepthOffset = 0x4E,
+		ShaderOutputCount = 0x4F,
 
 		// Framebuffer registers
 		AlphaTestConfig = 0x104,
@@ -84,6 +85,10 @@ namespace PICAInternalRegs {
 		VertexFloatUniformData5 = 0x2C6,
 		VertexFloatUniformData6 = 0x2C7,
 		VertexFloatUniformData7 = 0x2C8,
+
+		VertexShaderInputBufferCfg = 0x2B9,
+		VertexShaderInputCfgLow = 0x2BB,
+		VertexShaderInputCfgHigh = 0x2BC,
 
 		VertexShaderTransferIndex = 0x2CB,
 		VertexShaderData0 = 0x2CC,

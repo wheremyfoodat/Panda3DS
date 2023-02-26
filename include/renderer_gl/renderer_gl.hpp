@@ -12,6 +12,7 @@ class GPU;
 struct Vertex {
 	OpenGL::vec4 position;
 	OpenGL::vec4 colour;
+	OpenGL::vec2 UVs;
 };
 
 class Renderer {

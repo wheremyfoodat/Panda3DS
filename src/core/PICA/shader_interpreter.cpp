@@ -94,7 +94,7 @@ u8 PICAShader::getIndexedSource(u32 source, u32 index) {
 
 PICAShader::vec4f PICAShader::getSource(u32 source) {
 	if (source < 0x10)
-		return attributes[source];
+		return inputs[source];
 	else if (source < 0x20)
 		return tempRegisters[source - 0x10];
 	else if (source <= 0x7f)
@@ -237,7 +237,6 @@ void PICAShader::mova(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src = (instruction >> 12) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
 
 	if (idx) Helpers::panic("[PICA] MOVA: idx != 0");
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);

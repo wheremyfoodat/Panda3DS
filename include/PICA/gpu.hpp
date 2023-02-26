@@ -4,6 +4,7 @@
 #include "logger.hpp"
 #include "memory.hpp"
 #include "PICA/float_types.hpp"
+#include "PICA/regs.hpp"
 #include "PICA/shader_unit.hpp"
 #include "renderer_gl/renderer_gl.hpp"
 
@@ -19,6 +20,7 @@ class GPU {
 	static constexpr u32 regNum = 0x300;
 	static constexpr u32 vramSize = 6_MB;
 	std::array<u32, regNum> regs; // GPU internal registers
+	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
 	template <bool indexed>
 	void drawArrays();
@@ -31,11 +33,16 @@ class GPU {
 		int size = 0; // Bytes per vertex
 		u32 config1 = 0;
 		u32 config2 = 0;
+		u32 componentCount = 0; // Number of components for the attribute
 
 		u64 getConfigFull() {
 			return u64(config1) | (u64(config2) << 32);
 		}
 	};
+
+	u64 getVertexShaderInputConfig() {
+		return u64(regs[PICAInternalRegs::VertexShaderInputCfgLow]) | (u64(regs[PICAInternalRegs::VertexShaderInputCfgHigh]) << 32);
+	}
 
 	std::array<AttribInfo, maxAttribCount> attributeInfo; // Info for each of the 12 attributes
 	u32 totalAttribCount = 0; // Number of vertex attributes to send to VS

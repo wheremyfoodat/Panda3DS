@@ -120,10 +120,6 @@ namespace Helpers {
         static_for_impl<T, Begin>( std::forward<Func>(f), std::make_integer_sequence<T, End - Begin>{ } );
     }
 
-    static constexpr inline u8 get8BitColor (u8 colorRGB555) {
-        return (colorRGB555 << 3) | (colorRGB555 >> 2);
-    }
-
     // For values < 0x99
     static constexpr inline u8 incBCDByte(u8 value) {
         return ((value & 0xf) == 0x9) ? value + 7 : value + 1;

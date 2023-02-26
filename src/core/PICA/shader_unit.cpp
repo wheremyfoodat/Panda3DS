@@ -18,7 +18,7 @@ void PICAShader::reset() {
 	f32UniformTransfer = false;
 
 	const vec4f zero = vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() });
-	attributes.fill(zero);
+	inputs.fill(zero);
 	floatUniforms.fill(zero);
 	outputs.fill(zero);
 	tempRegisters.fill(zero);
