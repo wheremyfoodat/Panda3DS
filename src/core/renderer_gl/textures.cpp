@@ -2,7 +2,14 @@
 #include "colour.hpp"
 
 void Texture::allocate() {
-    printf("Tried to allocate texture\n");
+    glGenTextures(1, &texture.m_handle);
+    texture.create(size.u(), size.v(), GL_RGBA8);
+    texture.bind();
+
+    texture.setMinFilter(OpenGL::Nearest);
+    texture.setMagFilter(OpenGL::Nearest);
+    texture.setWrapS(OpenGL::Repeat);
+    texture.setWrapT(OpenGL::Repeat);
 }
 
 void Texture::free() {
@@ -78,6 +85,7 @@ u32 Texture::getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel) {
 // data: texture data of the texture
 u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
     switch (fmt) {
+        case Formats::ETC1A4:
         case Formats::RGBA4: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
             auto ptr = static_cast<const u8*>(data);
@@ -88,7 +96,16 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             u8 g = Colour::convert4To8Bit((texel >> 8) & 0xf);
             u8 r = Colour::convert4To8Bit((texel >> 12) & 0xf);
 
-            return (r << 24) | (g << 16) | (b << 8) | alpha;
+            return (alpha << 24) | (b << 16) | (g << 8) | r;
+        }
+
+        case Formats::I8: {
+            u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+            auto ptr = static_cast<const u8*>(data);
+            const u8 intensity = ptr[offset];
+
+            // Intensity formats just copy the intensity value to every colour channel
+            return (intensity << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
         default:
@@ -98,7 +115,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
 
 void Texture::decodeTexture(const void* data) {
     std::vector<u32> decoded;
-    decoded.reserve(size.u() * size.v());
+    decoded.reserve(u64(size.u()) * u64(size.v()));
 
     // Decode texels line by line
     for (u32 v = 0; v < size.v(); v++) {
@@ -107,4 +124,7 @@ void Texture::decodeTexture(const void* data) {
             decoded.push_back(colour);
         }
     }
+
+    texture.bind();
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.u(), size.v(), GL_RGBA, GL_UNSIGNED_BYTE, decoded.data());
 }

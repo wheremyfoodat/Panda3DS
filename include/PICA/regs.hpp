@@ -12,6 +12,8 @@ namespace PICAInternalRegs {
 		DepthOffset = 0x4E,
 		ShaderOutputCount = 0x4F,
 
+		TexUnitCfg = 0x80,
+
 		// Framebuffer registers
 		ColourOperation = 0x100,
 		BlendFunc = 0x101,
