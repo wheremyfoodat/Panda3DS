@@ -120,6 +120,16 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (intensity << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
+        case Formats::IA8: {
+            u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+            auto ptr = static_cast<const u8*>(data);
+
+            // Same as I8 except each pixel gets its own alpha value too
+            const u8 alpha = ptr[offset];
+            const u8 intensity = ptr[offset + 1];
+            return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
+        }
+
         default:
             Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
     }
