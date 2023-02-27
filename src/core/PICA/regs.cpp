@@ -170,6 +170,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 					case 2:
 						attr.config2 = value;
 						attr.size = (value >> 16) & 0xff;
+						attr.componentCount = value >> 28;
 						break;
 				}
 			} else {
