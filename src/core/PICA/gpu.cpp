@@ -193,7 +193,7 @@ void GPU::drawArrays() {
 
 		//printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z(), (double)vertices[i].position.w());
 		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
-		//printf("U: %f, V: %f\n", vertices[i].UVs.u(), vertices[i].UVs.v());
+		//printf("(u, v        )       = (%f, %f)\n", vertices[i].UVs.u(), vertices[i].UVs.v());
 	}
 
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is

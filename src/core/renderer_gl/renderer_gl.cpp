@@ -33,11 +33,16 @@ const char* fragmentShader = R"(
 	out vec4 fragColour;
 
 	uniform uint u_alphaControl;
+	uniform uint u_textureConfig;
+
 	uniform sampler2D u_tex0;
 
 	void main() {
-		//fragColour = colour;
-		fragColour = texture(u_tex0, UVs);
+		if ((u_textureConfig & 1u) != 0) { // Render texture 0 if enabled
+			fragColour = texture(u_tex0, UVs);
+		} else {
+			fragColour = colour;
+		}
 
 		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
 			uint func = (u_alphaControl >> 4u) & 7u;
@@ -124,6 +129,18 @@ void Renderer::reset() {
 
 	depthBufferLoc = 0;
 	depthBufferFormat = DepthBuffer::Formats::Depth16;
+
+	if (triangleProgram.exists()) {
+		const auto oldProgram = OpenGL::getProgram();
+
+		triangleProgram.use();
+		oldAlphaControl = 0;
+		oldTexUnitConfig = 0;
+
+		glUniform1ui(alphaControlLoc, 0); // Default alpha control to 0
+		glUniform1ui(texUnitConfigLoc, 0); // Default tex unit config to 0
+		glUseProgram(oldProgram); // Switch to old GL program
+	}
 }
 
 void Renderer::initGraphicsContext() {
@@ -133,8 +150,7 @@ void Renderer::initGraphicsContext() {
 	triangleProgram.use();
 	
 	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
-	glUniform1ui(alphaControlLoc, 0); // Default alpha control to 0
-	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
+	texUnitConfigLoc = OpenGL::uniformLocation(triangleProgram, "u_textureConfig");
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
@@ -169,6 +185,57 @@ void Renderer::getGraphicsContext() {
 	triangleProgram.use();
 }
 
+// Set up the OpenGL blending context to match the emulated PICA
+void Renderer::setupBlending() {
+	const bool blendingEnabled = (regs[PICAInternalRegs::ColourOperation] & (1 << 8)) != 0;
+	
+	// Map of PICA blending equations to OpenGL blending equations. The unused blending equations are equivalent to equation 0 (add)
+	static constexpr std::array<GLenum, 8> blendingEquations = {
+		GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX, GL_FUNC_ADD, GL_FUNC_ADD, GL_FUNC_ADD
+	};
+	
+	// Map of PICA blending funcs to OpenGL blending funcs. Func = 15 is undocumented and stubbed to GL_ONE for now
+	static constexpr std::array<GLenum, 16> blendingFuncs = {
+		GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR, GL_DST_COLOR, GL_ONE_MINUS_DST_COLOR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+		GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA, GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA,
+		GL_SRC_ALPHA_SATURATE, GL_ONE
+	};
+
+	// Temporarily here until we add constant color/alpha
+	const auto panicIfUnimplementedFunc = [](const u32 func) {
+		auto x = blendingFuncs[func];
+		if (x == GL_CONSTANT_COLOR || x == GL_ONE_MINUS_CONSTANT_COLOR || x == GL_ALPHA || x == GL_ONE_MINUS_CONSTANT_ALPHA) [[unlikely]]
+			Helpers::panic("Unimplemented blending function!");
+	};
+
+	if (!blendingEnabled) {
+		OpenGL::disableBlend();
+	} else {
+		OpenGL::enableBlend();
+
+		// Get blending equations
+		const u32 blendControl = regs[PICAInternalRegs::BlendFunc];
+		const u32 rgbEquation = blendControl & 0x7;
+		const u32 alphaEquation = (blendControl >> 8) & 0x7;
+
+		// Get blending functions
+		const u32 rgbSourceFunc = (blendControl >> 16) & 0xf;
+		const u32 rgbDestFunc = (blendControl >> 20) & 0xf;
+		const u32 alphaSourceFunc = (blendControl >> 24) & 0xf;
+		const u32 alphaDestFunc = (blendControl >> 28) & 0xf;
+
+		// Panic if one of the blending funcs is unimplemented
+		panicIfUnimplementedFunc(rgbSourceFunc);
+		panicIfUnimplementedFunc(rgbDestFunc);
+		panicIfUnimplementedFunc(alphaSourceFunc);
+		panicIfUnimplementedFunc(alphaDestFunc);
+
+		// Translate equations and funcs to their GL equivalents and set them
+		glBlendEquationSeparate(blendingEquations[rgbEquation], blendingEquations[alphaEquation]);
+		glBlendFuncSeparate(blendingFuncs[rgbSourceFunc], blendingFuncs[rgbDestFunc], blendingFuncs[alphaSourceFunc], blendingFuncs[alphaDestFunc]);
+	}
+}
+
 void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
@@ -177,6 +244,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		glUniform1ui(alphaControlLoc, alphaControl);
 	}
 
+	setupBlending();
 	OpenGL::Framebuffer poop = getColourFBO();
 	poop.bind(OpenGL::DrawAndReadFramebuffer);
 
@@ -192,12 +260,11 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 
 	f24 depthScale = f24::fromRaw(regs[PICAInternalRegs::DepthScale] & 0xffffff);
 	f24 depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff);
-	printf("Depth enable: %d, func: %d, writeEnable: %d\n", depthEnable, depthFunc, depthWriteEnable);
-	printf("Blending enabled: %d\n", (regs[0x100] >> 8) & 1);
-	printf("Blend func: %08X\n", regs[0x101]);
 
 	//if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
 	//	Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
+
+	// Hack for rendering texture 1
 	if (regs[0x80] & 1) {
 		u32 dim = regs[0x82];
 		u32 height = dim & 0x7ff;
@@ -210,9 +277,17 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		tex.bind();
 	}
 
+	// Update the texture unit configuration uniform if it changed
+	const u32 texUnitConfig = regs[PICAInternalRegs::TexUnitCfg];
+	if (oldTexUnitConfig != texUnitConfig) {
+		oldTexUnitConfig = texUnitConfig;
+		glUniform1ui(texUnitConfigLoc, texUnitConfig);
+	}
+
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
 	float viewportHeight = f24::fromRaw(regs[PICAInternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
+	//OpenGL::setViewport(viewportWidth, viewportHeight);
 
 	if (depthEnable) {
 		OpenGL::enableDepth();

@@ -23,7 +23,10 @@ class Renderer {
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
 	GLint alphaControlLoc = -1;
+	GLint texUnitConfigLoc = -1;
+
 	u32 oldAlphaControl = 0;
+	u32 oldTexUnitConfig = 0;
 
 	SurfaceCache<DepthBuffer, 10> depthBufferCache;
 	SurfaceCache<ColourBuffer, 10> colourBufferCache;
@@ -73,6 +76,8 @@ public:
 
 	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
+
+	void setupBlending();
 
 	static constexpr u32 vertexBufferSize = 0x1500;
 };
