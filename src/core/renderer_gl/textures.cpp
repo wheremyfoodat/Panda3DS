@@ -154,7 +154,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             const u8 intensity = ptr[offset];
 
             // Intensity formats just copy the intensity value to every colour channel
-            return (intensity << 24) | (intensity << 16) | (intensity << 8) | intensity;
+            return (0xff << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
         case Formats::IA8: {
