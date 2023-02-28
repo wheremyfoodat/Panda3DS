@@ -136,6 +136,18 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
 
+        case Formats::IA4: {
+            u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+            auto ptr = static_cast<const u8*>(data);
+
+            const u8 texel = ptr[offset];
+            const u8 alpha = Colour::convert4To8Bit(texel & 0xf);
+            const u8 intensity = Colour::convert4To8Bit(texel >> 4);
+
+            // Intensity formats just copy the intensity value to every colour channel
+            return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
+        }
+
         case Formats::I8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 1);
             auto ptr = static_cast<const u8*>(data);
