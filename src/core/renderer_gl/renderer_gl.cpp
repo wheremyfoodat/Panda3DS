@@ -287,7 +287,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
 	float viewportHeight = f24::fromRaw(regs[PICAInternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
-	//OpenGL::setViewport(viewportWidth, viewportHeight);
+	OpenGL::setViewport(viewportWidth, viewportHeight);
 
 	if (depthEnable) {
 		OpenGL::enableDepth();
