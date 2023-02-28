@@ -85,7 +85,6 @@ u32 Texture::getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel) {
 // data: texture data of the texture
 u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
     switch (fmt) {
-        case Formats::ETC1A4:
         case Formats::RGBA4: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
             auto ptr = static_cast<const u8*>(data);
@@ -166,6 +165,9 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             const u8 intensity = ptr[offset + 1];
             return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
+
+        case Formats::ETC1: return getTexelETC(false, u, v, size.u(), data);
+        case Formats::ETC1A4: return getTexelETC(true, u, v, size.u(), data);
 
         default:
             Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));

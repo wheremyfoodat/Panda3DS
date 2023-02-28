@@ -65,4 +65,10 @@ struct Texture {
     static u32 mortonInterleave(u32 u, u32 v);
     // Get the byte offset of texel (u, v) in the texture
     static u32 getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel);
+
+    // Returns the texel at coordinates (u, v) of an ETC1(A4) texture
+    // TODO: Make hasAlpha a template parameter
+    u32 getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, const void* data);
+    u32 decodeETC(u32 alpha, u32 u, u32 v, u64 colourData);
+
 };
