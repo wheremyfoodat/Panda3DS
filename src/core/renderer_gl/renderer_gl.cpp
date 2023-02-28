@@ -12,15 +12,17 @@ const char* vertexShader = R"(
 	
 	layout (location = 0) in vec4 coords;
 	layout (location = 1) in vec4 vertexColour;
-	layout (location = 2) in vec2 inUVs;
+	layout (location = 2) in vec2 inUVs_texture0;
 
 	out vec4 colour;
-	out vec2 UVs;
+	out vec2 tex0_UVs;
 
 	void main() {
 		gl_Position = coords * vec4(1.0, 1.0, -1.0, 1.0);
 		colour = vertexColour;
-		UVs = inUVs;
+
+		// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
+		tex0_UVs = vec2(inUVs_texture0.x, 1.0 - inUVs_texture0.y);
 	}
 )";
 
@@ -28,7 +30,7 @@ const char* fragmentShader = R"(
 	#version 420 core
 	
 	in vec4 colour;
-	in vec2 UVs;
+	in vec2 tex0_UVs;
 
 	out vec4 fragColour;
 
@@ -39,7 +41,7 @@ const char* fragmentShader = R"(
 
 	void main() {
 		if ((u_textureConfig & 1u) != 0) { // Render texture 0 if enabled
-			fragColour = texture(u_tex0, UVs);
+			fragColour = texture(u_tex0, tex0_UVs);
 		} else {
 			fragColour = colour;
 		}
