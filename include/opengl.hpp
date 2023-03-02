@@ -193,6 +193,18 @@ namespace OpenGL {
             create(width, height, internalFormat, GL_TEXTURE_2D_MULTISAMPLE, samples);
         }
 
+        // Creates a depth, stencil or depth-stencil texture
+        void createDSTexture(int width, int height, GLenum internalFormat, GLenum format, const void* data = nullptr,
+            GLenum type = GL_FLOAT, GLenum binding = GL_TEXTURE_2D) {
+            m_width = width;
+            m_height = height;
+            m_binding = binding;
+
+            glGenTextures(1, &m_handle);
+            bind();
+            glTexImage2D(binding, 0, internalFormat, width, height, 0, format, type, data);
+        }
+
         void setWrapS(WrappingMode mode) {
             glTexParameteri(m_binding, GL_TEXTURE_WRAP_S, static_cast<GLint>(mode));
         }
