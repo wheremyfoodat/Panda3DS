@@ -40,13 +40,13 @@ struct ColourBuffer {
 
     void allocate() {
         // Create texture for the FBO, setting up filters and the like
-        // Reading back the current texture is slow, but allocate calls should be and far between.
+        // Reading back the current texture is slow, but allocate calls should be few and far between.
         // If this becomes a bottleneck, we can fix it semi-easily
         auto prevTexture = OpenGL::getTex2D();
         texture.create(size.x(), size.y(), GL_RGBA8);
         texture.bind();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        texture.setMinFilter(OpenGL::Linear);
+        texture.setMagFilter(OpenGL::Linear);
         glBindTexture(GL_TEXTURE_2D, prevTexture);
 
         //Helpers::panic("Creating FBO: %d, %d\n", size.x(), size.y());
@@ -115,14 +115,47 @@ struct DepthBuffer {
     DepthBuffer() : valid(false) {}
 
     DepthBuffer(u32 loc, Formats format, u32 x, u32 y, bool valid = true) :
-        location(loc), format(format), size({x, y}), valid(valid) {}
+        location(loc), format(format), size({x, y}), valid(valid) {
+
+        u64 endLoc = (u64)loc + sizeInBytes();
+        // Check if start and end are valid here
+        range = Interval<u32>(loc, (u32)endLoc);
+    }
 
     bool hasStencil() {
         return format == Formats::Depth24Stencil8;
     }
 
     void allocate() {
-        printf("Make this depth buffer allocate itself\n");
+        // Create texture for the FBO, setting up filters and the like
+        // Reading back the current texture is slow, but allocate calls should be few and far between.
+        // If this becomes a bottleneck, we can fix it semi-easily
+        auto prevTexture = OpenGL::getTex2D();
+
+        // Internal formats for the texture based on format
+        static constexpr std::array<GLenum, 4> internalFormats = {
+            GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT24, GL_DEPTH24_STENCIL8
+        };
+
+        // Format of the texture
+        static constexpr std::array<GLenum, 4> formats = {
+            GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT, GL_DEPTH_STENCIL
+        };
+
+        static constexpr std::array<GLenum, 4> types = {
+            GL_FLOAT, GL_FLOAT, GL_FLOAT, GL_UNSIGNED_INT_24_8
+        };
+
+        auto internalFormat = internalFormats[(int)format];
+        auto fmt = formats[(int)format];
+        auto type = types[(int)format];
+
+        texture.createDSTexture(size.x(), size.y(), internalFormat, fmt, nullptr, type);
+        texture.bind();
+        texture.setMinFilter(OpenGL::Linear);
+        texture.setMagFilter(OpenGL::Linear);
+        
+        glBindTexture(GL_TEXTURE_2D, prevTexture);
     }
 
     void free() {

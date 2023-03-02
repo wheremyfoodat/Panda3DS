@@ -291,14 +291,18 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 	float viewportHeight = f24::fromRaw(regs[PICAInternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
 	OpenGL::setViewport(viewportWidth, viewportHeight);
 
+	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
+	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
 		OpenGL::enableDepth();
 		glDepthFunc(depthModes[depthFunc]);
 		glDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+		bindDepthBuffer();
 	} else {
 		if (depthWriteEnable) {
 			OpenGL::enableDepth();
 			glDepthFunc(GL_ALWAYS);
+			bindDepthBuffer();
 		} else {
 			OpenGL::disableDepth();
 		}
@@ -364,8 +368,24 @@ OpenGL::Framebuffer Renderer::getColourFBO() {
 	}
 }
 
+void Renderer::bindDepthBuffer() {
+	// Similar logic as the getColourFBO function
+	DepthBuffer sampleBuffer(depthBufferLoc, depthBufferFormat, fbSize.x(), fbSize.y());
+	auto buffer = depthBufferCache.find(sampleBuffer);
+	GLuint tex;
+
+	if (buffer.has_value()) {
+		tex = buffer.value().get().texture.m_handle;
+	} else {
+		tex = depthBufferCache.add(sampleBuffer).texture.m_handle;
+	}
+
+	auto attachment = depthBufferFormat == DepthBuffer::Formats::Depth24Stencil8 ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, tex, 0);
+}
+
 OpenGL::Texture Renderer::getTexture(Texture& tex) {
-	// Similar logic as the getColourFBO/getDepthBuffer functions
+	// Similar logic as the getColourFBO/bindDepthBuffer functions
 	auto buffer = textureCache.find(tex);
 
 	if (buffer.has_value()) {

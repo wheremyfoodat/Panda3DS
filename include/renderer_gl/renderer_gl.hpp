@@ -72,12 +72,19 @@ public:
 	void setColourFormat(u32 format) { colourBufferFormat = static_cast<ColourBuffer::Formats>(format); }
 
 	void setDepthFormat(DepthBuffer::Formats format) { depthBufferFormat = format; }
-	void setDepthFormat(u32 format) { depthBufferFormat = static_cast<DepthBuffer::Formats>(format); }
+	void setDepthFormat(u32 format) {
+		if (format == 2) {
+			Helpers::panic("[PICA] Undocumented depth-stencil mode!");
+		}
+
+		depthBufferFormat = static_cast<DepthBuffer::Formats>(format);
+	}
 
 	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
 
 	void setupBlending();
+	void bindDepthBuffer();
 
 	static constexpr u32 vertexBufferSize = 0x1500;
 };
