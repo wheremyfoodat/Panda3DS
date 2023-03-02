@@ -77,6 +77,12 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 		}
 
+		case DepthBufferFormat: {
+			u32 fmt = value & 0x3;
+			renderer.setDepthFormat(fmt);
+			break;
+		}
+
 		case FramebufferSize: {
 			const u32 width = value & 0x7ff;
 			const u32 height = ((value >> 12) & 0x3ff) + 1;

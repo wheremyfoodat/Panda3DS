@@ -20,6 +20,7 @@ namespace PICAInternalRegs {
 		BlendColour = 0x103,
 		AlphaTestConfig = 0x104,
 		DepthAndColorMask = 0x107,
+		DepthBufferFormat = 0x116,
 		ColourBufferFormat = 0x117,
 		DepthBufferLoc = 0x11C,
 		ColourBufferLoc = 0x11D,
