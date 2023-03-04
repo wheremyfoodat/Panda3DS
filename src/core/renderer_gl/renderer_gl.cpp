@@ -344,6 +344,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		if (depthWriteEnable) {
 			OpenGL::enableDepth();
 			glDepthFunc(GL_ALWAYS);
+			glDepthMask(GL_TRUE);
 			bindDepthBuffer();
 		} else {
 			OpenGL::disableDepth();
