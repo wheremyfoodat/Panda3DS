@@ -24,9 +24,18 @@ class Renderer {
 	OpenGL::VertexBuffer vbo;
 	GLint alphaControlLoc = -1;
 	GLint texUnitConfigLoc = -1;
+	
+	// Depth configuration uniform locations
+	GLint depthOffsetLoc = -1;
+	GLint depthScaleLoc = -1;
+	GLint depthmapEnableLoc = -1;
 
 	u32 oldAlphaControl = 0;
 	u32 oldTexUnitConfig = 0;
+
+	float oldDepthScale = -1.0;
+	float oldDepthOffset = 0.0;
+	bool oldDepthmapEnable = false;
 
 	SurfaceCache<DepthBuffer, 10> depthBufferCache;
 	SurfaceCache<ColourBuffer, 10> colourBufferCache;

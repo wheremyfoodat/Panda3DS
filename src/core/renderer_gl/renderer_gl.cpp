@@ -18,7 +18,7 @@ const char* vertexShader = R"(
 	out vec2 tex0_UVs;
 
 	void main() {
-		gl_Position = coords * vec4(1.0, 1.0, -1.0, 1.0);
+		gl_Position = coords;
 		colour = vertexColour;
 
 		// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
@@ -37,6 +37,11 @@ const char* fragmentShader = R"(
 	uniform uint u_alphaControl;
 	uniform uint u_textureConfig;
 
+	// Depth control uniforms
+	uniform float u_depthScale;
+	uniform float u_depthOffset;
+	uniform bool u_depthmapEnable;
+
 	uniform sampler2D u_tex0;
 
 	void main() {
@@ -45,6 +50,17 @@ const char* fragmentShader = R"(
 		} else {
 			fragColour = colour;
 		}
+
+		// Get original depth value pre-perspective by converting from [near, far] = [0, 1] to [-1, 1]
+		// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
+		float z_over_w = gl_FragCoord.z * 2.0f - 1.0;
+		float depth = z_over_w * u_depthScale + u_depthOffset;
+
+		if (!u_depthmapEnable) // Divide z by w if depthmap enable == 0 (ie using W-buffering)
+			depth /= gl_FragCoord.w;
+
+		// Write final fragment depth
+		gl_FragDepth = depth;
 
 		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
 			uint func = (u_alphaControl >> 4u) & 7u;
@@ -136,11 +152,19 @@ void Renderer::reset() {
 		const auto oldProgram = OpenGL::getProgram();
 
 		triangleProgram.use();
-		oldAlphaControl = 0;
-		oldTexUnitConfig = 0;
+		oldAlphaControl = 0; // Default alpha control to 0
+		oldTexUnitConfig = 0; // Default tex unit config to 0
+		
+		oldDepthScale = -1.0; // Default depth scale to -1.0, which is what games typically use
+		oldDepthOffset = 0.0; // Default depth offset to 0
+		oldDepthmapEnable = false; // Enable w buffering
 
-		glUniform1ui(alphaControlLoc, 0); // Default alpha control to 0
-		glUniform1ui(texUnitConfigLoc, 0); // Default tex unit config to 0
+		glUniform1ui(alphaControlLoc, oldAlphaControl);
+		glUniform1ui(texUnitConfigLoc, oldTexUnitConfig);
+		glUniform1f(depthScaleLoc, oldDepthScale);
+		glUniform1f(depthOffsetLoc, oldDepthOffset);
+		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
+
 		glUseProgram(oldProgram); // Switch to old GL program
 	}
 }
@@ -153,6 +177,10 @@ void Renderer::initGraphicsContext() {
 	
 	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
 	texUnitConfigLoc = OpenGL::uniformLocation(triangleProgram, "u_textureConfig");
+
+	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
+	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
+	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
@@ -251,20 +279,34 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 	poop.bind(OpenGL::DrawAndReadFramebuffer);
 
 	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
-	bool depthEnable = depthControl & 1;
-	bool depthWriteEnable = (depthControl >> 12) & 1;
-	int depthFunc = (depthControl >> 4) & 7;
-	int colourMask = (depthControl >> 8) & 0xf;
+	const bool depthEnable = depthControl & 1;
+	const bool depthWriteEnable = (depthControl >> 12) & 1;
+	const int depthFunc = (depthControl >> 4) & 7;
+	const int colourMask = (depthControl >> 8) & 0xf;
 
 	static constexpr std::array<GLenum, 8> depthModes = {
 		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
 	};
 
-	f24 depthScale = f24::fromRaw(regs[PICAInternalRegs::DepthScale] & 0xffffff);
-	f24 depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff);
+	const float depthScale = f24::fromRaw(regs[PICAInternalRegs::DepthScale] & 0xffffff).toFloat32();
+	const float depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff).toFloat32();
+	const bool depthMapEnable = regs[PICAInternalRegs::DepthmapEnable] & 1;
 
-	//if (depthScale.toFloat32() != -1.0 || depthOffset.toFloat32() != 0.0)
-	//	Helpers::panic("TODO: Implement depth scale/offset. Remove the depth *= -1.0 from vertex shader");
+	// Update depth uniforms
+	if (oldDepthScale != depthScale) {
+		oldDepthScale = depthScale;
+		glUniform1f(depthScaleLoc, depthScale);
+	}
+	
+	if (oldDepthOffset != depthOffset) {
+		oldDepthOffset = depthOffset;
+		glUniform1f(depthOffsetLoc, depthOffset);
+	}
+
+	if (oldDepthmapEnable != depthMapEnable) {
+		oldDepthmapEnable = depthMapEnable;
+		glUniform1i(depthmapEnableLoc, depthMapEnable);
+	}
 
 	// Hack for rendering texture 1
 	if (regs[0x80] & 1) {
@@ -380,6 +422,7 @@ void Renderer::bindDepthBuffer() {
 		tex = depthBufferCache.add(sampleBuffer).texture.m_handle;
 	}
 
+	if (DepthBuffer::Formats::Depth24Stencil8 != depthBufferFormat) Helpers::panic("TODO: Should we remove stencil attachment?");
 	auto attachment = depthBufferFormat == DepthBuffer::Formats::Depth24Stencil8 ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, tex, 0);
 }

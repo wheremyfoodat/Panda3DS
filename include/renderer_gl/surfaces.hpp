@@ -143,14 +143,14 @@ struct DepthBuffer {
         };
 
         static constexpr std::array<GLenum, 4> types = {
-            GL_FLOAT, GL_FLOAT, GL_FLOAT, GL_UNSIGNED_INT_24_8
+            GL_UNSIGNED_SHORT, GL_UNSIGNED_INT, GL_UNSIGNED_INT, GL_UNSIGNED_INT_24_8
         };
 
         auto internalFormat = internalFormats[(int)format];
         auto fmt = formats[(int)format];
         auto type = types[(int)format];
 
-        texture.createDSTexture(size.x(), size.y(), internalFormat, fmt, nullptr, type);
+        texture.createDSTexture(size.x(), size.y(), internalFormat, fmt, nullptr, type, GL_TEXTURE_2D);
         texture.bind();
         texture.setMinFilter(OpenGL::Linear);
         texture.setMagFilter(OpenGL::Linear);
