@@ -12,6 +12,7 @@ namespace PICAInternalRegs {
 		DepthOffset = 0x4E,
 		ShaderOutputCount = 0x4F,
 
+		DepthmapEnable = 0x6D,
 		TexUnitCfg = 0x80,
 
 		// Framebuffer registers
