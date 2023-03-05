@@ -51,9 +51,9 @@ const char* fragmentShader = R"(
 			fragColour = colour;
 		}
 
-		// Get original depth value pre-perspective by converting from [near, far] = [0, 1] to [-1, 1]
+		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
 		// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
-		float z_over_w = gl_FragCoord.z * 2.0f - 1.0;
+		float z_over_w = gl_FragCoord.z * 2.0f - 1.0f;
 		float depth = z_over_w * u_depthScale + u_depthOffset;
 
 		if (!u_depthmapEnable) // Divide z by w if depthmap enable == 0 (ie using W-buffering)

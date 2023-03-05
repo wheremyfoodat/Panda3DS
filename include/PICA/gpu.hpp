@@ -22,6 +22,11 @@ class GPU {
 	std::array<u32, regNum> regs; // GPU internal registers
 	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
+	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
+	std::array<Vertex, 3> immediateModeVertices;
+	uint immediateModeVertIndex;
+	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
+
 	template <bool indexed>
 	void drawArrays();
 
@@ -53,7 +58,7 @@ class GPU {
 	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
 	Renderer renderer;
-
+	Vertex getImmediateModeVertex();
 public:
 	GPU(Memory& mem);
 	void initGraphicsContext() { renderer.initGraphicsContext(); }

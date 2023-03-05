@@ -104,24 +104,52 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			fixedAttribCount = 0;
 			fixedAttribIndex = value & 0xf;
 
-			if (fixedAttribIndex == 0xf) Helpers::panic("[PICA] Immediate mode vertex submission");
+			if (fixedAttribIndex == 0xf) {
+				log("[PICA] Immediate mode vertex submission enabled");
+				immediateModeAttrIndex = 0;
+				immediateModeVertIndex = 0;
+			}
 			break;
 
 		case FixedAttribData0: case FixedAttribData1: case FixedAttribData2:
-			if (fixedAttribIndex >= 12) Helpers::panic("[PICA] Tried to write to fixed attribute %d", fixedAttribIndex);
-
 			fixedAttrBuff[fixedAttribCount++] = value;
+
 			if (fixedAttribCount == 3) {
 				fixedAttribCount = 0;
 
-				vec4f& attr = shaderUnit.vs.fixedAttributes[fixedAttribIndex];
+				vec4f attr;
 				// These are stored in the reverse order anyone would expect them to be in
 				attr.x() = f24::fromRaw(fixedAttrBuff[2] & 0xffffff);
 				attr.y() = f24::fromRaw(((fixedAttrBuff[1] & 0xffff) << 8) | (fixedAttrBuff[2] >> 24));
 				attr.z() = f24::fromRaw(((fixedAttrBuff[0] & 0xff) << 16) | (fixedAttrBuff[1] >> 16));
 				attr.w() = f24::fromRaw(fixedAttrBuff[0] >> 8);
 
-				fixedAttribIndex++;
+				// If the fixed attribute index is < 12, we're just writing to one of the fixed attributes
+				if (fixedAttribIndex < 12) [[likely]] {
+					shaderUnit.vs.fixedAttributes[fixedAttribIndex++] = attr;
+				} else if (fixedAttribIndex == 15) { // Otherwise if it's 15, we're submitting an immediate mode vertex
+					const uint totalAttrCount = (regs[PICAInternalRegs::VertexShaderAttrNum] & 0xf) + 1;
+					if (totalAttrCount <= immediateModeAttrIndex) {
+						printf("Broken state in the immediate mode vertex submission pipeline. Failing silently\n");
+						immediateModeAttrIndex = 0;
+						immediateModeVertIndex = 0;
+					}
+
+					immediateModeAttributes[immediateModeAttrIndex++] = attr;
+					if (immediateModeAttrIndex == totalAttrCount) {
+						Vertex v = getImmediateModeVertex();
+						immediateModeAttrIndex = 0;
+						immediateModeVertices[immediateModeVertIndex++] = v;
+
+						// If we've reached 3 verts, issue a draw call
+						if (immediateModeVertIndex == 3) {
+							renderer.drawVertices(OpenGL::Triangle, &immediateModeVertices[0], 3);
+							immediateModeVertIndex = 0;
+						}
+					}
+				} else { // Writing to fixed attributes 13 and 14 probably does nothing, but we'll see
+					log("Wrote to invalid fixed vertex attribute %d\n", fixedAttribIndex);
+				}
 			}
 
 			break;

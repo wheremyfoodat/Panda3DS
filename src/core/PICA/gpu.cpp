@@ -18,6 +18,9 @@ void GPU::reset() {
 	fixedAttribMask = 0;
 	fixedAttribIndex = 0;
 	fixedAttribCount = 0;
+	immediateModeAttrIndex = 0;
+	immediateModeVertIndex = 0;
+
 	fixedAttrBuff.fill(0);
 
 	for (auto& e : attributeInfo) {
@@ -193,7 +196,6 @@ void GPU::drawArrays() {
 
 		//printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z(), (double)vertices[i].position.w());
 		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
-		//printf("(u, v        )       = (%f, %f)\n", vertices[i].UVs.u(), vertices[i].UVs.v());
 	}
 
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
@@ -204,8 +206,24 @@ void GPU::drawArrays() {
 	renderer.drawVertices(shape, vertices, vertexCount);
 }
 
+Vertex GPU::getImmediateModeVertex() {
+	Vertex v;
+	const int totalAttrCount = (regs[PICAInternalRegs::VertexShaderAttrNum] & 0xf) + 1;
+
+	// Copy immediate mode attributes to vertex shader unit
+	for (int i = 0; i < totalAttrCount; i++) {
+		shaderUnit.vs.inputs[i] = immediateModeAttributes[i];
+	}
+
+	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
+	shaderUnit.vs.run();
+	std::memcpy(&v.position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
+	std::memcpy(&v.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
+	std::memcpy(&v.UVs, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+
+	return v;
+}
 void GPU::fireDMA(u32 dest, u32 source, u32 size) {
-	printf("[GPU] DMA of %08X bytes from %08X to %08X\n", size, source, dest);
 	constexpr u32 vramStart = VirtualAddrs::VramStart;
 	constexpr u32 vramSize = VirtualAddrs::VramSize;
 
