@@ -56,7 +56,6 @@ struct ColourBuffer {
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             Helpers::panic("Incomplete framebuffer");
-        //glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         // TODO: This should not clear the framebuffer contents. It should load them from VRAM.
         GLint oldViewport[4];
