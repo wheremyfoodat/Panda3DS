@@ -80,6 +80,14 @@ u32 Texture::getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel) {
     return offset * bytesPerPixel;
 }
 
+// Same as the above code except we need to divide by 2 because 4 bits is smaller than a byte
+u32 Texture::getSwizzledOffset_4bpp(u32 u, u32 v, u32 width) {
+    u32 offset = ((u & ~7) * 8) + ((v & ~7) * width); // Offset of the 8x8 tile the texel belongs to
+    offset += mortonInterleave(u, v); // Add the in-tile offset of the texel
+
+    return offset / 2;
+}
+
 // Get the texel at position (u, v)
 // fmt: format of the texture
 // data: texture data of the texture
@@ -145,6 +153,18 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
 
             // Intensity formats just copy the intensity value to every colour channel
             return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
+        }
+
+        case Formats::A4: {
+            u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
+            auto ptr = static_cast<const u8*>(data);
+
+            // For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
+            u8 alpha = ptr[offset] >> ((u % 2) ? 4 : 0);
+            alpha = Colour::convert4To8Bit(alpha & 0xf);
+
+            // A8 sets RGB to 0
+            return (alpha << 24) | (0 << 16) | (0 << 8) | 0;
         }
 
         case Formats::A8: {
