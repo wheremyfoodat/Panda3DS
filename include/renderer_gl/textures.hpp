@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <string>
 #include "boost/icl/interval.hpp"
 #include "helpers.hpp"
 #include "opengl.hpp"
@@ -66,6 +67,14 @@ struct Texture {
     // Get the byte offset of texel (u, v) in the texture
     static u32 getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel);
     static u32 getSwizzledOffset_4bpp(u32 u, u32 v, u32 width);
+
+    // Returns the string representation of a texture format
+    static std::string textureFormatToString(Formats fmt);
+
+    // Returns the format of this texture as a string
+    std::string formatToString() {
+        return textureFormatToString(format);
+    }
 
     // Returns the texel at coordinates (u, v) of an ETC1(A4) texture
     // TODO: Make hasAlpha a template parameter

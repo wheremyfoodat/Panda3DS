@@ -230,3 +230,23 @@ void Texture::decodeTexture(const void* data) {
     texture.bind();
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.u(), size.v(), GL_RGBA, GL_UNSIGNED_BYTE, decoded.data());
 }
+
+std::string Texture::textureFormatToString(Texture::Formats fmt) {
+    switch (fmt) {
+        case Formats::A4: return "A4";
+        case Formats::A8: return "A8";
+        case Formats::ETC1: return "ETC1";
+        case Formats::ETC1A4: return "ETC1A4";
+        case Formats::I4: return "I4";
+        case Formats::I8: return "I8";
+        case Formats::IA4: return "IA4";
+        case Formats::IA8: return "IA8";
+        case Formats::RG8: return "RG8";
+        case Formats::RGB565: return "RGB565";
+        case Formats::RGB8: return "RGB8";
+        case Formats::RGBA4: return "RGBA4";
+        case Formats::RGBA5551: return "RGBA5551";
+        case Formats::RGBA8: return "RGBA8";
+        default: return "Unknown";
+    }
+}
