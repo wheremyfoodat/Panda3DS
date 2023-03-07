@@ -189,6 +189,8 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			shaderUnit.vs.setBufferIndex(value);
 			break;
 
+		case 0x23C: case 0x23D: Helpers::panic("Nested PICA cmd list!");
+
 		default:
 			// Vertex attribute registers
 			if (index >= AttribInfoStart && index <= AttribInfoEnd) {
