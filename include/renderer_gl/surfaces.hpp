@@ -151,8 +151,8 @@ struct DepthBuffer {
 
         texture.createDSTexture(size.x(), size.y(), internalFormat, fmt, nullptr, type, GL_TEXTURE_2D);
         texture.bind();
-        texture.setMinFilter(OpenGL::Linear);
-        texture.setMagFilter(OpenGL::Linear);
+        texture.setMinFilter(OpenGL::Nearest);
+        texture.setMagFilter(OpenGL::Nearest);
         
         glBindTexture(GL_TEXTURE_2D, prevTexture);
     }
