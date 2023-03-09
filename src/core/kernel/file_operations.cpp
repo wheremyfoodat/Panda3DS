@@ -6,6 +6,7 @@ namespace FileOps {
 		Write = 0x08030102,
 		GetSize = 0x08040000,
 		Close = 0x08080000,
+		SetPriority = 0x080A0040,
 		OpenLinkFile = 0x080C0000
 	};
 }
@@ -24,6 +25,7 @@ void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 		case FileOps::GetSize: getFileSize(messagePointer, file); break;
 		case FileOps::OpenLinkFile: openLinkFile(messagePointer, file); break;
 		case FileOps::Read: readFile(messagePointer, file); break;
+		case FileOps::SetPriority: setFilePriority(messagePointer, file); break;
 		case FileOps::Write: writeFile(messagePointer, file); break;
 		default: Helpers::panic("Unknown file operation: %08X", cmd);
 	}
@@ -182,4 +184,22 @@ void Kernel::openLinkFile(u32 messagePointer, Handle fileHandle) {
 
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 12, handle);
+}
+
+void Kernel::setFilePriority(u32 messagePointer, Handle fileHandle) {
+	const u32 priority = mem.read32(messagePointer + 4);
+	logFileIO("Setting priority of file %X to %d\n", fileHandle, priority);
+
+	const auto p = getObject(fileHandle, KernelObjectType::File);
+	if (p == nullptr) [[unlikely]] {
+		Helpers::panic("Called GetFileSize on non-existent file");
+	}
+
+	FileSession* file = p->getData<FileSession>();
+	if (!file->isOpen) {
+		Helpers::panic("Tried to clone closed file");
+	}
+	file->priority = priority;
+
+	mem.write32(messagePointer + 4, Result::Success);
 }

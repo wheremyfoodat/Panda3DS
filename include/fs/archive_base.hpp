@@ -91,14 +91,15 @@ struct FileSession {
     FILE* fd = nullptr; // File descriptor for file sessions that require them.
     FSPath path;
     FSPath archivePath;
+    u32 priority = 0; // TODO: What does this even do
     bool isOpen;
 
     FileSession(ArchiveBase* archive, const FSPath& filePath, const FSPath& archivePath, FILE* fd, bool isOpen = true) : 
-        archive(archive), path(filePath), archivePath(archivePath), fd(fd), isOpen(isOpen) {}
+        archive(archive), path(filePath), archivePath(archivePath), fd(fd), isOpen(isOpen), priority(0) {}
 
     // For cloning a file session
     FileSession(const FileSession& other) : archive(other.archive), path(other.path),
-        archivePath(other.archivePath), fd(other.fd), isOpen(other.isOpen) {}
+        archivePath(other.archivePath), fd(other.fd), isOpen(other.isOpen), priority(other.priority) {}
 };
 
 struct ArchiveSession {

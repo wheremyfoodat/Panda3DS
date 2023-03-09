@@ -127,6 +127,7 @@ private:
 	void writeFile(u32 messagePointer, Handle file);
 	void getFileSize(u32 messagePointer, Handle file);
 	void openLinkFile(u32 messagePointer, Handle file);
+	void setFilePriority(u32 messagePointer, Handle file);
 
 public:
 	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
