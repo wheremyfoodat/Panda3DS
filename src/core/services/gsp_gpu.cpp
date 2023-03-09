@@ -103,7 +103,8 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	u8 flagIndex = (index + interruptCount) % 0x34;
 	interruptCount++;
 	
-	sharedMem[0xC + flagIndex] = static_cast<u8>(type);
+	sharedMem[2] = 0; // Set error code to 0
+	sharedMem[0xC + flagIndex] = static_cast<u8>(type); // Write interrupt type to queue
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {
@@ -271,10 +272,12 @@ void GPUService::memoryFill(u32* cmd) {
 
 	if (start0 != 0) {
 		gpu.clearBuffer(start0, end0, value0, control0);
+		requestInterrupt(GPUInterrupt::PSC0);
 	}
 
 	if (start1 != 0) {
 		gpu.clearBuffer(start1, end1, value1, control1);
+		requestInterrupt(GPUInterrupt::PSC1);
 	}
 }
 
