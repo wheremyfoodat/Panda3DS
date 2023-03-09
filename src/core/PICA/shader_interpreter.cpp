@@ -14,6 +14,7 @@ void PICAShader::run() {
 		switch (opcode) {
 			case ShaderOpcodes::ADD: add(instruction); break;
 			case ShaderOpcodes::CALL: call(instruction); break;
+			case ShaderOpcodes::CALLC: callc(instruction); break;
 			case ShaderOpcodes::CALLU: callu(instruction); break;
 			case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2: 
 				cmp(instruction);
@@ -449,6 +450,12 @@ void PICAShader::call(u32 instruction) {
 	block.returnPC = pc;
 
 	pc = dest;
+}
+
+void PICAShader::callc(u32 instruction) {
+	if (isCondTrue(instruction)) {
+		call(instruction); // Pls inline
+	}
 }
 
 void PICAShader::callu(u32 instruction) {

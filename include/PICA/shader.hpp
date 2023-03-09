@@ -25,6 +25,7 @@ namespace ShaderOpcodes {
 		NOP = 0x21,
 		END = 0x22,
 		CALL = 0x24,
+		CALLC = 0x25,
 		CALLU = 0x26,
 		IFU = 0x27,
 		IFC = 0x28,
@@ -87,6 +88,7 @@ class PICAShader {
 	// Shader opcodes
 	void add(u32 instruction);
 	void call(u32 instruction);
+	void callc(u32 instruction);
 	void callu(u32 instruction);
 	void cmp(u32 instruction);
 	void dp3(u32 instruction);
