@@ -5,7 +5,8 @@ namespace FileOps {
 		Read = 0x080200C2,
 		Write = 0x08030102,
 		GetSize = 0x08040000,
-		Close = 0x08080000
+		Close = 0x08080000,
+		OpenLinkFile = 0x080C0000
 	};
 }
 
@@ -21,6 +22,7 @@ void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 	switch (cmd) {
 		case FileOps::Close: closeFile(messagePointer, file); break;
 		case FileOps::GetSize: getFileSize(messagePointer, file); break;
+		case FileOps::OpenLinkFile: openLinkFile(messagePointer, file); break;
 		case FileOps::Read: readFile(messagePointer, file); break;
 		case FileOps::Write: writeFile(messagePointer, file); break;
 		default: Helpers::panic("Unknown file operation: %08X", cmd);
@@ -154,5 +156,30 @@ void Kernel::getFileSize(u32 messagePointer, Handle fileHandle) {
 	} else {
 		Helpers::panic("Tried to get file size of file without file descriptor");
 	}
+}
 
+void Kernel::openLinkFile(u32 messagePointer, Handle fileHandle) {
+	logFileIO("Open link file (clone) of file %X\n", fileHandle);
+
+	const auto p = getObject(fileHandle, KernelObjectType::File);
+	if (p == nullptr) [[unlikely]] {
+		Helpers::panic("Called GetFileSize on non-existent file");
+	}
+
+	FileSession* file = p->getData<FileSession>();
+	if (!file->isOpen) {
+		Helpers::panic("Tried to clone closed file");
+	}
+
+	// Make clone object
+	auto handle = makeObject(KernelObjectType::File);
+	auto& cloneFile = getObjects()[handle];
+
+	// Make a clone of the file by copying the archive/archive path/file path/file descriptor/etc of the original file
+	// TODO: Maybe we should duplicate the file handle instead of copying. This way their offsets will be separate
+	// However we do seek properly on every file access so this shouldn't matter
+	cloneFile.data = new FileSession(*file);
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 12, handle);
 }

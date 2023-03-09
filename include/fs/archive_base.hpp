@@ -95,6 +95,10 @@ struct FileSession {
 
     FileSession(ArchiveBase* archive, const FSPath& filePath, const FSPath& archivePath, FILE* fd, bool isOpen = true) : 
         archive(archive), path(filePath), archivePath(archivePath), fd(fd), isOpen(isOpen) {}
+
+    // For cloning a file session
+    FileSession(const FileSession& other) : archive(other.archive), path(other.path),
+        archivePath(other.archivePath), fd(other.fd), isOpen(other.isOpen) {}
 };
 
 struct ArchiveSession {
