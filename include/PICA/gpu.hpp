@@ -9,7 +9,9 @@
 #include "renderer_gl/renderer_gl.hpp"
 
 class GPU {
+	static constexpr u32 regNum = 0x300;
 	using vec4f = OpenGL::Vector<Floats::f24, 4>;
+	using Registers = std::array<u32, regNum>;
 
 	Memory& mem;
 	ShaderUnit shaderUnit;
@@ -17,9 +19,8 @@ class GPU {
 	MAKE_LOG_FUNCTION(log, gpuLogger)
 
 	static constexpr u32 maxAttribCount = 12; // Up to 12 vertex attributes
-	static constexpr u32 regNum = 0x300;
 	static constexpr u32 vramSize = 6_MB;
-	std::array<u32, regNum> regs; // GPU internal registers
+	Registers regs; // GPU internal registers
 	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
 	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
@@ -57,6 +58,11 @@ class GPU {
 	u32 fixedAttribCount = 0; // How many attribute components have we written? When we get to 4 the attr will actually get submitted
 	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
+	// Command processor pointers for GPU command lists
+	u32* cmdBuffStart = nullptr;
+	u32* cmdBuffEnd = nullptr;
+	u32* cmdBuffCurr = nullptr;
+
 	Renderer renderer;
 	Vertex getImmediateModeVertex();
 public:
@@ -67,6 +73,9 @@ public:
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();
+
+	Registers& getRegisters() { return regs; }
+	void startCommandList(u32 addr, u32 size);
 
 	// Used by the GSP GPU service for readHwRegs/writeHwRegs/writeHwRegsMasked
 	u32 readReg(u32 address);

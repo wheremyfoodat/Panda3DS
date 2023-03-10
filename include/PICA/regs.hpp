@@ -71,6 +71,14 @@ namespace PICAInternalRegs {
 		FixedAttribData0 = 0x233,
 		FixedAttribData1 = 0x234,
 		FixedAttribData2 = 0x235,
+		
+		// Command processor registers
+		CmdBufSize0 = 0x238,
+		CmdBufSize1 = 0x239,
+		CmdBufAddr0 = 0x23A,
+		CmdBufAddr1 = 0x23B,
+		CmdBufTrigger0 = 0x23C,
+		CmdBufTrigger1 = 0x23D,
 
 		PrimitiveConfig = 0x25E,
 

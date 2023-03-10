@@ -308,55 +308,7 @@ void GPUService::processCommandList(u32* cmd) {
 	bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
 	bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
 
-	u32* bufferStart = static_cast<u32*>(mem.getReadPointer(address));
-	if (!bufferStart) Helpers::panic("Couldn't get buffer for command list");
-	// TODO: This is very memory unsafe. We get a pointer to FCRAM and just keep writing without checking if we're gonna go OoB
-
-	u32* curr = bufferStart;
-	u32* bufferEnd = bufferStart + (size / sizeof(u32));
-
-	// LUT for converting the parameter mask to an actual 32-bit mask
-	// The parameter mask is 4 bits long, each bit corresponding to one byte of the mask
-	// If the bit is 0 then the corresponding mask byte is 0, otherwise the mask byte is 0xff
-	// So for example if the parameter mask is 0b1001, the full mask is 0xff'00'00'ff
-	static constexpr std::array<u32, 16> maskLUT = {
-		0x00000000, 0x000000ff, 0x0000ff00, 0x0000ffff, 0x00ff0000, 0x00ff00ff, 0x00ffff00, 0x00ffffff,
-		0xff000000, 0xff0000ff, 0xff00ff00, 0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff,
-	};
-
-	while (curr < bufferEnd) {
-		// If the buffer is not aligned to an 8 byte boundary, force align it by moving the pointer up a word
-		// The curr pointer starts out doubleword-aligned and is increased by 4 bytes each time
-		// So to check if it is aligned, we get the number of words it's been incremented by
-		// If that number is an odd value then the buffer is not aligned, otherwise it is
-		if ((curr - bufferStart) % 2 != 0) {
-			curr++;
-		}
-
-		// The first word of a command is the command parameter and the second one is the header
-		u32 param1 = *curr++;
-		u32 header = *curr++;
-		
-		u32 id = header & 0xffff;
-		u32 paramMaskIndex = (header >> 16) & 0xf;
-		u32 paramCount = (header >> 20) & 0xff; // Number of additional parameters
-		// Bit 31 tells us whether this command is going to write to multiple sequential registers (if the bit is 1)
-		// Or if all written values will go to the same register (If the bit is 0). It's essentially the value that
-		// gets added to the "id" field after each register write
-		bool consecutiveWritingMode = (header >> 31) != 0;
-
-		u32 mask = maskLUT[paramMaskIndex]; // Actual parameter mask
-		// Increment the ID by 1 after each write if we're in consecutive mode, or 0 otherwise
-		u32 idIncrement = (consecutiveWritingMode) ? 1 : 0;
-
-		gpu.writeInternalReg(id, param1, mask);
-		for (u32 i = 0; i < paramCount; i++) {
-			id += idIncrement;
-			u32 param = *curr++;
-			gpu.writeInternalReg(id, param, mask);
-		}
-	}
-
 	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
+	gpu.startCommandList(address, size);
 	requestInterrupt(GPUInterrupt::P3D); // Send an IRQ when command list processing is over
 }
