@@ -24,6 +24,7 @@ void PICAShader::run() {
 			case ShaderOpcodes::END: return; // Stop running shader
 			case ShaderOpcodes::IFC: ifc(instruction); break;
 			case ShaderOpcodes::IFU: ifu(instruction); break;
+			case ShaderOpcodes::JMPC: jmpc(instruction); break;
 			case ShaderOpcodes::JMPU: jmpu(instruction); break;
 			case ShaderOpcodes::LOOP: loop(instruction); break;
 			case ShaderOpcodes::MAX: max(instruction); break;
@@ -490,6 +491,11 @@ void PICAShader::loop(u32 instruction) {
 	loop.endingPC = dest + 1; // Loop is inclusive so we need + 1 here
 	loop.iterations = uniform.x() + 1;
 	loop.increment = uniform.z();
+}
+
+void PICAShader::jmpc(u32 instruction) {
+	if (isCondTrue(instruction))
+		pc = (instruction >> 10) & 0xfff;
 }
 
 void PICAShader::jmpu(u32 instruction) {

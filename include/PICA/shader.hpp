@@ -30,6 +30,7 @@ namespace ShaderOpcodes {
 		IFU = 0x27,
 		IFC = 0x28,
 		LOOP = 0x29,
+		JMPC = 0x2C,
 		JMPU = 0x2D,
 		CMP1 = 0x2E, // Both of these instructions are CMP
 		CMP2 = 0x2F,
@@ -96,6 +97,7 @@ class PICAShader {
 	void dp4(u32 instruction);
 	void ifc(u32 instruction);
 	void ifu(u32 instruction);
+	void jmpc(u32 instruction);
 	void jmpu(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
