@@ -24,6 +24,7 @@ void PICAShader::run() {
 			case ShaderOpcodes::END: return; // Stop running shader
 			case ShaderOpcodes::IFC: ifc(instruction); break;
 			case ShaderOpcodes::IFU: ifu(instruction); break;
+			case ShaderOpcodes::JMPU: jmpu(instruction); break;
 			case ShaderOpcodes::LOOP: loop(instruction); break;
 			case ShaderOpcodes::MAX: max(instruction); break;
 			case ShaderOpcodes::MIN: min(instruction); break;
@@ -489,4 +490,13 @@ void PICAShader::loop(u32 instruction) {
 	loop.endingPC = dest + 1; // Loop is inclusive so we need + 1 here
 	loop.iterations = uniform.x() + 1;
 	loop.increment = uniform.z();
+}
+
+void PICAShader::jmpu(u32 instruction) {
+	const u32 test = (instruction & 1) ^ 1; // If the LSB is 0 we want to compare to true, otherwise compare to false
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
+
+	if (((boolUniform >> bit) & 1) == test) // Jump if the bool uniform is the value we want
+		pc = dest;
 }
