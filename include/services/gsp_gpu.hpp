@@ -47,6 +47,7 @@ class GPUService {
 	void memoryFill(u32* cmd);
 	void triggerDisplayTransfer(u32* cmd);
 	void triggerDMARequest(u32* cmd);
+	void triggerTextureCopy(u32* cmd);
 	void flushCacheRegions(u32* cmd);
 
 public:

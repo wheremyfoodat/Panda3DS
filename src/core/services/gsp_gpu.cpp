@@ -23,6 +23,7 @@ namespace GXCommands {
 		ProcessCommandList = 1,
 		MemoryFill = 2,
 		TriggerDisplayTransfer = 3,
+		TriggerTextureCopy = 4,
 		FlushCacheRegions = 5
 	};
 }
@@ -245,6 +246,7 @@ void GPUService::processCommandBuffer() {
 				case GXCommands::MemoryFill: memoryFill(cmd); break;
 				case GXCommands::TriggerDisplayTransfer: triggerDisplayTransfer(cmd); break;
 				case GXCommands::TriggerDMARequest: triggerDMARequest(cmd); break;
+				case GXCommands::TriggerTextureCopy: triggerTextureCopy(cmd); break;
 				case GXCommands::FlushCacheRegions: flushCacheRegions(cmd); break;
 				default: Helpers::panic("GSP::GPU::ProcessCommands: Unknown cmd ID %d", cmdID);
 			}
@@ -303,12 +305,19 @@ void GPUService::flushCacheRegions(u32* cmd) {
 
 // Actually send command list (aka display list) to GPU
 void GPUService::processCommandList(u32* cmd) {
-	u32 address = cmd[1] & ~7; // Buffer address
-	u32 size = cmd[2] & ~3; // Buffer size in bytes
-	bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
-	bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
+	const u32 address = cmd[1] & ~7; // Buffer address
+	const u32 size = cmd[2] & ~3; // Buffer size in bytes
+	const bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
+	const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
 
 	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
 	gpu.startCommandList(address, size);
 	requestInterrupt(GPUInterrupt::P3D); // Send an IRQ when command list processing is over
+}
+
+void GPUService::triggerTextureCopy(u32* cmd) {
+	Helpers::warn("GSP::GPU::TriggerTextureCopy (unimplemented)\n");
+	// This uses the transfer engine and thus needs to fire a PPF interrupt.
+	// NSMB2 relies on this
+	requestInterrupt(GPUInterrupt::PPF);
 }
