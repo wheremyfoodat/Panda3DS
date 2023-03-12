@@ -16,6 +16,7 @@ namespace ShaderOpcodes {
 		DP3 = 0x01,
 		DP4 = 0x02,
 		MUL = 0x08,
+		FLR = 0x0B,
 		MAX = 0x0C,
 		MIN = 0x0D,
 		RCP = 0x0E,
@@ -95,6 +96,7 @@ class PICAShader {
 	void cmp(u32 instruction);
 	void dp3(u32 instruction);
 	void dp4(u32 instruction);
+	void flr(u32 instruction);
 	void ifc(u32 instruction);
 	void ifu(u32 instruction);
 	void jmpc(u32 instruction);

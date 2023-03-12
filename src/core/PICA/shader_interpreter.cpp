@@ -22,6 +22,7 @@ void PICAShader::run() {
 			case ShaderOpcodes::DP3: dp3(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
+			case ShaderOpcodes::FLR: flr(instruction); break;
 			case ShaderOpcodes::IFC: ifc(instruction); break;
 			case ShaderOpcodes::IFU: ifu(instruction); break;
 			case ShaderOpcodes::JMPC: jmpc(instruction); break;
@@ -172,6 +173,24 @@ void PICAShader::mul(u32 instruction) {
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
 			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i];
+		}
+	}
+}
+
+void PICAShader::flr(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src = getIndexedSource(src, idx);
+	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
+	vec4f& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = f24::fromFloat32(std::floor(srcVector[3 - 1].toFloat32()));
 		}
 	}
 }
