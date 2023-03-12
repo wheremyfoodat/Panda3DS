@@ -180,8 +180,7 @@ public:
 	}
 
 	void setBufferIndex(u32 index) {
-		if (index != 0) Helpers::panic("How many bits is the shader buffer index reg meant to be?");
-		bufferIndex = (index >> 2) & 0xfff;
+		bufferIndex = index & 0xfff;
 	}
 
 	void setOpDescriptorIndex(u32 index) {
