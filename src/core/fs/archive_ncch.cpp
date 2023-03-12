@@ -1,4 +1,5 @@
 #include "fs/archive_ncch.hpp"
+#include "fs/country_list..hpp"
 #include "fs/mii_data.hpp"
 #include <algorithm>
 #include <memory>
@@ -85,7 +86,8 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 
 		if (highProgramID == sharedDataArchive) {
 			if (lowProgramID == miiData) fileData = std::vector<u8>(std::begin(MII_DATA), std::end(MII_DATA));
-			else Helpers::panic("[NCCH archive] Read unimplemented NAND file");
+			else if (lowProgramID == regionManifest) fileData = std::vector<u8>(std::begin(COUNTRY_LIST_DATA), std::end(COUNTRY_LIST_DATA));
+			else Helpers::panic("[NCCH archive] Read unimplemented NAND file. ID: %08X", lowProgramID);
 		} else {
 			Helpers::panic("[NCCH archive] Read from NAND but not the shared data archive");
 		}
