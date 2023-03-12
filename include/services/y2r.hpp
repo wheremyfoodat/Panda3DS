@@ -9,7 +9,12 @@ class Y2RService {
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, y2rLogger)
 
+	bool transferEndInterruptEnabled;
+
 	// Service commands
+	void driverInitialize(u32 messagePointer);
+	void pingProcess(u32 messagePointer);
+	void setTransferEndInterrupt(u32 messagePointer);
 
 public:
 	Y2RService(Memory& mem) : mem(mem) {}
