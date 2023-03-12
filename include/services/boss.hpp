@@ -12,6 +12,7 @@ class BOSSService {
 	// Service commands
 	void initializeSession(u32 messagePointer);
 	void getOptoutFlag(u32 messagePointer);
+	void getTaskIdList(u32 messagePointer);
 
 	s8 optoutFlag;
 public:
