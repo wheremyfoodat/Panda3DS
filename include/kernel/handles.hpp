@@ -14,6 +14,7 @@ namespace KernelHandles {
 		AM,   // Application manager
 		APT,  // App Title something service?
 		BOSS, // Streetpass stuff?
+		CAM,  // Camera service
 		CECD, // More Streetpass stuff?
 		CFG,  // CFG service (Console & region info)
 		HID,  // HID service (Handles everything input-related including gyro)
@@ -26,7 +27,7 @@ namespace KernelHandles {
 		NIM,  // Updates, DLC, etc
 		NDM,  // ?????
 		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
-		Y2R,
+		Y2R,  // Also does camera stuff
 
 		MinServiceHandle = AC,
 		MaxServiceHandle = Y2R,
@@ -62,6 +63,7 @@ namespace KernelHandles {
 			case AM: return "AM";
 			case APT: return "APT";
 			case BOSS: return "BOSS";
+			case CAM: return "CAM";
 			case CECD: return "CECD";
 			case CFG: return "CFG";
 			case HID: return "HID";

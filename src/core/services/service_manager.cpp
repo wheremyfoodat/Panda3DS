@@ -2,7 +2,7 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), apt(mem, kernel), cecd(mem), cfg(mem), 
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), apt(mem, kernel), cam(mem), cecd(mem), cfg(mem), 
 	dsp(mem), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem),
 	nim(mem), ndm(mem), ptm(mem), y2r(mem) {}
 
@@ -14,6 +14,7 @@ void ServiceManager::reset() {
 	am.reset();
 	apt.reset();
 	boss.reset();
+	cam.reset();
 	cecd.reset();
 	cfg.reset();
 	dsp.reset();
@@ -88,6 +89,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	std::string service = mem.readString(messagePointer + 4, 8);
 	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
+	// TODO: Use a map here
 	if (service == "ac:u") {
         handle = KernelHandles::AC;
     } else if (service == "am:app") {
@@ -100,6 +102,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::APT;
 	} else if (service == "boss:U") {
 		handle = KernelHandles::BOSS;
+	} else if (service == "cam:u") {
+		handle = KernelHandles::CAM;
 	} else if (service == "cecd:u") {
 		handle = KernelHandles::CECD;
 	} else if (service == "cfg:u") {
@@ -164,17 +168,18 @@ void ServiceManager::subscribe(u32 messagePointer) {
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
+		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
         case KernelHandles::AC: ac.handleSyncRequest(messagePointer); break;
         case KernelHandles::AM: am.handleSyncRequest(messagePointer); break;
 		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
         case KernelHandles::BOSS: boss.handleSyncRequest(messagePointer); break;
+		case KernelHandles::CAM: cam.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DSP: dsp.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
         case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::FS: fs.handleSyncRequest(messagePointer); break;
-		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::MIC: mic.handleSyncRequest(messagePointer); break;
         case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;

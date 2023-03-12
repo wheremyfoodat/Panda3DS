@@ -32,6 +32,7 @@ namespace Log {
     static Logger<false> amLogger;
     static Logger<false> aptLogger;
     static Logger<false> bossLogger;
+    static Logger<false> camLogger;
     static Logger<false> cecdLogger;
     static Logger<false> cfgLogger;
     static Logger<false> dspServiceLogger;
@@ -44,6 +45,7 @@ namespace Log {
     static Logger<false> nimLogger;
     static Logger<false> ndmLogger;
     static Logger<false> ptmLogger;
+    static Logger<false> y2rLogger;
     static Logger<false> srvLogger;
 
     #define MAKE_LOG_FUNCTION(functionName, logger)      \
