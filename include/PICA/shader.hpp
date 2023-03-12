@@ -103,6 +103,7 @@ class PICAShader {
 	void jmpu(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
+	void madi(u32 instruction);
 	void max(u32 instruction);
 	void min(u32 instruction);
 	void mov(u32 instruction);
