@@ -20,6 +20,7 @@
 #include "services/nim.hpp"
 #include "services/ndm.hpp"
 #include "services/ptm.hpp"
+#include "services/y2r.hpp"
 
 // More circular dependencies!!
 class Kernel;
@@ -49,6 +50,7 @@ class ServiceManager {
     NIMService nim;
 	NDMService ndm;
 	PTMService ptm;
+	Y2RService y2r;
 
 	// "srv:" commands
 	void enableNotification(u32 messagePointer);

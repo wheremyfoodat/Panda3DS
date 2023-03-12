@@ -4,7 +4,7 @@
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), apt(mem, kernel), cecd(mem), cfg(mem), 
 	dsp(mem), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem),
-	nim(mem), ndm(mem), ptm(mem) {}
+	nim(mem), ndm(mem), ptm(mem), y2r(mem) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -26,6 +26,7 @@ void ServiceManager::reset() {
 	nim.reset();
 	ndm.reset();
 	ptm.reset();
+	y2r.reset();
 
 	notificationSemaphore = std::nullopt;
 }
@@ -123,6 +124,8 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 		handle = KernelHandles::NIM;
 	} else if (service == "ptm:u") {
 		handle = KernelHandles::PTM;
+	} else if (service == "y2r:u") {
+		handle = KernelHandles::Y2R;
 	} else {
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
 	}
@@ -177,6 +180,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
         case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
+		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
 }
