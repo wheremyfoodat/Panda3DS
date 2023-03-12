@@ -61,6 +61,8 @@ class Renderer {
 	OpenGL::Texture getTexture(Texture& tex);
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
+	void setupBlending();
+	void bindDepthBuffer();
 
 public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
@@ -70,6 +72,7 @@ public:
 	void initGraphicsContext(); // Initialize graphics context
 	void getGraphicsContext();  // Set up graphics context for rendering
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control); // Clear a GPU buffer in VRAM
+	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags); // Perform display transfer
 	void drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count); // Draw the given vertices
 
 	void setFBSize(u32 width, u32 height) {
@@ -91,9 +94,6 @@ public:
 
 	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
-
-	void setupBlending();
-	void bindDepthBuffer();
 
 	static constexpr u32 vertexBufferSize = 0x1500;
 };

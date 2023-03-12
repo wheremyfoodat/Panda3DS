@@ -38,10 +38,16 @@ void FSService::reset() {
 // Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
 void FSService::initializeFilesystem() {
 	const auto nandPath = IOFile::getAppData() / "NAND"; // Create NAND
-	// TODO: Savedata, SDMC, etc
+	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
+	namespace fs = std::filesystem;
+	// TODO: SDMC, etc
 
-	if (!std::filesystem::is_directory(nandPath)) {
-		std::filesystem::create_directories(nandPath);
+	if (!fs::is_directory(nandPath)) {
+		fs::create_directories(nandPath);
+	}
+
+	if (!fs::is_directory(savePath)) {
+		fs::create_directories(savePath);
 	}
 }
 

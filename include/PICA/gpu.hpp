@@ -85,8 +85,16 @@ public:
 	u32 readInternalReg(u32 index);
 	void writeInternalReg(u32 index, u32 value, u32 mask);
 
+	// TODO: Emulate the transfer engine & its registers
+	// Then this can be emulated by just writing the appropriate values there
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
 		renderer.clearBuffer(startAddress, endAddress, value, control);
+	}
+
+	// TODO: Emulate the transfer engine & its registers
+	// Then this can be emulated by just writing the appropriate values there
+	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
+		renderer.displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
 	}
 
 	// Read a value of type T from physical address paddr

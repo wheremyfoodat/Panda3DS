@@ -284,15 +284,22 @@ void GPUService::memoryFill(u32* cmd) {
 }
 
 void GPUService::triggerDisplayTransfer(u32* cmd) {
+	const u32 inputAddr = cmd[1];
+	const u32 outputAddr = cmd[2];
+	const u32 inputSize = cmd[3];
+	const u32 outputSize = cmd[4];
+	const u32 flags = cmd[5];
+
 	log("GSP::GPU::TriggerDisplayTransfer (Stubbed)\n");
+	gpu.displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
 	requestInterrupt(GPUInterrupt::PPF); // Send "Display transfer finished" interrupt
 }
 
 void GPUService::triggerDMARequest(u32* cmd) {
-	u32 source = cmd[1];
-	u32 dest = cmd[2];
-	u32 size = cmd[3];
-	bool flush = cmd[7] == 1;
+	const u32 source = cmd[1];
+	const u32 dest = cmd[2];
+	const u32 size = cmd[3];
+	const bool flush = cmd[7] == 1;
 
 	log("GSP::GPU::TriggerDMARequest (source = %08X, dest = %08X, size = %08X)\n", source, dest, size);
 	gpu.fireDMA(dest, source, size);
@@ -315,6 +322,8 @@ void GPUService::processCommandList(u32* cmd) {
 	requestInterrupt(GPUInterrupt::P3D); // Send an IRQ when command list processing is over
 }
 
+// TODO: Emulate the transfer engine & its registers
+// Then this can be emulated by just writing the appropriate values there
 void GPUService::triggerTextureCopy(u32* cmd) {
 	Helpers::warn("GSP::GPU::TriggerTextureCopy (unimplemented)\n");
 	// This uses the transfer engine and thus needs to fire a PPF interrupt.

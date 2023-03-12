@@ -442,3 +442,11 @@ OpenGL::Texture Renderer::getTexture(Texture& tex) {
 		return newTex.texture;
 	}
 }
+
+void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
+	const u32 inputWidth = inputSize & 0xffff;
+	const u32 inputGap = inputSize >> 16;
+
+	const u32 outputWidth = outputSize & 0xffff;
+	const u32 outputGap = outputSize >> 16;
+}
