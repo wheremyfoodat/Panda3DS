@@ -107,7 +107,7 @@ struct ArchiveSession {
     FSPath path;
     bool isOpen;
 
-    ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(path), isOpen(isOpen) {}
+    ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(filePath), isOpen(isOpen) {}
 };
 
 // Represents a file descriptor obtained from OpenFile. If the optional is nullopt, opening the file failed.
