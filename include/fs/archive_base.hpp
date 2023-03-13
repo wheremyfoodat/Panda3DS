@@ -140,8 +140,8 @@ protected:
     template <u32 format>
     bool isPathSafe(const FSPath& path) {
         static_assert(format == PathType::ASCII || format == PathType::UTF16);
-        using String = std::conditional<format == PathType::UTF16, std::u16string, std::string>::type; // String type for the path
-        using Char = String::value_type; // Char type for the path
+        using String = typename std::conditional<format == PathType::UTF16, std::u16string, std::string>::type; // String type for the path
+        using Char = typename String::value_type; // Char type for the path
 
         String pathString, dots;
         if constexpr (std::is_same<String, std::u16string>()) {
