@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <optional>
 #include <utility>
 
 #ifdef _MSC_VER

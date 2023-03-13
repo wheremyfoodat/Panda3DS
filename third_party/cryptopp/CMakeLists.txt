@@ -353,31 +353,31 @@ endif ()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Intel" OR CMAKE_CXX_COMPILER MATCHES "xlC")
 
-  if (CRYPTOPP_AMD64 OR CRYPTOPP_I386 AND FALSE)
+  if (CRYPTOPP_AMD64 OR CRYPTOPP_I386)
     CheckCompileLinkOption("-msse2" CRYPTOPP_IA32_SSE2
-                           "${TEST_PROG_DIR}/test_x86_sse2.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse2.cpp")
     CheckCompileLinkOption("-mssse3" CRYPTOPP_IA32_SSSE3
-                           "${TEST_PROG_DIR}/test_x86_ssse3.cxx")
+                           "${TEST_PROG_DIR}/test_x86_ssse3.cpp")
     CheckCompileLinkOption("-msse4.1" CRYPTOPP_IA32_SSE41
-                           "${TEST_PROG_DIR}/test_x86_sse41.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse41.cpp")
     CheckCompileLinkOption("-msse4.2" CRYPTOPP_IA32_SSE42
-                           "${TEST_PROG_DIR}/test_x86_sse42.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sse42.cpp")
     CheckCompileLinkOption("-mssse3 -mpclmul" CRYPTOPP_IA32_CLMUL
-                           "${TEST_PROG_DIR}/test_x86_clmul.cxx")
+                           "${TEST_PROG_DIR}/test_x86_clmul.cpp")
     CheckCompileLinkOption("-msse4.1 -maes" CRYPTOPP_IA32_AES
-                           "${TEST_PROG_DIR}/test_x86_aes.cxx")
+                           "${TEST_PROG_DIR}/test_x86_aes.cpp")
     CheckCompileLinkOption("-mavx" CRYPTOPP_IA32_AVX
-                           "${TEST_PROG_DIR}/test_x86_avx.cxx")
+                           "${TEST_PROG_DIR}/test_x86_avx.cpp")
     CheckCompileLinkOption("-mavx2" CRYPTOPP_IA32_AVX2
-                           "${TEST_PROG_DIR}/test_x86_avx2.cxx")
+                           "${TEST_PROG_DIR}/test_x86_avx2.cpp")
     CheckCompileLinkOption("-msse4.2 -msha" CRYPTOPP_IA32_SHA
-                           "${TEST_PROG_DIR}/test_x86_sha.cxx")
-    if (EXISTS "${TEST_PROG_DIR}/test_asm_mixed.cxx")
+                           "${TEST_PROG_DIR}/test_x86_sha.cpp")
+    if (EXISTS "${TEST_PROG_DIR}/test_asm_mixed.cpp")
       CheckCompileLinkOption("" CRYPTOPP_MIXED_ASM
-                             "${TEST_PROG_DIR}/test_asm_mixed.cxx")
+                             "${TEST_PROG_DIR}/test_asm_mixed.cpp")
     else ()
       CheckCompileLinkOption("" CRYPTOPP_MIXED_ASM
-                             "${TEST_PROG_DIR}/test_mixed_asm.cxx")
+                             "${TEST_PROG_DIR}/test_mixed_asm.cpp")
     endif ()
 
     if (NOT CRYPTOPP_MIXED_ASM)
@@ -398,7 +398,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       if (NOT CRYPTOPP_IA32_SSE42 AND NOT CRYPTOPP_DISABLE_SSE4)
         list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_SSE4")
       elseif (CRYPTOPP_IA32_SSE42 AND NOT CRYPTOPP_DISABLE_SSE4)
-        set_source_files_properties(${SRC_DIR}/crc_simd.cpp PROPERTIES COMPILE_FLAGS "-msse4.2")
+        set_source_files_properties(${SRC_DIR}/crc_simd.cpp PROPERTIES COMPILE_FLAGS "-msse4.2 -mcrc32")
         if (NOT CRYPTOPP_IA32_CLMUL AND NOT CRYPTOPP_DISABLE_CLMUL)
           list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_CLMUL")
         elseif (CRYPTOPP_IA32_CLMUL AND NOT CRYPTOPP_DISABLE_CLMUL)
