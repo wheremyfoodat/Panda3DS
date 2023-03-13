@@ -11,6 +11,7 @@ class CAMService {
 
 	// Service commands
 	void driverInitialize(u32 messagePointer);
+	void getMaxLines(u32 messagePointer);
 
 public:
 	CAMService(Memory& mem) : mem(mem) {}
