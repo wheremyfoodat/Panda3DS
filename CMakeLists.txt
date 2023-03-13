@@ -34,6 +34,7 @@ set(Boost_NO_SYSTEM_PATHS ON)
 add_library(boost INTERFACE)
 target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
+set(CRYPTOPP_BUILD_TESTING OFF) 
 add_subdirectory(third_party/cryptopp)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
