@@ -20,6 +20,7 @@ void Memory::reset() {
 	memoryInfo.clear();
 	usedFCRAMPages.reset();
 	usedUserMemory = 0_MB;
+	usedSystemMemory = 0_MB;
 
 	for (u32 i = 0; i < totalPageCount; i++) {
 		readTable[i] = 0;
@@ -42,14 +43,7 @@ void Memory::reset() {
 	// Initialize shared memory blocks and reserve memory for them
 	for (auto& e : sharedMemBlocks) {
 		e.mapped = false;
-		
-		std::optional<u32> possiblePaddr = findPaddr(e.size); // Find a physical FCRAM index to allocate for the shared memory block
-		if (!possiblePaddr.has_value()) Helpers::panic("Failed to find paddr for shared memory block");
-
-		e.paddr = possiblePaddr.value();
-		if (!reserveMemory(e.paddr, e.size)) { // Actually reserve the memory
-			Helpers::panic("Failed to reserve memory for shared memory block");
-		}
+		e.paddr = allocateSysMemory(e.size);
 	}
 
 	// Map DSP RAM as R/W at [0x1FF00000, 0x1FF7FFFF]
@@ -220,19 +214,20 @@ u32 Memory::getLinearHeapVaddr() {
 }
 
 std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r, bool w, bool x,
-	bool adjustAddrs) {
+	bool adjustAddrs, bool isMap) {
 	// Kernel-allocated memory & size must always be aligned to a page boundary
 	// Additionally assert we don't OoM and that we don't try to allocate physical FCRAM past what's available to userland
+	// If we're mapping there's no fear of OoM, because we're not really allocating memory, just binding vaddrs to specific paddrs
 	assert(isAligned(vaddr) && isAligned(paddr) && isAligned(size));
-	assert(size <= FCRAM_APPLICATION_SIZE);
-	assert(usedUserMemory + size <= FCRAM_APPLICATION_SIZE);
-	assert(paddr + size <= FCRAM_APPLICATION_SIZE);
+	assert(size <= FCRAM_APPLICATION_SIZE || isMap);
+	assert(usedUserMemory + size <= FCRAM_APPLICATION_SIZE || isMap);
+	assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
 
 	// Amount of available user FCRAM pages and FCRAM pages to allocate respectively
 	const u32 availablePageCount = (FCRAM_APPLICATION_SIZE - usedUserMemory) / pageSize;
 	const u32 neededPageCount = size / pageSize;
 
-	assert(availablePageCount >= neededPageCount);
+	assert(availablePageCount >= neededPageCount || isMap);
 
 	// If the paddr is 0, that means we need to select our own
 	// TODO: Fix. This method always tries to allocate blocks linearly.
@@ -244,7 +239,7 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 			Helpers::panic("Failed to find paddr");
 
 		paddr = newPaddr.value();
-		assert(paddr + size <= FCRAM_APPLICATION_SIZE);
+		assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
 	}
 
 	// If the vaddr is 0 that means we need to select our own
@@ -262,7 +257,8 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 		}
 	}
 
-	usedUserMemory += size;
+	if (!isMap)
+		usedUserMemory += size;
 
 	// Do linear mapping
 	u32 virtualPage = vaddr >> pageShift;
@@ -318,23 +314,31 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 	return std::nullopt;
 }
 
-bool Memory::reserveMemory(u32 paddr, u32 size) {
-	if (!isAligned(paddr) || !isAligned(size)) {
-		Helpers::panic("Memory::reserveMemory: Physical address or size is not page aligned. Paddr: %08X, size: %08X", paddr, size);
-;	}
+u32 Memory::allocateSysMemory(u32 size) {
+	// Should never be triggered, only here as a sanity check
+	if (!isAligned(size)) {
+		Helpers::panic("Memory::allocateSysMemory: Size is not page aligned (val = %08X)", size);
+	}
 
-	const u32 pageCount = size / pageSize; // Number of pages we need to reserve
-	const u32 startingPage = paddr / pageSize; // The first page of FCRAM we'll start allocating from
+	// We use a pretty dumb allocator for OS memory since this is not really accessible to the app and is only used internally
+	// It works by just allocating memory linearly, starting from index 0 of OS memory and going up
+	// This should also be unreachable in practice and exists as a sanity check
+	if (size > remainingSysFCRAM()) {
+		Helpers::panic("Memory::allocateSysMemory: Overflowed OS FCRAM");
+	}
 
-	// Assert that all of the pages are not yet reserved. TODO: Smarter memory allocator
+	const u32 pageCount = size / pageSize; // Number of pages that will be used up
+	const u32 startIndex = sysFCRAMIndex() + usedSystemMemory; // Starting FCRAM index
+	const u32 startingPage = startIndex / pageSize;
+
 	for (u32 i = 0; i < pageCount; i++) {
-		if (usedFCRAMPages[startingPage + i])
+		if (usedFCRAMPages[startingPage + i]) // Also a theoretically unreachable panic for safety
 			Helpers::panic("Memory::reserveMemory: Trying to reserve already reserved memory");
 		usedFCRAMPages[startingPage + i] = true;
 	}
 
-	usedUserMemory += size;
-	return true;
+	usedSystemMemory += size;
+	return startIndex;
 }
 
 // The way I understand how the kernel's QueryMemory is supposed to work is that you give it a vaddr
@@ -371,12 +375,7 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 			bool w = myPerms & 0b010;
 			bool x = myPerms & 0b100;
 
-			// This memory was not actually used, we just didn't want QueryMemory, getResourceLimitCurrentValues and such
-			// To report memory sizes wrongly. We subtract the size from the usedUserMemory size so
-			// allocateMemory won't break
-			usedUserMemory -= size;
-
-			const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x);
+			const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x, false, true);
 			e.mapped = true;
 			if (!result.has_value()) {
 				Helpers::panic("Memory::mapSharedMemory: Failed to map shared memory block");

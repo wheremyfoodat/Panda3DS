@@ -135,7 +135,8 @@ class Memory {
 
 public:
 	u16 kernelVersion = 0;
-	u32 usedUserMemory = 0;
+	u32 usedUserMemory = 0_MB; // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
+	u32 usedSystemMemory = 0_MB; // Similar for the SYSTEM range (reserved for the syscore)
 
 	Memory(u64& cpuTicks);
 	void reset();
@@ -157,6 +158,22 @@ public:
 
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
+
+	// Total amount of OS-only FCRAM available (Can vary depending on how much FCRAM the app requests via the cart exheader)
+	u32 totalSysFCRAM() {
+		return FCRAM_SIZE - FCRAM_APPLICATION_SIZE;
+	}
+
+	// Amount of OS-only FCRAM currently available
+	u32 remainingSysFCRAM() {
+		return totalSysFCRAM() - usedSystemMemory;
+	}
+
+	// Physical FCRAM index to the start of OS FCRAM
+	// We allocate the first part of physical FCRAM for the application, and the rest to the OS. So the index for the OS = application ram size
+	u32 sysFCRAMIndex() {
+		return FCRAM_APPLICATION_SIZE;
+	}
 
 	enum class BatteryLevel {
 		Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
@@ -185,18 +202,20 @@ public:
 	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
 	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).
 	// If the "linear" flag is on, the paddr pages must be adjacent in FCRAM
+	// This function is for interacting with the *user* portion of FCRAM mainly. For OS RAM, we use other internal functions below
 	// r, w, x: Permissions for the allocated memory
 	// adjustAddrs: If it's true paddr == 0 or vaddr == 0 tell the allocator to pick its own addresses. Used for eg svc ControlMemory
+	// isMap: Shows whether this is a reserve operation, that allocates memory and maps it to the addr space, or if it's a map operation,
+	// which just maps memory from paddr to vaddr without hassle. The latter is useful for shared memory mapping, the "map" ControlMemory, op, etc
 	// Returns the vaddr the FCRAM was mapped to or nullopt if allocation failed
 	std::optional<u32> allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r = true, bool w = true, bool x = true,
-		bool adjustsAddrs = false);
+		bool adjustsAddrs = false, bool isMap = false);
 	KernelMemoryTypes::MemoryInfo queryMemory(u32 vaddr);
 
-	// For internal use:
-	// Reserve FCRAM linearly starting from physical address "paddr" (paddr == 0 is NOT special) with a size of "size"
-	// Without actually mapping the memory to a vaddr
-	// Returns true if the reservation succeeded and false if not
-	bool reserveMemory(u32 paddr, u32 size);
+	// For internal use
+	// Allocates a "size"-sized chunk of system FCRAM and returns the index of physical FCRAM used for the allocation
+	// Used for allocating things like shared memory and the like
+	u32 allocateSysMemory(u32 size);
 
 	// Map a shared memory block to virtual address vaddr with permissions "myPerms"
 	// The kernel has a second permission parameter in MapMemoryBlock but not sure what's used for
