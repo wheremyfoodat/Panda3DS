@@ -12,8 +12,10 @@ class BOSSService {
 	// Service commands
 	void initializeSession(u32 messagePointer);
 	void getOptoutFlag(u32 messagePointer);
+	void getStorageEntryInfo(u32 messagePointer); // Unknown what this is, name taken from Citra
 	void getTaskIdList(u32 messagePointer);
 	void receiveProperty(u32 messagePointer);
+	void unregisterStorage(u32 messagePointer);
 
 	s8 optoutFlag;
 public:
