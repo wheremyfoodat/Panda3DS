@@ -1,4 +1,5 @@
 #include "fs/archive_ncch.hpp"
+#include "fs/bad_word_list.hpp"
 #include "fs/country_list..hpp"
 #include "fs/mii_data.hpp"
 #include <algorithm>
@@ -88,8 +89,11 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 			if (lowProgramID == miiData) fileData = std::vector<u8>(std::begin(MII_DATA), std::end(MII_DATA));
 			else if (lowProgramID == regionManifest) fileData = std::vector<u8>(std::begin(COUNTRY_LIST_DATA), std::end(COUNTRY_LIST_DATA));
 			else Helpers::panic("[NCCH archive] Read unimplemented NAND file. ID: %08X", lowProgramID);
+		} else if (highProgramID == systemDataArchive && lowProgramID == badWordList) {
+			fileData = std::vector<u8>(std::begin(BAD_WORD_LIST_DATA), std::end(BAD_WORD_LIST_DATA));
 		} else {
-			Helpers::panic("[NCCH archive] Read from NAND but not the shared data archive");
+			Helpers::panic("[NCCH archive] Read from unimplemented NCCH archive file. High program ID: %08X, low ID: %08X",
+				highProgramID, lowProgramID);
 		}
 
 		if (offset >= fileData.size()) {
