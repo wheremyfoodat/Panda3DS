@@ -1,4 +1,5 @@
 #include "services/service_manager.hpp"
+#include <map>
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
@@ -80,6 +81,30 @@ void ServiceManager::registerClient(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+static std::map<std::string, Handle> serviceMap = {
+	{ "ac:u", KernelHandles::AC },
+	{ "am:app", KernelHandles::AM },
+	{ "APT:S", KernelHandles::APT }, // TODO: APT:A, APT:S and APT:U are slightly different
+	{ "APT:A", KernelHandles::APT },
+	{ "APT:U", KernelHandles::APT },
+	{ "boss:U", KernelHandles::BOSS },
+	{ "cam:u", KernelHandles::CAM },
+	{ "cecd:u", KernelHandles::CECD },
+	{ "cfg:u", KernelHandles::CFG },
+	{ "dsp::DSP", KernelHandles::DSP },
+	{ "hid:USER", KernelHandles::HID },
+	{ "frd:u", KernelHandles::FRD },
+	{ "fs:USER", KernelHandles::FS },
+	{ "gsp::Gpu", KernelHandles::GPU },
+	{ "gsp::Lcd", KernelHandles::LCD },
+	{ "mic:u", KernelHandles::MIC },
+	{ "ndm:u", KernelHandles::NDM },
+	{ "nim:aoc", KernelHandles::NIM },
+	{ "ptm:u", KernelHandles::PTM },
+	{ "y2r:u", KernelHandles::Y2R }
+
+};
+
 // https://www.3dbrew.org/wiki/SRV:GetServiceHandle
 void ServiceManager::getServiceHandle(u32 messagePointer) {
 	u32 nameLength = mem.read32(messagePointer + 12);
@@ -89,50 +114,11 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	std::string service = mem.readString(messagePointer + 4, 8);
 	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
-	// TODO: Use a map here
-	if (service == "ac:u") {
-        handle = KernelHandles::AC;
-    } else if (service == "am:app") {
-        handle = KernelHandles::AM;
-    } else if (service == "APT:S") { // TODO: APT:A, APT:S and APT:U are slightly different
-		handle = KernelHandles::APT;
-	} else if (service == "APT:A") {
-		handle = KernelHandles::APT;
-	} else if (service == "APT:U") {
-		handle = KernelHandles::APT;
-	} else if (service == "boss:U") {
-		handle = KernelHandles::BOSS;
-	} else if (service == "cam:u") {
-		handle = KernelHandles::CAM;
-	} else if (service == "cecd:u") {
-		handle = KernelHandles::CECD;
-	} else if (service == "cfg:u") {
-		handle = KernelHandles::CFG;
-	} else if (service == "dsp::DSP") {
-		handle = KernelHandles::DSP;
-	} else if (service == "hid:USER") {
-		handle = KernelHandles::HID;	
-	} else if (service == "frd:u") {
-        handle = KernelHandles::FRD;
-    } else if (service == "fs:USER") {
-		handle = KernelHandles::FS;
-	} else if (service == "gsp::Gpu") {
-		handle = KernelHandles::GPU;
-	} else if (service == "gsp::Lcd") {
-		handle = KernelHandles::LCD;
-	} else if (service == "mic:u") {
-		handle = KernelHandles::MIC;
-	} else if (service == "ndm:u") {
-		handle = KernelHandles::NDM;
-	} else if (service == "nim:aoc") {
-		handle = KernelHandles::NIM;
-	} else if (service == "ptm:u") {
-		handle = KernelHandles::PTM;
-	} else if (service == "y2r:u") {
-		handle = KernelHandles::Y2R;
-	} else {
+	// Look up service handle in map, panic if it does not exist
+	if (auto search = serviceMap.find(service); search != serviceMap.end())
+		handle = search->second;
+	else
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
-	}
 
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 12, handle);
