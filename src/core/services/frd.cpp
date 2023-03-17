@@ -45,7 +45,7 @@ void FRDService::getFriendKeyList(u32 messagePointer) {
 	constexpr u32 friendCount = 0; // And this should be the number of friends whose keys were actually received?
 
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0);
+	mem.write32(messagePointer + 8, friendCount);
 
 	// Zero out friend keys
 	for (u32 i = 0; i < count * sizeof(FriendKey); i += 4) {
