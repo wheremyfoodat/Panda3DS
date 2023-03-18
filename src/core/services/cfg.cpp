@@ -90,6 +90,10 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 	} else if (size == 8 && blockID == 0x30001) { // User time offset
 		printf("Read from user time offset field in NAND. TODO: What is this\n");
 		mem.write64(output, 0);
+	} else if (size == 20 && blockID == 0xC0001) { // COPPACS restriction data, used by games when they detect a USA/Canada region for market restriction stuff
+		for (u32 i = 0; i < size; i += 4) {
+			mem.write32(output + i, 0);
+		}
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}
