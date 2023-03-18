@@ -107,9 +107,9 @@ public:
         return handle;
     }
 
-    static void setAppDataDir(const char* dir) {
-        if (!dir) Helpers::panic("Failed to set app data directory");
-        appData = std::filesystem::path(dir);
+    static void setAppDataDir(const std::filesystem::path& dir) {
+        if (dir == "") Helpers::panic("Failed to set app data directory");
+        appData = dir;
     }
 
     static std::filesystem::path getAppData() { return IOFile::appData; }
