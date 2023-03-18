@@ -1,12 +1,12 @@
 #include "services/cfg.hpp"
 #include "services/dsp.hpp"
-#include "services/region_codes.hpp"
 
 namespace CFGCommands {
 	enum : u32 {
 		GetConfigInfoBlk2 = 0x00010082,
 		SecureInfoGetRegion = 0x00020000,
-		GenHashConsoleUnique = 0x00030040
+		GenHashConsoleUnique = 0x00030040,
+		GetRegionCanadaUSA = 0x00040000
 	};
 }
 
@@ -22,6 +22,7 @@ void CFGService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case CFGCommands::GetConfigInfoBlk2: getConfigInfoBlk2(messagePointer); break;
+		case CFGCommands::GetRegionCanadaUSA: getRegionCanadaUSA(messagePointer); break;
 		case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
 		case CFGCommands::SecureInfoGetRegion: secureInfoGetRegion(messagePointer); break;
 		default: Helpers::panic("CFG service requested. Command: %08X\n", command);
@@ -53,7 +54,7 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		mem.write8(output, 0); // Unknown
 		mem.write8(output + 1, 0); // Unknown
 		mem.write8(output + 2, 2); // Province (Temporarily stubbed to Washington DC like Citra)
-		mem.write8(output + 3, 49); // Country code (Temporarily stubbed to USA like Citra)
+		mem.write8(output + 3, static_cast<u8>(country)); // Country code
 	} else if (size == 0x20 && blockID == 0x50005) {
 		printf("[Unimplemented] Read stereo display settings from NAND\n");
 	} else if (size == 0x1C && blockID == 0xA0000) { // Username
@@ -112,4 +113,14 @@ void CFGService::genUniqueConsoleHash(u32 messagePointer) {
 	// Let's stub it for now
 	mem.write32(messagePointer + 8, 0x33646D6F ^ salt); // Lower word of hash
 	mem.write32(messagePointer + 12, 0xA3534841 ^ salt);  // Upper word of hash
+}
+
+// Returns 1 if the console region is either Canada or USA, otherwise returns 0
+// Used for market restriction-related stuff
+void CFGService::getRegionCanadaUSA(u32 messagePointer) {
+	log("CFG::GetRegionCanadaUSA\n");
+	const u8 ret = (country == CountryCodes::US || country == CountryCodes::CA) ? 1 : 0;
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, ret);
 }
