@@ -23,6 +23,7 @@ namespace KernelHandles {
 		GPU,  // GPU service
 		DSP,  // DSP service (Used for audio decoding and output)
 		LCD,  // LCD service (Used for configuring the displays)
+		LDR_RO, // Loader service. Used for loading CROs.
 		MIC,  // MIC service (Controls the microphone)
 		NIM,  // Updates, DLC, etc
 		NDM,  // ?????
@@ -72,6 +73,7 @@ namespace KernelHandles {
 			case DSP: return "DSP";
 			case GPU: return "GPU";
 			case LCD: return "LCD";
+			case LDR_RO: return "LDR:RO";
 			case MIC: return "MIC";
 			case NDM: return "NDM";
 			case NIM: return "NIM";

@@ -4,7 +4,7 @@
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), apt(mem, kernel), cam(mem), cecd(mem), cfg(mem), 
-	dsp(mem), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), mic(mem),
+	dsp(mem), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, currentPID), gsp_lcd(mem), ldr(mem), mic(mem),
 	nim(mem), ndm(mem), ptm(mem), y2r(mem) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
@@ -24,6 +24,7 @@ void ServiceManager::reset() {
 	fs.reset();
 	gsp_gpu.reset();
 	gsp_lcd.reset();
+    ldr.reset();
 	mic.reset();
 	nim.reset();
 	ndm.reset();
@@ -97,12 +98,12 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "fs:USER", KernelHandles::FS },
 	{ "gsp::Gpu", KernelHandles::GPU },
 	{ "gsp::Lcd", KernelHandles::LCD },
+	{ "ldr:ro", KernelHandles::LDR_RO },
 	{ "mic:u", KernelHandles::MIC },
 	{ "ndm:u", KernelHandles::NDM },
 	{ "nim:aoc", KernelHandles::NIM },
 	{ "ptm:u", KernelHandles::PTM },
 	{ "y2r:u", KernelHandles::Y2R }
-
 };
 
 // https://www.3dbrew.org/wiki/SRV:GetServiceHandle
@@ -167,6 +168,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
         case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::FS: fs.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
+        case KernelHandles::LDR_RO: ldr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::MIC: mic.handleSyncRequest(messagePointer); break;
         case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;

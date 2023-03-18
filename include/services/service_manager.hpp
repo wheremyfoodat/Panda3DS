@@ -17,6 +17,7 @@
 #include "services/fs.hpp"
 #include "services/gsp_gpu.hpp"
 #include "services/gsp_lcd.hpp"
+#include "services/ldr_ro.hpp"
 #include "services/mic.hpp"
 #include "services/nim.hpp"
 #include "services/ndm.hpp"
@@ -48,6 +49,7 @@ class ServiceManager {
 	FSService fs;
 	GPUService gsp_gpu;
 	LCDService gsp_lcd;
+	LDRService ldr;
 	MICService mic;
     NIMService nim;
 	NDMService ndm;
