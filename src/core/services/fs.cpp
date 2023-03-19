@@ -17,6 +17,7 @@ namespace FSCommands {
 		OpenArchive = 0x080C00C2,
 		CloseArchive = 0x080E0080,
 		IsSdmcDetected = 0x08170000,
+		GetFormatInfo = 0x084500C2,
 		InitializeWithSdkVersion = 0x08610042,
 		SetPriority = 0x08620040,
 		GetPriority = 0x08630000
@@ -115,6 +116,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::CreateFile: createFile(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
+		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
 		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
@@ -286,6 +288,28 @@ void FSService::deleteFile(u32 messagePointer) {
 
 	DeleteFileResult res = archive->deleteFile(filePath);
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
+}
+
+void FSService::getFormatInfo(u32 messagePointer) {
+	const u32 archiveID = mem.read32(messagePointer + 4);
+	const u32 pathType = mem.read32(messagePointer + 8);
+	const u32 pathSize = mem.read32(messagePointer + 12);
+	const u32 pathPointer = mem.read32(messagePointer + 20);
+
+	const auto path = readPath(pathType, pathPointer, pathSize);
+	log("FS::GetFormatInfo(archive ID = %d, archive path type = %d)\n", archiveID, pathType);
+
+	ArchiveBase* archive = getArchiveFromID(archiveID);
+	if (archive == nullptr) [[unlikely]] {
+		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
+	}
+
+	ArchiveBase::FormatInfo info = archive->getFormatInfo(path);
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, info.size);
+	mem.write32(messagePointer + 12, info.numOfDirectories);
+	mem.write32(messagePointer + 16, info.numOfFiles);
+	mem.write8(messagePointer + 20, info.duplicateData ? 1 : 0);
 }
 
 void FSService::getPriority(u32 messagePointer) {

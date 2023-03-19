@@ -127,11 +127,18 @@ enum class DeleteFileResult : u32 {
 };
 
 class ArchiveBase {
+public:
+    struct FormatInfo {
+        u32 size; // Archive size
+        u32 numOfDirectories; // Number of directories
+        u32 numOfFiles;       // Number of files
+        bool duplicateData;   // Whether to duplicate data or not
+    };
+
 protected:
     using Handle = u32;
     static constexpr FileDescriptor NoFile = nullptr;
     static constexpr FileDescriptor FileError = std::nullopt;
-
     Memory& mem;
 
     // Returns if a specified 3DS path in UTF16 or ASCII format is safe or not
@@ -184,6 +191,11 @@ public:
     virtual u64 getFreeBytes() = 0;
     virtual CreateFileResult createFile(const FSPath& path, u64 size) = 0;
     virtual DeleteFileResult deleteFile(const FSPath& path) = 0;
+    virtual FormatInfo getFormatInfo(const FSPath& path) {
+        Helpers::panic("Unimplemented GetFormatInfo for %s archive", name().c_str());
+        // Return a dummy struct just to avoid the UB of not returning anything, even if we panic
+        return FormatInfo{ .size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false };
+    }
 
     // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
