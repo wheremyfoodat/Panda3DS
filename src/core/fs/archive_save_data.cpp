@@ -53,6 +53,12 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 	return FileError;
 }
 
+
+ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {
+	Helpers::panic("Unimplemented SaveData::GetFormatInfo");
+	return FormatInfo{ .size = 0, .numOfDirectories = 255, .numOfFiles = 255, .duplicateData = false };
+}
+
 ArchiveBase* SaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);

@@ -74,7 +74,7 @@ ArchiveBase* ExtSaveDataArchive::openArchive(const FSPath& path) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
-	if (path.binary[0] != 0) Helpers::panic("ExtSaveData: Tried to access something other than NAND");
+	if (path.binary[0] != 0) Helpers::panic("ExtSaveData: Tried to access something other than NAND. ID: %02X", path.binary[0]);
 
 	return this;
 }

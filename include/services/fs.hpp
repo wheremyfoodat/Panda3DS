@@ -22,6 +22,7 @@ class FSService {
 	// The different filesystem archives (Save data, SelfNCCH, SDMC, NCCH, ExtData, etc)
 	SelfNCCHArchive selfNcch;
 	SaveDataArchive saveData;
+	ExtSaveDataArchive extSaveData;
 	ExtSaveDataArchive sharedExtSaveData;
 	SDMCArchive sdmc;
 	NCCHArchive ncch;
@@ -49,8 +50,8 @@ class FSService {
 	u32 priority;
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), sharedExtSaveData(mem), sdmc(mem), selfNcch(mem), ncch(mem),
-		kernel(kernel)
+	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), extSaveData(mem), sharedExtSaveData(mem), sdmc(mem),
+		selfNcch(mem), ncch(mem), kernel(kernel)
 	{
 		sharedExtSaveData.isShared = true; // Need to do this here because templates and virtual classes do not mix well
 	}

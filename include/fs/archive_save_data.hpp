@@ -10,6 +10,7 @@ public:
 
 	CreateFileResult createFile(const FSPath& path, u64 size) override;
 	DeleteFileResult deleteFile(const FSPath& path) override;
+	FormatInfo getFormatInfo(const FSPath& path) override;
 
 	ArchiveBase* openArchive(const FSPath& path) override;
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;

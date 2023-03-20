@@ -56,6 +56,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id) {
 	switch (id) {
 		case ArchiveID::SelfNCCH: return &selfNcch;
 		case ArchiveID::SaveData: return &saveData;
+		case ArchiveID::ExtSaveData: return &extSaveData;
 		case ArchiveID::SharedExtSaveData: return &sharedExtSaveData;
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
