@@ -1,6 +1,6 @@
 #include "fs/archive_ncch.hpp"
 #include "fs/bad_word_list.hpp"
-#include "fs/country_list..hpp"
+#include "fs/country_list.hpp"
 #include "fs/mii_data.hpp"
 #include <algorithm>
 #include <memory>
