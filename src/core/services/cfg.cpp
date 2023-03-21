@@ -87,6 +87,9 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 	} else if (size == 4 && blockID == 0xB0003) { // Coordinates (latidude and longtitude) as s16
 		mem.write16(output, 0); // Latitude
 		mem.write16(output + 2, 0); // Longtitude
+	} else if (size == 2 && blockID == 0xA0001) { // Birthday
+		mem.write8(output, 5); // Month (May)
+		mem.write8(output + 1, 5); // Day (Fifth)
 	} else if (size == 8 && blockID == 0x30001) { // User time offset
 		printf("Read from user time offset field in NAND. TODO: What is this\n");
 		mem.write64(output, 0);

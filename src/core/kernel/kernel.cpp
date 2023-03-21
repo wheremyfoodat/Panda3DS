@@ -194,6 +194,13 @@ void Kernel::getProcessInfo() {
 	}
 
 	switch (type) {
+		// According to 3DBrew: Amount of private (code, data, heap) memory used by the process + total supervisor-mode
+		// stack size + page-rounded size of the external handle table
+		case 2:
+			regs[1] = mem.getUsedUserMem();
+			regs[2] = 0;
+			break;
+
 		case 20: // Returns 0x20000000 - <linear memory base vaddr for process>
 			regs[1] = PhysicalAddrs::FCRAM - mem.getLinearHeapVaddr();
 			regs[2] = 0;

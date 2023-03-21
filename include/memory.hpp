@@ -235,4 +235,6 @@ public:
 	u8* getDSPMem() { return dspRam; }
 	u8* getDSPDataMem() { return &dspRam[DSP_DATA_MEMORY_OFFSET]; }
 	u8* getDSPCodeMem() { return &dspRam[DSP_CODE_MEMORY_OFFSET]; }
+
+	u32 getUsedUserMem() { return usedUserMemory; }
 };

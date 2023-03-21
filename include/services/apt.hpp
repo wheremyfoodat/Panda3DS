@@ -8,6 +8,10 @@
 // Yay, more circular dependencies
 class Kernel;
 
+enum class ConsoleModel : u32 {
+	Old3DS, New3DS
+};
+
 class APTService {
 	Handle handle = KernelHandles::APT;
 	Memory& mem;
@@ -16,6 +20,8 @@ class APTService {
 	std::optional<Handle> lockHandle = std::nullopt;
 	std::optional<Handle> notificationEvent = std::nullopt;
 	std::optional<Handle> resumeEvent = std::nullopt;
+
+	ConsoleModel model = ConsoleModel::Old3DS;
 
 	MAKE_LOG_FUNCTION(log, aptLogger)
 
@@ -34,6 +40,7 @@ class APTService {
 	void replySleepQuery(u32 messagePointer);
 	void setApplicationCpuTimeLimit(u32 messagePointer);
 	void setScreencapPostPermission(u32 messagePointer);
+	void theSmashBrosFunction(u32 messagePointer);
 
 	// Percentage of the syscore available to the application, between 5% and 89%
 	u32 cpuTimeLimit;

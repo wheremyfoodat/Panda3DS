@@ -16,14 +16,8 @@ namespace APTCommands {
 		GetApplicationCpuTimeLimit = 0x00500040,
 		SetScreencapPostPermission = 0x00550040,
 		CheckNew3DSApp = 0x01010000,
-		CheckNew3DS = 0x01020000
-	};
-}
-
-namespace Model {
-	enum : u8 {
-		Old3DS = 0,
-		New3DS = 1
+		CheckNew3DS = 0x01020000,
+		TheSmashBrosFunction = 0x01030000
 	};
 }
 
@@ -61,6 +55,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::SetScreencapPostPermission: setScreencapPostPermission(messagePointer); break;
+		case APTCommands::TheSmashBrosFunction: theSmashBrosFunction(messagePointer); break;
 		default: Helpers::panic("APT service requested. Command: %08X\n", command);
 	}
 }
@@ -79,7 +74,7 @@ void APTService::appletUtility(u32 messagePointer) {
 void APTService::checkNew3DS(u32 messagePointer) {
 	log("APT::CheckNew3DS\n");
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, Model::Old3DS); // u8, Status (0 = Old 3DS, 1 = New 3DS)
+	mem.write8(messagePointer + 8, (model == ConsoleModel::New3DS) ? 1 : 0); // u8, Status (0 = Old 3DS, 1 = New 3DS)
 }
 
 // TODO: Figure out the slight way this differs from APT::CheckNew3DS
@@ -193,4 +188,13 @@ void APTService::getSharedFont(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, fontVaddr);
 	mem.write32(messagePointer + 16, KernelHandles::FontSharedMemHandle);
+}
+
+// This function is entirely undocumented. We know Smash Bros uses it and that it normally writes 2 to cmdreply[2] on New 3DS
+// And that writing 1 stops it from accessing the ir:USER service for New 3DS HID use
+void APTService::theSmashBrosFunction(u32 messagePointer) {
+	log("APT: Called the elusive Smash Bros function\n");
+
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, (model == ConsoleModel::New3DS) ? 2 : 1);
 }
