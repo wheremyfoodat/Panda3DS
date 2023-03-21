@@ -1,3 +1,4 @@
+#include <cstring>
 #include <vector>
 #include "loader/lz77.hpp"
 #include "loader/ncch.hpp"
