@@ -79,6 +79,14 @@ void Kernel::controlMemory() {
 			break;
 		}
 
+		case Operation::Map:
+			mem.mirrorMapping(addr0, addr1, size);
+			break;
+
+		case Operation::Protect:
+			Helpers::warn("Ignoring mprotect! Hope nothing goes wrong but if the game accesses invalid memory or crashes then we prolly need to implement this\n");
+			break;
+
 		default: Helpers::panic("ControlMemory: unknown operation %X\n", operation);
 	}
 

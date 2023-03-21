@@ -392,6 +392,24 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 	return nullptr;
 }
 
+void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
+	// Should theoretically be unreachable, only here for safety purposes
+	assert(isAligned(destAddress) && isAligned(sourceAddress) && isAligned(size));
+
+	const u32 pageCount = size / pageSize; // How many pages we need to mirror
+	for (u32 i = 0; i < pageCount; i++) {
+		// Redo the shift here to "properly" handle wrapping around the address space instead of reading OoB
+		const u32 sourcePage = sourceAddress / pageSize;
+		const u32 destPage = destAddress / pageSize;
+
+		readTable[destPage] = readTable[sourcePage];
+		writeTable[destPage] = writeTable[sourcePage];
+
+		sourceAddress += pageSize;
+		destAddress += pageSize;
+	}
+}
+
 // Get the number of ms since Jan 1 1900
 u64 Memory::timeSince3DSEpoch() {
 	using namespace std::chrono;

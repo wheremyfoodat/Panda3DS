@@ -223,6 +223,10 @@ public:
 	// Returns a pointer to the FCRAM block used for the memory if allocation succeeded
 	u8* mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms);
 
+	// Mirrors the page mapping for "size" bytes starting from sourceAddress, to "size" bytes in destAddress
+	// All of the above must be page-aligned.
+	void mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size);
+
 	// Backup of the game's CXI partition info, if any
 	std::optional<NCCH> loadedCXI = std::nullopt;
 	// File handle for reading the loaded ncch
