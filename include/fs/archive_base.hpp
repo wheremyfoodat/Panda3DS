@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -111,6 +112,17 @@ struct ArchiveSession {
     ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(filePath), isOpen(isOpen) {}
 };
 
+struct DirectorySession {
+    ArchiveBase* archive = nullptr;
+    // For directories which are mirrored to a specific path on the disk, this contains that path
+    // Otherwise this is a nullopt
+    std::optional<std::filesystem::path> pathOnDisk;
+    bool isOpen;
+
+    DirectorySession(ArchiveBase* archive, std::filesystem::path path, bool isOpen = true) : archive(archive), pathOnDisk(path),
+        isOpen(isOpen) {}
+};
+
 // Represents a file descriptor obtained from OpenFile. If the optional is nullopt, opening the file failed.
 // Otherwise the fd of the opened file is returned (or nullptr if the opened file doesn't require one)
 using FileDescriptor = std::optional<FILE*>;
@@ -201,6 +213,10 @@ public:
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
 
     virtual ArchiveBase* openArchive(const FSPath& path) = 0;
+    virtual std::optional<DirectorySession> openDirectory(const FSPath& path) {
+        Helpers::panic("Unimplemented OpenDirectory for %s archive", name().c_str());
+        return std::nullopt;
+    }
 
     // Read size bytes from a file starting at offset "offset" into a certain buffer in memory
     // Returns the number of bytes read, or nullopt if the read failed

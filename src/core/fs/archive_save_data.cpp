@@ -53,6 +53,29 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 	return FileError;
 }
 
+std::optional<DirectorySession> SaveDataArchive::openDirectory(const FSPath& path) {
+	if (!cartHasSaveData()) {
+		printf("Tried to open SaveData directory without save data\n");
+		return std::nullopt;
+	}
+
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
+
+		fs::path p = IOFile::getAppData() / "SaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_directory(p)) {
+			return DirectorySession(this, p);
+		} else {
+			Helpers::panic("Directory not found in SaveData::OpenDirectory");
+		}
+	}
+
+	Helpers::panic("SaveDataArchive::OpenDirectory: Unimplemented path type");
+	return std::nullopt;
+}
 
 ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {
 	Helpers::panic("Unimplemented SaveData::GetFormatInfo");

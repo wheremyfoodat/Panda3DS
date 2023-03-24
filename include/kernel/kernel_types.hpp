@@ -27,7 +27,7 @@ namespace SVCResult {
 }
 
 enum class KernelObjectType : u8 {
-    AddressArbiter, Archive, File, MemoryBlock, Process, ResourceLimit, Session, Dummy,
+    AddressArbiter, Archive, Directory, File, MemoryBlock, Process, ResourceLimit, Session, Dummy,
     // Bundle waitable objects together in the enum to let the compiler optimize certain checks better
     Event, Mutex, Port, Semaphore, Timer, Thread
 };
@@ -144,6 +144,7 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
     switch (t) {
         case KernelObjectType::AddressArbiter: return "address arbiter";
         case KernelObjectType::Archive: return "archive";
+        case KernelObjectType::Directory: return "directory";
         case KernelObjectType::Event: return "event";
         case KernelObjectType::File: return "file";
         case KernelObjectType::MemoryBlock: return "memory block";

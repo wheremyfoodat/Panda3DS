@@ -14,6 +14,7 @@ namespace FSCommands {
 		OpenFileDirectly = 0x08030204,
 		DeleteFile = 0x08040142,
 		CreateFile = 0x08080202,
+		OpenDirectory = 0x080B0102,
 		OpenArchive = 0x080C00C2,
 		CloseArchive = 0x080E0080,
 		IsSdmcDetected = 0x08170000,
@@ -66,7 +67,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id) {
 	}
 }
 
-std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath,const FilePerms& perms) {
+std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms) {
 	FileDescriptor opened = archive->openFile(path, perms);
 	if (opened.has_value()) { // If opened doesn't have a value, we failed to open the file
 		auto handle = kernel.makeObject(KernelObjectType::File);
@@ -74,6 +75,19 @@ std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPa
 		auto& file = kernel.getObjects()[handle];
 		file.data = new FileSession(archive, path, archivePath, opened.value());
 		
+		return handle;
+	} else {
+		return std::nullopt;
+	}
+}
+
+std::optional<Handle> FSService::openDirectoryHandle(ArchiveBase* archive, const FSPath& path) {
+	std::optional<DirectorySession> opened = archive->openDirectory(path);
+	if (opened.has_value()) { // If opened doesn't have a value, we failed to open the directory
+		auto handle = kernel.makeObject(KernelObjectType::Directory);
+		auto& object = kernel.getObjects()[handle];
+		object.data = new DirectorySession(opened.value());
+
 		return handle;
 	} else {
 		return std::nullopt;
@@ -123,8 +137,9 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
 		case FSCommands::IsSdmcDetected: isSdmcDetected(messagePointer); break;
 		case FSCommands::OpenArchive: openArchive(messagePointer); break;
-		case FSCommands::OpenFile: openFile(messagePointer); break;
-		case FSCommands::OpenFileDirectly: openFileDirectly(messagePointer); break;
+		case FSCommands::OpenDirectory: openDirectory(messagePointer); break;
+		case FSCommands::OpenFile: [[likely]] openFile(messagePointer); break;
+		case FSCommands::OpenFileDirectly: [[likely]] openFileDirectly(messagePointer); break;
 		case FSCommands::SetPriority: setPriority(messagePointer); break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
@@ -210,6 +225,32 @@ void FSService::openFile(u32 messagePointer) {
 	}
 }
 
+void FSService::openDirectory(u32 messagePointer) {
+	log("FS::OpenDirectory\n");
+	const Handle archiveHandle = (Handle)mem.read64(messagePointer + 4);
+	const u32 pathType = mem.read32(messagePointer + 12);
+	const u32 pathSize = mem.read32(messagePointer + 16);
+	const u32 pathPointer = mem.read32(messagePointer + 24);
+
+	KernelObject* archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
+	if (archiveObject == nullptr) [[unlikely]] {
+		log("FS::OpenDirectory: Invalid archive handle %d\n", archiveHandle);
+		mem.write32(messagePointer + 4, Result::Failure);
+		return;
+	}
+
+	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
+	const auto dirPath = readPath(pathType, pathPointer, pathSize);
+	std::optional<Handle> dir = openDirectoryHandle(archive, dirPath);
+
+	if (dir.has_value()) {
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 12, dir.value());
+	} else {
+		Helpers::panic("FS::OpenDirectory failed");
+	}
+}
+
 void FSService::openFileDirectly(u32 messagePointer) {
 	const u32 archiveID = mem.read32(messagePointer + 8);
 	const u32 archivePathType = mem.read32(messagePointer + 12);
@@ -247,7 +288,7 @@ void FSService::openFileDirectly(u32 messagePointer) {
 }
 
 void FSService::createFile(u32 messagePointer) {
-	const u32 archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = mem.read64(messagePointer + 8);
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 attributes = mem.read32(messagePointer + 24);
