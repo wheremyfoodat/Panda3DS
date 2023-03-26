@@ -85,7 +85,7 @@ public:
 
 	void setDepthFormat(DepthBuffer::Formats format) { depthBufferFormat = format; }
 	void setDepthFormat(u32 format) {
-		if (format == 2) {
+		if (format == 1) {
 			Helpers::panic("[PICA] Undocumented depth-stencil mode!");
 		}
 
