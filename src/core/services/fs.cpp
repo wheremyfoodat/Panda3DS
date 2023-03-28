@@ -320,7 +320,7 @@ void FSService::deleteFile(u32 messagePointer) {
 	log("FS::DeleteFile\n");
 	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
 	if (archiveObject == nullptr) [[unlikely]] {
-		log("FS::OpenFile: Invalid archive handle %d\n", archiveHandle);
+		log("FS::DeleteFile: Invalid archive handle %d\n", archiveHandle);
 		mem.write32(messagePointer + 4, Result::Failure);
 		return;
 	}

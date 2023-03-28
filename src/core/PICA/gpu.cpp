@@ -40,6 +40,8 @@ void GPU::drawArrays(bool indexed) {
 		drawArrays<false>();
 }
 
+Vertex* vertices = new Vertex[Renderer::vertexBufferSize];
+
 template <bool indexed>
 void GPU::drawArrays() {
 	// Base address for vertex attributes
@@ -50,14 +52,12 @@ void GPU::drawArrays() {
 	// Configures the type of primitive and the number of vertex shader outputs
 	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
 	const u32 primType = (primConfig >> 8) & 3;
-	if (primType != 0 && primType != 1) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
+	if (primType != 0 && primType != 1 && primType != 3) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
 	if ((primType == 0 && vertexCount % 3) || (primType == 1 && vertexCount < 3)) {
 		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
 	}
-
-	Vertex vertices[Renderer::vertexBufferSize];
 
 	// Get the configuration for the index buffer, used only for indexed drawing
 	u32 indexBufferConfig = regs[PICAInternalRegs::IndexBufferConfig];
@@ -228,6 +228,7 @@ Vertex GPU::getImmediateModeVertex() {
 
 	return v;
 }
+
 void GPU::fireDMA(u32 dest, u32 source, u32 size) {
 	log("[GPU] DMA of %08X bytes from %08X to %08X\n", size, source, dest);
 	constexpr u32 vramStart = VirtualAddrs::VramStart;

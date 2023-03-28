@@ -38,7 +38,8 @@ DeleteFileResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 		fs::path p = IOFile::getAppData() / "NAND";
 		p += fs::path(path.utf16_string).make_preferred();
 
-		bool success = fs::remove(p);
+		std::error_code ec;
+		bool success = fs::remove(p, ec);
 		return success ? DeleteFileResult::Success : DeleteFileResult::FileNotFound;
 	}
 

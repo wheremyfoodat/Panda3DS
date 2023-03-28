@@ -129,6 +129,11 @@ private:
 	void openLinkFile(u32 messagePointer, Handle file);
 	void setFilePriority(u32 messagePointer, Handle file);
 
+	// Directory operations
+	void handleDirectoryOperation(u32 messagePointer, Handle directory);
+	void closeDirectory(u32 messagePointer, Handle directory);
+	void readDirectory(u32 messagePointer, Handle directory);
+
 public:
 	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
 	void initializeFS() { return serviceManager.initializeFS(); }

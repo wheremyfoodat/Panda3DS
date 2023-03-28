@@ -91,6 +91,14 @@ void Kernel::sendSyncRequest() {
 		return;
 	}
 
+	// Check if our sync request is targetting a directory instead of a service
+	bool isDirectoryOperation = getObject(handle, KernelObjectType::Directory) != nullptr;
+	if (isDirectoryOperation) {
+		handleDirectoryOperation(messagePointer, handle);
+		regs[0] = SVCResult::Success;
+		return;
+	}
+
 	// If we're actually communicating with a port
 	const auto session = getObject(handle, KernelObjectType::Session);
 	if (session == nullptr) [[unlikely]] {

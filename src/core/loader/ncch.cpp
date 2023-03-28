@@ -127,7 +127,7 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
     }
 
     if (stackSize != 0 && stackSize != VirtualAddrs::DefaultStackSize) {
-        Helpers::panic("Stack size != 0x4000");
+        Helpers::warn("Requested stack size is %08X bytes. Temporarily emulated as 0x4000 until adjustable sizes are added\n", stackSize);
     }
 
     if (encrypted) {

@@ -95,5 +95,5 @@ public:
 	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
 
-	static constexpr u32 vertexBufferSize = 0x1500;
+	static constexpr u32 vertexBufferSize = 0x10000;
 };

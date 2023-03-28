@@ -53,7 +53,7 @@ set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limi
                         src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
                         src/core/kernel/events.cpp src/core/kernel/threads.cpp
                         src/core/kernel/address_arbiter.cpp src/core/kernel/error.cpp
-                        src/core/kernel/file_operations.cpp
+                        src/core/kernel/file_operations.cpp src/core/kernel/directory_operations.cpp
 )
 set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp
