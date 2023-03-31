@@ -11,6 +11,7 @@ namespace APTCommands {
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		GetSharedFont = 0x00440000,
+		GetWirelessRebootInfo = 0x00450040,
 		AppletUtility = 0x004B00C2,
 		SetApplicationCpuTimeLimit = 0x004F0080,
 		GetApplicationCpuTimeLimit = 0x00500040,
@@ -47,11 +48,12 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::Enable: enable(messagePointer); break;
 		case APTCommands::GetSharedFont: getSharedFont(messagePointer); break;
 		case APTCommands::Initialize: initialize(messagePointer); break;
-		case APTCommands::InquireNotification: inquireNotification(messagePointer); break;
+		case APTCommands::InquireNotification: [[likely]] inquireNotification(messagePointer); break;
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
+		case APTCommands::GetWirelessRebootInfo: getWirelessRebootInfo(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
-		case APTCommands::ReceiveParameter: receiveParameter(messagePointer); break;
+		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::SetScreencapPostPermission: setScreencapPostPermission(messagePointer); break;
@@ -197,4 +199,17 @@ void APTService::theSmashBrosFunction(u32 messagePointer) {
 
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, (model == ConsoleModel::New3DS) ? 2 : 1);
+}
+
+void APTService::getWirelessRebootInfo(u32 messagePointer) {
+	const u32 size = mem.read32(messagePointer + 4); // Size of data to read
+	log("APT::GetWirelessRebootInfo (size = %X)\n", size);
+
+	if (size > 0x10)
+		Helpers::panic("APT::GetWirelessInfo with size > 0x10 bytes");
+
+	mem.write32(messagePointer + 4, Result::Success);
+	for (u32 i = 0; i < size; i++) {
+		mem.write8(messagePointer + 0x104 + i, 0); // Temporarily stub this until we add SetWirelessRebootInfo
+	}
 }
