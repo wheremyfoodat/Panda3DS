@@ -19,6 +19,7 @@ include_directories(third_party/gl3w/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cryptopp/)
+include_directories(third_party/result/include/)
 
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(SDL_MAIN_HANDLED)
