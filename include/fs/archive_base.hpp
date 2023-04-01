@@ -9,6 +9,7 @@
 #include <vector>
 #include "helpers.hpp"
 #include "memory.hpp"
+#include "result.hpp"
 
 namespace PathType {
     enum : u32 {
@@ -127,14 +128,10 @@ struct DirectorySession {
 // Otherwise the fd of the opened file is returned (or nullptr if the opened file doesn't require one)
 using FileDescriptor = std::optional<FILE*>;
 
-enum class CreateFileResult : u32 {
+enum class FSResult : u32 {
     Success = 0,
     AlreadyExists = 0x82044BE,
-    FileTooLarge = 0x86044D2
-};
-
-enum class DeleteFileResult : u32 {
-    Success = 0,
+    FileTooLarge = 0x86044D2,
     FileNotFound = 0xC8804470
 };
 
@@ -149,6 +146,7 @@ public:
 
 protected:
     using Handle = u32;
+    
     static constexpr FileDescriptor NoFile = nullptr;
     static constexpr FileDescriptor FileError = std::nullopt;
     Memory& mem;
@@ -201,8 +199,8 @@ protected:
 public:
     virtual std::string name() = 0;
     virtual u64 getFreeBytes() = 0;
-    virtual CreateFileResult createFile(const FSPath& path, u64 size) = 0;
-    virtual DeleteFileResult deleteFile(const FSPath& path) = 0;
+    virtual FSResult createFile(const FSPath& path, u64 size) = 0;
+    virtual FSResult deleteFile(const FSPath& path) = 0;
     virtual FormatInfo getFormatInfo(const FSPath& path) {
         Helpers::panic("Unimplemented GetFormatInfo for %s archive", name().c_str());
         // Return a dummy struct just to avoid the UB of not returning anything, even if we panic
@@ -213,9 +211,9 @@ public:
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
 
     virtual ArchiveBase* openArchive(const FSPath& path) = 0;
-    virtual std::optional<DirectorySession> openDirectory(const FSPath& path) {
+    virtual Rust::Result<DirectorySession, FSResult> openDirectory(const FSPath& path) {
         Helpers::panic("Unimplemented OpenDirectory for %s archive", name().c_str());
-        return std::nullopt;
+        return Err(FSResult::FileNotFound);
     }
 
     // Read size bytes from a file starting at offset "offset" into a certain buffer in memory

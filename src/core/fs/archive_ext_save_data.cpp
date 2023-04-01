@@ -3,7 +3,7 @@
 
 namespace fs = std::filesystem;
 
-CreateFileResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
+FSResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 	if (size == 0)
 		Helpers::panic("ExtSaveData file does not support size == 0");
 
@@ -15,22 +15,22 @@ CreateFileResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::exists(p))
-			return CreateFileResult::AlreadyExists;
+			return FSResult::AlreadyExists;
 			
 		// Create a file of size "size" by creating an empty one, seeking to size - 1 and just writing a 0 there
 		IOFile file(p.string().c_str(), "wb");
 		if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
-			return CreateFileResult::Success;
+			return FSResult::Success;
 		}
 
-		return CreateFileResult::FileTooLarge;
+		return FSResult::FileTooLarge;
 	}
 
 	Helpers::panic("ExtSaveDataArchive::OpenFile: Failed");
-	return CreateFileResult::Success;
+	return FSResult::Success;
 }
 
-DeleteFileResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
+FSResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in ExtSaveData::DeleteFile");
@@ -40,11 +40,11 @@ DeleteFileResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 
 		std::error_code ec;
 		bool success = fs::remove(p, ec);
-		return success ? DeleteFileResult::Success : DeleteFileResult::FileNotFound;
+		return success ? FSResult::Success : FSResult::FileNotFound;
 	}
 
 	Helpers::panic("ExtSaveDataArchive::DeleteFile: Failed");
-	return DeleteFileResult::Success;
+	return FSResult::Success;
 }
 
 FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {

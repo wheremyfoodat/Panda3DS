@@ -9,14 +9,14 @@ namespace PathType {
 	};
 };
 
-CreateFileResult SelfNCCHArchive::createFile(const FSPath& path, u64 size) {
+FSResult SelfNCCHArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[SelfNCCH] CreateFile not yet supported");
-	return CreateFileResult::Success;
+	return FSResult::Success;
 }
 
-DeleteFileResult SelfNCCHArchive::deleteFile(const FSPath& path) {
+FSResult SelfNCCHArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[SelfNCCH] Unimplemented DeleteFile");
-	return DeleteFileResult::Success;
+	return FSResult::Success;
 }
 
 FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {

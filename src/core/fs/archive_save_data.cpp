@@ -4,14 +4,14 @@
 
 namespace fs = std::filesystem;
 
-CreateFileResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
+FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[SaveData] CreateFile not yet supported");
-	return CreateFileResult::Success;
+	return FSResult::Success;
 }
 
-DeleteFileResult SaveDataArchive::deleteFile(const FSPath& path) {
+FSResult SaveDataArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[SaveData] Unimplemented DeleteFile");
-	return DeleteFileResult::Success;
+	return FSResult::Success;
 }
 
 FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
@@ -53,10 +53,10 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 	return FileError;
 }
 
-std::optional<DirectorySession> SaveDataArchive::openDirectory(const FSPath& path) {
+Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FSPath& path) {
 	if (!cartHasSaveData()) {
 		printf("Tried to open SaveData directory without save data\n");
-		return std::nullopt;
+		return Err(FSResult::Success);
 	}
 
 	if (path.type == PathType::UTF16) {
@@ -66,15 +66,18 @@ std::optional<DirectorySession> SaveDataArchive::openDirectory(const FSPath& pat
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
 
+		if (fs::is_regular_file(p))
+			Helpers::panic("OpenDirectory: Tried to open directory but it's actually a file");
+
 		if (fs::is_directory(p)) {
-			return DirectorySession(this, p);
+			return Ok(DirectorySession(this, p));
 		} else {
-			Helpers::panic("Directory not found in SaveData::OpenDirectory");
+			return Err(FSResult::FileNotFound);
 		}
 	}
 
 	Helpers::panic("SaveDataArchive::OpenDirectory: Unimplemented path type");
-	return std::nullopt;
+	return Err(FSResult::Success);
 }
 
 ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {

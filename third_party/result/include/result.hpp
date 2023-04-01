@@ -49,7 +49,9 @@ types::Err<CleanE> Err(E&& val) {
     return types::Err<CleanE>(std::forward<E>(val));
 }
 
+namespace Rust {
 template<typename T, typename E> struct Result;
+}
 
 namespace details {
 
@@ -84,7 +86,7 @@ template<typename R>
 struct ResultOkType { typedef typename std::decay<R>::type type; };
 
 template<typename T, typename E>
-struct ResultOkType<Result<T, E>> {
+struct ResultOkType<Rust::Result<T, E>> {
     typedef T type;
 };
 
@@ -92,13 +94,13 @@ template<typename R>
 struct ResultErrType { typedef R type; };
 
 template<typename T, typename E>
-struct ResultErrType<Result<T, E>> {
+struct ResultErrType<Rust::Result<T, E>> {
     typedef typename std::remove_reference<E>::type type;
 };
 
 template<typename R> struct IsResult : public std::false_type { };
 template<typename T, typename E>
-struct IsResult<Result<T, E>> : public std::true_type { };
+struct IsResult<Rust::Result<T, E>> : public std::true_type { };
 
 namespace ok {
 
@@ -120,7 +122,7 @@ struct Map<Ret (Arg)> {
             "Can not map a callback returning a Result, use andThen instead");
 
     template<typename T, typename E, typename Func>
-    static Result<Ret, E> map(const Result<T, E>& result, Func func) {
+    static Rust::Result<Ret, E> map(const Rust::Result<T, E>& result, Func func) {
 
         static_assert(
                 std::is_same<T, Arg>::value ||
@@ -141,7 +143,7 @@ template<typename Arg>
 struct Map<void (Arg)> {
 
     template<typename T, typename E, typename Func>
-    static Result<void, E> map(const Result<T, E>& result, Func func) {
+    static Rust::Result<void, E> map(const Rust::Result<T, E>& result, Func func) {
 
         if (result.isOk()) {
             func(result.storage().template get<T>());
@@ -157,7 +159,7 @@ template<typename Ret>
 struct Map<Ret (void)> {
 
     template<typename T, typename E, typename Func>
-    static Result<Ret, E> map(const Result<T, E>& result, Func func) {
+    static Rust::Result<Ret, E> map(const Rust::Result<T, E>& result, Func func) {
         static_assert(std::is_same<T, void>::value,
                 "Can not map a void callback on a non-void Result");
 
@@ -175,7 +177,7 @@ template<>
 struct Map<void (void)> {
 
     template<typename T, typename E, typename Func>
-    static Result<void, E> map(const Result<T, E>& result, Func func) {
+    static Rust::Result<void, E> map(const Rust::Result<T, E>& result, Func func) {
         static_assert(std::is_same<T, void>::value,
                 "Can not map a void callback on a non-void Result");
 
@@ -190,10 +192,10 @@ struct Map<void (void)> {
 
 // General specialization for a callback returning a Result
 template<typename U, typename E, typename Arg>
-struct Map<Result<U, E> (Arg)> {
+struct Map<Rust::Result<U, E> (Arg)> {
 
     template<typename T, typename Func>
-    static Result<U, E> map(const Result<T, E>& result, Func func) {
+    static Rust::Result<U, E> map(const Rust::Result<T, E>& result, Func func) {
         static_assert(
                 std::is_same<T, Arg>::value ||
                 std::is_convertible<T, Arg>::value,
@@ -210,10 +212,10 @@ struct Map<Result<U, E> (Arg)> {
 
 // Specialization for a void callback returning a Result
 template<typename U, typename E>
-struct Map<Result<U, E> (void)> {
+struct Map<Rust::Result<U, E> (void)> {
 
     template<typename T, typename Func>
-    static Result<U, E> map(const Result<T, E>& result, Func func) {
+    static Rust::Result<U, E> map(const Rust::Result<T, E>& result, Func func) {
         static_assert(std::is_same<T, void>::value, "Can not call a void-callback on a non-void Result");
 
         if (result.isOk()) {
@@ -258,7 +260,7 @@ struct Map<Ret (Cls::*)(Arg) const> {
             "Can not map a callback returning a Result, use orElse instead");
 
     template<typename T, typename E, typename Func>
-    static Result<T, Ret> map(const Result<T, E>& result, Func func) {
+    static Rust::Result<T, Ret> map(const Rust::Result<T, E>& result, Func func) {
         if (result.isErr()) {
             auto res = func(result.storage().template get<E>());
             return types::Err<Ret>(res);
@@ -268,7 +270,7 @@ struct Map<Ret (Cls::*)(Arg) const> {
     }
 
     template<typename E, typename Func>
-    static Result<void, Ret> map(const Result<void, E>& result, Func func) {
+    static Rust::Result<void, Ret> map(const Rust::Result<void, E>& result, Func func) {
         if (result.isErr()) {
             auto res = func(result.storage().template get<E>());
             return types::Err<Ret>(res);
@@ -307,7 +309,7 @@ namespace impl {
                 "then() should not return anything, use map() instead");
 
         template<typename T, typename E, typename Func>
-        static Result<T, E> then(const Result<T, E>& result, Func func) {
+        static Rust::Result<T, E> then(const Rust::Result<T, E>& result, Func func) {
             if (result.isOk()) {
                 func(result.storage().template get<T>());
             }
@@ -321,7 +323,7 @@ namespace impl {
                 "then() should not return anything, use map() instead");
 
         template<typename T, typename E, typename Func>
-        static Result<T, E> then(const Result<T, E>& result, Func func) {
+        static Rust::Result<T, E> then(const Rust::Result<T, E>& result, Func func) {
             static_assert(std::is_same<T, void>::value, "Can not call a void-callback on a non-void Result");
 
             if (result.isOk()) {
@@ -365,10 +367,10 @@ namespace impl {
     struct Else<Ret (Cls::*)(Args...) const> : public Else<Ret (Args...)> { };
 
     template<typename T, typename F, typename Arg>
-    struct Else<Result<T, F> (Arg)> {
+    struct Else<Rust::Result<T, F> (Arg)> {
 
         template<typename E, typename Func>
-        static Result<T, F> orElse(const Result<T, E>& result, Func func) {
+        static Rust::Result<T, F> orElse(const Rust::Result<T, E>& result, Func func) {
             static_assert(
                     std::is_same<E, Arg>::value ||
                     std::is_convertible<E, Arg>::value,
@@ -383,7 +385,7 @@ namespace impl {
         }
 
         template<typename E, typename Func>
-        static Result<void, F> orElse(const Result<void, E>& result, Func func) {
+        static Rust::Result<void, F> orElse(const Rust::Result<void, E>& result, Func func) {
             if (result.isErr()) {
                 auto res = func(result.storage().template get<E>());
                 return res;
@@ -395,10 +397,10 @@ namespace impl {
     };
 
     template<typename T, typename F>
-    struct Else<Result<T, F> (void)> {
+    struct Else<Rust::Result<T, F> (void)> {
 
         template<typename E, typename Func>
-        static Result<T, F> orElse(const Result<T, E>& result, Func func) {
+        static Rust::Result<T, F> orElse(const Rust::Result<T, E>& result, Func func) {
             static_assert(std::is_same<T, void>::value,
                     "Can not call a void-callback on a non-void Result");
 
@@ -411,7 +413,7 @@ namespace impl {
         }
 
         template<typename E, typename Func>
-        static Result<void, F> orElse(const Result<void, E>& result, Func func) {
+        static Rust::Result<void, F> orElse(const Rust::Result<void, E>& result, Func func) {
             if (result.isErr()) {
                 auto res = func();
                 return res;
@@ -457,7 +459,7 @@ namespace impl {
     struct Wise<Ret (Arg)> {
 
         template<typename T, typename E, typename Func>
-        static Result<T, E> otherwise(const Result<T, E>& result, Func func) {
+        static Rust::Result<T, E> otherwise(const Rust::Result<T, E>& result, Func func) {
             static_assert(
                     std::is_same<E, Arg>::value ||
                     std::is_convertible<E, Arg>::value,
@@ -492,13 +494,13 @@ struct Wise<Ret (Cls::*)(Args...) const> : public impl::Wise<Ret (Args...)> { };
 
 template<typename T, typename E, typename Func,
          typename Ret =
-            Result<
+            Rust::Result<
                 typename details::ResultOkType<
                     typename details::result_of<Func>::type
                 >::type,
             E>
         >
-Ret map(const Result<T, E>& result, Func func) {
+Ret map(const Rust::Result<T, E>& result, Func func) {
     return ok::Map<Func>::map(result, func);
 }
 
@@ -510,29 +512,29 @@ template<typename T, typename E, typename Func,
                 >::type
             >
         >
-Ret mapError(const Result<T, E>& result, Func func) {
+Ret mapError(const Rust::Result<T, E>& result, Func func) {
     return err::Map<Func>::map(result, func);
 }
 
 template<typename T, typename E, typename Func>
-Result<T, E> then(const Result<T, E>& result, Func func) {
+Rust::Result<T, E> then(const Rust::Result<T, E>& result, Func func) {
     return And::Then<Func>::then(result, func);
 }
 
 template<typename T, typename E, typename Func>
-Result<T, E> otherwise(const Result<T, E>& result, Func func) {
+Rust::Result<T, E> otherwise(const Rust::Result<T, E>& result, Func func) {
     return Other::Wise<Func>::otherwise(result, func);
 }
 
 template<typename T, typename E, typename Func,
     typename Ret =
-        Result<T,
+        Rust::Result<T,
             typename details::ResultErrType<
                 typename details::result_of<Func>::type
             >::type
        >
 >
-Ret orElse(const Result<T, E>& result, Func func) {
+Ret orElse(const Rust::Result<T, E>& result, Func func) {
     return Or::Else<Func>::orElse(result, func);
 }
 
@@ -700,6 +702,7 @@ typename std::enable_if<
 
 } // namespace rpog
 
+namespace Rust {
 template<typename T, typename E>
 struct Result {
 
@@ -860,7 +863,7 @@ private:
 };
 
 template<typename T, typename E>
-bool operator==(const Result<T, E>& lhs, const Result<T, E>& rhs) {
+bool operator==(const Rust::Result<T, E>& lhs, const Rust::Result<T, E>& rhs) {
     static_assert(rpog::EqualityComparable<T>::value, "T must be EqualityComparable for Result to be comparable");
     static_assert(rpog::EqualityComparable<E>::value, "E must be EqualityComparable for Result to be comparable");
 
@@ -873,7 +876,7 @@ bool operator==(const Result<T, E>& lhs, const Result<T, E>& rhs) {
 }
 
 template<typename T, typename E>
-bool operator==(const Result<T, E>& lhs, types::Ok<T> ok) {
+bool operator==(const Rust::Result<T, E>& lhs, types::Ok<T> ok) {
     static_assert(rpog::EqualityComparable<T>::value, "T must be EqualityComparable for Result to be comparable");
 
     if (!lhs.isOk()) return false;
@@ -882,17 +885,18 @@ bool operator==(const Result<T, E>& lhs, types::Ok<T> ok) {
 }
 
 template<typename E>
-bool operator==(const Result<void, E>& lhs, types::Ok<void>) {
+bool operator==(const Rust::Result<void, E>& lhs, types::Ok<void>) {
     return lhs.isOk();
 }
 
 template<typename T, typename E>
-bool operator==(const Result<T, E>& lhs, types::Err<E> err) {
+bool operator==(const Rust::Result<T, E>& lhs, types::Err<E> err) {
     static_assert(rpog::EqualityComparable<E>::value, "E must be EqualityComparable for Result to be comparable");
     if (!lhs.isErr()) return false;
 
     return lhs.storage().template get<E>() == err.val;
 }
+} // end namespace Rust
 
 #define TRY(...)                                                   \
     ({                                                             \

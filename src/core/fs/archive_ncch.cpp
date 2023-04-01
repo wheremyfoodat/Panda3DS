@@ -21,14 +21,14 @@ namespace MediaType {
 	};
 };
 
-CreateFileResult NCCHArchive::createFile(const FSPath& path, u64 size) {
+FSResult NCCHArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[NCCH] CreateFile not yet supported");
-	return CreateFileResult::Success;
+	return FSResult::Success;
 }
 
-DeleteFileResult NCCHArchive::deleteFile(const FSPath& path) {
+FSResult NCCHArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[NCCH] Unimplemented DeleteFile");
-	return DeleteFileResult::Success;
+	return FSResult::Success;
 }
 
 FileDescriptor NCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {

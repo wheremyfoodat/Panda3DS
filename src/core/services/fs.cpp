@@ -25,7 +25,7 @@ namespace FSCommands {
 	};
 }
 
-namespace Result {
+namespace ResultCode {
 	enum : u32 {
 		Success = 0,
 		FileNotFound = 0xC8804464, // TODO: Verify this
@@ -81,16 +81,16 @@ std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPa
 	}
 }
 
-std::optional<Handle> FSService::openDirectoryHandle(ArchiveBase* archive, const FSPath& path) {
-	std::optional<DirectorySession> opened = archive->openDirectory(path);
-	if (opened.has_value()) { // If opened doesn't have a value, we failed to open the directory
+Rust::Result<Handle, FSResult> FSService::openDirectoryHandle(ArchiveBase* archive, const FSPath& path) {
+	Rust::Result<DirectorySession, FSResult> opened = archive->openDirectory(path);
+	if (opened.isOk()) { // If opened doesn't have a value, we failed to open the directory
 		auto handle = kernel.makeObject(KernelObjectType::Directory);
 		auto& object = kernel.getObjects()[handle];
-		object.data = new DirectorySession(opened.value());
+		object.data = new DirectorySession(opened.unwrap());
 
-		return handle;
+		return Ok(handle);
 	} else {
-		return std::nullopt;
+		return Err(opened.unwrapErr());
 	}
 }
 
@@ -147,7 +147,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 
 void FSService::initialize(u32 messagePointer) {
 	log("FS::Initialize\n");
-	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 4, ResultCode::Success);
 }
 
 // TODO: Figure out how this is different from Initialize
@@ -165,10 +165,10 @@ void FSService::closeArchive(u32 messagePointer) {
 
 	if (object == nullptr) {
 		log("FSService::CloseArchive: Tried to close invalid archive %X\n", handle);
-		mem.write32(messagePointer + 4, Result::Failure);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
 	} else {
 		object->getData<ArchiveSession>()->isOpen = false;
-		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 4, ResultCode::Success);
 	}
 }
 
@@ -183,11 +183,11 @@ void FSService::openArchive(u32 messagePointer) {
 	
 	std::optional<Handle> handle = openArchiveHandle(archiveID, archivePath);
 	if (handle.has_value()) {
-		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 4, ResultCode::Success);
 		mem.write64(messagePointer + 8, handle.value());
 	} else {
 		log("FS::OpenArchive: Failed to open archive with id = %d\n", archiveID);
-		mem.write32(messagePointer + 4, Result::Failure);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
 	}
 }
 
@@ -204,7 +204,7 @@ void FSService::openFile(u32 messagePointer) {
 	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
 	if (archiveObject == nullptr) [[unlikely]] {
 		log("FS::OpenFile: Invalid archive handle %d\n", archiveHandle);
-		mem.write32(messagePointer + 4, Result::Failure);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
 		return;
 	}
 
@@ -217,9 +217,9 @@ void FSService::openFile(u32 messagePointer) {
 	std::optional<Handle> handle = openFileHandle(archive, filePath, archivePath, perms);
 	if (!handle.has_value()) {
 		printf("OpenFile failed\n");
-		mem.write32(messagePointer + 4, Result::FileNotFound);
+		mem.write32(messagePointer + 4, ResultCode::FileNotFound);
 	} else {
-		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 4, ResultCode::Success);
 		mem.write32(messagePointer + 8, 0x10); // "Move handle descriptor"
 		mem.write32(messagePointer + 12, handle.value());
 	}
@@ -235,19 +235,20 @@ void FSService::openDirectory(u32 messagePointer) {
 	KernelObject* archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
 	if (archiveObject == nullptr) [[unlikely]] {
 		log("FS::OpenDirectory: Invalid archive handle %d\n", archiveHandle);
-		mem.write32(messagePointer + 4, Result::Failure);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
 		return;
 	}
 
 	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
 	const auto dirPath = readPath(pathType, pathPointer, pathSize);
-	std::optional<Handle> dir = openDirectoryHandle(archive, dirPath);
+	auto dir = openDirectoryHandle(archive, dirPath);
 
-	if (dir.has_value()) {
-		mem.write32(messagePointer + 4, Result::Success);
-		mem.write32(messagePointer + 12, dir.value());
+	if (dir.isOk()) {
+		mem.write32(messagePointer + 4, ResultCode::Success);
+		mem.write32(messagePointer + 12, dir.unwrap());
 	} else {
-		Helpers::panic("FS::OpenDirectory failed");
+		printf("FS::OpenDirectory failed\n");
+		mem.write32(messagePointer + 4, static_cast<u32>(dir.unwrapErr()));
 	}
 }
 
@@ -282,7 +283,7 @@ void FSService::openFileDirectly(u32 messagePointer) {
 	if (!handle.has_value()) {
 		Helpers::panic("OpenFileDirectly: Failed to open file with given path");
 	} else {
-		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 4, ResultCode::Success);
 		mem.write32(messagePointer + 12, handle.value());
 	}
 }
@@ -300,14 +301,14 @@ void FSService::createFile(u32 messagePointer) {
 	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
 	if (archiveObject == nullptr) [[unlikely]] {
 		log("FS::OpenFile: Invalid archive handle %d\n", archiveHandle);
-		mem.write32(messagePointer + 4, Result::Failure);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
 		return;
 	}
 
 	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
-	CreateFileResult res = archive->createFile(filePath, size);
+	FSResult res = archive->createFile(filePath, size);
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
 
@@ -321,14 +322,14 @@ void FSService::deleteFile(u32 messagePointer) {
 	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
 	if (archiveObject == nullptr) [[unlikely]] {
 		log("FS::DeleteFile: Invalid archive handle %d\n", archiveHandle);
-		mem.write32(messagePointer + 4, Result::Failure);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
 		return;
 	}
 
 	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
-	DeleteFileResult res = archive->deleteFile(filePath);
+	FSResult res = archive->deleteFile(filePath);
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
 
@@ -347,7 +348,7 @@ void FSService::getFormatInfo(u32 messagePointer) {
 	}
 
 	ArchiveBase::FormatInfo info = archive->getFormatInfo(path);
-	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 4, ResultCode::Success);
 	mem.write32(messagePointer + 8, info.size);
 	mem.write32(messagePointer + 12, info.numOfDirectories);
 	mem.write32(messagePointer + 16, info.numOfFiles);
@@ -357,7 +358,7 @@ void FSService::getFormatInfo(u32 messagePointer) {
 void FSService::getPriority(u32 messagePointer) {
 	log("FS::GetPriority\n");
 
-	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 4, ResultCode::Success);
 	mem.write32(messagePointer + 8, priority);
 }
 
@@ -365,12 +366,12 @@ void FSService::setPriority(u32 messagePointer) {
 	const u32 value = mem.read32(messagePointer + 4);
 	log("FS::SetPriority (priority = %d)\n", value);
 	
-	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 4, ResultCode::Success);
 	priority = value;
 }
 
 void FSService::isSdmcDetected(u32 messagePointer) {
 	log("FS::IsSdmcDetected\n");
-	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 4, ResultCode::Success);
 	mem.write32(messagePointer + 8, 0); // Whether SD is detected. For now we emulate a 3DS without an SD.
 }

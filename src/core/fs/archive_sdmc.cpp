@@ -1,14 +1,14 @@
 #include "fs/archive_sdmc.hpp"
 #include <memory>
 
-CreateFileResult SDMCArchive::createFile(const FSPath& path, u64 size) {
+FSResult SDMCArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[SDMC] CreateFile not yet supported");
-	return CreateFileResult::Success;
+	return FSResult::Success;
 }
 
-DeleteFileResult SDMCArchive::deleteFile(const FSPath& path) {
+FSResult SDMCArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[SDMC] Unimplemented DeleteFile");
-	return DeleteFileResult::Success;
+	return FSResult::Success;
 }
 
 FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms) {
