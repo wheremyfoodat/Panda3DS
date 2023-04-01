@@ -66,8 +66,10 @@ Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FS
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
 
-		if (fs::is_regular_file(p))
-			Helpers::panic("OpenDirectory: Tried to open directory but it's actually a file");
+		if (fs::is_regular_file(p)) {
+			printf("SaveData: OpenArchive used with a file path");
+			return Err(FSResult::UnexpectedFileOrDir);
+		}
 
 		if (fs::is_directory(p)) {
 			return Ok(DirectorySession(this, p));

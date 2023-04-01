@@ -132,7 +132,8 @@ enum class FSResult : u32 {
     Success = 0,
     AlreadyExists = 0x82044BE,
     FileTooLarge = 0x86044D2,
-    FileNotFound = 0xC8804470
+    FileNotFound = 0xC8804470,
+    UnexpectedFileOrDir = 0xE0C04702
 };
 
 class ArchiveBase {
