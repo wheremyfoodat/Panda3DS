@@ -19,6 +19,7 @@ namespace FSCommands {
 		CloseArchive = 0x080E0080,
 		IsSdmcDetected = 0x08170000,
 		GetFormatInfo = 0x084500C2,
+		FormatSaveData = 0x084C0242,
 		InitializeWithSdkVersion = 0x08610042,
 		SetPriority = 0x08620040,
 		GetPriority = 0x08630000
@@ -131,6 +132,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::CreateFile: createFile(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
+		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
 		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
@@ -353,6 +355,31 @@ void FSService::getFormatInfo(u32 messagePointer) {
 	mem.write32(messagePointer + 12, info.numOfDirectories);
 	mem.write32(messagePointer + 16, info.numOfFiles);
 	mem.write8(messagePointer + 20, info.duplicateData ? 1 : 0);
+}
+
+void FSService::formatSaveData(u32 messagePointer) {
+	const u32 archiveID = mem.read32(messagePointer + 4);
+	if (archiveID != ArchiveID::SaveData)
+		Helpers::panic("FS::FormatSaveData: Archive is not SaveData");
+
+	// Read path and path info
+	const u32 pathType = mem.read32(messagePointer + 8);
+	const u32 pathSize = mem.read32(messagePointer + 12);
+	const u32 pathPointer = mem.read32(messagePointer + 44);
+	auto path = readPath(pathType, pathPointer, pathSize);
+	// Size of a block. Seems to always be 0x200
+	const u32 blockSize = mem.read32(messagePointer + 16);
+
+	if (blockSize != 0x200 && blockSize != 0x1000)
+		Helpers::panic("FS::FormatSaveData: Invalid SaveData block size");
+
+	const u32 directoryNum = mem.read32(messagePointer + 20); // Max number of directories
+	const u32 fileNum = mem.read32(messagePointer + 24); // Max number of files
+	const u32 directoryBucketNum = mem.read32(messagePointer + 28); // Not sure what a directory bucket is...?
+	const u32 fileBucketNum = mem.read32(messagePointer + 32); // Same here
+	const bool duplicateData = mem.read8(messagePointer + 36) != 0; 
+
+	printf("Stubbed FS::FormatSaveData. File num: %d, directory num: %d\n", fileNum, directoryNum);
 }
 
 void FSService::getPriority(u32 messagePointer) {

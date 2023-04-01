@@ -37,6 +37,7 @@ class FSService {
 	void createFile(u32 messagePointer);
 	void closeArchive(u32 messagePointer);
 	void deleteFile(u32 messagePointer);
+	void formatSaveData(u32 messagePointer);
 	void getFormatInfo(u32 messagePointer);
 	void getPriority(u32 messagePointer);
 	void initialize(u32 messagePointer);
