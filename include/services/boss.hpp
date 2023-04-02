@@ -17,6 +17,7 @@ class BOSSService {
 	void receiveProperty(u32 messagePointer);
 	void registerStorageEntry(u32 messagePointer);
 	void unregisterStorage(u32 messagePointer);
+	void unregisterTask(u32 messagePointer);
 
 	s8 optoutFlag;
 public:

@@ -5,6 +5,7 @@ namespace BOSSCommands {
 		InitializeSession = 0x00010082,
 		UnregisterStorage = 0x00030000,
 		GetOptoutFlag = 0x000A0000,
+		UnregisterTask = 0x000C0082,
 		GetTaskIdList = 0x000E0000,
 		ReceiveProperty = 0x00160082,
 		RegisterStorageEntry = 0x002F0140,
@@ -32,6 +33,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
+		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
 		default: Helpers::panic("BOSS service requested. Command: %08X\n", command);
 	}
 }
@@ -67,6 +69,11 @@ void BOSSService::receiveProperty(u32 messagePointer) {
 	log("BOSS::ReceiveProperty(stubbed) (id = %d, size = %08X, ptr = %08X)\n", id, size, ptr);
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Read size
+}
+
+void BOSSService::unregisterTask(u32 messagePointer) {
+	log("BOSS::UnregisterTask (stubbed)\n");
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::registerStorageEntry(u32 messagePointer) {
