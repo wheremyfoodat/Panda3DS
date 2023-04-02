@@ -23,6 +23,7 @@ class FRDService {
 	void getMyFriendKey(u32 messagePointer);
 	void getMyPresence(u32 messagePointer);
 	void setClientSDKVersion(u32 messagePointer);
+	void setNotificationMask(u32 messagePointer);
 
 public:
 	FRDService(Memory& mem) : mem(mem) {}

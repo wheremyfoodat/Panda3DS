@@ -2,6 +2,7 @@
 
 namespace FRDCommands {
 	enum : u32 {
+		SetNotificationMask = 0x00210040,
 		SetClientSdkVersion = 0x00320042,
 		GetMyFriendKey = 0x00050000,
 		GetMyPresence = 0x00080000,
@@ -24,6 +25,7 @@ void FRDService::handleSyncRequest(u32 messagePointer) {
 		case FRDCommands::GetMyFriendKey: getMyFriendKey(messagePointer); break;
 		case FRDCommands::GetMyPresence: getMyPresence(messagePointer); break;
 		case FRDCommands::SetClientSdkVersion: setClientSDKVersion(messagePointer); break;
+		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
 		default: Helpers::panic("FRD service requested. Command: %08X\n", command);
 	}
 }
@@ -69,5 +71,10 @@ void FRDService::setClientSDKVersion(u32 messagePointer) {
 	u32 version = mem.read32(messagePointer + 4);
 	log("FRD::SetClientSdkVersion (version = %d)\n", version);
 
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::setNotificationMask(u32 messagePointer) {
+	log("FRD::SetNotificationMask (Not documented)\n");
 	mem.write32(messagePointer + 4, Result::Success);
 }
