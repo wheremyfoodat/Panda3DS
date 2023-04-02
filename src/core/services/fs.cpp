@@ -41,6 +41,7 @@ void FSService::reset() {
 // Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
 void FSService::initializeFilesystem() {
 	const auto nandPath = IOFile::getAppData() / "NAND"; // Create NAND
+	const auto cartPath = IOFile::getAppData() / "CartSave"; // Create cartridge save folder for use with ExtSaveData
 	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
 	namespace fs = std::filesystem;
 	// TODO: SDMC, etc
@@ -49,17 +50,37 @@ void FSService::initializeFilesystem() {
 		fs::create_directories(nandPath);
 	}
 
+	if (!fs::is_directory(cartPath)) {
+		fs::create_directories(cartPath);
+	}
+
 	if (!fs::is_directory(savePath)) {
 		fs::create_directories(savePath);
 	}
 }
 
-ArchiveBase* FSService::getArchiveFromID(u32 id) {
+ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 	switch (id) {
 		case ArchiveID::SelfNCCH: return &selfNcch;
 		case ArchiveID::SaveData: return &saveData;
-		case ArchiveID::ExtSaveData: return &extSaveData;
-		case ArchiveID::SharedExtSaveData: return &sharedExtSaveData;
+		case ArchiveID::ExtSaveData:
+			if (archivePath.type == PathType::Binary) {
+				switch (archivePath.binary[0]) {
+					case 0: return &extSaveData_nand;
+					case 1: return &extSaveData_cart;
+				}
+			}
+			return nullptr;
+
+		case ArchiveID::SharedExtSaveData:
+			if (archivePath.type == PathType::Binary) {
+				switch (archivePath.binary[0]) {
+					case 0: return &sharedExtSaveData_nand;
+					case 1: return &sharedExtSaveData_cart;
+				}
+			}
+			return nullptr;
+
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
 		default:
@@ -96,7 +117,7 @@ Rust::Result<Handle, FSResult> FSService::openDirectoryHandle(ArchiveBase* archi
 }
 
 std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
-	ArchiveBase* archive = getArchiveFromID(archiveID);
+	ArchiveBase* archive = getArchiveFromID(archiveID, path);
 
 	if (archive == nullptr) [[unlikely]] {
 		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
@@ -264,15 +285,14 @@ void FSService::openFileDirectly(u32 messagePointer) {
 	const u32 attributes = mem.read32(messagePointer + 32);
 	const u32 archivePathPointer = mem.read32(messagePointer + 40);
 	const u32 filePathPointer = mem.read32(messagePointer + 48);
-
 	log("FS::OpenFileDirectly\n");
 
-	ArchiveBase* archive = getArchiveFromID(archiveID);
+	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
+	ArchiveBase* archive = getArchiveFromID(archiveID, archivePath);
+	
 	if (archive == nullptr) [[unlikely]] {
 		Helpers::panic("OpenFileDirectly: Tried to open unknown archive %d.", archiveID);
 	}
-
-	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 	const FilePerms perms(openFlags);
 
@@ -344,7 +364,7 @@ void FSService::getFormatInfo(u32 messagePointer) {
 	const auto path = readPath(pathType, pathPointer, pathSize);
 	log("FS::GetFormatInfo(archive ID = %d, archive path type = %d)\n", archiveID, pathType);
 
-	ArchiveBase* archive = getArchiveFromID(archiveID);
+	ArchiveBase* archive = getArchiveFromID(archiveID, path);
 	if (archive == nullptr) [[unlikely]] {
 		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
 	}

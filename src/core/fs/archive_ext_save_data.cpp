@@ -11,7 +11,7 @@ FSResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in ExtSaveData::CreateFile");
 
-		fs::path p = IOFile::getAppData() / "NAND";
+		fs::path p = IOFile::getAppData() / backingFolder;
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::exists(p))
@@ -35,7 +35,7 @@ FSResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in ExtSaveData::DeleteFile");
 
-		fs::path p = IOFile::getAppData() / "NAND";
+		fs::path p = IOFile::getAppData() / backingFolder;
 		p += fs::path(path.utf16_string).make_preferred();
 
 		std::error_code ec;
@@ -55,7 +55,7 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 		if (perms.create())
 			Helpers::panic("[ExtSaveData] Can't open file with create flag");
 
-		fs::path p = IOFile::getAppData() / "NAND";
+		fs::path p = IOFile::getAppData() / backingFolder;
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::exists(p)) { // Return file descriptor if the file exists
@@ -75,9 +75,31 @@ ArchiveBase* ExtSaveDataArchive::openArchive(const FSPath& path) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
-	if (path.binary[0] != 0) Helpers::panic("ExtSaveData: Tried to access something other than NAND. ID: %02X", path.binary[0]);
-
 	return this;
+}
+
+Rust::Result<DirectorySession, FSResult> ExtSaveDataArchive::openDirectory(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in ExtSaveData::OpenDirectory");
+
+		fs::path p = IOFile::getAppData() / backingFolder;
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_regular_file(p)) {
+			printf("ExtSaveData: OpenArchive used with a file path");
+			return Err(FSResult::UnexpectedFileOrDir);
+		}
+
+		if (fs::is_directory(p)) {
+			return Ok(DirectorySession(this, p));
+		} else {
+			return Err(FSResult::FileNotFound);
+		}
+	}
+
+	Helpers::panic("ExtSaveDataArchive::OpenDirectory: Unimplemented path type");
+	return Err(FSResult::Success);
 }
 
 std::optional<u32> ExtSaveDataArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

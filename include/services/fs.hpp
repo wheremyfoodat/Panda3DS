@@ -22,12 +22,15 @@ class FSService {
 	// The different filesystem archives (Save data, SelfNCCH, SDMC, NCCH, ExtData, etc)
 	SelfNCCHArchive selfNcch;
 	SaveDataArchive saveData;
-	ExtSaveDataArchive extSaveData;
-	ExtSaveDataArchive sharedExtSaveData;
 	SDMCArchive sdmc;
 	NCCHArchive ncch;
 
-	ArchiveBase* getArchiveFromID(u32 id);
+	ExtSaveDataArchive extSaveData_nand;
+	ExtSaveDataArchive extSaveData_cart;
+	ExtSaveDataArchive sharedExtSaveData_nand;
+	ExtSaveDataArchive sharedExtSaveData_cart;
+
+	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
 	std::optional<Handle> openArchiveHandle(u32 archiveID, const FSPath& path);
 	Rust::Result<Handle, FSResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
@@ -53,11 +56,10 @@ class FSService {
 	u32 priority;
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), extSaveData(mem), sharedExtSaveData(mem), sdmc(mem),
-		selfNcch(mem), ncch(mem), kernel(kernel)
-	{
-		sharedExtSaveData.isShared = true; // Need to do this here because templates and virtual classes do not mix well
-	}
+	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), extSaveData_nand(mem, "NAND"), 
+		sharedExtSaveData_nand(mem, "NAND", true), extSaveData_cart(mem, "CartSave"), sharedExtSaveData_cart(mem, "CartSave", true),
+		sdmc(mem), selfNcch(mem), ncch(mem), kernel(kernel)
+	{}
 	
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
