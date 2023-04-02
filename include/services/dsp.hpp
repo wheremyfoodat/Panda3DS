@@ -53,6 +53,7 @@ class DSPService {
 	void flushDataCache(u32 messagePointer);
 	void getHeadphoneStatus(u32 messagePointer);
 	void getSemaphoreHandle(u32 messagePointer);
+	void invalidateDCache(u32 messagePointer);
 	void loadComponent(u32 messagePointer);
 	void readPipeIfPossible(u32 messagePointer);
 	void registerInterruptEvents(u32 messagePointer);
