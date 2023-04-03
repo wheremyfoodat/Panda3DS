@@ -19,9 +19,11 @@ class FRDService {
 	MAKE_LOG_FUNCTION(log, frdLogger)
 
 	// Service commands
+	void attachToEventNotification(u32 messagePointer);
 	void getFriendKeyList(u32 messagePointer);
 	void getMyFriendKey(u32 messagePointer);
 	void getMyPresence(u32 messagePointer);
+	void getMyScreenName(u32 messsagePointer);
 	void setClientSDKVersion(u32 messagePointer);
 	void setNotificationMask(u32 messagePointer);
 

@@ -1,11 +1,14 @@
 #include "services/frd.hpp"
+#include <string>
 
 namespace FRDCommands {
 	enum : u32 {
+		AttachToEventNotification = 0x00200002,
 		SetNotificationMask = 0x00210040,
 		SetClientSdkVersion = 0x00320042,
 		GetMyFriendKey = 0x00050000,
 		GetMyPresence = 0x00080000,
+		GetMyScreenName = 0x00090000,
 		GetFriendKeyList = 0x00110080
 	};
 }
@@ -21,13 +24,20 @@ void FRDService::reset() {}
 void FRDService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case FRDCommands::AttachToEventNotification: attachToEventNotification(messagePointer); break;
 		case FRDCommands::GetFriendKeyList: getFriendKeyList(messagePointer); break;
 		case FRDCommands::GetMyFriendKey: getMyFriendKey(messagePointer); break;
 		case FRDCommands::GetMyPresence: getMyPresence(messagePointer); break;
+		case FRDCommands::GetMyScreenName: getMyScreenName(messagePointer); break;
 		case FRDCommands::SetClientSdkVersion: setClientSDKVersion(messagePointer); break;
 		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
 		default: Helpers::panic("FRD service requested. Command: %08X\n", command);
 	}
+}
+
+void FRDService::attachToEventNotification(u32 messagePointer) {
+	log("FRD::AttachToEventNotification (Undocumented)\n");
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void FRDService::getMyFriendKey(u32 messagePointer) {
@@ -65,6 +75,22 @@ void FRDService::getMyPresence(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::getMyScreenName(u32 messagePointer) {
+	log("FRD::GetMyScreenName\n");
+	static const std::u16string name = u"Pander";
+	mem.write32(messagePointer + 4, Result::Success);
+
+	// TODO: Assert the name fits in the response buffer
+	u32 pointer = messagePointer + 8;
+	for (auto c : name) {
+		mem.write16(pointer, static_cast<u16>(c));
+		pointer += sizeof(u16);
+	}
+
+	// Add null terminator
+	mem.write16(pointer, static_cast<u16>(u'\0'));
 }
 
 void FRDService::setClientSDKVersion(u32 messagePointer) {
