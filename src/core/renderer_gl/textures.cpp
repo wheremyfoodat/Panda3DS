@@ -1,15 +1,33 @@
 #include "renderer_gl/textures.hpp"
 #include "colour.hpp"
+#include <array>
 
 void Texture::allocate() {
     glGenTextures(1, &texture.m_handle);
     texture.create(size.u(), size.v(), GL_RGBA8);
     texture.bind();
 
-    texture.setMinFilter(OpenGL::Nearest);
-    texture.setMagFilter(OpenGL::Nearest);
-    texture.setWrapS(OpenGL::Repeat);
-    texture.setWrapT(OpenGL::Repeat);
+    setNewConfig(config);
+}
+
+// Set the texture's configuration, which includes min/mag filters, wrapping S/T modes, and so on
+void Texture::setNewConfig(u32 cfg) {
+    config = cfg;
+    // The wrapping mode field is 3 bits instead of 2 bits. The bottom 4 undocumented wrapping modes are taken from Citra.
+    static constexpr std::array<OpenGL::WrappingMode, 8> wrappingModes = {
+        OpenGL::ClampToEdge, OpenGL::ClampToBorder, OpenGL::Repeat, OpenGL::RepeatMirrored,
+        OpenGL::ClampToEdge, OpenGL::ClampToBorder, OpenGL::Repeat, OpenGL::Repeat
+    };
+
+    const auto magFilter = (cfg & 0x2) != 0 ? OpenGL::Linear : OpenGL::Nearest;
+    const auto minFilter = (cfg & 0x4) != 0 ? OpenGL::Linear : OpenGL::Nearest;
+    const auto wrapT = wrappingModes[(cfg >> 8) & 0x7];
+    const auto wrapS = wrappingModes[(cfg >> 12) & 0x7];
+
+    texture.setMinFilter(minFilter);
+    texture.setMagFilter(magFilter);
+    texture.setWrapS(wrapS);
+    texture.setWrapT(wrapT);
 }
 
 void Texture::free() {

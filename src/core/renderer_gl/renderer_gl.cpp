@@ -310,13 +310,14 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 
 	// Hack for rendering texture 1
 	if (regs[0x80] & 1) {
-		u32 dim = regs[0x82];
-		u32 height = dim & 0x7ff;
-		u32 width = (dim >> 16) & 0x7ff;
-		u32 addr = (regs[0x85] & 0x0FFFFFFF) << 3;
-		u32 format = regs[0x8E] & 0xF;
+		const u32 dim = regs[0x82];
+		const u32 config = regs[0x83];
+		const u32 height = dim & 0x7ff;
+		const u32 width = (dim >> 16) & 0x7ff;
+		const u32 addr = (regs[0x85] & 0x0FFFFFFF) << 3;
+		const u32 format = regs[0x8E] & 0xF;
 
-		Texture targetTex(addr, static_cast<Texture::Formats>(format), width, height);
+		Texture targetTex(addr, static_cast<Texture::Formats>(format), width, height, config);
 		OpenGL::Texture tex = getTexture(targetTex);
 		tex.bind();
 	}

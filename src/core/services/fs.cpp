@@ -164,7 +164,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::OpenFile: [[likely]] openFile(messagePointer); break;
 		case FSCommands::OpenFileDirectly: [[likely]] openFileDirectly(messagePointer); break;
 		case FSCommands::SetPriority: setPriority(messagePointer); break;
-		default: Helpers::panic("FS service requested. Command: %08X\n", command);
+		default: mem.write32(messagePointer + 4, 0); break; Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
 }
 

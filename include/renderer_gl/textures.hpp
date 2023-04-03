@@ -29,6 +29,7 @@ struct Texture {
     };
 
     u32 location;
+    u32 config; // Magnification/minification filter, wrapping configs, etc
     Formats format;
     OpenGL::uvec2 size;
     bool valid;
@@ -40,8 +41,8 @@ struct Texture {
 
     Texture() : valid(false) {}
 
-    Texture(u32 loc, Formats format, u32 x, u32 y, bool valid = true)
-        : location(loc), format(format), size({x, y}), valid(valid) {
+    Texture(u32 loc, Formats format, u32 x, u32 y, u32 config, bool valid = true)
+        : location(loc), format(format), size({x, y}), config(config), valid(valid) {
 
         u64 endLoc = (u64)loc + sizeInBytes();
         // Check if start and end are valid here
@@ -56,6 +57,7 @@ struct Texture {
     }
 
     void allocate();
+    void setNewConfig(u32 newConfig);
     void decodeTexture(const void* data);
     void free();
     u64 sizeInBytes();
