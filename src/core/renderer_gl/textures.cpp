@@ -131,6 +131,17 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (0xff << 24) | (b << 16) | (g << 8) | r;
         }
 
+        case Formats::RG8: {
+            u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+            auto ptr = static_cast<const u8*>(data);
+
+            constexpr u8 b = 0;
+            u8 g = ptr[offset];
+            u8 r = ptr[offset + 1];
+
+            return (0xff << 24) | (b << 16) | (g << 8) | r;
+        }
+
         case Formats::RGB8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 3);
             auto ptr = static_cast<const u8*>(data);

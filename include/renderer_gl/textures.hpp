@@ -80,5 +80,4 @@ struct Texture {
     // TODO: Make hasAlpha a template parameter
     u32 getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, const void* data);
     u32 decodeETC(u32 alpha, u32 u, u32 v, u64 colourData);
-
 };
