@@ -231,13 +231,6 @@ void Renderer::setupBlending() {
 		GL_SRC_ALPHA_SATURATE, GL_ONE
 	};
 
-	// Temporarily here until we add constant color/alpha
-	const auto panicIfUnimplementedFunc = [](const u32 func) {
-		auto x = blendingFuncs[func];
-		if (x == GL_CONSTANT_COLOR || x == GL_ONE_MINUS_CONSTANT_COLOR || x == GL_ALPHA || x == GL_ONE_MINUS_CONSTANT_ALPHA) [[unlikely]]
-			Helpers::panic("Unimplemented blending function!");
-	};
-
 	if (!blendingEnabled) {
 		OpenGL::disableBlend();
 	} else {
@@ -254,11 +247,12 @@ void Renderer::setupBlending() {
 		const u32 alphaSourceFunc = (blendControl >> 24) & 0xf;
 		const u32 alphaDestFunc = (blendControl >> 28) & 0xf;
 
-		// Panic if one of the blending funcs is unimplemented
-		panicIfUnimplementedFunc(rgbSourceFunc);
-		panicIfUnimplementedFunc(rgbDestFunc);
-		panicIfUnimplementedFunc(alphaSourceFunc);
-		panicIfUnimplementedFunc(alphaDestFunc);
+		const u32 constantColor = regs[PICAInternalRegs::BlendColour];
+		const u32 r = constantColor & 0xff;
+		const u32 g = (constantColor >> 8) & 0xff;
+		const u32 b = (constantColor >> 16) & 0xff;
+		const u32 a = (constantColor >> 24) & 0xff;
+		OpenGL::setBlendColor(float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, float(a) / 255.f);
 
 		// Translate equations and funcs to their GL equivalents and set them
 		glBlendEquationSeparate(blendingEquations[rgbEquation], blendingEquations[alphaEquation]);
