@@ -16,6 +16,7 @@ namespace FSCommands {
 		CreateFile = 0x08080202,
 		OpenDirectory = 0x080B0102,
 		OpenArchive = 0x080C00C2,
+		ControlArchive = 0x080D0144,
 		CloseArchive = 0x080E0080,
 		IsSdmcDetected = 0x08170000,
 		GetFormatInfo = 0x084500C2,
@@ -151,6 +152,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case FSCommands::CreateFile: createFile(messagePointer); break;
+		case FSCommands::ControlArchive: controlArchive(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
@@ -215,7 +217,7 @@ void FSService::openArchive(u32 messagePointer) {
 }
 
 void FSService::openFile(u32 messagePointer) {
-	const u32 archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = mem.read64(messagePointer + 8);
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 openFlags = mem.read32(messagePointer + 24);
@@ -335,7 +337,7 @@ void FSService::createFile(u32 messagePointer) {
 }
 
 void FSService::deleteFile(u32 messagePointer) {
-	const u32 archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = mem.read64(messagePointer + 8);
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 filePathPointer = mem.read32(messagePointer + 28);
@@ -400,6 +402,33 @@ void FSService::formatSaveData(u32 messagePointer) {
 	const bool duplicateData = mem.read8(messagePointer + 36) != 0; 
 
 	printf("Stubbed FS::FormatSaveData. File num: %d, directory num: %d\n", fileNum, directoryNum);
+}
+
+void FSService::controlArchive(u32 messagePointer) {
+	const Handle archiveHandle = mem.read64(messagePointer + 4);
+	const u32 action = mem.read32(messagePointer + 12);
+	const u32 inputSize = mem.read32(messagePointer + 16);
+	const u32 outputSize = mem.read32(messagePointer + 20);
+	const u32 input = mem.read32(messagePointer + 28);
+	const u32 output = mem.read32(messagePointer + 36);
+
+	log("FS::ControlArchive (action = %X, handle = %X)\n", action, archiveHandle);
+
+	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
+	if (archiveObject == nullptr) [[unlikely]] {
+		log("FS::ControlArchive: Invalid archive handle %d\n", archiveHandle);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
+		return;
+	}
+
+	switch (action) {
+		case 0: // Commit save data changes. Shouldn't need us to do anything
+			mem.write32(messagePointer + 4, ResultCode::Success);
+			break;
+		default:
+			Helpers::panic("Unimplemented action for ControlArchive (action = %X)\n", action);
+			break;
+	}
 }
 
 void FSService::getPriority(u32 messagePointer) {

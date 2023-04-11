@@ -111,6 +111,14 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			}
 			break;
 
+		// Restart immediate mode primitive drawing
+		case PrimitiveRestart:
+			if (value & 1) {
+				immediateModeAttrIndex = 0;
+				immediateModeVertIndex = 0;
+			}
+			break;
+
 		case FixedAttribData0: case FixedAttribData1: case FixedAttribData2:
 			fixedAttrBuff[fixedAttribCount++] = value;
 
