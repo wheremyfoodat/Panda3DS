@@ -141,10 +141,35 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						immediateModeAttrIndex = 0;
 						immediateModeVertices[immediateModeVertIndex++] = v;
 
+						// Get primitive type
+						const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
+						const u32 primType = (primConfig >> 8) & 3;
+
 						// If we've reached 3 verts, issue a draw call
+						// Handle rendering depending on the primitive type
 						if (immediateModeVertIndex == 3) {
 							renderer.drawVertices(OpenGL::Triangle, &immediateModeVertices[0], 3);
-							immediateModeVertIndex = 0;
+
+							switch (primType) {
+								// Triangle or geometry primitive. Draw a triangle and discard all vertices
+								case 0: case 3:
+									immediateModeVertIndex = 0;
+									break;
+
+								// Triangle strip. Draw triangle, discard first vertex and keep the last 2
+								case 1:
+									immediateModeVertIndex = 2;
+
+									immediateModeVertices[0] = immediateModeVertices[1];
+									immediateModeVertices[1] = immediateModeVertices[2];
+									break;
+
+								// Triangle fan. Draw triangle, keep first vertex and last vertex, discard second vertex
+								case 2:
+									immediateModeVertIndex = 2;
+									immediateModeVertices[1] = immediateModeVertices[2];
+									break;
+							}
 						}
 					}
 				} else { // Writing to fixed attributes 13 and 14 probably does nothing, but we'll see
