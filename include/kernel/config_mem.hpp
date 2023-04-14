@@ -14,6 +14,7 @@ namespace ConfigMem {
 		NetworkState = 0x1FF81067,
 		LedState3D = 0x1FF81084,
 		BatteryState = 0x1FF81085,
+		Unknown1086 = 0x1FF81086,
 		HeadphonesConnectedMaybe = 0x1FF810C0 // TODO: What is actually stored here?
 	};
 
