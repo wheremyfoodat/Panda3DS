@@ -111,6 +111,7 @@ class Memory {
 		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
  	};
 
+public:
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
 	static constexpr u32 pageMask = pageSize - 1;
@@ -125,6 +126,7 @@ class Memory {
 	static constexpr u32 DSP_CODE_MEMORY_OFFSET = 0_KB;
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = 256_KB;
 
+private:
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();

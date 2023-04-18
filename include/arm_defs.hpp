@@ -1,8 +1,9 @@
 #pragma once
+#include <cstdint>
 
 // Status register definitions
 namespace CPSR {
-    enum : u32 {
+    enum : std::uint32_t {
         // Privilege modes
         UserMode = 16,
         FIQMode = 17,
@@ -26,7 +27,7 @@ namespace CPSR {
 
 namespace FPSCR {
     // FPSCR Flags
-    enum : u32 {
+    enum : std::uint32_t {
         Sign = 1U << 31U, // Negative condition flag
         Zero = 1 << 30,   // Zero condition flag
         Carry = 1 << 29,   // Carry condition flag

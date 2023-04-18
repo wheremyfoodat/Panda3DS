@@ -131,6 +131,7 @@ void Kernel::reset() {
 	// which is thankfully not used. Maybe we should prevent this
 	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, -2, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
+	setupIdleThread();
 
 	// Create some of the OS ports
 	srvHandle = makePort("srv:"); // Service manager port

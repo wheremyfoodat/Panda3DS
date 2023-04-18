@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cassert>
 #include <limits>
 #include <string>
 #include <vector>
@@ -19,7 +20,16 @@ class Kernel {
 
 	// The handle number for the next kernel object to be created
 	u32 handleCounter;
-	std::array<Thread, appResourceLimits.maxThreads> threads;
+	// A list of our OS threads, the max number of which depends on the resource limit (hardcoded 32 per process on retail it seems).
+	// We have an extra thread for when no thread is capable of running. This thread is called the "idle thread" in our code
+	// This thread is set up in setupIdleThread and just yields in a loop to see if any other thread has woken up
+	std::array<Thread, appResourceLimits.maxThreads + 1> threads;
+	static constexpr int idleThreadIndex = appResourceLimits.maxThreads;
+	// Our waitlist system uses a bitfield of 64 bits to show which threads are waiting on an object.
+	// That means we can have a maximum of 63 threads + 1 idle thread. This assert should never trigger because the max thread # is 32
+	// But we have it here for safety purposes
+	static_assert(appResourceLimits.maxThreads <= 63, "The waitlist system is built on the premise that <= 63 threads max can be active");
+
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 
@@ -71,6 +81,7 @@ private:
 	s32 getCurrentResourceValue(const KernelObject* limit, u32 resourceName);
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
 	u32 getTLSPointer();
+	void setupIdleThread();
 
 	bool isWaitable(const KernelObject* object);
 
