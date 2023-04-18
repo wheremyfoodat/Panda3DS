@@ -179,7 +179,7 @@ void APTService::setScreencapPostPermission(u32 messagePointer) {
 	log("APT::SetScreencapPostPermission (perm = %d)\n");
 
 	// Apparently only 1-3 are valid values, but I see 0 used in some games like Pokemon Rumble
-	mem.write32(messagePointer, Result::Success);
+	mem.write32(messagePointer + 4, Result::Success);
 	screencapPostPermission = perm;
 }
 
