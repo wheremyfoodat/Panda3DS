@@ -111,6 +111,10 @@ void Kernel::waitSynchronization1() {
 		t.sleepTick = cpu.getTicks();
 		t.waitingNanoseconds = ns;
 		t.waitList[0] = handle;
+
+		// Add the current thread to the object's wait list
+		object->getWaitlist() |= (1ull << currentThreadIndex);
+
 		switchToNextThread();
 	}
 }
@@ -148,8 +152,12 @@ void Kernel::waitSynchronizationN() {
 		}
 
 		if (!isWaitable(object)) [[unlikely]] {
-			//Helpers::panic("Tried to wait on a non waitable object. Type: %s, handle: %X\n", object->getTypeName(), handle);
+			Helpers::panic("Tried to wait on a non waitable object in WaitSyncN. Type: %s, handle: %X\n", 
+				object->getTypeName(), handle);
 		}
+
+		// Add the current thread to the object's wait list
+		object->getWaitlist() |= (1ull << currentThreadIndex);
 	}
 
 	regs[0] = SVCResult::Success;

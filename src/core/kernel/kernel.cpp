@@ -111,6 +111,7 @@ void Kernel::reset() {
 	for (auto& t : threads) {
 		t.status = ThreadStatus::Dead;
 		t.waitList.clear();
+		t.threadsWaitingForTermination = 0; // No threads are waiting for this thread to terminate cause it's dead
 	}
 
 	for (auto& object : objects) {

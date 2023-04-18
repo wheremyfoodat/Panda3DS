@@ -147,6 +147,7 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u
 	t.status = status;
 	t.handle = ret;
 	t.waitingAddress = 0;
+	t.threadsWaitingForTermination = 0; // Thread just spawned, no other threads waiting for it to terminate
 
 	t.cpsr = CPSR::UserMode | (isThumb ? CPSR::Thumb : 0);
 	t.fpscr = FPSCR::ThreadDefault;
@@ -309,6 +310,10 @@ void Kernel::exitThread() {
 	Thread& t = threads[currentThreadIndex];
 	t.status = ThreadStatus::Dead;
 	aliveThreadCount--;
+
+	// Check if any threads are sleeping, waiting for this thread to terminate, and wake them up
+	if (t.threadsWaitingForTermination != 0)
+		Helpers::panic("TODO: Implement threads sleeping until another thread terminates");
 
 	switchToNextThread();
 }
