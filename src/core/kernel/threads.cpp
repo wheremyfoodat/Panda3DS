@@ -83,6 +83,7 @@ void Kernel::switchToNextThread() {
 	if (!newThreadIndex.has_value()) {
 		log("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
 		assert(aliveThreadCount != 0);
+		Helpers::panic("rpog");
 
 		int index;
 		do {
@@ -190,9 +191,12 @@ void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
 		Helpers::panic("Sleeping a thread for a negative amount of ns");
 	} else if (ns == 0) { // Used when we want to force a thread switch
-		int curr = currentThreadIndex;
-		switchToNextThread(); // Mark thread as ready after switching, to avoid switching to the same thread
-		threads[curr].status = ThreadStatus::Ready;
+		std::optional<int> newThreadIndex = getNextThread();
+		// If there's no other thread waiting, don't bother yielding
+		if (newThreadIndex.has_value()) {
+			threads[currentThreadIndex].status = ThreadStatus::Ready;
+			switchThread(newThreadIndex.value());
+		}
 	} else { // If we're sleeping for > 0 ns
 		Thread& t = threads[currentThreadIndex];
 		t.status = ThreadStatus::WaitSleep;

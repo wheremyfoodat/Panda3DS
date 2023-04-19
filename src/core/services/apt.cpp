@@ -25,7 +25,6 @@ namespace APTCommands {
 namespace Result {
 	enum : u32 {
 		Success = 0,
-		Failure = 0xFFFFFFFF
 	};
 }
 
@@ -93,8 +92,10 @@ void APTService::enable(u32 messagePointer) {
 void APTService::initialize(u32 messagePointer) {
 	log("APT::Initialize\n");
 
-	notificationEvent = kernel.makeEvent(ResetType::OneShot);
-	resumeEvent = kernel.makeEvent(ResetType::OneShot);
+	if (!notificationEvent.has_value() || !resumeEvent.has_value()) {
+		notificationEvent = kernel.makeEvent(ResetType::OneShot);
+		resumeEvent = kernel.makeEvent(ResetType::OneShot);
+	}
 
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0x04000000); // Translation descriptor
@@ -103,12 +104,9 @@ void APTService::initialize(u32 messagePointer) {
 }
 
 void APTService::inquireNotification(u32 messagePointer) {
-	log("APT::InquireNotification (STUBBED TO FAIL)\n");
+	log("APT::InquireNotification (STUBBED TO RETURN NONE)\n");
 
-	// Thanks to our silly WaitSynchronization hacks, sometimes games will switch to the APT thread without actually getting a notif
-	// After REing the APT code, I figured that making InquireNotification fail is one way of making games not crash when this happens
-	// We should fix this in the future, when the sync object implementation is less hacky.
-	mem.write32(messagePointer + 4, Result::Failure);
+	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, static_cast<u32>(NotificationType::None)); 
 }
 
@@ -120,7 +118,7 @@ void APTService::getLockHandle(u32 messagePointer) {
 		lockHandle = kernel.makeMutex();
 	}
 
-	mem.write32(messagePointer + 4, Result::Failure); // Result code
+	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // AppletAttr
 	mem.write32(messagePointer + 12, 0); // APT State (bit0 = Power Button State, bit1 = Order To Close State)
 	mem.write32(messagePointer + 16, 0); // Translation descriptor

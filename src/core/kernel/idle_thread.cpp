@@ -51,6 +51,7 @@ void Kernel::setupIdleThread() {
 	std::memcpy(&mem.getFCRAM()[fcramIndex], idleThreadCode, sizeof(idleThreadCode));
 
 	t.entrypoint = codeAddress;
+	t.tlsBase = 0;
 	t.gprs[13] = 0; // Set SP & LR to 0 just in case. The idle thread should never access memory, but let's be safe
 	t.gprs[14] = 0;
 	t.gprs[15] = codeAddress;
