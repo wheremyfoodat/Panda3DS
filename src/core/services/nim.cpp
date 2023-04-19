@@ -1,4 +1,5 @@
 #include "services/nim.hpp"
+#include "ipc.hpp"
 
 namespace NIMCommands {
 	enum : u32 {
@@ -24,5 +25,6 @@ void NIMService::handleSyncRequest(u32 messagePointer) {
 
 void NIMService::initialize(u32 messagePointer) {
 	log("NIM::Initialize\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x21, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

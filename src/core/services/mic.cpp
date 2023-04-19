@@ -1,4 +1,5 @@
 #include "services/mic.hpp"
+#include "ipc.hpp"
 
 namespace MICCommands {
 	enum : u32 {
@@ -41,11 +42,13 @@ void MICService::mapSharedMem(u32 messagePointer) {
 	u32 handle = mem.read32(messagePointer + 12);
 
 	log("MIC::MapSharedMem (size = %08X, handle = %X) (stubbed)\n", size, handle);
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void MICService::getGain(u32 messagePointer) {
 	log("MIC::GetGain\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, gain);
 }
@@ -54,6 +57,7 @@ void MICService::setGain(u32 messagePointer) {
 	gain = mem.read8(messagePointer + 4);
 	log("MIC::SetGain (value = %d)\n", gain);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -62,6 +66,7 @@ void MICService::setPower(u32 messagePointer) {
 	log("MIC::SetPower (value = %d)\n", val);
 
 	micEnabled = val != 0;
+	mem.write32(messagePointer, IPC::responseHeader(0xA, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -70,6 +75,7 @@ void MICService::setClamp(u32 messagePointer) {
 	log("MIC::SetClamp (value = %d)\n", val);
 
 	shouldClamp = val != 0;
+	mem.write32(messagePointer, IPC::responseHeader(0xD, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -84,5 +90,6 @@ void MICService::startSampling(u32 messagePointer) {
 		encoding, sampleRate, offset, dataSize, loop ? "yes" : "no"
 	);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

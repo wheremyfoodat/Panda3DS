@@ -1,4 +1,5 @@
 #include "services/boss.hpp"
+#include "ipc.hpp"
 
 namespace BOSSCommands {
 	enum : u32 {
@@ -40,22 +41,26 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 
 void BOSSService::initializeSession(u32 messagePointer) {
 	log("BOSS::InitializeSession (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::getOptoutFlag(u32 messagePointer) {
 	log("BOSS::getOptoutFlag\n");
+	mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, optoutFlag);
 }
 
 void BOSSService::getTaskIdList(u32 messagePointer) {
 	log("BOSS::GetTaskIdList (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0xE, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::getStorageEntryInfo(u32 messagePointer) {
 	log("BOSS::GetStorageEntryInfo (undocumented)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x30, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // u32, unknown meaning
 	mem.write16(messagePointer + 12, 0); // s16, unknown meaning
@@ -67,21 +72,25 @@ void BOSSService::receiveProperty(u32 messagePointer) {
 	const u32 ptr = mem.read32(messagePointer + 16);
 
 	log("BOSS::ReceiveProperty(stubbed) (id = %d, size = %08X, ptr = %08X)\n", id, size, ptr);
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Read size
 }
 
 void BOSSService::unregisterTask(u32 messagePointer) {
 	log("BOSS::UnregisterTask (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::registerStorageEntry(u32 messagePointer) {
 	log("BOSS::RegisterStorageEntry (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x2F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::unregisterStorage(u32 messagePointer) {
 	log("BOSS::UnregisterStorage (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

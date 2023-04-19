@@ -1,4 +1,5 @@
 #include "services/frd.hpp"
+#include "ipc.hpp"
 
 namespace FRDCommands {
 	enum : u32 {
@@ -33,6 +34,7 @@ void FRDService::handleSyncRequest(u32 messagePointer) {
 void FRDService::getMyFriendKey(u32 messagePointer) {
 	log("FRD::GetMyFriendKey\n");
 
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 5, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0);  // Principal ID
 	mem.write32(messagePointer + 12, 0); // Padding (?)
@@ -46,6 +48,7 @@ void FRDService::getFriendKeyList(u32 messagePointer) {
 	const u32 count = mem.read32(messagePointer + 8); // From what I understand this is a cap on the number of keys to receive?
 	constexpr u32 friendCount = 0; // And this should be the number of friends whose keys were actually received?
 
+	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, friendCount);
 
@@ -64,6 +67,7 @@ void FRDService::getMyPresence(u32 messagePointer) {
 		mem.write32(buffer + i, 0);
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -71,10 +75,13 @@ void FRDService::setClientSDKVersion(u32 messagePointer) {
 	u32 version = mem.read32(messagePointer + 4);
 	log("FRD::SetClientSdkVersion (version = %d)\n", version);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x32, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void FRDService::setNotificationMask(u32 messagePointer) {
 	log("FRD::SetNotificationMask (Not documented)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x21, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

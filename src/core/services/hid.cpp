@@ -1,4 +1,5 @@
 #include "services/hid.hpp"
+#include "ipc.hpp"
 #include <bit>
 
 namespace HIDCommands {
@@ -38,20 +39,25 @@ void HIDService::handleSyncRequest(u32 messagePointer) {
 
 void HIDService::enableAccelerometer(u32 messagePointer) {
 	log("HID::EnableAccelerometer\n");
-	mem.write32(messagePointer + 4, Result::Success);
 	accelerometerEnabled = true;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x11, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void HIDService::enableGyroscopeLow(u32 messagePointer) {
 	log("HID::EnableGyroscopeLow\n");
-	mem.write32(messagePointer + 4, Result::Success);
 	gyroEnabled = true;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x13, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void HIDService::getGyroscopeLowCalibrateParam(u32 messagePointer) {
 	log("HID::GetGyroscopeLowCalibrateParam\n");
 	constexpr s16 unit = 6700; // Approximately from Citra which took it from hardware
 
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 6, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	// Fill calibration data (for x/y/z depending on i)
 	for (int i = 0; i < 3; i++) {
@@ -67,12 +73,14 @@ void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 	log("HID::GetGyroscopeLowRawToDpsCoefficient\n");
 
 	constexpr float gyroscopeCoeff = 14.375f; // Same as retail 3DS
+	mem.write32(messagePointer, IPC::responseHeader(0x15, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, std::bit_cast<u32, float>(gyroscopeCoeff));
 }
 
 void HIDService::getIPCHandles(u32 messagePointer) {
 	log("HID::GetIPCHandles\n");
+	mem.write32(messagePointer, IPC::responseHeader(0xA, 1, 7));
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0x14000000); // Translation descriptor
 	mem.write32(messagePointer + 12, KernelHandles::HIDSharedMemHandle); // Shared memory handle

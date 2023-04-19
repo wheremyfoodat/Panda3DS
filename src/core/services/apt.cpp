@@ -1,4 +1,5 @@
 #include "services/apt.hpp"
+#include "ipc.hpp"
 #include "kernel.hpp"
 
 namespace APTCommands {
@@ -69,11 +70,13 @@ void APTService::appletUtility(u32 messagePointer) {
 
 	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X)\n", utility, inputSize,
 		outputSize, inputPointer);
+	mem.write32(messagePointer, IPC::responseHeader(0x4B, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void APTService::checkNew3DS(u32 messagePointer) {
 	log("APT::CheckNew3DS\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x102, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, (model == ConsoleModel::New3DS) ? 1 : 0); // u8, Status (0 = Old 3DS, 1 = New 3DS)
 }
@@ -81,11 +84,14 @@ void APTService::checkNew3DS(u32 messagePointer) {
 // TODO: Figure out the slight way this differs from APT::CheckNew3DS
 void APTService::checkNew3DSApp(u32 messagePointer) {
 	log("APT::CheckNew3DSApp\n");
-	checkNew3DS(messagePointer);
+	mem.write32(messagePointer, IPC::responseHeader(0x101, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, (model == ConsoleModel::New3DS) ? 1 : 0); // u8, Status (0 = Old 3DS, 1 = New 3DS)
 }
 
 void APTService::enable(u32 messagePointer) {
 	log("APT::Enable\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -97,6 +103,7 @@ void APTService::initialize(u32 messagePointer) {
 		resumeEvent = kernel.makeEvent(ResetType::OneShot);
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 3));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0x04000000); // Translation descriptor
 	mem.write32(messagePointer + 12, notificationEvent.value()); // Notification Event Handle
@@ -106,6 +113,7 @@ void APTService::initialize(u32 messagePointer) {
 void APTService::inquireNotification(u32 messagePointer) {
 	log("APT::InquireNotification (STUBBED TO RETURN NONE)\n");
 
+	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, static_cast<u32>(NotificationType::None)); 
 }
@@ -118,6 +126,7 @@ void APTService::getLockHandle(u32 messagePointer) {
 		lockHandle = kernel.makeMutex();
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 3, 2));
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // AppletAttr
 	mem.write32(messagePointer + 12, 0); // APT State (bit0 = Power Button State, bit1 = Order To Close State)
@@ -128,6 +137,7 @@ void APTService::getLockHandle(u32 messagePointer) {
 // This apparently does nothing on the original kernel either?
 void APTService::notifyToWait(u32 messagePointer) {
 	log("APT::NotifyToWait\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x43, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -139,6 +149,7 @@ void APTService::receiveParameter(u32 messagePointer) {
 	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
 
 	// TODO: Properly implement this. We currently stub it in the same way as 3dmoo
+	mem.write32(messagePointer, IPC::responseHeader(0xD, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Sender App ID
 	mem.write32(messagePointer + 12, 1); // Signal type (1 = app just started, 0xB = returning to app, 0xC = exiting app)
@@ -150,6 +161,7 @@ void APTService::receiveParameter(u32 messagePointer) {
 
 void APTService::replySleepQuery(u32 messagePointer) {
 	log("APT::ReplySleepQuery (Stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x3E, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -161,6 +173,7 @@ void APTService::setApplicationCpuTimeLimit(u32 messagePointer) {
 	if (percentage < 5 || percentage > 89 || fixed != 1) {
 		Helpers::panic("Invalid parameters passed to APT::SetApplicationCpuTimeLimit");
 	} else {
+		mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
 		mem.write32(messagePointer + 4, Result::Success);
 		cpuTimeLimit = percentage;
 	}
@@ -168,6 +181,7 @@ void APTService::setApplicationCpuTimeLimit(u32 messagePointer) {
 
 void APTService::getApplicationCpuTimeLimit(u32 messagePointer) {
 	log("APT::GetApplicationCpuTimeLimit\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x50, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, cpuTimeLimit);
 }
@@ -176,6 +190,7 @@ void APTService::setScreencapPostPermission(u32 messagePointer) {
 	u32 perm = mem.read32(messagePointer + 4);
 	log("APT::SetScreencapPostPermission (perm = %d)\n");
 
+	mem.write32(messagePointer, IPC::responseHeader(0x55, 1, 0));
 	// Apparently only 1-3 are valid values, but I see 0 used in some games like Pokemon Rumble
 	mem.write32(messagePointer + 4, Result::Success);
 	screencapPostPermission = perm;
@@ -185,6 +200,7 @@ void APTService::getSharedFont(u32 messagePointer) {
 	log("APT::GetSharedFont\n");
 
 	constexpr u32 fontVaddr = 0x18000000;
+	mem.write32(messagePointer, IPC::responseHeader(0x44, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, fontVaddr);
 	mem.write32(messagePointer + 16, KernelHandles::FontSharedMemHandle);
@@ -195,6 +211,7 @@ void APTService::getSharedFont(u32 messagePointer) {
 void APTService::theSmashBrosFunction(u32 messagePointer) {
 	log("APT: Called the elusive Smash Bros function\n");
 
+	mem.write32(messagePointer, IPC::responseHeader(0x103, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, (model == ConsoleModel::New3DS) ? 2 : 1);
 }
@@ -206,6 +223,7 @@ void APTService::getWirelessRebootInfo(u32 messagePointer) {
 	if (size > 0x10)
 		Helpers::panic("APT::GetWirelessInfo with size > 0x10 bytes");
 
+	mem.write32(messagePointer, IPC::responseHeader(0x45, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	for (u32 i = 0; i < size; i++) {
 		mem.write8(messagePointer + 0x104 + i, 0); // Temporarily stub this until we add SetWirelessRebootInfo

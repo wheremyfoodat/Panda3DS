@@ -1,4 +1,5 @@
 #include "services/y2r.hpp"
+#include "ipc.hpp"
 #include "kernel.hpp"
 
 namespace Y2RCommands {
@@ -34,12 +35,14 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 
 void Y2RService::pingProcess(u32 messagePointer) {
 	log("Y2R::PingProcess\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x2A, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Connected number
 }
 
 void Y2RService::driverInitialize(u32 messagePointer) {
 	log("Y2R::DriverInitialize\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x2B, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -48,6 +51,7 @@ void Y2RService::getTransferEndEvent(u32 messagePointer) {
 	if (!transferEndEvent.has_value())
 		transferEndEvent = kernel.makeEvent(ResetType::OneShot);
 
+	mem.write32(messagePointer, IPC::responseHeader(0xF, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 12, transferEndEvent.value());
 }
@@ -56,6 +60,7 @@ void Y2RService::setTransferEndInterrupt(u32 messagePointer) {
 	const bool enable = mem.read32(messagePointer + 4) != 0;
 	log("Y2R::SetTransferEndInterrupt (enabled: %s)\n", enable ? "yes" : "no");
 
+	mem.write32(messagePointer, IPC::responseHeader(0xD, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	transferEndInterruptEnabled = enable;
 }

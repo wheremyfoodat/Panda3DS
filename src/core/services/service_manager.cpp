@@ -1,5 +1,6 @@
 #include "services/service_manager.hpp"
 #include <map>
+#include "ipc.hpp"
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
@@ -79,6 +80,7 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 // https://www.3dbrew.org/wiki/SRV:RegisterClient
 void ServiceManager::registerClient(u32 messagePointer) {
 	log("srv::registerClient (Stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -121,6 +123,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	else
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
 
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 12, handle);
 }
@@ -133,6 +136,7 @@ void ServiceManager::enableNotification(u32 messagePointer) {
 		notificationSemaphore = kernel.makeSemaphore(0, MAX_NOTIFICATION_COUNT);
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // Translation descriptor
 	// Handle to semaphore signaled on process notification
@@ -142,6 +146,7 @@ void ServiceManager::enableNotification(u32 messagePointer) {
 void ServiceManager::receiveNotification(u32 messagePointer) {
 	log("srv::ReceiveNotification() (STUBBED)\n");
 
+	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0); // Notification ID
 }
@@ -150,6 +155,7 @@ void ServiceManager::subscribe(u32 messagePointer) {
 	u32 id = mem.read32(messagePointer + 4);
 	log("srv::Subscribe (id = %d) (stubbed)\n", id);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
