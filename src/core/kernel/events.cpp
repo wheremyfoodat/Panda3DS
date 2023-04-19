@@ -103,6 +103,12 @@ void Kernel::waitSynchronization1() {
 	if (!shouldWaitOnObject(object)) {
 		regs[0] = SVCResult::Success;
 	} else {
+		// Timeout is 0, don't bother waiting, instantly timeout
+		if (ns == 0) {
+			regs[0] = SVCResult::Timeout;
+			return;
+		}
+
 		regs[0] = SVCResult::Success;
 
 		auto& t = threads[currentThreadIndex];

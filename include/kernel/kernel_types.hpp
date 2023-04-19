@@ -23,6 +23,9 @@ namespace SVCResult {
 
         BadThreadPriority = 0xE0E01BFD,
         PortNameTooLong = 0xE0E0181E,
+
+        // Returned when a thread stops waiting due to timing out
+        Timeout = 0x9401BFE,
 	};
 }
 
