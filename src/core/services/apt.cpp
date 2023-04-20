@@ -101,6 +101,8 @@ void APTService::initialize(u32 messagePointer) {
 	if (!notificationEvent.has_value() || !resumeEvent.has_value()) {
 		notificationEvent = kernel.makeEvent(ResetType::OneShot);
 		resumeEvent = kernel.makeEvent(ResetType::OneShot);
+
+		kernel.signalEvent(resumeEvent.value()); // Seems to be signalled on startup
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 3));

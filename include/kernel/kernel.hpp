@@ -62,6 +62,8 @@ public:
 	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
 	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
 
+	// Signals an event, returns true on success or false if the event does not exist
+	bool signalEvent(Handle e);
 private:
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThread(s64 ns);
@@ -103,9 +105,7 @@ private:
 
 	// SVC implementations
 	void arbitrateAddress();
-	void clearEvent();
 	void createAddressArbiter();
-	void createEvent();
 	void createMemoryBlock();
 	void createThread();
 	void controlMemory();
@@ -123,10 +123,12 @@ private:
 	void getThreadPriority();
 	void sendSyncRequest();
 	void setThreadPriority();
-	void signalEvent();
+	void svcClearEvent();
 	void svcCloseHandle();
+	void svcCreateEvent();
 	void svcCreateMutex();
 	void svcReleaseMutex();
+	void svcSignalEvent();
 	void svcSleepThread();
 	void connectToPort();
 	void outputDebugString();

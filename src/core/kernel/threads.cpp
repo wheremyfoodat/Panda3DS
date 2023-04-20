@@ -47,12 +47,14 @@ void Kernel::sortThreads() {
 bool Kernel::canThreadRun(const Thread& t) {
 	if (t.status == ThreadStatus::Ready) {
 		return true;
-	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAll) {
+	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 
+		|| t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
 		const u64 elapsedTicks = cpu.getTicks() - t.sleepTick;
 
 		constexpr double ticksPerSec = double(CPU::ticksPerSec);
 		constexpr double nsPerTick = ticksPerSec / 1000000000.0;
 
+		// TODO: Set r0 to the correct error code on timeout for WaitSync{1/Any/All}
 		const s64 elapsedNs = s64(double(elapsedTicks) * nsPerTick);
 		return elapsedNs >= t.waitingNanoseconds;
 	}
@@ -193,12 +195,21 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	switchToNextThread();
 }
 
+// Acquires an object that is **ready to be acquired** without waiting on it
 void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 	switch (object->type) {
 		case KernelObjectType::Mutex: {
 			Mutex* moo = object->getData<Mutex>();
 			moo->locked = true;
 			moo->ownerThread = thread.index;
+			break;
+		}
+
+		case KernelObjectType::Event: {
+			Event* e = object->getData<Event>();
+			if (e->resetType == ResetType::OneShot) { // One-shot events automatically get cleared after waking up a thread
+				e->fired = false;
+			}
 			break;
 		}
 

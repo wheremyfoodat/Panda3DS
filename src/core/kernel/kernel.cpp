@@ -35,9 +35,9 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x0C: setThreadPriority(); break;
 		case 0x13: svcCreateMutex(); break;
 		case 0x14: svcReleaseMutex(); break;
-		case 0x17: createEvent(); break;
-		case 0x18: signalEvent(); break;
-		case 0x19: clearEvent(); break;
+		case 0x17: svcCreateEvent(); break;
+		case 0x18: svcSignalEvent(); break;
+		case 0x19: svcClearEvent(); break;
 		case 0x1E: createMemoryBlock(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
