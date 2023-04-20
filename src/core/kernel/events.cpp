@@ -213,9 +213,8 @@ void Kernel::waitSynchronizationN() {
 			return;
 		}
 
-		Helpers::panic("WaitSyncAny can't instantly acquire :(");
-		regs[0] = SVCResult::Success;
-		regs[1] = handleCount - 1;     // FIX THIS
+		regs[0] = SVCResult::Success; // If the thread times out, this should be adjusted to SVCResult::Timeout
+		regs[1] = handleCount - 1; // When the thread exits, this will be adjusted to mirror which handle woke us up
 		t.waitList.resize(handleCount);
 		t.status = ThreadStatus::WaitSyncAny;
 		t.outPointer = outPointer;

@@ -1,5 +1,6 @@
 #include "services/gsp_gpu.hpp"
 #include "ipc.hpp"
+#include "kernel.hpp"
 
 // Commands used with SendSyncRequest targetted to the GSP::GPU service
 namespace ServiceCommands {
@@ -38,6 +39,7 @@ namespace Result {
 
 void GPUService::reset() {
 	privilegedProcess = 0xFFFFFFFF; // Set the privileged process to an invalid handle
+	interruptEvent = std::nullopt;
 	sharedMem = nullptr;
 }
 
@@ -90,6 +92,13 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 	const u32 eventHandle = mem.read32(messagePointer + 12);
 	log("GSP::GPU::RegisterInterruptRelayQueue (flags = %X, event handle = %X)\n", flags, eventHandle);
 
+	const auto event = kernel.getObject(eventHandle, KernelObjectType::Event);
+	if (event == nullptr) { // Check if interrupt event is invalid
+		Helpers::panic("Invalid event passed to GSP::GPU::RegisterInterruptRelayQueue");
+	} else {
+		interruptEvent = eventHandle;
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x13, 2, 2));
 	mem.write32(messagePointer + 4, Result::SuccessRegisterIRQ); // First init returns a unique result
 	mem.write32(messagePointer + 8, 0); // TODO: GSP module thread index
@@ -109,6 +118,11 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	
 	sharedMem[2] = 0; // Set error code to 0
 	sharedMem[0xC + flagIndex] = static_cast<u8>(type); // Write interrupt type to queue
+
+	// Signal interrupt event
+	if (interruptEvent.has_value()) {
+		kernel.signalEvent(interruptEvent.value());
+	}
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {
