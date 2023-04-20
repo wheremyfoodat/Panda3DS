@@ -104,7 +104,8 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "mic:u", KernelHandles::MIC },
 	{ "ndm:u", KernelHandles::NDM },
 	{ "nim:aoc", KernelHandles::NIM },
-	{ "ptm:u", KernelHandles::PTM },
+	{ "ptm:u", KernelHandles::PTM }, // TODO: ptm:u and ptm:sysm have very different command sets
+	{ "ptm:sysm", KernelHandles::PTM },
 	{ "y2r:u", KernelHandles::Y2R }
 };
 
