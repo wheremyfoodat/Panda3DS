@@ -171,6 +171,13 @@ Handle Kernel::makeMutex(bool locked) {
 	return ret;
 }
 
+void Kernel::releaseMutex(Mutex* moo) {
+	moo->locked = false;
+	if (moo->waitlist != 0) {
+		Helpers::panic("Mutex got freed while it's got more threads waiting for it. Must make a new thread claim it.");
+	}
+}
+
 Handle Kernel::makeSemaphore(u32 initialCount, u32 maximumCount) {
 	Handle ret = makeObject(KernelObjectType::Semaphore);
 	objects[ret].data = new Semaphore(initialCount, maximumCount);
@@ -335,7 +342,7 @@ void Kernel::exitThread() {
 	switchToNextThread();
 }
 
-void Kernel::createMutex() {
+void Kernel::svcCreateMutex() {
 	bool locked = regs[1] != 0;
 	logSVC("CreateMutex (locked = %s)\n", locked ? "yes" : "no");
 
@@ -343,10 +350,24 @@ void Kernel::createMutex() {
 	regs[1] = makeMutex(locked);
 }
 
-void Kernel::releaseMutex() {
+void Kernel::svcReleaseMutex() {
 	const Handle handle = regs[0];
-
 	logSVC("ReleaseMutex (handle = %x) (STUBBED)\n", handle);
+
+	const auto object = getObject(handle, KernelObjectType::Mutex);
+	if (object == nullptr) [[unlikely]] {
+		Helpers::panic("Tried to release non-existent mutex");
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	Mutex* moo = object->getData<Mutex>();
+	// A thread can't release a mutex it does not own
+	if (!moo->locked || moo->ownerThread != currentThreadIndex) {
+		Helpers::panic("[ReleaseMutex] Tried to release mutex that does not belong to thread");
+	}
+
+	releaseMutex(moo);
 	regs[0] = SVCResult::Success;
 }
 

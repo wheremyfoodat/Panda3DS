@@ -73,6 +73,7 @@ private:
 	void rescheduleThreads();
 	bool canThreadRun(const Thread& t);
 	bool shouldWaitOnObject(KernelObject* object);
+	void releaseMutex(Mutex* moo);
 
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);
@@ -106,7 +107,6 @@ private:
 	void createAddressArbiter();
 	void createEvent();
 	void createMemoryBlock();
-	void createMutex();
 	void createThread();
 	void controlMemory();
 	void duplicateHandle();
@@ -121,11 +121,12 @@ private:
 	void getSystemTick();
 	void getThreadID();
 	void getThreadPriority();
-	void releaseMutex();
 	void sendSyncRequest();
 	void setThreadPriority();
 	void signalEvent();
 	void svcCloseHandle();
+	void svcCreateMutex();
+	void svcReleaseMutex();
 	void svcSleepThread();
 	void connectToPort();
 	void outputDebugString();
