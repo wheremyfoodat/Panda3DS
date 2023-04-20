@@ -34,6 +34,7 @@ class APTService {
 	void enable(u32 messagePointer);
 	void getSharedFont(u32 messagePointer);
 	void getWirelessRebootInfo(u32 messagePointer);
+	void glanceParameter(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void inquireNotification(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);

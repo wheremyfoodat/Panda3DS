@@ -9,6 +9,7 @@ namespace APTCommands {
 		Enable = 0x00030040,
 		InquireNotification = 0x000B0040,
 		ReceiveParameter = 0x000D0080,
+		GlanceParameter = 0x000E0080,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		GetSharedFont = 0x00440000,
@@ -26,6 +27,31 @@ namespace APTCommands {
 namespace Result {
 	enum : u32 {
 		Success = 0,
+	};
+}
+
+// https://www.3dbrew.org/wiki/NS_and_APT_Services#Command
+namespace APTTransitions {
+	enum : u32 {
+		None = 0,
+		Wakeup = 1,
+		Request = 2,
+		Response = 3,
+		Exit = 4,
+		Message = 5,
+		HomeButtonSingle = 6,
+		HomeButtonDouble = 7,
+		DSPSleep = 8,
+		DSPWakeup = 9,
+		WakeupByExit = 10,
+		WakuepByPause = 11,
+		WakeupByCancel = 12,
+		WakeupByCancelAll = 13,
+		WakeupByPowerButton = 14,
+		WakeupToJumpHome = 15,
+		RequestForApplet = 16,
+		WakeupToLaunchApp = 17,
+		ProcessDed = 0x41
 	};
 }
 
@@ -52,6 +78,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::GetWirelessRebootInfo: getWirelessRebootInfo(messagePointer); break;
+		case APTCommands::GlanceParameter: glanceParameter(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
@@ -150,12 +177,30 @@ void APTService::receiveParameter(u32 messagePointer) {
 
 	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
 
-	// TODO: Properly implement this. We currently stub it in the same way as 3dmoo
+	// TODO: Properly implement this. We currently stub somewhat like 3dmoo
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Sender App ID
-	mem.write32(messagePointer + 12, 1); // Signal type (1 = app just started, 0xB = returning to app, 0xC = exiting app)
-	mem.write32(messagePointer + 16, 0x10);
+	mem.write32(messagePointer + 12, APTTransitions::Wakeup); // Command
+	mem.write32(messagePointer + 16, 0);
+	mem.write32(messagePointer + 20, 0x10);
+	mem.write32(messagePointer + 24, 0);
+	mem.write32(messagePointer + 28, 0);
+}
+
+void APTService::glanceParameter(u32 messagePointer) {
+	const u32 app = mem.read32(messagePointer + 4);
+	const u32 size = mem.read32(messagePointer + 8);
+	log("APT::GlanceParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
+
+	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
+
+	// TODO: Properly implement this. We currently stub it similar
+	mem.write32(messagePointer, IPC::responseHeader(0xE, 4, 4));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0); // Sender App ID
+	mem.write32(messagePointer + 12, APTTransitions::Wakeup); // Command
+	mem.write32(messagePointer + 16, 0);
 	mem.write32(messagePointer + 20, 0);
 	mem.write32(messagePointer + 24, 0);
 	mem.write32(messagePointer + 28, 0);
