@@ -83,6 +83,7 @@ private:
 	u32 getTLSPointer();
 	void setupIdleThread();
 
+	void acquireSyncObject(KernelObject* object, const Thread& thread);
 	bool isWaitable(const KernelObject* object);
 
 	// Functions for the err:f port

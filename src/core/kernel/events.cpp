@@ -101,6 +101,7 @@ void Kernel::waitSynchronization1() {
 	}
 
 	if (!shouldWaitOnObject(object)) {
+		acquireSyncObject(object, threads[currentThreadIndex]); // Acquire the object since it's ready
 		regs[0] = SVCResult::Success;
 	} else {
 		// Timeout is 0, don't bother waiting, instantly timeout

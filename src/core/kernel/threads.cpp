@@ -186,6 +186,19 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	switchToNextThread();
 }
 
+void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
+	switch (object->type) {
+		case KernelObjectType::Mutex: {
+			Mutex* moo = object->getData<Mutex>();
+			moo->locked = true;
+			moo->ownerThread = thread.index;
+			break;
+		}
+
+		default: Helpers::panic("Acquiring unimplemented sync object %s", object->getTypeName());
+	}
+}
+
 // Make a thread sleep for a certain amount of nanoseconds at minimum
 void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
@@ -353,8 +366,19 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 		case KernelObjectType::Event: // We should wait on an event only if it has not been signalled
 			return !object->getData<Event>()->fired;
 
+		case KernelObjectType::Mutex: {
+			Mutex* moo = object->getData<Mutex>(); // mooooooooooo
+			return moo->locked && moo->ownerThread != currentThreadIndex; // If the current thread owns the moo then no reason to wait
+		}
+
+		case KernelObjectType::Thread: // Waiting on a thread waits until it's dead. If it's dead then no need to wait
+			return object->getData<Thread>()->status != ThreadStatus::Dead;
+
+		case KernelObjectType::Semaphore:
+			Helpers::panic("No semaphore :(");
+
 		default:
-			logThread("Not sure whether to wait on object (type: %s)", object->getTypeName());
+			Helpers::panic("Not sure whether to wait on object (type: %s)", object->getTypeName());
 			return true;
 	}
 }

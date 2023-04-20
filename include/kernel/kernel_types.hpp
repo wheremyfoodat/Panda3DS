@@ -211,7 +211,7 @@ struct KernelObject {
         return static_cast<T*>(data);
     }
 
-    const char* getTypeName() {
+    const char* getTypeName() const {
         return kernelObjectTypeToString(type);
     }
 
