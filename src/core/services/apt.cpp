@@ -193,7 +193,7 @@ void APTService::glanceParameter(u32 messagePointer) {
 	const u32 size = mem.read32(messagePointer + 8);
 	log("APT::GlanceParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
 
-	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
+	if (size > 0x1000) Helpers::panic("APT::GlanceParameter with size > 0x1000");
 
 	// TODO: Properly implement this. We currently stub it similar
 	mem.write32(messagePointer, IPC::responseHeader(0xE, 4, 4));
