@@ -352,7 +352,7 @@ void Kernel::svcCreateMutex() {
 
 void Kernel::svcReleaseMutex() {
 	const Handle handle = regs[0];
-	logSVC("ReleaseMutex (handle = %x) (STUBBED)\n", handle);
+	logSVC("ReleaseMutex (handle = %x)\n", handle);
 
 	const auto object = getObject(handle, KernelObjectType::Mutex);
 	if (object == nullptr) [[unlikely]] {
