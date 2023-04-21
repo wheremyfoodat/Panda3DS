@@ -177,7 +177,7 @@ struct Mutex {
     u32 lockCount; // Number of times this mutex has been locked by its daddy. 0 = not locked
     bool locked;
 
-    Mutex(bool lock = false) : locked(lock), waitlist(0), lockCount(0) {}
+    Mutex(bool lock = false) : locked(lock), waitlist(0), lockCount(lock ? 1 : 0) {}
 };
 
 struct Semaphore {

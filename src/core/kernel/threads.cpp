@@ -169,7 +169,6 @@ Handle Kernel::makeMutex(bool locked) {
 	if (locked) {
 		Mutex* moo = objects[ret].getData<Mutex>();
 		moo->ownerThread = currentThreadIndex;
-		moo->lockCount = 1;
 	}
 
 	return ret;
