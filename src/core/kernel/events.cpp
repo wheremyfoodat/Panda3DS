@@ -1,5 +1,6 @@
 #include "kernel.hpp"
 #include "cpu.hpp"
+#include <bit>
 #include <utility>
 
 const char* Kernel::resetTypeToString(u32 type) {
@@ -27,29 +28,39 @@ bool Kernel::signalEvent(Handle handle) {
 	Event* event = object->getData<Event>();
 	event->fired = true;
 
-	if (event->waitlist != 0) {
-		Helpers::panic("Tried to signal event with a waitlist");
+	// One shot events go back to being not fired once they wake up one or more thread
+	if (event->waitlist != 0 && event->resetType == ResetType::OneShot) {
+		event->fired = false;
 	}
-	/*
-	switch (event->resetType) {
-		case ResetType::OneShot:
-			for (int i = 0; i < threadCount; i++) {
-				Thread& t = threads[i];
 
-				if (t.status == ThreadStatus::WaitSync1 && t.waitList[0] == handle) {
-					t.status = ThreadStatus::Ready;
-					break;
-				}
-				else if (t.status == ThreadStatus::WaitSyncAll) {
-					Helpers::panic("Trying to SignalEvent when a thread is waiting on multiple objects");
-				}
-			}
-			break;
+	// Wake up every single thread in the waitlist using a bit scanning algorithm
+	while (event->waitlist != 0) {
+		const uint index = std::countr_zero(event->waitlist); // Get one of the set bits to see which thread is waiting
+		event->waitlist ^= (1ull << index); // Remove thread from waitlist by toggling its bit
 
-		default:
-			Helpers::panic("Signaled event of unimplemented type: %d", event->resetType);
+		// Get the thread we'll be signalling
+		Thread& t = threads[index];
+		switch (t.status) {
+			case ThreadStatus::WaitSync1:
+				t.status = ThreadStatus::Ready;
+				break;
+
+			case ThreadStatus::WaitSyncAny:
+				t.status = ThreadStatus::Ready;
+				// Get the index of the event in the object's waitlist, write it to r1
+				for (size_t i = 0; i < t.waitList.size(); i++) {
+					if (t.waitList[i] == handle) {
+						t.gprs[1] = i;
+						break;
+					}
+				}
+				break;
+
+			case ThreadStatus::WaitSyncAll:
+				Helpers::panic("SignalEvent: Thread on WaitSyncAll");
+				break;
+		}
 	}
-	*/
 
 	return true;
 }

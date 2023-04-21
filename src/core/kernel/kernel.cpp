@@ -15,6 +15,7 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 		t.index = i;
 		t.tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
 		t.status = ThreadStatus::Dead;
+		t.waitList.clear();
 		t.waitList.reserve(10); // Reserve some space for the wait list to avoid further memory allocs later
 		// The state below isn't necessary to initialize but we do it anyways out of caution
 		t.outPointer = 0;

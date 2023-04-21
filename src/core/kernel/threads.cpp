@@ -165,18 +165,26 @@ Handle Kernel::makeMutex(bool locked) {
 	Handle ret = makeObject(KernelObjectType::Mutex);
 	objects[ret].data = new Mutex(locked);
 
-	// If the mutex is initially locked, store the index of the thread that owns it
+	// If the mutex is initially locked, store the index of the thread that owns it and set lock count to 1
 	if (locked) {
-		objects[ret].getData<Mutex>()->ownerThread = currentThreadIndex;
+		Mutex* moo = objects[ret].getData<Mutex>();
+		moo->ownerThread = currentThreadIndex;
+		moo->lockCount = 1;
 	}
 
 	return ret;
 }
 
 void Kernel::releaseMutex(Mutex* moo) {
-	moo->locked = false;
-	if (moo->waitlist != 0) {
-		Helpers::panic("Mutex got freed while it's got more threads waiting for it. Must make a new thread claim it.");
+	// TODO: Assert lockCount > 0 before release, maybe. The SVC should be safe at least.
+	moo->lockCount--; // Decrement lock count
+
+	// If the lock count reached 0 then the thread no longer owns the mootex and it can be given to a new one
+	if (moo->lockCount == 0) {
+		moo->locked = false;
+		if (moo->waitlist != 0) {
+			Helpers::panic("Mutex got freed while it's got more threads waiting for it. Must make a new thread claim it.");
+		}
 	}
 }
 
@@ -200,7 +208,10 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 	switch (object->type) {
 		case KernelObjectType::Mutex: {
 			Mutex* moo = object->getData<Mutex>();
-			moo->locked = true;
+			moo->locked = true; // Set locked to true, whether it's false or not because who cares
+			// Increment lock count by 1. If a thread acquires a mootex multiple times, it needs to release it until count == 0
+			// For the mootex to be free.
+			moo->lockCount++;
 			moo->ownerThread = thread.index;
 			break;
 		}
@@ -375,7 +386,8 @@ void Kernel::svcReleaseMutex() {
 	Mutex* moo = object->getData<Mutex>();
 	// A thread can't release a mutex it does not own
 	if (!moo->locked || moo->ownerThread != currentThreadIndex) {
-		Helpers::panic("[ReleaseMutex] Tried to release mutex that does not belong to thread");
+		regs[0] = SVCResult::InvalidMutexRelease;
+		return;
 	}
 
 	releaseMutex(moo);

@@ -26,6 +26,9 @@ namespace SVCResult {
 
         // Returned when a thread stops waiting due to timing out
         Timeout = 0x9401BFE,
+
+        // Returned when a thread releases a mutex it does not own
+        InvalidMutexRelease = 0xD8E0041F
 	};
 }
 
@@ -171,9 +174,10 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
 struct Mutex {
     u64 waitlist;           // Refer to the getWaitlist function below for documentation
     Handle ownerThread = 0; // Index of the thread that holds the mutex if it's locked
+    u32 lockCount; // Number of times this mutex has been locked by its daddy. 0 = not locked
     bool locked;
 
-    Mutex(bool lock = false) : locked(lock), waitlist(0) {}
+    Mutex(bool lock = false) : locked(lock), waitlist(0), lockCount(0) {}
 };
 
 struct Semaphore {
