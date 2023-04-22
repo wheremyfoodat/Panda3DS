@@ -28,8 +28,8 @@ bool Kernel::signalEvent(Handle handle) {
 	Event* event = object->getData<Event>();
 	event->fired = true;
 
-	// One shot events go back to being not fired once they wake up one or more thread
-	if (event->waitlist != 0 && event->resetType == ResetType::OneShot) {
+	// One shot events go back to being not fired once they are signaled
+	if (event->resetType == ResetType::Pulse) {
 		event->fired = false;
 	}
 
@@ -164,9 +164,6 @@ void Kernel::waitSynchronizationN() {
 	s64 ns = s64(ns1) | (s64(ns2) << 32);
 
 	logSVC("WaitSynchronizationN (handle pointer: %08X, count: %d, timeout = %lld)\n", handles, handleCount, ns);
-
-	if (waitAll && handleCount > 1)
-		Helpers::panic("Trying to wait on more than 1 object");
 
 	if (handleCount < 0)
 		Helpers::panic("WaitSyncN: Invalid handle count");

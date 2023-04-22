@@ -272,7 +272,7 @@ void Kernel::createThread() {
 // void SleepThread(s64 nanoseconds)
 void Kernel::svcSleepThread() {
 	const s64 ns = s64(u64(regs[0]) | (u64(regs[1]) << 32));
-	logSVC("SleepThread(ns = %lld)\n", ns);
+	//logSVC("SleepThread(ns = %lld)\n", ns);
 
 	regs[0] = SVCResult::Success;
 	sleepThread(ns);
@@ -417,8 +417,8 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 		case KernelObjectType::Thread: // Waiting on a thread waits until it's dead. If it's dead then no need to wait
 			return object->getData<Thread>()->status != ThreadStatus::Dead;
 
-		case KernelObjectType::Semaphore:
-			Helpers::panic("No semaphore :(");
+		case KernelObjectType::Semaphore: // Wait if the semaphore count <= 0
+			return object->getData<Semaphore>()->availableCount <= 0;
 
 		default:
 			Helpers::panic("Not sure whether to wait on object (type: %s)", object->getTypeName());

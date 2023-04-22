@@ -182,10 +182,10 @@ struct Mutex {
 
 struct Semaphore {
     u64 waitlist; // Refer to the getWaitlist function below for documentation
-    u32 initialCount;
-    u32 maximumCount;
+    s32 availableCount;
+    s32 maximumCount;
 
-    Semaphore(u32 initialCount, u32 maximumCount) : initialCount(initialCount), maximumCount(maximumCount), waitlist(0) {}
+    Semaphore(s32 initialCount, s32 maximumCount) : availableCount(initialCount), maximumCount(maximumCount), waitlist(0) {}
 };
 
 struct MemoryBlock {

@@ -1,5 +1,6 @@
 #include "services/dsp.hpp"
 #include "ipc.hpp"
+#include "kernel.hpp"
 
 namespace DSPCommands {
 	enum : u32 {
@@ -11,7 +12,7 @@ namespace DSPCommands {
 		FlushDataCache = 0x00130082,
 		InvalidateDataCache = 0x00140082,
 		RegisterInterruptEvents = 0x00150082,
-		GetSemaphoreHandle = 0x00160000,
+		GetSemaphoreEventHandle = 0x00160000,
 		SetSemaphoreMask = 0x00170040,
 		GetHeadphoneStatus = 0x001F0000
 	};
@@ -27,6 +28,15 @@ namespace Result {
 
 void DSPService::reset() {
 	audioPipe.reset();
+	totalEventCount = 0;
+
+	semaphoreEvent = std::nullopt;
+	interrupt0 = std::nullopt;
+	interrupt1 = std::nullopt;
+
+	for (DSPEvent& e : pipeEvents) {
+		e = std::nullopt;
+	}
 }
 
 void DSPService::handleSyncRequest(u32 messagePointer) {
@@ -36,7 +46,7 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 		case DSPCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case DSPCommands::InvalidateDataCache: invalidateDCache(messagePointer); break;
 		case DSPCommands::GetHeadphoneStatus: getHeadphoneStatus(messagePointer); break;
-		case DSPCommands::GetSemaphoreHandle: getSemaphoreHandle(messagePointer); break;
+		case DSPCommands::GetSemaphoreEventHandle: getSemaphoreEventHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
 		case DSPCommands::ReadPipeIfPossible: readPipeIfPossible(messagePointer); break;
 		case DSPCommands::RegisterInterruptEvents: registerInterruptEvents(messagePointer); break;
@@ -97,14 +107,47 @@ void DSPService::readPipeIfPossible(u32 messagePointer) {
 	mem.write16(messagePointer + 8, i); // Number of bytes read
 }
 
-void DSPService::registerInterruptEvents(u32 messagePointer) {
-	u32 interrupt = mem.read32(messagePointer + 4);
-	u32 channel = mem.read32(messagePointer + 8);
-	u32 event = mem.read32(messagePointer + 16);
+DSPService::DSPEvent& DSPService::getEventRef(u32 type, u32 pipe) {
+	switch (type) {
+		case 0: return interrupt0;
+		case 1: return interrupt1;
 
-	log("DSP::RegisterInterruptEvents (interrupt = %d, channel = %d, event = %d)\n", interrupt, channel, event);
-	mem.write32(messagePointer, IPC::responseHeader(0x15, 1, 0));
-	mem.write32(messagePointer + 4, Result::Success);
+		case 2:
+			if (pipe >= pipeCount)
+				Helpers::panic("Tried to access the event of an invalid pipe");
+			return pipeEvents[pipe];
+
+		default:
+			Helpers::panic("Unknown type for DSP::getEventRef");
+	}
+}
+
+void DSPService::registerInterruptEvents(u32 messagePointer) {
+	const u32 interrupt = mem.read32(messagePointer + 4);
+	const u32 channel = mem.read32(messagePointer + 8);
+	const u32 eventHandle = mem.read32(messagePointer + 16);
+	log("DSP::RegisterInterruptEvents (interrupt = %d, channel = %d, event = %d)\n", interrupt, channel, eventHandle);
+	
+	// The event handle being 0 means we're removing an event
+	if (eventHandle == 0) {
+		Helpers::panic("DSP::DSP::RegisterinterruptEvents Trying to remove a registered interrupt");
+	} else {
+		const KernelObject* object = kernel.getObject(eventHandle, KernelObjectType::Event);
+		if (!object) {
+			Helpers::panic("DSP::DSP::RegisterInterruptEvents with invalid event handle");
+		}
+
+		if (totalEventCount >= maxEventCount)
+			Helpers::panic("DSP::RegisterInterruptEvents overflowed total number of allowed events");
+		else {
+			getEventRef(interrupt, channel) = eventHandle;
+			mem.write32(messagePointer, IPC::responseHeader(0x15, 1, 0));
+			mem.write32(messagePointer + 4, Result::Success);
+
+			totalEventCount++;
+			kernel.signalEvent(eventHandle);
+		}
+	}
 }
 
 void DSPService::getHeadphoneStatus(u32 messagePointer) {
@@ -115,13 +158,17 @@ void DSPService::getHeadphoneStatus(u32 messagePointer) {
 	mem.write32(messagePointer + 8, Result::HeadphonesInserted); // This should be toggleable for shits and giggles
 }
 
-void DSPService::getSemaphoreHandle(u32 messagePointer) {
-	log("DSP::GetSemaphoreHandle\n");
+void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
+	log("DSP::GetSemaphoreEventHandle\n");
+
+	if (!semaphoreEvent.has_value()) {
+		semaphoreEvent = kernel.makeEvent(ResetType::OneShot);
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	// TODO: Translation descriptor here?
-	mem.write32(messagePointer + 12, 0xF9991234); // Semaphore handle (stubbed with random, obvious number)
+	mem.write32(messagePointer + 12, semaphoreEvent.value()); // Semaphore event handle
 }
 
 void DSPService::setSemaphore(u32 messagePointer) {
