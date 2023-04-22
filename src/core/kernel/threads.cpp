@@ -205,6 +205,14 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 // Acquires an object that is **ready to be acquired** without waiting on it
 void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 	switch (object->type) {
+		case KernelObjectType::Event: {
+			Event* e = object->getData<Event>();
+			if (e->resetType == ResetType::OneShot) { // One-shot events automatically get cleared after waking up a thread
+				e->fired = false;
+			}
+			break;
+		}
+
 		case KernelObjectType::Mutex: {
 			Mutex* moo = object->getData<Mutex>();
 			moo->locked = true; // Set locked to true, whether it's false or not because who cares
@@ -215,13 +223,8 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 			break;
 		}
 
-		case KernelObjectType::Event: {
-			Event* e = object->getData<Event>();
-			if (e->resetType == ResetType::OneShot) { // One-shot events automatically get cleared after waking up a thread
-				e->fired = false;
-			}
+		case KernelObjectType::Thread:
 			break;
-		}
 
 		default: Helpers::panic("Acquiring unimplemented sync object %s", object->getTypeName());
 	}
