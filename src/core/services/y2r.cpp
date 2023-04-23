@@ -5,6 +5,7 @@
 namespace Y2RCommands {
 	enum : u32 {
 		SetInputFormat = 0x00010040,
+		SetOutputFormat = 0x00030040,
 		SetTransferEndInterrupt = 0x000D0040,
 		GetTransferEndEvent = 0x000F0000,
 		StopConversion = 0x00270000,
@@ -25,6 +26,7 @@ void Y2RService::reset() {
 	transferEndEvent = std::nullopt;
 
 	inputFmt = InputFormat::YUV422_Individual8;
+	outputFmt = OutputFormat::RGB32;
 }
 
 void Y2RService::handleSyncRequest(u32 messagePointer) {
@@ -35,6 +37,7 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::IsBusyConversion: isBusyConversion(messagePointer); break;
 		case Y2RCommands::PingProcess: pingProcess(messagePointer); break;
 		case Y2RCommands::SetInputFormat: setInputFormat(messagePointer); break;
+		case Y2RCommands::SetOutputFormat: setOutputFormat(messagePointer); break;
 		case Y2RCommands::SetTransferEndInterrupt: setTransferEndInterrupt(messagePointer); break;
 		case Y2RCommands::StopConversion: stopConversion(messagePointer); break;
 		default: Helpers::panic("Y2R service requested. Command: %08X\n", command);
@@ -102,6 +105,20 @@ void Y2RService::setInputFormat(u32 messagePointer) {
 		Helpers::warn("Warning: Invalid input format for Y2R conversion\n");
 	} else {
 		inputFmt = static_cast<InputFormat>(format);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::setOutputFormat(u32 messagePointer) {
+	const u32 format = mem.read32(messagePointer + 4);
+	log("Y2R::SetOutputFormat (format = %d)\n", format);
+
+	if (format > 3) {
+		Helpers::warn("Warning: Invalid output format for Y2R conversion\n");
+	} else {
+		outputFmt = static_cast<OutputFormat>(format);
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));

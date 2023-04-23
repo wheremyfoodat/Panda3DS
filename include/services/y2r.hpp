@@ -30,7 +30,15 @@ class Y2RService {
 		YUV422_Batch = 4,
 	};
 
+	enum class OutputFormat : u32 {
+		RGB32 = 0,
+		RGB24 = 1,
+		RGB15 = 2,
+		RGB565 = 3
+	};
+
 	InputFormat inputFmt;
+	OutputFormat outputFmt;
 
 	// Service commands
 	void driverInitialize(u32 messagePointer);
@@ -39,6 +47,7 @@ class Y2RService {
 	void setTransferEndInterrupt(u32 messagePointer);
 	void getTransferEndEvent(u32 messagePointer);
 	void setInputFormat(u32 messagePointer);
+	void setOutputFormat(u32 messagePointer);
 	void stopConversion(u32 messagePointer);
 
 public:
