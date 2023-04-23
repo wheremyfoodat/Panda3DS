@@ -5,6 +5,7 @@ namespace FileOps {
 		Read = 0x080200C2,
 		Write = 0x08030102,
 		GetSize = 0x08040000,
+		SetSize = 0x08050080,
 		Close = 0x08080000,
 		SetPriority = 0x080A0040,
 		OpenLinkFile = 0x080C0000
@@ -25,6 +26,7 @@ void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 		case FileOps::GetSize: getFileSize(messagePointer, file); break;
 		case FileOps::OpenLinkFile: openLinkFile(messagePointer, file); break;
 		case FileOps::Read: readFile(messagePointer, file); break;
+		case FileOps::SetSize: setFileSize(messagePointer, file); break;
 		case FileOps::SetPriority: setFilePriority(messagePointer, file); break;
 		case FileOps::Write: writeFile(messagePointer, file); break;
 		default: Helpers::panic("Unknown file operation: %08X", cmd);
@@ -129,6 +131,34 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 	} else {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write32(messagePointer + 8, bytesWritten);
+	}
+}
+
+void Kernel::setFileSize(u32 messagePointer, Handle fileHandle) {
+	logFileIO("Setting size of file %X\n", fileHandle);
+
+	const auto p = getObject(fileHandle, KernelObjectType::File);
+	if (p == nullptr) [[unlikely]] {
+		Helpers::panic("Called SetFileSize on non-existent file");
+	}
+
+	FileSession* file = p->getData<FileSession>();
+	if (!file->isOpen) {
+		Helpers::panic("Tried to get size of closed file");
+	}
+
+	if (file->fd) {
+		const u64 newSize = mem.read64(messagePointer + 4);
+		IOFile f(file->fd);
+		bool success = f.setSize(newSize);
+
+		if (success) {
+			mem.write32(messagePointer + 4, Result::Success);
+		} else {
+			Helpers::panic("FileOp::SetFileSize failed");
+		}
+	} else {
+		Helpers::panic("Tried to set file size of file without file descriptor");
 	}
 }
 

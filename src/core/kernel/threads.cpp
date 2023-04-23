@@ -47,12 +47,14 @@ void Kernel::sortThreads() {
 bool Kernel::canThreadRun(const Thread& t) {
 	if (t.status == ThreadStatus::Ready) {
 		return true;
-	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAll) {
+	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 
+		|| t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
 		const u64 elapsedTicks = cpu.getTicks() - t.sleepTick;
 
 		constexpr double ticksPerSec = double(CPU::ticksPerSec);
 		constexpr double nsPerTick = ticksPerSec / 1000000000.0;
 
+		// TODO: Set r0 to the correct error code on timeout for WaitSync{1/Any/All}
 		const s64 elapsedNs = s64(double(elapsedTicks) * nsPerTick);
 		return elapsedNs >= t.waitingNanoseconds;
 	}
@@ -83,6 +85,7 @@ void Kernel::switchToNextThread() {
 	if (!newThreadIndex.has_value()) {
 		log("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
 		assert(aliveThreadCount != 0);
+		Helpers::panic("rpog");
 
 		int index;
 		do {
@@ -147,6 +150,7 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u
 	t.status = status;
 	t.handle = ret;
 	t.waitingAddress = 0;
+	t.threadsWaitingForTermination = 0; // Thread just spawned, no other threads waiting for it to terminate
 
 	t.cpsr = CPSR::UserMode | (isThumb ? CPSR::Thumb : 0);
 	t.fpscr = FPSCR::ThreadDefault;
@@ -161,12 +165,26 @@ Handle Kernel::makeMutex(bool locked) {
 	Handle ret = makeObject(KernelObjectType::Mutex);
 	objects[ret].data = new Mutex(locked);
 
-	// If the mutex is initially locked, store the index of the thread that owns it
+	// If the mutex is initially locked, store the index of the thread that owns it and set lock count to 1
 	if (locked) {
-		objects[ret].getData<Mutex>()->ownerThread = currentThreadIndex;
+		Mutex* moo = objects[ret].getData<Mutex>();
+		moo->ownerThread = currentThreadIndex;
 	}
 
 	return ret;
+}
+
+void Kernel::releaseMutex(Mutex* moo) {
+	// TODO: Assert lockCount > 0 before release, maybe. The SVC should be safe at least.
+	moo->lockCount--; // Decrement lock count
+
+	// If the lock count reached 0 then the thread no longer owns the mootex and it can be given to a new one
+	if (moo->lockCount == 0) {
+		moo->locked = false;
+		if (moo->waitlist != 0) {
+			Helpers::panic("Mutex got freed while it's got more threads waiting for it. Must make a new thread claim it.");
+		}
+	}
 }
 
 Handle Kernel::makeSemaphore(u32 initialCount, u32 maximumCount) {
@@ -184,14 +202,45 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	switchToNextThread();
 }
 
+// Acquires an object that is **ready to be acquired** without waiting on it
+void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
+	switch (object->type) {
+		case KernelObjectType::Event: {
+			Event* e = object->getData<Event>();
+			if (e->resetType == ResetType::OneShot) { // One-shot events automatically get cleared after waking up a thread
+				e->fired = false;
+			}
+			break;
+		}
+
+		case KernelObjectType::Mutex: {
+			Mutex* moo = object->getData<Mutex>();
+			moo->locked = true; // Set locked to true, whether it's false or not because who cares
+			// Increment lock count by 1. If a thread acquires a mootex multiple times, it needs to release it until count == 0
+			// For the mootex to be free.
+			moo->lockCount++;
+			moo->ownerThread = thread.index;
+			break;
+		}
+
+		case KernelObjectType::Thread:
+			break;
+
+		default: Helpers::panic("Acquiring unimplemented sync object %s", object->getTypeName());
+	}
+}
+
 // Make a thread sleep for a certain amount of nanoseconds at minimum
 void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
 		Helpers::panic("Sleeping a thread for a negative amount of ns");
 	} else if (ns == 0) { // Used when we want to force a thread switch
-		int curr = currentThreadIndex;
-		switchToNextThread(); // Mark thread as ready after switching, to avoid switching to the same thread
-		threads[curr].status = ThreadStatus::Ready;
+		std::optional<int> newThreadIndex = getNextThread();
+		// If there's no other thread waiting, don't bother yielding
+		if (newThreadIndex.has_value()) {
+			threads[currentThreadIndex].status = ThreadStatus::Ready;
+			switchThread(newThreadIndex.value());
+		}
 	} else { // If we're sleeping for > 0 ns
 		Thread& t = threads[currentThreadIndex];
 		t.status = ThreadStatus::WaitSleep;
@@ -226,7 +275,7 @@ void Kernel::createThread() {
 // void SleepThread(s64 nanoseconds)
 void Kernel::svcSleepThread() {
 	const s64 ns = s64(u64(regs[0]) | (u64(regs[1]) << 32));
-	logSVC("SleepThread(ns = %lld)\n", ns);
+	//logSVC("SleepThread(ns = %lld)\n", ns);
 
 	regs[0] = SVCResult::Success;
 	sleepThread(ns);
@@ -310,10 +359,14 @@ void Kernel::exitThread() {
 	t.status = ThreadStatus::Dead;
 	aliveThreadCount--;
 
+	// Check if any threads are sleeping, waiting for this thread to terminate, and wake them up
+	if (t.threadsWaitingForTermination != 0)
+		Helpers::panic("TODO: Implement threads sleeping until another thread terminates");
+
 	switchToNextThread();
 }
 
-void Kernel::createMutex() {
+void Kernel::svcCreateMutex() {
 	bool locked = regs[1] != 0;
 	logSVC("CreateMutex (locked = %s)\n", locked ? "yes" : "no");
 
@@ -321,10 +374,25 @@ void Kernel::createMutex() {
 	regs[1] = makeMutex(locked);
 }
 
-void Kernel::releaseMutex() {
+void Kernel::svcReleaseMutex() {
 	const Handle handle = regs[0];
+	logSVC("ReleaseMutex (handle = %x)\n", handle);
 
-	logSVC("ReleaseMutex (handle = %x) (STUBBED)\n", handle);
+	const auto object = getObject(handle, KernelObjectType::Mutex);
+	if (object == nullptr) [[unlikely]] {
+		Helpers::panic("Tried to release non-existent mutex");
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	Mutex* moo = object->getData<Mutex>();
+	// A thread can't release a mutex it does not own
+	if (!moo->locked || moo->ownerThread != currentThreadIndex) {
+		regs[0] = SVCResult::InvalidMutexRelease;
+		return;
+	}
+
+	releaseMutex(moo);
 	regs[0] = SVCResult::Success;
 }
 
@@ -344,8 +412,19 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 		case KernelObjectType::Event: // We should wait on an event only if it has not been signalled
 			return !object->getData<Event>()->fired;
 
+		case KernelObjectType::Mutex: {
+			Mutex* moo = object->getData<Mutex>(); // mooooooooooo
+			return moo->locked && moo->ownerThread != currentThreadIndex; // If the current thread owns the moo then no reason to wait
+		}
+
+		case KernelObjectType::Thread: // Waiting on a thread waits until it's dead. If it's dead then no need to wait
+			return object->getData<Thread>()->status != ThreadStatus::Dead;
+
+		case KernelObjectType::Semaphore: // Wait if the semaphore count <= 0
+			return object->getData<Semaphore>()->availableCount <= 0;
+
 		default:
-			logThread("Not sure whether to wait on object (type: %s)", object->getTypeName());
+			Helpers::panic("Not sure whether to wait on object (type: %s)", object->getTypeName());
 			return true;
 	}
 }

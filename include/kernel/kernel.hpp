@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cassert>
 #include <limits>
 #include <string>
 #include <vector>
@@ -19,7 +20,16 @@ class Kernel {
 
 	// The handle number for the next kernel object to be created
 	u32 handleCounter;
-	std::array<Thread, appResourceLimits.maxThreads> threads;
+	// A list of our OS threads, the max number of which depends on the resource limit (hardcoded 32 per process on retail it seems).
+	// We have an extra thread for when no thread is capable of running. This thread is called the "idle thread" in our code
+	// This thread is set up in setupIdleThread and just yields in a loop to see if any other thread has woken up
+	std::array<Thread, appResourceLimits.maxThreads + 1> threads;
+	static constexpr int idleThreadIndex = appResourceLimits.maxThreads;
+	// Our waitlist system uses a bitfield of 64 bits to show which threads are waiting on an object.
+	// That means we can have a maximum of 63 threads + 1 idle thread. This assert should never trigger because the max thread # is 32
+	// But we have it here for safety purposes
+	static_assert(appResourceLimits.maxThreads <= 63, "The waitlist system is built on the premise that <= 63 threads max can be active");
+
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 
@@ -52,6 +62,8 @@ public:
 	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
 	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
 
+	// Signals an event, returns true on success or false if the event does not exist
+	bool signalEvent(Handle e);
 private:
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThread(s64 ns);
@@ -63,6 +75,7 @@ private:
 	void rescheduleThreads();
 	bool canThreadRun(const Thread& t);
 	bool shouldWaitOnObject(KernelObject* object);
+	void releaseMutex(Mutex* moo);
 
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);
@@ -71,7 +84,9 @@ private:
 	s32 getCurrentResourceValue(const KernelObject* limit, u32 resourceName);
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
 	u32 getTLSPointer();
+	void setupIdleThread();
 
+	void acquireSyncObject(KernelObject* object, const Thread& thread);
 	bool isWaitable(const KernelObject* object);
 
 	// Functions for the err:f port
@@ -90,11 +105,8 @@ private:
 
 	// SVC implementations
 	void arbitrateAddress();
-	void clearEvent();
 	void createAddressArbiter();
-	void createEvent();
 	void createMemoryBlock();
-	void createMutex();
 	void createThread();
 	void controlMemory();
 	void duplicateHandle();
@@ -109,11 +121,14 @@ private:
 	void getSystemTick();
 	void getThreadID();
 	void getThreadPriority();
-	void releaseMutex();
 	void sendSyncRequest();
 	void setThreadPriority();
-	void signalEvent();
+	void svcClearEvent();
 	void svcCloseHandle();
+	void svcCreateEvent();
+	void svcCreateMutex();
+	void svcReleaseMutex();
+	void svcSignalEvent();
 	void svcSleepThread();
 	void connectToPort();
 	void outputDebugString();
@@ -127,6 +142,7 @@ private:
 	void writeFile(u32 messagePointer, Handle file);
 	void getFileSize(u32 messagePointer, Handle file);
 	void openLinkFile(u32 messagePointer, Handle file);
+	void setFileSize(u32 messagePointer, Handle file);
 	void setFilePriority(u32 messagePointer, Handle file);
 
 	// Directory operations

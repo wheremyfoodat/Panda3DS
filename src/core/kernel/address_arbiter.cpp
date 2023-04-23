@@ -25,6 +25,7 @@ Handle Kernel::makeArbiter() {
 
 // Result CreateAddressArbiter(Handle* arbiter)
 void Kernel::createAddressArbiter() {
+	logSVC("CreateAddressArbiter\n");
 	regs[0] = SVCResult::Success;
 	regs[1] = makeArbiter();
 }

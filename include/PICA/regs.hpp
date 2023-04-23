@@ -81,6 +81,7 @@ namespace PICAInternalRegs {
 		CmdBufTrigger1 = 0x23D,
 
 		PrimitiveConfig = 0x25E,
+		PrimitiveRestart = 0x25F,
 
 		// Vertex shader registers
 		VertexShaderAttrNum = 0x242,

@@ -1,4 +1,5 @@
 #include "services/am.hpp"
+#include "ipc.hpp"
 
 namespace AMCommands {
 	enum : u32 {
@@ -40,11 +41,14 @@ void AMService::listTitleInfo(u32 messagePointer) {
 		pointer += 24; // = sizeof(TicketInfo)
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x1007, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, ticketCount);
 }
 
 void AMService::getDLCTitleInfo(u32 messagePointer) {
 	log("AM::GetDLCTitleInfo (stubbed to fail)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1005, 1, 4));
 	mem.write32(messagePointer + 4, -1);
 }

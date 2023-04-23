@@ -1,6 +1,7 @@
 #include "services/fs.hpp"
 #include "kernel/kernel.hpp"
 #include "io_file.hpp"
+#include "ipc.hpp"
 
 #ifdef CreateFile // windows.h defines CreateFile & DeleteFile because of course it does.
 #undef CreateFile
@@ -16,6 +17,7 @@ namespace FSCommands {
 		CreateFile = 0x08080202,
 		OpenDirectory = 0x080B0102,
 		OpenArchive = 0x080C00C2,
+		ControlArchive = 0x080D0144,
 		CloseArchive = 0x080E0080,
 		IsSdmcDetected = 0x08170000,
 		GetFormatInfo = 0x084500C2,
@@ -151,6 +153,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case FSCommands::CreateFile: createFile(messagePointer); break;
+		case FSCommands::ControlArchive: controlArchive(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
@@ -170,6 +173,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 
 void FSService::initialize(u32 messagePointer) {
 	log("FS::Initialize\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x801, 1, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
 }
 
@@ -178,13 +182,16 @@ void FSService::initializeWithSdkVersion(u32 messagePointer) {
 	const auto version = mem.read32(messagePointer + 4);
 	log("FS::InitializeWithSDKVersion(version = %d)\n", version);
 
-	initialize(messagePointer);
+	mem.write32(messagePointer, IPC::responseHeader(0x861, 1, 0));
+	mem.write32(messagePointer + 4, ResultCode::Success);
 }
 
 void FSService::closeArchive(u32 messagePointer) {
 	const Handle handle = static_cast<u32>(mem.read64(messagePointer + 4)); // TODO: archive handles should be 64-bit
 	const auto object = kernel.getObject(handle, KernelObjectType::Archive);
 	log("FSService::CloseArchive(handle = %X)\n", handle);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x80E, 1, 0));
 
 	if (object == nullptr) {
 		log("FSService::CloseArchive: Tried to close invalid archive %X\n", handle);
@@ -205,6 +212,7 @@ void FSService::openArchive(u32 messagePointer) {
 	log("FS::OpenArchive(archive ID = %d, archive path type = %d)\n", archiveID, archivePathType);
 	
 	std::optional<Handle> handle = openArchiveHandle(archiveID, archivePath);
+	mem.write32(messagePointer, IPC::responseHeader(0x80C, 3, 0));
 	if (handle.has_value()) {
 		mem.write32(messagePointer + 4, ResultCode::Success);
 		mem.write64(messagePointer + 8, handle.value());
@@ -215,7 +223,7 @@ void FSService::openArchive(u32 messagePointer) {
 }
 
 void FSService::openFile(u32 messagePointer) {
-	const u32 archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = mem.read64(messagePointer + 8);
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 openFlags = mem.read32(messagePointer + 24);
@@ -238,6 +246,7 @@ void FSService::openFile(u32 messagePointer) {
 	const FilePerms perms(openFlags);
 
 	std::optional<Handle> handle = openFileHandle(archive, filePath, archivePath, perms);
+	mem.write32(messagePointer, IPC::responseHeader(0x802, 1, 2));
 	if (!handle.has_value()) {
 		printf("OpenFile failed\n");
 		mem.write32(messagePointer + 4, ResultCode::FileNotFound);
@@ -266,6 +275,7 @@ void FSService::openDirectory(u32 messagePointer) {
 	const auto dirPath = readPath(pathType, pathPointer, pathSize);
 	auto dir = openDirectoryHandle(archive, dirPath);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x80B, 1, 2));
 	if (dir.isOk()) {
 		mem.write32(messagePointer + 4, ResultCode::Success);
 		mem.write32(messagePointer + 12, dir.unwrap());
@@ -302,6 +312,7 @@ void FSService::openFileDirectly(u32 messagePointer) {
 	}
 
 	std::optional<Handle> handle = openFileHandle(archive, filePath, archivePath, perms);
+	mem.write32(messagePointer, IPC::responseHeader(0x803, 1, 2));
 	if (!handle.has_value()) {
 		Helpers::panic("OpenFileDirectly: Failed to open file with given path");
 	} else {
@@ -331,11 +342,12 @@ void FSService::createFile(u32 messagePointer) {
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
 	FSResult res = archive->createFile(filePath, size);
+	mem.write32(messagePointer, IPC::responseHeader(0x808, 1, 0));
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
 
 void FSService::deleteFile(u32 messagePointer) {
-	const u32 archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = mem.read64(messagePointer + 8);
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 filePathPointer = mem.read32(messagePointer + 28);
@@ -352,6 +364,7 @@ void FSService::deleteFile(u32 messagePointer) {
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 
 	FSResult res = archive->deleteFile(filePath);
+	mem.write32(messagePointer, IPC::responseHeader(0x804, 1, 0));
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
 
@@ -370,6 +383,7 @@ void FSService::getFormatInfo(u32 messagePointer) {
 	}
 
 	ArchiveBase::FormatInfo info = archive->getFormatInfo(path);
+	mem.write32(messagePointer, IPC::responseHeader(0x845, 5, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
 	mem.write32(messagePointer + 8, info.size);
 	mem.write32(messagePointer + 12, info.numOfDirectories);
@@ -400,11 +414,42 @@ void FSService::formatSaveData(u32 messagePointer) {
 	const bool duplicateData = mem.read8(messagePointer + 36) != 0; 
 
 	printf("Stubbed FS::FormatSaveData. File num: %d, directory num: %d\n", fileNum, directoryNum);
+	mem.write32(messagePointer, IPC::responseHeader(0x84C, 1, 0));
+	mem.write32(messagePointer + 4, ResultCode::Success);
+}
+
+void FSService::controlArchive(u32 messagePointer) {
+	const Handle archiveHandle = mem.read64(messagePointer + 4);
+	const u32 action = mem.read32(messagePointer + 12);
+	const u32 inputSize = mem.read32(messagePointer + 16);
+	const u32 outputSize = mem.read32(messagePointer + 20);
+	const u32 input = mem.read32(messagePointer + 28);
+	const u32 output = mem.read32(messagePointer + 36);
+
+	log("FS::ControlArchive (action = %X, handle = %X)\n", action, archiveHandle);
+
+	auto archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
+	mem.write32(messagePointer, IPC::responseHeader(0x80D, 1, 0));
+	if (archiveObject == nullptr) [[unlikely]] {
+		log("FS::ControlArchive: Invalid archive handle %d\n", archiveHandle);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
+		return;
+	}
+
+	switch (action) {
+		case 0: // Commit save data changes. Shouldn't need us to do anything
+			mem.write32(messagePointer + 4, ResultCode::Success);
+			break;
+		default:
+			Helpers::panic("Unimplemented action for ControlArchive (action = %X)\n", action);
+			break;
+	}
 }
 
 void FSService::getPriority(u32 messagePointer) {
 	log("FS::GetPriority\n");
 
+	mem.write32(messagePointer, IPC::responseHeader(0x863, 2, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
 	mem.write32(messagePointer + 8, priority);
 }
@@ -412,13 +457,15 @@ void FSService::getPriority(u32 messagePointer) {
 void FSService::setPriority(u32 messagePointer) {
 	const u32 value = mem.read32(messagePointer + 4);
 	log("FS::SetPriority (priority = %d)\n", value);
-	
+
+	mem.write32(messagePointer, IPC::responseHeader(0x862, 1, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
 	priority = value;
 }
 
 void FSService::isSdmcDetected(u32 messagePointer) {
 	log("FS::IsSdmcDetected\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x817, 2, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
 	mem.write32(messagePointer + 8, 0); // Whether SD is detected. For now we emulate a 3DS without an SD.
 }

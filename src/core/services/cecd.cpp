@@ -1,4 +1,5 @@
 #include "services/cecd.hpp"
+#include "ipc.hpp"
 
 namespace CECDCommands {
 	enum : u32 {
@@ -26,6 +27,8 @@ void CECDService::getEventHandle(u32 messagePointer) {
 	log("CECD::GetEventHandle (stubbed)\n");
 	Helpers::panic("TODO: Actually implement CECD::GetEventHandle");
 
+	mem.write32(messagePointer, IPC::responseHeader(0xF, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
+	// TODO: Translation descriptor here?
 	mem.write32(messagePointer + 12, 0x66666666);
 }

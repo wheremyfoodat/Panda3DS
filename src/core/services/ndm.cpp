@@ -1,4 +1,5 @@
 #include "services/ndm.hpp"
+#include "ipc.hpp"
 
 namespace NDMCommands {
 	enum : u32 {
@@ -32,25 +33,30 @@ void NDMService::handleSyncRequest(u32 messagePointer) {
 
 void NDMService::overrideDefaultDaemons(u32 messagePointer) {
 	log("NDM::OverrideDefaultDaemons(stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NDMService::resumeDaemons(u32 messagePointer) {
 	log("NDM::resumeDaemons(stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x7, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NDMService::suspendDaemons(u32 messagePointer) {
 	log("NDM::SuspendDaemons(stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NDMService::resumeScheduler(u32 messagePointer) {
 	log("NDM::ResumeScheduler(stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NDMService::suspendScheduler(u32 messagePointer) {
 	log("NDM::SuspendScheduler(stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

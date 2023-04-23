@@ -1,4 +1,5 @@
 #include "services/cam.hpp"
+#include "ipc.hpp"
 
 namespace CAMCommands {
 	enum : u32 {
@@ -26,6 +27,7 @@ void CAMService::handleSyncRequest(u32 messagePointer) {
 
 void CAMService::driverInitialize(u32 messagePointer) {
 	log("CAM::DriverInitialize\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x39, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -55,6 +57,7 @@ void CAMService::getMaxLines(u32 messagePointer) {
 			}
 		}
 
+		mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
 		mem.write32(messagePointer + 4, result);
 		mem.write16(messagePointer + 8, lines);
 	}

@@ -1,5 +1,6 @@
 #include "services/cfg.hpp"
 #include "services/dsp.hpp"
+#include "ipc.hpp"
 
 namespace CFGCommands {
 	enum : u32 {
@@ -101,12 +102,14 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void CFGService::secureInfoGetRegion(u32 messagePointer) {
 	log("CFG::SecureInfoGetRegion\n");
 
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, static_cast<u32>(Regions::USA)); // TODO: Detect the game region and report it
 }
@@ -115,6 +118,7 @@ void CFGService::genUniqueConsoleHash(u32 messagePointer) {
 	log("CFG::GenUniqueConsoleHash (semi-stubbed)\n");
 	const u32 salt = mem.read32(messagePointer + 4) & 0x000FFFFF;
 
+	mem.write32(messagePointer, IPC::responseHeader(0x3, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	// We need to implement hash generation & the SHA-256 digest properly later on. We have cryptopp so the hashing isn't too hard to do
 	// Let's stub it for now
@@ -128,6 +132,7 @@ void CFGService::getRegionCanadaUSA(u32 messagePointer) {
 	log("CFG::GetRegionCanadaUSA\n");
 	const u8 ret = (country == CountryCodes::US || country == CountryCodes::CA) ? 1 : 0;
 
+	mem.write32(messagePointer, IPC::responseHeader(0x4, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, ret);
 }

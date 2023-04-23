@@ -1,4 +1,6 @@
 #include "services/gsp_gpu.hpp"
+#include "ipc.hpp"
+#include "kernel.hpp"
 
 // Commands used with SendSyncRequest targetted to the GSP::GPU service
 namespace ServiceCommands {
@@ -37,6 +39,7 @@ namespace Result {
 
 void GPUService::reset() {
 	privilegedProcess = 0xFFFFFFFF; // Set the privileged process to an invalid handle
+	interruptEvent = std::nullopt;
 	sharedMem = nullptr;
 }
 
@@ -72,6 +75,7 @@ void GPUService::acquireRight(u32 messagePointer) {
 		privilegedProcess = pid;
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -88,7 +92,15 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 	const u32 eventHandle = mem.read32(messagePointer + 12);
 	log("GSP::GPU::RegisterInterruptRelayQueue (flags = %X, event handle = %X)\n", flags, eventHandle);
 
-	mem.write32(messagePointer + 4, Result::SuccessRegisterIRQ);
+	const auto event = kernel.getObject(eventHandle, KernelObjectType::Event);
+	if (event == nullptr) { // Check if interrupt event is invalid
+		Helpers::panic("Invalid event passed to GSP::GPU::RegisterInterruptRelayQueue");
+	} else {
+		interruptEvent = eventHandle;
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x13, 2, 2));
+	mem.write32(messagePointer + 4, Result::SuccessRegisterIRQ); // First init returns a unique result
 	mem.write32(messagePointer + 8, 0); // TODO: GSP module thread index
 	mem.write32(messagePointer + 12, 0); // Translation descriptor
 	mem.write32(messagePointer + 16, KernelHandles::GSPSharedMemHandle);
@@ -106,6 +118,11 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	
 	sharedMem[2] = 0; // Set error code to 0
 	sharedMem[0xC + flagIndex] = static_cast<u8>(type); // Write interrupt type to queue
+
+	// Signal interrupt event
+	if (interruptEvent.has_value()) {
+		kernel.signalEvent(interruptEvent.value());
+	}
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {
@@ -134,6 +151,8 @@ void GPUService::writeHwRegs(u32 messagePointer) {
 		dataPointer += 4;
 		ioAddr += 4;
 	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -176,6 +195,7 @@ void GPUService::writeHwRegsWithMask(u32 messagePointer) {
 		ioAddr += 4;
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -185,6 +205,7 @@ void GPUService::flushDataCache(u32 messagePointer) {
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
 	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -194,6 +215,7 @@ void GPUService::storeDataCache(u32 messagePointer) {
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
 	log("GSP::GPU::StoreDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x1F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -205,23 +227,27 @@ void GPUService::setLCDForceBlack(u32 messagePointer) {
 		printf("Filled both LCDs with black\n");
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0xB, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void GPUService::triggerCmdReqQueue(u32 messagePointer) {
 	processCommandBuffer();
+	mem.write32(messagePointer, IPC::responseHeader(0xC, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 // Seems to be completely undocumented, probably not very important or useful
 void GPUService::setAxiConfigQoSMode(u32 messagePointer) {
 	log("GSP::GPU::SetAxiConfigQoSMode\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x10, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 // Seems to also be completely undocumented
 void GPUService::setInternalPriorities(u32 messagePointer) {
 	log("GSP::GPU::SetInternalPriorities\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

@@ -23,6 +23,12 @@ namespace SVCResult {
 
         BadThreadPriority = 0xE0E01BFD,
         PortNameTooLong = 0xE0E0181E,
+
+        // Returned when a thread stops waiting due to timing out
+        Timeout = 0x9401BFE,
+
+        // Returned when a thread releases a mutex it does not own
+        InvalidMutexRelease = 0xD8E0041F
 	};
 }
 
@@ -72,10 +78,11 @@ struct Process {
 };
 
 struct Event {
+    u64 waitlist; // A bitfield where each bit symbolizes if the thread with thread with the corresponding index is waiting on the event
     ResetType resetType = ResetType::OneShot;
     bool fired = false;
 
-    Event(ResetType resetType) : resetType(resetType) {}
+    Event(ResetType resetType) : resetType(resetType), waitlist(0) {}
 };
 
 struct Port {
@@ -101,7 +108,8 @@ enum class ThreadStatus {
     Ready,       // Ready to run
     WaitArbiter, // Waiting on an address arbiter
     WaitSleep,   // Waiting due to a SleepThread SVC
-    WaitSync1,   // Waiting for AT LEAST one sync object in its wait list to be ready
+    WaitSync1,   // Waiting for the single object in the wait list to be ready
+    WaitSyncAny, // Wait for one object of the many that might be in the wait list to be ready
     WaitSyncAll, // Waiting for ALL sync objects in its wait list to be ready
     WaitIPC,     // Waiting for the reply from an IPC request
     Dormant,     // Created but not yet made ready
@@ -138,6 +146,9 @@ struct Thread {
     u32 cpsr;
     u32 fpscr;
     u32 tlsBase; // Base pointer for thread-local storage
+
+    // A list of threads waiting for this thread to terminate. Yes, threads are sync objects too.
+    u64 threadsWaitingForTermination;
 };
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {
@@ -161,17 +172,20 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
 }
 
 struct Mutex {
+    u64 waitlist;           // Refer to the getWaitlist function below for documentation
     Handle ownerThread = 0; // Index of the thread that holds the mutex if it's locked
+    u32 lockCount; // Number of times this mutex has been locked by its daddy. 0 = not locked
     bool locked;
 
-    Mutex(bool lock = false) : locked(lock) {}
+    Mutex(bool lock = false) : locked(lock), waitlist(0), lockCount(lock ? 1 : 0) {}
 };
 
 struct Semaphore {
-    u32 initialCount;
-    u32 maximumCount;
+    u64 waitlist; // Refer to the getWaitlist function below for documentation
+    s32 availableCount;
+    s32 maximumCount;
 
-    Semaphore(u32 initialCount, u32 maximumCount) : initialCount(initialCount), maximumCount(maximumCount) {}
+    Semaphore(s32 initialCount, s32 maximumCount) : availableCount(initialCount), maximumCount(maximumCount), waitlist(0) {}
 };
 
 struct MemoryBlock {
@@ -202,7 +216,26 @@ struct KernelObject {
         return static_cast<T*>(data);
     }
 
-    const char* getTypeName() {
+    const char* getTypeName() const {
         return kernelObjectTypeToString(type);
+    }
+
+    // Retrieves a reference to the waitlist for a specified object
+    // We return a reference because this function is only called in the kernel threading internals
+    // We want the kernel to be able to easily manage waitlists, by reading/parsing them or setting/clearing bits.
+    // As we mention in the definition of the "Event" struct, the format for wailists is very simple and made to be efficient.
+    // Each bit corresponds to a thread index and denotes whether the corresponding thread is waiting on this object
+    // For example if bit 0 of the wait list is set, then the thread with index 0 is waiting on our object
+    u64& getWaitlist() {
+        // This code is actually kinda trash but eh good enough
+        switch (type) {
+            case KernelObjectType::Event: return getData<Event>()->waitlist;
+            case KernelObjectType::Mutex: return getData<Mutex>()->waitlist;
+            case KernelObjectType::Semaphore: return getData<Mutex>()->waitlist;
+            case KernelObjectType::Thread: return getData<Thread>()->threadsWaitingForTermination;
+            // This should be unreachable once we fully implement sync objects
+            default: [[unlikely]]
+                Helpers::panic("Called GetWaitList on kernel object without a waitlist (Type: %s)", getTypeName());
+        }
     }
 };

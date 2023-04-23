@@ -76,6 +76,7 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::LedState3D: return 1; // Report the 3D LED as always off (non-zero) for now
 			case ConfigMem::NetworkState: return 2; // Report that we've got an internet connection
 			case ConfigMem::HeadphonesConnectedMaybe: return 0;
+			case ConfigMem::Unknown1086: return 1; // It's unknown what this is but some games want it to be 1
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}

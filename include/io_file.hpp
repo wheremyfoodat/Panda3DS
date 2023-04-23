@@ -18,6 +18,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#ifdef WIN32
+#include <io.h> // For _chsize_s
+#else
+#include <unistd.h> // For ftruncate
+#endif
+
 class IOFile {
     FILE* handle = nullptr;
     static inline std::filesystem::path appData = ""; // Directory for holding app data. AppData on Windows
@@ -110,6 +116,20 @@ public:
     static void setAppDataDir(const std::filesystem::path& dir) {
         if (dir == "") Helpers::panic("Failed to set app data directory");
         appData = dir;
+    }
+
+    // Sets the size of the file to "size" and returns whether it succeeded or not
+    bool setSize(std::uint64_t size) {
+        if (!isOpen()) return false;
+        bool success;
+
+#ifdef WIN32
+        success = _chsize_s(_fileno(handle), size) == 0;
+#else
+        success = ftruncate(fileno(handle), size) == 0;
+#endif
+        fflush(handle);
+        return success;
     }
 
     static std::filesystem::path getAppData() { return IOFile::appData; }

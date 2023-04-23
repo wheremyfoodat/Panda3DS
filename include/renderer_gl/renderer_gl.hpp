@@ -39,7 +39,7 @@ class Renderer {
 
 	SurfaceCache<DepthBuffer, 10> depthBufferCache;
 	SurfaceCache<ColourBuffer, 10> colourBufferCache;
-	SurfaceCache<Texture, 16> textureCache;
+	SurfaceCache<Texture, 256> textureCache;
 
 	OpenGL::uvec2 fbSize; // The size of the framebuffer (ie both the colour and depth buffer)'
 

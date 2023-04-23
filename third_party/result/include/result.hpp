@@ -506,7 +506,7 @@ Ret map(const Rust::Result<T, E>& result, Func func) {
 
 template<typename T, typename E, typename Func,
          typename Ret =
-            Result<T,
+            Rust::Result<T,
                 typename details::ResultErrType<
                     typename details::result_of<Func>::type
                 >::type
