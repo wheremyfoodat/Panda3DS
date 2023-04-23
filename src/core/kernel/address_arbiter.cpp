@@ -105,6 +105,7 @@ void Kernel::signalArbiter(u32 waitingAddress, s32 threadCount) {
 		}
 	}
 
+	// Reschedule threads if we woke one up
 	if (count != 0) {
 		rescheduleThreads();
 	}
