@@ -33,33 +33,45 @@ bool Kernel::signalEvent(Handle handle) {
 		event->fired = false;
 	}
 
-	// Wake up every single thread in the waitlist using a bit scanning algorithm
-	while (event->waitlist != 0) {
-		const uint index = std::countr_zero(event->waitlist); // Get one of the set bits to see which thread is waiting
-		event->waitlist ^= (1ull << index); // Remove thread from waitlist by toggling its bit
+	// Check if there's any thread waiting on this event
+	if (event->waitlist != 0) {
+		// Wake up every single thread in the waitlist using a bit scanning algorithm
+		while (event->waitlist != 0) {
+			const uint index = std::countr_zero(event->waitlist); // Get one of the set bits to see which thread is waiting
+			event->waitlist ^= (1ull << index); // Remove thread from waitlist by toggling its bit
 
-		// Get the thread we'll be signalling
-		Thread& t = threads[index];
-		switch (t.status) {
-			case ThreadStatus::WaitSync1:
-				t.status = ThreadStatus::Ready;
-				break;
+			// Get the thread we'll be signalling
+			Thread& t = threads[index];
+			switch (t.status) {
+				case ThreadStatus::WaitSync1:
+					t.status = ThreadStatus::Ready;
+					break;
 
-			case ThreadStatus::WaitSyncAny:
-				t.status = ThreadStatus::Ready;
-				// Get the index of the event in the object's waitlist, write it to r1
-				for (size_t i = 0; i < t.waitList.size(); i++) {
-					if (t.waitList[i] == handle) {
-						t.gprs[1] = i;
-						break;
+				case ThreadStatus::WaitSyncAny:
+					t.status = ThreadStatus::Ready;
+					// Get the index of the event in the object's waitlist, write it to r1
+					for (size_t i = 0; i < t.waitList.size(); i++) {
+						if (t.waitList[i] == handle) {
+							t.gprs[1] = i;
+							break;
+						}
 					}
-				}
-				break;
+					break;
 
-			case ThreadStatus::WaitSyncAll:
-				Helpers::panic("SignalEvent: Thread on WaitSyncAll");
-				break;
+				case ThreadStatus::WaitSyncAll:
+					Helpers::panic("SignalEvent: Thread on WaitSyncAll");
+					break;
+			}
 		}
+
+		// One-shot events get cleared once they are acquired by some thread
+		if (event->resetType == ResetType::OneShot)
+			event->fired = false;
+
+		// We must reschedule our threads if we signalled one. Some games such as FE: Awakening rely on this
+		// If this does not happen, we can have phenomena such as a thread waiting up a higher priority thread,
+		// and the higher priority thread just never running
+		rescheduleThreads();
 	}
 
 	return true;
