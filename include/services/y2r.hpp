@@ -82,6 +82,8 @@ class Y2RService {
 	void setSpacialDithering(u32 messagePointer);
 	void setStandardCoeff(u32 messagePointer);
 	void setTemporalDithering(u32 messagePointer);
+
+	void startConversion(u32 messagePointer);
 	void stopConversion(u32 messagePointer);
 
 public:

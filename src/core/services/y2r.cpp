@@ -20,6 +20,7 @@ namespace Y2RCommands {
 		SetInputLines = 0x001C0040,
 		SetStandardCoeff = 0x00200040,
 		SetAlpha = 0x00220040,
+		StartConversion = 0x00260000,
 		StopConversion = 0x00270000,
 		IsBusyConversion = 0x00280000,
 		PingProcess = 0x002A0000,
@@ -72,6 +73,7 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::SetStandardCoeff: setStandardCoeff(messagePointer); break;
 		case Y2RCommands::SetTemporalDithering: setTemporalDithering(messagePointer); break;
 		case Y2RCommands::SetTransferEndInterrupt: setTransferEndInterrupt(messagePointer); break;
+		case Y2RCommands::StartConversion: [[likely]] startConversion(messagePointer); break;
 		case Y2RCommands::StopConversion: stopConversion(messagePointer); break;
 		default: Helpers::panic("Y2R service requested. Command: %08X\n", command);
 	}
@@ -285,4 +287,18 @@ void Y2RService::setReceiving(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x18, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::startConversion(u32 messagePointer) {
+	log("Y2R::StartConversion\n");
+
+	// TODO: Actually launch conversion here
+	mem.write32(messagePointer, IPC::responseHeader(0x26, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	// Make Y2R conversion end instantly.
+	// Signal the transfer end event if it's been created. TODO: Is this affected by SetTransferEndInterrupt?
+	if (transferEndEvent.has_value()) {
+		kernel.signalEvent(transferEndEvent.value());
+	}
 }
