@@ -24,7 +24,8 @@ namespace Y2RCommands {
 		StopConversion = 0x00270000,
 		IsBusyConversion = 0x00280000,
 		PingProcess = 0x002A0000,
-		DriverInitialize = 0x002B0000
+		DriverInitialize = 0x002B0000,
+		DriverFinalize = 0x002C0000
 	};
 }
 
@@ -55,6 +56,7 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case Y2RCommands::DriverInitialize: driverInitialize(messagePointer); break;
+		case Y2RCommands::DriverFinalize: driverFinalize(messagePointer); break;
 		case Y2RCommands::GetTransferEndEvent: getTransferEndEvent(messagePointer); break;
 		case Y2RCommands::IsBusyConversion: isBusyConversion(messagePointer); break;
 		case Y2RCommands::PingProcess: pingProcess(messagePointer); break;
@@ -89,6 +91,12 @@ void Y2RService::pingProcess(u32 messagePointer) {
 void Y2RService::driverInitialize(u32 messagePointer) {
 	log("Y2R::DriverInitialize\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x2B, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::driverFinalize(u32 messagePointer) {
+	log("Y2R::DriverInitialize\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x2C, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

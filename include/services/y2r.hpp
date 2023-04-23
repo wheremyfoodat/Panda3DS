@@ -63,6 +63,7 @@ class Y2RService {
 
 	// Service commands
 	void driverInitialize(u32 messagePointer);
+	void driverFinalize(u32 messagePointer);
 	void isBusyConversion(u32 messagePointer);
 	void pingProcess(u32 messagePointer);
 	void setTransferEndInterrupt(u32 messagePointer);
