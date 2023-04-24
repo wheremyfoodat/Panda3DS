@@ -392,8 +392,8 @@ void Kernel::svcReleaseMutex() {
 		return;
 	}
 
-	releaseMutex(moo);
 	regs[0] = SVCResult::Success;
+	releaseMutex(moo);
 }
 
 // Returns whether an object is waitable or not
