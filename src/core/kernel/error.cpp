@@ -21,7 +21,9 @@ namespace FatalErrorType {
 void Kernel::handleErrorSyncRequest(u32 messagePointer) {
 	u32 cmd = mem.read32(messagePointer);
 	switch (cmd) {
-		case Commands::Throw: throwError(messagePointer); break;
+		case Commands::Throw:
+			throwError(messagePointer);
+			break;
 
 		default:
 			Helpers::panic("Unimplemented err:f command %08X\n", cmd);
