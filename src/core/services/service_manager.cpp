@@ -4,15 +4,16 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), apt(mem, kernel), cam(mem), cecd(mem), cfg(mem), 
-	dsp(mem, kernel), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem),
-	mic(mem), nim(mem), ndm(mem), ptm(mem), y2r(mem, kernel) {}
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem), cecd(mem),
+	cfg(mem), dsp(mem, kernel), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem),
+	ldr(mem), mic(mem), nfc(mem), nim(mem), ndm(mem), ptm(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
 // Reset every single service
 void ServiceManager::reset() {
 	ac.reset();
+	act.reset();
 	am.reset();
 	apt.reset();
 	boss.reset();
@@ -86,6 +87,7 @@ void ServiceManager::registerClient(u32 messagePointer) {
 
 static std::map<std::string, Handle> serviceMap = {
 	{ "ac:u", KernelHandles::AC },
+	{ "act:u", KernelHandles::ACT },
 	{ "am:app", KernelHandles::AM },
 	{ "APT:S", KernelHandles::APT }, // TODO: APT:A, APT:S and APT:U are slightly different
 	{ "APT:A", KernelHandles::APT },
@@ -103,6 +105,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "ldr:ro", KernelHandles::LDR_RO },
 	{ "mic:u", KernelHandles::MIC },
 	{ "ndm:u", KernelHandles::NDM },
+	{ "nfc:u", KernelHandles::NFC },
 	{ "nim:aoc", KernelHandles::NIM },
 	{ "ptm:u", KernelHandles::PTM }, // TODO: ptm:u and ptm:sysm have very different command sets
 	{ "ptm:sysm", KernelHandles::PTM },
@@ -162,10 +165,14 @@ void ServiceManager::subscribe(u32 messagePointer) {
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 	switch (handle) {
+		// Breaking alphabetical order a bit to place the ones I think are most common at the top
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
+		case KernelHandles::FS: [[likely]] fs.handleSyncRequest(messagePointer); break;
+		case KernelHandles::APT: [[likely]] apt.handleSyncRequest(messagePointer); break;
+
         case KernelHandles::AC: ac.handleSyncRequest(messagePointer); break;
+		case KernelHandles::ACT: act.handleSyncRequest(messagePointer); break;
         case KernelHandles::AM: am.handleSyncRequest(messagePointer); break;
-		case KernelHandles::APT: apt.handleSyncRequest(messagePointer); break;
         case KernelHandles::BOSS: boss.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CAM: cam.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
@@ -173,10 +180,10 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::DSP: dsp.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
         case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
-		case KernelHandles::FS: fs.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
         case KernelHandles::LDR_RO: ldr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::MIC: mic.handleSyncRequest(messagePointer); break;
+		case KernelHandles::NFC: nfc.handleSyncRequest(messagePointer); break;
         case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;

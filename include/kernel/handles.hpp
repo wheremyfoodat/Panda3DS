@@ -11,6 +11,7 @@ namespace KernelHandles {
 		CurrentThread = 0xFFFF8000,  // Used by the original kernel
 		CurrentProcess = 0xFFFF8001, // Used by the original kernel
 		AC,   // Something network related
+		ACT,  // Handles NNID accounts
 		AM,   // Application manager
 		APT,  // App Title something service?
 		BOSS, // Streetpass stuff?
@@ -25,6 +26,7 @@ namespace KernelHandles {
 		LCD,  // LCD service (Used for configuring the displays)
 		LDR_RO, // Loader service. Used for loading CROs.
 		MIC,  // MIC service (Controls the microphone)
+		NFC,  // NFC (Duh), used for Amiibo
 		NIM,  // Updates, DLC, etc
 		NDM,  // ?????
 		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
@@ -61,6 +63,7 @@ namespace KernelHandles {
 	static const char* getServiceName(Handle handle) {
 		switch (handle) {
 			case AC: return "AC";
+			case ACT: return "ACT";
 			case AM: return "AM";
 			case APT: return "APT";
 			case BOSS: return "BOSS";
@@ -71,11 +74,12 @@ namespace KernelHandles {
 			case FRD: return "FRD";
 			case FS: return "FS";
 			case DSP: return "DSP";
-			case GPU: return "GPU";
-			case LCD: return "LCD";
+			case GPU: return "GSP::GPU";
+			case LCD: return "GSP::LCD";
 			case LDR_RO: return "LDR:RO";
 			case MIC: return "MIC";
 			case NDM: return "NDM";
+			case NFC: return "NFC";
 			case NIM: return "NIM";
 			case PTM: return "PTM";
 			case Y2R: return "Y2R";

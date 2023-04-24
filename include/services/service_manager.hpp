@@ -5,6 +5,7 @@
 #include "logger.hpp"
 #include "memory.hpp"
 #include "services/ac.hpp"
+#include "services/act.hpp"
 #include "services/am.hpp"
 #include "services/apt.hpp"
 #include "services/boss.hpp"
@@ -19,6 +20,7 @@
 #include "services/gsp_lcd.hpp"
 #include "services/ldr_ro.hpp"
 #include "services/mic.hpp"
+#include "services/nfc.hpp"
 #include "services/nim.hpp"
 #include "services/ndm.hpp"
 #include "services/ptm.hpp"
@@ -37,6 +39,7 @@ class ServiceManager {
 	MAKE_LOG_FUNCTION(log, srvLogger)
 
     ACService ac;
+	ACTService act;
     AMService am;
 	APTService apt;
     BOSSService boss;
@@ -51,6 +54,7 @@ class ServiceManager {
 	LCDService gsp_lcd;
 	LDRService ldr;
 	MICService mic;
+	NFCService nfc;
     NIMService nim;
 	NDMService ndm;
 	PTMService ptm;

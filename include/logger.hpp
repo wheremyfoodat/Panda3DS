@@ -30,6 +30,7 @@ namespace Log {
 
     // Service loggers
     static Logger<false> acLogger;
+    static Logger<false> actLogger;
     static Logger<false> amLogger;
     static Logger<false> aptLogger;
     static Logger<false> bossLogger;
@@ -44,6 +45,7 @@ namespace Log {
     static Logger<false> gspLCDLogger;
     static Logger<false> ldrLogger;
     static Logger<false> micLogger;
+    static Logger<false> nfcLogger;
     static Logger<false> nimLogger;
     static Logger<false> ndmLogger;
     static Logger<false> ptmLogger;

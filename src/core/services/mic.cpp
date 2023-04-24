@@ -8,7 +8,8 @@ namespace MICCommands {
 		SetGain = 0x00080040,
 		GetGain = 0x00090000,
 		SetPower = 0x000A0040,
-		SetClamp = 0x000D0040
+		SetClamp = 0x000D0040,
+		CaptainToadFunction = 0x00100040
 	};
 }
 
@@ -33,6 +34,7 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 		case MICCommands::SetGain: setGain(messagePointer); break;
 		case MICCommands::SetPower: setPower(messagePointer); break;
 		case MICCommands::StartSampling: startSampling(messagePointer); break;
+		case MICCommands::CaptainToadFunction: theCaptainToadFunction(messagePointer); break;
 		default: Helpers::panic("MIC service requested. Command: %08X\n", command);
 	}
 }
@@ -91,5 +93,17 @@ void MICService::startSampling(u32 messagePointer) {
 	);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// Found in Captain Toad: Treasure Tracker
+// This is what 3DBrew says:
+// When the input value is 0, value 1 is written to an u8 MIC module state field.
+// Otherwise, value 0 is written there.Normally the input value is non - zero.
+// Citra calls it setClientVersion but no idea how they got that
+void MICService::theCaptainToadFunction(u32 messagePointer) {
+	log("MIC: Unknown function 0x00100040\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x10, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
