@@ -102,7 +102,7 @@ void Kernel::switchToNextThread() {
 void Kernel::rescheduleThreads() {
 	std::optional<int> newThreadIndex = getNextThread();
 	
-	if (newThreadIndex.has_value()) {
+	if (newThreadIndex.has_value() && newThreadIndex.value() != currentThreadIndex) {
 		threads[currentThreadIndex].status = ThreadStatus::Ready;
 		switchThread(newThreadIndex.value());
 	}
