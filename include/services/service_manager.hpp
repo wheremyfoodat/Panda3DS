@@ -80,4 +80,6 @@ public:
 	void requestGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }
 	void setGSPSharedMem(u8* ptr) { gsp_gpu.setSharedMem(ptr); }
 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
+
+	void signalDSPEvents() { dsp.signalEvents(); }
 };

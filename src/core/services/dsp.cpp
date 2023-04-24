@@ -216,3 +216,13 @@ void DSPService::invalidateDCache(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
+
+void DSPService::signalEvents() {
+	for (const DSPEvent& e : pipeEvents) {
+		if (e.has_value()) { kernel.signalEvent(e.value()); }
+	}
+
+	if (semaphoreEvent.has_value()) { kernel.signalEvent(semaphoreEvent.value()); }
+	if (interrupt0.has_value()) { kernel.signalEvent(interrupt0.value()); }
+	if (interrupt1.has_value()) { kernel.signalEvent(interrupt1.value()); }
+}
