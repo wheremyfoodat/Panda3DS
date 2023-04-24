@@ -111,12 +111,15 @@ void Kernel::svcClearEvent() {
 void Kernel::svcSignalEvent() {
 	const Handle handle = regs[0];
 	logSVC("SignalEvent(event handle = %X)\n", handle);
-	
-	if (!signalEvent(handle)) {
+	KernelObject* object = getObject(handle, KernelObjectType::Event);
+
+	if (object == nullptr) {
 		Helpers::panic("Signalled non-existent event: %X\n", handle);
 		regs[0] = SVCResult::BadHandle;
 	} else {
+		// We must signalEvent after setting r0, otherwise the r0 of the new thread will ne corrupted
 		regs[0] = SVCResult::Success;
+		signalEvent(handle);
 	}
 }
 
