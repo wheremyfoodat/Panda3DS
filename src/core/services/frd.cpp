@@ -1,5 +1,6 @@
 #include <string>
 #include "services/frd.hpp"
+#include "services/region_codes.hpp"
 #include "ipc.hpp"
 
 namespace FRDCommands {
@@ -8,8 +9,10 @@ namespace FRDCommands {
 		SetNotificationMask = 0x00210040,
 		SetClientSdkVersion = 0x00320042,
 		GetMyFriendKey = 0x00050000,
+		GetMyProfile = 0x00070000,
 		GetMyPresence = 0x00080000,
 		GetMyScreenName = 0x00090000,
+		GetMyMii = 0x000A0000,
 		GetFriendKeyList = 0x00110080
 	};
 }
@@ -28,7 +31,9 @@ void FRDService::handleSyncRequest(u32 messagePointer) {
 		case FRDCommands::AttachToEventNotification: attachToEventNotification(messagePointer); break;
 		case FRDCommands::GetFriendKeyList: getFriendKeyList(messagePointer); break;
 		case FRDCommands::GetMyFriendKey: getMyFriendKey(messagePointer); break;
+		case FRDCommands::GetMyMii: getMyMii(messagePointer); break;
 		case FRDCommands::GetMyPresence: getMyPresence(messagePointer); break;
+		case FRDCommands::GetMyProfile: getMyProfile(messagePointer); break;
 		case FRDCommands::GetMyScreenName: getMyScreenName(messagePointer); break;
 		case FRDCommands::SetClientSdkVersion: setClientSDKVersion(messagePointer); break;
 		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
@@ -81,6 +86,23 @@ void FRDService::getMyPresence(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void FRDService::getMyProfile(u32 messagePointer) {
+	mem.write32(messagePointer, IPC::responseHeader(0x7, 3, 0)); // Not sure if the header here has the correct # of responses?
+	mem.write32(messagePointer + 4, Result::Success);
+
+	// TODO: Should maybe make these user-configurable. Not super important though
+	mem.write8(messagePointer + 8, static_cast<u8>(Regions::USA));            // Region 
+	mem.write8(messagePointer + 9, static_cast<u8>(CountryCodes::US));        // Country
+	mem.write8(messagePointer + 10, 2);                                       // Area (this should be Washington)
+	mem.write8(messagePointer + 11, static_cast<u8>(LanguageCodes::English)); // Language
+	mem.write8(messagePointer + 12, 2);                                       // Platform (always 2 for CTR)
+
+	// Padding
+	mem.write8(messagePointer + 13, 0);
+	mem.write8(messagePointer + 14, 0);
+	mem.write8(messagePointer + 15, 0);
+}
+
 void FRDService::getMyScreenName(u32 messagePointer) {
 	log("FRD::GetMyScreenName\n");
 	static const std::u16string name = u"Pander";
@@ -109,5 +131,13 @@ void FRDService::setNotificationMask(u32 messagePointer) {
 	log("FRD::SetNotificationMask (Not documented)\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x21, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::getMyMii(u32 messagePointer) {
+	log("FRD::GetMyMii (stubbed)\n");
+
+	// TODO: How is the mii data even returned?
+	mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

@@ -1,19 +1,25 @@
 #pragma once
+#include <optional>
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
 
+class Kernel;
+
 class CECDService {
 	Handle handle = KernelHandles::CECD;
 	Memory& mem;
+	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, cecdLogger)
 
+	std::optional<Handle> infoEvent;
+
 	// Service commands
-	void getEventHandle(u32 messagePointer);
+	void getInfoEventHandle(u32 messagePointer);
 
 public:
-	CECDService(Memory& mem) : mem(mem) {}
+	CECDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

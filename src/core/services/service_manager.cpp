@@ -4,8 +4,8 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem), cecd(mem),
-	cfg(mem), dsp(mem, kernel), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem),
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem),
+	cecd(mem, kernel), cfg(mem), dsp(mem, kernel), hid(mem), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem),
 	ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
