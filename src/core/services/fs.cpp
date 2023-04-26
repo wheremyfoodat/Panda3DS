@@ -21,6 +21,7 @@ namespace FSCommands {
 		OpenArchive = 0x080C00C2,
 		ControlArchive = 0x080D0144,
 		CloseArchive = 0x080E0080,
+		GetFreeBytes = 0x08120080,
 		IsSdmcDetected = 0x08170000,
 		GetFormatInfo = 0x084500C2,
 		FormatSaveData = 0x084C0242,
@@ -160,6 +161,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
+		case FSCommands::GetFreeBytes: getFreeBytes(messagePointer); break;
 		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
@@ -470,6 +472,22 @@ void FSService::controlArchive(u32 messagePointer) {
 			Helpers::panic("Unimplemented action for ControlArchive (action = %X)\n", action);
 			break;
 	}
+}
+
+void FSService::getFreeBytes(u32 messagePointer) {
+	log("FS::GetFreeBytes\n");
+	const Handle archiveHandle = (Handle)mem.read64(messagePointer + 4);
+	auto session = kernel.getObject(archiveHandle, KernelObjectType::Archive);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x812, 3, 0));
+	if (session == nullptr) [[unlikely]] {
+		log("FS::GetFreeBytes: Invalid archive handle %d\n", archiveHandle);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
+		return;
+	}
+
+	const u64 bytes = session->getData<ArchiveSession>()->archive->getFreeBytes();
+	mem.write64(messagePointer + 8, bytes);
 }
 
 void FSService::getPriority(u32 messagePointer) {
