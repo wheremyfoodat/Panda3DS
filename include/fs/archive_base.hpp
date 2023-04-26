@@ -208,6 +208,11 @@ public:
         return FormatInfo{ .size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false };
     }
 
+    virtual FSResult createDirectory(const FSPath& path) {
+        Helpers::panic("Unimplemented CreateDirectory for %s archive", name().c_str());
+        return FSResult::AlreadyExists;
+    }
+
     // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
 

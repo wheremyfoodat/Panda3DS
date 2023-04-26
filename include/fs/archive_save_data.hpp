@@ -8,6 +8,7 @@ public:
 	u64 getFreeBytes() override { Helpers::panic("SaveData::GetFreeBytes unimplemented"); return 0; }
 	std::string name() override { return "SaveData"; }
 
+	FSResult createDirectory(const FSPath& path) override;
 	FSResult createFile(const FSPath& path, u64 size) override;
 	FSResult deleteFile(const FSPath& path) override;
 	FormatInfo getFormatInfo(const FSPath& path) override;

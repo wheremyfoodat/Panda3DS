@@ -4,6 +4,7 @@
 #include "ipc.hpp"
 
 #ifdef CreateFile // windows.h defines CreateFile & DeleteFile because of course it does.
+#undef CreateDirectory
 #undef CreateFile
 #undef DeleteFile
 #endif
@@ -15,6 +16,7 @@ namespace FSCommands {
 		OpenFileDirectly = 0x08030204,
 		DeleteFile = 0x08040142,
 		CreateFile = 0x08080202,
+		CreateDirectory = 0x08090182,
 		OpenDirectory = 0x080B0102,
 		OpenArchive = 0x080C00C2,
 		ControlArchive = 0x080D0144,
@@ -152,6 +154,7 @@ FSPath FSService::readPath(u32 type, u32 pointer, u32 size) {
 void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case FSCommands::CreateDirectory: createDirectory(messagePointer); break;
 		case FSCommands::CreateFile: createFile(messagePointer); break;
 		case FSCommands::ControlArchive: controlArchive(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
@@ -255,6 +258,29 @@ void FSService::openFile(u32 messagePointer) {
 		mem.write32(messagePointer + 8, 0x10); // "Move handle descriptor"
 		mem.write32(messagePointer + 12, handle.value());
 	}
+}
+
+void FSService::createDirectory(u32 messagePointer) {
+	log("FS::CreateDirectory\n");
+
+	const Handle archiveHandle = (Handle)mem.read64(messagePointer + 8);
+	const u32 pathType = mem.read32(messagePointer + 16);
+	const u32 pathSize = mem.read32(messagePointer + 20);
+	const u32 pathPointer = mem.read32(messagePointer + 32);
+
+	KernelObject* archiveObject = kernel.getObject(archiveHandle, KernelObjectType::Archive);
+	if (archiveObject == nullptr) [[unlikely]] {
+		log("FS::CreateDirectory: Invalid archive handle %d\n", archiveHandle);
+		mem.write32(messagePointer + 4, ResultCode::Failure);
+		return;
+	}
+
+	ArchiveBase* archive = archiveObject->getData<ArchiveSession>()->archive;
+	const auto dirPath = readPath(pathType, pathPointer, pathSize);
+	const FSResult res = archive->createDirectory(dirPath);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x809, 1, 0));
+	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
 
 void FSService::openDirectory(u32 messagePointer) {
@@ -384,7 +410,7 @@ void FSService::getFormatInfo(u32 messagePointer) {
 
 	ArchiveBase::FormatInfo info = archive->getFormatInfo(path);
 	mem.write32(messagePointer, IPC::responseHeader(0x845, 5, 0));
-	mem.write32(messagePointer + 4, ResultCode::Success);
+	mem.write32(messagePointer + 4, -1);
 	mem.write32(messagePointer + 8, info.size);
 	mem.write32(messagePointer + 12, info.numOfDirectories);
 	mem.write32(messagePointer + 16, info.numOfFiles);

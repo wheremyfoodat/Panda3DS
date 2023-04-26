@@ -9,6 +9,30 @@ FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 	return FSResult::Success;
 }
 
+FSResult SaveDataArchive::createDirectory(const FSPath& path) {
+	if (!cartHasSaveData()) {
+		printf("Tried to create SaveData dir without save data\n");
+		return FSResult::FileNotFound;
+	}
+
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in SaveData::OpenFile");
+
+		fs::path p = IOFile::getAppData() / "SaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_directory(p))
+			return FSResult::AlreadyExists;
+		if (fs::is_regular_file(p)) {
+			Helpers::panic("File path passed to SaveData::CreateDirectory");
+		}
+
+		bool success = fs::create_directory(p);
+		return success ? FSResult::Success : FSResult::UnexpectedFileOrDir;
+	}
+}
+
 FSResult SaveDataArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[SaveData] Unimplemented DeleteFile");
 	return FSResult::Success;
