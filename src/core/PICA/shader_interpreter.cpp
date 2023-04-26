@@ -36,6 +36,8 @@ void PICAShader::run() {
 			case ShaderOpcodes::NOP: break; // Do nothing
 			case ShaderOpcodes::RCP: rcp(instruction); break;
 			case ShaderOpcodes::RSQ: rsq(instruction); break;
+			case ShaderOpcodes::SGEI: sgei(instruction); break;
+			case ShaderOpcodes::SLT: slt(instruction); break;
 			case ShaderOpcodes::SLTI: slti(instruction); break;
 
 			case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
@@ -403,6 +405,47 @@ void PICAShader::madi(u32 instruction) {
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
 			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i] + srcVec3[3 - i];
+		}
+	}
+}
+
+void PICAShader::slt(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src1 = getIndexedSource(src1, idx);
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = srcVec1[3 - i] < srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
+		}
+	}
+}
+
+void PICAShader::sgei(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x1f];
+	const u32 src1 = (instruction >> 14) & 0x1f;
+	u32 src2 = (instruction >> 7) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src2 = getIndexedSource(src2, idx);
+
+	auto srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	auto srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = srcVec1[3 - i] >= srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
 		}
 	}
 }

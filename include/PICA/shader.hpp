@@ -16,6 +16,7 @@ namespace ShaderOpcodes {
 		DP3 = 0x01,
 		DP4 = 0x02,
 		MUL = 0x08,
+		SLT = 0x0A,
 		FLR = 0x0B,
 		MAX = 0x0C,
 		MIN = 0x0D,
@@ -23,6 +24,7 @@ namespace ShaderOpcodes {
 		RSQ = 0x0F,
 		MOVA = 0x12,
 		MOV = 0x13,
+		SGEI = 0x1A,
 		SLTI = 0x1B,
 		NOP = 0x21,
 		END = 0x22,
@@ -112,6 +114,8 @@ class PICAShader {
 	void mul(u32 instruction);
 	void rcp(u32 instruction);
 	void rsq(u32 instruction);
+	void sgei(u32 instruction);
+	void slt(u32 instruction);
 	void slti(u32 instruction);
 
 	// src1, src2 and src3 have different negation & component swizzle bits in the operand descriptor
