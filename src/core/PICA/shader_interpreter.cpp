@@ -430,7 +430,7 @@ void PICAShader::slt(u32 instruction) {
 }
 
 void PICAShader::sgei(u32 instruction) {
-	const u32 operandDescriptor = operandDescriptors[instruction & 0x1f];
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = (instruction >> 14) & 0x1f;
 	u32 src2 = (instruction >> 7) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
@@ -451,7 +451,7 @@ void PICAShader::sgei(u32 instruction) {
 }
 
 void PICAShader::slti(u32 instruction) {
-	const u32 operandDescriptor = operandDescriptors[instruction & 0x1f];
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = (instruction >> 14) & 0x1f;
 	u32 src2 = (instruction >> 7) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
