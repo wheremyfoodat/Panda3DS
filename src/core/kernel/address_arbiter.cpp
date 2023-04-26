@@ -86,6 +86,8 @@ void Kernel::arbitrateAddress() {
 		default:
 			Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
 	}
+
+	rescheduleThreads();
 }
 
 // Signal up to "threadCount" threads waiting on the arbiter indicated by "waitingAddress"
@@ -103,10 +105,5 @@ void Kernel::signalArbiter(u32 waitingAddress, s32 threadCount) {
 			// Check if we've reached the max number of. If count < 0 then all threads are released.
 			if (count == threadCount && threadCount > 0) break;
 		}
-	}
-
-	// Reschedule threads if we woke one up
-	if (count != 0) {
-		rescheduleThreads();
 	}
 }
