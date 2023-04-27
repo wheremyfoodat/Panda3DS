@@ -123,6 +123,10 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	if (interruptEvent.has_value()) {
 		kernel.signalEvent(interruptEvent.value());
 	}
+
+	// HACK: Signal DSP events on GPU interrupt for now until we have the DSP since games need DSP events
+	// Maybe there's a better alternative?
+	kernel.signalDSPEvents();
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {

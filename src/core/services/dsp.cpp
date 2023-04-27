@@ -169,6 +169,7 @@ void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	// TODO: Translation descriptor here?
 	mem.write32(messagePointer + 12, semaphoreEvent.value()); // Semaphore event handle
+	kernel.signalEvent(semaphoreEvent.value());
 }
 
 void DSPService::setSemaphore(u32 messagePointer) {
