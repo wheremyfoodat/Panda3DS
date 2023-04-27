@@ -80,7 +80,7 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FSPath& path) {
 	if (!cartHasSaveData()) {
 		printf("Tried to open SaveData directory without save data\n");
-		return Err(FSResult::Success);
+		return Err(FSResult::UnexpectedFileOrDir);
 	}
 
 	if (path.type == PathType::UTF16) {
@@ -91,7 +91,7 @@ Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FS
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::is_regular_file(p)) {
-			printf("SaveData: OpenArchive used with a file path");
+			printf("SaveData: OpenDirectory used with a file path");
 			return Err(FSResult::UnexpectedFileOrDir);
 		}
 

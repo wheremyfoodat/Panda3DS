@@ -277,6 +277,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 	const bool depthWriteEnable = (depthControl >> 12) & 1;
 	const int depthFunc = (depthControl >> 4) & 7;
 	const int colourMask = (depthControl >> 8) & 0xf;
+	glColorMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
 
 	static constexpr std::array<GLenum, 8> depthModes = {
 		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
@@ -346,7 +347,6 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		}
 	}
 
-	if (colourMask != 0xf) Helpers::panic("[PICA] Colour mask = %X != 0xf", colourMask);
 	vbo.bufferVertsSub(vertices, count);
 	OpenGL::draw(primType, count);
 }
