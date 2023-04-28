@@ -10,11 +10,6 @@ FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 }
 
 FSResult SaveDataArchive::createDirectory(const FSPath& path) {
-	if (!cartHasSaveData()) {
-		printf("Tried to create SaveData dir without save data\n");
-		return FSResult::FileNotFound;
-	}
-
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::OpenFile");
@@ -30,6 +25,8 @@ FSResult SaveDataArchive::createDirectory(const FSPath& path) {
 
 		bool success = fs::create_directory(p);
 		return success ? FSResult::Success : FSResult::UnexpectedFileOrDir;
+	} else {
+		Helpers::panic("Unimplemented SaveData::CreateDirectory");
 	}
 }
 
@@ -39,11 +36,6 @@ FSResult SaveDataArchive::deleteFile(const FSPath& path) {
 }
 
 FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
-	if (!cartHasSaveData()) {
-		printf("Tried to read SaveData FS without save data\n");
-		return FileError;
-	}
-
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::OpenFile");
@@ -78,11 +70,6 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 }
 
 Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FSPath& path) {
-	if (!cartHasSaveData()) {
-		printf("Tried to open SaveData directory without save data\n");
-		return Err(FSResult::UnexpectedFileOrDir);
-	}
-
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
@@ -107,7 +94,7 @@ Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FS
 }
 
 ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {
-	Helpers::panic("Unimplemented SaveData::GetFormatInfo");
+	//Helpers::panic("Unimplemented SaveData::GetFormatInfo");
 	return FormatInfo{ .size = 0, .numOfDirectories = 255, .numOfFiles = 255, .duplicateData = false };
 }
 
@@ -121,19 +108,6 @@ ArchiveBase* SaveDataArchive::openArchive(const FSPath& path) {
 }
 
 std::optional<u32> SaveDataArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {
-	if (!cartHasSaveData()) {
-		printf("Tried to read SaveData FS without save data\n");
-		return std::nullopt;
-	}
-
-	auto cxi = mem.getCXI();
-	const u64 saveSize = cxi->saveData.size();
-
-	if (offset >= saveSize) {
-		printf("Tried to read from past the end of save data\n");
-		return std::nullopt;
-	}
-
 	Helpers::panic("Unimplemented SaveData::ReadFile");
 	return 0;
 }
