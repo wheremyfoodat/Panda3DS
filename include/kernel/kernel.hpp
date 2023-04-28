@@ -77,6 +77,12 @@ private:
 	bool shouldWaitOnObject(KernelObject* object);
 	void releaseMutex(Mutex* moo);
 
+	// Wake up the thread with the highest priority out of all threads in the waitlist
+	// Returns the index of the woken up thread
+	// Do not call this function with an empty waitlist!!!
+	int wakeupOneThread(u64 waitlist, Handle handle);
+	void wakeupAllThreads(u64 waitlist, Handle handle);
+
 	std::optional<Handle> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);
 

@@ -174,10 +174,11 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
 struct Mutex {
     u64 waitlist;           // Refer to the getWaitlist function below for documentation
     Handle ownerThread = 0; // Index of the thread that holds the mutex if it's locked
+    Handle handle; // Handle of the mutex itself
     u32 lockCount; // Number of times this mutex has been locked by its daddy. 0 = not locked
     bool locked;
 
-    Mutex(bool lock = false) : locked(lock), waitlist(0), lockCount(lock ? 1 : 0) {}
+    Mutex(bool lock, Handle handle) : locked(lock), waitlist(0), lockCount(lock ? 1 : 0), handle(handle) {}
 };
 
 struct Semaphore {

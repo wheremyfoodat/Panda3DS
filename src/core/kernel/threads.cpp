@@ -163,7 +163,7 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u
 
 Handle Kernel::makeMutex(bool locked) {
 	Handle ret = makeObject(KernelObjectType::Mutex);
-	objects[ret].data = new Mutex(locked);
+	objects[ret].data = new Mutex(locked, ret);
 
 	// If the mutex is initially locked, store the index of the thread that owns it and set lock count to 1
 	if (locked) {
@@ -182,7 +182,13 @@ void Kernel::releaseMutex(Mutex* moo) {
 	if (moo->lockCount == 0) {
 		moo->locked = false;
 		if (moo->waitlist != 0) {
-			Helpers::panic("Mutex got freed while it's got more threads waiting for it. Must make a new thread claim it.");
+			int index = wakeupOneThread(moo->waitlist, moo->handle); // Wake up one thread and get its index
+			moo->waitlist ^= (1ull << index); // Remove thread from waitlist
+
+			// Have new thread acquire mutex
+			moo->locked = true;
+			moo->lockCount = 1;
+			moo->ownerThread = index;
 		}
 	}
 }
@@ -228,6 +234,53 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 
 		default: Helpers::panic("Acquiring unimplemented sync object %s", object->getTypeName());
 	}
+}
+
+// Wake up one of the threads in the waitlist (the one with highest prio) and return its index
+// Must not be called with an empty waitlist
+int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
+	if (waitlist == 0) [[unlikely]]
+		Helpers::panic("[Internal error] It shouldn't be possible to call wakeupOneThread when there's 0 threads waiting!");
+
+	// Find the waiting thread with the highest priority.
+	// We do this by first picking the first thread in the waitlist, then checking each other thread and comparing priority
+	int threadIndex = std::countr_zero(waitlist);    // Index of first thread
+	int maxPriority = threads[threadIndex].priority; // Set initial max prio to the prio of the first thread
+	waitlist ^= (1ull << threadIndex); // Remove thread from the waitlist
+
+	while (waitlist != 0) {
+		int newThread = std::countr_zero(waitlist); // Get new thread and evaluate whether it has a higher priority
+		if (threads[newThread].priority < maxPriority) { // Low priority value means high priority
+			threadIndex = newThread;
+			maxPriority = threads[newThread].priority;
+		}
+
+		waitlist ^= (1ull << threadIndex); // Remove thread from waitlist
+	}
+
+	Thread& t = threads[threadIndex];
+	switch (t.status) {
+		case ThreadStatus::WaitSync1:
+			t.status = ThreadStatus::Ready;
+			break;
+
+		case ThreadStatus::WaitSyncAny:
+			t.status = ThreadStatus::Ready;
+			// Get the index of the event in the object's waitlist, write it to r1
+			for (size_t i = 0; i < t.waitList.size(); i++) {
+				if (t.waitList[i] == handle) {
+					t.gprs[1] = i;
+					break;
+				}
+			}
+			break;
+
+		case ThreadStatus::WaitSyncAll:
+			Helpers::panic("WakeupOneThread: Thread on WaitSyncAll");
+			break;
+	}
+
+	return threadIndex;
 }
 
 // Make a thread sleep for a certain amount of nanoseconds at minimum
