@@ -1,5 +1,6 @@
 #include "services/hid.hpp"
 #include "ipc.hpp"
+#include "kernel.hpp"
 #include <bit>
 
 namespace HIDCommands {
@@ -80,15 +81,23 @@ void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 
 void HIDService::getIPCHandles(u32 messagePointer) {
 	log("HID::GetIPCHandles\n");
+
+	// Initialize HID events
+	if (!eventsInitialized) {
+		eventsInitialized = true;
+
+		for (auto& e : events) {
+			e = kernel.makeEvent(ResetType::OneShot);
+		}
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0xA, 1, 7));
 	mem.write32(messagePointer + 4, Result::Success); // Result code
 	mem.write32(messagePointer + 8, 0x14000000); // Translation descriptor
 	mem.write32(messagePointer + 12, KernelHandles::HIDSharedMemHandle); // Shared memory handle
 
-	// HID event handles
-	mem.write32(messagePointer + 16, KernelHandles::HIDEvent0);
-	mem.write32(messagePointer + 20, KernelHandles::HIDEvent1);
-	mem.write32(messagePointer + 24, KernelHandles::HIDEvent2);
-	mem.write32(messagePointer + 28, KernelHandles::HIDEvent3);
-	mem.write32(messagePointer + 32, KernelHandles::HIDEvent4);
+	// Write HID event handles
+	for (int i = 0; i < events.size(); i++) {
+		mem.write32(messagePointer + 16 + sizeof(Handle) * i, events[i].value());
+	}
 }

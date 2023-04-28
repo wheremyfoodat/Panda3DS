@@ -31,6 +31,9 @@ void Emulator::run() {
         kernel.sendGPUInterrupt(GPUInterrupt::VBlank0);
         kernel.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
+        // Update inputs in the HID module
+        kernel.updateInputs();
+
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {

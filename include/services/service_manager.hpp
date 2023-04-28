@@ -82,4 +82,5 @@ public:
 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
 
 	void signalDSPEvents() { dsp.signalEvents(); }
+	void updateInputs() { hid.updateInputs(); }
 };

@@ -41,12 +41,6 @@ namespace KernelHandles {
 
 		MinSharedMemHandle = GSPSharedMemHandle,
 		MaxSharedMemHandle = HIDSharedMemHandle,
-
-		HIDEvent0,
-		HIDEvent1,
-		HIDEvent2,
-		HIDEvent3,
-		HIDEvent4
 	};
 
 	// Returns whether "handle" belongs to one of the OS services

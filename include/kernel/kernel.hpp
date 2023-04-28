@@ -198,4 +198,5 @@ public:
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.requestGPUInterrupt(type); }
 	void signalDSPEvents() { serviceManager.signalDSPEvents(); }
+	void updateInputs() { serviceManager.updateInputs(); }
 };
