@@ -23,7 +23,13 @@ namespace Result {
 void HIDService::reset() {
 	sharedMem = nullptr;
 	accelerometerEnabled = false;
+	eventsInitialized = false;
 	gyroEnabled = false;
+
+	// Deinitialize HID events
+	for (auto& e : events) {
+		e = std::nullopt;
+	}
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
@@ -99,5 +105,18 @@ void HIDService::getIPCHandles(u32 messagePointer) {
 	// Write HID event handles
 	for (int i = 0; i < events.size(); i++) {
 		mem.write32(messagePointer + 16 + sizeof(Handle) * i, events[i].value());
+	}
+}
+
+// TODO: We don't currently have inputs but we must at least try to signal the HID key input events now and then
+void HIDService::updateInputs() {
+	// For some reason, the original developers decided to signal the HID events each time the OS rescanned inputs
+	// Rather than once every time the state of a key, or the accelerometer state, etc is updated
+	// This means that the OS will signal the events even if literally nothing happened
+	// Some games such as Majora's Mask rely on this behaviour.
+	if (eventsInitialized) {
+		for (auto& e : events) {
+			kernel.signalEvent(e.value());
+		}
 	}
 }
