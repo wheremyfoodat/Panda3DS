@@ -237,7 +237,8 @@ void Kernel::waitSynchronizationN() {
 		}
 
 		regs[0] = SVCResult::Success; // If the thread times out, this should be adjusted to SVCResult::Timeout
-		regs[1] = handleCount - 1; // When the thread exits, this will be adjusted to mirror which handle woke us up
+		// If the thread wakes up without timeout, this will be adjusted to the index of the handle that woke us up
+		regs[1] = 0xFFFFFFFF;
 		t.waitList.resize(handleCount);
 		t.status = ThreadStatus::WaitSyncAny;
 		t.outPointer = outPointer;
