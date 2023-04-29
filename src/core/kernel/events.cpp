@@ -180,7 +180,7 @@ void Kernel::waitSynchronizationN() {
 
 	logSVC("WaitSynchronizationN (handle pointer: %08X, count: %d, timeout = %lld)\n", handles, handleCount, ns);
 
-	if (handleCount < 0)
+	if (handleCount <= 0)
 		Helpers::panic("WaitSyncN: Invalid handle count");
 
 	using WaitObject = std::pair<Handle, KernelObject*>;
