@@ -147,6 +147,7 @@ void Kernel::waitSynchronization1() {
 	if (!shouldWaitOnObject(object)) {
 		acquireSyncObject(object, threads[currentThreadIndex]); // Acquire the object since it's ready
 		regs[0] = SVCResult::Success;
+		rescheduleThreads();
 	} else {
 		// Timeout is 0, don't bother waiting, instantly timeout
 		if (ns == 0) {
@@ -236,6 +237,7 @@ void Kernel::waitSynchronizationN() {
 			regs[0] = SVCResult::Success;
 			regs[1] = firstReadyObjectIndex; // Return index of the acquired object
 			acquireSyncObject(waitObjects[firstReadyObjectIndex].second, t); // Acquire object
+			rescheduleThreads();
 			return;
 		}
 
