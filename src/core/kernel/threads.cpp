@@ -262,10 +262,13 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 	switch (t.status) {
 		case ThreadStatus::WaitSync1:
 			t.status = ThreadStatus::Ready;
+			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
 			break;
 
 		case ThreadStatus::WaitSyncAny:
 			t.status = ThreadStatus::Ready;
+			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+
 			// Get the index of the event in the object's waitlist, write it to r1
 			for (size_t i = 0; i < t.waitList.size(); i++) {
 				if (t.waitList[i] == handle) {

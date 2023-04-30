@@ -45,10 +45,13 @@ bool Kernel::signalEvent(Handle handle) {
 			switch (t.status) {
 				case ThreadStatus::WaitSync1:
 					t.status = ThreadStatus::Ready;
+					t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
 					break;
 
 				case ThreadStatus::WaitSyncAny:
 					t.status = ThreadStatus::Ready;
+					t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+
 					// Get the index of the event in the object's waitlist, write it to r1
 					for (size_t i = 0; i < t.waitList.size(); i++) {
 						if (t.waitList[i] == handle) {
@@ -151,7 +154,7 @@ void Kernel::waitSynchronization1() {
 			return;
 		}
 
-		regs[0] = SVCResult::Success;
+		regs[0] = SVCResult::Timeout; // This will be overwritten with success if we don't timeout
 
 		auto& t = threads[currentThreadIndex];
 		t.waitList.resize(1);
@@ -236,7 +239,7 @@ void Kernel::waitSynchronizationN() {
 			return;
 		}
 
-		regs[0] = SVCResult::Success; // If the thread times out, this should be adjusted to SVCResult::Timeout
+		regs[0] = SVCResult::Timeout; // This will be overwritten with success if we don't timeout
 		// If the thread wakes up without timeout, this will be adjusted to the index of the handle that woke us up
 		regs[1] = 0xFFFFFFFF;
 		t.waitList.resize(handleCount);
