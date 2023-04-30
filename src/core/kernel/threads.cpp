@@ -190,6 +190,8 @@ void Kernel::releaseMutex(Mutex* moo) {
 			moo->lockCount = 1;
 			moo->ownerThread = index;
 		}
+
+		rescheduleThreads();
 	}
 }
 
@@ -326,6 +328,7 @@ void Kernel::createThread() {
 
 	regs[0] = SVCResult::Success;
 	regs[1] = makeThread(entrypoint, initialSP, priority, id, arg, ThreadStatus::Ready);
+	rescheduleThreads();
 }
 
 // void SleepThread(s64 nanoseconds)
