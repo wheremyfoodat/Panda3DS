@@ -412,7 +412,7 @@ void FSService::getFormatInfo(u32 messagePointer) {
 
 	ArchiveBase::FormatInfo info = archive->getFormatInfo(path);
 	mem.write32(messagePointer, IPC::responseHeader(0x845, 5, 0));
-	mem.write32(messagePointer + 4, -1);
+	mem.write32(messagePointer + 4, ResultCode::Success);
 	mem.write32(messagePointer + 8, info.size);
 	mem.write32(messagePointer + 12, info.numOfDirectories);
 	mem.write32(messagePointer + 16, info.numOfFiles);
