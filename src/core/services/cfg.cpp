@@ -1,5 +1,6 @@
 #include "services/cfg.hpp"
 #include "services/dsp.hpp"
+#include "system_models.hpp"
 #include "ipc.hpp"
 
 namespace CFGCommands {
@@ -7,7 +8,8 @@ namespace CFGCommands {
 		GetConfigInfoBlk2 = 0x00010082,
 		SecureInfoGetRegion = 0x00020000,
 		GenHashConsoleUnique = 0x00030040,
-		GetRegionCanadaUSA = 0x00040000
+		GetRegionCanadaUSA = 0x00040000,
+		GetSystemModel = 0x00050000
 	};
 }
 
@@ -22,12 +24,21 @@ void CFGService::reset() {}
 void CFGService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
-		case CFGCommands::GetConfigInfoBlk2: getConfigInfoBlk2(messagePointer); break;
+		case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;
 		case CFGCommands::GetRegionCanadaUSA: getRegionCanadaUSA(messagePointer); break;
+		case CFGCommands::GetSystemModel: getSystemModel(messagePointer); break;
 		case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
 		case CFGCommands::SecureInfoGetRegion: secureInfoGetRegion(messagePointer); break;
 		default: Helpers::panic("CFG service requested. Command: %08X\n", command);
 	}
+}
+
+void CFGService::getSystemModel(u32 messagePointer) {
+	log("CFG::GetSystemModel\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x05, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, SystemModel::Nintendo3DS); // TODO: Make this adjustable via GUI
 }
 
 // Write a UTF16 string to 3DS memory starting at "pointer". Appends a null terminator.
