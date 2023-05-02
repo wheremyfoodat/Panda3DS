@@ -107,10 +107,15 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 }
 
 void GPUService::requestInterrupt(GPUInterrupt type) {
+	// HACK: Signal DSP events on GPU interrupt for now until we have the DSP since games need DSP events
+	// Maybe there's a better alternative?
+	kernel.signalDSPEvents();
+
 	if (sharedMem == nullptr) [[unlikely]] { // Shared memory hasn't been set up yet
 		return;
 	}
 
+	// TODO: Add support for multiple GSP threads
 	u8 index = sharedMem[0]; // The interrupt block is normally located at sharedMem + processGSPIndex*0x40
 	u8& interruptCount = sharedMem[1];
 	u8 flagIndex = (index + interruptCount) % 0x34;
@@ -119,14 +124,27 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	sharedMem[2] = 0; // Set error code to 0
 	sharedMem[0xC + flagIndex] = static_cast<u8>(type); // Write interrupt type to queue
 
+	// Update framebuffer info in shared memory
+	// Most new games check to make sure that the "flag" byte of the framebuffer info header is set to 0
+	// Not emulating this causes Yoshi's Wooly World, Captain Toad, Metroid 2 et al to hang
+	if (type == GPUInterrupt::VBlank0 || type == GPUInterrupt::VBlank1) {
+		int screen = static_cast<u32>(type) - static_cast<u32>(GPUInterrupt::VBlank0); // 0 for top screen, 1 for bottom
+
+		constexpr u32 FBInfoSize = 0x40;
+		// TODO: Offset depends on GSP thread being triggered
+		u8* info = &sharedMem[0x200 + screen * FBInfoSize];
+		u8& dirtyFlag = info[1];
+
+		if (dirtyFlag) {
+			// TODO: Submit buffer info here
+			dirtyFlag = 0;
+		}
+	}
+
 	// Signal interrupt event
 	if (interruptEvent.has_value()) {
 		kernel.signalEvent(interruptEvent.value());
 	}
-
-	// HACK: Signal DSP events on GPU interrupt for now until we have the DSP since games need DSP events
-	// Maybe there's a better alternative?
-	kernel.signalDSPEvents();
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {
