@@ -288,6 +288,40 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 	return threadIndex;
 }
 
+// Wake up every single thread in the waitlist using a bit scanning algorithm
+void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
+	while (waitlist != 0) {
+		const uint index = std::countr_zero(waitlist); // Get one of the set bits to see which thread is waiting
+		waitlist ^= (1ull << index); // Remove thread from waitlist by toggling its bit
+
+		// Get the thread we'll be signalling
+		Thread& t = threads[index];
+		switch (t.status) {
+		case ThreadStatus::WaitSync1:
+			t.status = ThreadStatus::Ready;
+			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+			break;
+
+		case ThreadStatus::WaitSyncAny:
+			t.status = ThreadStatus::Ready;
+			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+
+			// Get the index of the event in the object's waitlist, write it to r1
+			for (size_t i = 0; i < t.waitList.size(); i++) {
+				if (t.waitList[i] == handle) {
+					t.gprs[1] = i;
+					break;
+				}
+			}
+			break;
+
+		case ThreadStatus::WaitSyncAll:
+			Helpers::panic("WakeupAllThreads: Thread on WaitSyncAll");
+			break;
+		}
+	}
+}
+
 // Make a thread sleep for a certain amount of nanoseconds at minimum
 void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
@@ -419,8 +453,12 @@ void Kernel::exitThread() {
 	aliveThreadCount--;
 
 	// Check if any threads are sleeping, waiting for this thread to terminate, and wake them up
-	if (t.threadsWaitingForTermination != 0)
-		Helpers::panic("TODO: Implement threads sleeping until another thread terminates");
+	// This is how thread joining is implemented in the kernel - you wait on a thread, like any other wait object.
+	if (t.threadsWaitingForTermination != 0) {
+		// TODO: Handle cloned handles? Not sure how those interact with wait object signalling
+		wakeupAllThreads(t.threadsWaitingForTermination, t.handle);
+		t.threadsWaitingForTermination = 0; // No other threads waiting
+	}
 
 	switchToNextThread();
 }
