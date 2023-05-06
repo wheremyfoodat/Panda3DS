@@ -130,7 +130,7 @@ const char* displayFragmentShader = R"(
     in vec2 UV;
     out vec4 FragColor;
 
-    uniform sampler2D u_texture; // TODO: Properly init this to 0 when I'm not lazy
+    uniform sampler2D u_texture;
     void main() {
 		FragColor = texture(u_texture, UV);
     }
@@ -181,10 +181,14 @@ void Renderer::initGraphicsContext() {
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
 	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0); // Init sampler object
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
 	displayProgram.create({ vertDisplay, fragDisplay });
+	displayProgram.use();
+
+	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
 	vbo.bind();
