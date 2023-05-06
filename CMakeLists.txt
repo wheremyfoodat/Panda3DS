@@ -41,15 +41,28 @@ target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 set(CRYPTOPP_BUILD_TESTING OFF) 
 add_subdirectory(third_party/cryptopp)
 
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+# Check for x64
+if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    set(HOST_X64 TRUE)
+else()
+    set(HOST_X64 FALSE)
+endif()
+
+# Check for arm64
+if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    set(HOST_ARM64 TRUE)
+else()
+    set(HOST_ARM64 FALSE)
+endif()
+
+if(HOST_X64 OR HOST_ARM64)
     set(DYNARMIC_TESTS OFF)
     #set(DYNARMIC_NO_BUNDLED_FMT ON)
     set(DYNARMIC_FRONTENDS "A32" CACHE STRING "")
     add_subdirectory(third_party/dynarmic)
     add_compile_definitions(CPU_DYNARMIC)
 else()
-    add_compile_definitions(CPU_KVM)
-    message(FATAL_ERROR "THIS IS NOT x64 WAIT FOR THE KVM IMPLEMENTATION")
+    message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
 set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp)
