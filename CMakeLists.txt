@@ -65,7 +65,9 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/memory.cpp)
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
+                 src/core/memory.cpp
+)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
                         src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
                         src/core/kernel/events.cpp src/core/kernel/threads.cpp
