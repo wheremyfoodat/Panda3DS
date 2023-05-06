@@ -8,7 +8,7 @@ using namespace Floats;
 // This is all hacked up to display our first triangle
 
 const char* vertexShader = R"(
-	#version 420 core
+	#version 410 core
 	
 	layout (location = 0) in vec4 coords;
 	layout (location = 1) in vec4 vertexColour;

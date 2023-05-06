@@ -39,7 +39,9 @@ public:
             Helpers::panic("Failed to initialize SDL2");
         }
 
-        // Request OpenGL 4.1 (Max available on MacOS)
+        // Request OpenGL 4.1 Core (Max available on MacOS)
+        // MacOS gets mad if we don't explicitly demand a core profile
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
         window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
