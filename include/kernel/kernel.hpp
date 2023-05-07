@@ -133,7 +133,9 @@ private:
 	void svcCloseHandle();
 	void svcCreateEvent();
 	void svcCreateMutex();
+	void svcCreateSemaphore();
 	void svcReleaseMutex();
+	void svcReleaseSemaphore();
 	void svcSignalEvent();
 	void svcSleepThread();
 	void connectToPort();

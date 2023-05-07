@@ -231,6 +231,15 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 			break;
 		}
 
+		case KernelObjectType::Semaphore: {
+			Semaphore* s = object->getData<Semaphore>();
+			if (s->availableCount <= 0) [[unlikely]] // This should be unreachable but let's check anyways
+				Helpers::panic("Tried to acquire unacquirable semaphore");
+
+			s->availableCount -= 1;
+			break;
+		}
+
 		case KernelObjectType::Thread:
 			break;
 
@@ -491,6 +500,55 @@ void Kernel::svcReleaseMutex() {
 
 	regs[0] = SVCResult::Success;
 	releaseMutex(moo);
+}
+
+void Kernel::svcCreateSemaphore() {
+	s32 initialCount = static_cast<s32>(regs[1]);
+	s32 maxCount = static_cast<s32>(regs[2]);
+	logSVC("CreateSemaphore (initial count = %d, max count = %d)\n", initialCount, maxCount);
+
+	if (initialCount > maxCount)
+		Helpers::panic("CreateSemaphore: Initial count higher than max count");
+
+	if (initialCount < 0 || maxCount < 0)
+		Helpers::panic("CreateSemaphore: Negative count value");
+
+	regs[0] = SVCResult::Success;
+	regs[1] = makeSemaphore(initialCount, maxCount);
+}
+
+void Kernel::svcReleaseSemaphore() {
+	const Handle handle = regs[1];
+	const s32 releaseCount = static_cast<s32>(regs[2]);
+	logSVC("ReleaseSemaphore (handle = %X, release count = %d)\n", handle, releaseCount);
+
+	const auto object = getObject(handle, KernelObjectType::Semaphore);
+	if (object == nullptr) [[unlikely]] {
+		Helpers::panic("Tried to release non-existent semaphore");
+		regs[0] = SVCResult::BadHandle;
+		return;
+	}
+
+	if (releaseCount < 0)
+		Helpers::panic("ReleaseSemaphore: Negative count");
+
+	Semaphore* s = object->getData<Semaphore>();
+	if (s->maximumCount - s->availableCount < releaseCount)
+		Helpers::panic("ReleaseSemaphore: Release count too high");
+
+	// Write success and old available count to r0 and r1 respectively
+	regs[0] = SVCResult::Success;
+	regs[1] = s->availableCount;
+	// Bump available count
+	s->availableCount += releaseCount;
+
+	// Wake up threads one by one until the available count hits 0 or we run out of threads to wake up
+	while (s->availableCount > 0 && s->waitlist != 0) {
+		int index = wakeupOneThread(s->waitlist, handle); // Wake up highest priority thread
+		s->waitlist ^= (1ull << index); // Remove thread from waitlist
+
+		s->availableCount--; // Decrement available count
+	}
 }
 
 // Returns whether an object is waitable or not
