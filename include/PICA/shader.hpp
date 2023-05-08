@@ -218,7 +218,7 @@ public:
 		if (floatUniformIndex >= 96)
 			Helpers::panic("[PICA] Tried to write float uniform %d", floatUniformIndex);
 
-		if ((f32UniformTransfer && floatUniformWordCount == 4) || (!f32UniformTransfer && floatUniformWordCount == 3)) {
+		if ((f32UniformTransfer && floatUniformWordCount >= 4) || (!f32UniformTransfer && floatUniformWordCount >= 3)) {
 			vec4f& uniform = floatUniforms[floatUniformIndex++];
 			floatUniformWordCount = 0;
 
