@@ -3,6 +3,9 @@
 #include "system_models.hpp"
 #include "ipc.hpp"
 
+#include <array>
+#include <bit>
+
 namespace CFGCommands {
 	enum : u32 {
 		GetConfigInfoBlk2 = 0x00010082,
@@ -68,7 +71,16 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		mem.write8(output + 2, 2); // Province (Temporarily stubbed to Washington DC like Citra)
 		mem.write8(output + 3, static_cast<u8>(country)); // Country code
 	} else if (size == 0x20 && blockID == 0x50005) {
-		printf("[Unimplemented] Read stereo display settings from NAND\n");
+		// "Stereo Camera settings"
+		// Implementing this properly fixes NaN uniforms in some games. Values taken from 3dmoo & Citra
+		static constexpr std::array<float, 8> STEREO_CAMERA_SETTINGS = {
+			62.0f, 289.0f, 76.80000305175781f, 46.08000183105469f,
+			10.0f, 5.0f,   55.58000183105469f, 21.56999969482422f
+		};
+
+		for (int i = 0; i < 8; i++) {
+			mem.write32(output + i * 4, std::bit_cast<u32, float>(STEREO_CAMERA_SETTINGS[i]));
+		}
 	} else if (size == 0x1C && blockID == 0xA0000) { // Username
 		writeStringU16(output, u"Pander");
 	} else if (size == 0xC0 && blockID == 0xC0000) { // Parental restrictions info
