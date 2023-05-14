@@ -135,9 +135,9 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 		u8* info = &sharedMem[0x200 + screen * FBInfoSize];
 		u8& dirtyFlag = info[1];
 
-		if (dirtyFlag) {
+		if (dirtyFlag & 1) {
 			// TODO: Submit buffer info here
-			dirtyFlag = 0;
+			dirtyFlag &= ~1;
 		}
 	}
 
