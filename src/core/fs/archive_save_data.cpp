@@ -98,13 +98,13 @@ ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {
 	return FormatInfo{ .size = 0, .numOfDirectories = 255, .numOfFiles = 255, .duplicateData = false };
 }
 
-ArchiveBase* SaveDataArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, FSResult> SaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);
-		return nullptr;
+		return Err(FSResult::NotFoundInvalid);
 	}
 
-	return this;
+	return Ok((ArchiveBase*)this);
 }
 
 std::optional<u32> SaveDataArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

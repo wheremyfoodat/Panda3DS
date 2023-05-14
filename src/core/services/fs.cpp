@@ -129,11 +129,11 @@ std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& 
 		return std::nullopt;
 	}
 
-	bool opened = archive->openArchive(path);
-	if (opened) {
+	Rust::Result<ArchiveBase*, FSResult> res = archive->openArchive(path);
+	if (res.isOk()) {
 		auto handle = kernel.makeObject(KernelObjectType::Archive);
 		auto& archiveObject = kernel.getObjects()[handle];
-		archiveObject.data = new ArchiveSession(archive, path);
+		archiveObject.data = new ArchiveSession(res.unwrap(), path);
 
 		return handle;
 	}
@@ -334,10 +334,11 @@ void FSService::openFileDirectly(u32 messagePointer) {
 	auto filePath = readPath(filePathType, filePathPointer, filePathSize);
 	const FilePerms perms(openFlags);
 
-	archive = archive->openArchive(archivePath);
-	if (archive == nullptr) [[unlikely]] {
+	Rust::Result<ArchiveBase*, FSResult> res = archive->openArchive(archivePath);
+	if (res.isErr()) [[unlikely]] {
 		Helpers::panic("OpenFileDirectly: Failed to open archive with given path");
 	}
+	archive = res.unwrap();
 
 	std::optional<Handle> handle = openFileHandle(archive, filePath, archivePath, perms);
 	mem.write32(messagePointer, IPC::responseHeader(0x803, 1, 2));

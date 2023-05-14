@@ -13,7 +13,7 @@ public:
 	FSResult deleteFile(const FSPath& path) override;
 	FormatInfo getFormatInfo(const FSPath& path) override;
 
-	ArchiveBase* openArchive(const FSPath& path) override;
+	Rust::Result<ArchiveBase*, FSResult> openArchive(const FSPath& path) override;
 	Rust::Result<DirectorySession, FSResult> openDirectory(const FSPath& path) override;
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;

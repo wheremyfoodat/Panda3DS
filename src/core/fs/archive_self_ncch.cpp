@@ -40,13 +40,13 @@ FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& pe
 	return NoFile; // No file descriptor needed for RomFS
 }
 
-ArchiveBase* SelfNCCHArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, FSResult> SelfNCCHArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
-		printf("Invalid path type for SelfNCCH archive: %d\n", path.type);
-		return nullptr;
+		Helpers::panic("Invalid path type for SelfNCCH archive: %d\n", path.type);
+		return Err(FSResult::NotFoundInvalid);
 	}
 
-	return this;
+	return Ok((ArchiveBase*)this);
 }
 
 std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

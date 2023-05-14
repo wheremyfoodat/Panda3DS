@@ -70,12 +70,12 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 	return FileError;
 }
 
-ArchiveBase* ExtSaveDataArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, FSResult> ExtSaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
-	return this;
+	return Ok((ArchiveBase*)this);
 }
 
 Rust::Result<DirectorySession, FSResult> ExtSaveDataArchive::openDirectory(const FSPath& path) {

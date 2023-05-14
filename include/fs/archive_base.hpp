@@ -217,8 +217,8 @@ public:
 
     // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
+    virtual Rust::Result<ArchiveBase*, FSResult> openArchive(const FSPath& path) = 0;
 
-    virtual ArchiveBase* openArchive(const FSPath& path) = 0;
     virtual Rust::Result<DirectorySession, FSResult> openDirectory(const FSPath& path) {
         Helpers::panic("Unimplemented OpenDirectory for %s archive", name().c_str());
         return Err(FSResult::FileNotFound);

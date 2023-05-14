@@ -16,9 +16,9 @@ FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms)
 	return FileError;
 }
 
-ArchiveBase* SDMCArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, FSResult> SDMCArchive::openArchive(const FSPath& path) {
 	printf("SDMCArchive::OpenArchive: Failed\n");
-	return nullptr;
+	return Ok((ArchiveBase*)nullptr);
 }
 
 std::optional<u32> SDMCArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

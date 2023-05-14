@@ -48,7 +48,7 @@ FileDescriptor NCCHArchive::openFile(const FSPath& path, const FilePerms& perms)
 	return NoFile;
 }
 
-ArchiveBase* NCCHArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, FSResult> NCCHArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary || path.binary.size() != 16) {
 		Helpers::panic("NCCHArchive::OpenArchive: Invalid path");
 	}
@@ -57,7 +57,7 @@ ArchiveBase* NCCHArchive::openArchive(const FSPath& path) {
 	if (mediaType != 0)
 		Helpers::panic("NCCH archive. Tried to access a mediatype other than the NAND. Type: %d", mediaType);
 
-	return this;
+	return Ok((ArchiveBase*)this);
 }
 
 std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {
