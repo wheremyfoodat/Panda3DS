@@ -133,6 +133,8 @@ enum class FSResult : u32 {
     AlreadyExists = 0x82044BE,
     FileTooLarge = 0x86044D2,
     FileNotFound = 0xC8804470,
+    NotFoundInvalid = 0xC8A04478, // Also a not found error code used here and there in the FS module.
+    NotFormatted = 0xC8A04554,    // Trying to access an archive that needs formatting and has not been formatted
     UnexpectedFileOrDir = 0xE0C04702
 };
 
