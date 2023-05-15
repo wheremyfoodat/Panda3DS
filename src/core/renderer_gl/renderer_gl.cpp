@@ -27,7 +27,7 @@ const char* vertexShader = R"(
 )";
 
 const char* fragmentShader = R"(
-	#version 420 core
+	#version 410 core
 	
 	in vec4 colour;
 	in vec2 tex0_UVs;
@@ -100,7 +100,7 @@ const char* fragmentShader = R"(
 )";
 
 const char* displayVertexShader = R"(
-	#version 420 core
+	#version 410 core
 	out vec2 UV;
 
 	void main() {
@@ -126,7 +126,7 @@ const char* displayVertexShader = R"(
 )";
 
 const char* displayFragmentShader = R"(
-    #version 420 core
+    #version 410 core
     in vec2 UV;
     out vec4 FragColor;
 
