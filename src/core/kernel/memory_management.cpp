@@ -1,4 +1,5 @@
 #include "kernel.hpp"
+#include "services/shared_font.hpp"
 
 namespace Operation {
 	enum : u32 {
@@ -12,6 +13,21 @@ namespace Operation {
 		SysRegion = 0x200,
 		BaseRegion = 0x300,
 		Linear = 0x10000
+	};
+}
+
+namespace MemoryPermissions {
+	enum : u32 {
+		None = 0,             // ---
+		Read = 1,             // R--
+		Write = 2,            // -W-
+		ReadWrite = 3,        // RW-
+		Execute = 4,          // --X
+		ReadExecute = 5,      // R-X
+		WriteExecute = 6,     // -WX
+		ReadWriteExecute = 7, // RWX
+
+		DontCare = 0x10000000
 	};
 }
 
@@ -31,8 +47,8 @@ void Kernel::controlMemory() {
 	u32 size = regs[3];
 	u32 perms = regs[4];
 
-	if (perms == 0x10000000) {
-		perms = 3; // We make "don't care" equivalent to read-write
+	if (perms == MemoryPermissions::DontCare) {
+		perms = MemoryPermissions::ReadWrite; // We make "don't care" equivalent to read-write
 		Helpers::panic("Unimplemented allocation permission: DONTCARE");
 	}
 
@@ -63,6 +79,14 @@ void Kernel::controlMemory() {
 			break;
 		}
 
+		case Operation::Map:
+			mem.mirrorMapping(addr0, addr1, size);
+			break;
+
+		case Operation::Protect:
+			Helpers::warn("Ignoring mprotect! Hope nothing goes wrong but if the game accesses invalid memory or crashes then we prolly need to implement this\n");
+			break;
+
 		default: Helpers::panic("ControlMemory: unknown operation %X\n", operation);
 	}
 
@@ -89,7 +113,7 @@ void Kernel::queryMemory() {
 // Result MapMemoryBlock(Handle memblock, u32 addr, MemoryPermission myPermissions, MemoryPermission otherPermission)	
 void Kernel::mapMemoryBlock() {
 	const Handle block = regs[0];
-	const u32 addr = regs[1];
+	u32 addr = regs[1];
 	const u32 myPerms = regs[2];
 	const u32 otherPerms = regs[3];
 	logSVC("MapMemoryBlock(block = %X, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
@@ -99,19 +123,82 @@ void Kernel::mapMemoryBlock() {
 	}
 
 	if (KernelHandles::isSharedMemHandle(block)) {
+		if (block == KernelHandles::FontSharedMemHandle && addr == 0) addr = 0x18000000;
 		u8* ptr = mem.mapSharedMemory(block, addr, myPerms, otherPerms); // Map shared memory block
 
 		// Pass pointer to shared memory to the appropriate service
-		if (block == KernelHandles::HIDSharedMemHandle) {
-			serviceManager.setHIDSharedMem(ptr);
-		} else if (block == KernelHandles::GSPSharedMemHandle) {
-			serviceManager.setGSPSharedMem(ptr);
-		} else {
-			Helpers::panic("Mapping unknown shared memory block: %X", block);
+		switch (block) {
+			case KernelHandles::HIDSharedMemHandle:
+				serviceManager.setHIDSharedMem(ptr);
+				break;
+
+			case KernelHandles::GSPSharedMemHandle:
+				serviceManager.setGSPSharedMem(ptr);
+				break;
+
+			case KernelHandles::FontSharedMemHandle:
+				std::memcpy(ptr, _shared_font_bin, _shared_font_len);
+				break;
+
+			default: Helpers::panic("Mapping unknown shared memory block: %X", block);
 		}
 	} else {
-		Helpers::panic("MapMemoryBlock where the handle does not refer to GSP memory");
+		Helpers::panic("MapMemoryBlock where the handle does not refer to a known piece of kernel shared mem");
 	}
 
 	regs[0] = SVCResult::Success;
+}
+
+Handle Kernel::makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission) {
+	Handle ret = makeObject(KernelObjectType::MemoryBlock);
+	objects[ret].data = new MemoryBlock(addr, size, myPermission, otherPermission);
+
+	return ret;
+}
+
+void Kernel::createMemoryBlock() {
+	const u32 addr = regs[1];
+	const u32 size = regs[2];
+	u32 myPermission = regs[3];
+	u32 otherPermission = mem.read32(regs[13] + 4); // This is placed on the stack rather than r4
+	logSVC("CreateMemoryBlock (addr = %08X, size = %08X, myPermission = %d, otherPermission = %d)\n", addr, size, myPermission, otherPermission);
+
+	// Returns whether a permission is valid
+	auto isPermValid = [](u32 permission) {
+		switch (permission) {
+			case MemoryPermissions::None:
+			case MemoryPermissions::Read:
+			case MemoryPermissions::Write:
+			case MemoryPermissions::ReadWrite:
+			case MemoryPermissions::DontCare:
+				return true;
+
+			default: // Permissions with the executable flag enabled or invalid permissions are not allowed
+				return false;
+		}
+	};
+
+	// Throw error if the size of the shared memory block is not aligned to page boundary
+	if (!isAligned(size)) {
+		regs[0] = SVCResult::UnalignedSize;
+		return;
+	}
+
+	// Throw error if one of the permissions is not valid
+	if (!isPermValid(myPermission) || !isPermValid(otherPermission)) {
+		regs[0] = SVCResult::InvalidCombination;
+		return;
+	}
+
+	// TODO: The address needs to be in a specific range otherwise it throws an invalid address error
+
+	if (addr == 0)
+		Helpers::panic("CreateMemoryBlock: Tried to use addr = 0");
+
+	// Implement "Don't care" permission as RW
+	if (myPermission == MemoryPermissions::DontCare) myPermission = MemoryPermissions::ReadWrite;
+	if (otherPermission == MemoryPermissions::DontCare) otherPermission = MemoryPermissions::ReadWrite;
+
+	regs[0] = SVCResult::Success; 
+	regs[1] = makeMemoryBlock(addr, size, myPermission, otherPermission);
 }

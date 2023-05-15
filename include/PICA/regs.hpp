@@ -10,10 +10,22 @@ namespace PICAInternalRegs {
 
 		DepthScale = 0x4D,
 		DepthOffset = 0x4E,
+		ShaderOutputCount = 0x4F,
+
+		DepthmapEnable = 0x6D,
+		TexUnitCfg = 0x80,
 
 		// Framebuffer registers
+		ColourOperation = 0x100,
+		BlendFunc = 0x101,
+		BlendColour = 0x103,
 		AlphaTestConfig = 0x104,
 		DepthAndColorMask = 0x107,
+		DepthBufferFormat = 0x116,
+		ColourBufferFormat = 0x117,
+		DepthBufferLoc = 0x11C,
+		ColourBufferLoc = 0x11D,
+		FramebufferSize = 0x11E,
 
 		// Geometry pipeline registers
 		VertexAttribLoc = 0x200,
@@ -59,10 +71,20 @@ namespace PICAInternalRegs {
 		FixedAttribData0 = 0x233,
 		FixedAttribData1 = 0x234,
 		FixedAttribData2 = 0x235,
+		
+		// Command processor registers
+		CmdBufSize0 = 0x238,
+		CmdBufSize1 = 0x239,
+		CmdBufAddr0 = 0x23A,
+		CmdBufAddr1 = 0x23B,
+		CmdBufTrigger0 = 0x23C,
+		CmdBufTrigger1 = 0x23D,
 
 		PrimitiveConfig = 0x25E,
+		PrimitiveRestart = 0x25F,
 
 		// Vertex shader registers
+		VertexShaderAttrNum = 0x242,
 		VertexBoolUniform = 0x2B0,
 		VertexIntUniform0 = 0x2B1,
 		VertexIntUniform1 = 0x2B2,
@@ -80,6 +102,10 @@ namespace PICAInternalRegs {
 		VertexFloatUniformData5 = 0x2C6,
 		VertexFloatUniformData6 = 0x2C7,
 		VertexFloatUniformData7 = 0x2C8,
+
+		VertexShaderInputBufferCfg = 0x2B9,
+		VertexShaderInputCfgLow = 0x2BB,
+		VertexShaderInputCfgHigh = 0x2BC,
 
 		VertexShaderTransferIndex = 0x2CB,
 		VertexShaderData0 = 0x2CC,

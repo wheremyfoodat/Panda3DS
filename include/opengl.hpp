@@ -30,6 +30,9 @@
 
 #include "gl3w.h"
 
+// Uncomment the following define if you want GL objects to automatically free themselves when their lifetime ends
+// #define OPENGL_DESTRUCTORS
+
 namespace OpenGL {
 
     // Workaround for using static_assert inside constexpr if
@@ -51,7 +54,9 @@ namespace OpenGL {
             }
         }
 
-        ~VertexArray() { glDeleteVertexArrays(1, &m_handle); }
+#ifdef OPENGL_DESTRUCTORS
+        ~VertexArray() { free(); }
+#endif
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind() { glBindVertexArray(m_handle); }
@@ -121,12 +126,35 @@ namespace OpenGL {
 
         void enableAttribute(GLuint index) { glEnableVertexAttribArray(index); }
         void disableAttribute(GLuint index) { glDisableVertexAttribArray(index); }
+
+        void free() {
+            glDeleteVertexArrays(1, &m_handle);
+        }
     };
 
     enum FramebufferTypes {
         DrawFramebuffer = GL_DRAW_FRAMEBUFFER,
         ReadFramebuffer = GL_READ_FRAMEBUFFER,
         DrawAndReadFramebuffer = GL_FRAMEBUFFER
+    };
+
+    // Texture filters
+    enum Filters {
+        Nearest = GL_NEAREST,
+        Linear = GL_LINEAR,
+        NearestMipmapNearest = GL_NEAREST_MIPMAP_NEAREST,
+        NearestMipmapLinear = GL_NEAREST_MIPMAP_LINEAR,
+        LinearMipmapNearest = GL_LINEAR_MIPMAP_NEAREST,
+        LinearMipmapLinear = GL_LINEAR_MIPMAP_LINEAR
+    };
+
+    // Wrapping mode for texture UVs
+    enum WrappingMode {
+        ClampToEdge = GL_CLAMP_TO_EDGE,
+        ClampToBorder = GL_CLAMP_TO_BORDER,
+        RepeatMirrored = GL_MIRRORED_REPEAT,
+        Repeat = GL_REPEAT,
+        MirrorClampToEdge = GL_MIRROR_CLAMP_TO_EDGE
     };
 
     struct Texture {
@@ -165,12 +193,48 @@ namespace OpenGL {
             create(width, height, internalFormat, GL_TEXTURE_2D_MULTISAMPLE, samples);
         }
 
-        ~Texture() { glDeleteTextures(1, &m_handle); }
+        // Creates a depth, stencil or depth-stencil texture
+        void createDSTexture(int width, int height, GLenum internalFormat, GLenum format, const void* data = nullptr,
+            GLenum type = GL_FLOAT, GLenum binding = GL_TEXTURE_2D) {
+            m_width = width;
+            m_height = height;
+            m_binding = binding;
+
+            glGenTextures(1, &m_handle);
+            bind();
+            glTexImage2D(binding, 0, internalFormat, width, height, 0, format, type, data);
+        }
+
+        void setWrapS(WrappingMode mode) {
+            glTexParameteri(m_binding, GL_TEXTURE_WRAP_S, static_cast<GLint>(mode));
+        }
+
+        void setWrapT(WrappingMode mode) {
+            glTexParameteri(m_binding, GL_TEXTURE_WRAP_T, static_cast<GLint>(mode));
+    }
+
+        void setWrapR(WrappingMode mode) {
+            glTexParameteri(m_binding, GL_TEXTURE_WRAP_R, static_cast<GLint>(mode));
+        }
+
+        void setMinFilter(Filters filter) {
+            glTexParameteri(m_binding, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(filter));
+        }
+
+        void setMagFilter(Filters filter) {
+            glTexParameteri(m_binding, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(filter));
+        }
+
+#ifdef OPENGL_DESTRUCTORS
+        ~Texture() { free(); }
+#endif
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind() { glBindTexture(m_binding, m_handle); }
         int width() { return m_width; }
         int height() { return m_height; }
+
+       void free() { glDeleteTextures(1, &m_handle); }
     };
 
     struct Framebuffer {
@@ -189,11 +253,14 @@ namespace OpenGL {
             }
         }
 
-        ~Framebuffer() { glDeleteFramebuffers(1, &m_handle); }
+#ifdef OPENGL_DESTRUCTORS
+        ~Framebuffer() { free(); }
+#endif
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind(GLenum target) { glBindFramebuffer(target, m_handle); }
         void bind(FramebufferTypes target) { bind(static_cast<GLenum>(target)); }
+        void free() { glDeleteFramebuffers(1, &m_handle); }
 
         void createWithTexture(Texture& tex, GLenum mode = GL_FRAMEBUFFER, GLenum textureType = GL_TEXTURE_2D) {
             m_textureType = textureType;
@@ -313,10 +380,13 @@ namespace OpenGL {
             }
         }
 
-        ~VertexBuffer() { glDeleteBuffers(1, &m_handle); }
+#ifdef OPENGL_DESTRUCTORS
+        ~VertexBuffer() { free(); }
+#endif  
         GLuint handle() { return m_handle; }
         bool exists() { return m_handle != 0; }
         void bind() { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
+        void free() { glDeleteBuffers(1, &m_handle); }
 
         // Reallocates the buffer on every call. Prefer the sub version if possible.
         template <typename VertType>

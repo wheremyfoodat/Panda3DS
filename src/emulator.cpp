@@ -31,6 +31,9 @@ void Emulator::run() {
         kernel.sendGPUInterrupt(GPUInterrupt::VBlank0);
         kernel.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
+        // Update inputs in the HID module
+        kernel.updateInputs();
+
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -49,6 +52,15 @@ void Emulator::runFrame() {
 }
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
+    // Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
+    // Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
+    // %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart
+    char* appData = SDL_GetPrefPath(nullptr, "Alber");
+    const std::filesystem::path dataPath = std::filesystem::path(appData) / path.filename().stem();
+    IOFile::setAppDataDir(dataPath);
+    SDL_free(appData);
+
+    kernel.initializeFS();
     auto extension = path.extension();
     
     if (extension == ".elf" || extension == ".axf")

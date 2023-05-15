@@ -1,8 +1,9 @@
 #pragma once
-#include <iostream>
-#include <vector>
 #include <cstdarg>
 #include <fstream>
+#include <iostream>
+#include <iterator>
+#include <vector>
 #include "termcolor.hpp"
 
 using u8 = std::uint8_t;
@@ -23,21 +24,18 @@ namespace Helpers {
         va_start(args, fmt);
         std::cout << termcolor::on_red << "[FATAL] ";
         std::vprintf (fmt, args);
-        std::cout << termcolor::reset;
-        std::cout << std::endl;
+        std::cout << termcolor::reset << "\n";
         va_end(args);
 
         exit(1);
     }
 
     static void warn(const char* fmt, ...) {
-        return;
         std::va_list args;
         va_start(args, fmt);
         std::cout << termcolor::on_red << "[Warning] ";
         std::vprintf (fmt, args);
-        std::cout << termcolor::reset;
-        std::cout << "\n";
+        std::cout << termcolor::reset << "\n";
         va_end(args);
     }
 
@@ -120,10 +118,6 @@ namespace Helpers {
     template <typename T, T Begin, T End, class Func>
     static constexpr void static_for(Func&& f) {
         static_for_impl<T, Begin>( std::forward<Func>(f), std::make_integer_sequence<T, End - Begin>{ } );
-    }
-
-    static constexpr inline u8 get8BitColor (u8 colorRGB555) {
-        return (colorRGB555 << 3) | (colorRGB555 >> 2);
     }
 
     // For values < 0x99

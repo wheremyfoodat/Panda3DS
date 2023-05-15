@@ -3,12 +3,15 @@
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
-#include "opengl.hpp"
 #include "PICA/float_types.hpp"
+#include "PICA/regs.hpp"
 #include "PICA/shader_unit.hpp"
+#include "renderer_gl/renderer_gl.hpp"
 
 class GPU {
+	static constexpr u32 regNum = 0x300;
 	using vec4f = OpenGL::Vector<Floats::f24, 4>;
+	using Registers = std::array<u32, regNum>;
 
 	Memory& mem;
 	ShaderUnit shaderUnit;
@@ -16,42 +19,14 @@ class GPU {
 	MAKE_LOG_FUNCTION(log, gpuLogger)
 
 	static constexpr u32 maxAttribCount = 12; // Up to 12 vertex attributes
-	static constexpr u32 regNum = 0x300;
 	static constexpr u32 vramSize = 6_MB;
-	std::array<u32, regNum> regs; // GPU internal registers
+	Registers regs; // GPU internal registers
+	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
-	struct Vertex {
-		OpenGL::vec4 position;
-		OpenGL::vec4 colour;
-	};
-	
-	// Read a value of type T from physical address paddr
-	// This is necessary because vertex attribute fetching uses physical addresses
-	template<typename T>
-	T readPhysical(u32 paddr) {
-		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
-			u8* fcram = mem.getFCRAM();
-			u32 index = paddr - PhysicalAddrs::FCRAM;
-
-			return *(T*)&fcram[index];
-		} else {
-			Helpers::panic("[PICA] Read unimplemented paddr %08X", paddr);
-		}
-	}
-
-	// Get a pointer of type T* to the data starting from physical address paddr
-	template<typename T>
-	T* getPointerPhys(u32 paddr) {
-		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
-			u8* fcram = mem.getFCRAM();
-			u32 index = paddr - PhysicalAddrs::FCRAM;
-
-			return (T*)&fcram[index];
-		}
-		else {
-			Helpers::panic("[PICA] Pointer to unimplemented paddr %08X", paddr);
-		}
-	}
+	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
+	std::array<Vertex, 3> immediateModeVertices;
+	uint immediateModeVertIndex;
+	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
 
 	template <bool indexed>
 	void drawArrays();
@@ -64,11 +39,16 @@ class GPU {
 		int size = 0; // Bytes per vertex
 		u32 config1 = 0;
 		u32 config2 = 0;
+		u32 componentCount = 0; // Number of components for the attribute
 
 		u64 getConfigFull() {
 			return u64(config1) | (u64(config2) << 32);
 		}
 	};
+
+	u64 getVertexShaderInputConfig() {
+		return u64(regs[PICAInternalRegs::VertexShaderInputCfgLow]) | (u64(regs[PICAInternalRegs::VertexShaderInputCfgHigh]) << 32);
+	}
 
 	std::array<AttribInfo, maxAttribCount> attributeInfo; // Info for each of the 12 attributes
 	u32 totalAttribCount = 0; // Number of vertex attributes to send to VS
@@ -78,32 +58,24 @@ class GPU {
 	u32 fixedAttribCount = 0; // How many attribute components have we written? When we get to 4 the attr will actually get submitted
 	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
-	// OpenGL renderer state
-	OpenGL::Framebuffer fbo;
-	OpenGL::Texture fboTexture;
-	OpenGL::Program triangleProgram;
-	OpenGL::Program displayProgram;
+	// Command processor pointers for GPU command lists
+	u32* cmdBuffStart = nullptr;
+	u32* cmdBuffEnd = nullptr;
+	u32* cmdBuffCurr = nullptr;
 
-	OpenGL::VertexArray vao;
-	OpenGL::VertexBuffer vbo;
-	GLint alphaControlLoc = -1;
-	u32 oldAlphaControl = 0;
-
-	// Dummy VAO/VBO for blitting the final output
-	OpenGL::VertexArray dummyVAO;
-	OpenGL::VertexBuffer dummyVBO;
-
-	static constexpr u32 vertexBufferSize = 0x1000;
-	void drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count);
-
+	Renderer renderer;
+	Vertex getImmediateModeVertex();
 public:
 	GPU(Memory& mem);
-	void initGraphicsContext(); // Initialize graphics context
-	void getGraphicsContext(); // Set up the graphics context for rendering
-	void display(); // Display the screen contents onto our window
+	void initGraphicsContext() { renderer.initGraphicsContext(); }
+	void getGraphicsContext() { renderer.getGraphicsContext(); }
+	void display() { renderer.display(); }
 
-	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);
+	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();
+
+	Registers& getRegisters() { return regs; }
+	void startCommandList(u32 addr, u32 size);
 
 	// Used by the GSP GPU service for readHwRegs/writeHwRegs/writeHwRegsMasked
 	u32 readReg(u32 address);
@@ -112,4 +84,46 @@ public:
 	// Used when processing GPU command lists
 	u32 readInternalReg(u32 index);
 	void writeInternalReg(u32 index, u32 value, u32 mask);
+
+	// TODO: Emulate the transfer engine & its registers
+	// Then this can be emulated by just writing the appropriate values there
+	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+		renderer.clearBuffer(startAddress, endAddress, value, control);
+	}
+
+	// TODO: Emulate the transfer engine & its registers
+	// Then this can be emulated by just writing the appropriate values there
+	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
+		renderer.displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
+	}
+
+	// Read a value of type T from physical address paddr
+	// This is necessary because vertex attribute fetching uses physical addresses
+	template <typename T>
+	T readPhysical(u32 paddr) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+			u8* fcram = mem.getFCRAM();
+			u32 index = paddr - PhysicalAddrs::FCRAM;
+
+			return *(T*)&fcram[index];
+		} else {
+			Helpers::panic("[PICA] Read unimplemented paddr %08X", paddr);
+		}
+	}
+
+	// Get a pointer of type T* to the data starting from physical address paddr
+	template <typename T>
+	T* getPointerPhys(u32 paddr) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+			u8* fcram = mem.getFCRAM();
+			u32 index = paddr - PhysicalAddrs::FCRAM;
+
+			return (T*)&fcram[index];
+		} else if (paddr >= PhysicalAddrs::VRAM && paddr <= PhysicalAddrs::VRAMEnd) {
+			u32 index = paddr - PhysicalAddrs::VRAM;
+			return (T*)&vram[index];
+		} else [[unlikely]] {
+			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
+		}
+	}
 };

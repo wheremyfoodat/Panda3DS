@@ -8,9 +8,12 @@
 #include "helpers.hpp"
 #include "handles.hpp"
 #include "loader/ncsd.hpp"
+#include "services/shared_font.hpp"
 
 namespace PhysicalAddrs {
 	enum : u32 {
+		VRAM = 0x18000000,
+		VRAMEnd = VRAM + 0x005FFFFF,
 		FCRAM = 0x20000000,
 		FCRAMEnd = FCRAM + 0x07FFFFFF
 	};
@@ -38,6 +41,7 @@ namespace VirtualAddrs {
 
 		VramStart = 0x1F000000,
 		VramSize = 0x00600000,
+		FcramTotalSize = 128_MB,
 		DSPMemStart = 0x1FF00000
 	};
 }
@@ -101,11 +105,13 @@ class Memory {
 	// This tracks our OS' memory allocations
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
-	std::array<SharedMemoryBlock, 2> sharedMemBlocks = {
+	std::array<SharedMemoryBlock, 3> sharedMemBlocks = {
+		SharedMemoryBlock(0, _shared_font_len, KernelHandles::FontSharedMemHandle), // Shared memory for the system font
 		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
 		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
-	};
+ 	};
 
+public:
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
 	static constexpr u32 pageMask = pageSize - 1;
@@ -120,6 +126,7 @@ class Memory {
 	static constexpr u32 DSP_CODE_MEMORY_OFFSET = 0_KB;
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = 256_KB;
 
+private:
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
@@ -130,7 +137,8 @@ class Memory {
 
 public:
 	u16 kernelVersion = 0;
-	u32 usedUserMemory = 0;
+	u32 usedUserMemory = 0_MB; // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
+	u32 usedSystemMemory = 0_MB; // Similar for the SYSTEM range (reserved for the syscore)
 
 	Memory(u64& cpuTicks);
 	void reset();
@@ -153,6 +161,33 @@ public:
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
 
+	// Total amount of OS-only FCRAM available (Can vary depending on how much FCRAM the app requests via the cart exheader)
+	u32 totalSysFCRAM() {
+		return FCRAM_SIZE - FCRAM_APPLICATION_SIZE;
+	}
+
+	// Amount of OS-only FCRAM currently available
+	u32 remainingSysFCRAM() {
+		return totalSysFCRAM() - usedSystemMemory;
+	}
+
+	// Physical FCRAM index to the start of OS FCRAM
+	// We allocate the first part of physical FCRAM for the application, and the rest to the OS. So the index for the OS = application ram size
+	u32 sysFCRAMIndex() {
+		return FCRAM_APPLICATION_SIZE;
+	}
+
+	enum class BatteryLevel {
+		Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
+	};
+	u8 getBatteryState(bool adapterConnected, bool charging, BatteryLevel batteryLevel) {
+		u8 value = static_cast<u8>(batteryLevel) << 2; // Bits 2:4 are the battery level from 0 to 5
+		if (adapterConnected) value |= 1 << 0; // Bit 0 shows if the charger is connected
+		if (charging) value |= 1 << 1; // Bit 1 shows if we're charging
+
+		return value;
+	}
+
 	NCCH* getCXI() {
 		if (loadedCXI.has_value()) {
 			return &loadedCXI.value();
@@ -169,24 +204,30 @@ public:
 	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
 	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).
 	// If the "linear" flag is on, the paddr pages must be adjacent in FCRAM
+	// This function is for interacting with the *user* portion of FCRAM mainly. For OS RAM, we use other internal functions below
 	// r, w, x: Permissions for the allocated memory
 	// adjustAddrs: If it's true paddr == 0 or vaddr == 0 tell the allocator to pick its own addresses. Used for eg svc ControlMemory
+	// isMap: Shows whether this is a reserve operation, that allocates memory and maps it to the addr space, or if it's a map operation,
+	// which just maps memory from paddr to vaddr without hassle. The latter is useful for shared memory mapping, the "map" ControlMemory, op, etc
 	// Returns the vaddr the FCRAM was mapped to or nullopt if allocation failed
 	std::optional<u32> allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r = true, bool w = true, bool x = true,
-		bool adjustsAddrs = false);
+		bool adjustsAddrs = false, bool isMap = false);
 	KernelMemoryTypes::MemoryInfo queryMemory(u32 vaddr);
 
-	// For internal use:
-	// Reserve FCRAM linearly starting from physical address "paddr" (paddr == 0 is NOT special) with a size of "size"
-	// Without actually mapping the memory to a vaddr
-	// Returns true if the reservation succeeded and false if not
-	bool reserveMemory(u32 paddr, u32 size);
+	// For internal use
+	// Allocates a "size"-sized chunk of system FCRAM and returns the index of physical FCRAM used for the allocation
+	// Used for allocating things like shared memory and the like
+	u32 allocateSysMemory(u32 size);
 
 	// Map a shared memory block to virtual address vaddr with permissions "myPerms"
 	// The kernel has a second permission parameter in MapMemoryBlock but not sure what's used for
 	// TODO: Find out
 	// Returns a pointer to the FCRAM block used for the memory if allocation succeeded
 	u8* mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms);
+
+	// Mirrors the page mapping for "size" bytes starting from sourceAddress, to "size" bytes in destAddress
+	// All of the above must be page-aligned.
+	void mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size);
 
 	// Backup of the game's CXI partition info, if any
 	std::optional<NCCH> loadedCXI = std::nullopt;
@@ -196,4 +237,6 @@ public:
 	u8* getDSPMem() { return dspRam; }
 	u8* getDSPDataMem() { return &dspRam[DSP_DATA_MEMORY_OFFSET]; }
 	u8* getDSPCodeMem() { return &dspRam[DSP_CODE_MEMORY_OFFSET]; }
+
+	u32 getUsedUserMem() { return usedUserMemory; }
 };

@@ -17,6 +17,8 @@ public:
     Memory& mem;
     Kernel& kernel;
 
+    u64 getCyclesForInstruction(bool isThumb, u32 instruction);
+
     u8 MemoryRead8(u32 vaddr) override {
         return mem.read8(vaddr);
     }
@@ -77,7 +79,13 @@ public:
     }
 
     void ExceptionRaised(u32 pc, Dynarmic::A32::Exception exception) override {
-        Helpers::panic("Fired exception oops");
+        switch (exception) {
+            case Dynarmic::A32::Exception::UnpredictableInstruction:
+                Helpers::panic("Unpredictable instruction at pc = %08X", pc);
+                break;
+
+            default: Helpers::panic("Fired exception oops");
+        }
     }
 
     void AddTicks(u64 ticks) override {
@@ -92,6 +100,10 @@ public:
 
     u64 GetTicksRemaining() override {
         return ticksLeft;
+    }
+
+    u64 GetTicksForCode(bool isThumb, u32 vaddr, u32 instruction) override {
+        return getCyclesForInstruction(isThumb, instruction);
     }
 
     MyEnvironment(Memory& mem, Kernel& kernel, CPU& cpu) : mem(mem), kernel(kernel) {}

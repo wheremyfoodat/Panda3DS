@@ -111,11 +111,17 @@ int main()
 	while (true)
 	{
 		// Render the scene
+        emuPrint("Entering C3D_FrameBegin");
 		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+            emuPrint("Clearing render target");
 			C3D_RenderTargetClear(target, C3D_CLEAR_ALL, CLEAR_COLOR, 0);
+            emuPrint("Calling C3D_FrameDrawOn");
 			C3D_FrameDrawOn(target);
+            emuPrint("Calling sceneRender");
 			sceneRender();
+            emuPrint("Entering C3D_FrameEnd");
 		C3D_FrameEnd(0);
+        emuPrint("Exited C3D_FrameEnd");
 	}
 
 	// Deinitialize the scene

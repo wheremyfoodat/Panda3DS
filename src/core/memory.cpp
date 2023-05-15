@@ -20,6 +20,7 @@ void Memory::reset() {
 	memoryInfo.clear();
 	usedFCRAMPages.reset();
 	usedUserMemory = 0_MB;
+	usedSystemMemory = 0_MB;
 
 	for (u32 i = 0; i < totalPageCount; i++) {
 		readTable[i] = 0;
@@ -42,14 +43,7 @@ void Memory::reset() {
 	// Initialize shared memory blocks and reserve memory for them
 	for (auto& e : sharedMemBlocks) {
 		e.mapped = false;
-		
-		std::optional<u32> possiblePaddr = findPaddr(e.size);
-		if (!possiblePaddr.has_value()) Helpers::panic("Failed to find paddr for shared memory block");
-
-		e.paddr = possiblePaddr.value();
-		if (!reserveMemory(e.paddr, e.size)) {
-			Helpers::panic("Failed to reserve memory for shared memory block");
-		}
+		e.paddr = allocateSysMemory(e.size);
 	}
 
 	// Map DSP RAM as R/W at [0x1FF00000, 0x1FF7FFFF]
@@ -74,10 +68,15 @@ u8 Memory::read8(u32 vaddr) {
 	}
 	else {
 		switch (vaddr) {
+			case ConfigMem::BatteryState: return getBatteryState(true, true, BatteryLevel::FourBars);
 			case ConfigMem::EnvInfo: return envInfo;
+			case ConfigMem::HardwareType: return ConfigMem::HardwareCodes::Product;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
 			case ConfigMem::KernelVersionMajor: return u8(kernelVersion >> 8);
 			case ConfigMem::LedState3D: return 1; // Report the 3D LED as always off (non-zero) for now
+			case ConfigMem::NetworkState: return 2; // Report that we've got an internet connection
+			case ConfigMem::HeadphonesConnectedMaybe: return 0;
+			case ConfigMem::Unknown1086: return 1; // It's unknown what this is but some games want it to be 1
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -115,8 +114,14 @@ u32 Memory::read32(u32 vaddr) {
 				return 0; // Set to 0 by PTM
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
+			case ConfigMem::SyscoreVer: return 2;
 			case 0x1FF81000: return 0; // TODO: Figure out what this config mem address does
 			default:
+				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
+					Helpers::warn("VRAM read!\n");
+					return 0;
+				}
+
 				Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
 				break;
 		}
@@ -212,19 +217,20 @@ u32 Memory::getLinearHeapVaddr() {
 }
 
 std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r, bool w, bool x,
-	bool adjustAddrs) {
+	bool adjustAddrs, bool isMap) {
 	// Kernel-allocated memory & size must always be aligned to a page boundary
 	// Additionally assert we don't OoM and that we don't try to allocate physical FCRAM past what's available to userland
+	// If we're mapping there's no fear of OoM, because we're not really allocating memory, just binding vaddrs to specific paddrs
 	assert(isAligned(vaddr) && isAligned(paddr) && isAligned(size));
-	assert(size <= FCRAM_APPLICATION_SIZE);
-	assert(usedUserMemory + size <= FCRAM_APPLICATION_SIZE);
-	assert(paddr + size <= FCRAM_APPLICATION_SIZE);
+	assert(size <= FCRAM_APPLICATION_SIZE || isMap);
+	assert(usedUserMemory + size <= FCRAM_APPLICATION_SIZE || isMap);
+	assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
 
 	// Amount of available user FCRAM pages and FCRAM pages to allocate respectively
 	const u32 availablePageCount = (FCRAM_APPLICATION_SIZE - usedUserMemory) / pageSize;
 	const u32 neededPageCount = size / pageSize;
 
-	assert(availablePageCount >= neededPageCount);
+	assert(availablePageCount >= neededPageCount || isMap);
 
 	// If the paddr is 0, that means we need to select our own
 	// TODO: Fix. This method always tries to allocate blocks linearly.
@@ -236,7 +242,7 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 			Helpers::panic("Failed to find paddr");
 
 		paddr = newPaddr.value();
-		assert(paddr + size <= FCRAM_APPLICATION_SIZE);
+		assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
 	}
 
 	// If the vaddr is 0 that means we need to select our own
@@ -254,7 +260,8 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 		}
 	}
 
-	usedUserMemory += size;
+	if (!isMap)
+		usedUserMemory += size;
 
 	// Do linear mapping
 	u32 virtualPage = vaddr >> pageShift;
@@ -310,23 +317,31 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 	return std::nullopt;
 }
 
-bool Memory::reserveMemory(u32 paddr, u32 size) {
-	if (!isAligned(paddr) || !isAligned(size)) {
-		Helpers::panic("Memory::reserveMemory: Physical address or size is not page aligned. Paddr: %08X, size: %08X", paddr, size);
-;	}
+u32 Memory::allocateSysMemory(u32 size) {
+	// Should never be triggered, only here as a sanity check
+	if (!isAligned(size)) {
+		Helpers::panic("Memory::allocateSysMemory: Size is not page aligned (val = %08X)", size);
+	}
 
-	const u32 pageCount = size / pageSize; // Number of pages we need to reserve
-	const u32 startingPage = paddr / pageSize; // The first page of FCRAM we'll start allocating from
+	// We use a pretty dumb allocator for OS memory since this is not really accessible to the app and is only used internally
+	// It works by just allocating memory linearly, starting from index 0 of OS memory and going up
+	// This should also be unreachable in practice and exists as a sanity check
+	if (size > remainingSysFCRAM()) {
+		Helpers::panic("Memory::allocateSysMemory: Overflowed OS FCRAM");
+	}
 
-	// Assert that all of the pages are not yet reserved. TODO: Smarter memory allocator
+	const u32 pageCount = size / pageSize; // Number of pages that will be used up
+	const u32 startIndex = sysFCRAMIndex() + usedSystemMemory; // Starting FCRAM index
+	const u32 startingPage = startIndex / pageSize;
+
 	for (u32 i = 0; i < pageCount; i++) {
-		if (usedFCRAMPages[startingPage + i])
+		if (usedFCRAMPages[startingPage + i]) // Also a theoretically unreachable panic for safety
 			Helpers::panic("Memory::reserveMemory: Trying to reserve already reserved memory");
 		usedFCRAMPages[startingPage + i] = true;
 	}
 
-	usedUserMemory += size;
-	return true;
+	usedSystemMemory += size;
+	return startIndex;
 }
 
 // The way I understand how the kernel's QueryMemory is supposed to work is that you give it a vaddr
@@ -363,12 +378,7 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 			bool w = myPerms & 0b010;
 			bool x = myPerms & 0b100;
 
-			// This memory was not actually used, we just didn't want QueryMemory, getResourceLimitCurrentValues and such
-			// To report memory sizes wrongly. We subtract the size from the usedUserMemory size so
-			// allocateMemory won't break
-			usedUserMemory -= size;
-
-			const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x);
+			const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x, false, true);
 			e.mapped = true;
 			if (!result.has_value()) {
 				Helpers::panic("Memory::mapSharedMemory: Failed to map shared memory block");
@@ -384,6 +394,24 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 	return nullptr;
 }
 
+void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
+	// Should theoretically be unreachable, only here for safety purposes
+	assert(isAligned(destAddress) && isAligned(sourceAddress) && isAligned(size));
+
+	const u32 pageCount = size / pageSize; // How many pages we need to mirror
+	for (u32 i = 0; i < pageCount; i++) {
+		// Redo the shift here to "properly" handle wrapping around the address space instead of reading OoB
+		const u32 sourcePage = sourceAddress / pageSize;
+		const u32 destPage = destAddress / pageSize;
+
+		readTable[destPage] = readTable[sourcePage];
+		writeTable[destPage] = writeTable[sourcePage];
+
+		sourceAddress += pageSize;
+		destAddress += pageSize;
+	}
+}
+
 // Get the number of ms since Jan 1 1900
 u64 Memory::timeSince3DSEpoch() {
 	using namespace std::chrono;
@@ -391,6 +419,6 @@ u64 Memory::timeSince3DSEpoch() {
 	// ms since Jan 1 1970
 	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
 	// ms between Jan 1 1900 and Jan 1 1970 (2208988800 seconds elapsed between the two)
-	const u64 offset = 2208988800ull * 1000;
+	constexpr u64 offset = 2208988800ull * 1000;
 	return ms.count() + offset;
 }

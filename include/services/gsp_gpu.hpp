@@ -1,5 +1,6 @@
 #pragma once
 #include <cstring>
+#include <optional>
 #include "PICA/gpu.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
@@ -16,16 +17,21 @@ enum class GPUInterrupt : u8 {
 	DMA = 6
 };
 
+// More circular dependencies
+class Kernel;
+
 class GPUService {
 	Handle handle = KernelHandles::GPU;
 	Memory& mem;
 	GPU& gpu;
+	Kernel& kernel;
 	u32& currentPID; // Process ID of the current process
 	u8* sharedMem; // Pointer to GSP shared memory
 
 	// At any point in time only 1 process has privileges to use rendering functions
 	// This is the PID of that process
 	u32 privilegedProcess;
+	std::optional<Handle> interruptEvent;
 
 	MAKE_LOG_FUNCTION(log, gspGPULogger)
 	void processCommandBuffer();
@@ -37,6 +43,7 @@ class GPUService {
 	void setAxiConfigQoSMode(u32 messagePointer);
 	void setInternalPriorities(u32 messagePointer);
 	void setLCDForceBlack(u32 messagePointer);
+	void storeDataCache(u32 messagePointer);
 	void triggerCmdReqQueue(u32 messagePointer);
 	void writeHwRegs(u32 messagePointer);
 	void writeHwRegsWithMask(u32 messagePointer);
@@ -46,10 +53,12 @@ class GPUService {
 	void memoryFill(u32* cmd);
 	void triggerDisplayTransfer(u32* cmd);
 	void triggerDMARequest(u32* cmd);
+	void triggerTextureCopy(u32* cmd);
 	void flushCacheRegions(u32* cmd);
 
 public:
-	GPUService(Memory& mem, GPU& gpu, u32& currentPID) : mem(mem), gpu(gpu), currentPID(currentPID) {}
+	GPUService(Memory& mem, GPU& gpu, Kernel& kernel, u32& currentPID) : mem(mem), gpu(gpu),
+		kernel(kernel), currentPID(currentPID) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	void requestInterrupt(GPUInterrupt type);

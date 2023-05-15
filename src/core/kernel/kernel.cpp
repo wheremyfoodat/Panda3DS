@@ -10,9 +10,16 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 	threadIndices.reserve(appResourceLimits.maxThreads);
 
 	for (int i = 0; i < threads.size(); i++) {
-		threads[i].index = i;
-		threads[i].tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
-		threads[i].status = ThreadStatus::Dead;
+		Thread& t = threads[i];
+
+		t.index = i;
+		t.tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
+		t.status = ThreadStatus::Dead;
+		t.waitList.clear();
+		t.waitList.reserve(10); // Reserve some space for the wait list to avoid further memory allocs later
+		// The state below isn't necessary to initialize but we do it anyways out of caution
+		t.outPointer = 0;
+		t.waitAll = false;
 	}
 
 	setVersion(1, 69);
@@ -23,14 +30,18 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x01: controlMemory(); break;
 		case 0x02: queryMemory(); break;
 		case 0x08: createThread(); break;
+		case 0x09: exitThread(); break;
 		case 0x0A: svcSleepThread(); break;
 		case 0x0B: getThreadPriority(); break;
 		case 0x0C: setThreadPriority(); break;
-		case 0x13: createMutex(); break;
-		case 0x14: releaseMutex(); break;
-		case 0x17: createEvent(); break;
-		case 0x18: signalEvent(); break;
-		case 0x19: clearEvent(); break;
+		case 0x13: svcCreateMutex(); break;
+		case 0x14: svcReleaseMutex(); break;
+		case 0x15: svcCreateSemaphore(); break;
+		case 0x16: svcReleaseSemaphore(); break;
+		case 0x17: svcCreateEvent(); break;
+		case 0x18: svcSignalEvent(); break;
+		case 0x19: svcClearEvent(); break;
+		case 0x1E: createMemoryBlock(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
 		case 0x22: arbitrateAddress(); break;
@@ -98,9 +109,12 @@ void Kernel::reset() {
 	handleCounter = 0;
 	arbiterCount = 0;
 	threadCount = 0;
+	aliveThreadCount = 0;
 
 	for (auto& t : threads) {
 		t.status = ThreadStatus::Dead;
+		t.waitList.clear();
+		t.threadsWaitingForTermination = 0; // No threads are waiting for this thread to terminate cause it's dead
 	}
 
 	for (auto& object : objects) {
@@ -120,6 +134,7 @@ void Kernel::reset() {
 	// which is thankfully not used. Maybe we should prevent this
 	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, -2, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
+	setupIdleThread();
 
 	// Create some of the OS ports
 	srvHandle = makePort("srv:"); // Service manager port
@@ -184,6 +199,13 @@ void Kernel::getProcessInfo() {
 	}
 
 	switch (type) {
+		// According to 3DBrew: Amount of private (code, data, heap) memory used by the process + total supervisor-mode
+		// stack size + page-rounded size of the external handle table
+		case 2:
+			regs[1] = mem.getUsedUserMem();
+			regs[2] = 0;
+			break;
+
 		case 20: // Returns 0x20000000 - <linear memory base vaddr for process>
 			regs[1] = PhysicalAddrs::FCRAM - mem.getLinearHeapVaddr();
 			regs[2] = 0;
@@ -196,7 +218,7 @@ void Kernel::getProcessInfo() {
 	regs[0] = SVCResult::Success;
 }
 
-// Result GetThreadId(u32* threadId, Handle thread)
+// Result DuplicateHandle(Handle* out, Handle original)
 void Kernel::duplicateHandle() {
 	Handle original = regs[1];
 	logSVC("DuplicateHandle(handle = %X)\n", original);

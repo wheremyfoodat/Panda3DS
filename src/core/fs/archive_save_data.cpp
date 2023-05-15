@@ -2,58 +2,112 @@
 #include <algorithm>
 #include <memory>
 
-bool SaveDataArchive::openFile(const FSPath& path) {
-	if (!cartHasSaveData()) {
-		printf("Tried to read SaveData FS without save data\n");
-		return false;
-	}
+namespace fs = std::filesystem;
 
-	if (path.type == PathType::UTF16 && mem.readString(path.pointer, path.size) == "/") {
-		printf("Reading root save data dir\n");
-		return true;
-	}
-
-	if (path.type != PathType::Binary) {
-		printf("Unimplemented SaveData path type: %d\n", path.type);
-		return false;
-	}
-
-	return true;
+FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
+	Helpers::panic("[SaveData] CreateFile not yet supported");
+	return FSResult::Success;
 }
 
-ArchiveBase* SaveDataArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Empty) {
-		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);
-		return nullptr;
+FSResult SaveDataArchive::createDirectory(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in SaveData::OpenFile");
+
+		fs::path p = IOFile::getAppData() / "SaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_directory(p))
+			return FSResult::AlreadyExists;
+		if (fs::is_regular_file(p)) {
+			Helpers::panic("File path passed to SaveData::CreateDirectory");
+		}
+
+		bool success = fs::create_directory(p);
+		return success ? FSResult::Success : FSResult::UnexpectedFileOrDir;
+	} else {
+		Helpers::panic("Unimplemented SaveData::CreateDirectory");
+	}
+}
+
+FSResult SaveDataArchive::deleteFile(const FSPath& path) {
+	Helpers::panic("[SaveData] Unimplemented DeleteFile");
+	return FSResult::Success;
+}
+
+FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in SaveData::OpenFile");
+
+		if (perms.raw == 0 || (perms.create() && !perms.write()))
+			Helpers::panic("[SaveData] Unsupported flags for OpenFile");
+
+		fs::path p = IOFile::getAppData() / "SaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		const char* permString = perms.write() ? "r+b" : "rb";
+
+		if (fs::exists(p)) { // Return file descriptor if the file exists
+			IOFile file(p.string().c_str(), permString);
+			return file.isOpen() ? file.getHandle() : FileError;
+		} else {
+			// If the file is not found, create it if the create flag is on
+			if (perms.create()) {
+				IOFile file(p.string().c_str(), "wb"); // Create file
+				file.close(); // Close it
+
+				file.open(p.string().c_str(), permString); // Reopen with proper perms
+				return file.isOpen() ? file.getHandle() : FileError;
+			} else {
+				return FileError;
+			}
+		}
 	}
 
-	return this;
+	Helpers::panic("SaveDataArchive::OpenFile: Failed");
+	return FileError;
+}
+
+Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
+
+		fs::path p = IOFile::getAppData() / "SaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_regular_file(p)) {
+			printf("SaveData: OpenDirectory used with a file path");
+			return Err(FSResult::UnexpectedFileOrDir);
+		}
+
+		if (fs::is_directory(p)) {
+			return Ok(DirectorySession(this, p));
+		} else {
+			return Err(FSResult::FileNotFound);
+		}
+	}
+
+	Helpers::panic("SaveDataArchive::OpenDirectory: Unimplemented path type");
+	return Err(FSResult::Success);
+}
+
+ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {
+	//Helpers::panic("Unimplemented SaveData::GetFormatInfo");
+	return FormatInfo{ .size = 0, .numOfDirectories = 255, .numOfFiles = 255, .duplicateData = false };
+}
+
+Rust::Result<ArchiveBase*, FSResult> SaveDataArchive::openArchive(const FSPath& path) {
+	if (path.type != PathType::Empty) {
+		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);
+		return Err(FSResult::NotFoundInvalid);
+	}
+
+	return Ok((ArchiveBase*)this);
 }
 
 std::optional<u32> SaveDataArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {
-	if (!cartHasSaveData()) {
-		printf("Tried to read SaveData FS without save data\n");
-		return std::nullopt;
-	}
-
-	auto cxi = mem.getCXI();
-	const u64 saveSize = cxi->saveData.size();
-
-	if (offset >= saveSize) {
-		printf("Tried to read from past the end of save data\n");
-		return std::nullopt;
-	}
-
-	const u64 endOffset = std::min<u64>(saveSize, offset + size); // Don't go past the end of the save file
-	const u32 bytesRead = endOffset - offset;
-
-	if (bytesRead != 0x22) Helpers::panic("Might want to actually implement SaveData");
-
-	static constexpr std::array<u8, 0x22> saveDataStub = { 0x00, 0x23, 0x3C, 0x77, 0x67, 0x28, 0x30, 0x33, 0x58, 0x61, 0x39, 0x61, 0x48, 0x59, 0x36, 0x55, 0x43, 0x76, 0x58, 0x61, 0x6F, 0x65, 0x48, 0x6D, 0x2B, 0x5E, 0x6F, 0x62, 0x3E, 0x6F, 0x34, 0x00, 0x77, 0x09};
-
-	for (u32 i = 0; i < bytesRead; i++) {
-		mem.write8(dataPointer + i, saveDataStub[i]);
-	}
-
-	return bytesRead;
+	Helpers::panic("Unimplemented SaveData::ReadFile");
+	return 0;
 }

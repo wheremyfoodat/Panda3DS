@@ -14,6 +14,7 @@ void PICAShader::run() {
 		switch (opcode) {
 			case ShaderOpcodes::ADD: add(instruction); break;
 			case ShaderOpcodes::CALL: call(instruction); break;
+			case ShaderOpcodes::CALLC: callc(instruction); break;
 			case ShaderOpcodes::CALLU: callu(instruction); break;
 			case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2: 
 				cmp(instruction);
@@ -21,15 +22,27 @@ void PICAShader::run() {
 			case ShaderOpcodes::DP3: dp3(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
+			case ShaderOpcodes::FLR: flr(instruction); break;
 			case ShaderOpcodes::IFC: ifc(instruction); break;
 			case ShaderOpcodes::IFU: ifu(instruction); break;
+			case ShaderOpcodes::JMPC: jmpc(instruction); break;
+			case ShaderOpcodes::JMPU: jmpu(instruction); break;
 			case ShaderOpcodes::LOOP: loop(instruction); break;
+			case ShaderOpcodes::MAX: max(instruction); break;
 			case ShaderOpcodes::MIN: min(instruction); break;
 			case ShaderOpcodes::MOV: mov(instruction); break;
 			case ShaderOpcodes::MOVA: mova(instruction); break;
 			case ShaderOpcodes::MUL: mul(instruction); break;
 			case ShaderOpcodes::NOP: break; // Do nothing
+			case ShaderOpcodes::RCP: rcp(instruction); break;
 			case ShaderOpcodes::RSQ: rsq(instruction); break;
+			case ShaderOpcodes::SGEI: sgei(instruction); break;
+			case ShaderOpcodes::SLT: slt(instruction); break;
+			case ShaderOpcodes::SLTI: slti(instruction); break;
+
+			case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
+				madi(instruction);
+				break;
 
 			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
 				mad(instruction);
@@ -92,13 +105,15 @@ u8 PICAShader::getIndexedSource(u32 source, u32 index) {
 
 PICAShader::vec4f PICAShader::getSource(u32 source) {
 	if (source < 0x10)
-		return attributes[source];
+		return inputs[source];
 	else if (source < 0x20)
 		return tempRegisters[source - 0x10];
 	else if (source <= 0x7f)
 		return floatUniforms[source - 0x20];
-
-	Helpers::panic("[PICA] Unimplemented source value: %X", source);
+	else {
+		Helpers::warn("[PICA] Unimplemented source value: %X\n", source);
+		return vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() });
+	}
 }
 
 PICAShader::vec4f& PICAShader::getDest(u32 dest) {
@@ -129,12 +144,12 @@ bool PICAShader::isCondTrue(u32 instruction) {
 
 void PICAShader::add(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src1 = (instruction >> 12) & 0x7f;
+	u32 src1 = (instruction >> 12) & 0x7f;
 	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	if (idx) Helpers::panic("[PICA] ADD: idx != 0");
+	src1 = getIndexedSource(src1, idx);
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 
@@ -150,12 +165,12 @@ void PICAShader::add(u32 instruction) {
 
 void PICAShader::mul(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src1 = (instruction >> 12) & 0x7f;
+	u32 src1 = (instruction >> 12) & 0x7f;
 	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	if (idx) Helpers::panic("[PICA] MUL: idx != 0");
+	src1 = getIndexedSource(src1, idx);
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 
@@ -165,6 +180,46 @@ void PICAShader::mul(u32 instruction) {
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
 			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i];
+		}
+	}
+}
+
+void PICAShader::flr(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src = getIndexedSource(src, idx);
+	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
+	vec4f& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = f24::fromFloat32(std::floor(srcVector[3 - 1].toFloat32()));
+		}
+	}
+}
+
+void PICAShader::max(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	if (idx) Helpers::panic("[PICA] MAX: idx != 0");
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			const auto maximum = srcVec1[3 - i] > srcVec2[3 - i] ? srcVec1[3 - i] : srcVec2[3 - i];
+			destVector[3 - i] = maximum;
 		}
 	}
 }
@@ -213,7 +268,6 @@ void PICAShader::mova(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src = (instruction >> 12) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
 
 	if (idx) Helpers::panic("[PICA] MOVA: idx != 0");
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
@@ -227,12 +281,12 @@ void PICAShader::mova(u32 instruction) {
 
 void PICAShader::dp3(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src1 = (instruction >> 12) & 0x7f;
+	u32 src1 = (instruction >> 12) & 0x7f;
 	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	if (idx) Helpers::panic("[PICA] DP3: idx != 0");
+	src1 = getIndexedSource(src1, idx);
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 
@@ -249,12 +303,12 @@ void PICAShader::dp3(u32 instruction) {
 
 void PICAShader::dp4(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src1 = (instruction >> 12) & 0x7f;
+	u32 src1 = (instruction >> 12) & 0x7f;
 	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	if (idx) Helpers::panic("[PICA] DP4: idx != 0");
+	src1 = getIndexedSource(src1, idx);
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 
@@ -269,6 +323,26 @@ void PICAShader::dp4(u32 instruction) {
 	}
 }
 
+void PICAShader::rcp(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	if (idx) Helpers::panic("[PICA] RCP: idx != 0");
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+	f24 res = f24::fromFloat32(1.0f) / srcVec1[0];
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = res;
+		}
+	}
+}
+
 void PICAShader::rsq(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = (instruction >> 12) & 0x7f;
@@ -279,7 +353,7 @@ void PICAShader::rsq(u32 instruction) {
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 
 	vec4f& destVector = getDest(dest);
-	f24 res = f24::fromFloat32(1.0f / std::sqrtf(srcVec1[0].toFloat32()));
+	f24 res = f24::fromFloat32(1.0f / std::sqrt(srcVec1[0].toFloat32()));
 
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
@@ -308,6 +382,91 @@ void PICAShader::mad(u32 instruction) {
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
 			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i] + srcVec3[3 - i];
+		}
+	}
+}
+
+void PICAShader::madi(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x1f];
+	const u32 src1 = (instruction >> 17) & 0x1f;
+	const u32 src2 = (instruction >> 12) & 0x1f;
+	u32 src3 = (instruction >> 5) & 0x7f;
+	const u32 idx = (instruction >> 22) & 3;
+	const u32 dest = (instruction >> 24) & 0x1f;
+
+	src3 = getIndexedSource(src3, idx);
+
+	auto srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	auto srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto srcVec3 = getSourceSwizzled<3>(src3, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i] + srcVec3[3 - i];
+		}
+	}
+}
+
+void PICAShader::slt(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src1 = getIndexedSource(src1, idx);
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = srcVec1[3 - i] < srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
+		}
+	}
+}
+
+void PICAShader::sgei(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 14) & 0x1f;
+	u32 src2 = (instruction >> 7) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src2 = getIndexedSource(src2, idx);
+
+	auto srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	auto srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = srcVec1[3 - i] >= srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
+		}
+	}
+}
+
+void PICAShader::slti(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 14) & 0x1f;
+	u32 src2 = (instruction >> 7) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src2 = getIndexedSource(src2, idx);
+
+	auto srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	auto srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = srcVec1[3 - i] < srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
 		}
 	}
 }
@@ -408,6 +567,12 @@ void PICAShader::call(u32 instruction) {
 	pc = dest;
 }
 
+void PICAShader::callc(u32 instruction) {
+	if (isCondTrue(instruction)) {
+		call(instruction); // Pls inline
+	}
+}
+
 void PICAShader::callu(u32 instruction) {
 	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
 
@@ -439,4 +604,18 @@ void PICAShader::loop(u32 instruction) {
 	loop.endingPC = dest + 1; // Loop is inclusive so we need + 1 here
 	loop.iterations = uniform.x() + 1;
 	loop.increment = uniform.z();
+}
+
+void PICAShader::jmpc(u32 instruction) {
+	if (isCondTrue(instruction))
+		pc = (instruction >> 10) & 0xfff;
+}
+
+void PICAShader::jmpu(u32 instruction) {
+	const u32 test = (instruction & 1) ^ 1; // If the LSB is 0 we want to compare to true, otherwise compare to false
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
+
+	if (((boolUniform >> bit) & 1) == test) // Jump if the bool uniform is the value we want
+		pc = dest;
 }

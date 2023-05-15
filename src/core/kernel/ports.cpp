@@ -78,16 +78,26 @@ void Kernel::sendSyncRequest() {
 
 	// The sync request is being sent at a service rather than whatever port, so have the service manager intercept it
 	if (KernelHandles::isServiceHandle(handle)) {
-		serviceManager.sendCommandToService(messagePointer, handle);
+		// The service call might cause a reschedule and change threads. Hence, set r0 before executing the service call
+		// Because if the service call goes first, we might corrupt the new thread's r0!!
 		regs[0] = SVCResult::Success;
+		serviceManager.sendCommandToService(messagePointer, handle);
 		return;
 	}
 
 	// Check if our sync request is targetting a file instead of a service
 	bool isFileOperation = getObject(handle, KernelObjectType::File) != nullptr;
 	if (isFileOperation) {
+		regs[0] = SVCResult::Success; // r0 goes first here too
 		handleFileOperation(messagePointer, handle);
-		regs[0] = SVCResult::Success;
+		return;
+	}
+
+	// Check if our sync request is targetting a directory instead of a service
+	bool isDirectoryOperation = getObject(handle, KernelObjectType::Directory) != nullptr;
+	if (isDirectoryOperation) {
+		regs[0] = SVCResult::Success; // r0 goes first here too
+		handleDirectoryOperation(messagePointer, handle);
 		return;
 	}
 
@@ -103,13 +113,13 @@ void Kernel::sendSyncRequest() {
 	const Handle portHandle = sessionData->portHandle;
 
 	if (portHandle == srvHandle) { // Special-case SendSyncRequest targetting the "srv: port"
+		regs[0] = SVCResult::Success;
 		serviceManager.handleSyncRequest(messagePointer);
 	} else if (portHandle == errorPortHandle) { // Special-case "err:f" for juicy logs too
+		regs[0] = SVCResult::Success;
 		handleErrorSyncRequest(messagePointer);
 	} else {
 		const auto portData = objects[portHandle].getData<Port>();
 		Helpers::panic("SendSyncRequest targetting port %s\n", portData->name);
 	}
-
-	regs[0] = SVCResult::Success;
 }

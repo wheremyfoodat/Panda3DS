@@ -16,17 +16,26 @@ namespace ShaderOpcodes {
 		DP3 = 0x01,
 		DP4 = 0x02,
 		MUL = 0x08,
+		SLT = 0x0A,
+		FLR = 0x0B,
+		MAX = 0x0C,
 		MIN = 0x0D,
+		RCP = 0x0E,
 		RSQ = 0x0F,
 		MOVA = 0x12,
 		MOV = 0x13,
+		SGEI = 0x1A,
+		SLTI = 0x1B,
 		NOP = 0x21,
 		END = 0x22,
 		CALL = 0x24,
+		CALLC = 0x25,
 		CALLU = 0x26,
 		IFU = 0x27,
 		IFC = 0x28,
 		LOOP = 0x29,
+		JMPC = 0x2C,
+		JMPU = 0x2D,
 		CMP1 = 0x2E, // Both of these instructions are CMP
 		CMP2 = 0x2F,
 		MAD = 0x38 // Everything between 0x38-0x3F is a MAD but fuck it
@@ -85,19 +94,29 @@ class PICAShader {
 	// Shader opcodes
 	void add(u32 instruction);
 	void call(u32 instruction);
+	void callc(u32 instruction);
 	void callu(u32 instruction);
 	void cmp(u32 instruction);
 	void dp3(u32 instruction);
 	void dp4(u32 instruction);
+	void flr(u32 instruction);
 	void ifc(u32 instruction);
 	void ifu(u32 instruction);
+	void jmpc(u32 instruction);
+	void jmpu(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
+	void madi(u32 instruction);
+	void max(u32 instruction);
 	void min(u32 instruction);
 	void mov(u32 instruction);
 	void mova(u32 instruction);
 	void mul(u32 instruction);
+	void rcp(u32 instruction);
 	void rsq(u32 instruction);
+	void sgei(u32 instruction);
+	void slt(u32 instruction);
+	void slti(u32 instruction);
 
 	// src1, src2 and src3 have different negation & component swizzle bits in the operand descriptor
 	// https://problemkaputt.github.io/gbatek.htm#3dsgpushaderinstructionsetopcodesummary in the
@@ -159,7 +178,7 @@ public:
 	std::array<vec4f, 96> floatUniforms;
 
 	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
-	std::array<vec4f, 16> attributes; // Attributes passed to the shader
+	std::array<vec4f, 16> inputs; // Attributes passed to the shader
 	std::array<vec4f, 16> outputs;
 
 	PICAShader(ShaderType type) : type(type) {}
@@ -170,8 +189,7 @@ public:
 	}
 
 	void setBufferIndex(u32 index) {
-		if (index != 0) Helpers::panic("How many bits is the shader buffer index reg meant to be?");
-		bufferIndex = (index >> 2) & 0xfff;
+		bufferIndex = index & 0xfff;
 	}
 
 	void setOpDescriptorIndex(u32 index) {
@@ -200,7 +218,7 @@ public:
 		if (floatUniformIndex >= 96)
 			Helpers::panic("[PICA] Tried to write float uniform %d", floatUniformIndex);
 
-		if ((f32UniformTransfer && floatUniformWordCount == 4) || (!f32UniformTransfer && floatUniformWordCount == 3)) {
+		if ((f32UniformTransfer && floatUniformWordCount >= 4) || (!f32UniformTransfer && floatUniformWordCount >= 3)) {
 			vec4f& uniform = floatUniforms[floatUniformIndex++];
 			floatUniformWordCount = 0;
 

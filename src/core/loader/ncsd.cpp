@@ -1,3 +1,4 @@
+#include <cstring>
 #include <optional>
 #include "loader/ncsd.hpp"
 #include "memory.hpp"
@@ -74,9 +75,9 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
         return std::nullopt;
     }
 
-    printf("Text address = %08X, page count = %08X\n", cxi.text.address, cxi.text.size);
-    printf("Rodata address = %08X, page count = %08X\n", cxi.rodata.address, cxi.rodata.size);
-    printf("Data address = %08X, page count = %08X\n", cxi.data.address, cxi.data.size);
+    printf("Text address = %08X, size = %08X\n", cxi.text.address, cxi.text.size);
+    printf("Rodata address = %08X, size = %08X\n", cxi.rodata.address, cxi.rodata.size);
+    printf("Data address = %08X, size = %08X\n", cxi.data.address, cxi.data.size);
     
     // Map code file to memory
     auto& code = cxi.codeFile;
