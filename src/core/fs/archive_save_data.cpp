@@ -94,14 +94,32 @@ Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FS
 }
 
 ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {
-	//Helpers::panic("Unimplemented SaveData::GetFormatInfo");
-	return FormatInfo{ .size = 0, .numOfDirectories = 255, .numOfFiles = 255, .duplicateData = false };
+	Helpers::panic("Unimplemented SaveData::GetFormatInfo");
+}
+
+void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& info) {
+	const fs::path saveDataPath = IOFile::getAppData() / "SaveData";
+	const fs::path formatInfoPath = getFormatInfoPath();
+
+	// Delete all contents by deleting the directory then recreating it 
+	fs::remove_all(saveDataPath);
+	fs::create_directories(saveDataPath);
+
+	// Write format info on disk
+	IOFile file(formatInfoPath, "wb");
+	file.writeBytes(&info, sizeof(info));
 }
 
 Rust::Result<ArchiveBase*, FSResult> SaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);
 		return Err(FSResult::NotFoundInvalid);
+	}
+
+	const fs::path formatInfoPath = getFormatInfoPath();
+	// Format info not found so the archive is not formatted
+	if (!fs::is_regular_file(formatInfoPath)) {
+		return Err(FSResult::NotFormatted);
 	}
 
 	return Ok((ArchiveBase*)this);

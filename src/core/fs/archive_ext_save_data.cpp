@@ -70,9 +70,26 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 	return FileError;
 }
 
+std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path) {
+	// TODO: Remove punning here
+	const u32 mediaType = *(u32*)&path.binary[0];
+	const u32 saveLow = *(u32*)&path.binary[4];
+	const u32 saveHigh = *(u32*)&path.binary[8];
+
+	// TODO: Should the media type be used here
+	return backingFolder + std::to_string(saveLow) + std::to_string(saveHigh);
+}
+
 Rust::Result<ArchiveBase*, FSResult> ExtSaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
+	}
+
+	// Create a format info path in the style of AppData/FormatInfo/Cartridge10390390194.format
+	fs::path formatInfopath = IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
+	// Format info not found so the archive is not formatted
+	if (!fs::is_regular_file(formatInfopath)) {
+		return isShared ? Err(FSResult::NotFormatted) : Err(FSResult::NotFoundInvalid);
 	}
 
 	return Ok((ArchiveBase*)this);

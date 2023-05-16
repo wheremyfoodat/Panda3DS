@@ -224,6 +224,10 @@ public:
         return Err(FSResult::FileNotFound);
     }
 
+    virtual void format(const FSPath& path, const FormatInfo& info) {
+        Helpers::panic("Unimplemented Format for %s archive", name().c_str());
+    }
+
     // Read size bytes from a file starting at offset "offset" into a certain buffer in memory
     // Returns the number of bytes read, or nullopt if the read failed
     virtual std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) = 0;

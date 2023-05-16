@@ -11,12 +11,18 @@ public:
 	FSResult createDirectory(const FSPath& path) override;
 	FSResult createFile(const FSPath& path, u64 size) override;
 	FSResult deleteFile(const FSPath& path) override;
-	FormatInfo getFormatInfo(const FSPath& path) override;
 
 	Rust::Result<ArchiveBase*, FSResult> openArchive(const FSPath& path) override;
 	Rust::Result<DirectorySession, FSResult> openDirectory(const FSPath& path) override;
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
+
+	void format(const FSPath& path, const FormatInfo& info) override;
+	FormatInfo getFormatInfo(const FSPath& path) override;
+
+	std::filesystem::path getFormatInfoPath() {
+		return IOFile::getAppData() / "FormatInfo" / "SaveData.format";
+	}
 
 	// Returns whether the cart has save data or not
 	bool cartHasSaveData() {

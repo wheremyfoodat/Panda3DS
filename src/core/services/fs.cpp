@@ -48,6 +48,7 @@ void FSService::initializeFilesystem() {
 	const auto nandPath = IOFile::getAppData() / "NAND"; // Create NAND
 	const auto cartPath = IOFile::getAppData() / "CartSave"; // Create cartridge save folder for use with ExtSaveData
 	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
+	const auto formatPath = IOFile::getAppData() / "FormatInfo"; // Create folder for storing archive formatting info
 	namespace fs = std::filesystem;
 	// TODO: SDMC, etc
 
@@ -61,6 +62,10 @@ void FSService::initializeFilesystem() {
 
 	if (!fs::is_directory(savePath)) {
 		fs::create_directories(savePath);
+	}
+
+	if (!fs::is_directory(formatPath)) {
+		fs::create_directories(formatPath);
 	}
 }
 
@@ -440,9 +445,18 @@ void FSService::formatSaveData(u32 messagePointer) {
 	const u32 fileNum = mem.read32(messagePointer + 24); // Max number of files
 	const u32 directoryBucketNum = mem.read32(messagePointer + 28); // Not sure what a directory bucket is...?
 	const u32 fileBucketNum = mem.read32(messagePointer + 32); // Same here
-	const bool duplicateData = mem.read8(messagePointer + 36) != 0; 
+	const bool duplicateData = mem.read8(messagePointer + 36) != 0;
+
+	ArchiveBase::FormatInfo info {
+		.size = blockSize * 0x200,
+		.numOfDirectories = directoryNum,
+		.numOfFiles = fileNum,
+		.duplicateData = duplicateData
+	};
 
 	printf("Stubbed FS::FormatSaveData. File num: %d, directory num: %d\n", fileNum, directoryNum);
+	saveData.format(path, info);
+
 	mem.write32(messagePointer, IPC::responseHeader(0x84C, 1, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
 }
