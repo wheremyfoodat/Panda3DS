@@ -108,6 +108,11 @@ void HIDService::getIPCHandles(u32 messagePointer) {
 	}
 }
 
+void HIDService::pressKey(u32 key) { sharedMem[0]++; *(u32*)&sharedMem[0x28] |= key; }
+void HIDService::releaseKey(u32 key) { sharedMem[0]++; *(u32*)&sharedMem[0x28] &= ~key; }
+void HIDService::setCirclepadX(u16 x) { sharedMem[0]++; *(u16*)&sharedMem[0x28 + 0xC] = x; }
+void HIDService::setCirclepadY(u16 y) { sharedMem[0]++; *(u16*)&sharedMem[0x28 + 0xC + 2] = y; }
+
 // TODO: We don't currently have inputs but we must at least try to signal the HID key input events now and then
 void HIDService::updateInputs() {
 	// For some reason, the original developers decided to signal the HID events each time the OS rescanned inputs

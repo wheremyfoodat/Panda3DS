@@ -200,5 +200,10 @@ public:
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.requestGPUInterrupt(type); }
 	void signalDSPEvents() { serviceManager.signalDSPEvents(); }
+
+	void pressKey(u32 key) { serviceManager.pressKey(key); }
+	void releaseKey(u32 key) { serviceManager.releaseKey(key); }
+	void setCirclepadX(u16 x) { serviceManager.setCirclepadX(x); }
+	void setCirclepadY(u16 y) { serviceManager.setCirclepadY(y); }
 	void updateInputs() { serviceManager.updateInputs(); }
 };
