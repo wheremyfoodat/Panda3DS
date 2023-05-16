@@ -8,23 +8,25 @@
 // Stub for DSP audio pipe
 class DSPPipe {
 	// Hardcoded responses for now
+	// These are DSP DRAM offsets for various variables
+	// https://www.3dbrew.org/wiki/DSP_Memory_Region
 	static constexpr std::array<u16, 16> pipeData = {
-		0x000F, //Number of responses
-		0xBFFF,
-		0x9E8E,
-		0x8680,
-		0xA78E,
-		0x9430,
-		0x8400,
-		0x8540,
-		0x948E,
-		0x8710,
-		0x8410,
-		0xA90E,
-		0xAA0E,
-		0xAACE,
-		0xAC4E,
-		0xAC58
+		0x000F, // Number of responses
+		0xBFFF, // Frame counter
+		0x9E92, // Source configs
+		0x8680, // Source statuses
+		0xA792, // ADPCM coefficients
+		0x9430, // DSP configs
+		0x8400, // DSP status
+		0x8540, // Final samples
+		0x9492, // Intermediate mix samples
+		0x8710, // Compressor
+		0x8410, // Debug
+		0xA912, // ??
+		0xAA12, // ??
+		0xAAD2, // ??
+		0xAC52, // Surround sound biquad filter 1
+		0xAC5C  // Surround sound biquad filter 2
 	};
 	uint index = 0;
 
