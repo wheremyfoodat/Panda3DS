@@ -94,6 +94,7 @@ class DSPService {
 	void registerInterruptEvents(u32 messagePointer);
 	void setSemaphore(u32 messagePointer);
 	void setSemaphoreMask(u32 messagePointer);
+	void unloadComponent(u32 messagePointer);
 	void writeProcessPipe(u32 messagePointer);
 
 public:

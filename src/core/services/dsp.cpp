@@ -11,6 +11,7 @@ namespace DSPCommands {
 		WriteProcessPipe = 0x000D0082,
 		ReadPipeIfPossible = 0x001000C0,
 		LoadComponent = 0x001100C2,
+		UnloadComponent = 0x00120000,
 		FlushDataCache = 0x00130082,
 		InvalidateDataCache = 0x00140082,
 		RegisterInterruptEvents = 0x00150082,
@@ -52,11 +53,12 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 		case DSPCommands::GetSemaphoreEventHandle: getSemaphoreEventHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
 		case DSPCommands::ReadPipeIfPossible: readPipeIfPossible(messagePointer); break;
-		case DSPCommands::RecvData: recvData(messagePointer); break;
-		case DSPCommands::RecvDataIsReady: recvDataIsReady(messagePointer); break;
+		case DSPCommands::RecvData: [[likely]] recvData(messagePointer); break;
+		case DSPCommands::RecvDataIsReady: [[likely]] recvDataIsReady(messagePointer); break;
 		case DSPCommands::RegisterInterruptEvents: registerInterruptEvents(messagePointer); break;
 		case DSPCommands::SetSemaphore: setSemaphore(messagePointer); break;
 		case DSPCommands::SetSemaphoreMask: setSemaphoreMask(messagePointer); break;
+		case DSPCommands::UnloadComponent: unloadComponent(messagePointer); break;
 		case DSPCommands::WriteProcessPipe: [[likely]] writeProcessPipe(messagePointer); break;
 		default: Helpers::panic("DSP service requested. Command: %08X\n", command);
 	}
@@ -83,6 +85,12 @@ void DSPService::loadComponent(u32 messagePointer) {
 	mem.write32(messagePointer + 8, 1); // Component loaded
 	mem.write32(messagePointer + 12, (size << 4) | 0xA);
 	mem.write32(messagePointer + 16, mem.read32(messagePointer + 20)); // Component buffer
+}
+
+void DSPService::unloadComponent(u32 messagePointer) {
+	log("DSP::UnloadComponent\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x12, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void DSPService::readPipeIfPossible(u32 messagePointer) {
@@ -158,7 +166,11 @@ void DSPService::registerInterruptEvents(u32 messagePointer) {
 	
 	// The event handle being 0 means we're removing an event
 	if (eventHandle == 0) {
-		Helpers::panic("DSP::DSP::RegisterinterruptEvents Trying to remove a registered interrupt");
+		DSPEvent& e = getEventRef(interrupt, channel); // Get event
+		if (e.has_value()) { // Remove if it exists
+			totalEventCount--;
+			e = std::nullopt;
+		}
 	} else {
 		const KernelObject* object = kernel.getObject(eventHandle, KernelObjectType::Event);
 		if (!object) {
