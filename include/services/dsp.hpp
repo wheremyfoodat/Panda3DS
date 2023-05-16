@@ -43,6 +43,12 @@ public:
 	}
 };
 
+namespace DSPPipeType {
+	enum : u32 {
+		Debug = 0, DMA = 1, Audio = 2, Binary = 3
+	};
+}
+
 // Circular dependencies!
 class Kernel;
 
@@ -52,9 +58,14 @@ class DSPService {
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, dspServiceLogger)
 
+	enum class DSPState : u32 {
+		Off, On, Slep
+	};
+
 	// Number of DSP pipes
 	static constexpr size_t pipeCount = 8;
 	DSPPipe audioPipe;
+	DSPState dspState;
 
 	// DSP service event handles
 	using DSPEvent = std::optional<Handle>;
@@ -78,6 +89,8 @@ class DSPService {
 	void invalidateDCache(u32 messagePointer);
 	void loadComponent(u32 messagePointer);
 	void readPipeIfPossible(u32 messagePointer);
+	void recvData(u32 messagePointer);
+	void recvDataIsReady(u32 messagePointer);
 	void registerInterruptEvents(u32 messagePointer);
 	void setSemaphore(u32 messagePointer);
 	void setSemaphoreMask(u32 messagePointer);
