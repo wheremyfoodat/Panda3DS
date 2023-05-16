@@ -18,7 +18,7 @@ FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms)
 
 Rust::Result<ArchiveBase*, FSResult> SDMCArchive::openArchive(const FSPath& path) {
 	printf("SDMCArchive::OpenArchive: Failed\n");
-	return Ok((ArchiveBase*)nullptr);
+	return Err(FSResult::NotFormatted);
 }
 
 std::optional<u32> SDMCArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

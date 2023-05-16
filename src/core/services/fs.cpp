@@ -121,12 +121,12 @@ Rust::Result<Handle, FSResult> FSService::openDirectoryHandle(ArchiveBase* archi
 	}
 }
 
-std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
+Rust::Result<Handle, FSResult> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
 	ArchiveBase* archive = getArchiveFromID(archiveID, path);
 
 	if (archive == nullptr) [[unlikely]] {
 		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
-		return std::nullopt;
+		return Err(FSResult::NotFormatted);
 	}
 
 	Rust::Result<ArchiveBase*, FSResult> res = archive->openArchive(path);
@@ -135,10 +135,10 @@ std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& 
 		auto& archiveObject = kernel.getObjects()[handle];
 		archiveObject.data = new ArchiveSession(res.unwrap(), path);
 
-		return handle;
+		return Ok(handle);
 	}
 	else {
-		return std::nullopt;
+		return Err(res.unwrapErr());
 	}
 }
 
@@ -216,14 +216,14 @@ void FSService::openArchive(u32 messagePointer) {
 	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
 	log("FS::OpenArchive(archive ID = %d, archive path type = %d)\n", archiveID, archivePathType);
 	
-	std::optional<Handle> handle = openArchiveHandle(archiveID, archivePath);
+	Rust::Result<Handle, FSResult> res = openArchiveHandle(archiveID, archivePath);
 	mem.write32(messagePointer, IPC::responseHeader(0x80C, 3, 0));
-	if (handle.has_value()) {
+	if (res.isOk()) {
 		mem.write32(messagePointer + 4, ResultCode::Success);
-		mem.write64(messagePointer + 8, handle.value());
+		mem.write64(messagePointer + 8, res.unwrap());
 	} else {
 		log("FS::OpenArchive: Failed to open archive with id = %d\n", archiveID);
-		mem.write32(messagePointer + 4, ResultCode::Failure);
+		mem.write32(messagePointer + 4, static_cast<u32>(res.unwrapErr()));
 	}
 }
 
