@@ -267,6 +267,7 @@ void DSPService::writeProcessPipe(u32 messagePointer) {
 					default: Helpers::panic("Unimplemented DSP audio pipe state change %d", state);
 				}
 			}
+			break;
 		}
 
 		default:
