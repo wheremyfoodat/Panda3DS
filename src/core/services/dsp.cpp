@@ -257,6 +257,7 @@ void DSPService::writeProcessPipe(u32 messagePointer) {
 					case StateChange::Initialize:
 						// TODO: Other initialization stuff here
 						dspState = DSPState::On;
+						audioPipe.reset();
 						break;
 
 					case StateChange::Shutdown:
