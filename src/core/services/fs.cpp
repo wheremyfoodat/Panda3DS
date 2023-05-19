@@ -77,7 +77,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 			if (archivePath.type == PathType::Binary) {
 				switch (archivePath.binary[0]) {
 					case 0: return &extSaveData_nand;
-					case 1: return &extSaveData_cart;
+					case 2: return &extSaveData_cart;
 				}
 			}
 			return nullptr;
@@ -86,7 +86,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 			if (archivePath.type == PathType::Binary) {
 				switch (archivePath.binary[0]) {
 					case 0: return &sharedExtSaveData_nand;
-					case 1: return &sharedExtSaveData_cart;
+					case 2: return &sharedExtSaveData_cart;
 				}
 			}
 			return nullptr;
@@ -227,8 +227,9 @@ void FSService::openArchive(u32 messagePointer) {
 		mem.write32(messagePointer + 4, ResultCode::Success);
 		mem.write64(messagePointer + 8, res.unwrap());
 	} else {
-		log("FS::OpenArchive: Failed to open archive with id = %d\n", archiveID);
+		log("FS::OpenArchive: Failed to open archive with id = %d. Error %08X\n", archiveID, (u32)res.unwrapErr());
 		mem.write32(messagePointer + 4, static_cast<u32>(res.unwrapErr()));
+		mem.write64(messagePointer + 8, 0);
 	}
 }
 
@@ -454,7 +455,6 @@ void FSService::formatSaveData(u32 messagePointer) {
 		.duplicateData = duplicateData
 	};
 
-	printf("Stubbed FS::FormatSaveData. File num: %d, directory num: %d\n", fileNum, directoryNum);
 	saveData.format(path, info);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x84C, 1, 0));
