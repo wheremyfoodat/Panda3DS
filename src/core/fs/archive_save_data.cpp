@@ -106,7 +106,7 @@ void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& 
 	fs::create_directories(saveDataPath);
 
 	// Write format info on disk
-	IOFile file(formatInfoPath, "wb+");
+	IOFile file(formatInfoPath, "wb");
 	file.writeBytes(&info, sizeof(info));
 }
 

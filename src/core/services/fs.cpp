@@ -21,6 +21,7 @@ namespace FSCommands {
 		OpenArchive = 0x080C00C2,
 		ControlArchive = 0x080D0144,
 		CloseArchive = 0x080E0080,
+		FormatThisUserSaveData = 0x080F0180,
 		GetFreeBytes = 0x08120080,
 		IsSdmcDetected = 0x08170000,
 		GetFormatInfo = 0x084500C2,
@@ -166,6 +167,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
+		case FSCommands::FormatThisUserSaveData: formatThisUserSaveData(messagePointer); break;
 		case FSCommands::GetFreeBytes: getFreeBytes(messagePointer); break;
 		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
@@ -427,6 +429,8 @@ void FSService::getFormatInfo(u32 messagePointer) {
 }
 
 void FSService::formatSaveData(u32 messagePointer) {
+	log("FS::FormatSaveData\n");
+
 	const u32 archiveID = mem.read32(messagePointer + 4);
 	if (archiveID != ArchiveID::SaveData)
 		Helpers::panic("FS::FormatSaveData: Archive is not SaveData");
@@ -459,6 +463,28 @@ void FSService::formatSaveData(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x84C, 1, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
+}
+
+void FSService::formatThisUserSaveData(u32 messagePointer) {
+	log("FS::FormatThisUserSaveData\n");
+
+	const u32 blockSize = mem.read32(messagePointer + 4);
+	const u32 directoryNum = mem.read32(messagePointer + 8); // Max number of directories
+	const u32 fileNum = mem.read32(messagePointer + 12); // Max number of files
+	const u32 directoryBucketNum = mem.read32(messagePointer + 16); // Not sure what a directory bucket is...?
+	const u32 fileBucketNum = mem.read32(messagePointer + 20); // Same here
+	const bool duplicateData = mem.read8(messagePointer + 24) != 0;
+
+	ArchiveBase::FormatInfo info {
+		.size = blockSize * 0x200,
+		.numOfDirectories = directoryNum,
+		.numOfFiles = fileNum,
+		.duplicateData = duplicateData
+	};
+	FSPath emptyPath;
+	
+	mem.write32(messagePointer, IPC::responseHeader(0x080F, 1, 0));
+	saveData.format(emptyPath, info);
 }
 
 void FSService::controlArchive(u32 messagePointer) {
