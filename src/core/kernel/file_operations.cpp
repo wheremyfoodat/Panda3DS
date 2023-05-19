@@ -41,7 +41,12 @@ void Kernel::closeFile(u32 messagePointer, Handle fileHandle) {
 		Helpers::panic("Called CloseFile on non-existent file");
 	}
 
-	p->getData<FileSession>()->isOpen = false;
+	FileSession* session = p->getData<FileSession>();
+	session->isOpen = false;
+	if (session->fd != nullptr) {
+		fclose(session->fd);
+	}
+
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

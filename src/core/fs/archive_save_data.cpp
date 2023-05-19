@@ -31,7 +31,34 @@ FSResult SaveDataArchive::createDirectory(const FSPath& path) {
 }
 
 FSResult SaveDataArchive::deleteFile(const FSPath& path) {
-	Helpers::panic("[SaveData] Unimplemented DeleteFile");
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in SaveData::DeleteFile");
+
+		fs::path p = IOFile::getAppData() / "SaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_directory(p)) {
+			Helpers::panic("SaveData::DeleteFile: Tried to delete directory");
+		}
+
+		if (!fs::is_regular_file(p)) {
+			return FSResult::FileNotFound;
+		}
+
+		std::error_code ec;
+		bool success = fs::remove(p, ec);
+
+		// It might still be possible for fs::remove to fail, if there's eg an open handle to a file being deleted
+		// In this case, print a warning, but still return success for now
+		if (!success) {
+			Helpers::warn("SaveData::DeleteFile: fs::remove failed\n");
+		}
+
+		return FSResult::Success;
+	}
+
+	Helpers::panic("SaveDataArchive::DeleteFile: Unknown path type");
 	return FSResult::Success;
 }
 

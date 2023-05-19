@@ -38,12 +38,27 @@ FSResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 		fs::path p = IOFile::getAppData() / backingFolder;
 		p += fs::path(path.utf16_string).make_preferred();
 
+		if (fs::is_directory(p)) {
+			Helpers::panic("ExtSaveData::DeleteFile: Tried to delete directory");
+		}
+
+		if (!fs::is_regular_file(p)) {
+			return FSResult::FileNotFound;
+		}
+
 		std::error_code ec;
 		bool success = fs::remove(p, ec);
-		return success ? FSResult::Success : FSResult::FileNotFound;
+
+		// It might still be possible for fs::remove to fail, if there's eg an open handle to a file being deleted
+		// In this case, print a warning, but still return success for now
+		if (!success) {
+			Helpers::warn("ExtSaveData::DeleteFile: fs::remove failed\n");
+		}
+
+		return FSResult::Success;
 	}
 
-	Helpers::panic("ExtSaveDataArchive::DeleteFile: Failed");
+	Helpers::panic("ExtSaveDataArchive::DeleteFile: Unknown path type");
 	return FSResult::Success;
 }
 
