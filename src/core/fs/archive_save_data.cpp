@@ -120,8 +120,23 @@ Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FS
 	return Err(FSResult::Success);
 }
 
-ArchiveBase::FormatInfo SaveDataArchive::getFormatInfo(const FSPath& path) {
-	Helpers::panic("Unimplemented SaveData::GetFormatInfo");
+Rust::Result<ArchiveBase::FormatInfo, FSResult> SaveDataArchive::getFormatInfo(const FSPath& path) {
+	const fs::path formatInfoPath = getFormatInfoPath();
+	IOFile file(formatInfoPath, "rb");
+
+	// If the file failed to open somehow, we return that the archive is not formatted
+	if (!file.isOpen()) {
+		return Err(FSResult::NotFormatted);
+	}
+
+	FormatInfo ret;
+	auto [success, bytesRead] = file.readBytes(&ret, sizeof(FormatInfo));
+	if (!success || bytesRead != sizeof(FormatInfo)) {
+		Helpers::warn("SaveData::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
+		return Err(FSResult::NotFormatted);
+	}
+
+	return Ok(ret);
 }
 
 void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& info) {

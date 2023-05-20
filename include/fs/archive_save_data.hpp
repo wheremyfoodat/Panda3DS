@@ -18,7 +18,7 @@ public:
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
 
 	void format(const FSPath& path, const FormatInfo& info) override;
-	FormatInfo getFormatInfo(const FSPath& path) override;
+	Rust::Result<FormatInfo, FSResult> getFormatInfo(const FSPath& path) override;
 
 	std::filesystem::path getFormatInfoPath() {
 		return IOFile::getAppData() / "FormatInfo" / "SaveData.format";

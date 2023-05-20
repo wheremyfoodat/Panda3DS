@@ -419,13 +419,20 @@ void FSService::getFormatInfo(u32 messagePointer) {
 		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
 	}
 
-	ArchiveBase::FormatInfo info = archive->getFormatInfo(path);
 	mem.write32(messagePointer, IPC::responseHeader(0x845, 5, 0));
-	mem.write32(messagePointer + 4, ResultCode::Success);
-	mem.write32(messagePointer + 8, info.size);
-	mem.write32(messagePointer + 12, info.numOfDirectories);
-	mem.write32(messagePointer + 16, info.numOfFiles);
-	mem.write8(messagePointer + 20, info.duplicateData ? 1 : 0);
+	Rust::Result<ArchiveBase::FormatInfo, FSResult> res = archive->getFormatInfo(path);
+
+	// If the FormatInfo was returned, write them to the output buffer. Otherwise, write an error code.
+	if (res.isOk()) {
+		ArchiveBase::FormatInfo info = res.unwrap();
+		mem.write32(messagePointer + 4, ResultCode::Success);
+		mem.write32(messagePointer + 8, info.size);
+		mem.write32(messagePointer + 12, info.numOfDirectories);
+		mem.write32(messagePointer + 16, info.numOfFiles);
+		mem.write8(messagePointer + 20, info.duplicateData ? 1 : 0);
+	} else {
+		mem.write32(messagePointer + 4, static_cast<u32>(res.unwrapErr()));
+	}
 }
 
 void FSService::formatSaveData(u32 messagePointer) {
