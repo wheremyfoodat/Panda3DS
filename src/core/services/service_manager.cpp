@@ -5,7 +5,7 @@
 
 ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem),
-	cecd(mem, kernel), cfg(mem), dsp(mem, kernel), hid(mem, kernel), frd(mem), fs(mem, kernel),
+	cecd(mem, kernel), cfg(mem), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), frd(mem), fs(mem, kernel),
 	gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem),
 	ptm(mem), y2r(mem, kernel) {}
 
@@ -21,6 +21,7 @@ void ServiceManager::reset() {
 	cam.reset();
 	cecd.reset();
 	cfg.reset();
+	dlp_srvr.reset();
 	dsp.reset();
 	hid.reset();
 	frd.reset();
@@ -97,6 +98,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "cam:u", KernelHandles::CAM },
 	{ "cecd:u", KernelHandles::CECD },
 	{ "cfg:u", KernelHandles::CFG },
+	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
 	{ "hid:USER", KernelHandles::HID },
 	{ "frd:u", KernelHandles::FRD },
@@ -170,6 +172,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
 		case KernelHandles::FS: [[likely]] fs.handleSyncRequest(messagePointer); break;
 		case KernelHandles::APT: [[likely]] apt.handleSyncRequest(messagePointer); break;
+		case KernelHandles::DSP: [[likely]] dsp.handleSyncRequest(messagePointer); break;
 
         case KernelHandles::AC: ac.handleSyncRequest(messagePointer); break;
 		case KernelHandles::ACT: act.handleSyncRequest(messagePointer); break;
@@ -178,7 +181,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::CAM: cam.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
-		case KernelHandles::DSP: dsp.handleSyncRequest(messagePointer); break;
+		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
         case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;

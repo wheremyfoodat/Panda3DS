@@ -12,6 +12,7 @@
 #include "services/cam.hpp"
 #include "services/cecd.hpp"
 #include "services/cfg.hpp"
+#include "services/dlp_srvr.hpp"
 #include "services/dsp.hpp"
 #include "services/hid.hpp"
 #include "services/frd.hpp"
@@ -46,6 +47,7 @@ class ServiceManager {
 	CAMService cam;
 	CECDService cecd;
 	CFGService cfg;
+	DlpSrvrService dlp_srvr;
 	DSPService dsp;
 	HIDService hid;
 	FRDService frd;
