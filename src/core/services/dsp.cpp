@@ -4,11 +4,14 @@
 
 namespace DSPCommands {
 	enum : u32 {
+		RecvData = 0x00010040,
+		RecvDataIsReady = 0x00020040,
 		SetSemaphore = 0x00070040,
 		ConvertProcessAddressFromDspDram = 0x000C0040,
 		WriteProcessPipe = 0x000D0082,
 		ReadPipeIfPossible = 0x001000C0,
 		LoadComponent = 0x001100C2,
+		UnloadComponent = 0x00120000,
 		FlushDataCache = 0x00130082,
 		InvalidateDataCache = 0x00140082,
 		RegisterInterruptEvents = 0x00150082,
@@ -29,6 +32,7 @@ namespace Result {
 void DSPService::reset() {
 	audioPipe.reset();
 	totalEventCount = 0;
+	dspState = DSPState::Off;
 
 	semaphoreEvent = std::nullopt;
 	interrupt0 = std::nullopt;
@@ -49,9 +53,12 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 		case DSPCommands::GetSemaphoreEventHandle: getSemaphoreEventHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
 		case DSPCommands::ReadPipeIfPossible: readPipeIfPossible(messagePointer); break;
+		case DSPCommands::RecvData: [[likely]] recvData(messagePointer); break;
+		case DSPCommands::RecvDataIsReady: [[likely]] recvDataIsReady(messagePointer); break;
 		case DSPCommands::RegisterInterruptEvents: registerInterruptEvents(messagePointer); break;
 		case DSPCommands::SetSemaphore: setSemaphore(messagePointer); break;
 		case DSPCommands::SetSemaphoreMask: setSemaphoreMask(messagePointer); break;
+		case DSPCommands::UnloadComponent: unloadComponent(messagePointer); break;
 		case DSPCommands::WriteProcessPipe: [[likely]] writeProcessPipe(messagePointer); break;
 		default: Helpers::panic("DSP service requested. Command: %08X\n", command);
 	}
@@ -78,6 +85,12 @@ void DSPService::loadComponent(u32 messagePointer) {
 	mem.write32(messagePointer + 8, 1); // Component loaded
 	mem.write32(messagePointer + 12, (size << 4) | 0xA);
 	mem.write32(messagePointer + 16, mem.read32(messagePointer + 20)); // Component buffer
+}
+
+void DSPService::unloadComponent(u32 messagePointer) {
+	log("DSP::UnloadComponent\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x12, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void DSPService::readPipeIfPossible(u32 messagePointer) {
@@ -107,6 +120,29 @@ void DSPService::readPipeIfPossible(u32 messagePointer) {
 	mem.write16(messagePointer + 8, i); // Number of bytes read
 }
 
+void DSPService::recvData(u32 messagePointer) {
+	const u32 registerIndex = mem.read32(messagePointer + 4);
+	log("DSP::RecvData (register = %d)\n", registerIndex);
+	if (registerIndex != 0) Helpers::panic("Unknown register in DSP::RecvData");
+
+	// Return 0 if the DSP is running, otherwise 1
+	const u16 ret = dspState == DSPState::On ? 0 : 1;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x01, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write16(messagePointer + 8, ret); // Always return that the DSP is on
+}
+
+void DSPService::recvDataIsReady(u32 messagePointer) {
+	const u32 registerIndex = mem.read32(messagePointer + 4);
+	log("DSP::RecvDataIsReady (register = %d)\n", registerIndex);
+	if (registerIndex != 0) Helpers::panic("Unknown register in DSP::RecvDataIsReady");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x02, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 1); // Always return that the register is ready for now
+}
+
 DSPService::DSPEvent& DSPService::getEventRef(u32 type, u32 pipe) {
 	switch (type) {
 		case 0: return interrupt0;
@@ -130,7 +166,11 @@ void DSPService::registerInterruptEvents(u32 messagePointer) {
 	
 	// The event handle being 0 means we're removing an event
 	if (eventHandle == 0) {
-		Helpers::panic("DSP::DSP::RegisterinterruptEvents Trying to remove a registered interrupt");
+		DSPEvent& e = getEventRef(interrupt, channel); // Get event
+		if (e.has_value()) { // Remove if it exists
+			totalEventCount--;
+			e = std::nullopt;
+		}
 	} else {
 		const KernelObject* object = kernel.getObject(eventHandle, KernelObjectType::Event);
 		if (!object) {
@@ -192,8 +232,49 @@ void DSPService::writeProcessPipe(u32 messagePointer) {
 	const u32 channel = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
 	const u32 buffer = mem.read32(messagePointer + 16);
-
 	log("DSP::writeProcessPipe (channel = %d, size = %X, buffer = %08X)\n", channel, size, buffer);
+
+	enum class StateChange : u8 {
+		Initialize = 0,
+		Shutdown = 1,
+		Wakeup = 2,
+		Sleep = 3,
+	};
+
+	switch (channel) {
+		case DSPPipeType::Audio: {
+			if (size != 4) {
+				printf("Invalid size written to DSP Audio Pipe\n");
+				break;
+			}
+
+			// Get new state
+			const u8 state = mem.read8(buffer);
+			if (state > 3) {
+				log("WriteProcessPipe::Audio: Unknown state change type");
+			} else {
+				switch (static_cast<StateChange>(state)) {
+					case StateChange::Initialize:
+						// TODO: Other initialization stuff here
+						dspState = DSPState::On;
+						audioPipe.reset();
+						break;
+
+					case StateChange::Shutdown:
+						dspState = DSPState::Off;
+						break;
+
+					default: Helpers::panic("Unimplemented DSP audio pipe state change %d", state);
+				}
+			}
+			break;
+		}
+
+		default:
+			log("DSP: Wrote to unimplemented pipe %d\n", channel);
+			break;
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

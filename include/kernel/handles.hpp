@@ -18,11 +18,12 @@ namespace KernelHandles {
 		CAM,  // Camera service
 		CECD, // More Streetpass stuff?
 		CFG,  // CFG service (Console & region info)
+		DLP_SRVR, // Download Play: Server. Used for network play.
+		DSP,  // DSP service (Used for audio decoding and output)
 		HID,  // HID service (Handles everything input-related including gyro)
         FRD,  // Friend service (Miiverse friend service)
 		FS,   // Filesystem service
 		GPU,  // GPU service
-		DSP,  // DSP service (Used for audio decoding and output)
 		LCD,  // LCD service (Used for configuring the displays)
 		LDR_RO, // Loader service. Used for loading CROs.
 		MIC,  // MIC service (Controls the microphone)
@@ -64,10 +65,11 @@ namespace KernelHandles {
 			case CAM: return "CAM";
 			case CECD: return "CECD";
 			case CFG: return "CFG";
+			case DSP: return "DSP";
+			case DLP_SRVR: return "DLP::SRVR";
 			case HID: return "HID";
 			case FRD: return "FRD";
 			case FS: return "FS";
-			case DSP: return "DSP";
 			case GPU: return "GSP::GPU";
 			case LCD: return "GSP::LCD";
 			case LDR_RO: return "LDR:RO";

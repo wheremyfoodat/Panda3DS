@@ -82,7 +82,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/ac.cpp src/core/services/am.cpp src/core/services/boss.cpp
                          src/core/services/frd.cpp src/core/services/nim.cpp src/core/services/shared_font.cpp
                          src/core/services/y2r.cpp src/core/services/cam.cpp src/core/services/ldr_ro.cpp
-                         src/core/services/act.cpp src/core/services/nfc.cpp
+                         src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp
@@ -112,7 +112,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/fs/archive_ext_save_data.hpp include/services/shared_font.hpp include/fs/archive_ncch.hpp
                  include/renderer_gl/textures.hpp include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
-                 include/system_models.hpp
+                 include/system_models.hpp include/services/dlp_srvr.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
