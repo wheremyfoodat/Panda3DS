@@ -51,3 +51,6 @@ Simply drag and drop a ROM to the executable if supported, or invoke the executa
 - [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an LLE 3DS emulator which both served as an inspiration, as well as a nice source of documentation for some PICA200-related things
 
 Nintendo 3DS is a registered trademark of Nintendo Co., Ltd.
+
+![pamda](docs/img/panda.jpg)
+Here's a panda it go blep
