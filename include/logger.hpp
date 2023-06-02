@@ -17,7 +17,6 @@ namespace Log {
         }
     };
 
-#define false 0
     // Our loggers here. Enable/disable by toggling the template param
     static Logger<false> kernelLogger;
     static Logger<true> debugStringLogger; // Enables output for the outputDebugString SVC
@@ -52,7 +51,6 @@ namespace Log {
     static Logger<false> ptmLogger;
     static Logger<false> y2rLogger;
     static Logger<false> srvLogger;
-#undef false
 
     #define MAKE_LOG_FUNCTION(functionName, logger)      \
     template <typename... Args>                          \
