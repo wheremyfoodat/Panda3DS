@@ -2,9 +2,7 @@
 
 Panda3DS is an HLE, red-panda-themed Nintendo 3DS emulator written in C++ which started out as a fun project out of curiosity, but evolved into something that can sort of play games!
 
-![screenshot1](docs/img/MK7_Car_Select.png)
-![screenshot2](docs/img/OoT_Title.png)
-![screenshot3](docs/img/Mayro.png)
+![screenshot1](docs/img/MK7_Car_Select.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/Mayro.png)
 
 # Compatibility
 Panda3DS is still in the early stages of development. Many games boot, many don't. Most games have at least some hilariously broken graphics, audio is not supported, performance leaves a bit to be desired mainly thanks to lack of shader acceleration, and most QoL features (including input, or a GUI!) are missing.
