@@ -100,12 +100,13 @@ Rust::Result<ArchiveBase*, FSResult> ExtSaveDataArchive::openArchive(const FSPat
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
+	// TODO: Readd the format check. I didn't manage to fix it sadly
 	// Create a format info path in the style of AppData/FormatInfo/Cartridge10390390194.format
-	fs::path formatInfopath = IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
+	// fs::path formatInfopath = IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
 	// Format info not found so the archive is not formatted
-	if (!fs::is_regular_file(formatInfopath)) {
-		return isShared ? Err(FSResult::NotFormatted) : Err(FSResult::NotFoundInvalid);
-	}
+	// if (!fs::is_regular_file(formatInfopath)) {
+	//	return isShared ? Err(FSResult::NotFormatted) : Err(FSResult::NotFoundInvalid);
+	//}
 
 	return Ok((ArchiveBase*)this);
 }

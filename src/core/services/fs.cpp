@@ -46,19 +46,20 @@ void FSService::reset() {
 
 // Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
 void FSService::initializeFilesystem() {
-	const auto nandPath = IOFile::getAppData() / "NAND"; // Create NAND
-	const auto cartPath = IOFile::getAppData() / "CartSave"; // Create cartridge save folder for use with ExtSaveData
+	const auto sdmcPath = IOFile::getAppData() / "SDMC"; // Create SDMC directory
+	const auto nandSharedpath = IOFile::getAppData() / ".." / "SharedFiles" / "NAND";
+
 	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
 	const auto formatPath = IOFile::getAppData() / "FormatInfo"; // Create folder for storing archive formatting info
 	namespace fs = std::filesystem;
-	// TODO: SDMC, etc
 
-	if (!fs::is_directory(nandPath)) {
-		fs::create_directories(nandPath);
+
+	if (!fs::is_directory(nandSharedpath)) {
+		fs::create_directories(nandSharedpath);
 	}
 
-	if (!fs::is_directory(cartPath)) {
-		fs::create_directories(cartPath);
+	if (!fs::is_directory(sdmcPath)) {
+		fs::create_directories(sdmcPath);
 	}
 
 	if (!fs::is_directory(savePath)) {
@@ -75,22 +76,10 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::SelfNCCH: return &selfNcch;
 		case ArchiveID::SaveData: return &saveData;
 		case ArchiveID::ExtSaveData:
-			if (archivePath.type == PathType::Binary) {
-				switch (archivePath.binary[0]) {
-					case 0: return &extSaveData_nand;
-					case 2: return &extSaveData_cart;
-				}
-			}
-			return nullptr;
+			return &extSaveData_sdmc;
 
 		case ArchiveID::SharedExtSaveData:
-			if (archivePath.type == PathType::Binary) {
-				switch (archivePath.binary[0]) {
-					case 0: return &sharedExtSaveData_nand;
-					case 2: return &sharedExtSaveData_cart;
-				}
-			}
-			return nullptr;
+			return &sharedExtSaveData_nand;
 
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
