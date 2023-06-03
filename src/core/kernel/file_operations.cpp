@@ -1,3 +1,4 @@
+#include "ipc.hpp"
 #include "kernel.hpp"
 
 namespace FileOps {
@@ -7,6 +8,7 @@ namespace FileOps {
 		GetSize = 0x08040000,
 		SetSize = 0x08050080,
 		Close = 0x08080000,
+		Flush = 0x08090000,
 		SetPriority = 0x080A0040,
 		OpenLinkFile = 0x080C0000
 	};
@@ -41,7 +43,30 @@ void Kernel::closeFile(u32 messagePointer, Handle fileHandle) {
 		Helpers::panic("Called CloseFile on non-existent file");
 	}
 
-	p->getData<FileSession>()->isOpen = false;
+	FileSession* session = p->getData<FileSession>();
+	session->isOpen = false;
+	if (session->fd != nullptr) {
+		fclose(session->fd);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0808, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Kernel::flushFile(u32 messagePointer, Handle fileHandle) {
+	logFileIO("Flushed file %X\n", fileHandle);
+
+	const auto p = getObject(fileHandle, KernelObjectType::File);
+	if (p == nullptr) [[unlikely]] {
+		Helpers::panic("Called FlushFile on non-existent file");
+	}
+
+	FileSession* session = p->getData<FileSession>();
+	if (session->fd != nullptr) {
+		fflush(session->fd);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0809, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -57,6 +82,8 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	if (p == nullptr) [[unlikely]] {
 		Helpers::panic("Called ReadFile on non-existent file");
 	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0802, 2, 2));
 
 	FileSession* file = p->getData<FileSession>();
 	if (!file->isOpen) {
@@ -126,6 +153,7 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 	IOFile f(file->fd);
 	auto [success, bytesWritten] = f.writeBytes(data.get(), size);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x0803, 2, 2));
 	if (!success) {
 		Helpers::panic("Kernel::WriteFile failed");
 	} else {
@@ -146,6 +174,7 @@ void Kernel::setFileSize(u32 messagePointer, Handle fileHandle) {
 	if (!file->isOpen) {
 		Helpers::panic("Tried to get size of closed file");
 	}
+	mem.write32(messagePointer, IPC::responseHeader(0x0805, 1, 0));
 
 	if (file->fd) {
 		const u64 newSize = mem.read64(messagePointer + 4);
@@ -174,6 +203,7 @@ void Kernel::getFileSize(u32 messagePointer, Handle fileHandle) {
 	if (!file->isOpen) {
 		Helpers::panic("Tried to get size of closed file");
 	}
+	mem.write32(messagePointer, IPC::responseHeader(0x0804, 3, 0));
 
 	if (file->fd) {
 		IOFile f(file->fd);
@@ -212,6 +242,7 @@ void Kernel::openLinkFile(u32 messagePointer, Handle fileHandle) {
 	// However we do seek properly on every file access so this shouldn't matter
 	cloneFile.data = new FileSession(*file);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x080C, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 12, handle);
 }
@@ -231,5 +262,6 @@ void Kernel::setFilePriority(u32 messagePointer, Handle fileHandle) {
 	}
 	file->priority = priority;
 
+	mem.write32(messagePointer, IPC::responseHeader(0x080A, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

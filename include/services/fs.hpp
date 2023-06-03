@@ -25,13 +25,11 @@ class FSService {
 	SDMCArchive sdmc;
 	NCCHArchive ncch;
 
-	ExtSaveDataArchive extSaveData_nand;
-	ExtSaveDataArchive extSaveData_cart;
+	ExtSaveDataArchive extSaveData_sdmc;
 	ExtSaveDataArchive sharedExtSaveData_nand;
-	ExtSaveDataArchive sharedExtSaveData_cart;
 
 	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
-	std::optional<Handle> openArchiveHandle(u32 archiveID, const FSPath& path);
+	Rust::Result<Handle, FSResult> openArchiveHandle(u32 archiveID, const FSPath& path);
 	Rust::Result<Handle, FSResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
 	FSPath readPath(u32 type, u32 pointer, u32 size);
@@ -43,6 +41,7 @@ class FSService {
 	void controlArchive(u32 messagePointer);
 	void deleteFile(u32 messagePointer);
 	void formatSaveData(u32 messagePointer);
+	void formatThisUserSaveData(u32 messagePointer);
 	void getFreeBytes(u32 messagePointer);
 	void getFormatInfo(u32 messagePointer);
 	void getPriority(u32 messagePointer);
@@ -59,8 +58,8 @@ class FSService {
 	u32 priority;
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem), extSaveData_nand(mem, "NAND"), 
-		sharedExtSaveData_nand(mem, "NAND", true), extSaveData_cart(mem, "CartSave"), sharedExtSaveData_cart(mem, "CartSave", true),
+	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem),
+		sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"),
 		sdmc(mem), selfNcch(mem), ncch(mem), kernel(kernel)
 	{}
 	

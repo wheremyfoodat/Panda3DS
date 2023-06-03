@@ -38,12 +38,27 @@ FSResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 		fs::path p = IOFile::getAppData() / backingFolder;
 		p += fs::path(path.utf16_string).make_preferred();
 
+		if (fs::is_directory(p)) {
+			Helpers::panic("ExtSaveData::DeleteFile: Tried to delete directory");
+		}
+
+		if (!fs::is_regular_file(p)) {
+			return FSResult::FileNotFound;
+		}
+
 		std::error_code ec;
 		bool success = fs::remove(p, ec);
-		return success ? FSResult::Success : FSResult::FileNotFound;
+
+		// It might still be possible for fs::remove to fail, if there's eg an open handle to a file being deleted
+		// In this case, print a warning, but still return success for now
+		if (!success) {
+			Helpers::warn("ExtSaveData::DeleteFile: fs::remove failed\n");
+		}
+
+		return FSResult::Success;
 	}
 
-	Helpers::panic("ExtSaveDataArchive::DeleteFile: Failed");
+	Helpers::panic("ExtSaveDataArchive::DeleteFile: Unknown path type");
 	return FSResult::Success;
 }
 
@@ -70,10 +85,28 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 	return FileError;
 }
 
+std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path) {
+	// TODO: Remove punning here
+	const u32 mediaType = *(u32*)&path.binary[0];
+	const u32 saveLow = *(u32*)&path.binary[4];
+	const u32 saveHigh = *(u32*)&path.binary[8];
+
+	// TODO: Should the media type be used here
+	return backingFolder + std::to_string(saveLow) + std::to_string(saveHigh);
+}
+
 Rust::Result<ArchiveBase*, FSResult> ExtSaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
+
+	// TODO: Readd the format check. I didn't manage to fix it sadly
+	// Create a format info path in the style of AppData/FormatInfo/Cartridge10390390194.format
+	// fs::path formatInfopath = IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
+	// Format info not found so the archive is not formatted
+	// if (!fs::is_regular_file(formatInfopath)) {
+	//	return isShared ? Err(FSResult::NotFormatted) : Err(FSResult::NotFoundInvalid);
+	//}
 
 	return Ok((ArchiveBase*)this);
 }

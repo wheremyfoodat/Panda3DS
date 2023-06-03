@@ -204,10 +204,11 @@ public:
     virtual u64 getFreeBytes() = 0;
     virtual FSResult createFile(const FSPath& path, u64 size) = 0;
     virtual FSResult deleteFile(const FSPath& path) = 0;
-    virtual FormatInfo getFormatInfo(const FSPath& path) {
+
+    virtual Rust::Result<FormatInfo, FSResult> getFormatInfo(const FSPath& path) {
         Helpers::panic("Unimplemented GetFormatInfo for %s archive", name().c_str());
         // Return a dummy struct just to avoid the UB of not returning anything, even if we panic
-        return FormatInfo{ .size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false };
+        return Ok(FormatInfo{ .size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false });
     }
 
     virtual FSResult createDirectory(const FSPath& path) {
@@ -222,6 +223,10 @@ public:
     virtual Rust::Result<DirectorySession, FSResult> openDirectory(const FSPath& path) {
         Helpers::panic("Unimplemented OpenDirectory for %s archive", name().c_str());
         return Err(FSResult::FileNotFound);
+    }
+
+    virtual void format(const FSPath& path, const FormatInfo& info) {
+        Helpers::panic("Unimplemented Format for %s archive", name().c_str());
     }
 
     // Read size bytes from a file starting at offset "offset" into a certain buffer in memory

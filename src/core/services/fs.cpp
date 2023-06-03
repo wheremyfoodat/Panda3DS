@@ -21,6 +21,7 @@ namespace FSCommands {
 		OpenArchive = 0x080C00C2,
 		ControlArchive = 0x080D0144,
 		CloseArchive = 0x080E0080,
+		FormatThisUserSaveData = 0x080F0180,
 		GetFreeBytes = 0x08120080,
 		IsSdmcDetected = 0x08170000,
 		GetFormatInfo = 0x084500C2,
@@ -45,22 +46,28 @@ void FSService::reset() {
 
 // Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
 void FSService::initializeFilesystem() {
-	const auto nandPath = IOFile::getAppData() / "NAND"; // Create NAND
-	const auto cartPath = IOFile::getAppData() / "CartSave"; // Create cartridge save folder for use with ExtSaveData
-	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
-	namespace fs = std::filesystem;
-	// TODO: SDMC, etc
+	const auto sdmcPath = IOFile::getAppData() / "SDMC"; // Create SDMC directory
+	const auto nandSharedpath = IOFile::getAppData() / ".." / "SharedFiles" / "NAND";
 
-	if (!fs::is_directory(nandPath)) {
-		fs::create_directories(nandPath);
+	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
+	const auto formatPath = IOFile::getAppData() / "FormatInfo"; // Create folder for storing archive formatting info
+	namespace fs = std::filesystem;
+
+
+	if (!fs::is_directory(nandSharedpath)) {
+		fs::create_directories(nandSharedpath);
 	}
 
-	if (!fs::is_directory(cartPath)) {
-		fs::create_directories(cartPath);
+	if (!fs::is_directory(sdmcPath)) {
+		fs::create_directories(sdmcPath);
 	}
 
 	if (!fs::is_directory(savePath)) {
 		fs::create_directories(savePath);
+	}
+
+	if (!fs::is_directory(formatPath)) {
+		fs::create_directories(formatPath);
 	}
 }
 
@@ -69,22 +76,10 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::SelfNCCH: return &selfNcch;
 		case ArchiveID::SaveData: return &saveData;
 		case ArchiveID::ExtSaveData:
-			if (archivePath.type == PathType::Binary) {
-				switch (archivePath.binary[0]) {
-					case 0: return &extSaveData_nand;
-					case 1: return &extSaveData_cart;
-				}
-			}
-			return nullptr;
+			return &extSaveData_sdmc;
 
 		case ArchiveID::SharedExtSaveData:
-			if (archivePath.type == PathType::Binary) {
-				switch (archivePath.binary[0]) {
-					case 0: return &sharedExtSaveData_nand;
-					case 1: return &sharedExtSaveData_cart;
-				}
-			}
-			return nullptr;
+			return &sharedExtSaveData_nand;
 
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
@@ -121,12 +116,12 @@ Rust::Result<Handle, FSResult> FSService::openDirectoryHandle(ArchiveBase* archi
 	}
 }
 
-std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
+Rust::Result<Handle, FSResult> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
 	ArchiveBase* archive = getArchiveFromID(archiveID, path);
 
 	if (archive == nullptr) [[unlikely]] {
 		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
-		return std::nullopt;
+		return Err(FSResult::NotFormatted);
 	}
 
 	Rust::Result<ArchiveBase*, FSResult> res = archive->openArchive(path);
@@ -135,10 +130,10 @@ std::optional<Handle> FSService::openArchiveHandle(u32 archiveID, const FSPath& 
 		auto& archiveObject = kernel.getObjects()[handle];
 		archiveObject.data = new ArchiveSession(res.unwrap(), path);
 
-		return handle;
+		return Ok(handle);
 	}
 	else {
-		return std::nullopt;
+		return Err(res.unwrapErr());
 	}
 }
 
@@ -161,6 +156,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
+		case FSCommands::FormatThisUserSaveData: formatThisUserSaveData(messagePointer); break;
 		case FSCommands::GetFreeBytes: getFreeBytes(messagePointer); break;
 		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
@@ -216,14 +212,15 @@ void FSService::openArchive(u32 messagePointer) {
 	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
 	log("FS::OpenArchive(archive ID = %d, archive path type = %d)\n", archiveID, archivePathType);
 	
-	std::optional<Handle> handle = openArchiveHandle(archiveID, archivePath);
+	Rust::Result<Handle, FSResult> res = openArchiveHandle(archiveID, archivePath);
 	mem.write32(messagePointer, IPC::responseHeader(0x80C, 3, 0));
-	if (handle.has_value()) {
+	if (res.isOk()) {
 		mem.write32(messagePointer + 4, ResultCode::Success);
-		mem.write64(messagePointer + 8, handle.value());
+		mem.write64(messagePointer + 8, res.unwrap());
 	} else {
-		log("FS::OpenArchive: Failed to open archive with id = %d\n", archiveID);
-		mem.write32(messagePointer + 4, ResultCode::Failure);
+		log("FS::OpenArchive: Failed to open archive with id = %d. Error %08X\n", archiveID, (u32)res.unwrapErr());
+		mem.write32(messagePointer + 4, static_cast<u32>(res.unwrapErr()));
+		mem.write64(messagePointer + 8, 0);
 	}
 }
 
@@ -411,16 +408,25 @@ void FSService::getFormatInfo(u32 messagePointer) {
 		Helpers::panic("OpenArchive: Tried to open unknown archive %d.", archiveID);
 	}
 
-	ArchiveBase::FormatInfo info = archive->getFormatInfo(path);
 	mem.write32(messagePointer, IPC::responseHeader(0x845, 5, 0));
-	mem.write32(messagePointer + 4, ResultCode::Success);
-	mem.write32(messagePointer + 8, info.size);
-	mem.write32(messagePointer + 12, info.numOfDirectories);
-	mem.write32(messagePointer + 16, info.numOfFiles);
-	mem.write8(messagePointer + 20, info.duplicateData ? 1 : 0);
+	Rust::Result<ArchiveBase::FormatInfo, FSResult> res = archive->getFormatInfo(path);
+
+	// If the FormatInfo was returned, write them to the output buffer. Otherwise, write an error code.
+	if (res.isOk()) {
+		ArchiveBase::FormatInfo info = res.unwrap();
+		mem.write32(messagePointer + 4, ResultCode::Success);
+		mem.write32(messagePointer + 8, info.size);
+		mem.write32(messagePointer + 12, info.numOfDirectories);
+		mem.write32(messagePointer + 16, info.numOfFiles);
+		mem.write8(messagePointer + 20, info.duplicateData ? 1 : 0);
+	} else {
+		mem.write32(messagePointer + 4, static_cast<u32>(res.unwrapErr()));
+	}
 }
 
 void FSService::formatSaveData(u32 messagePointer) {
+	log("FS::FormatSaveData\n");
+
 	const u32 archiveID = mem.read32(messagePointer + 4);
 	if (archiveID != ArchiveID::SaveData)
 		Helpers::panic("FS::FormatSaveData: Archive is not SaveData");
@@ -440,11 +446,41 @@ void FSService::formatSaveData(u32 messagePointer) {
 	const u32 fileNum = mem.read32(messagePointer + 24); // Max number of files
 	const u32 directoryBucketNum = mem.read32(messagePointer + 28); // Not sure what a directory bucket is...?
 	const u32 fileBucketNum = mem.read32(messagePointer + 32); // Same here
-	const bool duplicateData = mem.read8(messagePointer + 36) != 0; 
+	const bool duplicateData = mem.read8(messagePointer + 36) != 0;
 
-	printf("Stubbed FS::FormatSaveData. File num: %d, directory num: %d\n", fileNum, directoryNum);
+	ArchiveBase::FormatInfo info {
+		.size = blockSize * 0x200,
+		.numOfDirectories = directoryNum,
+		.numOfFiles = fileNum,
+		.duplicateData = duplicateData
+	};
+
+	saveData.format(path, info);
+
 	mem.write32(messagePointer, IPC::responseHeader(0x84C, 1, 0));
 	mem.write32(messagePointer + 4, ResultCode::Success);
+}
+
+void FSService::formatThisUserSaveData(u32 messagePointer) {
+	log("FS::FormatThisUserSaveData\n");
+
+	const u32 blockSize = mem.read32(messagePointer + 4);
+	const u32 directoryNum = mem.read32(messagePointer + 8); // Max number of directories
+	const u32 fileNum = mem.read32(messagePointer + 12); // Max number of files
+	const u32 directoryBucketNum = mem.read32(messagePointer + 16); // Not sure what a directory bucket is...?
+	const u32 fileBucketNum = mem.read32(messagePointer + 20); // Same here
+	const bool duplicateData = mem.read8(messagePointer + 24) != 0;
+
+	ArchiveBase::FormatInfo info {
+		.size = blockSize * 0x200,
+		.numOfDirectories = directoryNum,
+		.numOfFiles = fileNum,
+		.duplicateData = duplicateData
+	};
+	FSPath emptyPath;
+	
+	mem.write32(messagePointer, IPC::responseHeader(0x080F, 1, 0));
+	saveData.format(emptyPath, info);
 }
 
 void FSService::controlArchive(u32 messagePointer) {
