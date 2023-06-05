@@ -84,5 +84,10 @@ public:
 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
 
 	void signalDSPEvents() { dsp.signalEvents(); }
+
+	void pressKey(u32 key) { hid.pressKey(key); }
+	void releaseKey(u32 key) { hid.releaseKey(key); }
+	void setCirclepadX(u16 x) { hid.setCirclepadX(x); }
+	void setCirclepadY(u16 y) { hid.setCirclepadY(y); }
 	void updateInputs() { hid.updateInputs(); }
 };
