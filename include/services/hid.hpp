@@ -6,6 +6,31 @@
 #include "logger.hpp"
 #include "memory.hpp"
 
+namespace HID::Keys {
+	enum : u32 {
+		A = 1 << 0,
+		B = 1 << 1,
+		Select = 1 << 2,
+		Start = 1 << 3,
+		Right = 1 << 4,
+		Left = 1 << 5,
+		Up = 1 << 6,
+		Down = 1 << 7,
+		R = 1 << 8,
+		L = 1 << 9,
+		X = 1 << 10,
+		Y = 1 << 11,
+
+		GPIO0Inv = 1 << 12,  // Inverted value of GPIO bit 0
+		GPIO14Inv = 1 << 13, // Inverted value of GPIO bit 14
+
+		CirclePadRight = 1 << 28, // X >= 41
+		CirclePadLeft = 1 << 29,  // X <= -41
+		CirclePadUp = 1 << 30,    // Y >= 41
+		CirclePadDown = 1 << 31   // Y <= -41
+	};
+}
+
 // Circular dependency because we need HID to spawn events
 class Kernel;
 

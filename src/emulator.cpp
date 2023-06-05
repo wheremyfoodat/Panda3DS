@@ -33,11 +33,10 @@ void Emulator::run() {
         srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
         srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
-        // Update inputs in the HID module
-        srv.updateInputs();
-
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            namespace Keys = HID::Keys;
+
             switch (event.type) {
             case SDL_QUIT:
                 printf("Bye :(\n");
@@ -45,41 +44,58 @@ void Emulator::run() {
                 return;
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
-                    case SDLK_z:        srv.pressKey(1 << 0);        break;
-                    case SDLK_RIGHT:    srv.pressKey(1 << 4);        break;
-                    case SDLK_LEFT:     srv.pressKey(1 << 5);        break;
-                    case SDLK_UP:       srv.pressKey(1 << 6);        break;
-                    case SDLK_DOWN:     srv.pressKey(1 << 7);        break;
-                    case SDLK_w:        srv.setCirclepadY(0x9C);     break;
-                    case SDLK_a:        srv.setCirclepadX(-0x9C);    break;
-                    case SDLK_s:        srv.setCirclepadY(-0x9C);    break;
-                    case SDLK_d:        srv.setCirclepadX(0x9C);     break;
-                    case SDLK_j:        srv.pressKey(1 << 1);        break;
-                    case SDLK_k:        srv.pressKey(1 << 10);       break;
-                    case SDLK_l:        srv.pressKey(1 << 11);       break;
-                    case SDLK_r:        srv.pressKey(1 << 8);        break;
+                    case SDLK_l:     srv.pressKey(Keys::A);     break;
+                    case SDLK_k:     srv.pressKey(Keys::B);     break;
+                    case SDLK_o:     srv.pressKey(Keys::X);     break;
+                    case SDLK_i:     srv.pressKey(Keys::Y);     break;
+
+                    case SDLK_q:     srv.pressKey(Keys::L);     break;
+                    case SDLK_p:     srv.pressKey(Keys::R);     break;
+
+                    case SDLK_RIGHT: srv.pressKey(Keys::Right); break;
+                    case SDLK_LEFT:  srv.pressKey(Keys::Left);  break;
+                    case SDLK_UP:    srv.pressKey(Keys::Up);    break;
+                    case SDLK_DOWN:  srv.pressKey(Keys::Down);  break;
+
+                    case SDLK_w:     srv.setCirclepadY(0x9C);   break;
+                    case SDLK_a:     srv.setCirclepadX(-0x9C);  break;
+                    case SDLK_s:     srv.setCirclepadY(-0x9C);  break;
+                    case SDLK_d:     srv.setCirclepadX(0x9C);   break;
+
+                    case SDLK_RETURN: srv.pressKey(Keys::Start); break;
+                    case SDLK_BACKSPACE: srv.pressKey(Keys::Select); break;
                 }
                 break;
             case SDL_KEYUP:
                 switch (event.key.keysym.sym) {
-                    case SDLK_z:        srv.releaseKey(1 << 0);  break;
-                    case SDLK_RIGHT:    srv.releaseKey(1 << 4);  break;
-                    case SDLK_LEFT:     srv.releaseKey(1 << 5);  break;
-                    case SDLK_UP:       srv.releaseKey(1 << 6);  break;
-                    case SDLK_DOWN:     srv.releaseKey(1 << 7);  break;
-                    case SDLK_w:        srv.setCirclepadY(0);    break;
-                    case SDLK_a:        srv.setCirclepadX(0);    break;
-                    case SDLK_s:        srv.setCirclepadY(0);    break;
-                    case SDLK_d:        srv.setCirclepadX(0);    break;
-                    case SDLK_j:        srv.releaseKey(1 << 1);  break;
-                    case SDLK_k:        srv.releaseKey(1 << 10); break;
-                    case SDLK_l:        srv.releaseKey(1 << 11); break;
-                    case SDLK_r:        srv.releaseKey(1 << 8);  break;
+                    case SDLK_l:     srv.releaseKey(Keys::A);     break;
+                    case SDLK_k:     srv.releaseKey(Keys::B);     break;
+                    case SDLK_o:     srv.releaseKey(Keys::X);     break;
+                    case SDLK_i:     srv.releaseKey(Keys::Y);     break;
+
+                    case SDLK_q:     srv.releaseKey(Keys::L);     break;
+                    case SDLK_p:     srv.releaseKey(Keys::R);     break;
+
+                    case SDLK_RIGHT: srv.releaseKey(Keys::Right); break;
+                    case SDLK_LEFT:  srv.releaseKey(Keys::Left);  break;
+                    case SDLK_UP:    srv.releaseKey(Keys::Up);    break;
+                    case SDLK_DOWN:  srv.releaseKey(Keys::Down);  break;
+
+                    // Err this is probably not ideal
+                    case SDLK_w:     srv.setCirclepadY(0);  break;
+                    case SDLK_a:     srv.setCirclepadX(0);  break;
+                    case SDLK_s:     srv.setCirclepadY(0);  break;
+                    case SDLK_d:     srv.setCirclepadX(0);  break;
+
+                    case SDLK_RETURN: srv.releaseKey(Keys::Start); break;
+                    case SDLK_BACKSPACE: srv.releaseKey(Keys::Select); break;
                 }
                 break;
             }
         }
 
+        // Update inputs in the HID module
+        srv.updateInputs();
         SDL_GL_SwapWindow(window);
     }
 }
