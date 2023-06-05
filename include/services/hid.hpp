@@ -34,6 +34,11 @@ public:
 	HIDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
+
+	void pressKey(u32 key);
+	void releaseKey(u32 key);
+	void setCirclepadX(u16 x);
+	void setCirclepadY(u16 y);
 	void updateInputs();
 
 	void setSharedMem(u8* ptr) {
