@@ -30,6 +30,12 @@ void HIDService::reset() {
 	for (auto& e : events) {
 		e = std::nullopt;
 	}
+
+	// Reset indices for the various HID shared memory entries
+	nextPadIndex = nextTouchscreenIndex = nextAccelerometerIndex = nextGyroIndex = 0;
+	// Reset button states
+	newButtons = oldButtons = 0;
+	circlePadX = circlePadY = 0;
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
@@ -108,13 +114,58 @@ void HIDService::getIPCHandles(u32 messagePointer) {
 	}
 }
 
-void HIDService::pressKey(u32 key) { sharedMem[0]++; *(u32*)&sharedMem[0x28] |= key; }
-void HIDService::releaseKey(u32 key) { sharedMem[0]++; *(u32*)&sharedMem[0x28] &= ~key; }
-void HIDService::setCirclepadX(u16 x) { sharedMem[0]++; *(u16*)&sharedMem[0x28 + 0xC] = x; }
-void HIDService::setCirclepadY(u16 y) { sharedMem[0]++; *(u16*)&sharedMem[0x28 + 0xC + 2] = y; }
+void HIDService::updateInputs(u64 currentTick) {
+	// Update shared memory if it has been initialized
+	if (sharedMem) {
+		// First, update the pad state
+		if (nextPadIndex == 0) {
+			writeSharedMem<u64>(0x8, readSharedMem<u64>(0x0)); // Copy previous tick count
+			writeSharedMem<u64>(0x0, currentTick);             // Write new tick count
+		}
 
-// TODO: We don't currently have inputs but we must at least try to signal the HID key input events now and then
-void HIDService::updateInputs() {
+		writeSharedMem<u32>(0x10, nextPadIndex); // Index last updated by the HID module
+		writeSharedMem<u32>(0x1C, newButtons);   // Current PAD state
+		writeSharedMem<s16>(0x20, circlePadX);   // Current circle pad state
+		writeSharedMem<s16>(0x22, circlePadY);
+
+		const size_t padEntryOffset = 0x28 + (nextPadIndex * 0x10); // Offset in the array of 8 pad entries
+		nextPadIndex = (nextPadIndex + 1) % 8; // Move to next entry
+
+		const u32 pressed = (newButtons ^ oldButtons) & newButtons; // Pressed buttons
+		const u32 released = (newButtons ^ oldButtons) & oldButtons; // Released buttons
+		oldButtons = newButtons;
+
+		writeSharedMem<u32>(padEntryOffset, newButtons);
+		writeSharedMem<u32>(padEntryOffset + 4, pressed);
+		writeSharedMem<u32>(padEntryOffset + 8, released);
+		writeSharedMem<s16>(padEntryOffset + 12, circlePadX);
+		writeSharedMem<s16>(padEntryOffset + 14, circlePadY);
+
+		// Next, update touchscreen state
+		if (nextTouchscreenIndex == 0) {
+			writeSharedMem<u64>(0xB0, readSharedMem<u64>(0xA8)); // Copy previous tick count
+			writeSharedMem<u64>(0xA8, currentTick);             // Write new tick count
+		}
+		writeSharedMem<u32>(0xB8, nextTouchscreenIndex); // Index last updated by the HID module
+		nextTouchscreenIndex = (nextTouchscreenIndex + 1) % 8; // Move to next entry
+		
+		// Next, update accelerometer state
+		if (nextAccelerometerIndex == 0) {
+			writeSharedMem<u64>(0x110, readSharedMem<u64>(0x108)); // Copy previous tick count
+			writeSharedMem<u64>(0x108, currentTick);             // Write new tick count
+		}
+		writeSharedMem<u32>(0x118, nextAccelerometerIndex); // Index last updated by the HID module
+		nextAccelerometerIndex = (nextAccelerometerIndex + 1) % 8; // Move to next entry
+
+		// Next, update gyro state
+		if (nextGyroIndex == 0) {
+			writeSharedMem<u64>(0x160, readSharedMem<u64>(0x158)); // Copy previous tick count
+			writeSharedMem<u64>(0x158, currentTick);             // Write new tick count
+		}
+		writeSharedMem<u32>(0x168, nextGyroIndex); // Index last updated by the HID module
+		nextGyroIndex = (nextGyroIndex + 1) % 32; // Move to next entry
+	}
+
 	// For some reason, the original developers decided to signal the HID events each time the OS rescanned inputs
 	// Rather than once every time the state of a key, or the accelerometer state, etc is updated
 	// This means that the OS will signal the events even if literally nothing happened

@@ -89,5 +89,5 @@ public:
 	void releaseKey(u32 key) { hid.releaseKey(key); }
 	void setCirclepadX(u16 x) { hid.setCirclepadX(x); }
 	void setCirclepadY(u16 y) { hid.setCirclepadY(y); }
-	void updateInputs() { hid.updateInputs(); }
+	void updateInputs(u64 currentTimestamp) { hid.updateInputs(currentTimestamp); }
 };

@@ -95,7 +95,7 @@ void Emulator::run() {
         }
 
         // Update inputs in the HID module
-        srv.updateInputs();
+        srv.updateInputs(cpu.getTicks());
         SDL_GL_SwapWindow(window);
     }
 }
