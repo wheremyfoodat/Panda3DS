@@ -27,12 +27,14 @@ void Emulator::run() {
         runFrame(); // Run 1 frame of instructions
         gpu.display(); // Display graphics
 
+        ServiceManager& srv = kernel.getServiceManager();
+
         // Send VBlank interrupts
-        kernel.sendGPUInterrupt(GPUInterrupt::VBlank0);
-        kernel.sendGPUInterrupt(GPUInterrupt::VBlank1);
+        srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+        srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
         // Update inputs in the HID module
-        kernel.updateInputs();
+        srv.updateInputs();
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -43,36 +45,36 @@ void Emulator::run() {
                 return;
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
-                case SDLK_z:        kernel.pressKey(1 << 0);        break;
-                case SDLK_RIGHT:    kernel.pressKey(1 << 4);        break;
-                case SDLK_LEFT:     kernel.pressKey(1 << 5);        break;
-                case SDLK_UP:       kernel.pressKey(1 << 6);        break;
-                case SDLK_DOWN:     kernel.pressKey(1 << 7);        break;
-                case SDLK_w:        kernel.setCirclepadY(0x9C);     break;
-                case SDLK_a:        kernel.setCirclepadX(-0x9C);    break;
-                case SDLK_s:        kernel.setCirclepadY(-0x9C);    break;
-                case SDLK_d:        kernel.setCirclepadX(0x9C);     break;
-                case SDLK_j:        kernel.pressKey(1 << 1);        break;
-                case SDLK_k:        kernel.pressKey(1 << 10);       break;
-                case SDLK_l:        kernel.pressKey(1 << 11);       break;
-                case SDLK_r:        kernel.pressKey(1 << 8);        break;
+                    case SDLK_z:        srv.pressKey(1 << 0);        break;
+                    case SDLK_RIGHT:    srv.pressKey(1 << 4);        break;
+                    case SDLK_LEFT:     srv.pressKey(1 << 5);        break;
+                    case SDLK_UP:       srv.pressKey(1 << 6);        break;
+                    case SDLK_DOWN:     srv.pressKey(1 << 7);        break;
+                    case SDLK_w:        srv.setCirclepadY(0x9C);     break;
+                    case SDLK_a:        srv.setCirclepadX(-0x9C);    break;
+                    case SDLK_s:        srv.setCirclepadY(-0x9C);    break;
+                    case SDLK_d:        srv.setCirclepadX(0x9C);     break;
+                    case SDLK_j:        srv.pressKey(1 << 1);        break;
+                    case SDLK_k:        srv.pressKey(1 << 10);       break;
+                    case SDLK_l:        srv.pressKey(1 << 11);       break;
+                    case SDLK_r:        srv.pressKey(1 << 8);        break;
                 }
                 break;
             case SDL_KEYUP:
                 switch (event.key.keysym.sym) {
-                case SDLK_z:        kernel.releaseKey(1 << 0);  break;
-                case SDLK_RIGHT:    kernel.releaseKey(1 << 4);  break;
-                case SDLK_LEFT:     kernel.releaseKey(1 << 5);  break;
-                case SDLK_UP:       kernel.releaseKey(1 << 6);  break;
-                case SDLK_DOWN:     kernel.releaseKey(1 << 7);  break;
-                case SDLK_w:        kernel.setCirclepadY(0);    break;
-                case SDLK_a:        kernel.setCirclepadX(0);    break;
-                case SDLK_s:        kernel.setCirclepadY(0);    break;
-                case SDLK_d:        kernel.setCirclepadX(0);    break;
-                case SDLK_j:        kernel.releaseKey(1 << 1);  break;
-                case SDLK_k:        kernel.releaseKey(1 << 10); break;
-                case SDLK_l:        kernel.releaseKey(1 << 11); break;
-                case SDLK_r:        kernel.releaseKey(1 << 8);  break;
+                    case SDLK_z:        srv.releaseKey(1 << 0);  break;
+                    case SDLK_RIGHT:    srv.releaseKey(1 << 4);  break;
+                    case SDLK_LEFT:     srv.releaseKey(1 << 5);  break;
+                    case SDLK_UP:       srv.releaseKey(1 << 6);  break;
+                    case SDLK_DOWN:     srv.releaseKey(1 << 7);  break;
+                    case SDLK_w:        srv.setCirclepadY(0);    break;
+                    case SDLK_a:        srv.setCirclepadX(0);    break;
+                    case SDLK_s:        srv.setCirclepadY(0);    break;
+                    case SDLK_d:        srv.setCirclepadX(0);    break;
+                    case SDLK_j:        srv.releaseKey(1 << 1);  break;
+                    case SDLK_k:        srv.releaseKey(1 << 10); break;
+                    case SDLK_l:        srv.releaseKey(1 << 11); break;
+                    case SDLK_r:        srv.releaseKey(1 << 8);  break;
                 }
                 break;
             }
