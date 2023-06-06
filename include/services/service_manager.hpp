@@ -79,10 +79,15 @@ public:
 	void sendCommandToService(u32 messagePointer, Handle handle);
 
 	// Wrappers for communicating with certain services
-	void requestGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }
+	void sendGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }
 	void setGSPSharedMem(u8* ptr) { gsp_gpu.setSharedMem(ptr); }
 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
 
 	void signalDSPEvents() { dsp.signalEvents(); }
-	void updateInputs() { hid.updateInputs(); }
+
+	void pressKey(u32 key) { hid.pressKey(key); }
+	void releaseKey(u32 key) { hid.releaseKey(key); }
+	void setCirclepadX(u16 x) { hid.setCirclepadX(x); }
+	void setCirclepadY(u16 y) { hid.setCirclepadY(y); }
+	void updateInputs(u64 currentTimestamp) { hid.updateInputs(currentTimestamp); }
 };

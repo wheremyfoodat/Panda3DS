@@ -6,6 +6,31 @@
 #include "logger.hpp"
 #include "memory.hpp"
 
+namespace HID::Keys {
+	enum : u32 {
+		A = 1 << 0,
+		B = 1 << 1,
+		Select = 1 << 2,
+		Start = 1 << 3,
+		Right = 1 << 4,
+		Left = 1 << 5,
+		Up = 1 << 6,
+		Down = 1 << 7,
+		R = 1 << 8,
+		L = 1 << 9,
+		X = 1 << 10,
+		Y = 1 << 11,
+
+		GPIO0Inv = 1 << 12,  // Inverted value of GPIO bit 0
+		GPIO14Inv = 1 << 13, // Inverted value of GPIO bit 14
+
+		CirclePadRight = 1 << 28, // X >= 41
+		CirclePadLeft = 1 << 29,  // X <= -41
+		CirclePadUp = 1 << 30,    // Y >= 41
+		CirclePadDown = 1u << 31   // Y <= -41
+	};
+}
+
 // Circular dependency because we need HID to spawn events
 class Kernel;
 
@@ -14,6 +39,16 @@ class HIDService {
 	Memory& mem;
 	Kernel& kernel;
 	u8* sharedMem = nullptr; // Pointer to HID shared memory
+
+	uint nextPadIndex;
+	uint nextTouchscreenIndex;
+	uint nextAccelerometerIndex;
+	uint nextGyroIndex;
+
+	u32 newButtons; // The button state currently being edited
+	u32 oldButtons; // The previous pad state
+
+	s16 circlePadX, circlePadY; // Circlepad state
 
 	bool accelerometerEnabled;
 	bool eventsInitialized;
@@ -30,11 +65,50 @@ class HIDService {
 	void getGyroscopeCoefficient(u32 messagePointer);
 	void getIPCHandles(u32 messagePointer);
 
+	// Don't call these prior to initializing shared mem pls
+	template <typename T>
+	T readSharedMem(size_t offset) {
+		return *(T*)&sharedMem[offset];
+	}
+
+	template <typename T>
+	void writeSharedMem(size_t offset, T value) {
+		*(T*)&sharedMem[offset] = value;
+	}
+
 public:
 	HIDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
-	void updateInputs();
+
+	void pressKey(u32 mask) { newButtons |= mask; }
+	void releaseKey(u32 mask) { newButtons &= ~mask; }
+
+	void setCirclepadX(s16 x) {
+		circlePadX = x;
+
+		// Turn bits 28 and 29 off in the new button state, which indicate whether the circlepad is steering left or right
+		// Then, set them according to the new value of x
+		newButtons &= ~0x3000'0000;
+		if (x >= 41) // Pressing right
+			newButtons |= 1 << 28;
+		else if (x <= -41) // Pressing left
+			newButtons |= 1 << 29;
+	}
+
+	void setCirclepadY(s16 y) {
+		circlePadY = y;
+
+		// Turn bits 30 and 31 off in the new button state, which indicate whether the circlepad is steering up or down
+		// Then, set them according to the new value of y
+		newButtons &= ~0xC000'0000;
+		if (y >= 41) // Pressing up
+			newButtons |= 1 << 30;
+		else if (y <= -41) // Pressing down
+			newButtons |= 1 << 31;
+	}
+
+	void updateInputs(u64 currentTimestamp);
 
 	void setSharedMem(u8* ptr) {
 		sharedMem = ptr;

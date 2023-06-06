@@ -199,7 +199,8 @@ public:
 		return &objects[handle];
 	}
 
-	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.requestGPUInterrupt(type); }
+	ServiceManager& getServiceManager() { return serviceManager; }
+
+	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
 	void signalDSPEvents() { serviceManager.signalDSPEvents(); }
-	void updateInputs() { serviceManager.updateInputs(); }
 };
