@@ -46,6 +46,10 @@ add_subdirectory(third_party/cryptopp)
 # Check for x64
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
+    add_subdirectory(third_party/xbyak) # Add xbyak submodule for x86 JITs
+    include_directories(third_party/xbyak/xbyak)
+    add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
+    add_compile_definitions(PANDA3DS_X64_HOST)
 else()
     set(HOST_X64 FALSE)
 endif()
@@ -114,7 +118,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/fs/archive_ext_save_data.hpp include/services/shared_font.hpp include/fs/archive_ncch.hpp
                  include/renderer_gl/textures.hpp include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
-                 include/system_models.hpp include/services/dlp_srvr.hpp
+                 include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
