@@ -89,6 +89,17 @@ protected:
 	std::array<CallInfo, 4> callInfo;
 	ShaderType type;
 
+	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
+	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
+	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
+	using Hash = u64;
+
+	Hash lastCodeHash = 0; // Last hash computed for the shader code (Used for the JIT caching mechanism)
+	Hash lastOpdescHash = 0;  // Last hash computed for the operand descriptors (Also used for the JIT)
+
+	bool codeHashDirty = false;
+	bool opdescHashDirty = false;
+
 	friend class ShaderJIT;
 
 private:
@@ -204,11 +215,15 @@ public:
 		if (bufferIndex >= 4095) Helpers::panic("o no, shader upload overflew");
 		bufferedShader[bufferIndex++] = word;
 		bufferIndex &= 0xfff;
+
+		codeHashDirty = true; // Signal the JIT if necessary that the program hash has potentially changed
 	}
 
 	void uploadDescriptor(u32 word) {
 		operandDescriptors[opDescriptorIndex++] = word;
 		opDescriptorIndex &= 0x7f;
+
+		opdescHashDirty = true; // Signal the JIT if necessary that the program hash has potentially changed
 	}
 
 	void setFloatUniformIndex(u32 word) {
@@ -250,4 +265,7 @@ public:
 
 	void run();
 	void reset();
+
+	Hash getCodeHash();
+	Hash getOpdescHash();
 };

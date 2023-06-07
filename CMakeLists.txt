@@ -22,6 +22,7 @@ include_directories(third_party/gl3w/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cryptopp/)
+include_directories(third_party/cityhash/include)
 include_directories(third_party/result/include/)
 
 add_compile_definitions(NOMINMAX)

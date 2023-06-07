@@ -16,6 +16,8 @@ class GPU {
 
 	Memory& mem;
 	ShaderUnit shaderUnit;
+	ShaderJIT shaderJIT; // Doesn't do anything if JIT is disabled or not supported
+
 	u8* vram = nullptr;
 	MAKE_LOG_FUNCTION(log, gpuLogger)
 

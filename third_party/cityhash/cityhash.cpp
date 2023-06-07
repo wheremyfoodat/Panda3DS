@@ -29,7 +29,7 @@
 
 #include <algorithm>
 #include <string.h> // for memcpy and memset
-#include "cityhash.hpp"
+#include "include/cityhash.hpp"
 #include "swap.hpp"
 
 // #include "config.h"

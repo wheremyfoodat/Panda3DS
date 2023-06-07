@@ -12,6 +12,7 @@ GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
 void GPU::reset() {
 	regs.fill(0);
 	shaderUnit.reset();
+	shaderJIT.reset();
 	std::memset(vram, 0, vramSize);
 
 	totalAttribCount = 0;
@@ -82,6 +83,10 @@ void GPU::drawArrays() {
 		log("PICA::DrawArrays(vertex count = %d, vertexOffset = %d)\n", vertexCount, offset);
 	} else {
 		log("PICA::DrawElements(vertex count = %d, index buffer config = %08X)\n", vertexCount, indexBufferConfig);
+	}
+
+	if constexpr (useShaderJIT) {
+		shaderJIT.prepare(shaderUnit.vs);
 	}
 
 	// Total number of input attributes to shader. Differs between GS and VS. Currently stubbed to the VS one, as we don't have geometry shaders.
