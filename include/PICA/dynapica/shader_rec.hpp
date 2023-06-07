@@ -12,10 +12,12 @@ public:
 	// This will read the PICA config (uploaded shader and shader operand descriptors) and search if we've already compiled this shader
 	// If yes, it sets it as the active shader. if not, then it compiles it, adds it to the cache, and sets it as active,
 	void prepare(PICAShader& shaderUnit);
+	static constexpr bool isAvailable() { return true; }
 #else
 	void prepare(PICAShader& shaderUnit) {
 		Helpers::panic("Vertex Loader JIT: Tried to load vertices with JIT on platform that does not support vertex loader jit");
 	}
+	static constexpr bool isAvailable() { return false; }
 #endif
 
 };

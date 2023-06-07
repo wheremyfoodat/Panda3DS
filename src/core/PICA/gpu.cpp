@@ -33,16 +33,25 @@ void GPU::reset() {
 	renderer.reset();
 }
 
+// Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
+// And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
-	if (indexed)
-		drawArrays<true>();
-	else
-		drawArrays<false>();
+	if (indexed) {
+		if constexpr (ShaderJIT::isAvailable())
+			drawArrays<true, true>();
+		else
+			drawArrays<true, false>();
+	} else {
+		if constexpr (ShaderJIT::isAvailable())
+			drawArrays<false, true>();
+		else
+			drawArrays<false, false>();
+	}
 }
 
 Vertex* vertices = new Vertex[Renderer::vertexBufferSize];
 
-template <bool indexed>
+template <bool indexed, bool useShaderJIT>
 void GPU::drawArrays() {
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible

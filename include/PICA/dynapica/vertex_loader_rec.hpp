@@ -13,6 +13,8 @@ class VertexLoaderJIT {
 
 public:
 #if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
+	#define PANDA3DS_VERTEX_LOADER_JIT_SUPPORTED
+
 	void loadVertices(Vertex* output, size_t count, PICARegs regs);
 	static constexpr bool isAvailable() { return true; }
 

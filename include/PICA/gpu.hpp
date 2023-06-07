@@ -29,7 +29,7 @@ class GPU {
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
 
-	template <bool indexed>
+	template <bool indexed, bool useShaderJIT>
 	void drawArrays();
 
 	// Silly method of avoiding linking problems. TODO: Change to something less silly
