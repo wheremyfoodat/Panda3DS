@@ -3,13 +3,19 @@
 
 #if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
 #define PANDA3DS_SHADER_JIT_SUPPORTED
+#include <memory>
 #include <unordered_map>
+
+#ifdef PANDA3DS_X64_HOST
+#include "xbyak/xbyak.h"
+using ShaderEmitter = Xbyak::CodeGenerator;
+#endif
 #endif
 
 class ShaderJIT {
 #ifdef PANDA3DS_SHADER_JIT_SUPPORTED
 	using Hash = PICAShader::Hash;
-	using ShaderCache = std::unordered_map<Hash, int>;
+	using ShaderCache = std::unordered_map<Hash, std::unique_ptr<ShaderEmitter>>;
 
 	ShaderCache cache;
 	void compileShader(PICAShader& shaderUnit);

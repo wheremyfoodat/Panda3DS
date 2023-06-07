@@ -58,6 +58,7 @@ endif()
 # Check for arm64
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
     set(HOST_ARM64 TRUE)
+    add_compile_definitions(PANDA3DS_ARM64_HOST)
 else()
     set(HOST_ARM64 FALSE)
 endif()
