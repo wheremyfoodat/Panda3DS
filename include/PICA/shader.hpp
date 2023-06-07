@@ -71,6 +71,8 @@ class PICAShader {
 	bool f32UniformTransfer = false; // Are we transferring an f32 uniform or an f24 uniform?
 
 	std::array<u32, 4> floatUniformBuffer; // Buffer for temporarily caching float uniform data
+
+protected:
 	std::array<u32, 128> operandDescriptors;
 	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
 	OpenGL::Vector<s32, 2> addrRegister; // Address register
@@ -85,13 +87,15 @@ class PICAShader {
 	std::array<Loop, 4> loopInfo;
 	std::array<ConditionalInfo, 8> conditionalInfo;
 	std::array<CallInfo, 4> callInfo;
-
 	ShaderType type;
 
+	friend class ShaderJIT;
+
+private:
 	vec4f getSource(u32 source);
 	vec4f& getDest(u32 dest);
 
-	// Shader opcodes
+	// Interpreter functions for the various shader functions
 	void add(u32 instruction);
 	void call(u32 instruction);
 	void callc(u32 instruction);

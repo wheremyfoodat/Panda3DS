@@ -91,8 +91,10 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
-                      src/core/PICA/shader_interpreter.cpp
+                      src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
+                      src/core/PICA/dynapica/shader_rec_instructions_x64.cpp
 )
+
 set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp)
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/lz77.cpp)
@@ -119,7 +121,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/renderer_gl/textures.hpp include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
                  include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
-                 include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp
+                 include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp include/PICA/dynapica/shader_rec.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

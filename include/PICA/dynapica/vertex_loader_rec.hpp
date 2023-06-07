@@ -12,11 +12,15 @@ class VertexLoaderJIT {
 	Callback compileConfig(PICARegs regs);
 
 public:
-#ifndef PANDA3DS_DYNAPICA_SUPPORTED
+#if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
+	void loadVertices(Vertex* output, size_t count, PICARegs regs);
+	static constexpr bool isAvailable() { return true; }
+
+#else
 	void loadVertices(Vertex* output, size_t count, PICARegs regs) {
 		Helpers::panic("Vertex Loader JIT: Tried to load vertices with JIT on platform that does not support vertex loader jit");
 	}
-#else
-	void loadVertices(Vertex* output, size_t count, PICARegs regs);
+
+	static constexpr bool isAvailable() { return false; }
 #endif
 };

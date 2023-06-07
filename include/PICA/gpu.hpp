@@ -6,6 +6,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_unit.hpp"
+#include "PICA/dynapica/shader_rec.hpp"
 #include "renderer_gl/renderer_gl.hpp"
 
 class GPU {
