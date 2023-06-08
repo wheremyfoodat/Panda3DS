@@ -100,7 +100,9 @@ protected:
 	bool codeHashDirty = false;
 	bool opdescHashDirty = false;
 
+	// Add these as friend classes for the JIT so it has access to all important state
 	friend class ShaderJIT;
+	friend class ShaderEmitter;
 
 private:
 	vec4f getSource(u32 source);
@@ -184,8 +186,9 @@ private:
 	bool isCondTrue(u32 instruction);
 
 public:
-	std::array<u32, 4096> loadedShader; // Currently loaded & active shader
-	std::array<u32, 4096> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
+	static constexpr size_t maxInstructionCount = 4096;
+	std::array<u32, maxInstructionCount> loadedShader; // Currently loaded & active shader
+	std::array<u32, maxInstructionCount> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
 
 	u32 entrypoint = 0; // Initial shader PC
 	u32 boolUniform;

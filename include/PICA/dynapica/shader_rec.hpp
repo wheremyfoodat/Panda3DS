@@ -7,8 +7,7 @@
 #include <unordered_map>
 
 #ifdef PANDA3DS_X64_HOST
-#include "xbyak/xbyak.h"
-using ShaderEmitter = Xbyak::CodeGenerator;
+#include "shader_rec_emitter_x64.hpp"
 #endif
 #endif
 
@@ -16,6 +15,7 @@ class ShaderJIT {
 #ifdef PANDA3DS_SHADER_JIT_SUPPORTED
 	using Hash = PICAShader::Hash;
 	using ShaderCache = std::unordered_map<Hash, std::unique_ptr<ShaderEmitter>>;
+	ShaderEmitter::Callback activeShaderCallback;
 
 	ShaderCache cache;
 	void compileShader(PICAShader& shaderUnit);
@@ -35,8 +35,13 @@ public:
 		Helpers::panic("Vertex Loader JIT: Tried to load vertices with JIT on platform that does not support vertex loader jit");
 	}
 
+	// Define dummy callback. This should never be called if the shader JIT is not supported
+	using Callback = void(*)(PICAShader& shaderUnit);
+	Callback activeShaderCallback = nullptr;
+
 	void reset() {}
 	static constexpr bool isAvailable() { return false; }
 #endif
 
+	auto getCallback() { return activeShaderCallback; }
 };

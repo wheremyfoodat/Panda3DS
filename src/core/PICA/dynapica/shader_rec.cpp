@@ -7,6 +7,7 @@ void ShaderJIT::reset() {
 }
 
 void ShaderJIT::prepare(PICAShader& shaderUnit) {
+	shaderUnit.pc = shaderUnit.entrypoint;
 	// We construct a shader hash from both the code and operand descriptor hashes
 	// This is so that if only one of them changes, we still properly recompile the shader
 	// This code is inspired from how Citra solves this problem
@@ -15,11 +16,10 @@ void ShaderJIT::prepare(PICAShader& shaderUnit) {
 
 	if (it == cache.end()) { // Block has not been compiled yet
 		auto emitter = std::make_unique<ShaderEmitter>();
+		emitter->compile(shaderUnit);
 		cache.emplace_hint(it, hash, std::move(emitter));
 	} else { // Block has been compiled and found, use it
-
+		auto emitter = it->second.get();
 	}
-
-	shaderUnit.pc = shaderUnit.entrypoint;
 }
 #endif // PANDA3DS_SHADER_JIT_SUPPORTED
