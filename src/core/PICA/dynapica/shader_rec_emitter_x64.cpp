@@ -1,11 +1,17 @@
 #if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
 #include "PICA/dynapica/shader_rec_emitter_x64.hpp"
 
+#include <algorithm>
+#include <cstddef>
+
 using namespace Xbyak;
 using namespace Xbyak::util;
 
 // Register that points to PICA state
 static constexpr Reg64 statePointer = rbp;
+static constexpr Xmm scratch1 = xmm0;
+static constexpr Xmm scratch2 = xmm1;
+static constexpr Xmm scratch3 = xmm2;
 
 void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	// Emit prologue first
@@ -65,9 +71,27 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	const u32 opcode = instruction >> 26;
 
 	switch (opcode) {
+		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
 		default:
 			Helpers::panic("ShaderJIT: Unimplemented PICA opcode %X", opcode);
 	}
+}
+
+void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 srcReg, u32 index) {
+
+}
+
+void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	src = getIndexedSource(src, idx);
+	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
+	vec4f& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
 }
 
 #endif
