@@ -35,9 +35,9 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void scanForCalls(const PICAShader& shader);
 
 public:
-	using InstructionCallback = void(*)(PICAShader& shaderUnit); // Callback type used for instructions
+	using InstructionCallback = const void(*)(PICAShader& shaderUnit); // Callback type used for instructions
 	// Callback type used for the JIT prologue. This is what the caller will call
-	using PrologueCallback = void(*)(PICAShader& shaderUnit, InstructionCallback cb);
+	using PrologueCallback = const void(*)(PICAShader& shaderUnit, InstructionCallback cb);
 	PrologueCallback prologueCb;
 
 	// Initialize our emitter with "allocSize" bytes of RWX memory
