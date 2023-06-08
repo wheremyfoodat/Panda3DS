@@ -51,6 +51,9 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	const vec4f& getDestRef(const PICAShader& shader, u32 dest);
 
 	// Instruction recompilation functions
+	void recADD(const PICAShader& shader, u32 instruction);
+	void recDP4(const PICAShader& shader, u32 instruction);
+	void recEND(const PICAShader& shader, u32 instruction);
 	void recMOV(const PICAShader& shader, u32 instruction);
 
 public:
@@ -64,6 +67,9 @@ public:
 		const auto cpu = Xbyak::util::Cpu();
 
 		haveSSE4_1 = cpu.has(Xbyak::util::Cpu::tSSE41);
+		if (!cpu.has(Xbyak::util::Cpu::tSSE3)) {
+			Helpers::panic("This CPU does not support SSE3. Please use the shader interpreter instead");
+		}
 	}
 	
 	void compile(const PICAShader& shaderUnit);

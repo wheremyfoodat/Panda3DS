@@ -2,6 +2,7 @@
 #include "PICA/dynapica/shader_rec_emitter_x64.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <cstddef>
 
 using namespace Xbyak;
@@ -11,7 +12,9 @@ using namespace Xbyak::util;
 static constexpr Reg64 statePointer = rbp;
 static constexpr Xmm scratch1 = xmm0;
 static constexpr Xmm scratch2 = xmm1;
-static constexpr Xmm scratch3 = xmm2;
+static constexpr Xmm src1_xmm = xmm2;
+static constexpr Xmm src2_xmm = xmm3;
+static constexpr Xmm src3_xmm = xmm4;
 
 void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	// Emit prologue first
@@ -71,15 +74,17 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	const u32 opcode = instruction >> 26;
 
 	switch (opcode) {
+		case ShaderOpcodes::ADD: recADD(shaderUnit, instruction); break;
+		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
+		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
+		case ShaderOpcodes::NOP: break;
 		default:
 			Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
 	}
 }
 
 const ShaderEmitter::vec4f& ShaderEmitter::getSourceRef(const PICAShader& shader, u32 src) {
-	alignas(16) static vec4f dummy = vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() });
-
 	if (src < 0x10)
 		return shader.inputs[src];
 	else if (src < 0x20)
@@ -88,7 +93,7 @@ const ShaderEmitter::vec4f& ShaderEmitter::getSourceRef(const PICAShader& shader
 		return shader.floatUniforms[src - 0x20];
 	else {
 		Helpers::warn("[Shader JIT] Unimplemented source value: %X\n", src);
-		return dummy;
+		return shader.dummy;
 	}
 }
 
@@ -132,7 +137,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 				movaps(dest, xword[statePointer + offset]);
 			else // Swizzle is not trivial so we need to emit a shuffle instruction
 				pshufd(dest, xword[statePointer + offset], convertedSwizzle);
-			return;
+			break;
 		}
 		
 		default:
@@ -142,8 +147,6 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	if (negate) {
 		Helpers::panic("[ShaderJIT] Unimplemented register negation");
 	}
-
-	Helpers::panic("Reached unreachable path in PICAShader::getIndexedSource");
 }
 
 void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest, u32 operandDescriptor) {
@@ -151,9 +154,22 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	const uintptr_t offset = uintptr_t(&destRef) - uintptr_t(&shader); // Calculate offset of register from start of the state struct
 
 	// Mask of which lanes to write
+	// TODO: If only 1 lane is being written to, use movss
 	u32 writeMask = operandDescriptor & 0xf;
 	if (writeMask == 0xf) { // No lanes are masked, just movaps
 		movaps(xword[statePointer + offset], source);
+	} else if (std::popcount(writeMask) == 1) { // Only 1 register needs to be written back. This can be done with a simple shift right + movss
+		int bit = std::countr_zero(writeMask); // Get which PICA register needs to be written to (0 = w, 1 = z, etc)
+		size_t index = 3 - bit;
+		const uintptr_t lane_offset = offset + index * sizeof(float);
+
+		if (index == 0) { // Bottom lane, no need to shift
+			movss(dword[statePointer + lane_offset], source);
+		} else { // Shift right by 32 * index, then write bottom lane
+			movaps(scratch1, source);
+			psrldq(scratch1, index * sizeof(float));
+			movss(dword[statePointer + lane_offset], scratch1);
+		}
 	} else if (haveSSE4_1) {
 		// Bit reverse the write mask because that is what blendps expects
 		u32 adjustedMask = ((writeMask >> 3) & 0b1) | ((writeMask >> 1) & 0b10) | ((writeMask << 1) & 0b100) | ((writeMask << 3) & 0b1000);
@@ -176,14 +192,53 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	}
 }
 
+void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
+	// Undo anything the prologue did and return
+	// Dellocate shadow stack on Windows
+	if constexpr (isWindows()) {
+		add(rsp, 32);
+	}
+
+	// Restore registers
+	pop(statePointer);
+	ret();
+}
+
 void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	u32 src = (instruction >> 12) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	loadRegister<1>(scratch1, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
-	storeRegister(scratch1, shader, dest, operandDescriptor);
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+	addps(src1_xmm, src2_xmm); // Dot product between the 2 register
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+	dpps(src1_xmm, src2_xmm, 0b11111111); // Dot product between the 2 register, store the result in all lanes of scratch1 similarly to PICA 
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
 #endif

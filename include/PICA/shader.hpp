@@ -73,6 +73,18 @@ class PICAShader {
 
 	std::array<u32, 4> floatUniformBuffer; // Buffer for temporarily caching float uniform data
 
+public:
+	// These are placed close to the temp registers and co because it helps the JIT generate better code
+	u32 entrypoint = 0; // Initial shader PC
+	u32 boolUniform;
+	std::array<OpenGL::Vector<u8, 4>, 4> intUniforms;
+	alignas(16) std::array<vec4f, 96> floatUniforms;
+
+	alignas(16) std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
+	alignas(16) std::array<vec4f, 16> inputs; // Attributes passed to the shader
+	alignas(16) std::array<vec4f, 16> outputs;
+	alignas(16) vec4f dummy = vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() }); // Dummy register used by the JIT
+
 protected:
 	std::array<u32, 128> operandDescriptors;
 	alignas(16) std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
@@ -190,15 +202,6 @@ public:
 	static constexpr size_t maxInstructionCount = 4096;
 	std::array<u32, maxInstructionCount> loadedShader; // Currently loaded & active shader
 	std::array<u32, maxInstructionCount> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
-
-	u32 entrypoint = 0; // Initial shader PC
-	u32 boolUniform;
-	std::array<OpenGL::Vector<u8, 4>, 4> intUniforms;
-	alignas(16) std::array<vec4f, 96> floatUniforms;
-
-	alignas(16) std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
-	alignas(16) std::array<vec4f, 16> inputs; // Attributes passed to the shader
-	alignas(16) std::array<vec4f, 16> outputs;
 
 	PICAShader(ShaderType type) : type(type) {}
 
