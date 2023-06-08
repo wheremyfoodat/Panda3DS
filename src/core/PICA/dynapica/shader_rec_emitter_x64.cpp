@@ -82,7 +82,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 srcReg,
 }
 
 void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
-	/*
+    /*
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	u32 src = (instruction >> 12) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
@@ -93,7 +93,7 @@ void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	vec4f& destVector = getDest(dest);
 
 	u32 componentMask = operandDescriptor & 0xf;
-	*/
+    */
 }
 
 #endif
