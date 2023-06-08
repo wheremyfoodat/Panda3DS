@@ -42,6 +42,7 @@ namespace ShaderOpcodes {
 	};
 }
 
+// Note: All PICA f24 vec4 registers must have the alignas(16) specifier to make them easier to access in SSE/NEON code in the JIT
 class PICAShader {
 	using f24 = Floats::f24;
 	using vec4f = OpenGL::Vector<f24, 4>;
@@ -74,7 +75,7 @@ class PICAShader {
 
 protected:
 	std::array<u32, 128> operandDescriptors;
-	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
+	alignas(16) std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
 	OpenGL::Vector<s32, 2> addrRegister; // Address register
 	bool cmpRegister[2]; // Comparison registers where the result of CMP is stored in
 	u32 loopCounter;
@@ -104,10 +105,10 @@ protected:
 	friend class ShaderJIT;
 	friend class ShaderEmitter;
 
-private:
 	vec4f getSource(u32 source);
 	vec4f& getDest(u32 dest);
 
+private:
 	// Interpreter functions for the various shader functions
 	void add(u32 instruction);
 	void call(u32 instruction);
@@ -193,11 +194,11 @@ public:
 	u32 entrypoint = 0; // Initial shader PC
 	u32 boolUniform;
 	std::array<OpenGL::Vector<u8, 4>, 4> intUniforms;
-	std::array<vec4f, 96> floatUniforms;
+	alignas(16) std::array<vec4f, 96> floatUniforms;
 
-	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
-	std::array<vec4f, 16> inputs; // Attributes passed to the shader
-	std::array<vec4f, 16> outputs;
+	alignas(16) std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
+	alignas(16) std::array<vec4f, 16> inputs; // Attributes passed to the shader
+	alignas(16) std::array<vec4f, 16> outputs;
 
 	PICAShader(ShaderType type) : type(type) {}
 

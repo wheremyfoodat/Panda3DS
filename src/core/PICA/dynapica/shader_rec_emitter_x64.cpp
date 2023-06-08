@@ -73,27 +73,117 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	switch (opcode) {
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
 		default:
-			Helpers::panic("ShaderJIT: Unimplemented PICA opcode %X", opcode);
+			Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
 	}
 }
 
-void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 srcReg, u32 index) {
+const ShaderEmitter::vec4f& ShaderEmitter::getSourceRef(const PICAShader& shader, u32 src) {
+	alignas(16) static vec4f dummy = vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() });
 
+	if (src < 0x10)
+		return shader.inputs[src];
+	else if (src < 0x20)
+		return shader.tempRegisters[src - 0x10];
+	else if (src <= 0x7f)
+		return shader.floatUniforms[src - 0x20];
+	else {
+		Helpers::warn("[Shader JIT] Unimplemented source value: %X\n", src);
+		return dummy;
+	}
+}
+
+const ShaderEmitter::vec4f& ShaderEmitter::getDestRef(const PICAShader& shader, u32 dest) {
+	if (dest < 0x10) {
+		return shader.outputs[dest];
+	} else if (dest < 0x20) {
+		return shader.tempRegisters[dest - 0x10];
+	}
+	Helpers::panic("[Shader JIT] Unimplemented dest: %X", dest);
+}
+
+// See shader.hpp header for docs on how the swizzle and negate works
+template <int sourceIndex>
+void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u32 index, u32 operandDescriptor) {
+	u32 compSwizzle; // Component swizzle pattern for the register
+	bool negate;     // If true, negate all lanes of the register
+
+	if constexpr (sourceIndex == 1) { // SRC1
+		negate = ((operandDescriptor >> 4) & 1) != 0;
+		compSwizzle = (operandDescriptor >> 5) & 0xff;
+	}
+	else if constexpr (sourceIndex == 2) { // SRC2
+		negate = ((operandDescriptor >> 13) & 1) != 0;
+		compSwizzle = (operandDescriptor >> 14) & 0xff;
+	}
+	else if constexpr (sourceIndex == 3) { // SRC3
+		negate = ((operandDescriptor >> 22) & 1) != 0;
+		compSwizzle = (operandDescriptor >> 23) & 0xff;
+	}
+
+	// PICA has the swizzle descriptor inverted in comparison to x86. For the PICA, the descriptor is (lowest to highest bits) wzyx while it's xyzw for x86
+	u32 convertedSwizzle = ((compSwizzle >> 6) & 0b11) | (((compSwizzle >> 4) & 0b11) << 2) | (((compSwizzle >> 2) & 0b11) << 4) | ((compSwizzle & 0b11) << 6);
+
+	switch (index) {
+		case 0: [[likely]] { // Keep src as is, no need to offset it
+			const vec4f& srcRef = getSourceRef(shader, src);
+			const uintptr_t offset = uintptr_t(&srcRef) - uintptr_t(&shader); // Calculate offset of register from start of the state struct
+
+			if (compSwizzle == noSwizzle) // Avoid emitting swizzle if not necessary
+				movaps(dest, xword[statePointer + offset]);
+			else // Swizzle is not trivial so we need to emit a shuffle instruction
+				pshufd(dest, xword[statePointer + offset], convertedSwizzle);
+			return;
+		}
+		
+		default:
+			Helpers::panic("[ShaderJIT]: Unimplemented source index type");
+	}
+
+	if (negate) {
+		Helpers::panic("[ShaderJIT] Unimplemented register negation");
+	}
+
+	Helpers::panic("Reached unreachable path in PICAShader::getIndexedSource");
+}
+
+void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest, u32 operandDescriptor) {
+	const vec4f& destRef = getDestRef(shader, dest);
+	const uintptr_t offset = uintptr_t(&destRef) - uintptr_t(&shader); // Calculate offset of register from start of the state struct
+
+	// Mask of which lanes to write
+	u32 writeMask = operandDescriptor & 0xf;
+	if (writeMask == 0xf) { // No lanes are masked, just movaps
+		movaps(xword[statePointer + offset], source);
+	} else if (haveSSE4_1) {
+		// Bit reverse the write mask because that is what blendps expects
+		u32 adjustedMask = ((writeMask >> 3) & 0b1) | ((writeMask >> 1) & 0b10) | ((writeMask << 1) & 0b100) | ((writeMask << 3) & 0b1000);
+		movaps(scratch1, xword[statePointer + offset]); // Read current value of dest
+		blendps(scratch1, source, adjustedMask);        // Blend with source
+		movaps(xword[statePointer + offset], scratch1); // Write back
+	} else {
+		// Blend algo referenced from Citra
+		const u8 selector = (((writeMask & 0b1000) ? 1 : 0) << 0) |
+			(((writeMask & 0b0100) ? 3 : 2) << 2) |
+			(((writeMask & 0b0010) ? 0 : 1) << 4) |
+			(((writeMask & 0b0001) ? 2 : 3) << 6);
+
+		movaps(scratch1, xword[statePointer + offset]);
+		movaps(scratch2, source);
+		unpckhps(scratch2, scratch1); // Unpack X/Y components of source and destination
+		unpcklps(scratch1, source);   // Unpack Z/W components of source and destination
+		shufps(scratch1, scratch2, selector); // "merge-shuffle" dest and source using selecto
+		movaps(xword[statePointer + offset], scratch1); // Write back
+	}
 }
 
 void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
-    /*
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	u32 src = (instruction >> 12) & 0x7f;
 	const u32 idx = (instruction >> 19) & 3;
 	const u32 dest = (instruction >> 21) & 0x1f;
 
-	src = getIndexedSource(src, idx);
-	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
-	vec4f& destVector = getDest(dest);
-
-	u32 componentMask = operandDescriptor & 0xf;
-    */
+	loadRegister<1>(scratch1, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	storeRegister(scratch1, shader, dest, operandDescriptor);
 }
 
 #endif
