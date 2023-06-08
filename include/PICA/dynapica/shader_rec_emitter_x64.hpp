@@ -32,7 +32,13 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 		return (opcode == ShaderOpcodes::CALL) || (opcode == ShaderOpcodes::CALLC) || (opcode == ShaderOpcodes::CALLU);
 	}
 	// Scan the shader code for call instructions to fill up the returnPCs vector before starting compilation
-	void scanForCalls(const PICAShader& shader);
+	void scanForCalls(const PICAShader& shaderUnit);
+
+	// Load register with number "srcReg" indexed by index "idx" into the xmm register "reg"
+	void loadRegister(Xmm dest, const PICAShader& shader, u32 srcReg, u32 idx);
+
+	// Instruction recompilation functions
+	void recMOV(const PICAShader& shader, u32 instruction);
 
 public:
 	using InstructionCallback = const void(*)(PICAShader& shaderUnit); // Callback type used for instructions
