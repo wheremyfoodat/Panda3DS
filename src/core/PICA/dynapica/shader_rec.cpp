@@ -17,9 +17,15 @@ void ShaderJIT::prepare(PICAShader& shaderUnit) {
 	if (it == cache.end()) { // Block has not been compiled yet
 		auto emitter = std::make_unique<ShaderEmitter>();
 		emitter->compile(shaderUnit);
+		// Get pointer to callbacks
+		entrypointCallback = emitter->getInstructionCallback(shaderUnit.entrypoint);
+		prologueCallback = emitter->getPrologueCallback();
+
 		cache.emplace_hint(it, hash, std::move(emitter));
 	} else { // Block has been compiled and found, use it
 		auto emitter = it->second.get();
+		entrypointCallback = emitter->getInstructionCallback(shaderUnit.entrypoint);
+		prologueCallback = emitter->getPrologueCallback();
 	}
 }
 #endif // PANDA3DS_SHADER_JIT_SUPPORTED

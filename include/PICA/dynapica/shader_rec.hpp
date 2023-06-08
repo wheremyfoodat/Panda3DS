@@ -15,10 +15,10 @@ class ShaderJIT {
 #ifdef PANDA3DS_SHADER_JIT_SUPPORTED
 	using Hash = PICAShader::Hash;
 	using ShaderCache = std::unordered_map<Hash, std::unique_ptr<ShaderEmitter>>;
-	ShaderEmitter::Callback activeShaderCallback;
+	ShaderEmitter::PrologueCallback prologueCallback;
+	ShaderEmitter::InstructionCallback entrypointCallback;
 
 	ShaderCache cache;
-	void compileShader(PICAShader& shaderUnit);
 #endif
 
 public:
@@ -26,8 +26,12 @@ public:
 	// Call this before starting to process a batch of vertices
 	// This will read the PICA config (uploaded shader and shader operand descriptors) and search if we've already compiled this shader
 	// If yes, it sets it as the active shader. if not, then it compiles it, adds it to the cache, and sets it as active,
+	// The caller must make sure the entrypoint has been properly set beforehand
 	void prepare(PICAShader& shaderUnit);
 	void reset();
+	void run(PICAShader& shaderUnit) {
+		prologueCallback(shaderUnit, entrypointCallback);
+	}
 
 	static constexpr bool isAvailable() { return true; }
 #else
@@ -42,6 +46,4 @@ public:
 	void reset() {}
 	static constexpr bool isAvailable() { return false; }
 #endif
-
-	auto getCallback() { return activeShaderCallback; }
 };

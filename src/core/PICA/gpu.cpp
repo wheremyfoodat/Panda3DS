@@ -203,7 +203,12 @@ void GPU::drawArrays() {
 			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
 		}
 		
-		shaderUnit.vs.run();
+		if constexpr (useShaderJIT) {
+			shaderJIT.run(shaderUnit.vs);
+		} else {
+			shaderUnit.vs.run();
+		}
+
 		std::memcpy(&vertices[i].position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
 		std::memcpy(&vertices[i].colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
 		std::memcpy(&vertices[i].UVs, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
