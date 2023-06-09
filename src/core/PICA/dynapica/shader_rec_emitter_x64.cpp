@@ -59,6 +59,9 @@ void ShaderEmitter::scanForCalls(const PICAShader& shaderUnit) {
 			returnPCs.push_back(returnPC);
 		}
 	}
+
+	// Sort return PCs so they can be binary searched
+	std::sort(returnPCs.begin(), returnPCs.end());
 }
 
 void ShaderEmitter::compileUntil(const PICAShader& shaderUnit, u32 end) {
@@ -70,19 +73,33 @@ void ShaderEmitter::compileUntil(const PICAShader& shaderUnit, u32 end) {
 void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	// Write current location to label for this instruction
 	L(instructionLabels[recompilerPC]);
+
+	// See if PC is a possible return PC and emit the proper code if so
+	if (std::binary_search(returnPCs.begin(), returnPCs.end(), recompilerPC)) {
+		int3();
+	}
+
 	// Fetch instruction and inc PC
 	const u32 instruction = shaderUnit.loadedShader[recompilerPC++];
 	const u32 opcode = instruction >> 26;
 
 	switch (opcode) {
 		case ShaderOpcodes::ADD: recADD(shaderUnit, instruction); break;
+		case ShaderOpcodes::CALL:
+			recCALL(shaderUnit, instruction);
+			break;
 		case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2:
 			recCMP(shaderUnit, instruction);
 			break;
+		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
+		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
+		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
+		case ShaderOpcodes::MUL: recMUL(shaderUnit, instruction); break;
 		case ShaderOpcodes::NOP: break;
+		case ShaderOpcodes::RSQ: recRSQ(shaderUnit, instruction); break;
 		default:
 			Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
 	}
@@ -195,6 +212,46 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	}
 }
 
+void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) {
+	static_assert(sizeof(bool) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
+	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister) - uintptr_t(&shader);
+	const size_t cmpRegYOffset = cmpRegXOffset + sizeof(bool);
+
+	const u32 condition = (instruction >> 22) & 3;
+	const uint refY = (instruction >> 24) & 1;
+	const uint refX = (instruction >> 25) & 1;
+
+	// refX in the bottom byte, refY in the top byte. This is done for condition codes 0 and 1 which check both x and y, so we can emit a single instruction that checks both
+	const u16 refX_refY_merged = refX | (refY << 8);
+
+	switch (condition) {
+	case 0: // Either cmp register matches 
+		// Z flag is 0 if at least 1 of them is set
+		test(word[statePointer + cmpRegXOffset], refX_refY_merged);
+
+		// Invert z flag
+		setz(al);
+		test(al, al);
+		break;
+	case 1: // Both cmp registers match
+		cmp(word[statePointer + cmpRegXOffset], refX_refY_merged);
+		break;
+	case 2: // At least cmp.x matches
+		cmp(byte[statePointer + cmpRegXOffset], refX);
+		break;
+	default: // At least cmp.y matches
+		cmp(byte[statePointer + cmpRegYOffset], refY);
+		break;
+	}
+}
+
+void ShaderEmitter::checkBoolUniform(const PICAShader& shader, u32 instruction) {
+	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
+	const uintptr_t boolUniformOffset = uintptr_t(&shader.boolUniform) - uintptr_t(&shader);
+
+	test(word[statePointer + boolUniformOffset], 1 << bit);
+}
+
 void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
 	// Undo anything the prologue did and return
 	// Dellocate shadow stack on Windows
@@ -230,6 +287,20 @@ void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
+void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+	dpps(src1_xmm, src2_xmm, 0b11111111); // 3-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
 void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	u32 src1 = (instruction >> 12) & 0x7f;
@@ -240,7 +311,40 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	dpps(src1_xmm, src2_xmm, 0b11111111); // Dot product between the 2 register, store the result in all lanes of scratch1 similarly to PICA 
+	dpps(src1_xmm, src2_xmm, 0b01111111); // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+	mulps(src1_xmm, src2_xmm);
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 writeMask = operandDescriptor & 0xf;
+
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	rsqrtss(src1_xmm, src1_xmm); // Compute rsqrt approximation
+
+	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
+	// Otherwise we do
+	if (writeMask != 0x8) {// Copy bottom lane to all lanes if we're not simply writing back x
+		shufps(src1_xmm, src1_xmm, 0); // src1_xmm = src1_xmm.xxxx
+	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -284,7 +388,7 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 
 	static_assert(sizeof(bool) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
 	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister) - uintptr_t(&shader);
-	const size_t cmpRegYOffset = cmpRegXOffset + 1;
+	const size_t cmpRegYOffset = cmpRegXOffset + sizeof(bool);
 
 	// Cmp x and y are the same compare function, we can use a single cmp instruction
 	if (cmpX == cmpY) {
@@ -309,6 +413,71 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 		test(edx, edx);
 		setne(byte[statePointer + cmpRegYOffset]);
 	}
+}
+
+void ShaderEmitter::recIFC(const PICAShader& shader, u32 instruction) {
+	// z is 1 if true, else 0
+	checkCmpRegister(shader, instruction);
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 num = instruction & 0xff;
+
+	if (dest < recompilerPC) {
+		Helpers::warn("Shader JIT: IFC instruction with dest < current PC\n");
+	}
+	Label elseBlock, endIf;
+
+	// Jump to else block if z is 0
+	jnz(elseBlock);
+	compileUntil(shader, dest);
+
+	if (num == 0) { // Else block is empty,
+		L(elseBlock);
+	} else { // Else block is NOT empty
+		jmp(endIf);
+		L(elseBlock);
+		compileUntil(shader, dest + num);
+		L(endIf);
+	}
+}
+
+void ShaderEmitter::recIFU(const PICAShader& shader, u32 instruction) {
+	// z is 0 if true, else 1
+	checkBoolUniform(shader, instruction);
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 num = instruction & 0xff;
+
+	if (dest < recompilerPC) {
+		Helpers::warn("Shader JIT: IFC instruction with dest < current PC\n");
+	}
+	Label elseBlock, endIf;
+
+	// Jump to else block if z is 1
+	jz(elseBlock, T_NEAR);
+	compileUntil(shader, dest);
+
+	if (num == 0) { // Else block is empty,
+		L(elseBlock);
+	}
+	else { // Else block is NOT empty
+		jmp(endIf, T_NEAR);
+		L(elseBlock);
+		compileUntil(shader, dest + num);
+		L(endIf);
+	}
+}
+
+void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
+	const u32 dest = (instruction >> 10) & 0xfff;
+	const u32 num = instruction & 0xff;
+
+	// Push return PC as stack parameter. This is a decently fast solution and Citra does the same but we should probably switch to a proper PICA-like
+	// Callstack, because it's not great to have an infinitely expanding call stack where popping from empty stack is undefined as hell
+	push(qword, dest + num);
+	// Realign stack to 64 bits and allocate shadow space on windows
+	sub(rsp, isWindows() ? (8 + 32) : 8);
+
+	// Call subroutine, Xbyak will update the label if it hasn't been initialized yet
+	call(instructionLabels[dest]);
 }
 
 #endif

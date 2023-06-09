@@ -50,6 +50,14 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	const vec4f& getSourceRef(const PICAShader& shader, u32 src);
 	const vec4f& getDestRef(const PICAShader& shader, u32 dest);
 
+	// Check the value of the cmp register for instructions like ifc and callc
+	// Result is returned in the zero flag. If the comparison is true then zero == 1, else zero == 0
+	void checkCmpRegister(const PICAShader& shader, u32 instruction);
+
+	// Check the value of the bool uniform for instructions like ifu and callu
+	// Result is returned in the zero flag. If the comparison is true then zero == 0, else zero == 1 (Opposite of checkCmpRegister)
+	void checkBoolUniform(const PICAShader& shader, u32 instruction);
+
 	// Instruction recompilation functions
 	void recADD(const PICAShader& shader, u32 instruction);
 	void recCALL(const PICAShader& shader, u32 instruction);
