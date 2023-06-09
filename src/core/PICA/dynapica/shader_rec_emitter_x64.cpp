@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cassert>
 #include <cstddef>
 
 using namespace Xbyak;
@@ -75,6 +76,9 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 
 	switch (opcode) {
 		case ShaderOpcodes::ADD: recADD(shaderUnit, instruction); break;
+		case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2:
+			recCMP(shaderUnit, instruction);
+			break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
@@ -238,6 +242,73 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
 	dpps(src1_xmm, src2_xmm, 0b11111111); // Dot product between the 2 register, store the result in all lanes of scratch1 similarly to PICA 
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 cmpY = (instruction >> 21) & 7;
+	const u32 cmpX = (instruction >> 24) & 7;
+
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+
+	// Condition codes for cmpps
+	enum : u8 {
+		CMP_EQ = 0,
+		CMP_LT = 1,
+		CMP_LE = 2,
+		CMP_UNORD = 3,
+		CMP_NEQ = 4,
+		CMP_NLT = 5,
+		CMP_NLE = 6,
+		CMP_ORD = 7,
+		CMP_TRUE = 15
+	};
+
+	// Map from PICA condition codes (used as index) to x86 condition codes
+	static constexpr std::array<u8, 8> conditionCodes = { CMP_EQ, CMP_NEQ, CMP_LT, CMP_LE, CMP_LT, CMP_LE, CMP_TRUE, CMP_TRUE };
+
+	// SSE does not offer GT or GE comparisons in the cmpps instruction, so we need to flip the left and right operands in that case and use LT/LE
+	const bool invertX = (cmpX == 4 || cmpX == 5);
+	const bool invertY = (cmpY == 4 || cmpY == 5);
+	Xmm lhs_x = invertX ? src2_xmm : src1_xmm;
+	Xmm rhs_x = invertX ? src1_xmm : src2_xmm;
+	Xmm lhs_y = invertY ? src2_xmm : src1_xmm;
+	Xmm rhs_y = invertY ? src1_xmm : src2_xmm;
+
+	const u8 compareFuncX = conditionCodes[cmpX];
+	const u8 compareFuncY = conditionCodes[cmpY];
+
+	static_assert(sizeof(bool) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
+	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister) - uintptr_t(&shader);
+	const size_t cmpRegYOffset = cmpRegXOffset + 1;
+
+	// Cmp x and y are the same compare function, we can use a single cmp instruction
+	if (cmpX == cmpY) {
+		cmpps(lhs_x, rhs_x, compareFuncX);
+		movd(eax, lhs_x);
+		test(eax, eax);
+
+		setne(byte[statePointer + cmpRegXOffset]);
+		setne(byte[statePointer + cmpRegYOffset]);
+	} else {
+		movaps(scratch1, lhs_x); // Copy the left hand operands to temp registers
+		movaps(scratch2, lhs_y);
+
+		cmpps(scratch1, rhs_x, compareFuncX); // Perform the compares
+		cmpps(scratch2, rhs_y, compareFuncY);
+
+		movd(eax, scratch1); // Move results to eax for X and edx for Y
+		movd(edx, scratch2);
+
+		test(eax, eax);      // Write back results with setne
+		setne(byte[statePointer + cmpRegXOffset]);
+		test(edx, edx);
+		setne(byte[statePointer + cmpRegYOffset]);
+	}
 }
 
 #endif
