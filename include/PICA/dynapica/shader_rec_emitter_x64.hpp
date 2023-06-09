@@ -27,6 +27,9 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	// Filled before compiling a shader by scanning the code for call instructions
 	std::vector<u32> returnPCs;
 
+	// Vector value of (-0.0, -0.0, -0.0, -0.0) for negating vectors via pxor
+	Label negateVector;
+
 	u32 recompilerPC = 0; // PC the recompiler is currently recompiling @
 	bool haveSSE4_1 = false;  // Shows if the CPU supports SSE4.1
 
@@ -73,6 +76,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void recJMPC(const PICAShader& shader, u32 instruction);
 	void recJMPU(const PICAShader& shader, u32 instruction);
 	void recLOOP(const PICAShader& shader, u32 instruction);
+	void recMAD(const PICAShader& shader, u32 instruction);
+	void recMADI(const PICAShader& shader, u32 instruction);
 	void recMAX(const PICAShader& shader, u32 instruction);
 	void recMIN(const PICAShader& shader, u32 instruction);
 	void recMOVA(const PICAShader& shader, u32 instruction);

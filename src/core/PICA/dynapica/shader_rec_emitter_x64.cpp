@@ -18,6 +18,11 @@ static constexpr Xmm src2_xmm = xmm3;
 static constexpr Xmm src3_xmm = xmm4;
 
 void ShaderEmitter::compile(const PICAShader& shaderUnit) {
+	// Constants
+	align(16);
+	L(negateVector);
+	dd(0x80000000); dd(0x80000000); dd(0x80000000); dd(0x80000000); // -0.0 4 times
+
 	// Emit prologue first
 	align(16);
 	prologueCb = getCurr<PrologueCallback>();
@@ -97,9 +102,15 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
+		case ShaderOpcodes::MAX: recMAX(shaderUnit, instruction); break;
 		case ShaderOpcodes::MUL: recMUL(shaderUnit, instruction); break;
 		case ShaderOpcodes::NOP: break;
+		case ShaderOpcodes::RCP: recRCP(shaderUnit, instruction); break;
 		case ShaderOpcodes::RSQ: recRSQ(shaderUnit, instruction); break;
+
+		case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
+			recMAD(shaderUnit, instruction);
+			break;
 		default:
 			Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
 	}
@@ -166,7 +177,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	}
 
 	if (negate) {
-		Helpers::panic("[ShaderJIT] Unimplemented register negation");
+		pxor(dest, xword[rip + negateVector]);
 	}
 }
 
@@ -297,7 +308,7 @@ void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	dpps(src1_xmm, src2_xmm, 0b11111111); // 3-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	dpps(src1_xmm, src2_xmm, 0b01111111); // 3-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -311,7 +322,20 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	dpps(src1_xmm, src2_xmm, 0b01111111); // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	dpps(src1_xmm, src2_xmm, 0b11111111); // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src1 = (instruction >> 12) & 0x7f;
+	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+	maxps(src1_xmm, src2_xmm);
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -326,6 +350,25 @@ void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
 	mulps(src1_xmm, src2_xmm);
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recRCP(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	u32 src = (instruction >> 12) & 0x7f;
+	const u32 idx = (instruction >> 19) & 3;
+	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 writeMask = operandDescriptor & 0xf;
+
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	rcpss(src1_xmm, src1_xmm); // Compute rcp approximation
+
+	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
+	// Otherwise we do
+	if (writeMask != 0x8) {// Copy bottom lane to all lanes if we're not simply writing back x
+		shufps(src1_xmm, src1_xmm, 0); // src1_xmm = src1_xmm.xxxx
+	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -346,6 +389,25 @@ void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 	}
 
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
+	const u32 src1 = (instruction >> 17) & 0x1f;
+	u32 src2 = (instruction >> 10) & 0x7f;
+	const u32 src3 = (instruction >> 5) & 0x1f;
+	const u32 idx = (instruction >> 22) & 3;
+	const u32 dest = (instruction >> 24) & 0x1f;
+
+	loadRegister<1>(src1_xmm, shader, src1, 0, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, idx, operandDescriptor);
+	loadRegister<3>(src3_xmm, shader, src3, 0, operandDescriptor);
+
+	movaps(scratch1, src1_xmm);
+	// TODO: Implement safe PICA mul
+	mulps(scratch1, src2_xmm);
+	addps(scratch1, src3_xmm);
+	storeRegister(scratch1, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
@@ -427,13 +489,13 @@ void ShaderEmitter::recIFC(const PICAShader& shader, u32 instruction) {
 	Label elseBlock, endIf;
 
 	// Jump to else block if z is 0
-	jnz(elseBlock);
+	jnz(elseBlock, T_NEAR);
 	compileUntil(shader, dest);
 
 	if (num == 0) { // Else block is empty,
 		L(elseBlock);
 	} else { // Else block is NOT empty
-		jmp(endIf);
+		jmp(endIf, T_NEAR);
 		L(elseBlock);
 		compileUntil(shader, dest + num);
 		L(endIf);
