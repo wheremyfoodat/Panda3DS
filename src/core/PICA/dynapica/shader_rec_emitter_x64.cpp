@@ -154,7 +154,6 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	const uintptr_t offset = uintptr_t(&destRef) - uintptr_t(&shader); // Calculate offset of register from start of the state struct
 
 	// Mask of which lanes to write
-	// TODO: If only 1 lane is being written to, use movss
 	u32 writeMask = operandDescriptor & 0xf;
 	if (writeMask == 0xf) { // No lanes are masked, just movaps
 		movaps(xword[statePointer + offset], source);

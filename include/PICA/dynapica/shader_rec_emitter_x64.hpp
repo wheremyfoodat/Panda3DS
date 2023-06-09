@@ -52,9 +52,30 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 
 	// Instruction recompilation functions
 	void recADD(const PICAShader& shader, u32 instruction);
+	void recCALL(const PICAShader& shader, u32 instruction);
+	void recCALLC(const PICAShader& shader, u32 instruction);
+	void recCALLU(const PICAShader& shader, u32 instruction);
+	void recCMP(const PICAShader& shader, u32 instruction);
+	void recDP3(const PICAShader& shader, u32 instruction);
 	void recDP4(const PICAShader& shader, u32 instruction);
 	void recEND(const PICAShader& shader, u32 instruction);
+	void recFLR(const PICAShader& shader, u32 instruction);
+	void recIFC(const PICAShader& shader, u32 instruction);
+	void recIFU(const PICAShader& shader, u32 instruction);
+	void recJMPC(const PICAShader& shader, u32 instruction);
+	void recJMPU(const PICAShader& shader, u32 instruction);
+	void recLOOP(const PICAShader& shader, u32 instruction);
+	void recMAX(const PICAShader& shader, u32 instruction);
+	void recMIN(const PICAShader& shader, u32 instruction);
+	void recMOVA(const PICAShader& shader, u32 instruction);
 	void recMOV(const PICAShader& shader, u32 instruction);
+	void recMUL(const PICAShader& shader, u32 instruction);
+	void recRCP(const PICAShader& shader, u32 instruction);
+	void recRSQ(const PICAShader& shader, u32 instruction);
+	void recSGE(const PICAShader& shader, u32 instruction);
+	void recSGEI(const PICAShader& shader, u32 instruction);
+	void recSLT(const PICAShader& shader, u32 instruction);
+	void recSLTI(const PICAShader& shader, u32 instruction);
 
 public:
 	using InstructionCallback = const void(*)(PICAShader& shaderUnit); // Callback type used for instructions
