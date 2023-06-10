@@ -377,13 +377,13 @@ void ShaderEmitter::recMOVA(const PICAShader& shader, u32 instruction) {
 		movsd(qword[statePointer + addrRegisterOffset], scratch1); // Write back bottom 2 to addr register x and ys
 	}
 	else if (writeX) {
-		cvttss2si(scratch1, src1_xmm); // Convert bottom lane
-		movss(dword[statePointer + addrRegisterOffset], scratch1); // Write it back
+		cvttss2si(eax, src1_xmm); // Convert bottom lane
+		mov(dword[statePointer + addrRegisterOffset], eax); // Write it back
 	}
 	else if (writeY) {
 		psrldq(src1_xmm, sizeof(float)); // Shift y component to bottom lane
-		cvttss2si(scratch1, src1_xmm); // Convert bottom lane
-		movss(dword[statePointer + addrRegisterYOffset], scratch1); // Write it back to y component
+		cvttss2si(eax, src1_xmm); // Convert bottom lane
+		mov(dword[statePointer + addrRegisterYOffset], eax); // Write it back to y component
 	}
 }
 
