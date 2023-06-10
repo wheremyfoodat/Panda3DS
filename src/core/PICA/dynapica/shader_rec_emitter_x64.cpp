@@ -171,6 +171,23 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 				movaps(dest, xword[statePointer + offset]);
 			else // Swizzle is not trivial so we need to emit a shuffle instruction
 				pshufd(dest, xword[statePointer + offset], convertedSwizzle);
+
+			// Negate the register if necessary
+			if (negate) {
+				pxor(dest, xword[rip + negateVector]);
+			}
+			return; // Return. Rest of the function handles indexing which is not used if index == 0
+		}
+
+		case 1: {
+			const uintptr_t addrXOffset = uintptr_t(&shader.addrRegister[0]) - uintptr_t(&shader);
+			movsxd(rax, dword[statePointer + addrXOffset]); // rax = address register x
+			break;
+		}
+
+		case 2: {
+			const uintptr_t addrYOffset = uintptr_t(&shader.addrRegister[1]) - uintptr_t(&shader);
+			movsxd(rax, dword[statePointer + addrYOffset]); // rax = address register y
 			break;
 		}
 		
@@ -178,6 +195,47 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 			Helpers::panic("[ShaderJIT]: Unimplemented source index type %d", index);
 	}
 
+	// Here we handle what happens when using indexed addressing & we can't predict what register will be read at compile time
+	// The index of the access is assumed to be in rax
+	// Add source register (src) and index (rax) to form the final register
+	add(rax, src);
+
+	Label maybeTemp, maybeUniform, unknownReg, end;
+	const uintptr_t inputOffset = uintptr_t(&shader.inputs) - uintptr_t(&shader);
+	const uintptr_t tempOffset = uintptr_t(&shader.tempRegisters) - uintptr_t(&shader);
+	const uintptr_t uniformOffset = uintptr_t(&shader.floatUniforms) - uintptr_t(&shader);
+
+	// If reg < 0x10, return inputRegisters[reg]
+	cmp(rax, 0x10);
+	jae(maybeTemp);
+	mov(rcx, rax);
+	shl(rcx, 4);  // rcx = rax * sizeof(vec4 of floats) = rax * 16
+	movaps(dest, xword[statePointer + rcx + inputOffset]);
+	jmp(end);
+	
+	// If (reg < 0x1F) return tempRegisters[reg - 0x10]
+	L(maybeTemp);
+	cmp(rax, 0x20);
+	jae(maybeUniform);
+	lea(rcx, qword[rax - 0x10]);
+	shl(rcx, 4);
+	movaps(dest, xword[statePointer + rcx + tempOffset]);
+	jmp(end);
+
+	// If (reg < 0x80) return floatUniforms[reg - 0x20]
+	L(maybeUniform);
+	cmp(rax, 0x80);
+	jae(unknownReg);
+	lea(rcx, qword[rax - 0x20]);
+	shl(rcx, 4);
+	movaps(dest, xword[statePointer + rcx + uniformOffset]);
+	jmp(end);
+
+	L(unknownReg);
+	pxor(dest, dest); // Set dest to 0 if we're reading from a garbage register
+
+	L(end);
+	// Negate the register if necessary
 	if (negate) {
 		pxor(dest, xword[rip + negateVector]);
 	}
