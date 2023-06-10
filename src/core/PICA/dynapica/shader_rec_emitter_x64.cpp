@@ -8,6 +8,8 @@
 
 using namespace Xbyak;
 using namespace Xbyak::util;
+using Helpers::getBit;
+using Helpers::getBits;
 
 // Register that points to PICA state
 static constexpr Reg64 statePointer = rbp;

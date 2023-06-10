@@ -157,15 +157,16 @@ private:
 		u32 compSwizzle;
 		bool negate;
 
+		using namespace Helpers;
 		if constexpr (sourceIndex == 1) { // SRC1
-			negate = (Helpers::getBit<4>(opDescriptor)) != 0;
-			compSwizzle = Helpers::getBits<5, 8>(opDescriptor);
+			negate = (getBit<4>(opDescriptor)) != 0;
+			compSwizzle = getBits<5, 8>(opDescriptor);
 		} else if constexpr (sourceIndex == 2) { // SRC2
-			negate = (Helpers::getBit<13>(opDescriptor)) != 0;
-			compSwizzle = Helpers::getBits<14, 8>(opDescriptor);
+			negate = (getBit<13>(opDescriptor)) != 0;
+			compSwizzle = getBits<14, 8>(opDescriptor);
 		} else if constexpr (sourceIndex == 3) { // SRC3
-			negate = (Helpers::getBit<22>(opDescriptor)) != 0;
-			compSwizzle = Helpers::getBits<23, 8>(opDescriptor);
+			negate = (getBit<22>(opDescriptor)) != 0;
+			compSwizzle = getBits<23, 8>(opDescriptor);
 		}
 
 		// Iterate through every component of the swizzled vector in reverse order
@@ -263,11 +264,13 @@ public:
 	}
 
 	void uploadIntUniform(int index, u32 word) {
+		using namespace Helpers;
+
 		auto& u = intUniforms[index];
 		u.x() = word & 0xff;
-		u.y() = Helpers::getBits<8, 8>(word);
-		u.z() = Helpers::getBits<16, 8>(word);
-		u.w() = Helpers::getBits<24, 8>(word);
+		u.y() = getBits<8, 8>(word);
+		u.z() = getBits<16, 8>(word);
+		u.w() = getBits<24, 8>(word);
 	}
 
 	void run();
