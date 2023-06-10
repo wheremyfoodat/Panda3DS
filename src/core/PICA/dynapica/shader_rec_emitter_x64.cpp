@@ -103,6 +103,7 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
+		case ShaderOpcodes::MOVA: recMOVA(shaderUnit, instruction); break;
 		case ShaderOpcodes::MAX: recMAX(shaderUnit, instruction); break;
 		case ShaderOpcodes::MUL: recMUL(shaderUnit, instruction); break;
 		case ShaderOpcodes::NOP: break;
@@ -277,6 +278,16 @@ void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
 }
 
 void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	u32 componentMask = operandDescriptor & 0xf;
+	Helpers::panic("Implement MOVA");
+}
+
+void ShaderEmitter::recMOVA(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src = getBits<12, 7>(instruction);
 	const u32 idx = getBits<19, 2>(instruction);

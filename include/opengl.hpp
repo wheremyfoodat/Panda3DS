@@ -20,6 +20,7 @@
 #pragma once
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -546,7 +547,8 @@ namespace OpenGL {
         T& y() { return g(); }
         T& z() { return b(); }
         T& w() { return a(); }
-        T& operator[](int index) { return m_storage[index]; }
+        T& operator[](size_t index) { return m_storage[index]; }
+        const T& operator[](size_t index) const { return m_storage[index]; }
 
         T& u() { return r(); }
         T& v() { return g(); }
