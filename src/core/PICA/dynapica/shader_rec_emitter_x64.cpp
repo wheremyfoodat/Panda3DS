@@ -562,7 +562,7 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 		setne(byte[statePointer + cmpRegXOffset]); // set cmp.x
 
 		shr(rax, 32);     // Check top 32 bits (shr will set the zero flag properly)
-		setne(byte[statePointer + cmpRegYOffset]);
+		setne(byte[statePointer + cmpRegYOffset]); // set cmp.y
 	} else {
 		movaps(scratch1, lhs_x); // Copy the left hand operands to temp registers
 		movaps(scratch2, lhs_y);
