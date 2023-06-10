@@ -1,4 +1,3 @@
-#pragma once
 #include <algorithm>
 #include <cstring>
 #include "loader/lz77.hpp"
