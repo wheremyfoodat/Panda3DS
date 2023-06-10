@@ -35,10 +35,12 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	// If we add integer register allocations they should be pushed here, and the rsp should be properly fixed up
 	// However most of the PICA is floating point so yeah
 
-	// Allocate shadow stack on Windows
-	if constexpr (isWindows()) {
-		sub(rsp, 32);
-	}
+	// Push a return guard on the stack. This happens due to the way we handle the PICA callstack, by pushing the return PC to stack
+	// By pushing ffff'ffff, we make it impossible for a return check to erroneously pass
+	push(qword, 0xffffffff);
+	// Allocate 32 bytes of shadow stack on windows, and 8 more bytes to realign stack to 16 bytes after our 4-byte push
+	sub(rsp, isWindows() ? (8 + 32) : 8);
+
 	// Tail call to shader code entrypoint
 	jmp(arg2);
 	align(16);
@@ -84,7 +86,7 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	if (std::binary_search(returnPCs.begin(), returnPCs.end(), recompilerPC)) {
 		// This is the offset we need to add to rsp to peek the next return address in the callstack
 		// Ie the PICA PC address which, when reached, will trigger a return
-		const auto stackOffsetForPC = isWindows() ? (16 + 32) : 16;
+		const auto stackOffsetForPC = isWindows() ? (8 + 32) : 8;
 		
 		Label end;
 		// Check if return address == recompilerPC, ie if we should return
@@ -335,10 +337,8 @@ void ShaderEmitter::checkBoolUniform(const PICAShader& shader, u32 instruction) 
 
 void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
 	// Undo anything the prologue did and return
-	// Dellocate shadow stack on Windows
-	if constexpr (isWindows()) {
-		add(rsp, 32);
-	}
+	// Dellocate shadow stack on Windows, and deallocate the stack space taken up for the return guard
+	add(rsp, isWindows() ? (16 + 32) : 16);
 
 	// Restore registers
 	pop(statePointer);
@@ -550,8 +550,8 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	const u8 compareFuncX = conditionCodes[cmpX];
 	const u8 compareFuncY = conditionCodes[cmpY];
 
-	static_assert(sizeof(bool) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
-	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister) - uintptr_t(&shader);
+	static_assert(sizeof(shader.cmpRegister[0]) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
+	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister[0]) - uintptr_t(&shader);
 	const size_t cmpRegYOffset = cmpRegXOffset + sizeof(bool);
 
 	// Cmp x and y are the same compare function, we can use a single cmp instruction
@@ -597,7 +597,7 @@ void ShaderEmitter::recIFC(const PICAShader& shader, u32 instruction) {
 	if (num == 0) { // Else block is empty,
 		L(elseBlock);
 	} else { // Else block is NOT empty
-		jmp(endIf, T_NEAR);
+		jmp(endIf, T_NEAR); // Skip executing the else branch if the if branch was ran
 		L(elseBlock);
 		compileUntil(shader, dest + num);
 		L(endIf);
@@ -621,9 +621,8 @@ void ShaderEmitter::recIFU(const PICAShader& shader, u32 instruction) {
 
 	if (num == 0) { // Else block is empty,
 		L(elseBlock);
-	}
-	else { // Else block is NOT empty
-		jmp(endIf, T_NEAR);
+	} else { // Else block is NOT empty
+		jmp(endIf, T_NEAR); // Skip executing the else branch if the if branch was ran
 		L(elseBlock);
 		compileUntil(shader, dest + num);
 		L(endIf);
@@ -637,14 +636,16 @@ void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
 	// Push return PC as stack parameter. This is a decently fast solution and Citra does the same but we should probably switch to a proper PICA-like
 	// Callstack, because it's not great to have an infinitely expanding call stack where popping from empty stack is undefined as hell
 	push(qword, dest + num);
-	// Realign stack to 64 bits and allocate 32 bytes of shadow space on windows
-	sub(rsp, isWindows() ? (8 + 32) : 8);
+	if constexpr (isWindows()) {
+		// Allocate 32 bytes of shadow space on windows
+		sub(rsp, 32);
+	}
 
 	// Call subroutine, Xbyak will update the label if it hasn't been initialized yet
 	call(instructionLabels[dest]);
 
 	// Fix up stack after returning. The 8 from before becomes a 16 because we're also skipping the qword we pushed
-	add(rsp, isWindows() ? (16 + 32) : 16);
+	add(rsp, isWindows() ? (8 + 32) : 8);
 }
 
 #endif
