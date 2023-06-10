@@ -31,7 +31,7 @@ All you need is CMake and a generator of your choice (Make, Visual Studio, Ninja
 git clone https://github.com/wheremyfoodat/Panda3DS --recursive
 
 cd Panda3DS && mkdir build && cd build
-cmake . -DCMAKE_BUILD_TYPE=Release # Set up compilers etc here if you'd like
+cmake .. -DCMAKE_BUILD_TYPE=Release # Set up compilers etc here if you'd like
 
 <Invoke Make, Visual Studio, or whatever you would like to use>
 ```
