@@ -44,7 +44,7 @@ bool NCCH::loadFromHeader(u8* header, IOFile& file) {
         // It seems like some decryption tools will decrypt the file, without actually setting the NoCrypto flag in the NCCH header
         // This is a nice and easy hack to see if a file is pretending to be encrypted, taken from 3DMoo and Citra
         if (u32(programID) == u32(jumpID) && encrypted) {
-            printf("NCSD is supposedly ecrypted but not actually encrypted\n");
+            printf("NCSD is supposedly encrypted but not actually encrypted\n");
             encrypted = false;
         } else if (encrypted) {
             Helpers::panic("Encrypted NCSD file");
