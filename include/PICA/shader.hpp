@@ -158,14 +158,14 @@ private:
 		bool negate;
 
 		if constexpr (sourceIndex == 1) { // SRC1
-			negate = ((opDescriptor >> 4) & 1) != 0;
-			compSwizzle = (opDescriptor >> 5) & 0xff;
+			negate = (Helpers::getBit<4>(opDescriptor)) != 0;
+			compSwizzle = Helpers::getBits<5, 8>(opDescriptor);
 		} else if constexpr (sourceIndex == 2) { // SRC2
-			negate = ((opDescriptor >> 13) & 1) != 0;
-			compSwizzle = (opDescriptor >> 14) & 0xff;
+			negate = (Helpers::getBit<13>(opDescriptor)) != 0;
+			compSwizzle = Helpers::getBits<14, 8>(opDescriptor);
 		} else if constexpr (sourceIndex == 3) { // SRC3
-			negate = ((opDescriptor >> 22) & 1) != 0;
-			compSwizzle = (opDescriptor >> 23) & 0xff;
+			negate = (Helpers::getBit<22>(opDescriptor)) != 0;
+			compSwizzle = Helpers::getBits<23, 8>(opDescriptor);
 		}
 
 		// Iterate through every component of the swizzled vector in reverse order
@@ -265,9 +265,9 @@ public:
 	void uploadIntUniform(int index, u32 word) {
 		auto& u = intUniforms[index];
 		u.x() = word & 0xff;
-		u.y() = (word >> 8) & 0xff;
-		u.z() = (word >> 16) & 0xff;
-		u.w() = (word >> 24) & 0xff;
+		u.y() = Helpers::getBits<8, 8>(word);
+		u.z() = Helpers::getBits<16, 8>(word);
+		u.w() = Helpers::getBits<24, 8>(word);
 	}
 
 	void run();

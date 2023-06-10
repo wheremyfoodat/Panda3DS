@@ -61,7 +61,7 @@ void GPU::drawArrays() {
 
 	// Configures the type of primitive and the number of vertex shader outputs
 	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
-	const u32 primType = (primConfig >> 8) & 3;
+	const u32 primType = Helpers::getBits<8, 2>(primConfig);
 	if (primType != 0 && primType != 1 && primType != 3) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
@@ -72,7 +72,7 @@ void GPU::drawArrays() {
 	// Get the configuration for the index buffer, used only for indexed drawing
 	u32 indexBufferConfig = regs[PICAInternalRegs::IndexBufferConfig];
 	u32 indexBufferPointer = vertexBase + (indexBufferConfig & 0xfffffff);
-	bool shortIndex = (indexBufferConfig >> 31) & 1; // Indicates whether vert indices are 16-bit or 8-bit
+	bool shortIndex = Helpers::getBit<31>(indexBufferConfig); // Indicates whether vert indices are 16-bit or 8-bit
 
 	// Stuff the global attribute config registers in one u64 to make attr parsing easier
 	// TODO: Cache this when the vertex attribute format registers are written to 

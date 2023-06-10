@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdarg>
+#include <climits>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -89,6 +90,30 @@ namespace Helpers {
         auto bitsToShift = 16 - startingSize;
         return (u16) (temp << bitsToShift >> bitsToShift);
     }
+
+	/// Create a mask with `count` number of one bits.
+	template<typename T, usize count>
+	static constexpr T ones () {
+		constexpr usize bitsize = CHAR_BIT * sizeof(T);
+		static_assert(count <= bitsize, "count larger than bitsize of T");
+
+		if (count == T(0)) {
+			return T(0);
+		}
+		return static_cast<T>(~static_cast<T>(0)) >> (bitsize - count);
+	}
+
+	/// Extract bits from an integer-type
+	template<usize offset, typename T>
+	static constexpr T getBit (T value)	{
+		return (value >> offset) & T(1); 
+	}
+
+	/// Extract bits from an integer-type
+	template<usize offset, usize bits, typename T>
+	static constexpr T getBits (T value) {
+		return (value >> offset) & ones<T, bits>(); 
+	}
 
     /// Check if a bit "bit" of value is set
     static constexpr bool isBitSet (u32 value, int bit) {

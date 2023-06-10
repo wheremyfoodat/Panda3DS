@@ -23,7 +23,7 @@ bool CartLZ77::decompress(std::vector<u8>& output, const std::vector<u8>& input)
     std::memcpy(&bufferTopAndBottom, footer, sizeof(u32));
 
     u32 out = sizeDecompressed; // TODO: Is this meant to be u32 or s32?
-    u32 index = sizeCompressed - ((bufferTopAndBottom >> 24) & 0xff);
+    u32 index = sizeCompressed - (Helpers::getBits<24, 8>(bufferTopAndBottom));
     u32 stopIndex = sizeCompressed - (bufferTopAndBottom & 0xffffff);
 
     // Set all of the decompressed buffer to 0 and copy the compressed buffer to the start of it
@@ -48,7 +48,7 @@ bool CartLZ77::decompress(std::vector<u8>& output, const std::vector<u8>& input)
                 index -= 2;
 
                 u32 segmentOffset = compressed[index] | (compressed[index + 1] << 8);
-                u32 segment_size = ((segmentOffset >> 12) & 15) + 3;
+                u32 segment_size = (Helpers::getBits<12, 4>(segmentOffset)) + 3;
                 segmentOffset &= 0x0FFF;
                 segmentOffset += 2;
 
