@@ -82,7 +82,17 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 
 	// See if PC is a possible return PC and emit the proper code if so
 	if (std::binary_search(returnPCs.begin(), returnPCs.end(), recompilerPC)) {
-		int3();
+		// This is the offset we need to add to rsp to peek the next return address in the callstack
+		// Ie the PICA PC address which, when reached, will trigger a return
+		const auto stackOffsetForPC = isWindows() ? (16 + 32) : 16;
+		
+		Label end;
+		// Check if return address == recompilerPC, ie if we should return
+		cmp(dword[rsp + stackOffsetForPC], recompilerPC);
+		jne(end); // If not, continue with uor lives
+		ret();    // If yes, return
+
+		L(end);
 	}
 
 	// Fetch instruction and inc PC
@@ -627,11 +637,14 @@ void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
 	// Push return PC as stack parameter. This is a decently fast solution and Citra does the same but we should probably switch to a proper PICA-like
 	// Callstack, because it's not great to have an infinitely expanding call stack where popping from empty stack is undefined as hell
 	push(qword, dest + num);
-	// Realign stack to 64 bits and allocate shadow space on windows
+	// Realign stack to 64 bits and allocate 32 bytes of shadow space on windows
 	sub(rsp, isWindows() ? (8 + 32) : 8);
 
 	// Call subroutine, Xbyak will update the label if it hasn't been initialized yet
 	call(instructionLabels[dest]);
+
+	// Fix up stack after returning. The 8 from before becomes a 16 because we're also skipping the qword we pushed
+	add(rsp, isWindows() ? (16 + 32) : 16);
 }
 
 #endif
