@@ -141,6 +141,28 @@ constexpr size_t operator""_GB(unsigned long long int x) {
     return 1024_MB * x;
 }
 
+// Utility user-literal/metaprogramming-type for turning four-character-codes
+// into 32-bit integers at compile-time
+// Ex: "BLAH"_u32, "HEAD"_u32, "END "_u32
+template <std::size_t N>
+struct FourCC {
+	u32 value;
+
+	constexpr FourCC(const char (&identifier)[N]) : value(0) {
+		static_assert(N == 5, "FourCC must be 4 characters");
+		if constexpr (std::endian::native == std::endian::big) {
+			value = ((identifier[3] << 0) | (identifier[2] << 8) | (identifier[1] << 16) | (identifier[0] << 24));
+		} else {
+			value = ((identifier[3] << 24) | (identifier[2] << 16) | (identifier[1] << 8) | (identifier[0] << 0));
+		}
+	}
+};
+
+template <FourCC code>
+constexpr std::uint32_t operator""_u32() {
+        return code.value;
+}
+
 // useful macros
 // likely/unlikely
 #ifdef __GNUC__

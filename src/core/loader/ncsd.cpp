@@ -17,7 +17,7 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
         return std::nullopt;
     }
 
-    if (magic[0] != 'N' || magic[1] != 'C' || magic[2] != 'S' || magic[3] != 'D') {
+    if (*(u32*)&magic[0] != "NCSD"_u32) {
         printf("NCSD with wrong magic value\n");
         return std::nullopt;
     }

@@ -5,7 +5,7 @@
 #include "memory.hpp"
 
 bool NCCH::loadFromHeader(u8* header, IOFile& file) {
-    if (header[0x100] != 'N' || header[0x101] != 'C' || header[0x102] != 'C' || header[0x103] != 'H') {
+    if (*(u32*)&header[0x100] != "NCCH"_u32) {
         printf("Invalid header on NCCH\n");
         return false;
     }
