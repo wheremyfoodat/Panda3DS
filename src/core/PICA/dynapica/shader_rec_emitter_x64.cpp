@@ -175,7 +175,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 		}
 		
 		default:
-			Helpers::panic("[ShaderJIT]: Unimplemented source index type");
+			Helpers::panic("[ShaderJIT]: Unimplemented source index type %d", index);
 	}
 
 	if (negate) {
@@ -281,20 +281,42 @@ void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src = getBits<12, 7>(instruction);
 	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
-	u32 componentMask = operandDescriptor & 0xf;
-	Helpers::panic("Implement MOVA");
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recMOVA(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src = getBits<12, 7>(instruction);
 	const u32 idx = getBits<19, 2>(instruction);
-	const u32 dest = getBits<21, 5>(instruction);
 
+	const bool writeX = getBit<3>(operandDescriptor); // Should we write the x component of the address register?
+	const bool writeY = getBit<2>(operandDescriptor);
+
+	static_assert(sizeof(shader.addrRegister) == 2 * sizeof(s32)); // Assert that the address register is 2 s32s
+	const uintptr_t addrRegisterOffset = uintptr_t(&shader.addrRegister[0]) - uintptr_t(&shader);
+	const uintptr_t addrRegisterYOffset = addrRegisterOffset + sizeof(shader.addrRegister[0]);
+
+	// If no register is being written to then it is a nop. Probably not common but whatever
+	if (!writeX && !writeY) return;
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
-	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+
+	// Write both
+	if (writeX && writeY) {
+		cvttps2dq(scratch1, src1_xmm); // Convert all lanes of src1 with truncation
+		movsd(qword[statePointer + addrRegisterOffset], scratch1); // Write back bottom 2 to addr register x and ys
+	}
+	else if (writeX) {
+		cvttss2si(scratch1, src1_xmm); // Convert bottom lane
+		movss(dword[statePointer + addrRegisterOffset], scratch1); // Write it back
+	}
+	else if (writeY) {
+		psrldq(src1_xmm, sizeof(float)); // Shift y component to bottom lane
+		cvttss2si(scratch1, src1_xmm); // Convert bottom lane
+		movss(dword[statePointer + addrRegisterYOffset], scratch1); // Write it back to y component
+	}
 }
 
 void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
