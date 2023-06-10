@@ -269,8 +269,12 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 		if (index == 0) { // Bottom lane, no need to shift
 			movss(dword[statePointer + lane_offset], source);
 		} else { // Shift right by 32 * index, then write bottom lane
-			movaps(scratch1, source);
-			psrldq(scratch1, index * sizeof(float));
+			if (haveAVX) {
+				vpsrldq(scratch1, source, index * sizeof(float));
+			} else {
+				movaps(scratch1, source);
+				psrldq(scratch1, index * sizeof(float));
+			}
 			movss(dword[statePointer + lane_offset], scratch1);
 		}
 	} else if (haveSSE4_1) {
@@ -505,9 +509,16 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2_xmm, shader, src2, idx, operandDescriptor);
 	loadRegister<3>(src3_xmm, shader, src3, 0, operandDescriptor);
 
-	movaps(scratch1, src1_xmm);
 	// TODO: Implement safe PICA mul
-	mulps(scratch1, src2_xmm);
+	// Multiply src1 * src2
+	if (haveAVX) {
+		vmulps(scratch1, src1_xmm, src2_xmm);
+	} else {
+		movaps(scratch1, src1_xmm);
+		mulps(scratch1, src2_xmm);
+	}
+
+	// Add src3
 	addps(scratch1, src3_xmm);
 	storeRegister(scratch1, shader, dest, operandDescriptor);
 }
@@ -564,18 +575,23 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 		shr(rax, 32);     // Check top 32 bits (shr will set the zero flag properly)
 		setne(byte[statePointer + cmpRegYOffset]); // set cmp.y
 	} else {
-		movaps(scratch1, lhs_x); // Copy the left hand operands to temp registers
-		movaps(scratch2, lhs_y);
+		if (haveAVX) {
+			vcmpps(scratch1, lhs_x, rhs_x, compareFuncX); // Perform comparison for X component and store result in scratch1
+			vcmpps(scratch2, lhs_y, rhs_y, compareFuncY); // Perform comparison for Y component and store result in scratch2
+		} else {
+			movaps(scratch1, lhs_x); // Copy the left hand operands to temp registers
+			movaps(scratch2, lhs_y);
 
-		cmpps(scratch1, rhs_x, compareFuncX); // Perform the compares
-		cmpps(scratch2, rhs_y, compareFuncY);
+			cmpps(scratch1, rhs_x, compareFuncX); // Perform the compares
+			cmpps(scratch2, rhs_y, compareFuncY);
+		}
 
 		movd(eax, scratch1); // Move results to eax for X and edx for Y
-		movd(edx, scratch2);
+		movq(rdx, scratch2);
 
 		test(eax, eax);      // Write back results with setne
 		setne(byte[statePointer + cmpRegXOffset]);
-		test(edx, edx);
+		shr(rdx, 32);        // We want the y component for the second comparison. This shift will set zero flag to 0 if the comparison is true
 		setne(byte[statePointer + cmpRegYOffset]);
 	}
 }
