@@ -8,8 +8,7 @@
 
 using namespace Xbyak;
 using namespace Xbyak::util;
-using Helpers::getBit;
-using Helpers::getBits;
+using namespace Helpers;
 
 // Register that points to PICA state
 static constexpr Reg64 statePointer = rbp;
@@ -59,8 +58,8 @@ void ShaderEmitter::scanForCalls(const PICAShader& shaderUnit) {
 	for (u32 i = 0; i < PICAShader::maxInstructionCount; i++) {
 		const u32 instruction = shaderUnit.loadedShader[i];
 		if (isCall(instruction)) {
-			const u32 num = instruction & 0xff; // Num of instructions to execute
-			const u32 dest = (instruction >> 10) & 0xfff; // Starting subroutine address
+			const u32 num = instruction & 0xff;
+			const u32 dest = getBits<10, 12>(instruction);
 			const u32 returnPC = num + dest; // Add them to get the return PC
 
 			returnPCs.push_back(returnPC);
@@ -147,16 +146,16 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	bool negate;     // If true, negate all lanes of the register
 
 	if constexpr (sourceIndex == 1) { // SRC1
-		negate = ((operandDescriptor >> 4) & 1) != 0;
-		compSwizzle = (operandDescriptor >> 5) & 0xff;
+		negate = (getBit<4>(operandDescriptor)) != 0;
+		compSwizzle = getBits<5, 8>(operandDescriptor);
 	}
 	else if constexpr (sourceIndex == 2) { // SRC2
-		negate = ((operandDescriptor >> 13) & 1) != 0;
-		compSwizzle = (operandDescriptor >> 14) & 0xff;
+		negate = (getBit<13>(operandDescriptor)) != 0;
+		compSwizzle = getBits<14, 8>(operandDescriptor);
 	}
 	else if constexpr (sourceIndex == 3) { // SRC3
-		negate = ((operandDescriptor >> 22) & 1) != 0;
-		compSwizzle = (operandDescriptor >> 23) & 0xff;
+		negate = (getBit<22>(operandDescriptor)) != 0;
+		compSwizzle = getBits<23, 8>(operandDescriptor);
 	}
 
 	// PICA has the swizzle descriptor inverted in comparison to x86. For the PICA, the descriptor is (lowest to highest bits) wzyx while it's xyzw for x86
@@ -230,36 +229,36 @@ void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) 
 	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister) - uintptr_t(&shader);
 	const size_t cmpRegYOffset = cmpRegXOffset + sizeof(bool);
 
-	const u32 condition = (instruction >> 22) & 3;
-	const uint refY = (instruction >> 24) & 1;
-	const uint refX = (instruction >> 25) & 1;
+	const u32 condition = getBits<22, 2>(instruction);
+	const uint refY = getBit<24>(instruction);
+	const uint refX = getBit<25>(instruction);
 
 	// refX in the bottom byte, refY in the top byte. This is done for condition codes 0 and 1 which check both x and y, so we can emit a single instruction that checks both
 	const u16 refX_refY_merged = refX | (refY << 8);
 
 	switch (condition) {
-	case 0: // Either cmp register matches 
-		// Z flag is 0 if at least 1 of them is set
-		test(word[statePointer + cmpRegXOffset], refX_refY_merged);
+		case 0: // Either cmp register matches 
+			// Z flag is 0 if at least 1 of them is set
+			test(word[statePointer + cmpRegXOffset], refX_refY_merged);
 
-		// Invert z flag
-		setz(al);
-		test(al, al);
-		break;
-	case 1: // Both cmp registers match
-		cmp(word[statePointer + cmpRegXOffset], refX_refY_merged);
-		break;
-	case 2: // At least cmp.x matches
-		cmp(byte[statePointer + cmpRegXOffset], refX);
-		break;
-	default: // At least cmp.y matches
-		cmp(byte[statePointer + cmpRegYOffset], refY);
-		break;
+			// Invert z flag
+			setz(al);
+			test(al, al);
+			break;
+		case 1: // Both cmp registers match
+			cmp(word[statePointer + cmpRegXOffset], refX_refY_merged);
+			break;
+		case 2: // At least cmp.x matches
+			cmp(byte[statePointer + cmpRegXOffset], refX);
+			break;
+		default: // At least cmp.y matches
+			cmp(byte[statePointer + cmpRegYOffset], refY);
+			break;
 	}
 }
 
 void ShaderEmitter::checkBoolUniform(const PICAShader& shader, u32 instruction) {
-	const u32 bit = (instruction >> 22) & 0xf; // Bit of the bool uniform to check
+	const u32 bit = getBits<22, 4>(instruction); // Bit of the bool uniform to check
 	const uintptr_t boolUniformOffset = uintptr_t(&shader.boolUniform) - uintptr_t(&shader);
 
 	test(word[statePointer + boolUniformOffset], 1 << bit);
@@ -279,9 +278,9 @@ void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src = (instruction >> 12) & 0x7f;
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
@@ -289,10 +288,10 @@ void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src1 = (instruction >> 12) & 0x7f;
-	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
@@ -302,10 +301,10 @@ void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src1 = (instruction >> 12) & 0x7f;
-	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
@@ -316,10 +315,10 @@ void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src1 = (instruction >> 12) & 0x7f;
-	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
@@ -330,10 +329,10 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src1 = (instruction >> 12) & 0x7f;
-	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
@@ -343,10 +342,10 @@ void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src1 = (instruction >> 12) & 0x7f;
-	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
@@ -357,9 +356,9 @@ void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recRCP(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src = (instruction >> 12) & 0x7f;
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = operandDescriptor & 0xf;
 
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
@@ -376,9 +375,9 @@ void ShaderEmitter::recRCP(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	u32 src = (instruction >> 12) & 0x7f;
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 dest = (instruction >> 21) & 0x1f;
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = operandDescriptor & 0xf;
 
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
@@ -395,11 +394,11 @@ void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
-	const u32 src1 = (instruction >> 17) & 0x1f;
-	u32 src2 = (instruction >> 10) & 0x7f;
-	const u32 src3 = (instruction >> 5) & 0x1f;
-	const u32 idx = (instruction >> 22) & 3;
-	const u32 dest = (instruction >> 24) & 0x1f;
+	const u32 src1 = getBits<17, 5>(instruction);
+	const u32 src2 = getBits<10, 7>(instruction);
+	const u32 src3 = getBits<5, 5>(instruction);
+	const u32 idx = getBits<22, 2>(instruction);
+	const u32 dest = getBits<24, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src1, 0, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, idx, operandDescriptor);
@@ -414,11 +413,11 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	const u32 src1 = (instruction >> 12) & 0x7f;
-	const u32 src2 = (instruction >> 7) & 0x1f; // src2 coming first because PICA moment
-	const u32 idx = (instruction >> 19) & 3;
-	const u32 cmpY = (instruction >> 21) & 7;
-	const u32 cmpX = (instruction >> 24) & 7;
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 cmpY = getBits<21, 3>(instruction);
+	const u32 cmpX = getBits<24, 3>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
@@ -482,8 +481,8 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 void ShaderEmitter::recIFC(const PICAShader& shader, u32 instruction) {
 	// z is 1 if true, else 0
 	checkCmpRegister(shader, instruction);
-	const u32 dest = (instruction >> 10) & 0xfff;
 	const u32 num = instruction & 0xff;
+	const u32 dest = getBits<10, 12>(instruction);
 
 	if (dest < recompilerPC) {
 		Helpers::warn("Shader JIT: IFC instruction with dest < current PC\n");
@@ -507,8 +506,8 @@ void ShaderEmitter::recIFC(const PICAShader& shader, u32 instruction) {
 void ShaderEmitter::recIFU(const PICAShader& shader, u32 instruction) {
 	// z is 0 if true, else 1
 	checkBoolUniform(shader, instruction);
-	const u32 dest = (instruction >> 10) & 0xfff;
 	const u32 num = instruction & 0xff;
+	const u32 dest = getBits<10, 12>(instruction);
 
 	if (dest < recompilerPC) {
 		Helpers::warn("Shader JIT: IFC instruction with dest < current PC\n");
@@ -531,8 +530,8 @@ void ShaderEmitter::recIFU(const PICAShader& shader, u32 instruction) {
 }
 
 void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
-	const u32 dest = (instruction >> 10) & 0xfff;
 	const u32 num = instruction & 0xff;
+	const u32 dest = getBits<10, 12>(instruction);
 
 	// Push return PC as stack parameter. This is a decently fast solution and Citra does the same but we should probably switch to a proper PICA-like
 	// Callstack, because it's not great to have an infinitely expanding call stack where popping from empty stack is undefined as hell
