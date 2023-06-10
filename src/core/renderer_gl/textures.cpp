@@ -2,6 +2,8 @@
 #include "colour.hpp"
 #include <array>
 
+using namespace Helpers;
+
 void Texture::allocate() {
     glGenTextures(1, &texture.m_handle);
     texture.create(size.u(), size.v(), GL_RGBA8);
@@ -21,8 +23,8 @@ void Texture::setNewConfig(u32 cfg) {
 
     const auto magFilter = (cfg & 0x2) != 0 ? OpenGL::Linear : OpenGL::Nearest;
     const auto minFilter = (cfg & 0x4) != 0 ? OpenGL::Linear : OpenGL::Nearest;
-    const auto wrapT = wrappingModes[(cfg >> 8) & 0x7];
-    const auto wrapS = wrappingModes[(cfg >> 12) & 0x7];
+    const auto wrapT = wrappingModes[getBits<8, 3>(cfg)];
+    const auto wrapS = wrappingModes[getBits<12, 3>(cfg)];
 
     texture.setMinFilter(minFilter);
     texture.setMagFilter(magFilter);
@@ -116,10 +118,10 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
 
-            u8 alpha = Colour::convert4To8Bit(texel & 0xf);
-            u8 b = Colour::convert4To8Bit((texel >> 4) & 0xf);
-            u8 g = Colour::convert4To8Bit((texel >> 8) & 0xf);
-            u8 r = Colour::convert4To8Bit((texel >> 12) & 0xf);
+            u8 alpha = Colour::convert4To8Bit(getBits<0, 4>(texel));
+            u8 b = Colour::convert4To8Bit(getBits<4, 4>(texel));
+            u8 g = Colour::convert4To8Bit(getBits<8, 4>(texel));
+            u8 r = Colour::convert4To8Bit(getBits<12, 4>(texel));
 
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
@@ -129,10 +131,10 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
 
-            u8 alpha = (texel & 1) ? 0xff : 0;
-            u8 b = Colour::convert5To8Bit((texel >> 1) & 0x1f);
-            u8 g = Colour::convert5To8Bit((texel >> 6) & 0x1f);
-            u8 r = Colour::convert5To8Bit((texel >> 11) & 0x1f);
+            u8 alpha = getBit<0>(texel) ? 0xff : 0;
+            u8 b = Colour::convert5To8Bit(getBits<1, 5>(texel));
+            u8 g = Colour::convert5To8Bit(getBits<6, 5>(texel));
+            u8 r = Colour::convert5To8Bit(getBits<11, 5>(texel));
 
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
@@ -142,9 +144,9 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
 
-            u8 b = Colour::convert5To8Bit(texel & 0x1f);
-            u8 g = Colour::convert6To8Bit((texel >> 5) & 0x3f);
-            u8 r = Colour::convert5To8Bit((texel >> 11) & 0x1f);
+            u8 b = Colour::convert5To8Bit(getBits<0, 5>(texel));
+            u8 g = Colour::convert6To8Bit(getBits<5, 6>(texel));
+            u8 r = Colour::convert5To8Bit(getBits<11, 5>(texel));
 
             return (0xff << 24) | (b << 16) | (g << 8) | r;
         }
@@ -201,7 +203,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
 
             // For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
             u8 alpha = ptr[offset] >> ((u % 2) ? 4 : 0);
-            alpha = Colour::convert4To8Bit(alpha & 0xf);
+            alpha = Colour::convert4To8Bit(getBits<0, 4>(alpha));
 
             // A8 sets RGB to 0
             return (alpha << 24) | (0 << 16) | (0 << 8) | 0;
@@ -222,7 +224,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
 
             // For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
             u8 intensity = ptr[offset] >> ((u % 2) ? 4 : 0);
-            intensity = Colour::convert4To8Bit(intensity & 0xf);
+            intensity = Colour::convert4To8Bit(getBits<0, 4>(intensity));
 
             // Intensity formats just copy the intensity value to every colour channel
             return (0xff << 24) | (intensity << 16) | (intensity << 8) | intensity;

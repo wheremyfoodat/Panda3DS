@@ -2,6 +2,7 @@
 #include "PICA/regs.hpp"
 
 using namespace Floats;
+using namespace Helpers;
 
 u32 GPU::readReg(u32 address) {
 	if (address >= 0x1EF01000 && address < 0x1EF01C00) { // Internal registers
@@ -56,7 +57,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 		case AttribFormatHigh:
 			totalAttribCount = (value >> 28) + 1; // Total number of vertex attributes
-			fixedAttribMask = (value >> 16) & 0xfff; // Determines which vertex attributes are fixed for all vertices
+			fixedAttribMask = getBits<16, 12>(value); // Determines which vertex attributes are fixed for all vertices
 			break;
 
 		case ColourBufferLoc: {
@@ -66,7 +67,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		};
 
 		case ColourBufferFormat: {
-			u32 format = (value >> 16) & 7;
+			u32 format = getBits<16, 3>(value);
 			renderer.setColourFormat(format);
 			break;
 		}
@@ -85,7 +86,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 		case FramebufferSize: {
 			const u32 width = value & 0x7ff;
-			const u32 height = ((value >> 12) & 0x3ff) + 1;
+			const u32 height = getBits<12, 10>(value) + 1;
 			renderer.setFBSize(width, height);
 			break;
 		}
@@ -151,7 +152,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 						// Get primitive type
 						const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
-						const u32 primType = (primConfig >> 8) & 3;
+						const u32 primType = getBits<8, 2>(primConfig);
 
 						// If we've reached 3 verts, issue a draw call
 						// Handle rendering depending on the primitive type
@@ -253,7 +254,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						break;
 					case 2:
 						attr.config2 = value;
-						attr.size = (value >> 16) & 0xff;
+						attr.size = getBits<16, 8>(value);
 						attr.componentCount = value >> 28;
 						break;
 				}
@@ -295,8 +296,8 @@ void GPU::startCommandList(u32 addr, u32 size) {
 		u32 header = *cmdBuffCurr++;
 
 		u32 id = header & 0xffff;
-		u32 paramMaskIndex = (header >> 16) & 0xf;
-		u32 paramCount = (header >> 20) & 0xff; // Number of additional parameters
+		u32 paramMaskIndex = getBits<16, 4>(header);
+		u32 paramCount = getBits<20, 8>(header); // Number of additional parameters
 		// Bit 31 tells us whether this command is going to write to multiple sequential registers (if the bit is 1)
 		// Or if all written values will go to the same register (If the bit is 0). It's essentially the value that
 		// gets added to the "id" field after each register write
