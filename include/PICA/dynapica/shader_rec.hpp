@@ -36,7 +36,11 @@ public:
 	static constexpr bool isAvailable() { return true; }
 #else
 	void prepare(PICAShader& shaderUnit) {
-		Helpers::panic("Vertex Loader JIT: Tried to load vertices with JIT on platform that does not support vertex loader jit");
+		Helpers::panic("Vertex Loader JIT: Tried to run ShaderJIT::Prepare on platform that does not support shader jit");
+	}
+
+	void run(PICAShader& shaderUnit) {
+		Helpers::panic("Vertex Loader JIT: Tried to run ShaderJIT::Run on platform that does not support shader jit");
 	}
 
 	// Define dummy callback. This should never be called if the shader JIT is not supported
