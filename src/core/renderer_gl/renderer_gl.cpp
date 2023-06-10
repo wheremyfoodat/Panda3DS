@@ -4,6 +4,7 @@
 #include "PICA/regs.hpp"
 
 using namespace Floats;
+using namespace Helpers;
 
 // This is all hacked up to display our first triangle
 
@@ -243,19 +244,19 @@ void Renderer::setupBlending() {
 		// Get blending equations
 		const u32 blendControl = regs[PICAInternalRegs::BlendFunc];
 		const u32 rgbEquation = blendControl & 0x7;
-		const u32 alphaEquation = (blendControl >> 8) & 0x7;
+		const u32 alphaEquation = getBits<8, 3>(blendControl);
 
 		// Get blending functions
-		const u32 rgbSourceFunc = (blendControl >> 16) & 0xf;
-		const u32 rgbDestFunc = (blendControl >> 20) & 0xf;
-		const u32 alphaSourceFunc = (blendControl >> 24) & 0xf;
-		const u32 alphaDestFunc = (blendControl >> 28) & 0xf;
+		const u32 rgbSourceFunc = getBits<16, 4>(blendControl);
+		const u32 rgbDestFunc = getBits<20, 4>(blendControl);
+		const u32 alphaSourceFunc = getBits<24, 4>(blendControl);
+		const u32 alphaDestFunc = getBits<28, 4>(blendControl);
 
 		const u32 constantColor = regs[PICAInternalRegs::BlendColour];
 		const u32 r = constantColor & 0xff;
-		const u32 g = (constantColor >> 8) & 0xff;
-		const u32 b = (constantColor >> 16) & 0xff;
-		const u32 a = (constantColor >> 24) & 0xff;
+		const u32 g = getBits<8, 8>(constantColor);
+		const u32 b = getBits<16, 8>(constantColor);
+		const u32 a = getBits<24, 8>(constantColor);
 		OpenGL::setBlendColor(float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, float(a) / 255.f);
 
 		// Translate equations and funcs to their GL equivalents and set them
@@ -278,9 +279,9 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 
 	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
 	const bool depthEnable = depthControl & 1;
-	const bool depthWriteEnable = (depthControl >> 12) & 1;
-	const int depthFunc = (depthControl >> 4) & 7;
-	const int colourMask = (depthControl >> 8) & 0xf;
+	const bool depthWriteEnable = getBit<12>(depthControl);
+	const int depthFunc = getBits<4, 3>(depthControl);
+	const int colourMask = getBits<8, 4>(depthControl);
 	glColorMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
 
 	static constexpr std::array<GLenum, 8> depthModes = {
@@ -312,7 +313,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		const u32 dim = regs[0x82];
 		const u32 config = regs[0x83];
 		const u32 height = dim & 0x7ff;
-		const u32 width = (dim >> 16) & 0x7ff;
+		const u32 width = getBits<16, 11>(dim);
 		const u32 addr = (regs[0x85] & 0x0FFFFFFF) << 3;
 		const u32 format = regs[0x8E] & 0xF;
 
@@ -379,9 +380,9 @@ void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 cont
 	return;
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
 
-	const float r = float((value >> 24) & 0xff) / 255.0;
-	const float g = float((value >> 16) & 0xff) / 255.0;
-	const float b = float((value >> 8) & 0xff) / 255.0;
+	const float r = float(getBits<24, 8>(value)) / 255.0;
+	const float g = float(getBits<16, 8>(value)) / 255.0;
+	const float b = float(getBits<8, 8>(value)) / 255.0;
 	const float a = float(value & 0xff) / 255.0;
 
 	if (startAddress == topScreenBuffer) {
