@@ -557,10 +557,11 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	// Cmp x and y are the same compare function, we can use a single cmp instruction
 	if (cmpX == cmpY) {
 		cmpps(lhs_x, rhs_x, compareFuncX);
-		movd(eax, lhs_x);
-		test(eax, eax);
+		movq(rax, lhs_x); // Move both comparison results to rax
+		test(eax, eax);   // Check bottom 32 bits first
+		setne(byte[statePointer + cmpRegXOffset]); // set cmp.x
 
-		setne(byte[statePointer + cmpRegXOffset]);
+		shr(rax, 32);     // Check top 32 bits (shr will set the zero flag properly)
 		setne(byte[statePointer + cmpRegYOffset]);
 	} else {
 		movaps(scratch1, lhs_x); // Copy the left hand operands to temp registers
