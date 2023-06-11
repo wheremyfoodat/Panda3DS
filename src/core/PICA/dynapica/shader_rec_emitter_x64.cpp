@@ -5,6 +5,8 @@
 #include <bit>
 #include <cassert>
 #include <cstddef>
+#include <immintrin.h>
+#include <smmintrin.h>
 
 using namespace Xbyak;
 using namespace Xbyak::util;
@@ -115,12 +117,16 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::CALLC:
 			recCALLC(shaderUnit, instruction);
 			break;
+		case ShaderOpcodes::CALLU:
+			recCALLU(shaderUnit, instruction);
+			break;
 		case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2:
 			recCMP(shaderUnit, instruction);
 			break;
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
+		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
 		case ShaderOpcodes::JMPC: recJMPC(shaderUnit, instruction); break;
@@ -369,6 +375,23 @@ void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<21, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recFLR(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	if (haveSSE4_1) {
+		roundps(src1_xmm, src1_xmm, _MM_FROUND_FLOOR);
+	} else {
+		cvttps2dq(src1_xmm, src1_xmm); // Truncate and convert to integer
+		cvtdq2ps(src1_xmm, src1_xmm);  // Convert from integer back to float
+	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -697,6 +720,17 @@ void ShaderEmitter::recCALLC(const PICAShader& shader, u32 instruction) {
 	// z is 1 if the call should be taken, 0 otherwise
 	checkCmpRegister(shader, instruction);
 	jnz(skipCall);
+	recCALL(shader, instruction);
+
+	L(skipCall);
+}
+
+void ShaderEmitter::recCALLU(const PICAShader& shader, u32 instruction) {
+	Label skipCall;
+
+	// z is 0 if the call should be taken, 1 otherwise
+	checkBoolUniform(shader, instruction);
+	jz(skipCall);
 	recCALL(shader, instruction);
 
 	L(skipCall);
