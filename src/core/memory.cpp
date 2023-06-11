@@ -143,7 +143,15 @@ void Memory::write8(u32 vaddr, u8 value) {
 		*(u8*)(pointer + offset) = value;
 	}
 	else {
-		Helpers::panic("Unimplemented 8-bit write, addr: %08X, val: %02X", vaddr, value);
+		// VRAM write
+		if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
+			// TODO: Invalidate renderer caches here
+			vram[vaddr - VirtualAddrs::VramStart] = value;
+		} 
+
+		else {
+			Helpers::panic("Unimplemented 8-bit write, addr: %08X, val: %02X", vaddr, value);
+		}
 	}
 }
 
