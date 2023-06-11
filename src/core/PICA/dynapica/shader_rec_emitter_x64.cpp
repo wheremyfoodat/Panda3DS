@@ -117,6 +117,7 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOVA: recMOVA(shaderUnit, instruction); break;
 		case ShaderOpcodes::MAX: recMAX(shaderUnit, instruction); break;
+		case ShaderOpcodes::MIN: recMIN(shaderUnit, instruction); break;
 		case ShaderOpcodes::MUL: recMUL(shaderUnit, instruction); break;
 		case ShaderOpcodes::NOP: break;
 		case ShaderOpcodes::RCP: recRCP(shaderUnit, instruction); break;
@@ -442,6 +443,19 @@ void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
 	maxps(src1_xmm, src2_xmm);
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recMIN(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+	minps(src1_xmm, src2_xmm);
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
