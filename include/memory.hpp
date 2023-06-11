@@ -95,6 +95,7 @@ namespace KernelMemoryTypes {
 class Memory {
 	u8* fcram;
 	u8* dspRam;
+	u8* vram;  // Provided to the memory class by the GPU class
 
 	u64& cpuTicks; // Reference to the CPU tick counter
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
@@ -237,6 +238,7 @@ public:
 	u8* getDSPMem() { return dspRam; }
 	u8* getDSPDataMem() { return &dspRam[DSP_DATA_MEMORY_OFFSET]; }
 	u8* getDSPCodeMem() { return &dspRam[DSP_CODE_MEMORY_OFFSET]; }
-
 	u32 getUsedUserMem() { return usedUserMemory; }
+
+	void setVRAM(u8* pointer) { vram = pointer; }
 };
