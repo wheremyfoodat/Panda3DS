@@ -95,7 +95,7 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	// See if PC is a possible return PC and emit the proper code if so
 	if (std::binary_search(returnPCs.begin(), returnPCs.end(), recompilerPC)) {
 		const auto stackOffsetForPC = getStackOffsetOfReturnPC();
-		
+
 		Label end;
 		// Check if return address == recompilerPC, ie if we should return
 		cmp(dword[rsp + stackOffsetForPC], recompilerPC);
@@ -219,6 +219,12 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 		case 2: {
 			const uintptr_t addrYOffset = uintptr_t(&shader.addrRegister[1]) - uintptr_t(&shader);
 			movsxd(rax, dword[statePointer + addrYOffset]); // rax = address register y
+			break;
+		}
+
+		case 3: {
+			const uintptr_t loopCounterOffset = uintptr_t(&shader.loopCounter) - uintptr_t(&shader);
+			mov(eax, dword[statePointer + loopCounterOffset]); // rax = loop counter
 			break;
 		}
 		
