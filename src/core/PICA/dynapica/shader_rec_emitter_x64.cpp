@@ -51,6 +51,7 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	// Compile every instruction in the shader
 	// This sounds horrible but the PICA instruction memory is tiny, and most of the time it's padded wtih nops that compile to nothing
 	recompilerPC = 0;
+	loopLevel = 0;
 	compileUntil(shaderUnit, PICAShader::maxInstructionCount);
 }
 
@@ -78,15 +79,20 @@ void ShaderEmitter::compileUntil(const PICAShader& shaderUnit, u32 end) {
 	}
 }
 
+// This is the offset we need to add to rsp to peek the next return address in the callstack
+// Ie the PICA PC address which, when reached, will trigger a return
+size_t ShaderEmitter::getStackOffsetOfReturnPC() {
+	size_t ret = isWindows() ? (8 + 32) : 8; // Offset assuming 0 loop level
+	return ret;
+}
+
 void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	// Write current location to label for this instruction
 	L(instructionLabels[recompilerPC]);
 
 	// See if PC is a possible return PC and emit the proper code if so
 	if (std::binary_search(returnPCs.begin(), returnPCs.end(), recompilerPC)) {
-		// This is the offset we need to add to rsp to peek the next return address in the callstack
-		// Ie the PICA PC address which, when reached, will trigger a return
-		const auto stackOffsetForPC = isWindows() ? (8 + 32) : 8;
+		const auto stackOffsetForPC = getStackOffsetOfReturnPC();
 		
 		Label end;
 		// Check if return address == recompilerPC, ie if we should return
@@ -106,6 +112,9 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::CALL:
 			recCALL(shaderUnit, instruction);
 			break;
+		case ShaderOpcodes::CALLC:
+			recCALLC(shaderUnit, instruction);
+			break;
 		case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2:
 			recCMP(shaderUnit, instruction);
 			break;
@@ -114,6 +123,9 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
+		case ShaderOpcodes::JMPC: recJMPC(shaderUnit, instruction); break;
+		case ShaderOpcodes::JMPU: recJMPU(shaderUnit, instruction); break;
+		case ShaderOpcodes::LOOP: recLOOP(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOVA: recMOVA(shaderUnit, instruction); break;
 		case ShaderOpcodes::MAX: recMAX(shaderUnit, instruction); break;
@@ -677,6 +689,89 @@ void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
 
 	// Fix up stack after returning. The 8 from before becomes a 16 because we're also skipping the qword we pushed
 	add(rsp, isWindows() ? (8 + 32) : 8);
+}
+
+void ShaderEmitter::recCALLC(const PICAShader& shader, u32 instruction) {
+	Label skipCall;
+
+	// z is 1 if the call should be taken, 0 otherwise
+	checkCmpRegister(shader, instruction);
+	jnz(skipCall);
+	recCALL(shader, instruction);
+
+	L(skipCall);
+}
+
+void ShaderEmitter::recJMPC(const PICAShader& shader, u32 instruction) {
+	const u32 dest = getBits<10, 12>(instruction);
+
+	Label& l = instructionLabels[dest];
+	// Z is 1 if the comparison is true
+	checkCmpRegister(shader, instruction);
+	jz(l, T_NEAR);
+}
+
+void ShaderEmitter::recJMPU(const PICAShader& shader, u32 instruction) {
+	bool jumpIfFalse = instruction & 1; // If the LSB is 0 we want to compare to true, otherwise compare to false
+	const u32 dest = getBits<10, 12>(instruction);
+
+	Label& l = instructionLabels[dest];
+	// Z is 0 if the uniform is true
+	checkBoolUniform(shader, instruction);
+
+	if (jumpIfFalse) {
+		jz(l, T_NEAR);
+	} else {
+		jnz(l, T_NEAR);
+	}
+}
+
+void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
+	const u32 dest = getBits<10, 12>(instruction);
+	const u32 uniformIndex = getBits<22, 2>(instruction);
+
+	if (loopLevel > 0) {
+		log("[Shader JIT] Detected nested loop. Might be broken?\n");
+	}
+
+	if (dest < recompilerPC) {
+		Helpers::panic("[Shader JIT] Detected backwards loop\n");
+	}
+
+	loopLevel++;
+
+	// Offset of the uniform
+	const uintptr_t uniformOffset = uintptr_t(&shader.intUniforms[uniformIndex]) - uintptr_t(&shader);
+	// Offset of the loop register
+	const uintptr_t loopRegOffset = uintptr_t(&shader.loopCounter) - uintptr_t(&shader);
+
+	movzx(eax, byte[statePointer + uniformOffset]); // eax = loop iteration count
+	movzx(ecx, byte[statePointer + uniformOffset + sizeof(u8)]); // ecx = initial loop counter value
+	movzx(edx, byte[statePointer + uniformOffset + 2 * sizeof(u8)]); // edx = loop increment
+
+	add(eax, 1); // The iteration count is actually uniform.x + 1
+	mov(dword[statePointer + loopRegOffset], ecx); // Set loop counter
+	
+	// TODO: This might break if an instruction in a loop decides to yield...
+	push(rax); // Push loop iteration counter
+	push(rdx); // Push loop increment
+	if constexpr (isWindows())
+		sub(rsp, 32);
+
+	Label loopStart;
+	L(loopStart);
+	compileUntil(shader, dest + 1);
+
+	const size_t stackOffsetOfLoopIncrement = isWindows() ? 32 : 0;
+	const size_t stackOffsetOfIterationCounter = stackOffsetOfLoopIncrement + 8;
+
+	mov(ecx, dword[rsp + stackOffsetOfLoopIncrement]); // ecx = Loop increment
+	add(dword[statePointer + loopRegOffset], ecx);     // Increment loop counter
+	sub(dword[rsp + stackOffsetOfIterationCounter], 1); // Subtract 1 from loop iteration counter
+
+	jnz(loopStart); // Back to loop start if not over
+	add(rsp, isWindows() ? (16 + 32) : 16);
+	loopLevel--;
 }
 
 #endif

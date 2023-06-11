@@ -3,6 +3,7 @@
 // Only do anything if we're on an x64 target with JIT support enabled
 #if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
 #include "helpers.hpp"
+#include "logger.hpp"
 #include "PICA/shader.hpp"
 #include "xbyak/xbyak.h"
 #include "xbyak/xbyak_util.h"
@@ -31,6 +32,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	Label negateVector;
 
 	u32 recompilerPC = 0; // PC the recompiler is currently recompiling @
+	u32 loopLevel = 0;    // The current loop nesting level (0 = not in a loop)
+
 	bool haveSSE4_1 = false;  // Shows if the CPU supports SSE4.1
 	bool haveAVX = false;     // Shows if the CPU supports AVX (NOT AVX2, NOT AVX512. Regular AVX)
 
@@ -38,6 +41,9 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void compileUntil(const PICAShader& shaderUnit, u32 endPC);
 	// Compile instruction "instr"
 	void compileInstruction(const PICAShader& shaderUnit);
+
+	// Get the offset to be added to the rsp register to get the current return address
+	size_t getStackOffsetOfReturnPC();
 
 	bool isCall(u32 instruction) {
 		const u32 opcode = instruction >> 26;
@@ -90,6 +96,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void recSGEI(const PICAShader& shader, u32 instruction);
 	void recSLT(const PICAShader& shader, u32 instruction);
 	void recSLTI(const PICAShader& shader, u32 instruction);
+
+	MAKE_LOG_FUNCTION(log, shaderJITLogger)
 
 public:
 	using InstructionCallback = const void(*)(PICAShader& shaderUnit); // Callback type used for instructions
