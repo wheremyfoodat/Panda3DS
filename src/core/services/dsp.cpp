@@ -140,7 +140,7 @@ std::vector<u8> DSPService::readPipe(u32 pipe, u32 size) {
 	}
 
 	if (pipe != DSPPipeType::Audio) {
-		Helpers::warn("Reading from non-audio pipe! This might be broken, might need to check what pipe is being read from and implement writing to it\n");
+		log("Reading from non-audio pipe! This might be broken, might need to check what pipe is being read from and implement writing to it\n");
 	}
 
 	std::vector<u8>& data = pipeData[pipe];
@@ -321,6 +321,10 @@ void DSPService::writeProcessPipe(u32 messagePointer) {
 			}
 			break;
 		}
+
+		case DSPPipeType::Binary:
+			Helpers::warn("Unimplemented write to binary pipe! Size: %d\n", size);
+			break;
 
 		default:
 			log("DSP: Wrote to unimplemented pipe %d\n", channel);
