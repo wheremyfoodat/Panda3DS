@@ -7,6 +7,7 @@ using namespace Floats;
 
 GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
 	vram = new u8[vramSize];
+	mem.setVRAM(vram); // Give the bus a pointer to our VRAM
 }
 
 void GPU::reset() {
@@ -256,7 +257,6 @@ void GPU::fireDMA(u32 dest, u32 source, u32 size) {
 		std::memcpy(&vram[dest - vramStart], &fcram[source - fcramStart], size);
 	} else {
 		printf("Non-trivially optimizable GPU DMA. Falling back to byte-by-byte transfer");
-		std::memcpy(&vram[dest - vramStart], mem.getReadPointer(source), size);
 
 		for (u32 i = 0; i < size; i++) {
 			mem.write8(dest + i, mem.read8(source + i));
