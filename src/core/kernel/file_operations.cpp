@@ -25,6 +25,7 @@ void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 	const u32 cmd = mem.read32(messagePointer);
 	switch (cmd) {
 		case FileOps::Close: closeFile(messagePointer, file); break;
+		case FileOps::Flush: flushFile(messagePointer, file); break;
 		case FileOps::GetSize: getFileSize(messagePointer, file); break;
 		case FileOps::OpenLinkFile: openLinkFile(messagePointer, file); break;
 		case FileOps::Read: readFile(messagePointer, file); break;
