@@ -10,6 +10,7 @@ namespace APTCommands {
 		InquireNotification = 0x000B0040,
 		ReceiveParameter = 0x000D0080,
 		GlanceParameter = 0x000E0080,
+		PreloadLibraryApplet = 0x00160040,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		GetSharedFont = 0x00440000,
@@ -80,6 +81,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::GetWirelessRebootInfo: getWirelessRebootInfo(messagePointer); break;
 		case APTCommands::GlanceParameter: glanceParameter(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
+		case APTCommands::PreloadLibraryApplet: preloadLibraryApplet(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
@@ -95,9 +97,17 @@ void APTService::appletUtility(u32 messagePointer) {
 	u32 outputSize = mem.read32(messagePointer + 12);
 	u32 inputPointer = mem.read32(messagePointer + 20);
 
-	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X)\n", utility, inputSize,
+	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X) (Stubbed)\n", utility, inputSize,
 		outputSize, inputPointer);
 	mem.write32(messagePointer, IPC::responseHeader(0x4B, 2, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::preloadLibraryApplet(u32 messagePointer) {
+	const u32 appID = mem.read32(messagePointer + 4);
+	log("APT::PreloadLibraryApplet (app ID = %d) (stubbed)\n", appID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
