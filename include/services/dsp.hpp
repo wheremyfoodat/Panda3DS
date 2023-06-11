@@ -5,46 +5,6 @@
 #include "logger.hpp"
 #include "memory.hpp"
 
-// Stub for DSP audio pipe
-class DSPPipe {
-	// Hardcoded responses for now
-	// These are DSP DRAM offsets for various variables
-	// https://www.3dbrew.org/wiki/DSP_Memory_Region
-	static constexpr std::array<u16, 16> pipeData = {
-		0x000F, // Number of responses
-		0xBFFF, // Frame counter
-		0x9E92, // Source configs
-		0x8680, // Source statuses
-		0xA792, // ADPCM coefficients
-		0x9430, // DSP configs
-		0x8400, // DSP status
-		0x8540, // Final samples
-		0x9492, // Intermediate mix samples
-		0x8710, // Compressor
-		0x8410, // Debug
-		0xA912, // ??
-		0xAA12, // ??
-		0xAAD2, // ??
-		0xAC52, // Surround sound biquad filter 1
-		0xAC5C  // Surround sound biquad filter 2
-	};
-	uint index = 0;
-
-public:
-	void reset() {
-		index = 0;
-	}
-
-	// Read without checking if the pipe has overflowed
-	u16 readUnchecked() {
-		return pipeData[index++];
-	}
-
-	bool empty() {
-		return index >= pipeData.size();
-	}
-};
-
 namespace DSPPipeType {
 	enum : u32 {
 		Debug = 0, DMA = 1, Audio = 2, Binary = 3
@@ -66,7 +26,6 @@ class DSPService {
 
 	// Number of DSP pipes
 	static constexpr size_t pipeCount = 8;
-	DSPPipe audioPipe;
 	DSPState dspState;
 
 	// DSP service event handles
@@ -76,6 +35,10 @@ class DSPService {
 	DSPEvent interrupt0;
 	DSPEvent interrupt1;
 	std::array<DSPEvent, pipeCount> pipeEvents;
+	std::array<std::vector<u8>, pipeCount> pipeData; // The data of each pipe
+
+	void resetAudioPipe();
+	std::vector<u8> readPipe(u32 pipe, u32 size);
 
 	DSPEvent& getEventRef(u32 type, u32 pipe);
 	static constexpr size_t maxEventCount = 6;
