@@ -5,9 +5,6 @@
 namespace fs = std::filesystem;
 
 FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
-	if (size == 0)
-		Helpers::panic("SaveData file does not support size == 0");
-
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::CreateFile");
@@ -17,10 +14,16 @@ FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 
 		if (fs::exists(p))
 			return FSResult::AlreadyExists;
-			
-		// Create a file of size "size" by creating an empty one, seeking to size - 1 and just writing a 0 there
+		
 		IOFile file(p.string().c_str(), "wb");
-		if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
+		
+		// If the size is 0, leave the file empty and return success
+		if (size == 0) {
+			return FSResult::Success;
+		}
+
+		// If it is not empty, seek to size - 1 and write a 0 to create a file of size "size"
+		else if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
 			return FSResult::Success;
 		}
 
