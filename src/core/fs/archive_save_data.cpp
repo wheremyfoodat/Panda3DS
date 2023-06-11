@@ -5,7 +5,32 @@
 namespace fs = std::filesystem;
 
 FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
-	Helpers::panic("[SaveData] CreateFile not yet supported");
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path))
+			Helpers::panic("Unsafe path in SaveData::CreateFile");
+
+		fs::path p = IOFile::getAppData() / "SaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::exists(p))
+			return FSResult::AlreadyExists;
+		
+		IOFile file(p.string().c_str(), "wb");
+		
+		// If the size is 0, leave the file empty and return success
+		if (size == 0) {
+			return FSResult::Success;
+		}
+
+		// If it is not empty, seek to size - 1 and write a 0 to create a file of size "size"
+		else if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
+			return FSResult::Success;
+		}
+
+		return FSResult::FileTooLarge;
+	}
+
+	Helpers::panic("SaveDataArchive::OpenFile: Failed");
 	return FSResult::Success;
 }
 
