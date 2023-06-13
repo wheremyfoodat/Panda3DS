@@ -25,6 +25,7 @@ void HIDService::reset() {
 	accelerometerEnabled = false;
 	eventsInitialized = false;
 	gyroEnabled = false;
+	touchScreenPressed = false;
 
 	// Deinitialize HID events
 	for (auto& e : events) {
@@ -36,6 +37,7 @@ void HIDService::reset() {
 	// Reset button states
 	newButtons = oldButtons = 0;
 	circlePadX = circlePadY = 0;
+	touchScreenX = touchScreenY = 0;
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
