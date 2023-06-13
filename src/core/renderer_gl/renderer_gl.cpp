@@ -361,6 +361,7 @@ constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 // Quick hack to display top screen for now
 void Renderer::display() {
+	OpenGL::disableBlend();
 	OpenGL::disableDepth();
 	OpenGL::disableScissor();
 
