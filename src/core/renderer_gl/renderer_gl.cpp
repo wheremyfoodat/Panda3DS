@@ -422,7 +422,6 @@ OpenGL::Framebuffer Renderer::getColourFBO() {
 	if (buffer.has_value()) {
 		return buffer.value().get().fbo;
 	} else {
-		printf("New colour buffer: %08X\n", colourBufferLoc);
 		return colourBufferCache.add(sampleBuffer).fbo;
 	}
 }
