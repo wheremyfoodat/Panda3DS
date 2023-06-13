@@ -57,6 +57,9 @@ class Renderer {
 	static constexpr u32 regNum = 0x300; // Number of internal PICA registers
 	const std::array<u32, regNum>& regs;
 
+	OpenGL::Texture screenTexture;
+	OpenGL::Framebuffer screenFramebuffer;
+
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
 

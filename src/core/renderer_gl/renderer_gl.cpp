@@ -187,8 +187,8 @@ void Renderer::initGraphicsContext() {
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
 	displayProgram.create({ vertDisplay, fragDisplay });
-	displayProgram.use();
 
+	displayProgram.use();
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
@@ -208,16 +208,33 @@ void Renderer::initGraphicsContext() {
 
 	dummyVBO.create();
 	dummyVAO.create();
+
+	// Create texture and framebuffer for the 3DS screen
+	const u32 screenTextureWidth = 2 * 400; // Top screen is 400 pixels wide, bottom is 320
+	const u32 screenTextureHeight = 2 * 240; // Both screens are 240 pixels tall
+
+	auto prevTexture = OpenGL::getTex2D();
+	screenTexture.create(screenTextureWidth, screenTextureHeight, GL_RGBA8);
+	screenTexture.bind();
+	screenTexture.setMinFilter(OpenGL::Linear);
+	screenTexture.setMagFilter(OpenGL::Linear);
+	glBindTexture(GL_TEXTURE_2D, prevTexture);
+
+	screenFramebuffer.createWithDrawTexture(screenTexture);
+	screenFramebuffer.bind(OpenGL::DrawAndReadFramebuffer);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		Helpers::panic("Incomplete framebuffer");
+
+	// TODO: This should not clear the framebuffer contents. It should load them from VRAM.
+	GLint oldViewport[4];
+	glGetIntegerv(GL_VIEWPORT, oldViewport);
+	OpenGL::setViewport(screenTextureWidth, screenTextureHeight);
+	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
+	OpenGL::clearColor();
+	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
+
 	reset();
-}
-
-void Renderer::getGraphicsContext() {
-	OpenGL::disableScissor();
-	OpenGL::setViewport(400, 240);
-
-	vbo.bind();
-	vao.bind();
-	triangleProgram.use();
 }
 
 // Set up the OpenGL blending context to match the emulated PICA
@@ -266,6 +283,12 @@ void Renderer::setupBlending() {
 }
 
 void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
+	OpenGL::disableScissor();
+
+	vbo.bind();
+	vao.bind();
+	triangleProgram.use();
+
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
@@ -361,20 +384,11 @@ constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 // Quick hack to display top screen for now
 void Renderer::display() {
-	OpenGL::disableBlend();
-	OpenGL::disableDepth();
 	OpenGL::disableScissor();
 
-	OpenGL::bindScreenFramebuffer();
-	colourBufferCache[0].texture.bind();
-
-	displayProgram.use();
-
-	dummyVAO.bind();
-	OpenGL::setClearColor(0.0, 0.0, 1.0, 1.0); // Clear screen colour
-	OpenGL::clearColor();
-	OpenGL::setViewport(0, 240, 400, 240); // Actually draw our 3DS screen
-	OpenGL::draw(OpenGL::TriangleStrip, 4);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
+	glBlitFramebuffer(0, 0, 400, 480, 0, 0, 400, 480, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 }
 
 void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -408,6 +422,7 @@ OpenGL::Framebuffer Renderer::getColourFBO() {
 	if (buffer.has_value()) {
 		return buffer.value().get().fbo;
 	} else {
+		printf("New colour buffer: %08X\n", colourBufferLoc);
 		return colourBufferCache.add(sampleBuffer).fbo;
 	}
 }
@@ -450,4 +465,28 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 
 	const u32 outputWidth = outputSize & 0xffff;
 	const u32 outputGap = outputSize >> 16;
+
+	auto framebuffer = colourBufferCache.findFromAddress(inputAddr);
+	if (framebuffer.has_value()) {
+		OpenGL::Texture& texture = framebuffer.value().get().texture;
+		texture.bind();
+		screenFramebuffer.bind(OpenGL::DrawFramebuffer);
+
+		OpenGL::disableBlend();
+		OpenGL::disableDepth();
+		OpenGL::disableScissor();
+
+		displayProgram.use();
+
+		// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
+		// We consider output gap == 320 to mean bottom, and anything else to mean top
+		if (outputGap == 320) {
+			OpenGL::setViewport(40, 0, 320, 240);
+		} else {
+			OpenGL::setViewport(0, 240, 400, 240);
+		}
+
+		dummyVAO.bind();
+		OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+	}
 }

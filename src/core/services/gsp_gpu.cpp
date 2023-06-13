@@ -331,9 +331,31 @@ void GPUService::memoryFill(u32* cmd) {
 	}
 }
 
+static u32 VaddrToPaddr(u32 addr) {
+	if (addr >= VirtualAddrs::VramStart && addr < (VirtualAddrs::VramStart + VirtualAddrs::VramSize)) [[likely]] {
+		return addr - VirtualAddrs::VramStart + PhysicalAddrs::VRAM;
+	}
+	
+	else if (addr >= VirtualAddrs::LinearHeapStartOld && addr < VirtualAddrs::LinearHeapEndOld) {
+		return addr - VirtualAddrs::LinearHeapStartOld + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr >= VirtualAddrs::LinearHeapStartNew && addr < VirtualAddrs::LinearHeapEndNew) {
+		return addr - VirtualAddrs::LinearHeapStartNew + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr == 0) {
+		return 0;
+	}
+
+	Helpers::warn("[GSP::GPU VaddrToPaddr] Unknown virtual address %08X", addr);
+	// Obviously garbage address
+	return 0xF3310932;
+}
+
 void GPUService::triggerDisplayTransfer(u32* cmd) {
-	const u32 inputAddr = cmd[1];
-	const u32 outputAddr = cmd[2];
+	const u32 inputAddr = VaddrToPaddr(cmd[1]);
+	const u32 outputAddr = VaddrToPaddr(cmd[2]);
 	const u32 inputSize = cmd[3];
 	const u32 outputSize = cmd[4];
 	const u32 flags = cmd[5];
