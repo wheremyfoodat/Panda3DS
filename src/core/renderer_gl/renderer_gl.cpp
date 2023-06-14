@@ -466,26 +466,26 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	const u32 outputGap = outputSize >> 16;
 
 	auto framebuffer = colourBufferCache.findFromAddress(inputAddr);
-	if (framebuffer.has_value()) {
-		OpenGL::Texture& texture = framebuffer.value().get().texture;
-		texture.bind();
-		screenFramebuffer.bind(OpenGL::DrawFramebuffer);
+	// If there's a framebuffer at this address, use it. Otherwise go back to our old hack and display framebuffer 0
+	// Displays are hard I really don't want to try implementing them because getting a fast solution is terrible
+	OpenGL::Texture& tex = framebuffer.has_value() ? framebuffer.value().get().texture : colourBufferCache[0].texture;
 
-		OpenGL::disableBlend();
-		OpenGL::disableDepth();
-		OpenGL::disableScissor();
+	tex.bind();
+	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
-		displayProgram.use();
+	OpenGL::disableBlend();
+	OpenGL::disableDepth();
+	OpenGL::disableScissor();
+	displayProgram.use();
 
-		// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
-		// We consider output gap == 320 to mean bottom, and anything else to mean top
-		if (outputGap == 320) {
-			OpenGL::setViewport(40, 0, 320, 240);
-		} else {
-			OpenGL::setViewport(0, 240, 400, 240);
-		}
-
-		dummyVAO.bind();
-		OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
+	// We consider output gap == 320 to mean bottom, and anything else to mean top
+	if (outputGap == 320) {
+		OpenGL::setViewport(40, 0, 320, 240); // Bottom screen viewport
+	} else {
+		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
 	}
+
+	dummyVAO.bind();
+	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
 }
