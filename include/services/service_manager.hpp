@@ -85,9 +85,12 @@ public:
 
 	void signalDSPEvents() { dsp.signalEvents(); }
 
+	// Input function wrappers
 	void pressKey(u32 key) { hid.pressKey(key); }
 	void releaseKey(u32 key) { hid.releaseKey(key); }
 	void setCirclepadX(u16 x) { hid.setCirclepadX(x); }
 	void setCirclepadY(u16 y) { hid.setCirclepadY(y); }
 	void updateInputs(u64 currentTimestamp) { hid.updateInputs(currentTimestamp); }
+	void setTouchScreenPress(u16 x, u16 y) { hid.setTouchScreenPress(x, y); }
+	void releaseTouchScreen() { hid.releaseTouchScreen(); }
 };

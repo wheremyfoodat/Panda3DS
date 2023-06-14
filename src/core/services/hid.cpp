@@ -25,6 +25,7 @@ void HIDService::reset() {
 	accelerometerEnabled = false;
 	eventsInitialized = false;
 	gyroEnabled = false;
+	touchScreenPressed = false;
 
 	// Deinitialize HID events
 	for (auto& e : events) {
@@ -36,6 +37,7 @@ void HIDService::reset() {
 	// Reset button states
 	newButtons = oldButtons = 0;
 	circlePadX = circlePadY = 0;
+	touchScreenX = touchScreenY = 0;
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
@@ -147,7 +149,12 @@ void HIDService::updateInputs(u64 currentTick) {
 			writeSharedMem<u64>(0xA8, currentTick);             // Write new tick count
 		}
 		writeSharedMem<u32>(0xB8, nextTouchscreenIndex); // Index last updated by the HID module
+		const size_t touchEntryOffset = 0xC8 + (nextTouchscreenIndex * 8); // Offset in the array of 8 touchscreen entries
 		nextTouchscreenIndex = (nextTouchscreenIndex + 1) % 8; // Move to next entry
+
+		writeSharedMem<u16>(touchEntryOffset, touchScreenX);
+		writeSharedMem<u16>(touchEntryOffset + 2, touchScreenY);
+		writeSharedMem<u8>(touchEntryOffset + 4, touchScreenPressed ? 1 : 0);
 		
 		// Next, update accelerometer state
 		if (nextAccelerometerIndex == 0) {

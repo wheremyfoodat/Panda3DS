@@ -49,10 +49,12 @@ class HIDService {
 	u32 oldButtons; // The previous pad state
 
 	s16 circlePadX, circlePadY; // Circlepad state
+	s16 touchScreenX, touchScreenY; // Touchscreen state
 
 	bool accelerometerEnabled;
 	bool eventsInitialized;
 	bool gyroEnabled;
+	bool touchScreenPressed;
 
 	std::array<std::optional<Handle>, 5> events;
 
@@ -115,5 +117,15 @@ public:
 		if (ptr != nullptr) { // Zero-fill shared memory in case the process tries to read stale service data or vice versa
 			std::memset(ptr, 0, 0x2b0);
 		}
+	}
+
+	void setTouchScreenPress(u16 x, u16 y) {
+		touchScreenX = x;
+		touchScreenY = y;
+		touchScreenPressed = true;
+	}
+
+	void releaseTouchScreen() {
+		touchScreenPressed = false;
 	}
 };
