@@ -35,25 +35,3 @@ void PICAShader::reset() {
 	codeHashDirty = true;
 	opdescHashDirty = true;
 }
-
-PICAShader::Hash PICAShader::getCodeHash() {
-	// Hash the code again if the code changed
-	if (codeHashDirty) {
-		codeHashDirty = false;
-		lastCodeHash = CityHash::CityHash64((const char*)&loadedShader[0], loadedShader.size() * sizeof(loadedShader[0]));
-	}
-
-	// Return the code hash
-	return lastCodeHash;
-}
-
-PICAShader::Hash PICAShader::getOpdescHash() {
-	// Hash the code again if the operand descriptors changed
-	if (opdescHashDirty) {
-		opdescHashDirty = false;
-		lastOpdescHash = CityHash::CityHash64((const char*)&operandDescriptors[0], operandDescriptors.size() * sizeof(operandDescriptors[0]));
-	}
-
-	// Return the code hash
-	return lastOpdescHash;
-}

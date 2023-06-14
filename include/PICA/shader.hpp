@@ -5,6 +5,7 @@
 #include "helpers.hpp"
 #include "opengl.hpp"
 #include "PICA/float_types.hpp"
+#include "PICA/pica_hash.hpp"
 
 enum class ShaderType {
 	Vertex, Geometry
@@ -105,7 +106,7 @@ protected:
 	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
 	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
 	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
-	using Hash = u64;
+	using Hash = PICAHash::HashType;
 
 	Hash lastCodeHash = 0; // Last hash computed for the shader code (Used for the JIT caching mechanism)
 	Hash lastOpdescHash = 0;  // Last hash computed for the operand descriptors (Also used for the JIT)
