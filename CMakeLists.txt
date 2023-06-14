@@ -23,7 +23,8 @@ include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cryptopp/)
 include_directories(third_party/cityhash/include)
-include_directories(third_party/result/include/)
+include_directories(third_party/result/include)
+include_directories(third_party/xxhash/include)
 
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(SDL_MAIN_HANDLED)
@@ -94,7 +95,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
-                      src/core/PICA/dynapica/shader_rec_emitter_x64.cpp 
+                      src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
 )
 
 set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp)
@@ -124,7 +125,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
                  include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
                  include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp include/PICA/dynapica/shader_rec.hpp
-                 include/PICA/dynapica/shader_rec_emitter_x64.hpp
+                 include/PICA/dynapica/shader_rec_emitter_x64.hpp include/PICA/pica_hash.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -135,6 +136,7 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/gl3w/gl3w.cpp
 
                              third_party/cityhash/cityhash.cpp
+                             third_party/xxhash/xxhash.c
 )
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
