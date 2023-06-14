@@ -1,5 +1,5 @@
 #include "PICA/dynapica/shader_rec.hpp"
-#include "cityhash.hpp"
+#include <bit>
 
 #ifdef PANDA3DS_SHADER_JIT_SUPPORTED
 void ShaderJIT::reset() {
@@ -8,10 +8,11 @@ void ShaderJIT::reset() {
 
 void ShaderJIT::prepare(PICAShader& shaderUnit) {
 	shaderUnit.pc = shaderUnit.entrypoint;
-	// We construct a shader hash from both the code and operand descriptor hashes
+	// We combine the code and operand descriptor hashes into a single hash
 	// This is so that if only one of them changes, we still properly recompile the shader
-	// This code is inspired from how Citra solves this problem
-	Hash hash = shaderUnit.getCodeHash() ^ shaderUnit.getOpdescHash();
+	// The combine does rotl(x, 1) ^ y for the merging instead of x ^ y because xor is commutative, hence creating possible collisions
+	// re: https://github.com/wheremyfoodat/Panda3DS/pull/15#discussion_r1229925372
+	Hash hash = std::rotl(shaderUnit.getCodeHash(), 1) ^ shaderUnit.getOpdescHash();
 	auto it = cache.find(hash);
 
 	if (it == cache.end()) { // Block has not been compiled yet
