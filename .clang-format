@@ -5,10 +5,10 @@ AccessModifierOffset: -2
 TabWidth: 4
 NamespaceIndentation: All
 UseTab: ForContinuationAndIndentation
-AllowShortEnumsOnASingleLine: false
+AllowShortEnumsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: false
-AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
 Cpp11BracedListStyle: true
 PackConstructorInitializers: BinPack
 AlignAfterOpenBracket: BlockIndent
