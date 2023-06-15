@@ -67,7 +67,7 @@ const char* fragmentShader = R"(
 			case  0u: source.rgb = colour.rgb; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.rgb = texture(u_tex0, tex0_UVs).rgb; break; // Texture 0
 			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
-			case 15u: source.rgb = previous.rgb; // Previous (output from TEV #n-1)
+			case 15u: source.rgb = previous.rgb; break; // Previous (output from TEV #n-1)
 			default: break;//return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
@@ -75,7 +75,7 @@ const char* fragmentShader = R"(
 			case  0u: source.a = colour.a; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.a = texture(u_tex0, tex0_UVs).a; break; // Texture 0
 			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
-			case 15u: source.a = previous.a; // Previous (output from TEV #n-1)
+			case 15u: source.a = previous.a; break; // Previous (output from TEV #n-1)
 			default: break;//return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
