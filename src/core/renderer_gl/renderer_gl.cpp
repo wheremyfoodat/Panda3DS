@@ -44,6 +44,8 @@ const char* fragmentShader = R"(
 	uniform uint u_textureEnvCombiner[6];
 	uniform vec4 u_textureEnvColor[6];
 	uniform uint u_textureEnvScale[6];
+	uniform uint u_textureEnvUpdateBuffer;
+	uniform vec4 u_textureEnvBufferColor;
 
 	// Depth control uniforms
 	uniform float u_depthScale;
@@ -54,6 +56,10 @@ const char* fragmentShader = R"(
 
 	// TODO: figure out what the correct "initial" value used by TEV0 is.
 	vec4 previous = vec4(1.0);
+
+	// TODO: presumably this needs to be initialized to the value of GPUREG_TEXENV_BUFFER_COLOR
+	vec4 buffer;
+	vec4 next_buffer;
 
 	vec4 tev_evaluate_source(int tev_id, int src_id) {
 		vec4 source = vec4(1.0);
@@ -66,17 +72,19 @@ const char* fragmentShader = R"(
 		switch (rgb_source) {
 			case  0u: source.rgb = colour.rgb; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.rgb = texture(u_tex0, tex0_UVs).rgb; break; // Texture 0
+			case 13u: source.rgb = buffer.rgb; break; // Previous buffer
 			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.rgb = previous.rgb; break; // Previous (output from TEV #n-1)
-			default: break;//return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
+			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
 		switch (alpha_source) {
 			case  0u: source.a = colour.a; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.a = texture(u_tex0, tex0_UVs).a; break; // Texture 0
+			case 13u: source.a = buffer.a; break; // Previous buffer
 			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.a = previous.a; break; // Previous (output from TEV #n-1)
-			default: break;//return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
+			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
 		uint rgb_operand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
@@ -157,12 +165,37 @@ const char* fragmentShader = R"(
 
 	void main() {
 		if ((u_textureConfig & 1u) != 0) { // Render texture 0 if enabled
+			// TODO: fix all the redundancy
+
+			buffer = vec4(0.0);
+			next_buffer = u_textureEnvBufferColor;
+
 			previous = tev_combine(0);
+			buffer = next_buffer;
+			if ((u_textureEnvUpdateBuffer &  0x100u) != 0u) next_buffer.rgb = previous.rgb;
+			if ((u_textureEnvUpdateBuffer & 0x1000u) != 0u) next_buffer.a   = previous.a;
+
 			previous = tev_combine(1);
+			buffer = next_buffer;
+			if ((u_textureEnvUpdateBuffer &  0x200u) != 0u) next_buffer.rgb = previous.rgb;
+			if ((u_textureEnvUpdateBuffer & 0x2000u) != 0u) next_buffer.a   = previous.a;
+
 			previous = tev_combine(2);
+			buffer = next_buffer;
+			if ((u_textureEnvUpdateBuffer &  0x400u) != 0u) next_buffer.rgb = previous.rgb;
+			if ((u_textureEnvUpdateBuffer & 0x4000u) != 0u) next_buffer.a   = previous.a;
+
 			previous = tev_combine(3);
+			buffer = next_buffer;
+			if ((u_textureEnvUpdateBuffer &  0x800u) != 0u) next_buffer.rgb = previous.rgb;
+			if ((u_textureEnvUpdateBuffer & 0x8000u) != 0u) next_buffer.a   = previous.a;
+
 			previous = tev_combine(4);
+			buffer = next_buffer;
+
 			fragColour = tev_combine(5);
+
+			if((u_textureEnvUpdateBuffer & 0xFF00u) != 0u) {fragColour = vec4(1.0, 0.5, 1.0, 1.0); return; }
 		} else {
 			fragColour = colour;
 		}
@@ -299,6 +332,8 @@ void Renderer::initGraphicsContext() {
 	textureEnvCombinerLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvCombiner");
 	textureEnvColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvColor");
 	textureEnvScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvScale");
+	textureEnvUpdateBufferLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvUpdateBuffer");
+	textureEnvBufferColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvBufferColor");
 
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
@@ -486,6 +521,21 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
 		glUniform4fv(textureEnvColorLoc, 6, (const GLfloat*)textureEnvColourRegs);
 		glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
+		glUniform1ui(textureEnvUpdateBufferLoc, regs[0xe0]);
+
+		// TODO: deduplicate color decoding
+		{
+			const u32 rgba = regs[0xfd];
+			const float r = (float)(rgba & 0xff) / 255.0f;
+			const float g = (float)((rgba >> 8) & 0xff) / 255.0f;
+			const float b = (float)((rgba >> 16) & 0xff) / 255.0f;
+			const float a = (float)(rgba >> 24) / 255.0f;
+
+			glUniform4f(textureEnvBufferColorLoc, r, g, b, a);
+		}
+
+//		if(regs[0xfd] != 0)
+//		Helpers::warn("FOO %08x", regs[0xfd]);
 	}
 
 	// Hack for rendering texture 1
