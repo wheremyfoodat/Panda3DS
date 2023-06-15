@@ -6,7 +6,7 @@ Panda3DS is an HLE, red-panda-themed Nintendo 3DS emulator written in C++ which 
 # Discussion
 Join our Discord server by pressing on the banner below!
 
-![Discord Banner 2](https://discord.com/api/guilds/1118695732958994532/widget.png?style=banner2)
+[![Discord Banner 2](https://discord.com/api/guilds/1118695732958994532/widget.png?style=banner2)](https://discord.gg/ZYbugsEmsw)
 
 ![screenshot1](docs/img/MK7_Car_Select.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/Mayro.png)
 
