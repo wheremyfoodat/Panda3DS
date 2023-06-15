@@ -24,7 +24,14 @@ class Renderer {
 	OpenGL::VertexBuffer vbo;
 	GLint alphaControlLoc = -1;
 	GLint texUnitConfigLoc = -1;
-	
+
+	// TEV configuration uniform locations
+	GLint textureEnv0SourceLoc = -1;
+	GLint textureEnv0OperandLoc = -1;
+	GLint textureEnv0CombinerLoc = -1;
+	GLint textureEnv0ColorLoc = -1;
+	GLint textureEnv0ScaleLoc = -1;
+
 	// Depth configuration uniform locations
 	GLint depthOffsetLoc = -1;
 	GLint depthScaleLoc = -1;
