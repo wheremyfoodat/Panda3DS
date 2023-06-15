@@ -52,30 +52,35 @@ const char* fragmentShader = R"(
 
 	uniform sampler2D u_tex0;
 
-	vec4 tev_evaluate_source(int src_id) {
+	// TODO: figure out what the correct "initial" value used by TEV0 is.
+	vec4 previous = vec4(1.0);
+
+	vec4 tev_evaluate_source(int tev_id, int src_id) {
 		vec4 source = vec4(1.0);
 
-		uint rgb_source = (u_textureEnvSource[0] >> (src_id * 4)) & 15u;
-		uint alpha_source = (u_textureEnvSource[0] >> (16 + src_id * 4)) & 15u;
+		uint rgb_source = (u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u;
+		uint alpha_source = (u_textureEnvSource[tev_id] >> (16 + src_id * 4)) & 15u;
 
 		// TODO: get rid of redundant texture fetches during TEV evaluation.
 
 		switch (rgb_source) {
 			case  0u: source.rgb = colour.rgb; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.rgb = texture(u_tex0, tex0_UVs).rgb; break; // Texture 0
-			case 14u: source.rgb = u_textureEnvColor[0].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
-			default: break; // TODO: implement remaining sources
+			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
+			case 15u: source.rgb = previous.rgb; // Previous (output from TEV #n-1)
+			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
 		switch (alpha_source) {
 			case  0u: source.a = colour.a; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.a = texture(u_tex0, tex0_UVs).a; break; // Texture 0
-			case 14u: source.a = u_textureEnvColor[0].a; break; // Constant (GPUREG_TEXENVi_COLOR)
-			default: break; // TODO: implement remaining sources
+			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
+			case 15u: source.a = previous.a; // Previous (output from TEV #n-1)
+			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
-		uint rgb_operand = (u_textureEnvOperand[0] >> (src_id * 4)) & 15u;
-		uint alpha_operand = (u_textureEnvOperand[0] >> (12 + src_id * 4)) & 7u;
+		uint rgb_operand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
+		uint alpha_operand = (u_textureEnvOperand[tev_id] >> (12 + src_id * 4)) & 7u;
 
 		vec4 final;
 
@@ -109,26 +114,42 @@ const char* fragmentShader = R"(
 		return final;
 	}
 
-	vec4 tev_combine() {
-		vec4 source0 = tev_evaluate_source(0);
-		vec4 source1 = tev_evaluate_source(1);
-		vec4 source2 = tev_evaluate_source(2);
+	vec4 tev_combine(int tev_id) {
+		vec4 source0 = tev_evaluate_source(tev_id, 0);
+		vec4 source1 = tev_evaluate_source(tev_id, 1);
+		vec4 source2 = tev_evaluate_source(tev_id, 2);
 
-		uint rgb_combine = u_textureEnvCombiner[0] & 15u;
-		uint alpha_combine = (u_textureEnvCombiner[0] >> 16) & 15u;
+		uint rgb_combine = u_textureEnvCombiner[tev_id] & 15u;
+		uint alpha_combine = (u_textureEnvCombiner[tev_id] >> 16) & 15u;
 
 		vec4 result = vec4(1.0);
 
-		// TODO: figure out how most of the combine modes work.
-
 		switch (rgb_combine) {
-			case 1u: result.rgb = source0.rgb * source1.rgb * source2.rgb; break; // Modulate
-			default: return vec4(1.0, 0.0, 0.0, 1.0);
+			case 0u: result.rgb = source0.rgb; break; // Replace
+			case 1u: result.rgb = source0.rgb * source1.rgb; break; // Modulate
+			case 2u: result.rgb = min(vec3(1.0), source0.rgb + source1.rgb); break; // Add
+			case 3u: result.rgb = clamp(source0.rgb + source1.rgb - 0.5, vec3(0.0), vec3(1.0)); break; // Add signed
+			case 4u: result.rgb = mix(source0.rgb, source1.rgb, source2.rgb); break; // Interpolate
+			case 5u: result.rgb = max(vec3(0.0), source0.rgb - source1.rgb); break; // Subtract
+			case 6u: result.rgb = vec3(dot(source0.rgb, source1.rgb)); break; // Dot3 RGB
+			case 7u: result.rgb = vec3(dot(source0, source1)); break; // Dot3 RGBA, TODO: not sure if this is correct?
+			case 8u: result.rgb = min(vec3(1.0), source0.rgb * source1.rgb + source2.rgb); break; // Multiply then add
+			case 9u: result.rgb = min(vec3(1.0), (source0.rgb + source1.rgb) * source2.rgb); break; // Add then multiply
+			default: break; // TODO: figure out what the undocumented values do
 		}
 
 		switch (alpha_combine) {
-			case 1u: result.a = source0.a * source1.a * source2.a; break; // Modulate
-			default: return vec4(1.0, 0.0, 0.0, 1.0);
+			case 0u: result.a = source0.a; break; // Replace
+			case 1u: result.a = source0.a * source1.a; break; // Modulate
+			case 2u: result.a = min(1.0, source0.a + source1.a); break; // Add
+			case 3u: result.a = clamp(source0.a + source1.a - 0.5, 0.0, 1.0); break; // Add signed
+			case 4u: result.a = mix(source0.a, source1.a, source2.a); break; // Interpolate
+			case 5u: result.a = max(0.0, source0.a - source1.a); break; // Subtract
+			case 6u: result.a = dot(source0.rgb, source1.rgb); break; // Dot3 RGB
+			case 7u: result.a = dot(source0, source1); break; // Dot3 RGBA, TODO: not sure if this is correct?
+			case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break; // Multiply then add
+			case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break; // Add then multiply
+			default: break; // TODO: figure out what the undocumented values do
 		}
 
 		return result;
@@ -136,7 +157,12 @@ const char* fragmentShader = R"(
 
 	void main() {
 		if ((u_textureConfig & 1u) != 0) { // Render texture 0 if enabled
-			fragColour = tev_combine();
+			previous = tev_combine(0);
+			previous = tev_combine(1);
+			previous = tev_combine(2);
+			fragColour = tev_combine(3);
+
+//			fragColour = tev_combine(0);
 		} else {
 			fragColour = colour;
 		}
