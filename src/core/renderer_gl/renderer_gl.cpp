@@ -160,28 +160,28 @@ const char* fragmentShader = R"(
 
 			switch (func) {
 				case 0: discard; // Never pass alpha test
-				case 1: break;	  // Always pass alpha test
-				case 2:		 // Pass if equal
+				case 1: break;          // Always pass alpha test
+				case 2:                 // Pass if equal
 					if (alpha != reference)
 						discard;
 					break;
-				case 3:		 // Pass if not equal
+				case 3:                 // Pass if not equal
 					if (alpha == reference)
 						discard;
 					break;
-				case 4:		 // Pass if less than
+				case 4:                 // Pass if less than
 					if (alpha >= reference)
 						discard;
 					break;
-				case 5:		 // Pass if less than or equal
+				case 5:                 // Pass if less than or equal
 					if (alpha > reference)
 						discard;
 					break;
-				case 6:		 // Pass if greater than
+				case 6:                 // Pass if greater than
 					if (alpha <= reference)
 						discard;
 					break;
-				case 7:		 // Pass if greater than or equal
+				case 7:                 // Pass if greater than or equal
 					if (alpha < reference)
 						discard;
 					break;
@@ -196,11 +196,11 @@ const char* displayVertexShader = R"(
 
 	void main() {
 		const vec4 positions[4] = vec4[](
-	  vec4(-1.0, 1.0, 1.0, 1.0),    // Top-left
-	  vec4(1.0, 1.0, 1.0, 1.0),     // Top-right
-	  vec4(-1.0, -1.0, 1.0, 1.0),   // Bottom-left
-	  vec4(1.0, -1.0, 1.0, 1.0)     // Bottom-right
-	);
+          vec4(-1.0, 1.0, 1.0, 1.0),    // Top-left
+          vec4(1.0, 1.0, 1.0, 1.0),     // Top-right
+          vec4(-1.0, -1.0, 1.0, 1.0),   // Bottom-left
+          vec4(1.0, -1.0, 1.0, 1.0)     // Bottom-right
+        );
 
 		// The 3DS displays both screens' framebuffer rotated 90 deg counter clockwise
 		// So we adjust our texcoords accordingly
