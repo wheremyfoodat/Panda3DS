@@ -39,11 +39,11 @@ const char* fragmentShader = R"(
 	uniform uint u_textureConfig;
 
 	// TEV uniforms
-	uniform uint u_textureEnvSource[4];
-	uniform uint u_textureEnvOperand[4];
-	uniform uint u_textureEnvCombiner[4];
-	uniform vec4 u_textureEnvColor[4];
-	uniform uint u_textureEnvScale[4];
+	uniform uint u_textureEnvSource[6];
+	uniform uint u_textureEnvOperand[6];
+	uniform uint u_textureEnvCombiner[6];
+	uniform vec4 u_textureEnvColor[6];
+	uniform uint u_textureEnvScale[6];
 
 	// Depth control uniforms
 	uniform float u_depthScale;
@@ -68,7 +68,7 @@ const char* fragmentShader = R"(
 			case  3u: source.rgb = texture(u_tex0, tex0_UVs).rgb; break; // Texture 0
 			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.rgb = previous.rgb; // Previous (output from TEV #n-1)
-			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
+			default: break;//return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
 		switch (alpha_source) {
@@ -76,7 +76,7 @@ const char* fragmentShader = R"(
 			case  3u: source.a = texture(u_tex0, tex0_UVs).a; break; // Texture 0
 			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.a = previous.a; // Previous (output from TEV #n-1)
-			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
+			default: break;//return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
 		}
 
 		uint rgb_operand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
@@ -160,9 +160,9 @@ const char* fragmentShader = R"(
 			previous = tev_combine(0);
 			previous = tev_combine(1);
 			previous = tev_combine(2);
-			fragColour = tev_combine(3);
-
-//			fragColour = tev_combine(0);
+			previous = tev_combine(3);
+			previous = tev_combine(4);
+			fragColour = tev_combine(5);
 		} else {
 			fragColour = colour;
 		}
@@ -455,35 +455,37 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 	// TODO: only update TEV uniforms when the configuration changes.
 	// TODO: define registers in the PICAInternalRegs enumeration
 	{
-		u32 textureEnvSourceRegs[4];
-		u32 textureEnvOperandRegs[4];
-		u32 textureEnvCombinerRegs[4];
-		float textureEnvColourRegs[4][4];
-		u32 textureEnvScaleRegs[4];
+		u32 textureEnvSourceRegs[6];
+		u32 textureEnvOperandRegs[6];
+		u32 textureEnvCombinerRegs[6];
+		float textureEnvColourRegs[6][4];
+		u32 textureEnvScaleRegs[6];
 
-		u32 base_reg = 0xc0;
+		static constexpr std::array<u32, 6> ioBases = {
+		  	0xc0, 0xc8, 0xd0, 0xd8, 0xf0, 0xf8
+		};
 
-		for (int i = 0; i < 4; i++) {
-			textureEnvSourceRegs[i] = regs[base_reg];
-			textureEnvOperandRegs[i] = regs[base_reg + 1];
-			textureEnvCombinerRegs[i] = regs[base_reg + 2];
+		for (int i = 0; i < 6; i++) {
+			const u32 ioBase = ioBases[i];
 
-			const u32 rgba = regs[base_reg + 3];
+			textureEnvSourceRegs[i] = regs[ioBase];
+			textureEnvOperandRegs[i] = regs[ioBase + 1];
+			textureEnvCombinerRegs[i] = regs[ioBase + 2];
+
+			const u32 rgba = regs[ioBase + 3];
 			textureEnvColourRegs[i][0] = (float)(rgba & 0xff) / 255.0f;
 			textureEnvColourRegs[i][1] = (float)((rgba >> 8) & 0xff) / 255.0f;
 			textureEnvColourRegs[i][2] = (float)((rgba >> 16) & 0xff) / 255.0f;
 			textureEnvColourRegs[i][3] = (float)(rgba >> 24) / 255.0f;
 
-			textureEnvScaleRegs[i] = regs[base_reg + 4];
-
-			base_reg += 8;
+			textureEnvScaleRegs[i] = regs[ioBase + 4];
 		}
 
-		glUniform1uiv(textureEnvSourceLoc, 4, textureEnvSourceRegs);
-		glUniform1uiv(textureEnvOperandLoc, 4, textureEnvOperandRegs);
-		glUniform1uiv(textureEnvCombinerLoc, 4, textureEnvCombinerRegs);
-		glUniform4fv(textureEnvColorLoc, 4, (const GLfloat*)textureEnvColourRegs);
-		glUniform1uiv(textureEnvScaleLoc, 4, textureEnvScaleRegs);
+		glUniform1uiv(textureEnvSourceLoc, 6, textureEnvSourceRegs);
+		glUniform1uiv(textureEnvOperandLoc, 6, textureEnvOperandRegs);
+		glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
+		glUniform4fv(textureEnvColorLoc, 6, (const GLfloat*)textureEnvColourRegs);
+		glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
 	}
 
 	// Hack for rendering texture 1
