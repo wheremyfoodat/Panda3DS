@@ -26,11 +26,11 @@ class Renderer {
 	GLint texUnitConfigLoc = -1;
 
 	// TEV configuration uniform locations
-	GLint textureEnv0SourceLoc = -1;
-	GLint textureEnv0OperandLoc = -1;
-	GLint textureEnv0CombinerLoc = -1;
-	GLint textureEnv0ColorLoc = -1;
-	GLint textureEnv0ScaleLoc = -1;
+	GLint textureEnvSourceLoc = -1;
+	GLint textureEnvOperandLoc = -1;
+	GLint textureEnvCombinerLoc = -1;
+	GLint textureEnvColorLoc = -1;
+	GLint textureEnvScaleLoc = -1;
 
 	// Depth configuration uniform locations
 	GLint depthOffsetLoc = -1;
