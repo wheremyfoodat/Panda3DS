@@ -238,9 +238,9 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	add(rax, src);
 
 	Label maybeTemp, maybeUniform, unknownReg, end;
-	const uintptr_t inputOffset = uintptr_t(&shader.inputs) - uintptr_t(&shader);
-	const uintptr_t tempOffset = uintptr_t(&shader.tempRegisters) - uintptr_t(&shader);
-	const uintptr_t uniformOffset = uintptr_t(&shader.floatUniforms) - uintptr_t(&shader);
+	const uintptr_t inputOffset = uintptr_t(&shader.inputs[0]) - uintptr_t(&shader);
+	const uintptr_t tempOffset = uintptr_t(&shader.tempRegisters[0]) - uintptr_t(&shader);
+	const uintptr_t uniformOffset = uintptr_t(&shader.floatUniforms[0]) - uintptr_t(&shader);
 
 	// If reg < 0x10, return inputRegisters[reg]
 	cmp(rax, 0x10);
@@ -326,7 +326,7 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 
 void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) {
 	static_assert(sizeof(bool) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
-	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister) - uintptr_t(&shader);
+	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister[0]) - uintptr_t(&shader);
 	const size_t cmpRegYOffset = cmpRegXOffset + sizeof(bool);
 
 	const u32 condition = getBits<22, 2>(instruction);
