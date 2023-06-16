@@ -2,10 +2,12 @@
 #include <array>
 #include <cassert>
 #include <limits>
+#include <span>
 #include <string>
 #include <vector>
-#include "kernel_types.hpp"
+
 #include "helpers.hpp"
+#include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
 #include "resource_limits.hpp"
@@ -14,7 +16,7 @@
 class CPU;
 
 class Kernel {
-	std::array<u32, 16>& regs;
+	std::span<u32, 16> regs;
 	CPU& cpu;
 	Memory& mem;
 
