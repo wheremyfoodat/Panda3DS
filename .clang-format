@@ -1,6 +1,6 @@
 BasedOnStyle: Google
 IndentWidth: 4
-ColumnLimit: 120
+ColumnLimit: 150
 AccessModifierOffset: -2
 TabWidth: 4
 NamespaceIndentation: All

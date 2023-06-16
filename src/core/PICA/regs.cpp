@@ -157,7 +157,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						// If we've reached 3 verts, issue a draw call
 						// Handle rendering depending on the primitive type
 						if (immediateModeVertIndex == 3) {
-							renderer.drawVertices(OpenGL::Triangle, &immediateModeVertices[0], 3);
+							renderer.drawVertices(OpenGL::Triangle, immediateModeVertices);
 
 							switch (primType) {
 								// Triangle or geometry primitive. Draw a triangle and discard all vertices

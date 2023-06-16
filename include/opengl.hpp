@@ -30,6 +30,19 @@
 
 #include "gl3w.h"
 
+// Check if we have C++20. If yes, we can add C++20 std::span support
+#ifdef _MSVC_LANG // MSVC does not properly define __cplusplus without a compiler flag...
+#if _MSVC_LANG >= 202002L
+#define OPENGL_HAVE_CPP20
+#endif
+#elif __cplusplus >= 202002L
+#define OPENGL_HAVE_CPP20
+#endif // MSVC_LANG
+
+#ifdef OPENGL_HAVE_CPP20
+#include <span>
+#endif
+
 // Uncomment the following define if you want GL objects to automatically free themselves when their lifetime ends
 // #define OPENGL_DESTRUCTORS
 
@@ -389,17 +402,30 @@ namespace OpenGL {
         void free() { glDeleteBuffers(1, &m_handle); }
 
         // Reallocates the buffer on every call. Prefer the sub version if possible.
-        template <typename VertType>
-        void bufferVerts(VertType* vertices, int vertCount, GLenum usage = GL_DYNAMIC_DRAW) {
-            glBufferData(GL_ARRAY_BUFFER, sizeof(VertType) * vertCount, vertices, usage);
-        }
+		template <typename VertType>
+		void bufferVerts(VertType* vertices, int vertCount, GLenum usage = GL_DYNAMIC_DRAW) {
+			glBufferData(GL_ARRAY_BUFFER, sizeof(VertType) * vertCount, vertices, usage);
+		}
 
-        // Only use if you used createFixedSize
-        template <typename VertType>
-        void bufferVertsSub(VertType* vertices, int vertCount, GLintptr offset = 0) {
-            glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(VertType) * vertCount, vertices);
-        }
-    };
+		// Only use if you used createFixedSize
+		template <typename VertType>
+		void bufferVertsSub(VertType* vertices, int vertCount, GLintptr offset = 0) {
+			glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(VertType) * vertCount, vertices);
+		}
+
+        // If C++20 is available, add overloads that take std::span instead of raw pointers
+#ifdef OPENGL_HAVE_CPP20
+		template <typename VertType>
+		void bufferVerts(std::span<const VertType> vertices, GLenum usage = GL_DYNAMIC_DRAW) {
+			glBufferData(GL_ARRAY_BUFFER, sizeof(VertType) * vertices.size(), vertices.data(), usage);
+		}
+
+		template <typename VertType>
+		void bufferVertsSub(std::span<const VertType> vertices, GLintptr offset = 0) {
+			glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(VertType) * vertices.size(), vertices.data());
+		}
+#endif
+	};
 
     enum DepthFunc {
         Never = GL_NEVER,       // Depth test never passes

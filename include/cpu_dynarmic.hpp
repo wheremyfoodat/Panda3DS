@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include "dynarmic/interface/A32/a32.h"
 #include "dynarmic/interface/A32/config.h"
 #include "dynarmic/interface/exclusive_monitor.h"
@@ -132,17 +134,11 @@ public:
         return jit->Regs()[index];
     }
 
-    std::array<u32, 16>& regs() {
-        return jit->Regs();
-    }
+	std::span<u32, 16> regs() { return jit->Regs(); }
 
-    // Get reference to array of FPRs. This array consists of the FPRs as single precision values
-    // Hence why its base type is u32
-    // Note: Dynarmic keeps 64 VFP registers as VFPv3 extends the VFP register set to 64 registers.
-    // However the 3DS ARM11 is an ARMv6k processor with VFPv2, so only the first 32 registers are actually used
-    std::array<u32, 64>& fprs() {
-        return jit->ExtRegs();
-    }
+	// Get reference to array of FPRs. This array consists of the FPRs as single precision values
+	// Hence why its base type is u32
+	std::span<u32, 32> fprs() { return std::span(jit->ExtRegs()).first<32>(); }
 
     void setCPSR(u32 value) {
         jit->SetCpsr(value);

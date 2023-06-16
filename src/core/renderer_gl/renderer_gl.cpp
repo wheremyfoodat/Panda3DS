@@ -237,6 +237,15 @@ void Renderer::initGraphicsContext() {
 	reset();
 }
 
+// TODO: Maybe merge this with drawVertices
+void Renderer::getGraphicsContext() {
+	OpenGL::disableScissor();
+
+	vbo.bind();
+	vao.bind();
+	triangleProgram.use();
+}
+
 // Set up the OpenGL blending context to match the emulated PICA
 void Renderer::setupBlending() {
 	const bool blendingEnabled = (regs[PICAInternalRegs::ColourOperation] & (1 << 8)) != 0;
@@ -282,13 +291,7 @@ void Renderer::setupBlending() {
 	}
 }
 
-void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
-	OpenGL::disableScissor();
-
-	vbo.bind();
-	vao.bind();
-	triangleProgram.use();
-
+void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex> vertices) {
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
@@ -375,8 +378,8 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		}
 	}
 
-	vbo.bufferVertsSub(vertices, count);
-	OpenGL::draw(primType, count);
+	vbo.bufferVertsSub(vertices);
+	OpenGL::draw(primType, vertices.size());
 }
 
 constexpr u32 topScreenBuffer = 0x1f000000;
