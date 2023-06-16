@@ -265,7 +265,7 @@ void Renderer::setupBlending() {
 	}
 }
 
-void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
+void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex> vertices) {
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
@@ -352,8 +352,8 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		}
 	}
 
-	vbo.bufferVertsSub(vertices, count);
-	OpenGL::draw(primType, count);
+	vbo.bufferVertsSub(vertices);
+	OpenGL::draw(primType, vertices.size());
 }
 
 constexpr u32 topScreenBuffer = 0x1f000000;

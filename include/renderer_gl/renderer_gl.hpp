@@ -1,5 +1,7 @@
 #pragma once
 #include <array>
+#include <span>
+
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "opengl.hpp"
@@ -68,12 +70,14 @@ public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
 
 	void reset();
-	void display(); // Display the 3DS screen contents to the window
-	void initGraphicsContext(); // Initialize graphics context
-	void getGraphicsContext();  // Set up graphics context for rendering
-	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control); // Clear a GPU buffer in VRAM
-	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags); // Perform display transfer
-	void drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count); // Draw the given vertices
+	void display();              // Display the 3DS screen contents to the window
+	void initGraphicsContext();  // Initialize graphics context
+	void getGraphicsContext();   // Set up graphics context for rendering
+	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);  // Clear a GPU buffer in VRAM
+	void displayTransfer(
+		u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags
+	);                                                                            // Perform display transfer
+	void drawVertices(OpenGL::Primitives primType, std::span<const Vertex> vertices);  // Draw the given vertices
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize.x() = width;
