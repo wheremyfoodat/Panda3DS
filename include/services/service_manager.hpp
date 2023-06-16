@@ -1,6 +1,8 @@
 #pragma once
 #include <array>
 #include <optional>
+#include <span>
+
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
@@ -14,16 +16,16 @@
 #include "services/cfg.hpp"
 #include "services/dlp_srvr.hpp"
 #include "services/dsp.hpp"
-#include "services/hid.hpp"
 #include "services/frd.hpp"
 #include "services/fs.hpp"
 #include "services/gsp_gpu.hpp"
 #include "services/gsp_lcd.hpp"
+#include "services/hid.hpp"
 #include "services/ldr_ro.hpp"
 #include "services/mic.hpp"
+#include "services/ndm.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
-#include "services/ndm.hpp"
 #include "services/ptm.hpp"
 #include "services/y2r.hpp"
 
@@ -31,7 +33,7 @@
 class Kernel;
 
 class ServiceManager {
-	std::array<u32, 16>& regs;
+	std::span<u32, 16> regs;
 	Memory& mem;
 	Kernel& kernel;
 
@@ -69,8 +71,8 @@ class ServiceManager {
 	void registerClient(u32 messagePointer);
 	void subscribe(u32 messagePointer);
 
-public:
-	ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel);
+  public:
+	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel);
 	void reset();
 	void initializeFS() { fs.initializeFilesystem(); }
 	void handleSyncRequest(u32 messagePointer);
