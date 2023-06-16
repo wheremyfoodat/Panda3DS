@@ -237,15 +237,6 @@ void Renderer::initGraphicsContext() {
 	reset();
 }
 
-// TODO: Maybe merge this with drawVertices
-void Renderer::getGraphicsContext() {
-	OpenGL::disableScissor();
-
-	vbo.bind();
-	vao.bind();
-	triangleProgram.use();
-}
-
 // Set up the OpenGL blending context to match the emulated PICA
 void Renderer::setupBlending() {
 	const bool blendingEnabled = (regs[PICAInternalRegs::ColourOperation] & (1 << 8)) != 0;
@@ -292,6 +283,15 @@ void Renderer::setupBlending() {
 }
 
 void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex> vertices) {
+    // TODO: We should implement a GL state tracker that tracks settings like scissor, blending, bound program, etc
+    // This way if we attempt to eg do multiple glEnable(GL_BLEND) calls in a row, it will say "Oh blending is already enabled"
+    // And not actually perform the very expensive driver call for it
+	OpenGL::disableScissor();
+
+	vbo.bind();
+	vao.bind();
+	triangleProgram.use();
+
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
