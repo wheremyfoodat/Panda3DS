@@ -54,12 +54,13 @@ const char* fragmentShader = R"(
 
 	uniform sampler2D u_tex0;
 
-	// TODO: figure out what the correct "initial" value used by TEV0 is.
-	vec4 previous = vec4(1.0);
+	// TODO: figure out the color that is returned to the TEVs when reading from a disabled texture slot.
+	vec4 tev_texture_sources[4] = vec4[](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
 
-	// TODO: presumably this needs to be initialized to the value of GPUREG_TEXENV_BUFFER_COLOR
-	vec4 buffer;
-	vec4 next_buffer;
+	// TODO: figure out the correct "initial" value returned to TEV0 when reading the "previous" source.
+	vec4 tev_previous = vec4(0.0);
+
+	vec4 tev_previous_buffer[2];
 
 	bool tev_unimplemented_source = false;
 
@@ -69,23 +70,21 @@ const char* fragmentShader = R"(
 		uint rgb_source = (u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u;
 		uint alpha_source = (u_textureEnvSource[tev_id] >> (16 + src_id * 4)) & 15u;
 
-		// TODO: get rid of redundant texture fetches during TEV evaluation.
-
 		switch (rgb_source) {
 			case  0u: source.rgb = colour.rgb; break; // Primary color, TODO: confirm that this is correct
-			case  3u: source.rgb = texture(u_tex0, tex0_UVs).rgb; break; // Texture 0
-			case 13u: source.rgb = buffer.rgb; break; // Previous buffer
+			case  3u: source.rgb = tev_texture_sources[0].rgb; break; // Texture 0
+			case 13u: source.rgb = tev_previous_buffer[0].rgb; break; // Previous buffer
 			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
-			case 15u: source.rgb = previous.rgb; break; // Previous (output from TEV #n-1)
+			case 15u: source.rgb = tev_previous.rgb; break; // Previous (output from TEV #n-1)
 			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
 		}
 
 		switch (alpha_source) {
 			case  0u: source.a = colour.a; break; // Primary color, TODO: confirm that this is correct
-			case  3u: source.a = texture(u_tex0, tex0_UVs).a; break; // Texture 0
-			case 13u: source.a = buffer.a; break; // Previous buffer
+			case  3u: source.a = tev_texture_sources[0].a; break; // Texture 0
+			case 13u: source.a = tev_previous_buffer[0].a; break; // Previous buffer
 			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
-			case 15u: source.a = previous.a; break; // Previous (output from TEV #n-1)
+			case 15u: source.a = tev_previous.a; break; // Previous (output from TEV #n-1)
 			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
 		}
 
@@ -166,42 +165,40 @@ const char* fragmentShader = R"(
 	}
 
 	void main() {
-		if ((u_textureConfig & 1u) != 0) { // Render texture 0 if enabled
-			// TODO: fix all the redundancy
+		if ((u_textureConfig & 1u) != 0u) tev_texture_sources[0] = texture(u_tex0, tex0_UVs);
 
-			buffer = vec4(0.0);
-			next_buffer = u_textureEnvBufferColor;
+		// TODO: make TEV logic less redundant
 
-			previous = tev_combine(0);
-			buffer = next_buffer;
-			if ((u_textureEnvUpdateBuffer &  0x100u) != 0u) next_buffer.rgb = previous.rgb;
-			if ((u_textureEnvUpdateBuffer & 0x1000u) != 0u) next_buffer.a   = previous.a;
+		tev_previous_buffer[0] = vec4(0.0);
+		tev_previous_buffer[1] = u_textureEnvBufferColor;
 
-			previous = tev_combine(1);
-			buffer = next_buffer;
-			if ((u_textureEnvUpdateBuffer &  0x200u) != 0u) next_buffer.rgb = previous.rgb;
-			if ((u_textureEnvUpdateBuffer & 0x2000u) != 0u) next_buffer.a   = previous.a;
+		tev_previous = tev_combine(0);
+		tev_previous_buffer[0] = tev_previous_buffer[1];
+		if ((u_textureEnvUpdateBuffer &  0x100u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
+		if ((u_textureEnvUpdateBuffer & 0x1000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
 
-			previous = tev_combine(2);
-			buffer = next_buffer;
-			if ((u_textureEnvUpdateBuffer &  0x400u) != 0u) next_buffer.rgb = previous.rgb;
-			if ((u_textureEnvUpdateBuffer & 0x4000u) != 0u) next_buffer.a   = previous.a;
+		tev_previous = tev_combine(1);
+		tev_previous_buffer[0] = tev_previous_buffer[1];
+		if ((u_textureEnvUpdateBuffer &  0x200u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
+		if ((u_textureEnvUpdateBuffer & 0x2000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
 
-			previous = tev_combine(3);
-			buffer = next_buffer;
-			if ((u_textureEnvUpdateBuffer &  0x800u) != 0u) next_buffer.rgb = previous.rgb;
-			if ((u_textureEnvUpdateBuffer & 0x8000u) != 0u) next_buffer.a   = previous.a;
+		tev_previous = tev_combine(2);
+		tev_previous_buffer[0] = tev_previous_buffer[1];
+		if ((u_textureEnvUpdateBuffer &  0x400u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
+		if ((u_textureEnvUpdateBuffer & 0x4000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
 
-			previous = tev_combine(4);
-			buffer = next_buffer;
+		tev_previous = tev_combine(3);
+		tev_previous_buffer[0] = tev_previous_buffer[1];
+		if ((u_textureEnvUpdateBuffer &  0x800u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
+		if ((u_textureEnvUpdateBuffer & 0x8000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
 
-			fragColour = tev_combine(5);
+		tev_previous = tev_combine(4);
+		tev_previous_buffer[0] = tev_previous_buffer[1];
 
-			if (tev_unimplemented_source) {
-				fragColour = vec4(1.0, 0.0, 1.0, 1.0);
-			}
-		} else {
-			fragColour = colour;
+		fragColour = tev_combine(5);
+
+		if (tev_unimplemented_source) {
+			// fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 		}
 
 		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
