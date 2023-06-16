@@ -75,6 +75,7 @@ class Renderer {
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();
 	void bindDepthBuffer();
+	void setupTextureEnvState();
 
 public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}

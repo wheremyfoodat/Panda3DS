@@ -431,6 +431,50 @@ void Renderer::setupBlending() {
 	}
 }
 
+void Renderer::setupTextureEnvState() {
+	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
+
+	static constexpr std::array<u32, 6> ioBases = {
+	  0xc0, 0xc8, 0xd0, 0xd8, 0xf0, 0xf8
+	};
+
+	u32 textureEnvSourceRegs[6];
+	u32 textureEnvOperandRegs[6];
+	u32 textureEnvCombinerRegs[6];
+	float textureEnvColourRegs[6][4];
+	u32 textureEnvScaleRegs[6];
+
+	for (int i = 0; i < 6; i++) {
+		const u32 ioBase = ioBases[i];
+
+		textureEnvSourceRegs[i] = regs[ioBase];
+		textureEnvOperandRegs[i] = regs[ioBase + 1];
+		textureEnvCombinerRegs[i] = regs[ioBase + 2];
+
+		const u32 constantColor = regs[ioBase + 3];
+		textureEnvColourRegs[i][0] = (float)(constantColor & 0xff) / 255.0f;
+		textureEnvColourRegs[i][1] = (float)getBits<8, 8>(constantColor) / 255.0f;
+		textureEnvColourRegs[i][2] = (float)getBits<16, 8>(constantColor) / 255.0f;
+		textureEnvColourRegs[i][3] = (float)getBits<24, 8>(constantColor) / 255.0f;
+
+		textureEnvScaleRegs[i] = regs[ioBase + 4];
+	}
+
+	glUniform1uiv(textureEnvSourceLoc, 6, textureEnvSourceRegs);
+	glUniform1uiv(textureEnvOperandLoc, 6, textureEnvOperandRegs);
+	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
+	glUniform4fv(textureEnvColorLoc, 6, (const GLfloat*)textureEnvColourRegs);
+	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
+	glUniform1ui(textureEnvUpdateBufferLoc, regs[0xe0]);
+
+	const u32 bufferColor = regs[0xfd];
+	const float r = (float)(bufferColor & 0xff) / 255.0f;
+	const float g = (float)getBits<8, 8>(bufferColor) / 255.0f;
+	const float b = (float)getBits<16, 8>(bufferColor) / 255.0f;
+	const float a = (float)getBits<24, 8>(bufferColor) / 255.0f;
+	glUniform4f(textureEnvBufferColorLoc, r, g, b, a);
+}
+
 void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
 	OpenGL::disableScissor();
 
@@ -480,56 +524,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		glUniform1i(depthmapEnableLoc, depthMapEnable);
 	}
 
-	// TODO: only update TEV uniforms when the configuration changes.
-	// TODO: define registers in the PICAInternalRegs enumeration
-	{
-		u32 textureEnvSourceRegs[6];
-		u32 textureEnvOperandRegs[6];
-		u32 textureEnvCombinerRegs[6];
-		float textureEnvColourRegs[6][4];
-		u32 textureEnvScaleRegs[6];
-
-		static constexpr std::array<u32, 6> ioBases = {
-		  	0xc0, 0xc8, 0xd0, 0xd8, 0xf0, 0xf8
-		};
-
-		for (int i = 0; i < 6; i++) {
-			const u32 ioBase = ioBases[i];
-
-			textureEnvSourceRegs[i] = regs[ioBase];
-			textureEnvOperandRegs[i] = regs[ioBase + 1];
-			textureEnvCombinerRegs[i] = regs[ioBase + 2];
-
-			const u32 rgba = regs[ioBase + 3];
-			textureEnvColourRegs[i][0] = (float)(rgba & 0xff) / 255.0f;
-			textureEnvColourRegs[i][1] = (float)((rgba >> 8) & 0xff) / 255.0f;
-			textureEnvColourRegs[i][2] = (float)((rgba >> 16) & 0xff) / 255.0f;
-			textureEnvColourRegs[i][3] = (float)(rgba >> 24) / 255.0f;
-
-			textureEnvScaleRegs[i] = regs[ioBase + 4];
-		}
-
-		glUniform1uiv(textureEnvSourceLoc, 6, textureEnvSourceRegs);
-		glUniform1uiv(textureEnvOperandLoc, 6, textureEnvOperandRegs);
-		glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
-		glUniform4fv(textureEnvColorLoc, 6, (const GLfloat*)textureEnvColourRegs);
-		glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
-		glUniform1ui(textureEnvUpdateBufferLoc, regs[0xe0]);
-
-		// TODO: deduplicate color decoding
-		{
-			const u32 rgba = regs[0xfd];
-			const float r = (float)(rgba & 0xff) / 255.0f;
-			const float g = (float)((rgba >> 8) & 0xff) / 255.0f;
-			const float b = (float)((rgba >> 16) & 0xff) / 255.0f;
-			const float a = (float)(rgba >> 24) / 255.0f;
-
-			glUniform4f(textureEnvBufferColorLoc, r, g, b, a);
-		}
-
-//		if(regs[0xfd] != 0)
-//		Helpers::warn("FOO %08x", regs[0xfd]);
-	}
+	setupTextureEnvState();
 
 	// Hack for rendering texture 1
 	if (regs[0x80] & 1) {
