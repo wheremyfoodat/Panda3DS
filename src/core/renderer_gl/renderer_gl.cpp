@@ -213,7 +213,6 @@ void Renderer::initGraphicsContext() {
 
 void Renderer::getGraphicsContext() {
 	OpenGL::disableScissor();
-	OpenGL::setViewport(400, 240);
 
 	vbo.bind();
 	vao.bind();
