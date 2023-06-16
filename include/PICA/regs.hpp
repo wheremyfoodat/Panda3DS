@@ -1,4 +1,5 @@
 #pragma once
+#include "helpers.hpp"
 
 namespace PICAInternalRegs {
 	enum : u32 {
@@ -71,7 +72,7 @@ namespace PICAInternalRegs {
 		FixedAttribData0 = 0x233,
 		FixedAttribData1 = 0x234,
 		FixedAttribData2 = 0x235,
-		
+
 		// Command processor registers
 		CmdBufSize0 = 0x238,
 		CmdBufSize1 = 0x239,
