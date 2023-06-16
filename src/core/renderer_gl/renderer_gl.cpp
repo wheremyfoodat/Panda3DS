@@ -118,7 +118,8 @@ const char* fragmentShader = R"(
 			case 7u: final.a = 1.0 - source.b; break; // One minus source blue
 		}
 
-		// TODO: respect GPUREG_TEXENVi_SCALE
+		final.rgb *= float(1 << (u_textureEnvScale[tev_id] & 3u));
+		final.a   *= float(1 << ((u_textureEnvScale[tev_id] >> 16) & 3u));
 
 		return final;
 	}
