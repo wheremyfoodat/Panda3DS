@@ -12,7 +12,8 @@ CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
     config.define_unpredictable_behaviour = true;
     config.global_monitor = &exclusiveMonitor;
     config.processor_id = 0;
-    
+    config.fastmem_pointer = mem.isFastmemEnabled() ? mem.getFastmemArenaBase() : nullptr;
+
     jit = std::make_unique<Dynarmic::A32::Jit>(config);
 }
 

@@ -13,6 +13,51 @@ Memory::Memory(u64& cpuTicks) : cpuTicks(cpuTicks) {
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
 	memoryInfo.reserve(32); // Pre-allocate some room for memory allocation info to avoid dynamic allocs
+
+#ifdef PANDA3DS_HARDWARE_FASTMEM
+	constexpr size_t FASTMEM_MEMORY_SIZE = 0x100000000; // Total size of the virtual address space we will occupy (4GB)
+	u8* arenaFcram = nullptr;
+	u8* arenaDSPRam = nullptr;
+
+	constexpr size_t MEMORY_ARENA_SIZE = FCRAM_SIZE + DSP_RAM_SIZE;
+	if (!arena.Create(MEMORY_ARENA_SIZE, true, false) || !arena.IsValid()) {
+		printf("Failed to create fastmem memory arena\n");
+		goto fastmemSetupFail;
+	}
+
+	fastmemArenaBase = (u8*)arena.FindBaseAddressForMapping(FASTMEM_MEMORY_SIZE);
+	if (!fastmemArenaBase) {
+		printf("Couldn't find base address for fastmem\n");
+		goto fastmemSetupFail;
+	}
+
+	arenaFcram = (u8*)arena.CreateViewPtr(FASTMEM_FCRAM_OFFSET, FCRAM_SIZE, true, false);
+	if (!arenaFcram) {
+		printf("Couldn't allocate FCRAM for fastmem");
+		goto fastmemSetupFail;
+	}
+
+	arenaDSPRam = (u8*)arena.CreateViewPtr(FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false);
+	if (!arenaDSPRam) {
+		printf("Couldn't allocate FCRAM for fastmem");
+		goto fastmemSetupFail;
+	}
+
+	fcram = arenaFcram;
+	dspRam = arenaDSPRam;
+	useFastmem = true;
+	return;
+
+fastmemSetupFail:
+	if (arenaFcram) arena.ReleaseViewPtr(arenaFcram, FCRAM_SIZE);
+	if (arenaDSPRam) arena.ReleaseViewPtr(arenaDSPRam, DSP_RAM_SIZE);
+	useFastmem = false;
+	fastmemArenaBase = nullptr;
+	return;
+#else
+	useFastmem = false;
+	fastmemArenaBase = nullptr;
+#endif
 }
 
 void Memory::reset() {
@@ -26,6 +71,9 @@ void Memory::reset() {
 		readTable[i] = 0;
 		writeTable[i] = 0;
 	}
+
+	resetFastmemViews(); // Reset the entire fastmem state
+	addFastmemView(VirtualAddrs::DSPMemStart, FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false); // Allocate RW mapping for DSP RAM
 
 	// Map stack pages as R/W
 	// We have 16KB for the stack, so we allocate the last 16KB of APPLICATION FCRAM for the stack
@@ -284,6 +332,9 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 
 		// Mark FCRAM page as allocated and go on
 		usedFCRAMPages[physPage] = true;
+		// Add mapping to the fastmem arena
+		addFastmemView(size_t(virtualPage) * pageSize, FASTMEM_FCRAM_OFFSET + size_t(physPage) * pageSize, pageSize, w, false);
+
 		virtualPage++;
 		physPage++;
 	}

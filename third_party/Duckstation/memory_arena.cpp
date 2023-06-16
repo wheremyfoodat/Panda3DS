@@ -125,7 +125,6 @@ static std::string GetFileMappingName()
 #endif
 
   std::string ret = std::string("Alber_") + std::to_string(pid);
-  printf("File mapping name: %s\n", ret.c_str());
   return ret;
 }
 

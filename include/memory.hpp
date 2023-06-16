@@ -8,7 +8,11 @@
 #include "helpers.hpp"
 #include "handles.hpp"
 #include "loader/ncsd.hpp"
+#include "MemArena/memory_arena.hpp"
 #include "services/shared_font.hpp"
+
+// Comment this out to disable fastmem
+#define PANDA3DS_HARDWARE_FASTMEM
 
 namespace PhysicalAddrs {
 	enum : u32 {
@@ -100,7 +104,7 @@ class Memory {
 	u64& cpuTicks; // Reference to the CPU tick counter
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
-	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
+	// Our memory core uses page tables for reads and writes with 4096 byte pages
 	std::vector<uintptr_t> readTable, writeTable;
 
 	// This tracks our OS' memory allocations
@@ -128,6 +132,36 @@ public:
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = 256_KB;
 
 private:
+	// We also use MMU-accelerated fastmem for fast memory emulation
+	// This means that we've got a 4GB memory arena which is organized the same way as the emulated 3DS' memory map
+	// And we can access this directly instead of calling the memory read/write functions, which would be slower
+	// Regions that are not mapped or can't be accelerated this way will segfault, and the caller (eg dynarmic), will
+	// handle this segfault and call the Slower memory read/write functions
+	bool useFastmem = false;
+	u8* fastmemArenaBase = nullptr;
+	static constexpr size_t FASTMEM_FCRAM_OFFSET = 0;  // Offset of FCRAM in the fastmem arena
+	static constexpr size_t FASTMEM_DSP_RAM_OFFSET = FASTMEM_FCRAM_OFFSET + FCRAM_SIZE;  // Offset of DSP RAM
+
+#ifdef PANDA3DS_HARDWARE_FASTMEM
+	Common::MemoryArena arena;
+	std::vector<Common::MemoryArena::View> fastmemViews;
+
+	void resetFastmemViews() { fastmemViews.clear(); }
+	void addFastmemView(u32 guestVaddr, size_t arenaOffset, size_t size, bool w, bool x = false) {
+		if (useFastmem) {
+			const auto hostAddr = fastmemArenaBase + guestVaddr;
+			auto view = arena.CreateView(arenaOffset, size, w, x, hostAddr);
+
+			if (view) {
+				fastmemViews.push_back(std::move(view.value()));
+			}
+		}
+	}
+#else
+	void resetFastmemViews() {}
+	void addFastmemView(u32 guestVaddr, size_t arenaOffset, size_t size, bool r, bool w, bool x = false) {}
+#endif
+
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
@@ -201,6 +235,9 @@ public:
 	static constexpr bool isAligned(u32 addr) {
 		return (addr & pageMask) == 0;
 	}
+
+	bool isFastmemEnabled() { return useFastmem; }
+	u8* getFastmemArenaBase() { return fastmemArenaBase; }
 
 	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
 	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).
