@@ -23,6 +23,7 @@ include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cryptopp/)
 include_directories(third_party/result/include/)
+include_directories(third_party/Duckstation/include)
 
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(SDL_MAIN_HANDLED)
@@ -123,6 +124,8 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/imgui/imgui_widgets.cpp
                              third_party/imgui/imgui_demo.cpp
                              third_party/gl3w/gl3w.cpp
+
+                             third_party/Duckstation/memory_arena.cpp
 )
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
