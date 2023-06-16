@@ -167,35 +167,26 @@ const char* fragmentShader = R"(
 	void main() {
 		if ((u_textureConfig & 1u) != 0u) tev_texture_sources[0] = texture(u_tex0, tex0_UVs);
 
-		// TODO: make TEV logic less redundant
-
 		tev_previous_buffer[0] = vec4(0.0);
 		tev_previous_buffer[1] = u_textureEnvBufferColor;
 
-		tev_previous = tev_combine(0);
-		tev_previous_buffer[0] = tev_previous_buffer[1];
-		if ((u_textureEnvUpdateBuffer &  0x100u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
-		if ((u_textureEnvUpdateBuffer & 0x1000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
+		for (int i = 0; i < 6; i++) {
+			tev_previous = tev_combine(i);
 
-		tev_previous = tev_combine(1);
-		tev_previous_buffer[0] = tev_previous_buffer[1];
-		if ((u_textureEnvUpdateBuffer &  0x200u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
-		if ((u_textureEnvUpdateBuffer & 0x2000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
+			tev_previous_buffer[0] = tev_previous_buffer[1];
 
-		tev_previous = tev_combine(2);
-		tev_previous_buffer[0] = tev_previous_buffer[1];
-		if ((u_textureEnvUpdateBuffer &  0x400u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
-		if ((u_textureEnvUpdateBuffer & 0x4000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
+			if (i < 4) {
+				if ((u_textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
+					tev_previous_buffer[1].rgb = tev_previous.rgb;
+				}
 
-		tev_previous = tev_combine(3);
-		tev_previous_buffer[0] = tev_previous_buffer[1];
-		if ((u_textureEnvUpdateBuffer &  0x800u) != 0u) tev_previous_buffer[1].rgb = tev_previous.rgb;
-		if ((u_textureEnvUpdateBuffer & 0x8000u) != 0u) tev_previous_buffer[1].a   = tev_previous.a;
+				if ((u_textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
+					tev_previous_buffer[1].a = tev_previous.a;
+				}
+			}
+		}
 
-		tev_previous = tev_combine(4);
-		tev_previous_buffer[0] = tev_previous_buffer[1];
-
-		fragColour = tev_combine(5);
+		fragColour = tev_previous;
 
 		if (tev_unimplemented_source) {
 			// fragColour = vec4(1.0, 0.0, 1.0, 1.0);
