@@ -781,7 +781,8 @@ void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	loopLevel++;
 
 	// Offset of the uniform
-	const uintptr_t uniformOffset = uintptr_t(&shader.intUniforms[uniformIndex]) - uintptr_t(&shader);
+	const auto& uniform = shader.intUniforms[uniformIndex];
+	const uintptr_t uniformOffset = uintptr_t(&uniform[0]) - uintptr_t(&shader);
 	// Offset of the loop register
 	const uintptr_t loopRegOffset = uintptr_t(&shader.loopCounter) - uintptr_t(&shader);
 
