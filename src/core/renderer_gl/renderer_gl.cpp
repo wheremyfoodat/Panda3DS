@@ -61,6 +61,8 @@ const char* fragmentShader = R"(
 	vec4 buffer;
 	vec4 next_buffer;
 
+	bool tev_unimplemented_source = false;
+
 	vec4 tev_evaluate_source(int tev_id, int src_id) {
 		vec4 source = vec4(1.0);
 
@@ -75,7 +77,7 @@ const char* fragmentShader = R"(
 			case 13u: source.rgb = buffer.rgb; break; // Previous buffer
 			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.rgb = previous.rgb; break; // Previous (output from TEV #n-1)
-			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
+			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
 		}
 
 		switch (alpha_source) {
@@ -84,7 +86,7 @@ const char* fragmentShader = R"(
 			case 13u: source.a = buffer.a; break; // Previous buffer
 			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.a = previous.a; break; // Previous (output from TEV #n-1)
-			default: return vec4(0.0, 1.0, 1.0, 1.0); break; // TODO: implement remaining sources
+			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
 		}
 
 		uint rgb_operand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
@@ -195,7 +197,9 @@ const char* fragmentShader = R"(
 
 			fragColour = tev_combine(5);
 
-			if((u_textureEnvUpdateBuffer & 0xFF00u) != 0u) {fragColour = vec4(1.0, 0.5, 1.0, 1.0); return; }
+			if (tev_unimplemented_source) {
+				fragColour = vec4(1.0, 0.0, 1.0, 1.0);
+			}
 		} else {
 			fragColour = colour;
 		}
