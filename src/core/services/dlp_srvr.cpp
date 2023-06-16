@@ -7,12 +7,6 @@ namespace DlpSrvrCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void DlpSrvrService::reset() {}
 
 void DlpSrvrService::handleSyncRequest(u32 messagePointer) {

@@ -3,6 +3,7 @@
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
+#include "result/result.hpp"
 
 // Please forgive me for how everything in this file is named
 // "dlp:SRVR" is not a nice name to work with

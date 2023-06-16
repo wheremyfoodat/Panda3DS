@@ -40,7 +40,7 @@ add_compile_definitions(BOOST_NO_CXX98_FUNCTION_BASE) # Forbid Boost from using 
 add_library(boost INTERFACE)
 target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
-set(CRYPTOPP_BUILD_TESTING OFF) 
+set(CRYPTOPP_BUILD_TESTING OFF)
 add_subdirectory(third_party/cryptopp)
 
 # Check for x64
@@ -114,7 +114,9 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/fs/archive_ext_save_data.hpp include/services/shared_font.hpp include/fs/archive_ncch.hpp
                  include/renderer_gl/textures.hpp include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
-                 include/system_models.hpp include/services/dlp_srvr.hpp
+                 include/system_models.hpp include/services/dlp_srvr.hpp include/result/result.hpp
+                 include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
+                 include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

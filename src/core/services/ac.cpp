@@ -7,12 +7,6 @@ namespace ACCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void ACService::reset() {}
 
 void ACService::handleSyncRequest(u32 messagePointer) {

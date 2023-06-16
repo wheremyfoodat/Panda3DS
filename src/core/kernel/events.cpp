@@ -38,7 +38,7 @@ bool Kernel::signalEvent(Handle handle) {
 		// One-shot events get cleared once they are acquired by some thread and only wake up 1 thread at a time
 		if (event->resetType == ResetType::OneShot) {
 			int index = wakeupOneThread(event->waitlist, handle); // Wake up one thread with the highest priority
-			event->waitlist ^= (1ull << index); // Remove thread from waitlist 
+			event->waitlist ^= (1ull << index); // Remove thread from waitlist
 			event->fired = false;
 		} else {
 			wakeupAllThreads(event->waitlist, handle);
@@ -64,11 +64,11 @@ void Kernel::svcCreateEvent() {
 
 	logSVC("CreateEvent(handle pointer = %08X, resetType = %s)\n", outPointer, resetTypeToString(resetType));
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = makeEvent(static_cast<ResetType>(resetType));
 }
 
-// Result ClearEvent(Handle event)	
+// Result ClearEvent(Handle event)
 void Kernel::svcClearEvent() {
 	const Handle handle = regs[0];
 	const auto event = getObject(handle, KernelObjectType::Event);
@@ -76,15 +76,15 @@ void Kernel::svcClearEvent() {
 
 	if (event == nullptr) [[unlikely]] {
 		Helpers::panic("Tried to clear non-existent event (handle = %X)", handle);
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
 	event->getData<Event>()->fired = false;
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
-// Result SignalEvent(Handle event)	
+// Result SignalEvent(Handle event)
 void Kernel::svcSignalEvent() {
 	const Handle handle = regs[0];
 	logSVC("SignalEvent(event handle = %X)\n", handle);
@@ -92,15 +92,15 @@ void Kernel::svcSignalEvent() {
 
 	if (object == nullptr) {
 		Helpers::panic("Signalled non-existent event: %X\n", handle);
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 	} else {
 		// We must signalEvent after setting r0, otherwise the r0 of the new thread will ne corrupted
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		signalEvent(handle);
 	}
 }
 
-// Result WaitSynchronization1(Handle handle, s64 timeout_nanoseconds)	
+// Result WaitSynchronization1(Handle handle, s64 timeout_nanoseconds)
 void Kernel::waitSynchronization1() {
 	const Handle handle = regs[0];
 	const s64 ns = s64(u64(regs[1]) | (u64(regs[2]) << 32));
@@ -110,7 +110,7 @@ void Kernel::waitSynchronization1() {
 
 	if (object == nullptr) [[unlikely]] {
 		Helpers::panic("WaitSynchronization1: Bad event handle %X\n", handle);
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
@@ -120,16 +120,16 @@ void Kernel::waitSynchronization1() {
 
 	if (!shouldWaitOnObject(object)) {
 		acquireSyncObject(object, threads[currentThreadIndex]); // Acquire the object since it's ready
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		rescheduleThreads();
 	} else {
 		// Timeout is 0, don't bother waiting, instantly timeout
 		if (ns == 0) {
-			regs[0] = SVCResult::Timeout;
+			regs[0] = Result::OS::Timeout;
 			return;
 		}
 
-		regs[0] = SVCResult::Timeout; // This will be overwritten with success if we don't timeout
+		regs[0] = Result::OS::Timeout; // This will be overwritten with success if we don't timeout
 
 		auto& t = threads[currentThreadIndex];
 		t.waitList.resize(1);
@@ -180,7 +180,7 @@ void Kernel::waitSynchronizationN() {
 		// Panic if one of the objects is not even an object
 		if (object == nullptr) [[unlikely]] {
 			Helpers::panic("WaitSynchronizationN: Bad object handle %X\n", handle);
-			regs[0] = SVCResult::BadHandle;
+			regs[0] = Result::Kernel::InvalidHandle;
 			return;
 		}
 
@@ -206,16 +206,16 @@ void Kernel::waitSynchronizationN() {
 
 	// We only need to wait on one object. Easy...?!
 	if (!waitAll) {
-		// If there's ready objects, acquire the first one and return 
+		// If there's ready objects, acquire the first one and return
 		if (oneObjectReady) {
-			regs[0] = SVCResult::Success;
+			regs[0] = Result::Success;
 			regs[1] = firstReadyObjectIndex; // Return index of the acquired object
 			acquireSyncObject(waitObjects[firstReadyObjectIndex].second, t); // Acquire object
 			rescheduleThreads();
 			return;
 		}
 
-		regs[0] = SVCResult::Timeout; // This will be overwritten with success if we don't timeout
+		regs[0] = Result::OS::Timeout; // This will be overwritten with success if we don't timeout
 		// If the thread wakes up without timeout, this will be adjusted to the index of the handle that woke us up
 		regs[1] = 0xFFFFFFFF;
 		t.waitList.resize(handleCount);
@@ -223,7 +223,7 @@ void Kernel::waitSynchronizationN() {
 		t.outPointer = outPointer;
 		t.waitingNanoseconds = ns;
 		t.sleepTick = cpu.getTicks();
-		
+
 		for (s32 i = 0; i < handleCount; i++) {
 			t.waitList[i] = waitObjects[i].first; // Add object to this thread's waitlist
 			waitObjects[i].second->getWaitlist() |= (1ull << currentThreadIndex); // And add the thread to the object's waitlist

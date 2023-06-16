@@ -6,12 +6,6 @@ namespace LCDCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void LCDService::reset() {}
 
 void LCDService::handleSyncRequest(u32 messagePointer) {

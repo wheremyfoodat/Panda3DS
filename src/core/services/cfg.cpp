@@ -16,12 +16,6 @@ namespace CFGCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void CFGService::reset() {}
 
 void CFGService::handleSyncRequest(u32 messagePointer) {
@@ -89,7 +83,7 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 	} else if (size == 4 && blockID == 0xD0000) { // Agreed EULA version (first 2 bytes) and latest EULA version (next 2 bytes)
 		log("Read EULA info\n");
 		mem.write16(output, 0x0202); // Agreed EULA version = 2.2 (Random number. TODO: Check)
-		mem.write16(output + 2, 0x0202); // Latest EULA version = 2.2 
+		mem.write16(output + 2, 0x0202); // Latest EULA version = 2.2
 	} else if (size == 0x800 && blockID == 0xB0001) { // UTF-16 name for our country in every language at 0x80 byte intervals
 		constexpr size_t languageCount = 16;
 		constexpr size_t nameSize = 0x80; // Max size of each name in bytes
@@ -105,7 +99,7 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		std::u16string name = u"Pandington"; // Note: This + the null terminator needs to fit in 0x80 bytes
 
 		for (int i = 0; i < languageCount; i++) {
-			u32 pointer = output + i * nameSize; 
+			u32 pointer = output + i * nameSize;
 			writeStringU16(pointer, name);
 		}
 	} else if (size == 4 && blockID == 0xB0003) { // Coordinates (latidude and longtitude) as s16

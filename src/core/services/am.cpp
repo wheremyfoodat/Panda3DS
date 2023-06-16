@@ -8,12 +8,6 @@ namespace AMCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void AMService::reset() {}
 
 void AMService::handleSyncRequest(u32 messagePointer) {

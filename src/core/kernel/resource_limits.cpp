@@ -10,13 +10,13 @@ void Kernel::getResourceLimit() {
 	logSVC("GetResourceLimit (handle pointer = %08X, process: %s)\n", handlePointer, getProcessName(pid).c_str());
 
 	if (process == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
 	const auto processData = static_cast<Process*>(process->data);
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = processData->limits.handle;
 }
 
@@ -29,7 +29,7 @@ void Kernel::getResourceLimitLimitValues() {
 
 	const KernelObject* limit = getObject(resourceLimit, KernelObjectType::ResourceLimit);
 	if (limit == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
@@ -46,7 +46,7 @@ void Kernel::getResourceLimitLimitValues() {
 		count--;
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
 // Result GetResourceLimitCurrentValues(s64* values, Handle resourceLimit, LimitableResource* names, s32 nameCount)
@@ -59,7 +59,7 @@ void Kernel::getResourceLimitCurrentValues() {
 
 	const KernelObject* limit = getObject(resourceLimit, KernelObjectType::ResourceLimit);
 	if (limit == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
@@ -75,7 +75,7 @@ void Kernel::getResourceLimitCurrentValues() {
 		count--;
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
 s32 Kernel::getCurrentResourceValue(const KernelObject* limit, u32 resourceName) {
