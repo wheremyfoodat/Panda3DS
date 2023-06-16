@@ -61,8 +61,16 @@ void Kernel::controlMemory() {
 	if (x)
 		Helpers::panic("ControlMemory: attempted to allocate executable memory");
 
-	if (!isAligned(addr0) || !isAligned(addr1) || !isAligned(size)) {
-		Helpers::panic("ControlMemory: Unaligned parameters\nAddr0: %08X\nAddr1: %08X\nSize: %08X", addr0, addr1, size);
+	if (!isAligned(addr0) || !isAligned(addr1)) [[unlikely]] {
+		Helpers::panic("ControlMemory: Unaligned addresses\nAddr0: %08X\nAddr1: %08X\n", addr0, addr1);
+		regs[0] = Result::OS::MisalignedAddress;
+		return;
+	}
+
+	if (!isAligned(size)) [[unlikely]] {
+		Helpers::panic("ControlMemory: Unaligned size\nSize: %08X", size);
+		regs[0] = Result::OS::MisalignedSize;
+		return;
 	}
 
 	logSVC("ControlMemory(addr0 = %08X, addr1 = %08X, size = %08X, operation = %X (%c%c%c)%s\n",
@@ -87,7 +95,10 @@ void Kernel::controlMemory() {
 			Helpers::warn("Ignoring mprotect! Hope nothing goes wrong but if the game accesses invalid memory or crashes then we prolly need to implement this\n");
 			break;
 
-		default: Helpers::panic("ControlMemory: unknown operation %X\n", operation);
+		default:
+			Helpers::panic("ControlMemory: unknown operation %X\n", operation);
+			regs[0] = Result::OS::InvalidCombination;
+			return;
 	}
 
 	regs[0] = Result::Success;
@@ -114,17 +125,37 @@ void Kernel::queryMemory() {
 void Kernel::mapMemoryBlock() {
 	const Handle block = regs[0];
 	u32 addr = regs[1];
-	const u32 myPerms = regs[2];
-	const u32 otherPerms = regs[3];
-	logSVC("MapMemoryBlock(block = %X, addr = %08X, myPerms = %X, otherPerms = %X\n", block, addr, myPerms, otherPerms);
+	const u32 myPermission = regs[2];
+	const u32 otherPermission = regs[3];
+	logSVC("MapMemoryBlock(block = %X, addr = %08X, myPermission = %X, otherPermission = %X\n", block, addr, myPermission, otherPermission);
 
 	if (!isAligned(addr)) [[unlikely]] {
 		Helpers::panic("MapMemoryBlock: Unaligned address");
+		regs[0] = Result::OS::MisalignedAddress;
+		return;
+	}
+
+	if (myPermission != MemoryPermissions::Read &&
+		myPermission != MemoryPermissions::Write &&
+		myPermission != MemoryPermissions::ReadWrite) [[unlikely]] {
+		Helpers::panic("MapMemoryBlock: Invalid myPermission");
+		regs[0] = Result::OS::InvalidCombination;
+		return;
+	}
+
+	if (otherPermission != MemoryPermissions::None &&
+		otherPermission != MemoryPermissions::Read &&
+		otherPermission != MemoryPermissions::Write &&
+		otherPermission != MemoryPermissions::ReadWrite &&
+		otherPermission != MemoryPermissions::DontCare) [[unlikely]] {
+		Helpers::panic("MapMemoryBlock: Invalid otherPermission");
+		regs[0] = Result::OS::InvalidCombination;
+		return;
 	}
 
 	if (KernelHandles::isSharedMemHandle(block)) {
 		if (block == KernelHandles::FontSharedMemHandle && addr == 0) addr = 0x18000000;
-		u8* ptr = mem.mapSharedMemory(block, addr, myPerms, otherPerms); // Map shared memory block
+		u8* ptr = mem.mapSharedMemory(block, addr, myPermission, otherPermission); // Map shared memory block
 
 		// Pass pointer to shared memory to the appropriate service
 		switch (block) {
@@ -140,10 +171,15 @@ void Kernel::mapMemoryBlock() {
 				std::memcpy(ptr, _shared_font_bin, _shared_font_len);
 				break;
 
-			default: Helpers::panic("Mapping unknown shared memory block: %X", block);
+			default:
+				Helpers::panic("Mapping unknown shared memory block: %X", block);
+				regs[0] = Result::OS::InvalidHandle;
+				return;
 		}
 	} else {
 		Helpers::panic("MapMemoryBlock where the handle does not refer to a known piece of kernel shared mem");
+		regs[0] = Result::OS::InvalidHandle;
+		return;
 	}
 
 	regs[0] = Result::Success;
@@ -163,29 +199,25 @@ void Kernel::createMemoryBlock() {
 	u32 otherPermission = mem.read32(regs[13] + 4); // This is placed on the stack rather than r4
 	logSVC("CreateMemoryBlock (addr = %08X, size = %08X, myPermission = %d, otherPermission = %d)\n", addr, size, myPermission, otherPermission);
 
-	// Returns whether a permission is valid
-	auto isPermValid = [](u32 permission) {
-		switch (permission) {
-			case MemoryPermissions::None:
-			case MemoryPermissions::Read:
-			case MemoryPermissions::Write:
-			case MemoryPermissions::ReadWrite:
-			case MemoryPermissions::DontCare:
-				return true;
-
-			default: // Permissions with the executable flag enabled or invalid permissions are not allowed
-				return false;
-		}
-	};
-
 	// Throw error if the size of the shared memory block is not aligned to page boundary
 	if (!isAligned(size)) {
 		regs[0] = Result::OS::MisalignedSize;
 		return;
 	}
 
-	// Throw error if one of the permissions is not valid
-	if (!isPermValid(myPermission) || !isPermValid(otherPermission)) {
+	if (myPermission != MemoryPermissions::Read &&
+		myPermission != MemoryPermissions::Write &&
+		myPermission != MemoryPermissions::ReadWrite) [[unlikely]] {
+		Helpers::panic("MapMemoryBlock: Invalid myPermission");
+		regs[0] = Result::OS::InvalidCombination;
+		return;
+	}
+
+	if (otherPermission != MemoryPermissions::None &&
+		otherPermission != MemoryPermissions::Read &&
+		otherPermission != MemoryPermissions::Write &&
+		otherPermission != MemoryPermissions::ReadWrite) [[unlikely]] {
+		Helpers::panic("MapMemoryBlock: Invalid otherPermission");
 		regs[0] = Result::OS::InvalidCombination;
 		return;
 	}
@@ -194,10 +226,6 @@ void Kernel::createMemoryBlock() {
 
 	if (addr == 0)
 		Helpers::panic("CreateMemoryBlock: Tried to use addr = 0");
-
-	// Implement "Don't care" permission as RW
-	if (myPermission == MemoryPermissions::DontCare) myPermission = MemoryPermissions::ReadWrite;
-	if (otherPermission == MemoryPermissions::DontCare) otherPermission = MemoryPermissions::ReadWrite;
 
 	regs[0] = Result::Success;
 	regs[1] = makeMemoryBlock(addr, size, myPermission, otherPermission);

@@ -37,15 +37,28 @@ std::optional<Handle> Kernel::getPortHandle(const char* name) {
 // Result ConnectToPort(Handle* out, const char* portName)
 void Kernel::connectToPort() {
 	const u32 handlePointer = regs[0];
-	// Read up to max + 1 characters to see if the name is too long
-	std::string port = mem.readString(regs[1], Port::maxNameLen + 1);
-	logSVC("ConnectToPort(handle pointer = %X, port = \"%s\")\n", handlePointer, port.c_str());
+	const u32 portNameUserPtr = regs[1];
 
-	if (port.size() > Port::maxNameLen) {
+	const u32 PortNameSize = Port::maxNameLen + 1;
+
+	u8 portName[PortNameSize];
+
+	int portSizeRead = copyStringFromUser(portName, portNameUserPtr, PortNameSize);
+
+	if (portSizeRead < 0) {
+		Helpers::panic("ConnectToPort: Port name pointer was invalid\n");
+		regs[0] = Result::OS::InvalidPortName;
+		return;
+	} else if (portSizeRead == PortNameSize && portName[Port::maxNameLen] != '\0') {
 		Helpers::panic("ConnectToPort: Port name too long\n");
 		regs[0] = Result::OS::PortNameTooLong;
 		return;
 	}
+
+	portSizeRead = std::max(portSizeRead, 0);
+	std::string port(portName, portName + portSizeRead - 1);
+
+	logSVC("ConnectToPort(handle pointer = %X, port = \"%s\")\n", handlePointer, port.c_str());
 
 	// Try getting a handle to the port
 	std::optional<Handle> optionalHandle = getPortHandle(port.c_str());

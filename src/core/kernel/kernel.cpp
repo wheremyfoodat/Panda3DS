@@ -70,6 +70,25 @@ void Kernel::setVersion(u8 major, u8 minor) {
 	mem.kernelVersion = descriptor; // The memory objects needs a copy because you can read the kernel ver from config mem
 }
 
+int Kernel::copyStringFromUser(u8 *dst, u32 src, u32 size) {
+	if (size == 0) {
+		return 0;
+	}
+
+	u32 i;
+	for (i = 0; i < size; i++) {
+		u8 c = mem.read8(src + i);
+
+		*dst++ = c;
+
+		if (c == 0) {
+			break;
+		}
+	}
+
+	return i + 1;
+}
+
 Handle Kernel::makeProcess(u32 id) {
 	const Handle processHandle = makeObject(KernelObjectType::Process);
 	const Handle resourceLimitHandle = makeObject(KernelObjectType::ResourceLimit);
@@ -162,12 +181,23 @@ void Kernel::getSystemTick() {
 }
 
 // Result OutputDebugString(const char* str, s32 size)
-// TODO: Does this actually write an error code in r0 and is the above signature correct?
 void Kernel::outputDebugString() {
 	const u32 pointer = regs[0];
-	const u32 size = regs[1];
+	const s32 size = regs[1];
+
+	if (size < 0 || ~pointer < size) {
+		regs[0] = Result::OS::OutOfRange;
+		return;
+	}
+	else if (pointer >= 0x40000000) {
+		regs[0] = Result::OS::InvalidAddress;
+		return;
+	}
 
 	std::string message = mem.readString(pointer, size);
+
+	// TODO: Dispatch debug event
+
 	logDebugString("[OutputDebugString] %s\n", message.c_str());
 	regs[0] = Result::Success;
 }
@@ -198,6 +228,8 @@ void Kernel::getProcessInfo() {
 		return;
 	}
 
+	regs[0] = Result::Success;
+
 	switch (type) {
 		// According to 3DBrew: Amount of private (code, data, heap) memory used by the process + total supervisor-mode
 		// stack size + page-rounded size of the external handle table
@@ -213,9 +245,9 @@ void Kernel::getProcessInfo() {
 
 		default:
 			Helpers::panic("GetProcessInfo: unimplemented type %d", type);
+			regs[0] = Result::Kernel::InvalidEnumValue;
+			break;
 	}
-
-	regs[0] = Result::Success;
 }
 
 // Result DuplicateHandle(Handle* out, Handle original)
@@ -231,6 +263,7 @@ void Kernel::duplicateHandle() {
 		regs[1] = ret;
 	} else {
 		Helpers::panic("DuplicateHandle: unimplemented handle type");
+		regs[0] = Result::Kernel::InvalidHandle;
 	}
 }
 

@@ -104,6 +104,8 @@ private:
 	std::string getProcessName(u32 pid);
 	const char* resetTypeToString(u32 type);
 
+	int copyStringFromUser(u8 *dst, u32 src, u32 size);
+
 	MAKE_LOG_FUNCTION(log, kernelLogger)
 	MAKE_LOG_FUNCTION(logSVC, svcLogger)
 	MAKE_LOG_FUNCTION(logThread, threadLogger)
