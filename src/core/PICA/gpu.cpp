@@ -1,7 +1,10 @@
 #include "PICA/gpu.hpp"
+
+#include <array>
+#include <cstdio>
+
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
-#include <cstdio>
 
 using namespace Floats;
 
@@ -41,7 +44,7 @@ void GPU::drawArrays(bool indexed) {
 		drawArrays<false>();
 }
 
-Vertex* vertices = new Vertex[Renderer::vertexBufferSize];
+static std::array<Vertex, Renderer::vertexBufferSize> vertices;
 
 template <bool indexed>
 void GPU::drawArrays() {
@@ -205,7 +208,7 @@ void GPU::drawArrays() {
 		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
 	};
 	const auto shape = primTypes[primType];
-	renderer.drawVertices(shape, vertices, vertexCount);
+	renderer.drawVertices(shape, std::span(vertices).first(vertexCount));
 }
 
 Vertex GPU::getImmediateModeVertex() {

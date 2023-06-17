@@ -1,8 +1,10 @@
 #include <cassert>
 #include <cstring>
-#include "kernel.hpp"
+
 #include "arm_defs.hpp"
-// This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each other
+#include "kernel.hpp"
+// This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each
+// other
 #include "cpu.hpp"
 #include "resource_limits.hpp"
 
@@ -20,17 +22,17 @@ void Kernel::switchThread(int newThreadIndex) {
 	}
 
 	// Backup context
-	std::memcpy(&oldThread.gprs[0], &cpu.regs()[0], 16 * sizeof(u32)); // Backup the 16 GPRs
-	std::memcpy(&oldThread.fprs[0], &cpu.fprs()[0], 32 * sizeof(u32)); // Backup the 32 FPRs
-	oldThread.cpsr = cpu.getCPSR();   // Backup CPSR
-	oldThread.fpscr = cpu.getFPSCR(); // Backup FPSCR
+	std::memcpy(oldThread.gprs.data(), cpu.regs().data(), cpu.regs().size_bytes());  // Backup the 16 GPRs
+	std::memcpy(oldThread.fprs.data(), cpu.fprs().data(), cpu.fprs().size_bytes());  // Backup the 32 FPRs
+	oldThread.cpsr = cpu.getCPSR();                                                  // Backup CPSR
+	oldThread.fpscr = cpu.getFPSCR();                                                // Backup FPSCR
 
 	// Load new context
-	std::memcpy(&cpu.regs()[0], &newThread.gprs[0], 16 * sizeof(u32)); // Load 16 GPRs
-	std::memcpy(&cpu.fprs()[0], &newThread.fprs[0], 32 * sizeof(u32)); // Load 32 FPRs
-	cpu.setCPSR(newThread.cpsr);   // Load CPSR
-	cpu.setFPSCR(newThread.fpscr); // Load FPSCR
-	cpu.setTLSBase(newThread.tlsBase); // Load CP15 thread-local-storage pointer register
+	std::memcpy(cpu.regs().data(), newThread.gprs.data(), cpu.regs().size_bytes());  // Load 16 GPRs
+	std::memcpy(cpu.fprs().data(), newThread.fprs.data(), cpu.fprs().size_bytes());  // Load 32 FPRs
+	cpu.setCPSR(newThread.cpsr);                                                     // Load CPSR
+	cpu.setFPSCR(newThread.fpscr);                                                   // Load FPSCR
+	cpu.setTLSBase(newThread.tlsBase);  // Load CP15 thread-local-storage pointer register
 
 	currentThreadIndex = newThreadIndex;
 }

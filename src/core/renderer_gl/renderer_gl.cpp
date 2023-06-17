@@ -475,7 +475,10 @@ void Renderer::setupTextureEnvState() {
 	glUniform4f(textureEnvBufferColorLoc, r, g, b, a);
 }
 
-void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 count) {
+void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex> vertices) {
+    // TODO: We should implement a GL state tracker that tracks settings like scissor, blending, bound program, etc
+    // This way if we attempt to eg do multiple glEnable(GL_BLEND) calls in a row, it will say "Oh blending is already enabled"
+    // And not actually perform the very expensive driver call for it
 	OpenGL::disableScissor();
 
 	vbo.bind();
@@ -570,8 +573,8 @@ void Renderer::drawVertices(OpenGL::Primitives primType, Vertex* vertices, u32 c
 		}
 	}
 
-	vbo.bufferVertsSub(vertices, count);
-	OpenGL::draw(primType, count);
+	vbo.bufferVertsSub(vertices);
+	OpenGL::draw(primType, vertices.size());
 }
 
 constexpr u32 topScreenBuffer = 0x1f000000;
