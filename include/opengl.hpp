@@ -28,7 +28,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "gl3w.h"
+#include <glad/gl.h>
 
 // Check if we have C++20. If yes, we can add C++20 std::span support
 #ifdef _MSVC_LANG // MSVC does not properly define __cplusplus without a compiler flag...
@@ -522,8 +522,6 @@ namespace OpenGL {
     static GLint getTex2D() { return get<GLint>(GL_TEXTURE_BINDING_2D); }
     static GLint getProgram() { return get<GLint>(GL_CURRENT_PROGRAM); }
     static bool scissorEnabled() { return isEnabled(GL_SCISSOR_TEST); }
-
-    static bool versionSupported(int major, int minor) { return gl3wIsSupported(major, minor); }
 
     [[nodiscard]] static GLint uniformLocation(GLuint program, const char* name) {
         return glGetUniformLocation(program, name);
