@@ -118,9 +118,6 @@ const char* fragmentShader = R"(
 			case 7u: final.a = 1.0 - source.b; break; // One minus source blue
 		}
 
-		final.rgb *= float(1 << (u_textureEnvScale[tev_id] & 3u));
-		final.a   *= float(1 << ((u_textureEnvScale[tev_id] >> 16) & 3u));
-
 		return final;
 	}
 
@@ -161,6 +158,9 @@ const char* fragmentShader = R"(
 			case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break; // Add then multiply
 			default: break; // TODO: figure out what the undocumented values do
 		}
+
+		result.rgb *= float(1 << (u_textureEnvScale[tev_id] & 3u));
+		result.a   *= float(1 << ((u_textureEnvScale[tev_id] >> 16) & 3u));
 
 		return result;
 	}
