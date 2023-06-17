@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdarg>
 #include <climits>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <iterator>
