@@ -64,6 +64,9 @@ const char* fragmentShader = R"(
 
 	bool tev_unimplemented_source = false;
 
+	// OpenGL ES 1.1 reference pages for TEVs (this is what the PICA200 implements):
+	// https://registry.khronos.org/OpenGL-Refpages/es1.1/xhtml/glTexEnv.xml
+
 	vec4 tev_evaluate_source(int tev_id, int src_id) {
 		vec4 source = vec4(1.0);
 
@@ -131,6 +134,10 @@ const char* fragmentShader = R"(
 
 		vec4 result = vec4(1.0);
 
+		// TODO:
+		// - test Dot3 RGBA, particularly what happens when rgb_combine != alpha_combine
+		// - test if alpha_combine can use all the same combine modes as rgb_combine
+
 		switch (rgb_combine) {
 			case 0u: result.rgb = source0.rgb; break; // Replace
 			case 1u: result.rgb = source0.rgb * source1.rgb; break; // Modulate
@@ -138,8 +145,8 @@ const char* fragmentShader = R"(
 			case 3u: result.rgb = clamp(source0.rgb + source1.rgb - 0.5, vec3(0.0), vec3(1.0)); break; // Add signed
 			case 4u: result.rgb = mix(source1.rgb, source0.rgb, source2.rgb); break; // Interpolate
 			case 5u: result.rgb = max(vec3(0.0), source0.rgb - source1.rgb); break; // Subtract
-			case 6u: result.rgb = vec3(dot(source0.rgb, source1.rgb)); break; // Dot3 RGB
-			case 7u: result.rgb = vec3(dot(source0, source1)); break; // Dot3 RGBA, TODO: not sure if this is correct?
+			case 6u:
+			case 7u: result.rgb = vec3(4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5)); break; // Dot3 RGB(A)
 			case 8u: result.rgb = min(vec3(1.0), source0.rgb * source1.rgb + source2.rgb); break; // Multiply then add
 			case 9u: result.rgb = min(vec3(1.0), (source0.rgb + source1.rgb) * source2.rgb); break; // Add then multiply
 			default: break; // TODO: figure out what the undocumented values do
@@ -152,8 +159,7 @@ const char* fragmentShader = R"(
 			case 3u: result.a = clamp(source0.a + source1.a - 0.5, 0.0, 1.0); break; // Add signed
 			case 4u: result.a = mix(source1.a, source0.a, source2.a); break; // Interpolate
 			case 5u: result.a = max(0.0, source0.a - source1.a); break; // Subtract
-			case 6u: result.a = dot(source0.rgb, source1.rgb); break; // Dot3 RGB
-			case 7u: result.a = dot(source0, source1); break; // Dot3 RGBA, TODO: not sure if this is correct?
+			case 7u: result.a = 4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5); break; // Dot3 RGB(A)
 			case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break; // Multiply then add
 			case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break; // Add then multiply
 			default: break; // TODO: figure out what the undocumented values do
