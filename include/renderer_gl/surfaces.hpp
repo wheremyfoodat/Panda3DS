@@ -1,4 +1,5 @@
 #pragma once
+#include "PICA/regs.hpp"
 #include "boost/icl/interval.hpp"
 #include "helpers.hpp"
 #include "opengl.hpp"
@@ -7,18 +8,8 @@ template <typename T>
 using Interval = boost::icl::right_open_interval<T>;
 
 struct ColourBuffer {
-    enum class Formats : u32 {
-        RGBA8 = 0,
-        BGR8 = 1,
-        RGB5A1 = 2,
-        RGB565 = 3,
-        RGBA4 = 4,
-        
-        Trash1 = 5, Trash2 = 6, Trash3 = 7 // Technically selectable, but their function is unknown
-    };
-
     u32 location;
-    Formats format;
+    PICAColorFmt format;
     OpenGL::uvec2 size;
     bool valid;
 
@@ -30,7 +21,7 @@ struct ColourBuffer {
 
     ColourBuffer() : valid(false) {}
 
-    ColourBuffer(u32 loc, Formats format, u32 x, u32 y, bool valid = true)
+    ColourBuffer(u32 loc, PICAColorFmt format, u32 x, u32 y, bool valid = true)
         : location(loc), format(format), size({x, y}), valid(valid) {
 
         u64 endLoc = (u64)loc + sizeInBytes();
@@ -78,31 +69,14 @@ struct ColourBuffer {
             size.x() == other.size.x() && size.y() == other.size.y();
     }
 
-    // Size occupied by each pixel in bytes
-    // All formats are 16BPP except for RGBA8 (32BPP) and BGR8 (24BPP)
-    size_t sizePerPixel() {
-        switch (format) {
-            case Formats::BGR8: return 3;
-            case Formats::RGBA8: return 4;
-            default: return 2;
-        }
-    }
-
     size_t sizeInBytes() {
-        return (size_t)size.x() * (size_t)size.y() * sizePerPixel();
+        return (size_t)size.x() * (size_t)size.y() * sizePerPixel(format);
     }
 };
 
 struct DepthBuffer {
-    enum class Formats : u32 {
-        Depth16 = 0,
-        Garbage = 1,
-        Depth24 = 2,
-        Depth24Stencil8 = 3
-    };
-
     u32 location;
-    Formats format;
+    PICADepthFmt format;
     OpenGL::uvec2 size; // Implicitly set to the size of the framebuffer
     bool valid;
 
@@ -113,7 +87,7 @@ struct DepthBuffer {
 
     DepthBuffer() : valid(false) {}
 
-    DepthBuffer(u32 loc, Formats format, u32 x, u32 y, bool valid = true) :
+    DepthBuffer(u32 loc, PICADepthFmt format, u32 x, u32 y, bool valid = true) :
         location(loc), format(format), size({x, y}), valid(valid) {
 
         u64 endLoc = (u64)loc + sizeInBytes();
@@ -122,7 +96,7 @@ struct DepthBuffer {
     }
 
     bool hasStencil() {
-        return format == Formats::Depth24Stencil8;
+        return format == PICADepthFmt::Depth24Stencil8;
     }
 
     void allocate() {
@@ -167,18 +141,7 @@ struct DepthBuffer {
             size.x() == other.size.x() && size.y() == other.size.y();
     }
 
-    // Size occupied by each pixel in bytes
-    size_t sizePerPixel() {
-        switch (format) {
-            case Formats::Depth16: return 2;
-            case Formats::Depth24: return 3;
-            case Formats::Depth24Stencil8: return 4;
-
-            default: return 1; // Invalid format
-        }
-    }
-
     size_t sizeInBytes() {
-        return (size_t)size.x() * (size_t)size.y() * sizePerPixel();
+        return (size_t)size.x() * (size_t)size.y() * sizePerPixel(format);
     }
 };

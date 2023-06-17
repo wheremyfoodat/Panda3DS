@@ -68,7 +68,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 		case ColourBufferFormat: {
 			u32 format = getBits<16, 3>(value);
-			renderer.setColourFormat(format);
+			renderer.setColourFormat(static_cast<PICAColorFmt>(format));
 			break;
 		}
 
@@ -79,8 +79,8 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		}
 
 		case DepthBufferFormat: {
-			u32 fmt = value & 0x3;
-			renderer.setDepthFormat(fmt);
+			u32 format = value & 0x3;
+			renderer.setDepthFormat(static_cast<PICADepthFmt>(format));
 			break;
 		}
 
@@ -157,7 +157,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						// If we've reached 3 verts, issue a draw call
 						// Handle rendering depending on the primitive type
 						if (immediateModeVertIndex == 3) {
-							renderer.drawVertices(OpenGL::Triangle, immediateModeVertices);
+							renderer.drawVertices(PICAPrimType::TriangleList, immediateModeVertices);
 
 							switch (primType) {
 								// Triangle or geometry primitive. Draw a triangle and discard all vertices

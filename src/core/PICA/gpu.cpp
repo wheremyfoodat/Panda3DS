@@ -55,11 +55,12 @@ void GPU::drawArrays() {
 
 	// Configures the type of primitive and the number of vertex shader outputs
 	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
-	const u32 primType = Helpers::getBits<8, 2>(primConfig);
-	if (primType != 0 && primType != 1 && primType != 3) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
+	const PICAPrimType primType = static_cast<PICAPrimType>(Helpers::getBits<8, 2>(primConfig));
+	if (primType == PICAPrimType::TriangleFan) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
-	if ((primType == 0 && vertexCount % 3) || (primType == 1 && vertexCount < 3)) {
+	if ((primType == PICAPrimType::TriangleList && vertexCount % 3) ||
+		(primType == PICAPrimType::TriangleStrip && vertexCount < 3)) {
 		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
 	}
 
@@ -203,12 +204,7 @@ void GPU::drawArrays() {
 		//printf("(u, v      ) = (%f, %f)\n", vertices[i].UVs.u(), vertices[i].UVs.v());
 	}
 
-	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
-	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
-		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
-	};
-	const auto shape = primTypes[primType];
-	renderer.drawVertices(shape, std::span(vertices).first(vertexCount));
+	renderer.drawVertices(primType, std::span(vertices).first(vertexCount));
 }
 
 Vertex GPU::getImmediateModeVertex() {

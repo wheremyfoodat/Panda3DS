@@ -128,3 +128,50 @@ namespace PICAInternalRegs {
 		VertexShaderOpDescriptorData7 = 0x2DD,
 	};
 }
+
+enum class PICAColorFmt : u32 {
+	RGBA8 = 0,
+	BGR8 = 1,
+	RGB5A1 = 2,
+	RGB565 = 3,
+	RGBA4 = 4,
+
+	// Technically selectable, but their function is unknown
+	Unknown5 = 5,
+	Unknown6 = 6,
+	Unknown7 = 7,
+};
+
+enum class PICADepthFmt : u32 {
+	Depth16 = 0,
+	Unknown1 = 1,  // Technically selectable, but function is unknown
+	Depth24 = 2,
+	Depth24Stencil8 = 3,
+};
+
+// Size occupied by each pixel in bytes
+
+// All formats are 16BPP except for RGBA8 (32BPP) and BGR8 (24BPP)
+inline constexpr usize sizePerPixel(PICAColorFmt format) {
+	switch (format) {
+		case PICAColorFmt::BGR8: return 3;
+		case PICAColorFmt::RGBA8: return 4;
+		default: return 2;
+	}
+}
+
+inline constexpr usize sizePerPixel(PICADepthFmt format) {
+	switch (format) {
+		case PICADepthFmt::Depth16: return 2;
+		case PICADepthFmt::Depth24: return 3;
+		case PICADepthFmt::Depth24Stencil8: return 4;
+		default: return 1;  // Invalid format
+	}
+}
+
+enum class PICAPrimType : u32 {
+	TriangleList = 0,
+	TriangleStrip = 1,
+	TriangleFan = 2,
+	GeometryPrimitive = 3,
+};

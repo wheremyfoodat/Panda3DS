@@ -144,10 +144,10 @@ void Renderer::reset() {
 
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
-	colourBufferFormat = ColourBuffer::Formats::RGBA8;
+	colourBufferFormat = PICAColorFmt::RGBA8;
 
 	depthBufferLoc = 0;
-	depthBufferFormat = DepthBuffer::Formats::Depth16;
+	depthBufferFormat = PICADepthFmt::Depth16;
 
 	if (triangleProgram.exists()) {
 		const auto oldProgram = OpenGL::getProgram();
@@ -264,7 +264,13 @@ void Renderer::setupBlending() {
 	}
 }
 
-void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex> vertices) {
+void Renderer::drawVertices(PICAPrimType primType, std::span<const Vertex> vertices) {
+	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
+	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
+		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
+	};
+	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
+
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
@@ -352,7 +358,7 @@ void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex>
 	}
 
 	vbo.bufferVertsSub(vertices);
-	OpenGL::draw(primType, vertices.size());
+	OpenGL::draw(primitiveTopology, vertices.size());
 }
 
 constexpr u32 topScreenBuffer = 0x1f000000;
@@ -423,8 +429,8 @@ void Renderer::bindDepthBuffer() {
 		tex = depthBufferCache.add(sampleBuffer).texture.m_handle;
 	}
 
-	if (DepthBuffer::Formats::Depth24Stencil8 != depthBufferFormat) Helpers::panic("TODO: Should we remove stencil attachment?");
-	auto attachment = depthBufferFormat == DepthBuffer::Formats::Depth24Stencil8 ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+	if (PICADepthFmt::Depth24Stencil8 != depthBufferFormat) Helpers::panic("TODO: Should we remove stencil attachment?");
+	auto attachment = depthBufferFormat == PICADepthFmt::Depth24Stencil8 ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, tex, 0);
 }
 
