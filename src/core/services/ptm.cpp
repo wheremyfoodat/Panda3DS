@@ -3,15 +3,9 @@
 
 namespace PTMCommands {
 	enum : u32 {
-		GetStepHistory = 0x000B00C2, 
+		GetStepHistory = 0x000B00C2,
 		GetTotalStepCount = 0x000C0000,
 		ConfigureNew3DSCPU = 0x08180040
-	};
-}
-
-namespace Result {
-	enum : u32 {
-		Success = 0,
 	};
 }
 

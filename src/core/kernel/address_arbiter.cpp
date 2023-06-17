@@ -26,7 +26,7 @@ Handle Kernel::makeArbiter() {
 // Result CreateAddressArbiter(Handle* arbiter)
 void Kernel::createAddressArbiter() {
 	logSVC("CreateAddressArbiter\n");
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = makeArbiter();
 }
 
@@ -43,7 +43,7 @@ void Kernel::arbitrateAddress() {
 
 	const auto arbiter = getObject(handle, KernelObjectType::AddressArbiter);
 	if (arbiter == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
@@ -52,16 +52,16 @@ void Kernel::arbitrateAddress() {
 	}
 
 	if (type > 4) [[unlikely]] {
-		regs[0] = SVCResult::InvalidEnumValueAlt;
+		regs[0] = Result::FND::InvalidEnumValue;
 		return;
 	}
 	// This needs to put the error code in r0 before we change threads
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 
 	switch (static_cast<ArbitrationType>(type)) {
 		// Puts this thread to sleep if word < value until another thread arbitrates the address using SIGNAL
 		case ArbitrationType::WaitIfLess: {
-			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed 
+			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed
 			if (word < value) {
 				sleepThreadOnArbiter(address);
 			}
@@ -71,7 +71,7 @@ void Kernel::arbitrateAddress() {
 		// Puts this thread to sleep if word < value until another thread arbitrates the address using SIGNAL
 		// If the thread is put to sleep, the arbiter address is decremented
 		case ArbitrationType::DecrementAndWaitIfLess: {
-			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed 
+			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed
 			if (word < value) {
 				mem.write32(address, word - 1);
 				sleepThreadOnArbiter(address);

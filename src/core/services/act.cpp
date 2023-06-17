@@ -7,12 +7,6 @@ namespace ACTCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void ACTService::reset() {}
 
 void ACTService::handleSyncRequest(u32 messagePointer) {

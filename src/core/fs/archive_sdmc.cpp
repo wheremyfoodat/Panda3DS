@@ -1,14 +1,14 @@
 #include "fs/archive_sdmc.hpp"
 #include <memory>
 
-FSResult SDMCArchive::createFile(const FSPath& path, u64 size) {
+HorizonResult SDMCArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[SDMC] CreateFile not yet supported");
-	return FSResult::Success;
+	return Result::Success;
 }
 
-FSResult SDMCArchive::deleteFile(const FSPath& path) {
+HorizonResult SDMCArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[SDMC] Unimplemented DeleteFile");
-	return FSResult::Success;
+	return Result::Success;
 }
 
 FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms) {
@@ -16,9 +16,9 @@ FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms)
 	return FileError;
 }
 
-Rust::Result<ArchiveBase*, FSResult> SDMCArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, HorizonResult> SDMCArchive::openArchive(const FSPath& path) {
 	printf("SDMCArchive::OpenArchive: Failed\n");
-	return Err(FSResult::NotFormatted);
+	return Err(Result::FS::NotFormatted);
 }
 
 std::optional<u32> SDMCArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

@@ -7,12 +7,6 @@ namespace NIMCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void NIMService::reset() {}
 
 void NIMService::handleSyncRequest(u32 messagePointer) {

@@ -4,6 +4,7 @@
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
+#include "result/result.hpp"
 
 namespace DSPPipeType {
 	enum : u32 {

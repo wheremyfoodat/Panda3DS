@@ -10,12 +10,6 @@ namespace NFCCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void NFCService::reset() {
 	tagInRangeEvent = std::nullopt;
 	tagOutOfRangeEvent = std::nullopt;
