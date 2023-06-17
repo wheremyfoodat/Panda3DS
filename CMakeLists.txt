@@ -18,7 +18,6 @@ include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${FMT_INCLUDE_DIR})
 include_directories(third_party/boost/)
 include_directories(third_party/elfio/)
-include_directories(third_party/gl3w/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cryptopp/)
@@ -30,6 +29,7 @@ add_compile_definitions(SDL_MAIN_HANDLED)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/SDL2)
+add_subdirectory(third_party/glad)
 include_directories(${SDL2_INCLUDE_DIR})
 
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
@@ -122,7 +122,6 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/imgui/imgui_tables.cpp
                              third_party/imgui/imgui_widgets.cpp
                              third_party/imgui/imgui_demo.cpp
-                             third_party/gl3w/gl3w.cpp
 )
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
@@ -137,4 +136,4 @@ source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
 add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 ${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static)
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad)
