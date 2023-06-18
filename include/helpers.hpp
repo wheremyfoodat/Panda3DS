@@ -152,6 +152,12 @@ namespace Helpers {
     static constexpr inline u8 incBCDByte(u8 value) {
         return ((value & 0xf) == 0x9) ? value + 7 : value + 1;
     }
+    // Use this helper for platforms that lack a working std::bit_cast implementation
+    // TODO: Replace this with C++20 version if available
+    template< class To, class From >
+    constexpr To bit_cast( const From& from ) noexcept{
+        return *reinterpret_cast<const To*>(&from);
+    }
 };
 
 // UDLs for memory size values
