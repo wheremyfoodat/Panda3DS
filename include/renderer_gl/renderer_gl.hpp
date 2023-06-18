@@ -47,11 +47,11 @@ class Renderer {
 	OpenGL::uvec2 fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'
 
 	u32 colourBufferLoc;                       // Location in 3DS VRAM for the colour buffer
-	PICAColorFmt colourBufferFormat;  // Format of the colours stored in the colour buffer
+	PICA::ColorFmt colourBufferFormat;  // Format of the colours stored in the colour buffer
 
 	// Same for the depth/stencil buffer
 	u32 depthBufferLoc;
-	PICADepthFmt depthBufferFormat;
+	PICA::DepthFmt depthBufferFormat;
 
 	// Dummy VAO/VBO for blitting the final output
 	OpenGL::VertexArray dummyVAO;
@@ -76,16 +76,16 @@ class Renderer {
 	void getGraphicsContext();                                                                      // Set up graphics context for rendering
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);                     // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
-	void drawVertices(PICAPrimType primType, std::span<const Vertex> vertices);               // Draw the given vertices
+	void drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices);               // Draw the given vertices
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize.x() = width;
 		fbSize.y() = height;
 	}
 
-	void setColourFormat(PICAColorFmt format) { colourBufferFormat = format; }
-	void setDepthFormat(PICADepthFmt format) {
-		if (format == PICADepthFmt::Unknown1) {
+	void setColourFormat(PICA::ColorFmt format) { colourBufferFormat = format; }
+	void setDepthFormat(PICA::DepthFmt format) {
+		if (format == PICA::DepthFmt::Unknown1) {
 			Helpers::panic("[PICA] Undocumented depth-stencil mode!");
 		}
 		depthBufferFormat = format;

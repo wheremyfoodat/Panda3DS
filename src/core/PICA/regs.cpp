@@ -33,7 +33,7 @@ u32 GPU::readInternalReg(u32 index) {
 }
 
 void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
-	using namespace PICAInternalRegs;
+	using namespace PICA::InternalRegs;
 
 	if (index > regNum) {
 		Helpers::panic("Tried to write to invalid GPU register. Index: %X, value: %08X\n", index, value);
@@ -68,7 +68,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 		case ColourBufferFormat: {
 			u32 format = getBits<16, 3>(value);
-			renderer.setColourFormat(static_cast<PICAColorFmt>(format));
+			renderer.setColourFormat(static_cast<PICA::ColorFmt>(format));
 			break;
 		}
 
@@ -80,7 +80,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 		case DepthBufferFormat: {
 			u32 format = value & 0x3;
-			renderer.setDepthFormat(static_cast<PICADepthFmt>(format));
+			renderer.setDepthFormat(static_cast<PICA::DepthFmt>(format));
 			break;
 		}
 
@@ -137,7 +137,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 				if (fixedAttribIndex < 12) [[likely]] {
 					shaderUnit.vs.fixedAttributes[fixedAttribIndex++] = attr;
 				} else if (fixedAttribIndex == 15) { // Otherwise if it's 15, we're submitting an immediate mode vertex
-					const uint totalAttrCount = (regs[PICAInternalRegs::VertexShaderAttrNum] & 0xf) + 1;
+					const uint totalAttrCount = (regs[PICA::InternalRegs::VertexShaderAttrNum] & 0xf) + 1;
 					if (totalAttrCount <= immediateModeAttrIndex) {
 						printf("Broken state in the immediate mode vertex submission pipeline. Failing silently\n");
 						immediateModeAttrIndex = 0;
@@ -151,13 +151,13 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						immediateModeVertices[immediateModeVertIndex++] = v;
 
 						// Get primitive type
-						const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
+						const u32 primConfig = regs[PICA::InternalRegs::PrimitiveConfig];
 						const u32 primType = getBits<8, 2>(primConfig);
 
 						// If we've reached 3 verts, issue a draw call
 						// Handle rendering depending on the primitive type
 						if (immediateModeVertIndex == 3) {
-							renderer.drawVertices(PICAPrimType::TriangleList, immediateModeVertices);
+							renderer.drawVertices(PICA::PrimType::TriangleList, immediateModeVertices);
 
 							switch (primType) {
 								// Triangle or geometry primitive. Draw a triangle and discard all vertices

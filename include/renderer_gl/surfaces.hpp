@@ -9,7 +9,7 @@ using Interval = boost::icl::right_open_interval<T>;
 
 struct ColourBuffer {
     u32 location;
-    PICAColorFmt format;
+    PICA::ColorFmt format;
     OpenGL::uvec2 size;
     bool valid;
 
@@ -21,7 +21,7 @@ struct ColourBuffer {
 
     ColourBuffer() : valid(false) {}
 
-    ColourBuffer(u32 loc, PICAColorFmt format, u32 x, u32 y, bool valid = true)
+    ColourBuffer(u32 loc, PICA::ColorFmt format, u32 x, u32 y, bool valid = true)
         : location(loc), format(format), size({x, y}), valid(valid) {
 
         u64 endLoc = (u64)loc + sizeInBytes();
@@ -70,13 +70,13 @@ struct ColourBuffer {
     }
 
     size_t sizeInBytes() {
-        return (size_t)size.x() * (size_t)size.y() * sizePerPixel(format);
+        return (size_t)size.x() * (size_t)size.y() * PICA::sizePerPixel(format);
     }
 };
 
 struct DepthBuffer {
     u32 location;
-    PICADepthFmt format;
+    PICA::DepthFmt format;
     OpenGL::uvec2 size; // Implicitly set to the size of the framebuffer
     bool valid;
 
@@ -87,7 +87,7 @@ struct DepthBuffer {
 
     DepthBuffer() : valid(false) {}
 
-    DepthBuffer(u32 loc, PICADepthFmt format, u32 x, u32 y, bool valid = true) :
+    DepthBuffer(u32 loc, PICA::DepthFmt format, u32 x, u32 y, bool valid = true) :
         location(loc), format(format), size({x, y}), valid(valid) {
 
         u64 endLoc = (u64)loc + sizeInBytes();
@@ -96,7 +96,7 @@ struct DepthBuffer {
     }
 
     bool hasStencil() {
-        return format == PICADepthFmt::Depth24Stencil8;
+        return format == PICA::DepthFmt::Depth24Stencil8;
     }
 
     void allocate() {
@@ -142,6 +142,6 @@ struct DepthBuffer {
     }
 
     size_t sizeInBytes() {
-        return (size_t)size.x() * (size_t)size.y() * sizePerPixel(format);
+        return (size_t)size.x() * (size_t)size.y() * PICA::sizePerPixel(format);
     }
 };

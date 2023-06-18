@@ -144,10 +144,10 @@ void Renderer::reset() {
 
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
-	colourBufferFormat = PICAColorFmt::RGBA8;
+	colourBufferFormat = PICA::ColorFmt::RGBA8;
 
 	depthBufferLoc = 0;
-	depthBufferFormat = PICADepthFmt::Depth16;
+	depthBufferFormat = PICA::DepthFmt::Depth16;
 
 	if (triangleProgram.exists()) {
 		const auto oldProgram = OpenGL::getProgram();
@@ -221,7 +221,7 @@ void Renderer::getGraphicsContext() {
 
 // Set up the OpenGL blending context to match the emulated PICA
 void Renderer::setupBlending() {
-	const bool blendingEnabled = (regs[PICAInternalRegs::ColourOperation] & (1 << 8)) != 0;
+	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
 	
 	// Map of PICA blending equations to OpenGL blending equations. The unused blending equations are equivalent to equation 0 (add)
 	static constexpr std::array<GLenum, 8> blendingEquations = {
@@ -241,7 +241,7 @@ void Renderer::setupBlending() {
 		OpenGL::enableBlend();
 
 		// Get blending equations
-		const u32 blendControl = regs[PICAInternalRegs::BlendFunc];
+		const u32 blendControl = regs[PICA::InternalRegs::BlendFunc];
 		const u32 rgbEquation = blendControl & 0x7;
 		const u32 alphaEquation = getBits<8, 3>(blendControl);
 
@@ -251,7 +251,7 @@ void Renderer::setupBlending() {
 		const u32 alphaSourceFunc = getBits<24, 4>(blendControl);
 		const u32 alphaDestFunc = getBits<28, 4>(blendControl);
 
-		const u32 constantColor = regs[PICAInternalRegs::BlendColour];
+		const u32 constantColor = regs[PICA::InternalRegs::BlendColour];
 		const u32 r = constantColor & 0xff;
 		const u32 g = getBits<8, 8>(constantColor);
 		const u32 b = getBits<16, 8>(constantColor);
@@ -264,7 +264,7 @@ void Renderer::setupBlending() {
 	}
 }
 
-void Renderer::drawVertices(PICAPrimType primType, std::span<const Vertex> vertices) {
+void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
 		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
@@ -272,7 +272,7 @@ void Renderer::drawVertices(PICAPrimType primType, std::span<const Vertex> verti
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 
 	// Adjust alpha test if necessary
-	const u32 alphaControl = regs[PICAInternalRegs::AlphaTestConfig];
+	const u32 alphaControl = regs[PICA::InternalRegs::AlphaTestConfig];
 	if (alphaControl != oldAlphaControl) {
 		oldAlphaControl = alphaControl;
 		glUniform1ui(alphaControlLoc, alphaControl);
@@ -282,7 +282,7 @@ void Renderer::drawVertices(PICAPrimType primType, std::span<const Vertex> verti
 	OpenGL::Framebuffer poop = getColourFBO();
 	poop.bind(OpenGL::DrawAndReadFramebuffer);
 
-	const u32 depthControl = regs[PICAInternalRegs::DepthAndColorMask];
+	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
 	const bool depthEnable = depthControl & 1;
 	const bool depthWriteEnable = getBit<12>(depthControl);
 	const int depthFunc = getBits<4, 3>(depthControl);
@@ -293,9 +293,9 @@ void Renderer::drawVertices(PICAPrimType primType, std::span<const Vertex> verti
 		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
 	};
 
-	const float depthScale = f24::fromRaw(regs[PICAInternalRegs::DepthScale] & 0xffffff).toFloat32();
-	const float depthOffset = f24::fromRaw(regs[PICAInternalRegs::DepthOffset] & 0xffffff).toFloat32();
-	const bool depthMapEnable = regs[PICAInternalRegs::DepthmapEnable] & 1;
+	const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+	const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+	const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
 	// Update depth uniforms
 	if (oldDepthScale != depthScale) {
@@ -328,15 +328,15 @@ void Renderer::drawVertices(PICAPrimType primType, std::span<const Vertex> verti
 	}
 
 	// Update the texture unit configuration uniform if it changed
-	const u32 texUnitConfig = regs[PICAInternalRegs::TexUnitCfg];
+	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
 	if (oldTexUnitConfig != texUnitConfig) {
 		oldTexUnitConfig = texUnitConfig;
 		glUniform1ui(texUnitConfigLoc, texUnitConfig);
 	}
 
 	// TODO: Actually use this
-	float viewportWidth = f24::fromRaw(regs[PICAInternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
-	float viewportHeight = f24::fromRaw(regs[PICAInternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
+	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
+	float viewportHeight = f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
 	OpenGL::setViewport(viewportWidth, viewportHeight);
 
 	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
@@ -429,8 +429,8 @@ void Renderer::bindDepthBuffer() {
 		tex = depthBufferCache.add(sampleBuffer).texture.m_handle;
 	}
 
-	if (PICADepthFmt::Depth24Stencil8 != depthBufferFormat) Helpers::panic("TODO: Should we remove stencil attachment?");
-	auto attachment = depthBufferFormat == PICADepthFmt::Depth24Stencil8 ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+	if (PICA::DepthFmt::Depth24Stencil8 != depthBufferFormat) Helpers::panic("TODO: Should we remove stencil attachment?");
+	auto attachment = depthBufferFormat == PICA::DepthFmt::Depth24Stencil8 ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, tex, 0);
 }
 
