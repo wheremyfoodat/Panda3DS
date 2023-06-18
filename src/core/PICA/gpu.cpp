@@ -2,11 +2,49 @@
 
 #include <array>
 #include <cstdio>
+#include <cstddef>
 
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
 
 using namespace Floats;
+
+// A representation of the output vertex as it comes out of the vertex shader, with padding and all
+struct OutputVertex {
+	using vec2f = OpenGL::Vector<f24, 2>;
+	using vec3f = OpenGL::Vector<f24, 3>;
+	using vec4f = OpenGL::Vector<f24, 4>;
+
+	union {
+		struct {
+			vec4f positions;   // Vertex position
+			vec4f quaternion;  // Quaternion specifying the normal/tangent frame (for fragment lighting)
+			vec4f colour;      // Vertex color
+			vec2f texcoord0;   // Texcoords for texture unit 0 (Only U and V, W is stored separately for 3D textures!)
+			vec2f texcoord1;   // Texcoords for TU 1
+			f24 texcoord0_w;   // W component for texcoord 0 if using a 3D texture
+			u32 padding;       // Unused
+
+			vec3f view;       // View vector (for fragment lighting)
+			u32 padding2;     // Unused
+			vec2f texcoord2;  // Texcoords for TU 2
+		};
+
+		// The software, non-accelerated vertex loader writes here and then reads specific components from the above struct
+		f24 raw[0x20];
+	};
+	OutputVertex() {}
+};
+#define ASSERT_POS(member, pos) static_assert(offsetof(OutputVertex, member) == pos * sizeof(f24), "OutputVertex struct is broken!");
+
+ASSERT_POS(positions, 0)
+ASSERT_POS(quaternion, 4)
+ASSERT_POS(colour, 8)
+ASSERT_POS(texcoord0, 12)
+ASSERT_POS(texcoord1, 14)
+ASSERT_POS(texcoord0_w, 16)
+ASSERT_POS(view, 18)
+ASSERT_POS(texcoord2, 22)
 
 GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
 	vram = new u8[vramSize];
@@ -194,9 +232,22 @@ void GPU::drawArrays() {
 		}
 		
 		shaderUnit.vs.run();
-		std::memcpy(&vertices[i].position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
-		std::memcpy(&vertices[i].colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
-		std::memcpy(&vertices[i].UVs, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+		OutputVertex out;
+
+		// Map shader outputs to fixed function properties
+		const u32 totalShaderOutputs = regs[PICAInternalRegs::ShaderOutputCount] & 7;
+		for (int i = 0; i < totalShaderOutputs; i++) {
+			const u32 config = regs[PICAInternalRegs::ShaderOutmap0 + i];
+
+			for (int j = 0; j < 4; j++) { // pls unroll
+				const u32 mapping = (config >> (j * 8)) & 0x1F;
+				out.raw[mapping] = shaderUnit.vs.outputs[i][j];
+			}
+		}
+
+		std::memcpy(&vertices[i].position, &out.positions, sizeof(vec4f));
+		std::memcpy(&vertices[i].colour, &out.colour, sizeof(vec4f));
+		std::memcpy(&vertices[i].UVs, &out.texcoord0, 2 * sizeof(f24));
 
 		//printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z(), (double)vertices[i].position.w());
 		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
