@@ -12,6 +12,7 @@ namespace PICAInternalRegs {
 		DepthScale = 0x4D,
 		DepthOffset = 0x4E,
 		ShaderOutputCount = 0x4F,
+		ShaderOutmap0 = 0x50,
 
 		DepthmapEnable = 0x6D,
 		TexUnitCfg = 0x80,
