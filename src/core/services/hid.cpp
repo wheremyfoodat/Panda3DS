@@ -83,7 +83,7 @@ void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 	constexpr float gyroscopeCoeff = 14.375f; // Same as retail 3DS
 	mem.write32(messagePointer, IPC::responseHeader(0x15, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, std::bit_cast<u32, float>(gyroscopeCoeff));
+	mem.write32(messagePointer + 8, Helpers::bit_cast<u32, float>(gyroscopeCoeff));
 }
 
 void HIDService::getIPCHandles(u32 messagePointer) {
