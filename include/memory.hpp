@@ -33,7 +33,10 @@ namespace VirtualAddrs {
 
 		NormalHeapStart = 0x08000000,
 		LinearHeapStartOld = 0x14000000, // If kernel version < 0x22C
+		LinearHeapEndOld = 0x1C000000,
+
 		LinearHeapStartNew = 0x30000000,
+		LinearHeapEndNew = 0x40000000,
 
 		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x1000, and so on
 		TLSBase = 0xFF400000,
