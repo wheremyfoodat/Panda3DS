@@ -46,7 +46,7 @@ class Renderer {
 
 	OpenGL::uvec2 fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'
 
-	u32 colourBufferLoc;                       // Location in 3DS VRAM for the colour buffer
+	u32 colourBufferLoc;                 // Location in 3DS VRAM for the colour buffer
 	PICA::ColorFmt colourBufferFormat;  // Format of the colours stored in the colour buffer
 
 	// Same for the depth/stencil buffer

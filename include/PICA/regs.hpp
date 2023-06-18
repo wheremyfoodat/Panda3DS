@@ -130,7 +130,7 @@ namespace PICA {
 		};
 	}
 
-	enum class ColorFmt : u32 {
+	enum class TextureFmt : u32 {
 		RGBA8 = 0x0,
 		RGB8 = 0x1,
 		RGBA5551 = 0x2,
@@ -147,6 +147,14 @@ namespace PICA {
 		ETC1A4 = 0xD,
 	};
 
+	enum class ColorFmt : u32 {
+		RGBA8 = 0x0,
+		RGB8 = 0x1,
+		RGBA5551 = 0x2,
+		RGB565 = 0x3,
+		RGBA4 = 0x4,
+	};
+
 	enum class DepthFmt : u32 {
 		Depth16 = 0,
 		Unknown1 = 1,  // Technically selectable, but function is unknown
@@ -155,24 +163,28 @@ namespace PICA {
 	};
 
 	// Returns the string representation of a texture format
-	inline constexpr const char* textureFormatToString(ColorFmt fmt) {
+	inline constexpr const char* textureFormatToString(TextureFmt fmt) {
 		switch (fmt) {
-			case ColorFmt::RGBA8: return "RGBA8";
-			case ColorFmt::RGB8: return "RGB8";
-			case ColorFmt::RGBA5551: return "RGBA5551";
-			case ColorFmt::RGB565: return "RGB565";
-			case ColorFmt::RGBA4: return "RGBA4";
-			case ColorFmt::IA8: return "IA8";
-			case ColorFmt::RG8: return "RG8";
-			case ColorFmt::I8: return "I8";
-			case ColorFmt::A8: return "A8";
-			case ColorFmt::IA4: return "IA4";
-			case ColorFmt::I4: return "I4";
-			case ColorFmt::A4: return "A4";
-			case ColorFmt::ETC1: return "ETC1";
-			case ColorFmt::ETC1A4: return "ETC1A4";
+			case TextureFmt::RGBA8: return "RGBA8";
+			case TextureFmt::RGB8: return "RGB8";
+			case TextureFmt::RGBA5551: return "RGBA5551";
+			case TextureFmt::RGB565: return "RGB565";
+			case TextureFmt::RGBA4: return "RGBA4";
+			case TextureFmt::IA8: return "IA8";
+			case TextureFmt::RG8: return "RG8";
+			case TextureFmt::I8: return "I8";
+			case TextureFmt::A8: return "A8";
+			case TextureFmt::IA4: return "IA4";
+			case TextureFmt::I4: return "I4";
+			case TextureFmt::A4: return "A4";
+			case TextureFmt::ETC1: return "ETC1";
+			case TextureFmt::ETC1A4: return "ETC1A4";
 			default: return "Unknown";
 		}
+	}
+
+	inline constexpr const char* textureFormatToString(ColorFmt fmt) {
+		return textureFormatToString(static_cast<TextureFmt>(fmt));
 	}
 
 	inline constexpr bool hasStencil(DepthFmt format) { return format == PICA::DepthFmt::Depth24Stencil8; }
@@ -180,12 +192,16 @@ namespace PICA {
 	// Size occupied by each pixel in bytes
 
 	// All formats are 16BPP except for RGBA8 (32BPP) and BGR8 (24BPP)
-	inline constexpr usize sizePerPixel(ColorFmt format) {
+	inline constexpr usize sizePerPixel(TextureFmt format) {
 		switch (format) {
-			case ColorFmt::RGB8: return 3;
-			case ColorFmt::RGBA8: return 4;
+			case TextureFmt::RGB8: return 3;
+			case TextureFmt::RGBA8: return 4;
 			default: return 2;
 		}
+	}
+
+	inline constexpr usize sizePerPixel(ColorFmt format) {
+		return sizePerPixel(static_cast<TextureFmt>(format));
 	}
 
 	inline constexpr usize sizePerPixel(DepthFmt format) {

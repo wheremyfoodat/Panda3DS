@@ -12,7 +12,7 @@ using Interval = boost::icl::right_open_interval<T>;
 struct Texture {
     u32 location;
     u32 config; // Magnification/minification filter, wrapping configs, etc
-    PICA::ColorFmt format;
+    PICA::TextureFmt format;
     OpenGL::uvec2 size;
     bool valid;
 
@@ -23,7 +23,7 @@ struct Texture {
 
     Texture() : valid(false) {}
 
-    Texture(u32 loc, PICA::ColorFmt format, u32 x, u32 y, u32 config, bool valid = true)
+    Texture(u32 loc, PICA::TextureFmt format, u32 x, u32 y, u32 config, bool valid = true)
         : location(loc), format(format), size({x, y}), config(config), valid(valid) {
 
         u64 endLoc = (u64)loc + sizeInBytes();
@@ -44,7 +44,7 @@ struct Texture {
     void free();
     u64 sizeInBytes();
 
-    u32 decodeTexel(u32 u, u32 v, PICA::ColorFmt fmt, const void* data);
+    u32 decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, const void* data);
 
     // Get the morton interleave offset of a texel based on its U and V values
     static u32 mortonInterleave(u32 u, u32 v);
