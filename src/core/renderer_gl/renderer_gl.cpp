@@ -322,7 +322,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 		const u32 addr = (regs[0x85] & 0x0FFFFFFF) << 3;
 		const u32 format = regs[0x8E] & 0xF;
 
-		Texture targetTex(addr, static_cast<Texture::Formats>(format), width, height, config);
+		Texture targetTex(addr, static_cast<PICA::ColorFmt>(format), width, height, config);
 		OpenGL::Texture tex = getTexture(targetTex);
 		tex.bind();
 	}
