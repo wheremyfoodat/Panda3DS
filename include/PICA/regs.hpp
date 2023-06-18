@@ -150,6 +150,8 @@ namespace PICA {
 		Depth24Stencil8 = 3,
 	};
 
+	inline constexpr bool hasStencil(DepthFmt format) { return format == PICA::DepthFmt::Depth24Stencil8; }
+
 	// Size occupied by each pixel in bytes
 
 	// All formats are 16BPP except for RGBA8 (32BPP) and BGR8 (24BPP)

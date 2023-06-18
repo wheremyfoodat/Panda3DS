@@ -95,10 +95,6 @@ struct DepthBuffer {
         range = Interval<u32>(loc, (u32)endLoc);
     }
 
-    bool hasStencil() {
-        return format == PICA::DepthFmt::Depth24Stencil8;
-    }
-
     void allocate() {
         // Create texture for the FBO, setting up filters and the like
         // Reading back the current texture is slow, but allocate calls should be few and far between.
