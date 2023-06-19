@@ -28,14 +28,14 @@ struct OutputVertex {
 			vec3f view;       // View vector (for fragment lighting)
 			u32 padding2;     // Unused
 			vec2f texcoord2;  // Texcoords for TU 2
-		};
+		} s;
 
 		// The software, non-accelerated vertex loader writes here and then reads specific components from the above struct
 		f24 raw[0x20];
 	};
 	OutputVertex() {}
 };
-#define ASSERT_POS(member, pos) static_assert(offsetof(OutputVertex, member) == pos * sizeof(f24), "OutputVertex struct is broken!");
+#define ASSERT_POS(member, pos) static_assert(offsetof(OutputVertex, s.member) == pos * sizeof(f24), "OutputVertex struct is broken!");
 
 ASSERT_POS(positions, 0)
 ASSERT_POS(quaternion, 4)
@@ -245,9 +245,9 @@ void GPU::drawArrays() {
 			}
 		}
 
-		std::memcpy(&vertices[i].position, &out.positions, sizeof(vec4f));
-		std::memcpy(&vertices[i].colour, &out.colour, sizeof(vec4f));
-		std::memcpy(&vertices[i].UVs, &out.texcoord0, 2 * sizeof(f24));
+		std::memcpy(&vertices[i].position, &out.s.positions, sizeof(vec4f));
+		std::memcpy(&vertices[i].colour, &out.s.colour, sizeof(vec4f));
+		std::memcpy(&vertices[i].UVs, &out.s.texcoord0, 2 * sizeof(f24));
 
 		//printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z(), (double)vertices[i].position.w());
 		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
