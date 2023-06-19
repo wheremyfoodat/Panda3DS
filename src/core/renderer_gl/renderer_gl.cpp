@@ -13,17 +13,24 @@ const char* vertexShader = R"(
 	
 	layout (location = 0) in vec4 coords;
 	layout (location = 1) in vec4 vertexColour;
-	layout (location = 2) in vec2 inUVs_texture0;
+	layout (location = 2) in vec2 in_texcoord0;
+	layout (location = 3) in vec2 in_texcoord1;
+	layout (location = 4) in float in_texcoord0_w;
+	layout (location = 5) in vec2 in_texcoord2;
 
 	out vec4 colour;
-	out vec2 tex0_UVs;
+	out vec3 texcoord0;
+	out vec2 texcoord1;
+	out vec2 texcoord2;
 
 	void main() {
 		gl_Position = coords;
 		colour = vertexColour;
 
 		// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
-		tex0_UVs = vec2(inUVs_texture0.x, 1.0 - inUVs_texture0.y);
+		texcoord0 = vec3(in_texcoord0.x, 1.0 - in_texcoord0.y, in_texcoord0_w);
+		texcoord1 = vec2(in_texcoord1.x, 1.0 - in_texcoord1.y);
+		texcoord2 = vec2(in_texcoord2.x, 1.0 - in_texcoord2.y);
 	}
 )";
 
@@ -31,7 +38,9 @@ const char* fragmentShader = R"(
 	#version 410 core
 	
 	in vec4 colour;
-	in vec2 tex0_UVs;
+	in vec3 texcoord0;
+	in vec2 texcoord1;
+	in vec2 texcoord2;
 
 	out vec4 fragColour;
 
@@ -53,6 +62,8 @@ const char* fragmentShader = R"(
 	uniform bool u_depthmapEnable;
 
 	uniform sampler2D u_tex0;
+	uniform sampler2D u_tex1;
+	uniform sampler2D u_tex2;
 
 	// TODO: figure out the color that is returned to the TEVs when reading from a disabled texture slot.
 	vec4 tev_texture_sources[4] = vec4[](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
@@ -76,6 +87,8 @@ const char* fragmentShader = R"(
 		switch (rgb_source) {
 			case  0u: source.rgb = colour.rgb; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.rgb = tev_texture_sources[0].rgb; break; // Texture 0
+			case  4u: source.rgb = tev_texture_sources[1].rgb; break; // Texture 1
+			case  5u: source.rgb = tev_texture_sources[2].rgb; break; // Texture 2
 			case 13u: source.rgb = tev_previous_buffer[0].rgb; break; // Previous buffer
 			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.rgb = tev_previous.rgb; break; // Previous (output from TEV #n-1)
@@ -85,6 +98,8 @@ const char* fragmentShader = R"(
 		switch (alpha_source) {
 			case  0u: source.a = colour.a; break; // Primary color, TODO: confirm that this is correct
 			case  3u: source.a = tev_texture_sources[0].a; break; // Texture 0
+			case  4u: source.a = tev_texture_sources[1].a; break; // Texture 1
+			case  5u: source.a = tev_texture_sources[2].a; break; // Texture 2
 			case 13u: source.a = tev_previous_buffer[0].a; break; // Previous buffer
 			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
 			case 15u: source.a = tev_previous.a; break; // Previous (output from TEV #n-1)
@@ -172,7 +187,11 @@ const char* fragmentShader = R"(
 	}
 
 	void main() {
-		if ((u_textureConfig & 1u) != 0u) tev_texture_sources[0] = texture(u_tex0, tex0_UVs);
+		vec2 tex2_uv = (u_textureConfig & (1 << 13)) != 0u ? texcoord1 : texcoord2;
+
+		if ((u_textureConfig & 1u) != 0u) tev_texture_sources[0] = texture(u_tex0, texcoord0.xy);
+		if ((u_textureConfig & 2u) != 0u) tev_texture_sources[1] = texture(u_tex1, texcoord1);
+		if ((u_textureConfig & 4u) != 0u) tev_texture_sources[2] = texture(u_tex2, tex2_uv);
 
 		tev_previous_buffer[0] = vec4(0.0);
 		tev_previous_buffer[1] = u_textureEnvBufferColor;
@@ -196,7 +215,7 @@ const char* fragmentShader = R"(
 		fragColour = tev_previous;
 
 		if (tev_unimplemented_source) {
-			// fragColour = vec4(1.0, 0.0, 1.0, 1.0);
+			 // fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 		}
 
 		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
@@ -337,7 +356,11 @@ void Renderer::initGraphicsContext() {
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
 	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
-	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0); // Init sampler object
+
+	// Init sampler objects
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex1"), 1);
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex2"), 2);
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
@@ -357,9 +380,18 @@ void Renderer::initGraphicsContext() {
 	// Colour attribute
 	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, colour));
 	vao.enableAttribute(1);
-	// UV attribute
-	vao.setAttributeFloat<float>(2, 2, sizeof(Vertex), offsetof(Vertex, UVs));
+	// UV 0 attribute
+	vao.setAttributeFloat<float>(2, 2, sizeof(Vertex), offsetof(Vertex, texcoord0));
 	vao.enableAttribute(2);
+	// UV 1 attribute
+	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, texcoord1));
+	vao.enableAttribute(3);
+	// UV 0 W-component attribute
+	vao.setAttributeFloat<float>(4, 1, sizeof(Vertex), offsetof(Vertex, texcoord0_w));
+	vao.enableAttribute(4);
+	// UV 2 attribute
+	vao.setAttributeFloat<float>(5, 2, sizeof(Vertex), offsetof(Vertex, texcoord2));
+	vao.enableAttribute(5);
 
 	dummyVBO.create();
 	dummyVAO.create();
@@ -535,19 +567,32 @@ void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex>
 
 	setupTextureEnvState();
 
-	// Hack for rendering texture 1
-	if (regs[0x80] & 1) {
-		const u32 dim = regs[0x82];
-		const u32 config = regs[0x83];
+	// Bind textures 0 to 2
+	for (int i = 0; i < 3; i++) {
+		if ((regs[0x80] & (1 << i)) == 0) {
+			continue;
+		}
+
+		static constexpr std::array<u32, 3> ioBases = {
+		  0x80, 0x90, 0x98
+		};
+
+		const size_t ioBase = ioBases[i];
+
+		const u32 dim = regs[ioBase + 2];
+		const u32 config = regs[ioBase + 3];
 		const u32 height = dim & 0x7ff;
 		const u32 width = getBits<16, 11>(dim);
-		const u32 addr = (regs[0x85] & 0x0FFFFFFF) << 3;
-		const u32 format = regs[0x8E] & 0xF;
+		const u32 addr = (regs[ioBase + 5] & 0x0FFFFFFF) << 3;
+		u32 format = regs[ioBase + (i == 0 ? 14 : 6)] & 0xF;
 
+		glActiveTexture(GL_TEXTURE0 + i);
 		Texture targetTex(addr, static_cast<Texture::Formats>(format), width, height, config);
 		OpenGL::Texture tex = getTexture(targetTex);
 		tex.bind();
 	}
+
+	glActiveTexture(GL_TEXTURE0);
 
 	// Update the texture unit configuration uniform if it changed
 	const u32 texUnitConfig = regs[PICAInternalRegs::TexUnitCfg];

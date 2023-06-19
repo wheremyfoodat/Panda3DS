@@ -2,6 +2,7 @@
 #include <array>
 #include <span>
 
+#include "PICA/float_types.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "opengl.hpp"
@@ -14,7 +15,11 @@ class GPU;
 struct Vertex {
 	OpenGL::vec4 position;
 	OpenGL::vec4 colour;
-	OpenGL::vec2 UVs;
+	OpenGL::vec2 texcoord0;
+	OpenGL::vec2 texcoord1;
+	Floats::f24 texcoord0_w;
+	u32 padding; // pad so that texcoord2 is 64-bit aligned
+	OpenGL::vec2 texcoord2;
 };
 
 class Renderer {

@@ -247,7 +247,10 @@ void GPU::drawArrays() {
 
 		std::memcpy(&vertices[i].position, &out.s.positions, sizeof(vec4f));
 		std::memcpy(&vertices[i].colour, &out.s.colour, sizeof(vec4f));
-		std::memcpy(&vertices[i].UVs, &out.s.texcoord0, 2 * sizeof(f24));
+		std::memcpy(&vertices[i].texcoord0, &out.s.texcoord0, 2 * sizeof(f24));
+		std::memcpy(&vertices[i].texcoord1, &out.s.texcoord1, 2 * sizeof(f24));
+		std::memcpy(&vertices[i].texcoord0_w, &out.s.texcoord0_w, sizeof(f24));
+		std::memcpy(&vertices[i].texcoord2, &out.s.texcoord2, 2 * sizeof(f24));
 
 		//printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z(), (double)vertices[i].position.w());
 		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
@@ -275,11 +278,11 @@ Vertex GPU::getImmediateModeVertex() {
 	shaderUnit.vs.run();
 	std::memcpy(&v.position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
 	std::memcpy(&v.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
-	std::memcpy(&v.UVs, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+	std::memcpy(&v.texcoord0, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
 
 	printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.position.x(), (double)v.position.y(), (double)v.position.z(), (double)v.position.w());
 	printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)v.colour.r(), (double)v.colour.g(), (double)v.colour.b(), (double)v.colour.a());
-	printf("(u, v      ) = (%f, %f)\n", v.UVs.u(), v.UVs.v());
+	printf("(u, v      ) = (%f, %f)\n", v.texcoord0.u(), v.texcoord0.v());
 
 	return v;
 }
