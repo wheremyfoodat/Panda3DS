@@ -16,17 +16,17 @@ namespace Crypto {
 
 	template<std::size_t N>
 	static std::array<uint8_t, N> rolArray(const std::array<uint8_t, N>& value, std::size_t bits) {
-		const auto bitWidth = N * UINT8_WIDTH;
+		const auto bitWidth = N * CHAR_BIT;
 
 		bits %= bitWidth;
 
-		const auto byteShift = bits / UINT8_WIDTH;
-		const auto bitShift = bits % UINT8_WIDTH;
+		const auto byteShift = bits / CHAR_BIT;
+		const auto bitShift = bits % CHAR_BIT;
 
 		std::array<uint8_t, N> result;
 
 		for (std::size_t i = 0; i < N; i++) {
-			result[i] = ((value[(i + byteShift) % N] << bitShift) | (value[(i + byteShift + 1) % N] >> (UINT8_WIDTH - bitShift))) & UINT8_MAX;
+			result[i] = ((value[(i + byteShift) % N] << bitShift) | (value[(i + byteShift + 1) % N] >> (CHAR_BIT - bitShift))) & UINT8_MAX;
 		}
 
 		return result;
@@ -40,7 +40,7 @@ namespace Crypto {
 
 		for (std::int64_t i = N - 1; i >= 0; i--) {
 			sum = a[i] + b[i] + carry;
-			carry = sum >> UINT8_WIDTH;
+			carry = sum >> CHAR_BIT;
 			result[i] = static_cast<std::uint8_t>(sum & UINT8_MAX);
 		}
 
