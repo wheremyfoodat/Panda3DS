@@ -143,7 +143,7 @@ source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
 add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 ${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad)
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad cryptopp)
 
 
 if(GPU_DEBUG_INFO)

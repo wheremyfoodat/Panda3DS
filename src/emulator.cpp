@@ -161,7 +161,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 bool Emulator::loadNCSD(const std::filesystem::path& path) {
     romType = ROMType::NCSD;
-    std::optional<NCSD> opt = memory.loadNCSD(path);
+    std::optional<NCSD> opt = memory.loadNCSD(aesEngine, path);
 
     if (!opt.has_value()) {
         return false;
