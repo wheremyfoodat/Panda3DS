@@ -22,6 +22,21 @@ const char* vertexShader = R"(
 	out vec3 texcoord0;
 	out vec2 texcoord1;
 	out vec2 texcoord2;
+	flat out vec4 v_textureEnvBufferColor;
+
+	// TEV uniforms
+	uniform uint u_textureEnvBufferColor;
+
+	vec4 abgr8888_to_vec4(uint abgr) {
+		const float scale = 1.0 / 255.0;
+
+		return vec4(
+			scale * float(abgr & 0xffu),
+			scale * float((abgr >> 8) & 0xffu),
+			scale * float((abgr >> 16) & 0xffu),
+			scale * float(abgr >> 24)
+		);
+	}
 
 	void main() {
 		gl_Position = coords;
@@ -31,6 +46,8 @@ const char* vertexShader = R"(
 		texcoord0 = vec3(in_texcoord0.x, 1.0 - in_texcoord0.y, in_texcoord0_w);
 		texcoord1 = vec2(in_texcoord1.x, 1.0 - in_texcoord1.y);
 		texcoord2 = vec2(in_texcoord2.x, 1.0 - in_texcoord2.y);
+
+		v_textureEnvBufferColor = abgr8888_to_vec4(u_textureEnvBufferColor);
 	}
 )";
 
@@ -41,6 +58,7 @@ const char* fragmentShader = R"(
 	in vec3 texcoord0;
 	in vec2 texcoord1;
 	in vec2 texcoord2;
+	flat in vec4 v_textureEnvBufferColor;
 
 	out vec4 fragColour;
 
@@ -54,7 +72,6 @@ const char* fragmentShader = R"(
 	uniform vec4 u_textureEnvColor[6];
 	uniform uint u_textureEnvScale[6];
 	uniform uint u_textureEnvUpdateBuffer;
-	uniform vec4 u_textureEnvBufferColor;
 
 	// Depth control uniforms
 	uniform float u_depthScale;
@@ -181,7 +198,7 @@ const char* fragmentShader = R"(
 		tev_sources[13] = vec4(0.0); // Previous buffer
 		tev_sources[15] = vec4(0.0); // Previous combiner
 
-		tev_next_previous_buffer = u_textureEnvBufferColor;
+		tev_next_previous_buffer = v_textureEnvBufferColor;
 
 		for (int i = 0; i < 6; i++) {
 			tev_sources[14] = u_textureEnvColor[i]; // Constant color
@@ -491,13 +508,7 @@ void Renderer::setupTextureEnvState() {
 	glUniform4fv(textureEnvColorLoc, 6, (const GLfloat*)textureEnvColourRegs);
 	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
 	glUniform1ui(textureEnvUpdateBufferLoc, regs[0xe0]);
-
-	const u32 bufferColor = regs[0xfd];
-	const float r = (float)(bufferColor & 0xff) / 255.0f;
-	const float g = (float)getBits<8, 8>(bufferColor) / 255.0f;
-	const float b = (float)getBits<16, 8>(bufferColor) / 255.0f;
-	const float a = (float)getBits<24, 8>(bufferColor) / 255.0f;
-	glUniform4f(textureEnvBufferColorLoc, r, g, b, a);
+	glUniform1ui(textureEnvBufferColorLoc, regs[0xfd]);
 }
 
 void Renderer::drawVertices(OpenGL::Primitives primType, std::span<const Vertex> vertices) {
