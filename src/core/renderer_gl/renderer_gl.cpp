@@ -65,38 +65,24 @@ const char* fragmentShader = R"(
 	uniform sampler2D u_tex1;
 	uniform sampler2D u_tex2;
 
-	// TODO: figure out the color that is returned to the TEVs when reading from a disabled texture slot.
-	vec4 tev_texture_sources[4] = vec4[](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
-
-	// TODO: figure out the correct "initial" value returned to TEV0 when reading the "previous" source.
-	vec4 tev_previous = vec4(0.0);
-
-	vec4 tev_previous_buffer[2];
-
+	vec4 tev_sources[16];
+	vec4 tev_next_previous_buffer;
 	bool tev_unimplemented_source = false;
 
 	// OpenGL ES 1.1 reference pages for TEVs (this is what the PICA200 implements):
 	// https://registry.khronos.org/OpenGL-Refpages/es1.1/xhtml/glTexEnv.xml
 
-	vec4 tev_fetch_source(int tev_id, uint source_id) {
-		// TODO: this can be simplified to be an array, except for the env color (but that can be updated in the loop)
-		switch (source_id) {
-			case  0u: return colour; break; // Primary color
-			case  3u: return tev_texture_sources[0]; break; // Texture 0
-			case  4u: return tev_texture_sources[1]; break; // Texture 1
-			case  5u: return tev_texture_sources[2]; break; // Texture 2
-			case 13u: return tev_previous_buffer[0]; break; // Previous buffer
-			case 14u: return u_textureEnvColor[tev_id]; break; // Constant (GPUREG_TEXENVi_COLOR)
-			case 15u: return tev_previous; break; // Previous (output from TEV #n-1)
-			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
+	vec4 tev_fetch_source(uint source) {
+		if (source >= 6u && source < 13u) {
+			tev_unimplemented_source = true;
 		}
 
-		return vec4(0.5, 0.5, 0.5, 1.0);
+		return tev_sources[source];
 	}
 
 	vec4 tev_evaluate_source(int tev_id, int src_id) {
-		vec4 rgb_source = tev_fetch_source(tev_id, (u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u);
-		vec4 alpha_source = tev_fetch_source(tev_id, (u_textureEnvSource[tev_id] >> (16 + src_id * 4)) & 15u);
+		vec4 rgb_source = tev_fetch_source((u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u);
+		vec4 alpha_source = tev_fetch_source((u_textureEnvSource[tev_id] >> (16 + src_id * 4)) & 15u);
 
 		uint rgb_operand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
 		uint alpha_operand = (u_textureEnvOperand[tev_id] >> (12 + src_id * 4)) & 7u;
@@ -182,30 +168,36 @@ const char* fragmentShader = R"(
 	void main() {
 		vec2 tex2_uv = (u_textureConfig & (1 << 13)) != 0u ? texcoord1 : texcoord2;
 
-		if ((u_textureConfig & 1u) != 0u) tev_texture_sources[0] = texture(u_tex0, texcoord0.xy);
-		if ((u_textureConfig & 2u) != 0u) tev_texture_sources[1] = texture(u_tex1, texcoord1);
-		if ((u_textureConfig & 4u) != 0u) tev_texture_sources[2] = texture(u_tex2, tex2_uv);
+		// TODO: what do invalid sources, disabled textures read as?
+		// And what does the "previous combiner" source read initially?
+		tev_sources[0] = colour; // Primary/vertex color
+		tev_sources[1] = vec4(vec3(0.5), 1.0); // Fragment primary color
+		tev_sources[2] = vec4(vec3(0.5), 1.0); // Fragment secondary color
+		if ((u_textureConfig & 1u) != 0u) tev_sources[3] = texture(u_tex0, texcoord0.xy);
+		if ((u_textureConfig & 2u) != 0u) tev_sources[4] = texture(u_tex1, texcoord1);
+		if ((u_textureConfig & 4u) != 0u) tev_sources[5] = texture(u_tex2, tex2_uv);
+		tev_sources[13] = vec4(0.0); // Previous buffer
+		tev_sources[15] = vec4(0.0); // Previous combiner
 
-		tev_previous_buffer[0] = vec4(0.0);
-		tev_previous_buffer[1] = u_textureEnvBufferColor;
+		tev_next_previous_buffer = u_textureEnvBufferColor;
 
 		for (int i = 0; i < 6; i++) {
-			tev_previous = tev_combine(i);
-
-			tev_previous_buffer[0] = tev_previous_buffer[1];
+			tev_sources[14] = u_textureEnvColor[i]; // Constant color
+			tev_sources[15] = tev_combine(i);
+			tev_sources[13] = tev_next_previous_buffer;
 
 			if (i < 4) {
 				if ((u_textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
-					tev_previous_buffer[1].rgb = tev_previous.rgb;
+					tev_next_previous_buffer.rgb = tev_sources[15].rgb;
 				}
 
 				if ((u_textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
-					tev_previous_buffer[1].a = tev_previous.a;
+					tev_next_previous_buffer.a = tev_sources[15].a;
 				}
 			}
 		}
 
-		fragColour = tev_previous;
+		fragColour = tev_sources[15];
 
 		if (tev_unimplemented_source) {
 			 // fragColour = vec4(1.0, 0.0, 1.0, 1.0);
