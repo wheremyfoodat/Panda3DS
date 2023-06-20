@@ -911,7 +911,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	}
 
 	vbo.bufferVertsSub(vertices);
-	OpenGL::draw(primitiveTopology, vertices.size());
+	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 }
 
 constexpr u32 topScreenBuffer = 0x1f000000;

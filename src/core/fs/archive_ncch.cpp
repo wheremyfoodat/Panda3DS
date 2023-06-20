@@ -138,8 +138,8 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 	// Seek to file offset depending on if we're reading from RomFS, ExeFS, etc
 	switch (type) {
 		case PathType::RomFS: {
-			const u32 romFSSize = cxi->romFS.size;
-			const u32 romFSOffset = cxi->romFS.offset;
+			const u64 romFSSize = cxi->romFS.size;
+			const u64 romFSOffset = cxi->romFS.offset;
 			if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
 				Helpers::panic("Tried to read from NCCH with too big of an offset");
 			}
@@ -161,8 +161,8 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 	}
 
 	for (u64 i = 0; i < bytesRead; i++) {
-		mem.write8(dataPointer + i, data[i]);
+		mem.write8(u32(dataPointer + i), data[i]);
 	}
 
-	return bytesRead;
+	return u32(bytesRead);
 }

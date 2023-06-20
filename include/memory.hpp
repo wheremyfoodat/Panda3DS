@@ -110,7 +110,7 @@ class Memory {
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
 	std::array<SharedMemoryBlock, 3> sharedMemBlocks = {
-		SharedMemoryBlock(0, _shared_font_len, KernelHandles::FontSharedMemHandle), // Shared memory for the system font
+		SharedMemoryBlock(0, u32(_shared_font_len), KernelHandles::FontSharedMemHandle), // Shared memory for the system font
 		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
 		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
  	};
@@ -121,14 +121,14 @@ public:
 	static constexpr u32 pageMask = pageSize - 1;
 	static constexpr u32 totalPageCount = 1 << (32 - pageShift);
 	
-	static constexpr u32 FCRAM_SIZE = 128_MB;
-	static constexpr u32 FCRAM_APPLICATION_SIZE = 64_MB;
+	static constexpr u32 FCRAM_SIZE = u32(128_MB);
+	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(64_MB);
 	static constexpr u32 FCRAM_PAGE_COUNT = FCRAM_SIZE / pageSize;
 	static constexpr u32 FCRAM_APPLICATION_PAGE_COUNT = FCRAM_APPLICATION_SIZE / pageSize;
 
-	static constexpr u32 DSP_RAM_SIZE = 512_KB;
-	static constexpr u32 DSP_CODE_MEMORY_OFFSET = 0_KB;
-	static constexpr u32 DSP_DATA_MEMORY_OFFSET = 256_KB;
+	static constexpr u32 DSP_RAM_SIZE = u32(512_KB);
+	static constexpr u32 DSP_CODE_MEMORY_OFFSET = u32(0_KB);
+	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
 private:
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
@@ -141,8 +141,8 @@ private:
 
 public:
 	u16 kernelVersion = 0;
-	u32 usedUserMemory = 0_MB; // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
-	u32 usedSystemMemory = 0_MB; // Similar for the SYSTEM range (reserved for the syscore)
+	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
+	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
 
 	Memory(u64& cpuTicks);
 	void reset();

@@ -286,7 +286,7 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 			// Get the index of the event in the object's waitlist, write it to r1
 			for (size_t i = 0; i < t.waitList.size(); i++) {
 				if (t.waitList[i] == handle) {
-					t.gprs[1] = i;
+					t.gprs[1] = u32(i);
 					break;
 				}
 			}
@@ -321,7 +321,7 @@ void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
 			// Get the index of the event in the object's waitlist, write it to r1
 			for (size_t i = 0; i < t.waitList.size(); i++) {
 				if (t.waitList[i] == handle) {
-					t.gprs[1] = i;
+					t.gprs[1] = u32(i);
 					break;
 				}
 			}

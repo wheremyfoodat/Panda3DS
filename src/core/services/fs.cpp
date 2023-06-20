@@ -219,7 +219,7 @@ void FSService::openArchive(u32 messagePointer) {
 }
 
 void FSService::openFile(u32 messagePointer) {
-	const Handle archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = Handle(mem.read64(messagePointer + 8));
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 openFlags = mem.read32(messagePointer + 24);
@@ -342,7 +342,7 @@ void FSService::openFileDirectly(u32 messagePointer) {
 }
 
 void FSService::createFile(u32 messagePointer) {
-	const Handle archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = Handle(mem.read64(messagePointer + 8));
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 attributes = mem.read32(messagePointer + 24);
@@ -367,7 +367,7 @@ void FSService::createFile(u32 messagePointer) {
 }
 
 void FSService::deleteFile(u32 messagePointer) {
-	const Handle archiveHandle = mem.read64(messagePointer + 8);
+	const Handle archiveHandle = Handle(mem.read64(messagePointer + 8));
 	const u32 filePathType = mem.read32(messagePointer + 16);
 	const u32 filePathSize = mem.read32(messagePointer + 20);
 	const u32 filePathPointer = mem.read32(messagePointer + 28);
@@ -478,7 +478,7 @@ void FSService::formatThisUserSaveData(u32 messagePointer) {
 }
 
 void FSService::controlArchive(u32 messagePointer) {
-	const Handle archiveHandle = mem.read64(messagePointer + 4);
+	const Handle archiveHandle = Handle(mem.read64(messagePointer + 4));
 	const u32 action = mem.read32(messagePointer + 12);
 	const u32 inputSize = mem.read32(messagePointer + 16);
 	const u32 outputSize = mem.read32(messagePointer + 20);
