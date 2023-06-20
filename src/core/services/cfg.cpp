@@ -73,7 +73,7 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		};
 
 		for (int i = 0; i < 8; i++) {
-			mem.write32(output + i * 4, std::bit_cast<u32, float>(STEREO_CAMERA_SETTINGS[i]));
+			mem.write32(output + i * 4, Helpers::bit_cast<u32, float>(STEREO_CAMERA_SETTINGS[i]));
 		}
 	} else if (size == 0x1C && blockID == 0xA0000) { // Username
 		writeStringU16(output, u"Pander");

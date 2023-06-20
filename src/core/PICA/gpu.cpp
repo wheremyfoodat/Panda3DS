@@ -88,44 +88,45 @@ template <bool indexed>
 void GPU::drawArrays() {
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
-	const u32 vertexBase = ((regs[PICAInternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
-	const u32 vertexCount = regs[PICAInternalRegs::VertexCountReg]; // Total # of vertices to transfer
+	const u32 vertexBase = ((regs[PICA::InternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
+	const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg]; // Total # of vertices to transfer
 
 	// Configures the type of primitive and the number of vertex shader outputs
-	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
-	const u32 primType = Helpers::getBits<8, 2>(primConfig);
-	if (primType != 0 && primType != 1 && primType != 3) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
+	const u32 primConfig = regs[PICA::InternalRegs::PrimitiveConfig];
+	const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(primConfig));
+	if (primType == PICA::PrimType::TriangleFan) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
-	if ((primType == 0 && vertexCount % 3) || (primType == 1 && vertexCount < 3)) {
+	if ((primType == PICA::PrimType::TriangleList && vertexCount % 3) ||
+		(primType == PICA::PrimType::TriangleStrip && vertexCount < 3)) {
 		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
 	}
 
 	// Get the configuration for the index buffer, used only for indexed drawing
-	u32 indexBufferConfig = regs[PICAInternalRegs::IndexBufferConfig];
+	u32 indexBufferConfig = regs[PICA::InternalRegs::IndexBufferConfig];
 	u32 indexBufferPointer = vertexBase + (indexBufferConfig & 0xfffffff);
 	bool shortIndex = Helpers::getBit<31>(indexBufferConfig); // Indicates whether vert indices are 16-bit or 8-bit
 
 	// Stuff the global attribute config registers in one u64 to make attr parsing easier
 	// TODO: Cache this when the vertex attribute format registers are written to 
-	u64 vertexCfg = u64(regs[PICAInternalRegs::AttribFormatLow]) | (u64(regs[PICAInternalRegs::AttribFormatHigh]) << 32);
+	u64 vertexCfg = u64(regs[PICA::InternalRegs::AttribFormatLow]) | (u64(regs[PICA::InternalRegs::AttribFormatHigh]) << 32);
 
 	if constexpr (!indexed) {
-		u32 offset = regs[PICAInternalRegs::VertexOffsetReg];
+		u32 offset = regs[PICA::InternalRegs::VertexOffsetReg];
 		log("PICA::DrawArrays(vertex count = %d, vertexOffset = %d)\n", vertexCount, offset);
 	} else {
 		log("PICA::DrawElements(vertex count = %d, index buffer config = %08X)\n", vertexCount, indexBufferConfig);
 	}
 
 	// Total number of input attributes to shader. Differs between GS and VS. Currently stubbed to the VS one, as we don't have geometry shaders.
-	const u32 inputAttrCount = (regs[PICAInternalRegs::VertexShaderInputBufferCfg] & 0xf) + 1;
+	const u32 inputAttrCount = (regs[PICA::InternalRegs::VertexShaderInputBufferCfg] & 0xf) + 1;
 	const u64 inputAttrCfg = getVertexShaderInputConfig();
 		
 	for (u32 i = 0; i < vertexCount; i++) {
 		u32 vertexIndex; // Index of the vertex in the VBO
 
 		if constexpr (!indexed) {
-			vertexIndex = i + regs[PICAInternalRegs::VertexOffsetReg];
+			vertexIndex = i + regs[PICA::InternalRegs::VertexOffsetReg];
 		} else {
 			if (shortIndex) {
 				auto ptr = getPointerPhys<u16>(indexBufferPointer);
@@ -235,9 +236,9 @@ void GPU::drawArrays() {
 		OutputVertex out;
 
 		// Map shader outputs to fixed function properties
-		const u32 totalShaderOutputs = regs[PICAInternalRegs::ShaderOutputCount] & 7;
+		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 		for (int i = 0; i < totalShaderOutputs; i++) {
-			const u32 config = regs[PICAInternalRegs::ShaderOutmap0 + i];
+			const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
 			for (int j = 0; j < 4; j++) { // pls unroll
 				const u32 mapping = (config >> (j * 8)) & 0x1F;
@@ -257,17 +258,12 @@ void GPU::drawArrays() {
 		//printf("(u, v      ) = (%f, %f)\n", vertices[i].UVs.u(), vertices[i].UVs.v());
 	}
 
-	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
-	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
-		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
-	};
-	const auto shape = primTypes[primType];
-	renderer.drawVertices(shape, std::span(vertices).first(vertexCount));
+	renderer.drawVertices(primType, std::span(vertices).first(vertexCount));
 }
 
 Vertex GPU::getImmediateModeVertex() {
 	Vertex v;
-	const int totalAttrCount = (regs[PICAInternalRegs::VertexShaderAttrNum] & 0xf) + 1;
+	const int totalAttrCount = (regs[PICA::InternalRegs::VertexShaderAttrNum] & 0xf) + 1;
 
 	// Copy immediate mode attributes to vertex shader unit
 	for (int i = 0; i < totalAttrCount; i++) {
