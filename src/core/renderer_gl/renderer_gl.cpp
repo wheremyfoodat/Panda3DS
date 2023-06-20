@@ -483,7 +483,9 @@ void Renderer::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
 
 	static constexpr std::array<u32, 6> ioBases = {
-	  0xc0, 0xc8, 0xd0, 0xd8, 0xf0, 0xf8
+	  PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source,
+	  PICA::InternalRegs::TexEnv2Source, PICA::InternalRegs::TexEnv3Source,
+	  PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source
 	};
 
 	u32 textureEnvSourceRegs[6];
@@ -507,28 +509,28 @@ void Renderer::setupTextureEnvState() {
 	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
 	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
 	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
-	glUniform1ui(textureEnvUpdateBufferLoc, regs[0xe0]);
-	glUniform1ui(textureEnvBufferColorLoc, regs[0xfd]);
+	glUniform1ui(textureEnvUpdateBufferLoc, regs[PICA::InternalRegs::TexEnvUpdateBuffer]);
+	glUniform1ui(textureEnvBufferColorLoc, regs[PICA::InternalRegs::TexEnvBufferColor]);
 }
 
 void Renderer::bindTexturesToSlots() {
 	static constexpr std::array<u32, 3> ioBases = {
-	  0x80, 0x90, 0x98
+	  PICA::InternalRegs::Tex0BorderColor, PICA::InternalRegs::Tex1BorderColor, PICA::InternalRegs::Tex2BorderColor
 	};
 
 	for (int i = 0; i < 3; i++) {
-		if ((regs[0x80] & (1 << i)) == 0) {
+		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
 			continue;
 		}
 
 		const size_t ioBase = ioBases[i];
 
-		const u32 dim = regs[ioBase + 2];
-		const u32 config = regs[ioBase + 3];
+		const u32 dim = regs[ioBase + 1];
+		const u32 config = regs[ioBase + 2];
 		const u32 height = dim & 0x7ff;
 		const u32 width = getBits<16, 11>(dim);
-		const u32 addr = (regs[ioBase + 5] & 0x0FFFFFFF) << 3;
-		u32 format = regs[ioBase + (i == 0 ? 14 : 6)] & 0xF;
+		const u32 addr = (regs[ioBase + 4] & 0x0FFFFFFF) << 3;
+		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
 
 		glActiveTexture(GL_TEXTURE0 + i);
 		Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
