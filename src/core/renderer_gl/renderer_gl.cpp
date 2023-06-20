@@ -78,33 +78,25 @@ const char* fragmentShader = R"(
 	// OpenGL ES 1.1 reference pages for TEVs (this is what the PICA200 implements):
 	// https://registry.khronos.org/OpenGL-Refpages/es1.1/xhtml/glTexEnv.xml
 
+	vec4 tev_fetch_source(int tev_id, uint source_id) {
+		// TODO: this can be simplified to be an array, except for the env color (but that can be updated in the loop)
+		switch (source_id) {
+			case  0u: return colour; break; // Primary color
+			case  3u: return tev_texture_sources[0]; break; // Texture 0
+			case  4u: return tev_texture_sources[1]; break; // Texture 1
+			case  5u: return tev_texture_sources[2]; break; // Texture 2
+			case 13u: return tev_previous_buffer[0]; break; // Previous buffer
+			case 14u: return u_textureEnvColor[tev_id]; break; // Constant (GPUREG_TEXENVi_COLOR)
+			case 15u: return tev_previous; break; // Previous (output from TEV #n-1)
+			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
+		}
+
+		return vec4(0.5, 0.5, 0.5, 1.0);
+	}
+
 	vec4 tev_evaluate_source(int tev_id, int src_id) {
-		vec4 source = vec4(1.0);
-
-		uint rgb_source = (u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u;
-		uint alpha_source = (u_textureEnvSource[tev_id] >> (16 + src_id * 4)) & 15u;
-
-		switch (rgb_source) {
-			case  0u: source.rgb = colour.rgb; break; // Primary color, TODO: confirm that this is correct
-			case  3u: source.rgb = tev_texture_sources[0].rgb; break; // Texture 0
-			case  4u: source.rgb = tev_texture_sources[1].rgb; break; // Texture 1
-			case  5u: source.rgb = tev_texture_sources[2].rgb; break; // Texture 2
-			case 13u: source.rgb = tev_previous_buffer[0].rgb; break; // Previous buffer
-			case 14u: source.rgb = u_textureEnvColor[tev_id].rgb; break; // Constant (GPUREG_TEXENVi_COLOR)
-			case 15u: source.rgb = tev_previous.rgb; break; // Previous (output from TEV #n-1)
-			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
-		}
-
-		switch (alpha_source) {
-			case  0u: source.a = colour.a; break; // Primary color, TODO: confirm that this is correct
-			case  3u: source.a = tev_texture_sources[0].a; break; // Texture 0
-			case  4u: source.a = tev_texture_sources[1].a; break; // Texture 1
-			case  5u: source.a = tev_texture_sources[2].a; break; // Texture 2
-			case 13u: source.a = tev_previous_buffer[0].a; break; // Previous buffer
-			case 14u: source.a = u_textureEnvColor[tev_id].a; break; // Constant (GPUREG_TEXENVi_COLOR)
-			case 15u: source.a = tev_previous.a; break; // Previous (output from TEV #n-1)
-			default: tev_unimplemented_source = true; break; // TODO: implement remaining sources
-		}
+		vec4 rgb_source = tev_fetch_source(tev_id, (u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u);
+		vec4 alpha_source = tev_fetch_source(tev_id, (u_textureEnvSource[tev_id] >> (16 + src_id * 4)) & 15u);
 
 		uint rgb_operand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
 		uint alpha_operand = (u_textureEnvOperand[tev_id] >> (12 + src_id * 4)) & 7u;
@@ -112,28 +104,28 @@ const char* fragmentShader = R"(
 		vec4 final;
 
 		switch (rgb_operand) {
-			case  0u: final.rgb = source.rgb; break; // Source color
-			case  1u: final.rgb = 1.0 - source.rgb; break; // One minus source color
-			case  2u: final.rgb = vec3(source.a); break; // Source alpha
-			case  3u: final.rgb = vec3(1.0 - source.a); break; // One minus source alpha
-			case  4u: final.rgb = vec3(source.r); break; // Source red
-			case  5u: final.rgb = vec3(1.0 - source.r); break; // One minus source red
-			case  8u: final.rgb = vec3(source.g); break; // Source green
-			case  9u: final.rgb = vec3(1.0 - source.g); break; // One minus source green
-			case 12u: final.rgb = vec3(source.b); break; // Source blue
-			case 13u: final.rgb = vec3(1.0 - source.b); break; // One minus source blue
+			case  0u: final.rgb = rgb_source.rgb; break; // Source color
+			case  1u: final.rgb = 1.0 - rgb_source.rgb; break; // One minus source color
+			case  2u: final.rgb = vec3(rgb_source.a); break; // Source alpha
+			case  3u: final.rgb = vec3(1.0 - rgb_source.a); break; // One minus source alpha
+			case  4u: final.rgb = vec3(rgb_source.r); break; // Source red
+			case  5u: final.rgb = vec3(1.0 - rgb_source.r); break; // One minus source red
+			case  8u: final.rgb = vec3(rgb_source.g); break; // Source green
+			case  9u: final.rgb = vec3(1.0 - rgb_source.g); break; // One minus source green
+			case 12u: final.rgb = vec3(rgb_source.b); break; // Source blue
+			case 13u: final.rgb = vec3(1.0 - rgb_source.b); break; // One minus source blue
 			default: break; // TODO: figure out what the undocumented values do
 		}
 
 		switch (alpha_operand) {
-			case 0u: final.a = source.a; break; // Source alpha
-			case 1u: final.a = 1.0 - source.a; break; // One minus source alpha
-			case 2u: final.a = source.r; break; // Source red
-			case 3u: final.a = 1.0 - source.r; break; // One minus source red
-			case 4u: final.a = source.g; break; // Source green
-			case 5u: final.a = 1.0 - source.g; break; // One minus source green
-			case 6u: final.a = source.b; break; // Source blue
-			case 7u: final.a = 1.0 - source.b; break; // One minus source blue
+			case 0u: final.a = alpha_source.a; break; // Source alpha
+			case 1u: final.a = 1.0 - alpha_source.a; break; // One minus source alpha
+			case 2u: final.a = alpha_source.r; break; // Source red
+			case 3u: final.a = 1.0 - alpha_source.r; break; // One minus source red
+			case 4u: final.a = alpha_source.g; break; // Source green
+			case 5u: final.a = 1.0 - alpha_source.g; break; // One minus source green
+			case 6u: final.a = alpha_source.b; break; // Source blue
+			case 7u: final.a = 1.0 - alpha_source.b; break; // One minus source blue
 		}
 
 		return final;
