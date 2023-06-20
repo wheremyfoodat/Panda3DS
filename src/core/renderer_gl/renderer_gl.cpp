@@ -11,17 +11,17 @@ using namespace Helpers;
 const char* vertexShader = R"(
 	#version 410 core
 	
-	layout (location = 0) in vec4 coords;
-	layout (location = 1) in vec4 vertexColour;
-	layout (location = 2) in vec2 in_texcoord0;
-	layout (location = 3) in vec2 in_texcoord1;
-	layout (location = 4) in float in_texcoord0_w;
-	layout (location = 5) in vec2 in_texcoord2;
+	layout (location = 0) in vec4 a_coords;
+	layout (location = 1) in vec4 a_vertexColour;
+	layout (location = 2) in vec2 a_texcoord0;
+	layout (location = 3) in vec2 a_texcoord1;
+	layout (location = 4) in float a_texcoord0_w;
+	layout (location = 5) in vec2 a_texcoord2;
 
-	out vec4 colour;
-	out vec3 texcoord0;
-	out vec2 texcoord1;
-	out vec2 texcoord2;
+	out vec4 v_colour;
+	out vec3 v_texcoord0;
+	out vec2 v_texcoord1;
+	out vec2 v_texcoord2;
 	flat out vec4 v_textureEnvColor[6];
 	flat out vec4 v_textureEnvBufferColor;
 
@@ -41,13 +41,13 @@ const char* vertexShader = R"(
 	}
 
 	void main() {
-		gl_Position = coords;
-		colour = vertexColour;
+		gl_Position = a_coords;
+		v_colour = a_vertexColour;
 
 		// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
-		texcoord0 = vec3(in_texcoord0.x, 1.0 - in_texcoord0.y, in_texcoord0_w);
-		texcoord1 = vec2(in_texcoord1.x, 1.0 - in_texcoord1.y);
-		texcoord2 = vec2(in_texcoord2.x, 1.0 - in_texcoord2.y);
+		v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
+		v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
+		v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
 
 		for (int i = 0; i < 6; i++) {
 			v_textureEnvColor[i] = abgr8888_to_vec4(u_textureEnvColor[i]);
@@ -60,10 +60,10 @@ const char* vertexShader = R"(
 const char* fragmentShader = R"(
 	#version 410 core
 	
-	in vec4 colour;
-	in vec3 texcoord0;
-	in vec2 texcoord1;
-	in vec2 texcoord2;
+	in vec4 v_colour;
+	in vec3 v_texcoord0;
+	in vec2 v_texcoord1;
+	in vec2 v_texcoord2;
 	flat in vec4 v_textureEnvColor[6];
 	flat in vec4 v_textureEnvBufferColor;
 
@@ -191,15 +191,15 @@ const char* fragmentShader = R"(
 	}
 
 	void main() {
-		vec2 tex2_uv = (u_textureConfig & (1 << 13)) != 0u ? texcoord1 : texcoord2;
+		vec2 tex2_uv = (u_textureConfig & (1 << 13)) != 0u ? v_texcoord1 : v_texcoord2;
 
 		// TODO: what do invalid sources and disabled textures read as?
 		// And what does the "previous combiner" source read initially?
-		tev_sources[0] = colour; // Primary/vertex color
+		tev_sources[0] = v_colour; // Primary/vertex color
 		tev_sources[1] = vec4(vec3(0.5), 1.0); // Fragment primary color
 		tev_sources[2] = vec4(vec3(0.5), 1.0); // Fragment secondary color
-		if ((u_textureConfig & 1u) != 0u) tev_sources[3] = texture(u_tex0, texcoord0.xy);
-		if ((u_textureConfig & 2u) != 0u) tev_sources[4] = texture(u_tex1, texcoord1);
+		if ((u_textureConfig & 1u) != 0u) tev_sources[3] = texture(u_tex0, v_texcoord0.xy);
+		if ((u_textureConfig & 2u) != 0u) tev_sources[4] = texture(u_tex1, v_texcoord1);
 		if ((u_textureConfig & 4u) != 0u) tev_sources[5] = texture(u_tex2, tex2_uv);
 		tev_sources[13] = vec4(0.0); // Previous buffer
 		tev_sources[15] = vec4(0.0); // Previous combiner
