@@ -22,9 +22,11 @@ const char* vertexShader = R"(
 	out vec3 texcoord0;
 	out vec2 texcoord1;
 	out vec2 texcoord2;
+	flat out vec4 v_textureEnvColor[6];
 	flat out vec4 v_textureEnvBufferColor;
 
 	// TEV uniforms
+	uniform uint u_textureEnvColor[6];
 	uniform uint u_textureEnvBufferColor;
 
 	vec4 abgr8888_to_vec4(uint abgr) {
@@ -47,6 +49,10 @@ const char* vertexShader = R"(
 		texcoord1 = vec2(in_texcoord1.x, 1.0 - in_texcoord1.y);
 		texcoord2 = vec2(in_texcoord2.x, 1.0 - in_texcoord2.y);
 
+		for (int i = 0; i < 6; i++) {
+			v_textureEnvColor[i] = abgr8888_to_vec4(u_textureEnvColor[i]);
+		}
+
 		v_textureEnvBufferColor = abgr8888_to_vec4(u_textureEnvBufferColor);
 	}
 )";
@@ -58,6 +64,7 @@ const char* fragmentShader = R"(
 	in vec3 texcoord0;
 	in vec2 texcoord1;
 	in vec2 texcoord2;
+	flat in vec4 v_textureEnvColor[6];
 	flat in vec4 v_textureEnvBufferColor;
 
 	out vec4 fragColour;
@@ -69,7 +76,6 @@ const char* fragmentShader = R"(
 	uniform uint u_textureEnvSource[6];
 	uniform uint u_textureEnvOperand[6];
 	uniform uint u_textureEnvCombiner[6];
-	uniform vec4 u_textureEnvColor[6];
 	uniform uint u_textureEnvScale[6];
 	uniform uint u_textureEnvUpdateBuffer;
 
@@ -201,7 +207,7 @@ const char* fragmentShader = R"(
 		tev_next_previous_buffer = v_textureEnvBufferColor;
 
 		for (int i = 0; i < 6; i++) {
-			tev_sources[14] = u_textureEnvColor[i]; // Constant color
+			tev_sources[14] = v_textureEnvColor[i]; // Constant color
 			tev_sources[15] = tev_combine(i);
 			tev_sources[13] = tev_next_previous_buffer;
 
@@ -483,7 +489,7 @@ void Renderer::setupTextureEnvState() {
 	u32 textureEnvSourceRegs[6];
 	u32 textureEnvOperandRegs[6];
 	u32 textureEnvCombinerRegs[6];
-	float textureEnvColourRegs[6][4];
+	u32 textureEnvColourRegs[6];
 	u32 textureEnvScaleRegs[6];
 
 	for (int i = 0; i < 6; i++) {
@@ -492,20 +498,14 @@ void Renderer::setupTextureEnvState() {
 		textureEnvSourceRegs[i] = regs[ioBase];
 		textureEnvOperandRegs[i] = regs[ioBase + 1];
 		textureEnvCombinerRegs[i] = regs[ioBase + 2];
-
-		const u32 constantColor = regs[ioBase + 3];
-		textureEnvColourRegs[i][0] = (float)(constantColor & 0xff) / 255.0f;
-		textureEnvColourRegs[i][1] = (float)getBits<8, 8>(constantColor) / 255.0f;
-		textureEnvColourRegs[i][2] = (float)getBits<16, 8>(constantColor) / 255.0f;
-		textureEnvColourRegs[i][3] = (float)getBits<24, 8>(constantColor) / 255.0f;
-
+		textureEnvColourRegs[i] = regs[ioBase + 3];
 		textureEnvScaleRegs[i] = regs[ioBase + 4];
 	}
 
 	glUniform1uiv(textureEnvSourceLoc, 6, textureEnvSourceRegs);
 	glUniform1uiv(textureEnvOperandLoc, 6, textureEnvOperandRegs);
 	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
-	glUniform4fv(textureEnvColorLoc, 6, (const GLfloat*)textureEnvColourRegs);
+	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
 	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
 	glUniform1ui(textureEnvUpdateBufferLoc, regs[0xe0]);
 	glUniform1ui(textureEnvBufferColorLoc, regs[0xfd]);
