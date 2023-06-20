@@ -141,9 +141,7 @@ const char* fragmentShader = R"(
 
 		vec4 result = vec4(1.0);
 
-		// TODO:
-		// - test Dot3 RGBA, particularly what happens when rgb_combine != alpha_combine
-		// - test if alpha_combine can use all the same combine modes as rgb_combine
+		// TODO: test if the alpha combiner supports all the same modes as the color combiner.
 
 		switch (rgb_combine) {
 			case 0u: result.rgb = source0.rgb; break; // Replace
@@ -152,24 +150,25 @@ const char* fragmentShader = R"(
 			case 3u: result.rgb = clamp(source0.rgb + source1.rgb - 0.5, vec3(0.0), vec3(1.0)); break; // Add signed
 			case 4u: result.rgb = mix(source1.rgb, source0.rgb, source2.rgb); break; // Interpolate
 			case 5u: result.rgb = max(vec3(0.0), source0.rgb - source1.rgb); break; // Subtract
-			case 6u:
-			case 7u: result.rgb = vec3(4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5)); break; // Dot3 RGB(A)
+			case 6u: result.rgb = vec3(4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5)); break; // Dot3 RGB
+			case 7u: result     = vec4(4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5)); break; // Dot3 RGBA
 			case 8u: result.rgb = min(vec3(1.0), source0.rgb * source1.rgb + source2.rgb); break; // Multiply then add
 			case 9u: result.rgb = min(vec3(1.0), (source0.rgb + source1.rgb) * source2.rgb); break; // Add then multiply
 			default: break; // TODO: figure out what the undocumented values do
 		}
 
-		switch (alpha_combine) {
-			case 0u: result.a = source0.a; break; // Replace
-			case 1u: result.a = source0.a * source1.a; break; // Modulate
-			case 2u: result.a = min(1.0, source0.a + source1.a); break; // Add
-			case 3u: result.a = clamp(source0.a + source1.a - 0.5, 0.0, 1.0); break; // Add signed
-			case 4u: result.a = mix(source1.a, source0.a, source2.a); break; // Interpolate
-			case 5u: result.a = max(0.0, source0.a - source1.a); break; // Subtract
-			case 7u: result.a = 4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5); break; // Dot3 RGB(A)
-			case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break; // Multiply then add
-			case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break; // Add then multiply
-			default: break; // TODO: figure out what the undocumented values do
+		if (rgb_combine != 7u) { // The color combiner also writes the alpha channel in the "Dot3 RGBA" mode.
+			switch (alpha_combine) {
+				case 0u: result.a = source0.a; break; // Replace
+				case 1u: result.a = source0.a * source1.a; break; // Modulate
+				case 2u: result.a = min(1.0, source0.a + source1.a); break; // Add
+				case 3u: result.a = clamp(source0.a + source1.a - 0.5, 0.0, 1.0); break; // Add signed
+				case 4u: result.a = mix(source1.a, source0.a, source2.a); break; // Interpolate
+				case 5u: result.a = max(0.0, source0.a - source1.a); break; // Subtract
+				case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break; // Multiply then add
+				case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break; // Add then multiply
+				default: break; // TODO: figure out what the undocumented values do
+			}
 		}
 
 		result.rgb *= float(1 << (u_textureEnvScale[tev_id] & 3u));
