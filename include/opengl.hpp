@@ -20,6 +20,7 @@
 #pragma once
 #include <array>
 #include <cassert>
+#include <cstdarg>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -43,6 +44,15 @@
 #include <span>
 #endif
 
+#ifdef _MSC_VER
+#include <sal.h> 
+#define OPENGL_PRINTF_FORMAT _Printf_format_string_
+#define OPENGL_PRINTF_FORMAT_ATTR(format_arg_index, dots_arg_index)
+#else
+#define OPENGL_PRINTF_FORMAT
+#define OPENGL_PRINTF_FORMAT_ATTR(format_arg_index, dots_arg_index) __attribute__((__format__(__printf__, format_arg_index, dots_arg_index)))
+#endif
+
 // Uncomment the following define if you want GL objects to automatically free themselves when their lifetime ends
 // #define OPENGL_DESTRUCTORS
 
@@ -52,6 +62,16 @@ namespace OpenGL {
     // https://stackoverflow.com/questions/53945490/how-to-assert-that-a-constexpr-if-else-clause-never-happen
     template <class...>
     constexpr std::false_type AlwaysFalse{};
+
+    OPENGL_PRINTF_FORMAT_ATTR(3, 4)
+	static void setObjectLabel(GLenum identifier, GLuint name, OPENGL_PRINTF_FORMAT const char* format, ...) {
+		GLchar label[256] = {};
+		va_list args;
+		va_start(args, format);
+		const GLsizei length = vsnprintf(label, std::size(label), format, args);
+		va_end(args);
+		glObjectLabel(identifier, name, length, label);
+	}
 
     struct VertexArray {
         GLuint m_handle = 0;
