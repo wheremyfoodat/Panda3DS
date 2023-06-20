@@ -191,7 +191,7 @@ const char* fragmentShader = R"(
 	}
 
 	void main() {
-		vec2 tex2UV = (u_textureConfig & (1 << 13)) != 0u ? v_texcoord1 : v_texcoord2;
+		vec2 tex2UV = (u_textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
 
 		// TODO: what do invalid sources and disabled textures read as?
 		// And what does the "previous combiner" source read initially?
