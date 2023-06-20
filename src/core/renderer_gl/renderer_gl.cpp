@@ -29,7 +29,7 @@ const char* vertexShader = R"(
 	uniform uint u_textureEnvColor[6];
 	uniform uint u_textureEnvBufferColor;
 
-	vec4 abgr8888_to_vec4(uint abgr) {
+	vec4 abgr8888ToVec4(uint abgr) {
 		const float scale = 1.0 / 255.0;
 
 		return vec4(
@@ -50,10 +50,10 @@ const char* vertexShader = R"(
 		v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
 
 		for (int i = 0; i < 6; i++) {
-			v_textureEnvColor[i] = abgr8888_to_vec4(u_textureEnvColor[i]);
+			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
 		}
 
-		v_textureEnvBufferColor = abgr8888_to_vec4(u_textureEnvBufferColor);
+		v_textureEnvBufferColor = abgr8888ToVec4(u_textureEnvBufferColor);
 	}
 )";
 
