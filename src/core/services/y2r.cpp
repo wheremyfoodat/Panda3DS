@@ -29,12 +29,6 @@ namespace Y2RCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void Y2RService::reset() {
 	transferEndInterruptEnabled = false;
 	transferEndEvent = std::nullopt;

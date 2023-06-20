@@ -8,12 +8,6 @@ namespace CECDCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void CECDService::reset() {
 	infoEvent = std::nullopt;
 }

@@ -21,14 +21,14 @@ namespace MediaType {
 	};
 };
 
-FSResult NCCHArchive::createFile(const FSPath& path, u64 size) {
+HorizonResult NCCHArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[NCCH] CreateFile not yet supported");
-	return FSResult::Success;
+	return Result::Success;
 }
 
-FSResult NCCHArchive::deleteFile(const FSPath& path) {
+HorizonResult NCCHArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[NCCH] Unimplemented DeleteFile");
-	return FSResult::Success;
+	return Result::Success;
 }
 
 FileDescriptor NCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {
@@ -48,7 +48,7 @@ FileDescriptor NCCHArchive::openFile(const FSPath& path, const FilePerms& perms)
 	return NoFile;
 }
 
-Rust::Result<ArchiveBase*, FSResult> NCCHArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, HorizonResult> NCCHArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary || path.binary.size() != 16) {
 		Helpers::panic("NCCHArchive::OpenArchive: Invalid path");
 	}

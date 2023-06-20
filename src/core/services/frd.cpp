@@ -17,12 +17,6 @@ namespace FRDCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void FRDService::reset() {}
 
 void FRDService::handleSyncRequest(u32 messagePointer) {
@@ -91,7 +85,7 @@ void FRDService::getMyProfile(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 
 	// TODO: Should maybe make these user-configurable. Not super important though
-	mem.write8(messagePointer + 8, static_cast<u8>(Regions::USA));            // Region 
+	mem.write8(messagePointer + 8, static_cast<u8>(Regions::USA));            // Region
 	mem.write8(messagePointer + 9, static_cast<u8>(CountryCodes::US));        // Country
 	mem.write8(messagePointer + 10, 2);                                       // Area (this should be Washington)
 	mem.write8(messagePointer + 11, static_cast<u8>(LanguageCodes::English)); // Language

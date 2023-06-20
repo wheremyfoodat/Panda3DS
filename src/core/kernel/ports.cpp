@@ -43,7 +43,7 @@ void Kernel::connectToPort() {
 
 	if (port.size() > Port::maxNameLen) {
 		Helpers::panic("ConnectToPort: Port name too long\n");
-		regs[0] = SVCResult::PortNameTooLong;
+		regs[0] = Result::OS::PortNameTooLong;
 		return;
 	}
 
@@ -51,7 +51,7 @@ void Kernel::connectToPort() {
 	std::optional<Handle> optionalHandle = getPortHandle(port.c_str());
 	if (!optionalHandle.has_value()) [[unlikely]] {
 		Helpers::panic("ConnectToPort: Port doesn't exist\n");
-		regs[0] = SVCResult::ObjectNotFound;
+		regs[0] = Result::Kernel::NotFound;
 		return;
 	}
 
@@ -65,7 +65,7 @@ void Kernel::connectToPort() {
 	// TODO: Actually create session
 	Handle sessionHandle = makeSession(portHandle);
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = sessionHandle;
 }
 
@@ -80,7 +80,7 @@ void Kernel::sendSyncRequest() {
 	if (KernelHandles::isServiceHandle(handle)) {
 		// The service call might cause a reschedule and change threads. Hence, set r0 before executing the service call
 		// Because if the service call goes first, we might corrupt the new thread's r0!!
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		serviceManager.sendCommandToService(messagePointer, handle);
 		return;
 	}
@@ -88,7 +88,7 @@ void Kernel::sendSyncRequest() {
 	// Check if our sync request is targetting a file instead of a service
 	bool isFileOperation = getObject(handle, KernelObjectType::File) != nullptr;
 	if (isFileOperation) {
-		regs[0] = SVCResult::Success; // r0 goes first here too
+		regs[0] = Result::Success; // r0 goes first here too
 		handleFileOperation(messagePointer, handle);
 		return;
 	}
@@ -96,7 +96,7 @@ void Kernel::sendSyncRequest() {
 	// Check if our sync request is targetting a directory instead of a service
 	bool isDirectoryOperation = getObject(handle, KernelObjectType::Directory) != nullptr;
 	if (isDirectoryOperation) {
-		regs[0] = SVCResult::Success; // r0 goes first here too
+		regs[0] = Result::Success; // r0 goes first here too
 		handleDirectoryOperation(messagePointer, handle);
 		return;
 	}
@@ -105,7 +105,7 @@ void Kernel::sendSyncRequest() {
 	const auto session = getObject(handle, KernelObjectType::Session);
 	if (session == nullptr) [[unlikely]] {
 		Helpers::panic("SendSyncRequest: Invalid handle");
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
@@ -113,10 +113,10 @@ void Kernel::sendSyncRequest() {
 	const Handle portHandle = sessionData->portHandle;
 
 	if (portHandle == srvHandle) { // Special-case SendSyncRequest targetting the "srv: port"
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		serviceManager.handleSyncRequest(messagePointer);
 	} else if (portHandle == errorPortHandle) { // Special-case "err:f" for juicy logs too
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		handleErrorSyncRequest(messagePointer);
 	} else {
 		const auto portData = objects[portHandle].getData<Port>();

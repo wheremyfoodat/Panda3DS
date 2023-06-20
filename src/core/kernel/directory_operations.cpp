@@ -7,12 +7,6 @@ namespace DirectoryOps {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0
-	};
-}
-
 void Kernel::handleDirectoryOperation(u32 messagePointer, Handle directory) {
 	const u32 cmd = mem.read32(messagePointer);
 	switch (cmd) {

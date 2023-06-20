@@ -60,12 +60,6 @@ namespace Commands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0
-	};
-}
-
 // Handle an IPC message issued using the SendSyncRequest SVC
 // The parameters are stored in thread-local storage in this format: https://www.3dbrew.org/wiki/IPC#Message_Structure
 // messagePointer: The base pointer for the IPC message

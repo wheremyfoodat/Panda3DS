@@ -36,7 +36,7 @@ static constexpr bool isAligned(u32 value) {
 	return (value & 0xFFF) == 0;
 }
 
-// Result ControlMemory(u32* outaddr, u32 addr0, u32 addr1, u32 size, 
+// Result ControlMemory(u32* outaddr, u32 addr0, u32 addr1, u32 size,
 //						MemoryOperation operation, MemoryPermission permissions)
 // This has a weird ABI documented here https://www.3dbrew.org/wiki/Kernel_ABI
 // TODO: Does this need to write to outaddr?
@@ -64,7 +64,7 @@ void Kernel::controlMemory() {
 	if (!isAligned(addr0) || !isAligned(addr1) || !isAligned(size)) {
 		Helpers::panic("ControlMemory: Unaligned parameters\nAddr0: %08X\nAddr1: %08X\nSize: %08X", addr0, addr1, size);
 	}
-	
+
 	logSVC("ControlMemory(addr0 = %08X, addr1 = %08X, size = %08X, operation = %X (%c%c%c)%s\n",
 			addr0, addr1, size, operation, r ? 'r' : '-', w ? 'w' : '-', x ? 'x' : '-', linear ? ", linear" : ""
 	);
@@ -90,7 +90,7 @@ void Kernel::controlMemory() {
 		default: Helpers::panic("ControlMemory: unknown operation %X\n", operation);
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
 // Result QueryMemory(MemoryInfo* memInfo, PageInfo* pageInfo, u32 addr)
@@ -102,7 +102,7 @@ void Kernel::queryMemory() {
 	logSVC("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
 
 	const auto info = mem.queryMemory(addr);
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = info.baseAddr;
 	regs[2] = info.size;
 	regs[3] = info.perms;
@@ -110,7 +110,7 @@ void Kernel::queryMemory() {
 	regs[5] = 0; // page flags
 }
 
-// Result MapMemoryBlock(Handle memblock, u32 addr, MemoryPermission myPermissions, MemoryPermission otherPermission)	
+// Result MapMemoryBlock(Handle memblock, u32 addr, MemoryPermission myPermissions, MemoryPermission otherPermission)
 void Kernel::mapMemoryBlock() {
 	const Handle block = regs[0];
 	u32 addr = regs[1];
@@ -146,7 +146,7 @@ void Kernel::mapMemoryBlock() {
 		Helpers::panic("MapMemoryBlock where the handle does not refer to a known piece of kernel shared mem");
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
 Handle Kernel::makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission) {
@@ -180,13 +180,13 @@ void Kernel::createMemoryBlock() {
 
 	// Throw error if the size of the shared memory block is not aligned to page boundary
 	if (!isAligned(size)) {
-		regs[0] = SVCResult::UnalignedSize;
+		regs[0] = Result::OS::MisalignedSize;
 		return;
 	}
 
 	// Throw error if one of the permissions is not valid
 	if (!isPermValid(myPermission) || !isPermValid(otherPermission)) {
-		regs[0] = SVCResult::InvalidCombination;
+		regs[0] = Result::OS::InvalidCombination;
 		return;
 	}
 
@@ -199,6 +199,6 @@ void Kernel::createMemoryBlock() {
 	if (myPermission == MemoryPermissions::DontCare) myPermission = MemoryPermissions::ReadWrite;
 	if (otherPermission == MemoryPermissions::DontCare) otherPermission = MemoryPermissions::ReadWrite;
 
-	regs[0] = SVCResult::Success; 
+	regs[0] = Result::Success;
 	regs[1] = makeMemoryBlock(addr, size, myPermission, otherPermission);
 }
