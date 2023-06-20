@@ -60,14 +60,14 @@ u32 Texture::decodeETC(u32 alpha, u32 u, u32 v, u64 colourData) {
     };
 
     // Parse colour data for 4x4 block
-    const u32 subindices = getBits<0, 16>(colourData);
-    const u32 negationFlags = getBits<16, 16>(colourData);
+    const u32 subindices = getBits<0, 16, u32>(colourData);
+    const u32 negationFlags = getBits<16, 16, u32>(colourData);
     const bool flip = getBit<32>(colourData);
     const bool diffMode = getBit<33>(colourData);
 
     // Note: index1 is indeed stored on the higher bits, with index2 in the lower bits
-    const u32 tableIndex1 = getBits<37, 3>(colourData);
-    const u32 tableIndex2 = getBits<34, 3>(colourData);
+    const u32 tableIndex1 = getBits<37, 3, u32>(colourData);
+    const u32 tableIndex2 = getBits<34, 3, u32>(colourData);
     const u32 texelIndex = u * 4 + v; // Index of the texel in the block
 
     if (flip)
@@ -75,14 +75,14 @@ u32 Texture::decodeETC(u32 alpha, u32 u, u32 v, u64 colourData) {
 
     s32 r, g, b;
     if (diffMode) {
-        r = getBits<59, 5>(colourData);
-        g = getBits<51, 5>(colourData);
-        b = getBits<43, 5>(colourData);
+        r = getBits<59, 5, s32>(colourData);
+        g = getBits<51, 5, s32>(colourData);
+        b = getBits<43, 5, s32>(colourData);
 
         if (u >= 2) {
-            r += signExtend3To32(getBits<56, 3>(colourData));
-            g += signExtend3To32(getBits<48, 3>(colourData));
-            b += signExtend3To32(getBits<40, 3>(colourData));
+            r += signExtend3To32(getBits<56, 3, u32>(colourData));
+            g += signExtend3To32(getBits<48, 3, u32>(colourData));
+            b += signExtend3To32(getBits<40, 3, u32>(colourData));
         }
 
         // Expand from 5 to 8 bits per channel
@@ -91,13 +91,13 @@ u32 Texture::decodeETC(u32 alpha, u32 u, u32 v, u64 colourData) {
         b = Colour::convert5To8Bit(b);
     } else {
         if (u < 2) {
-            r = getBits<60, 4>(colourData);
-            g = getBits<52, 4>(colourData);
-            b = getBits<44, 4>(colourData);
+            r = getBits<60, 4, s32>(colourData);
+            g = getBits<52, 4, s32>(colourData);
+            b = getBits<44, 4, s32>(colourData);
         } else {
-            r = getBits<56, 4>(colourData);
-            g = getBits<48, 4>(colourData);
-            b = getBits<40, 4>(colourData);
+            r = getBits<56, 4, s32>(colourData);
+            g = getBits<48, 4, s32>(colourData);
+            b = getBits<40, 4, s32>(colourData);
         }
 
         // Expand from 4 to 8 bits per channel

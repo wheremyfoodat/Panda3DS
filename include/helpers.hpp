@@ -113,9 +113,16 @@ namespace Helpers {
 	}
 
 	/// Extract bits from an integer-type
-	template <usize offset, usize bits, typename T>
-	static constexpr T getBits(T value) {
-		return (value >> offset) & ones<T, bits>();
+	template <usize offset, usize bits, typename ReturnT, typename ValueT>
+	static constexpr ReturnT getBits(ValueT value) {
+		static_assert((offset + bits) <= (CHAR_BIT * sizeof(ValueT)), "Invalid bit range");
+		static_assert(bits > 0, "Invalid bit size");
+		return ReturnT(ValueT(value >> offset) & ones<ValueT, bits>());
+	}
+
+	template <usize offset, usize bits, typename ValueT>
+	static constexpr ValueT getBits(ValueT value) {
+		return getBits<offset, bits, ValueT, ValueT>(value);
 	}
 
 #ifdef HELPERS_APPLE_CLANG

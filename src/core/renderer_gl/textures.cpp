@@ -119,10 +119,10 @@ u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, const void* data) {
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
 
-            u8 alpha = Colour::convert4To8Bit(getBits<0, 4>(texel));
-            u8 b = Colour::convert4To8Bit(getBits<4, 4>(texel));
-            u8 g = Colour::convert4To8Bit(getBits<8, 4>(texel));
-            u8 r = Colour::convert4To8Bit(getBits<12, 4>(texel));
+            u8 alpha = Colour::convert4To8Bit(getBits<0, 4, u8>(texel));
+            u8 b = Colour::convert4To8Bit(getBits<4, 4, u8>(texel));
+            u8 g = Colour::convert4To8Bit(getBits<8, 4, u8>(texel));
+            u8 r = Colour::convert4To8Bit(getBits<12, 4, u8>(texel));
 
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
@@ -133,9 +133,9 @@ u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, const void* data) {
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
 
             u8 alpha = getBit<0>(texel) ? 0xff : 0;
-            u8 b = Colour::convert5To8Bit(getBits<1, 5>(texel));
-            u8 g = Colour::convert5To8Bit(getBits<6, 5>(texel));
-            u8 r = Colour::convert5To8Bit(getBits<11, 5>(texel));
+            u8 b = Colour::convert5To8Bit(getBits<1, 5, u8>(texel));
+            u8 g = Colour::convert5To8Bit(getBits<6, 5, u8>(texel));
+            u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
 
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
@@ -145,9 +145,9 @@ u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, const void* data) {
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
 
-            u8 b = Colour::convert5To8Bit(getBits<0, 5>(texel));
-            u8 g = Colour::convert6To8Bit(getBits<5, 6>(texel));
-            u8 r = Colour::convert5To8Bit(getBits<11, 5>(texel));
+            u8 b = Colour::convert5To8Bit(getBits<0, 5, u8>(texel));
+            u8 g = Colour::convert6To8Bit(getBits<5, 6, u8>(texel));
+            u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
 
             return (0xff << 24) | (b << 16) | (g << 8) | r;
         }
