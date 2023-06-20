@@ -102,9 +102,9 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	}
 
 	if (exheaderSize != 0) {
-		u8 exheader[exheaderSize];
+		std::unique_ptr<u8[]> exheader(new u8[exheaderSize]);
 
-		auto [success, bytes] = readFromFile(file, info, exheader, 0x200, exheaderSize);
+		auto [success, bytes] = readFromFile(file, info, &exheader[0], 0x200, exheaderSize);
 		if (!success || bytes != exheaderSize) {
 			printf("Failed to read Extended NCCH header\n");
 			return false;
@@ -120,7 +120,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		}
 		// If it's truely encrypted, we need to read section again.
 		if (encrypted) {
-			auto [success, bytes] = readFromFile(file, exheaderInfo, exheader, 0, exheaderSize);
+			auto [success, bytes] = readFromFile(file, exheaderInfo, &exheader[0], 0, exheaderSize);
 			if (!success || bytes != exheaderSize) {
 				printf("Failed to read Extended NCCH header\n");
 				return false;
