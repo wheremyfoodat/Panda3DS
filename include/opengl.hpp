@@ -73,6 +73,26 @@ namespace OpenGL {
 		glObjectLabel(identifier, name, length, label);
 	}
 
+    class DebugScope {
+		inline static GLuint scopeDepth = 0;
+		const GLuint m_scope_depth;
+
+	  public:
+		OPENGL_PRINTF_FORMAT_ATTR(2, 3)
+		DebugScope(OPENGL_PRINTF_FORMAT const char* format, ...) : m_scope_depth(scopeDepth++) {
+			GLchar message[256] = {};
+			va_list args;
+			va_start(args, format);
+			const GLsizei length = vsnprintf(message, std::size(message), format, args);
+			va_end(args);
+			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, m_scope_depth, length, message);
+		}
+		~DebugScope() {
+			glPopDebugGroup();
+			scopeDepth--;
+		}
+	};
+
     struct VertexArray {
         GLuint m_handle = 0;
 
