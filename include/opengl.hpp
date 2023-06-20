@@ -44,6 +44,10 @@
 #include <span>
 #endif
 
+#if defined(GPU_DEBUG_INFO)
+#define OPENGL_DEBUG_INFO
+#endif
+
 #ifdef _MSC_VER
 #include <sal.h> 
 #define OPENGL_PRINTF_FORMAT _Printf_format_string_
@@ -63,23 +67,29 @@ namespace OpenGL {
     template <class...>
     constexpr std::false_type AlwaysFalse{};
 
-    OPENGL_PRINTF_FORMAT_ATTR(3, 4)
+	OPENGL_PRINTF_FORMAT_ATTR(3, 4)
 	static void setObjectLabel(GLenum identifier, GLuint name, OPENGL_PRINTF_FORMAT const char* format, ...) {
+#if defined(OPENGL_DEBUG_INFO)
 		GLchar label[256] = {};
 		va_list args;
 		va_start(args, format);
 		const GLsizei length = vsnprintf(label, std::size(label), format, args);
 		va_end(args);
 		glObjectLabel(identifier, name, length, label);
+#endif
 	}
 
-    class DebugScope {
+	class DebugScope {
+#if defined(OPENGL_DEBUG_INFO)
 		inline static GLuint scopeDepth = 0;
 		const GLuint m_scope_depth;
+#endif
 
 	  public:
 		OPENGL_PRINTF_FORMAT_ATTR(2, 3)
-		DebugScope(OPENGL_PRINTF_FORMAT const char* format, ...) : m_scope_depth(scopeDepth++) {
+		DebugScope(OPENGL_PRINTF_FORMAT const char* format, ...)
+#if defined(OPENGL_DEBUG_INFO)
+			: m_scope_depth(scopeDepth++) {
 			GLchar message[256] = {};
 			va_list args;
 			va_start(args, format);
@@ -87,13 +97,20 @@ namespace OpenGL {
 			va_end(args);
 			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, m_scope_depth, length, message);
 		}
+#else
+		{
+		}
+#endif
+
 		~DebugScope() {
+#if defined(OPENGL_DEBUG_INFO)
 			glPopDebugGroup();
 			scopeDepth--;
+#endif
 		}
 	};
 
-    struct VertexArray {
+	struct VertexArray {
         GLuint m_handle = 0;
 
         void create() {

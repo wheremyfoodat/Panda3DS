@@ -13,6 +13,8 @@ endif()
 project(Alber)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
+
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${FMT_INCLUDE_DIR})
@@ -139,3 +141,8 @@ source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 ${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad)
+
+
+if(GPU_DEBUG_INFO)
+  target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
+endif()
