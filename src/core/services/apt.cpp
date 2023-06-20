@@ -25,12 +25,6 @@ namespace APTCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 // https://www.3dbrew.org/wiki/NS_and_APT_Services#Command
 namespace APTTransitions {
 	enum : u32 {
@@ -154,7 +148,7 @@ void APTService::inquireNotification(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, static_cast<u32>(NotificationType::None)); 
+	mem.write32(messagePointer + 8, static_cast<u32>(NotificationType::None));
 }
 
 void APTService::getLockHandle(u32 messagePointer) {

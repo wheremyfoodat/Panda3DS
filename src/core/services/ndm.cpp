@@ -11,12 +11,6 @@ namespace NDMCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void NDMService::reset() {}
 
 void NDMService::handleSyncRequest(u32 messagePointer) {

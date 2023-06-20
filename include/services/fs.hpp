@@ -8,6 +8,7 @@
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
+#include "result/result.hpp"
 
 // Yay, more circular dependencies
 class Kernel;
@@ -29,8 +30,8 @@ class FSService {
 	ExtSaveDataArchive sharedExtSaveData_nand;
 
 	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
-	Rust::Result<Handle, FSResult> openArchiveHandle(u32 archiveID, const FSPath& path);
-	Rust::Result<Handle, FSResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
+	Rust::Result<Handle, HorizonResult> openArchiveHandle(u32 archiveID, const FSPath& path);
+	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
 	FSPath readPath(u32 type, u32 pointer, u32 size);
 
@@ -62,7 +63,7 @@ public:
 		sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"),
 		sdmc(mem), selfNcch(mem), ncch(mem), kernel(kernel)
 	{}
-	
+
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	// Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.

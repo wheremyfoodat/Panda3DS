@@ -8,12 +8,6 @@ namespace LDRCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void LDRService::reset() {}
 
 void LDRService::handleSyncRequest(u32 messagePointer) {

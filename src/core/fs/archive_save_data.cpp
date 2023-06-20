@@ -4,7 +4,7 @@
 
 namespace fs = std::filesystem;
 
-FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
+HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::CreateFile");
@@ -13,28 +13,28 @@ FSResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::exists(p))
-			return FSResult::AlreadyExists;
-		
+			return Result::FS::AlreadyExists;
+
 		IOFile file(p.string().c_str(), "wb");
-		
+
 		// If the size is 0, leave the file empty and return success
 		if (size == 0) {
-			return FSResult::Success;
+			return Result::Success;
 		}
 
 		// If it is not empty, seek to size - 1 and write a 0 to create a file of size "size"
 		else if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
-			return FSResult::Success;
+			return Result::Success;
 		}
 
-		return FSResult::FileTooLarge;
+		return Result::FS::FileTooLarge;
 	}
 
 	Helpers::panic("SaveDataArchive::OpenFile: Failed");
-	return FSResult::Success;
+	return Result::Success;
 }
 
-FSResult SaveDataArchive::createDirectory(const FSPath& path) {
+HorizonResult SaveDataArchive::createDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::OpenFile");
@@ -43,19 +43,19 @@ FSResult SaveDataArchive::createDirectory(const FSPath& path) {
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::is_directory(p))
-			return FSResult::AlreadyExists;
+			return Result::FS::AlreadyExists;
 		if (fs::is_regular_file(p)) {
 			Helpers::panic("File path passed to SaveData::CreateDirectory");
 		}
 
 		bool success = fs::create_directory(p);
-		return success ? FSResult::Success : FSResult::UnexpectedFileOrDir;
+		return success ? Result::Success : Result::FS::UnexpectedFileOrDir;
 	} else {
 		Helpers::panic("Unimplemented SaveData::CreateDirectory");
 	}
 }
 
-FSResult SaveDataArchive::deleteFile(const FSPath& path) {
+HorizonResult SaveDataArchive::deleteFile(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::DeleteFile");
@@ -68,7 +68,7 @@ FSResult SaveDataArchive::deleteFile(const FSPath& path) {
 		}
 
 		if (!fs::is_regular_file(p)) {
-			return FSResult::FileNotFound;
+			return Result::FS::FileNotFoundAlt;
 		}
 
 		std::error_code ec;
@@ -80,11 +80,11 @@ FSResult SaveDataArchive::deleteFile(const FSPath& path) {
 			Helpers::warn("SaveData::DeleteFile: fs::remove failed\n");
 		}
 
-		return FSResult::Success;
+		return Result::Success;
 	}
 
 	Helpers::panic("SaveDataArchive::DeleteFile: Unknown path type");
-	return FSResult::Success;
+	return Result::Success;
 }
 
 FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
@@ -121,7 +121,7 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 	return FileError;
 }
 
-Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FSPath& path) {
+Rust::Result<DirectorySession, HorizonResult> SaveDataArchive::openDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
@@ -131,34 +131,34 @@ Rust::Result<DirectorySession, FSResult> SaveDataArchive::openDirectory(const FS
 
 		if (fs::is_regular_file(p)) {
 			printf("SaveData: OpenDirectory used with a file path");
-			return Err(FSResult::UnexpectedFileOrDir);
+			return Err(Result::FS::UnexpectedFileOrDir);
 		}
 
 		if (fs::is_directory(p)) {
 			return Ok(DirectorySession(this, p));
 		} else {
-			return Err(FSResult::FileNotFound);
+			return Err(Result::FS::FileNotFoundAlt);
 		}
 	}
 
 	Helpers::panic("SaveDataArchive::OpenDirectory: Unimplemented path type");
-	return Err(FSResult::Success);
+	return Err(Result::Success);
 }
 
-Rust::Result<ArchiveBase::FormatInfo, FSResult> SaveDataArchive::getFormatInfo(const FSPath& path) {
+Rust::Result<ArchiveBase::FormatInfo, HorizonResult> SaveDataArchive::getFormatInfo(const FSPath& path) {
 	const fs::path formatInfoPath = getFormatInfoPath();
 	IOFile file(formatInfoPath, "rb");
 
 	// If the file failed to open somehow, we return that the archive is not formatted
 	if (!file.isOpen()) {
-		return Err(FSResult::NotFormatted);
+		return Err(Result::FS::NotFormatted);
 	}
 
 	FormatInfo ret;
 	auto [success, bytesRead] = file.readBytes(&ret, sizeof(FormatInfo));
 	if (!success || bytesRead != sizeof(FormatInfo)) {
 		Helpers::warn("SaveData::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
-		return Err(FSResult::NotFormatted);
+		return Err(Result::FS::NotFormatted);
 	}
 
 	return Ok(ret);
@@ -168,7 +168,7 @@ void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& 
 	const fs::path saveDataPath = IOFile::getAppData() / "SaveData";
 	const fs::path formatInfoPath = getFormatInfoPath();
 
-	// Delete all contents by deleting the directory then recreating it 
+	// Delete all contents by deleting the directory then recreating it
 	fs::remove_all(saveDataPath);
 	fs::create_directories(saveDataPath);
 
@@ -177,16 +177,16 @@ void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& 
 	file.writeBytes(&info, sizeof(info));
 }
 
-Rust::Result<ArchiveBase*, FSResult> SaveDataArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, HorizonResult> SaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);
-		return Err(FSResult::NotFoundInvalid);
+		return Err(Result::FS::NotFoundInvalid);
 	}
 
 	const fs::path formatInfoPath = getFormatInfoPath();
 	// Format info not found so the archive is not formatted
 	if (!fs::is_regular_file(formatInfoPath)) {
-		return Err(FSResult::NotFormatted);
+		return Err(Result::FS::NotFormatted);
 	}
 
 	return Ok((ArchiveBase*)this);

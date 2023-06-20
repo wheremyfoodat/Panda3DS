@@ -10,6 +10,9 @@
 #include "helpers.hpp"
 #include "memory.hpp"
 #include "result.hpp"
+#include "result/result.hpp"
+
+using Result::HorizonResult;
 
 namespace PathType {
     enum : u32 {
@@ -97,7 +100,7 @@ struct FileSession {
     u32 priority = 0; // TODO: What does this even do
     bool isOpen;
 
-    FileSession(ArchiveBase* archive, const FSPath& filePath, const FSPath& archivePath, FILE* fd, bool isOpen = true) : 
+    FileSession(ArchiveBase* archive, const FSPath& filePath, const FSPath& archivePath, FILE* fd, bool isOpen = true) :
         archive(archive), path(filePath), archivePath(archivePath), fd(fd), isOpen(isOpen), priority(0) {}
 
     // For cloning a file session
@@ -128,16 +131,6 @@ struct DirectorySession {
 // Otherwise the fd of the opened file is returned (or nullptr if the opened file doesn't require one)
 using FileDescriptor = std::optional<FILE*>;
 
-enum class FSResult : u32 {
-    Success = 0,
-    AlreadyExists = 0x82044BE,
-    FileTooLarge = 0x86044D2,
-    FileNotFound = 0xC8804470,
-    NotFoundInvalid = 0xC8A04478, // Also a not found error code used here and there in the FS module.
-    NotFormatted = 0xC8A04554,    // Trying to access an archive that needs formatting and has not been formatted
-    UnexpectedFileOrDir = 0xE0C04702
-};
-
 class ArchiveBase {
 public:
     struct FormatInfo {
@@ -149,7 +142,7 @@ public:
 
 protected:
     using Handle = u32;
-    
+
     static constexpr FileDescriptor NoFile = nullptr;
     static constexpr FileDescriptor FileError = std::nullopt;
     Memory& mem;
@@ -176,12 +169,12 @@ protected:
         // If the path string doesn't begin with / then that means it's accessing outside the FS root, which is invalid & unsafe
         if (pathString[0] != Char('/')) return false;
 
-        // Counts how many folders sans the root our file is nested under. 
+        // Counts how many folders sans the root our file is nested under.
         // If it's < 0 at any point of parsing, then the path is unsafe and tries to crawl outside our file sandbox.
         // If it's 0 then this is the FS root.
         // If it's > 0 then we're in a subdirectory of the root.
         int level = 0;
-        
+
         // Split the string on / characters and see how many of the substrings are ".."
         size_t pos = 0;
         while ((pos = pathString.find(Char('/'))) != String::npos) {
@@ -202,27 +195,27 @@ protected:
 public:
     virtual std::string name() = 0;
     virtual u64 getFreeBytes() = 0;
-    virtual FSResult createFile(const FSPath& path, u64 size) = 0;
-    virtual FSResult deleteFile(const FSPath& path) = 0;
+    virtual HorizonResult createFile(const FSPath& path, u64 size) = 0;
+    virtual HorizonResult deleteFile(const FSPath& path) = 0;
 
-    virtual Rust::Result<FormatInfo, FSResult> getFormatInfo(const FSPath& path) {
+    virtual Rust::Result<FormatInfo, HorizonResult> getFormatInfo(const FSPath& path) {
         Helpers::panic("Unimplemented GetFormatInfo for %s archive", name().c_str());
         // Return a dummy struct just to avoid the UB of not returning anything, even if we panic
         return Ok(FormatInfo{ .size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false });
     }
 
-    virtual FSResult createDirectory(const FSPath& path) {
+    virtual HorizonResult createDirectory(const FSPath& path) {
         Helpers::panic("Unimplemented CreateDirectory for %s archive", name().c_str());
-        return FSResult::AlreadyExists;
+        return Result::FS::AlreadyExists;
     }
 
     // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
-    virtual Rust::Result<ArchiveBase*, FSResult> openArchive(const FSPath& path) = 0;
+    virtual Rust::Result<ArchiveBase*, HorizonResult> openArchive(const FSPath& path) = 0;
 
-    virtual Rust::Result<DirectorySession, FSResult> openDirectory(const FSPath& path) {
+    virtual Rust::Result<DirectorySession, HorizonResult> openDirectory(const FSPath& path) {
         Helpers::panic("Unimplemented OpenDirectory for %s archive", name().c_str());
-        return Err(FSResult::FileNotFound);
+        return Err(Result::FS::FileNotFoundAlt);
     }
 
     virtual void format(const FSPath& path, const FormatInfo& info) {
@@ -232,6 +225,6 @@ public:
     // Read size bytes from a file starting at offset "offset" into a certain buffer in memory
     // Returns the number of bytes read, or nullopt if the read failed
     virtual std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) = 0;
-    
+
     ArchiveBase(Memory& mem) : mem(mem) {}
 };

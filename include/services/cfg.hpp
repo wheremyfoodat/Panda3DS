@@ -4,6 +4,7 @@
 #include "logger.hpp"
 #include "memory.hpp"
 #include "region_codes.hpp"
+#include "result/result.hpp"
 
 class CFGService {
 	Handle handle = KernelHandles::CFG;
