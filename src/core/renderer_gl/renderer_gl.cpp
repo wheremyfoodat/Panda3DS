@@ -511,6 +511,41 @@ void Renderer::setupTextureEnvState() {
 	glUniform1ui(textureEnvBufferColorLoc, regs[0xfd]);
 }
 
+void Renderer::bindTexturesToSlots() {
+	static constexpr std::array<u32, 3> ioBases = {
+	  0x80, 0x90, 0x98
+	};
+
+	for (int i = 0; i < 3; i++) {
+		if ((regs[0x80] & (1 << i)) == 0) {
+			continue;
+		}
+
+		const size_t ioBase = ioBases[i];
+
+		const u32 dim = regs[ioBase + 2];
+		const u32 config = regs[ioBase + 3];
+		const u32 height = dim & 0x7ff;
+		const u32 width = getBits<16, 11>(dim);
+		const u32 addr = (regs[ioBase + 5] & 0x0FFFFFFF) << 3;
+		u32 format = regs[ioBase + (i == 0 ? 14 : 6)] & 0xF;
+
+		glActiveTexture(GL_TEXTURE0 + i);
+		Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+		OpenGL::Texture tex = getTexture(targetTex);
+		tex.bind();
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+
+	// Update the texture unit configuration uniform if it changed
+	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
+	if (oldTexUnitConfig != texUnitConfig) {
+		oldTexUnitConfig = texUnitConfig;
+		glUniform1ui(texUnitConfigLoc, texUnitConfig);
+	}
+}
+
 void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
@@ -570,40 +605,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	}
 
 	setupTextureEnvState();
-
-	// Bind textures 0 to 2
-	for (int i = 0; i < 3; i++) {
-		if ((regs[0x80] & (1 << i)) == 0) {
-			continue;
-		}
-
-		static constexpr std::array<u32, 3> ioBases = {
-		  0x80, 0x90, 0x98
-		};
-
-		const size_t ioBase = ioBases[i];
-
-		const u32 dim = regs[ioBase + 2];
-		const u32 config = regs[ioBase + 3];
-		const u32 height = dim & 0x7ff;
-		const u32 width = getBits<16, 11>(dim);
-		const u32 addr = (regs[ioBase + 5] & 0x0FFFFFFF) << 3;
-		u32 format = regs[ioBase + (i == 0 ? 14 : 6)] & 0xF;
-
-		glActiveTexture(GL_TEXTURE0 + i);
-		Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
-		OpenGL::Texture tex = getTexture(targetTex);
-		tex.bind();
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-
-	// Update the texture unit configuration uniform if it changed
-	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
-	if (oldTexUnitConfig != texUnitConfig) {
-		oldTexUnitConfig = texUnitConfig;
-		glUniform1ui(texUnitConfigLoc, texUnitConfig);
-	}
+	bindTexturesToSlots();
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;

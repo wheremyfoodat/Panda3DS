@@ -84,6 +84,7 @@ class Renderer {
 	void setupBlending();
 	void bindDepthBuffer();
 	void setupTextureEnvState();
+	void bindTexturesToSlots();
 
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
