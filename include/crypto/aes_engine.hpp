@@ -72,9 +72,9 @@ namespace Crypto {
 	}
 
 	struct AESKeySlot {
-		std::optional<AESKey> keyX;
-		std::optional<AESKey> keyY;
-		std::optional<AESKey> normalKey;
+		std::optional<AESKey> keyX{std::nullopt};
+		std::optional<AESKey> keyY{std::nullopt};
+		std::optional<AESKey> normalKey{std::nullopt};
 	};
 
 	enum KeySlotId : std::size_t {

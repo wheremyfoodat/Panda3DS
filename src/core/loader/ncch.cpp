@@ -118,7 +118,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 			printf("NCSD is supposedly ecrypted but not actually encrypted\n");
 			encrypted = false;
 		}
-		// If it's truely encrypted, we need to read section again.
+		// If it's truly encrypted, we need to read section again.
 		if (encrypted) {
 			auto [success, bytes] = readFromFile(file, exheaderInfo, &exheader[0], 0, exheaderSize);
 			if (!success || bytes != exheaderSize) {
