@@ -43,34 +43,34 @@ u64 Texture::sizeInBytes() {
     u64 pixelCount = u64(size.x()) * u64(size.y());
 
     switch (format) {
-        case Formats::RGBA8: // 4 bytes per pixel
+        case PICA::TextureFmt::RGBA8: // 4 bytes per pixel
             return pixelCount * 4;
 
-        case Formats::RGB8: // 3 bytes per pixel
+        case PICA::TextureFmt::RGB8: // 3 bytes per pixel
             return pixelCount * 3;
 
-        case Formats::RGBA5551: // 2 bytes per pixel
-        case Formats::RGB565:
-        case Formats::RGBA4:
-        case Formats::RG8:
-        case Formats::IA8:
+        case PICA::TextureFmt::RGBA5551: // 2 bytes per pixel
+        case PICA::TextureFmt::RGB565:
+        case PICA::TextureFmt::RGBA4:
+        case PICA::TextureFmt::RG8:
+        case PICA::TextureFmt::IA8:
             return pixelCount * 2;
 
-        case Formats::A8: // 1 byte per pixel
-        case Formats::I8:
-        case Formats::IA4:
+        case PICA::TextureFmt::A8: // 1 byte per pixel
+        case PICA::TextureFmt::I8:
+        case PICA::TextureFmt::IA4:
             return pixelCount;
 
-        case Formats::I4: // 4 bits per pixel
-        case Formats::A4:
+        case PICA::TextureFmt::I4: // 4 bits per pixel
+        case PICA::TextureFmt::A4:
             return pixelCount / 2;
 
-        case Formats::ETC1: // Compressed formats
-        case Formats::ETC1A4: {
+        case PICA::TextureFmt::ETC1: // Compressed formats
+        case PICA::TextureFmt::ETC1A4: {
             // Number of 4x4 tiles
             const u64 tileCount = pixelCount / 16;
             // Tiles are 8 bytes each on ETC1 and 16 bytes each on ETC1A4
-            const u64 tileSize = format == Formats::ETC1 ? 8 : 16;
+            const u64 tileSize = format == PICA::TextureFmt::ETC1 ? 8 : 16;
             return tileCount * tileSize;
         }
 
@@ -111,9 +111,9 @@ u32 Texture::getSwizzledOffset_4bpp(u32 u, u32 v, u32 width) {
 // Get the texel at position (u, v)
 // fmt: format of the texture
 // data: texture data of the texture
-u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
+u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, const void* data) {
     switch (fmt) {
-        case Formats::RGBA4: {
+        case PICA::TextureFmt::RGBA4: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
@@ -126,7 +126,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
 
-        case Formats::RGBA5551: {
+        case PICA::TextureFmt::RGBA5551: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
@@ -139,7 +139,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
 
-        case Formats::RGB565: {
+        case PICA::TextureFmt::RGB565: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
             auto ptr = static_cast<const u8*>(data);
             u16 texel = u16(ptr[offset]) | (u16(ptr[offset + 1]) << 8);
@@ -151,7 +151,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (0xff << 24) | (b << 16) | (g << 8) | r;
         }
 
-        case Formats::RG8: {
+        case PICA::TextureFmt::RG8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
             auto ptr = static_cast<const u8*>(data);
 
@@ -162,7 +162,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (0xff << 24) | (b << 16) | (g << 8) | r;
         }
 
-        case Formats::RGB8: {
+        case PICA::TextureFmt::RGB8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 3);
             auto ptr = static_cast<const u8*>(data);
 
@@ -173,7 +173,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (0xff << 24) | (b << 16) | (g << 8) | r;
         }
 
-        case Formats::RGBA8: {
+        case PICA::TextureFmt::RGBA8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 4);
             auto ptr = static_cast<const u8*>(data);
 
@@ -185,7 +185,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (b << 16) | (g << 8) | r;
         }
 
-        case Formats::IA4: {
+        case PICA::TextureFmt::IA4: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 1);
             auto ptr = static_cast<const u8*>(data);
 
@@ -197,7 +197,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
-        case Formats::A4: {
+        case PICA::TextureFmt::A4: {
             u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
             auto ptr = static_cast<const u8*>(data);
 
@@ -209,7 +209,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (0 << 16) | (0 << 8) | 0;
         }
 
-        case Formats::A8: {
+        case PICA::TextureFmt::A8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 1);
             auto ptr = static_cast<const u8*>(data);
             const u8 alpha = ptr[offset];
@@ -218,7 +218,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (0 << 16) | (0 << 8) | 0;
         }
 
-        case Formats::I4: {
+        case PICA::TextureFmt::I4: {
             u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
             auto ptr = static_cast<const u8*>(data);
 
@@ -230,7 +230,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (0xff << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
-        case Formats::I8: {
+        case PICA::TextureFmt::I8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 1);
             auto ptr = static_cast<const u8*>(data);
             const u8 intensity = ptr[offset];
@@ -239,7 +239,7 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (0xff << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
-        case Formats::IA8: {
+        case PICA::TextureFmt::IA8: {
             u32 offset = getSwizzledOffset(u, v, size.u(), 2);
             auto ptr = static_cast<const u8*>(data);
 
@@ -249,8 +249,8 @@ u32 Texture::decodeTexel(u32 u, u32 v, Texture::Formats fmt, const void* data) {
             return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
-        case Formats::ETC1: return getTexelETC(false, u, v, size.u(), data);
-        case Formats::ETC1A4: return getTexelETC(true, u, v, size.u(), data);
+        case PICA::TextureFmt::ETC1: return getTexelETC(false, u, v, size.u(), data);
+        case PICA::TextureFmt::ETC1A4: return getTexelETC(true, u, v, size.u(), data);
 
         default:
             Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
@@ -271,24 +271,4 @@ void Texture::decodeTexture(const void* data) {
 
     texture.bind();
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.u(), size.v(), GL_RGBA, GL_UNSIGNED_BYTE, decoded.data());
-}
-
-std::string Texture::textureFormatToString(Texture::Formats fmt) {
-    switch (fmt) {
-        case Formats::A4: return "A4";
-        case Formats::A8: return "A8";
-        case Formats::ETC1: return "ETC1";
-        case Formats::ETC1A4: return "ETC1A4";
-        case Formats::I4: return "I4";
-        case Formats::I8: return "I8";
-        case Formats::IA4: return "IA4";
-        case Formats::IA8: return "IA8";
-        case Formats::RG8: return "RG8";
-        case Formats::RGB565: return "RGB565";
-        case Formats::RGB8: return "RGB8";
-        case Formats::RGBA4: return "RGBA4";
-        case Formats::RGBA5551: return "RGBA5551";
-        case Formats::RGBA8: return "RGBA8";
-        default: return "Unknown";
-    }
 }
