@@ -11,11 +11,10 @@
 
 namespace Crypto {
 	constexpr std::size_t AesKeySize = 0x10;
+	using AESKey = std::array<u8, AesKeySize>;
 
-	using AESKey = std::array<uint8_t, AesKeySize>;
-
-	template<std::size_t N>
-	static std::array<uint8_t, N> rolArray(const std::array<uint8_t, N>& value, std::size_t bits) {
+	template <std::size_t N>
+	static std::array<u8, N> rolArray(const std::array<u8, N>& value, std::size_t bits) {
 		const auto bitWidth = N * CHAR_BIT;
 
 		bits %= bitWidth;
@@ -23,7 +22,7 @@ namespace Crypto {
 		const auto byteShift = bits / CHAR_BIT;
 		const auto bitShift = bits % CHAR_BIT;
 
-		std::array<uint8_t, N> result;
+		std::array<u8, N> result;
 
 		for (std::size_t i = 0; i < N; i++) {
 			result[i] = ((value[(i + byteShift) % N] << bitShift) | (value[(i + byteShift + 1) % N] >> (CHAR_BIT - bitShift))) & UINT8_MAX;
@@ -32,24 +31,24 @@ namespace Crypto {
 		return result;
 	}
 
-	template<std::size_t N>
-	static std::array<uint8_t, N> addArray(const std::array<uint8_t, N>& a, const std::array<uint8_t, N>& b) {
-		std::array<uint8_t, N> result;
+	template <std::size_t N>
+	static std::array<u8, N> addArray(const std::array<u8, N>& a, const std::array<u8, N>& b) {
+		std::array<u8, N> result;
 		std::size_t sum = 0;
 		std::size_t carry = 0;
 
 		for (std::int64_t i = N - 1; i >= 0; i--) {
 			sum = a[i] + b[i] + carry;
 			carry = sum >> CHAR_BIT;
-			result[i] = static_cast<std::uint8_t>(sum & UINT8_MAX);
+			result[i] = static_cast<u8>(sum & UINT8_MAX);
 		}
 
 		return result;
 	}
 
-	template<std::size_t N>
-	static std::array<uint8_t, N> xorArray(const std::array<uint8_t, N>& a, const std::array<uint8_t, N>& b) {
-		std::array<uint8_t, N> result;
+	template <std::size_t N>
+	static std::array<u8, N> xorArray(const std::array<u8, N>& a, const std::array<u8, N>& b) {
+		std::array<u8, N> result;
 
 		for (std::size_t i = 0; i < N; i++) {
 			result[i] = a[i] ^ b[i];
@@ -65,16 +64,16 @@ namespace Crypto {
 
 		AESKey rawKey;
 		for (std::size_t i = 0; i < rawKey.size(); i++) {
-			rawKey[i] = static_cast<uint8_t>(std::stoi(hex.substr(i * 2, 2), 0, 16));
+			rawKey[i] = static_cast<u8>(std::stoi(hex.substr(i * 2, 2), 0, 16));
 		}
 
 		return rawKey;
 	}
 
 	struct AESKeySlot {
-		std::optional<AESKey> keyX{std::nullopt};
-		std::optional<AESKey> keyY{std::nullopt};
-		std::optional<AESKey> normalKey{std::nullopt};
+		std::optional<AESKey> keyX = std::nullopt;
+		std::optional<AESKey> keyY = std::nullopt;
+		std::optional<AESKey> normalKey = std::nullopt;
 	};
 
 	enum KeySlotId : std::size_t {
@@ -88,8 +87,9 @@ namespace Crypto {
 	private:
 		constexpr static std::size_t AesKeySlotCount = 0x40;
 
-		std::optional<AESKey> m_generator;
+		std::optional<AESKey> m_generator = std::nullopt;
 		std::array<AESKeySlot, AesKeySlotCount> m_slots;
+		bool keysLoaded = false;
 
 		constexpr void updateNormalKey(std::size_t slotId) {
 			if (m_generator.has_value() && hasKeyX(slotId) && hasKeyY(slotId)) {
@@ -103,8 +103,8 @@ namespace Crypto {
 
 	public:
 		AESEngine() {}
-
 		void loadKeys(const std::filesystem::path& path);
+		bool haveKeys() { return keysLoaded; }
 
 		constexpr bool hasKeyX(std::size_t slotId) {
 			if (slotId >= AesKeySlotCount) {
@@ -121,7 +121,6 @@ namespace Crypto {
 		constexpr void setKeyX(std::size_t slotId, const AESKey &key) {
 			if (slotId < AesKeySlotCount) {
 				m_slots.at(slotId).keyX = key;
-
 				updateNormalKey(slotId);
 			}
 		}
@@ -141,7 +140,6 @@ namespace Crypto {
 		constexpr void setKeyY(std::size_t slotId, const AESKey &key) {
 			if (slotId < AesKeySlotCount) {
 				m_slots.at(slotId).keyY = key;
-
 				updateNormalKey(slotId);
 			}
 		}

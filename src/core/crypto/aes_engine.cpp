@@ -9,13 +9,12 @@ namespace Crypto {
 		std::ifstream file(path, std::ios::in);
 	
 		if (file.fail()) {
-			Helpers::warn("keys: Couldn't read key file: %s", path.c_str());
+			Helpers::warn("Keys: Couldn't read key file: %s", path.c_str());
 			return;
 		}
 
 		while (!file.eof()) {
 			std::string line;
-
 			std::getline(file, line);
 
 			// Skip obvious invalid lines
@@ -24,9 +23,8 @@ namespace Crypto {
 			}
 
 			const auto parts = Helpers::split(line, '=');
-
 			if (parts.size() != 2) {
-				Helpers::warn("keys: Failed to parse %s", line.c_str());
+				Helpers::warn("Keys: Failed to parse %s", line.c_str());
 				continue;
 			}
 
@@ -37,16 +35,15 @@ namespace Crypto {
 			char keyType;
 
 			bool is_generator = name == "generator";
-
 			if (!is_generator && std::sscanf(name.c_str(), "slot0x%zXKey%c", &slotId, &keyType) != 2) {
-				Helpers::warn("keys: Ignoring unknown key %s", name.c_str());
+				Helpers::warn("Keys: Ignoring unknown key %s", name.c_str());
 				continue;
 			}
 
 			auto key = createKeyFromHex(rawKeyHex);
 
 			if (!key.has_value()) {
-				Helpers::warn("keys: Failed to parse raw key %s", rawKeyHex.c_str());
+				Helpers::warn("Keys: Failed to parse raw key %s", rawKeyHex.c_str());
 				continue;
 			}
 
@@ -56,7 +53,7 @@ namespace Crypto {
 			}
 
 			if (slotId >= AesKeySlotCount) {
-				Helpers::warn("keys: Invalid key slot id %u", slotId);
+				Helpers::warn("Keys: Invalid key slot id %u", slotId);
 				continue;
 			}
 
@@ -71,7 +68,7 @@ namespace Crypto {
 					setNormalKey(slotId, key.value());
 					break;
 				default:
-					Helpers::warn("keys: Invalid key type %c", keyType);
+					Helpers::warn("Keys: Invalid key type %c", keyType);
 					break;
 			}
 		}
@@ -80,5 +77,7 @@ namespace Crypto {
 		for (std::size_t i = 0; i < AesKeySlotCount; i++) {
 			updateNormalKey(i);
 		}
+
+		keysLoaded = true;
 	}
 };

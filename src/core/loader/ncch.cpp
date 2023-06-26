@@ -54,6 +54,14 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	romFS.hashRegionSize = u64(*(u32*)&header[0x1B8]) * mediaUnit;
 
 	if (encrypted) {
+		if (!aesEngine.haveKeys()) {
+			Helpers::panic(
+				"Loaded an encrypted ROM but AES keys don't seem to have been provided correctly! Navigate to the emulator's\n"
+				"app data folder and make sure you have a sysdata directory with a file called aes_keys.txt which contains your keys!"
+			);
+			return false;
+		}
+
 		Crypto::AESKey primaryKeyY;
 		Crypto::AESKey secondaryKeyY;
 		std::memcpy(primaryKeyY.data(), header, primaryKeyY.size());
