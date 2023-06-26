@@ -120,7 +120,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/system_models.hpp include/services/dlp_srvr.hpp include/result/result.hpp
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
-                 include/crypto/aes_engine.hpp
+                 include/crypto/aes_engine.hpp include/metaprogramming.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

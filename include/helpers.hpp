@@ -2,13 +2,10 @@
 #include <climits>
 #include <cstdarg>
 #include <cstdint>
-#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <sstream>
 #include <string>
-#include <type_traits>
-#include <utility>
 #include <vector>
 
 #include "termcolor.hpp"
@@ -51,21 +48,6 @@ namespace Helpers {
 		std::vprintf(fmt, args);
 		std::cout << termcolor::reset << "\n";
 		va_end(args);
-	}
-
-	static std::vector<u8> loadROM(std::string directory) {
-		std::ifstream file(directory, std::ios::binary);
-		if (file.fail()) panic("Couldn't read %s", directory.c_str());
-
-		std::vector<u8> ROM;
-
-		file.unsetf(std::ios::skipws);
-		ROM.insert(ROM.begin(), std::istream_iterator<uint8_t>(file), std::istream_iterator<uint8_t>());
-
-		file.close();
-
-		printf("%s loaded successfully\n", directory.c_str());
-		return ROM;
 	}
 
 	static constexpr bool buildingInDebugMode() {
@@ -122,36 +104,6 @@ namespace Helpers {
 		return (value >> offset) & ones<T, bits>();
 	}
 
-	/// Check if a bit "bit" of value is set
-	static constexpr bool isBitSet(u32 value, int bit) { return (value >> bit) & 1; }
-
-	/// rotate number right
-	template <typename T>
-	static constexpr T rotr(T value, int bits) {
-		constexpr auto bitWidth = sizeof(T) * 8;
-		bits &= bitWidth - 1;
-		return (value >> bits) | (value << (bitWidth - bits));
-	}
-
-	// rotate number left
-	template <typename T>
-	static constexpr T rotl(T value, int bits) {
-		constexpr auto bitWidth = sizeof(T) * 8;
-		bits &= bitWidth - 1;
-		return (value << bits) | (value >> (bitWidth - bits));
-	}
-
-	/// Used to make the compiler evaluate beeg loops at compile time for the tablegen
-	template <typename T, T Begin, class Func, T... Is>
-	static constexpr void static_for_impl(Func&& f, std::integer_sequence<T, Is...>) {
-		(f(std::integral_constant<T, Begin + Is>{}), ...);
-	}
-
-	template <typename T, T Begin, T End, class Func>
-	static constexpr void static_for(Func&& f) {
-		static_for_impl<T, Begin>(std::forward<Func>(f), std::make_integer_sequence<T, End - Begin>{});
-	}
-
 	// For values < 0x99
 	static constexpr inline u8 incBCDByte(u8 value) { return ((value & 0xf) == 0x9) ? value + 7 : value + 1; }
 
@@ -186,12 +138,3 @@ constexpr size_t operator""_KB(unsigned long long int x) { return 1024ULL * x; }
 constexpr size_t operator""_MB(unsigned long long int x) { return 1024_KB * x; }
 constexpr size_t operator""_GB(unsigned long long int x) { return 1024_MB * x; }
 
-// useful macros
-// likely/unlikely
-#ifdef __GNUC__
-#define likely(x) __builtin_expect((x), 1)
-#define unlikely(x) __builtin_expect((x), 0)
-#else
-#define likely(x) (x)
-#define unlikely(x) (x)
-#endif
