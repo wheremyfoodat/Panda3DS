@@ -6,6 +6,7 @@
 #include <glad/gl.h>
 
 #include "cpu.hpp"
+#include "crypto/aes_engine.hpp"
 #include "io_file.hpp"
 #include "memory.hpp"
 #include "opengl.hpp"
@@ -20,6 +21,7 @@ class Emulator {
     GPU gpu;
     Memory memory;
     Kernel kernel;
+    Crypto::AESEngine aesEngine;
 
     SDL_Window* window;
     SDL_GLContext glContext;
