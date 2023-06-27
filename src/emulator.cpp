@@ -135,9 +135,18 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
     // Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
     // %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart
     char* appData = SDL_GetPrefPath(nullptr, "Alber");
-    const std::filesystem::path dataPath = std::filesystem::path(appData) / path.filename().stem();
+    const std::filesystem::path appDataPath = std::filesystem::path(appData);
+    const std::filesystem::path dataPath = appDataPath / path.filename().stem();
+	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
     IOFile::setAppDataDir(dataPath);
-    SDL_free(appData);
+	SDL_free(appData);
+
+    // Open the text file containing our AES keys if it exists. We use the std::filesystem::exists overload that takes an error code param to
+    // avoid the call throwing exceptions
+    std::error_code ec;
+    if (std::filesystem::exists(aesKeysPath, ec) && !ec) {
+        aesEngine.loadKeys(aesKeysPath);
+    }
 
     kernel.initializeFS();
     auto extension = path.extension();
@@ -154,7 +163,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 bool Emulator::loadNCSD(const std::filesystem::path& path) {
     romType = ROMType::NCSD;
-    std::optional<NCSD> opt = memory.loadNCSD(path);
+    std::optional<NCSD> opt = memory.loadNCSD(aesEngine, path);
 
     if (!opt.has_value()) {
         return false;
