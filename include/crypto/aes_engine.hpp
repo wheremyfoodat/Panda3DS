@@ -93,7 +93,7 @@ namespace Crypto {
 
 		constexpr void updateNormalKey(std::size_t slotId) {
 			if (m_generator.has_value() && hasKeyX(slotId) && hasKeyY(slotId)) {
-				auto &keySlot = m_slots.at(slotId);
+				auto& keySlot = m_slots.at(slotId);
 				AESKey keyX = keySlot.keyX.value();
 				AESKey keyY = keySlot.keyY.value();
 

@@ -104,9 +104,6 @@ namespace Helpers {
 		return (value >> offset) & ones<T, bits>();
 	}
 
-	// For values < 0x99
-	static constexpr inline u8 incBCDByte(u8 value) { return ((value & 0xf) == 0x9) ? value + 7 : value + 1; }
-
 #ifdef HELPERS_APPLE_CLANG
 	template <class To, class From>
 	constexpr To bit_cast(const From& from) noexcept {
