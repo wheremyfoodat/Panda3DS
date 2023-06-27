@@ -9,14 +9,14 @@ namespace PathType {
 	};
 };
 
-FSResult SelfNCCHArchive::createFile(const FSPath& path, u64 size) {
+HorizonResult SelfNCCHArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[SelfNCCH] CreateFile not yet supported");
-	return FSResult::Success;
+	return Result::Success;
 }
 
-FSResult SelfNCCHArchive::deleteFile(const FSPath& path) {
+HorizonResult SelfNCCHArchive::deleteFile(const FSPath& path) {
 	Helpers::panic("[SelfNCCH] Unimplemented DeleteFile");
-	return FSResult::Success;
+	return Result::Success;
 }
 
 FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {
@@ -40,10 +40,10 @@ FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& pe
 	return NoFile; // No file descriptor needed for RomFS
 }
 
-Rust::Result<ArchiveBase*, FSResult> SelfNCCHArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, HorizonResult> SelfNCCHArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Invalid path type for SelfNCCH archive: %d\n", path.type);
-		return Err(FSResult::NotFoundInvalid);
+		return Err(Result::FS::NotFoundInvalid);
 	}
 
 	return Ok((ArchiveBase*)this);

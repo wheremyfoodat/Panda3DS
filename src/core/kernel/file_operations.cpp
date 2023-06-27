@@ -14,12 +14,6 @@ namespace FileOps {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0
-	};
-}
-
 
 void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 	const u32 cmd = mem.read32(messagePointer);
@@ -90,7 +84,7 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	if (!file->isOpen) {
 		Helpers::panic("Tried to read closed file");
 	}
-	
+
 	// Handle files with their own file descriptors by just fread'ing the data
 	if (file->fd) {
 		std::unique_ptr<u8[]> data(new u8[size]);

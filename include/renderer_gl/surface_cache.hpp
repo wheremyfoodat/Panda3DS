@@ -13,6 +13,7 @@
 // Are concerned. We could overload the == operator, but that implies full equality
 // Including equality of the allocated OpenGL resources, which we don't want
 // - A "valid" member that tells us whether the function is still valid or not
+// - A "location" member which tells us which location in 3DS memory this surface occupies
 template <typename SurfaceType, size_t capacity>
 class SurfaceCache {
     // Vanilla std::optional can't hold actual references
@@ -34,6 +35,15 @@ public:
     OptionalRef find(SurfaceType& other) {
         for (auto& e : buffer) {
             if (e.matches(other) && e.valid)
+                return e;
+        }
+
+        return std::nullopt;
+    }
+
+    OptionalRef findFromAddress(u32 address) {
+        for (auto& e : buffer) {
+            if (e.location == address && e.valid)
                 return e;
         }
 

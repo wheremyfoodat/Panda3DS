@@ -25,7 +25,6 @@ namespace DSPCommands {
 
 namespace Result {
 	enum : u32 {
-		Success = 0,
 		HeadphonesNotInserted = 0,
 		HeadphonesInserted = 1
 	};
@@ -215,7 +214,7 @@ void DSPService::registerInterruptEvents(u32 messagePointer) {
 	const u32 channel = mem.read32(messagePointer + 8);
 	const u32 eventHandle = mem.read32(messagePointer + 16);
 	log("DSP::RegisterInterruptEvents (interrupt = %d, channel = %d, event = %d)\n", interrupt, channel, eventHandle);
-	
+
 	// The event handle being 0 means we're removing an event
 	if (eventHandle == 0) {
 		DSPEvent& e = getEventRef(interrupt, channel); // Get event

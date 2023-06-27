@@ -13,12 +13,6 @@ namespace MICCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void MICService::reset() {
 	micEnabled = false;
 	shouldClamp = false;

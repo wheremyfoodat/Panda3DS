@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <SDL.h>
+#include <glad/gl.h>
 
 #include "cpu.hpp"
 #include "io_file.hpp"
@@ -35,7 +36,7 @@ class Emulator {
 
 public:
     Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory), memory(cpu.getTicksRef()) {
-        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
             Helpers::panic("Failed to initialize SDL2");
         }
 
@@ -45,7 +46,20 @@ public:
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
         window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
+
+        if (window == nullptr) {
+            Helpers::panic("Window creation failed: %s", SDL_GetError());
+        }
+
         glContext = SDL_GL_CreateContext(window);
+
+        if (glContext == nullptr) {
+            Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+        }
+
+        if(!gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress))) {
+            Helpers::panic("OpenGL init failed: %s", SDL_GetError());
+        }
 
         reset();
     }

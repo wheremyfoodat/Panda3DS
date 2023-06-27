@@ -1,8 +1,11 @@
+#include <bit>
 #include <cassert>
 #include <cstring>
-#include "kernel.hpp"
+
 #include "arm_defs.hpp"
-// This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each other
+#include "kernel.hpp"
+// This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each
+// other
 #include "cpu.hpp"
 #include "resource_limits.hpp"
 
@@ -20,17 +23,17 @@ void Kernel::switchThread(int newThreadIndex) {
 	}
 
 	// Backup context
-	std::memcpy(&oldThread.gprs[0], &cpu.regs()[0], 16 * sizeof(u32)); // Backup the 16 GPRs
-	std::memcpy(&oldThread.fprs[0], &cpu.fprs()[0], 32 * sizeof(u32)); // Backup the 32 FPRs
-	oldThread.cpsr = cpu.getCPSR();   // Backup CPSR
-	oldThread.fpscr = cpu.getFPSCR(); // Backup FPSCR
+	std::memcpy(oldThread.gprs.data(), cpu.regs().data(), cpu.regs().size_bytes());  // Backup the 16 GPRs
+	std::memcpy(oldThread.fprs.data(), cpu.fprs().data(), cpu.fprs().size_bytes());  // Backup the 32 FPRs
+	oldThread.cpsr = cpu.getCPSR();                                                  // Backup CPSR
+	oldThread.fpscr = cpu.getFPSCR();                                                // Backup FPSCR
 
 	// Load new context
-	std::memcpy(&cpu.regs()[0], &newThread.gprs[0], 16 * sizeof(u32)); // Load 16 GPRs
-	std::memcpy(&cpu.fprs()[0], &newThread.fprs[0], 32 * sizeof(u32)); // Load 32 FPRs
-	cpu.setCPSR(newThread.cpsr);   // Load CPSR
-	cpu.setFPSCR(newThread.fpscr); // Load FPSCR
-	cpu.setTLSBase(newThread.tlsBase); // Load CP15 thread-local-storage pointer register
+	std::memcpy(cpu.regs().data(), newThread.gprs.data(), cpu.regs().size_bytes());  // Load 16 GPRs
+	std::memcpy(cpu.fprs().data(), newThread.fprs.data(), cpu.fprs().size_bytes());  // Load 32 FPRs
+	cpu.setCPSR(newThread.cpsr);                                                     // Load CPSR
+	cpu.setFPSCR(newThread.fpscr);                                                   // Load FPSCR
+	cpu.setTLSBase(newThread.tlsBase);  // Load CP15 thread-local-storage pointer register
 
 	currentThreadIndex = newThreadIndex;
 }
@@ -47,7 +50,7 @@ void Kernel::sortThreads() {
 bool Kernel::canThreadRun(const Thread& t) {
 	if (t.status == ThreadStatus::Ready) {
 		return true;
-	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 
+	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1
 		|| t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
 		const u64 elapsedTicks = cpu.getTicks() - t.sleepTick;
 
@@ -81,7 +84,7 @@ std::optional<int> Kernel::getNextThread() {
 
 void Kernel::switchToNextThread() {
 	std::optional<int> newThreadIndex = getNextThread();
-	
+
 	if (!newThreadIndex.has_value()) {
 		log("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
 		assert(aliveThreadCount != 0);
@@ -101,7 +104,7 @@ void Kernel::switchToNextThread() {
 // See if there;s a higher priority, ready thread and switch to that
 void Kernel::rescheduleThreads() {
 	std::optional<int> newThreadIndex = getNextThread();
-	
+
 	if (newThreadIndex.has_value() && newThreadIndex.value() != currentThreadIndex) {
 		threads[currentThreadIndex].status = ThreadStatus::Ready;
 		switchThread(newThreadIndex.value());
@@ -273,12 +276,12 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 	switch (t.status) {
 		case ThreadStatus::WaitSync1:
 			t.status = ThreadStatus::Ready;
-			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
 			break;
 
 		case ThreadStatus::WaitSyncAny:
 			t.status = ThreadStatus::Ready;
-			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
 
 			// Get the index of the event in the object's waitlist, write it to r1
 			for (size_t i = 0; i < t.waitList.size(); i++) {
@@ -308,12 +311,12 @@ void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
 		switch (t.status) {
 		case ThreadStatus::WaitSync1:
 			t.status = ThreadStatus::Ready;
-			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
 			break;
 
 		case ThreadStatus::WaitSyncAny:
 			t.status = ThreadStatus::Ready;
-			t.gprs[0] = SVCResult::Success; // The thread did not timeout, so write success to r0
+			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
 
 			// Get the index of the event in the object's waitlist, write it to r1
 			for (size_t i = 0; i < t.waitList.size(); i++) {
@@ -352,7 +355,7 @@ void Kernel::sleepThread(s64 ns) {
 	}
 }
 
-// Result CreateThread(s32 priority, ThreadFunc entrypoint, u32 arg, u32 stacktop, s32 threadPriority, s32 processorID)	
+// Result CreateThread(s32 priority, ThreadFunc entrypoint, u32 arg, u32 stacktop, s32 threadPriority, s32 processorID)
 void Kernel::createThread() {
 	u32 priority = regs[0];
 	u32 entrypoint = regs[1];
@@ -365,11 +368,11 @@ void Kernel::createThread() {
 
 	if (priority > 0x3F) [[unlikely]] {
 		Helpers::panic("Created thread with bad priority value %X", priority);
-		regs[0] = SVCResult::BadThreadPriority;
+		regs[0] = Result::OS::OutOfRange;
 		return;
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = makeThread(entrypoint, initialSP, priority, id, arg, ThreadStatus::Ready);
 	rescheduleThreads();
 }
@@ -379,7 +382,7 @@ void Kernel::svcSleepThread() {
 	const s64 ns = s64(u64(regs[0]) | (u64(regs[1]) << 32));
 	//logSVC("SleepThread(ns = %lld)\n", ns);
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	sleepThread(ns);
 }
 
@@ -388,18 +391,18 @@ void Kernel::getThreadID() {
 	logSVC("GetThreadID(handle = %X)\n", handle);
 
 	if (handle == KernelHandles::CurrentThread) {
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		regs[1] = currentThreadIndex;
 		return;
 	}
 
 	const auto thread = getObject(handle, KernelObjectType::Thread);
 	if (thread == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = thread->getData<Thread>()->index;
 }
 
@@ -408,14 +411,14 @@ void Kernel::getThreadPriority() {
 	logSVC("GetThreadPriority (handle = %X)\n", handle);
 
 	if (handle == KernelHandles::CurrentThread) {
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		regs[1] = threads[currentThreadIndex].priority;
 	} else {
 		auto object = getObject(handle, KernelObjectType::Thread);
 		if (object == nullptr) [[unlikely]] {
-			regs[0] = SVCResult::BadHandle;
+			regs[0] = Result::Kernel::InvalidHandle;
 		} else {
-			regs[0] = SVCResult::Success;
+			regs[0] = Result::Success;
 			regs[1] = object->getData<Thread>()->priority;
 		}
 	}
@@ -427,20 +430,20 @@ void Kernel::setThreadPriority() {
 	logSVC("SetThreadPriority (handle = %X, priority = %X)\n", handle, priority);
 
 	if (priority > 0x3F) {
-		regs[0] = SVCResult::BadThreadPriority;
+		regs[0] = Result::OS::OutOfRange;
 		return;
 	}
 
 	if (handle == KernelHandles::CurrentThread) {
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		threads[currentThreadIndex].priority = priority;
 	} else {
 		auto object = getObject(handle, KernelObjectType::Thread);
 		if (object == nullptr) [[unlikely]] {
-			regs[0] = SVCResult::BadHandle;
+			regs[0] = Result::Kernel::InvalidHandle;
 			return;
 		} else {
-			regs[0] = SVCResult::Success;
+			regs[0] = Result::Success;
 			object->getData<Thread>()->priority = priority;
 		}
 	}
@@ -476,7 +479,7 @@ void Kernel::svcCreateMutex() {
 	bool locked = regs[1] != 0;
 	logSVC("CreateMutex (locked = %s)\n", locked ? "yes" : "no");
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = makeMutex(locked);
 }
 
@@ -487,18 +490,18 @@ void Kernel::svcReleaseMutex() {
 	const auto object = getObject(handle, KernelObjectType::Mutex);
 	if (object == nullptr) [[unlikely]] {
 		Helpers::panic("Tried to release non-existent mutex");
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
 	Mutex* moo = object->getData<Mutex>();
 	// A thread can't release a mutex it does not own
 	if (!moo->locked || moo->ownerThread != currentThreadIndex) {
-		regs[0] = SVCResult::InvalidMutexRelease;
+		regs[0] = Result::Kernel::InvalidMutexRelease;
 		return;
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	releaseMutex(moo);
 }
 
@@ -513,7 +516,7 @@ void Kernel::svcCreateSemaphore() {
 	if (initialCount < 0 || maxCount < 0)
 		Helpers::panic("CreateSemaphore: Negative count value");
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = makeSemaphore(initialCount, maxCount);
 }
 
@@ -525,7 +528,7 @@ void Kernel::svcReleaseSemaphore() {
 	const auto object = getObject(handle, KernelObjectType::Semaphore);
 	if (object == nullptr) [[unlikely]] {
 		Helpers::panic("Tried to release non-existent semaphore");
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
@@ -537,7 +540,7 @@ void Kernel::svcReleaseSemaphore() {
 		Helpers::panic("ReleaseSemaphore: Release count too high");
 
 	// Write success and old available count to r0 and r1 respectively
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = s->availableCount;
 	// Bump available count
 	s->availableCount += releaseCount;

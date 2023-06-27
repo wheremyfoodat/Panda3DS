@@ -3,6 +3,7 @@
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
+#include "result/result.hpp"
 
 class NIMService {
 	Handle handle = KernelHandles::NIM;

@@ -3,7 +3,7 @@
 
 namespace fs = std::filesystem;
 
-FSResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
+HorizonResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 	if (size == 0)
 		Helpers::panic("ExtSaveData file does not support size == 0");
 
@@ -15,22 +15,22 @@ FSResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 		p += fs::path(path.utf16_string).make_preferred();
 
 		if (fs::exists(p))
-			return FSResult::AlreadyExists;
-			
+			return Result::FS::AlreadyExists;
+
 		// Create a file of size "size" by creating an empty one, seeking to size - 1 and just writing a 0 there
 		IOFile file(p.string().c_str(), "wb");
 		if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
-			return FSResult::Success;
+			return Result::Success;
 		}
 
-		return FSResult::FileTooLarge;
+		return Result::FS::FileTooLarge;
 	}
 
 	Helpers::panic("ExtSaveDataArchive::OpenFile: Failed");
-	return FSResult::Success;
+	return Result::Success;
 }
 
-FSResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
+HorizonResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in ExtSaveData::DeleteFile");
@@ -43,7 +43,7 @@ FSResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 		}
 
 		if (!fs::is_regular_file(p)) {
-			return FSResult::FileNotFound;
+			return Result::FS::FileNotFoundAlt;
 		}
 
 		std::error_code ec;
@@ -55,11 +55,11 @@ FSResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 			Helpers::warn("ExtSaveData::DeleteFile: fs::remove failed\n");
 		}
 
-		return FSResult::Success;
+		return Result::Success;
 	}
 
 	Helpers::panic("ExtSaveDataArchive::DeleteFile: Unknown path type");
-	return FSResult::Success;
+	return Result::Success;
 }
 
 FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
@@ -95,7 +95,7 @@ std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path)
 	return backingFolder + std::to_string(saveLow) + std::to_string(saveHigh);
 }
 
-Rust::Result<ArchiveBase*, FSResult> ExtSaveDataArchive::openArchive(const FSPath& path) {
+Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary || path.binary.size() != 12) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
@@ -105,13 +105,13 @@ Rust::Result<ArchiveBase*, FSResult> ExtSaveDataArchive::openArchive(const FSPat
 	// fs::path formatInfopath = IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
 	// Format info not found so the archive is not formatted
 	// if (!fs::is_regular_file(formatInfopath)) {
-	//	return isShared ? Err(FSResult::NotFormatted) : Err(FSResult::NotFoundInvalid);
+	//	return isShared ? Err(Result::FS::NotFormatted) : Err(Result::FS::NotFoundInvalid);
 	//}
 
 	return Ok((ArchiveBase*)this);
 }
 
-Rust::Result<DirectorySession, FSResult> ExtSaveDataArchive::openDirectory(const FSPath& path) {
+Rust::Result<DirectorySession, HorizonResult> ExtSaveDataArchive::openDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in ExtSaveData::OpenDirectory");
@@ -121,18 +121,18 @@ Rust::Result<DirectorySession, FSResult> ExtSaveDataArchive::openDirectory(const
 
 		if (fs::is_regular_file(p)) {
 			printf("ExtSaveData: OpenArchive used with a file path");
-			return Err(FSResult::UnexpectedFileOrDir);
+			return Err(Result::FS::UnexpectedFileOrDir);
 		}
 
 		if (fs::is_directory(p)) {
 			return Ok(DirectorySession(this, p));
 		} else {
-			return Err(FSResult::FileNotFound);
+			return Err(Result::FS::FileNotFoundAlt);
 		}
 	}
 
 	Helpers::panic("ExtSaveDataArchive::OpenDirectory: Unimplemented path type");
-	return Err(FSResult::Success);
+	return Err(Result::Success);
 }
 
 std::optional<u32> ExtSaveDataArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

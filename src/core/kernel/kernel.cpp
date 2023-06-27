@@ -149,7 +149,7 @@ u32 Kernel::getTLSPointer() {
 // Result CloseHandle(Handle handle)
 void Kernel::svcCloseHandle() {
 	logSVC("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
 // u64 GetSystemTick()
@@ -169,7 +169,7 @@ void Kernel::outputDebugString() {
 
 	std::string message = mem.readString(pointer, size);
 	logDebugString("[OutputDebugString] %s\n", message.c_str());
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
 void Kernel::getProcessID() {
@@ -178,11 +178,11 @@ void Kernel::getProcessID() {
 	logSVC("GetProcessID(process: %s)\n", getProcessName(pid).c_str());
 
 	if (process == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 	regs[1] = process->getData<Process>()->id;
 }
 
@@ -194,7 +194,7 @@ void Kernel::getProcessInfo() {
 	logSVC("GetProcessInfo(process: %s, type = %d)\n", getProcessName(pid).c_str(), type);
 
 	if (process == nullptr) [[unlikely]] {
-		regs[0] = SVCResult::BadHandle;
+		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}
 
@@ -215,7 +215,7 @@ void Kernel::getProcessInfo() {
 			Helpers::panic("GetProcessInfo: unimplemented type %d", type);
 	}
 
-	regs[0] = SVCResult::Success;
+	regs[0] = Result::Success;
 }
 
 // Result DuplicateHandle(Handle* out, Handle original)
@@ -224,7 +224,7 @@ void Kernel::duplicateHandle() {
 	logSVC("DuplicateHandle(handle = %X)\n", original);
 
 	if (original == KernelHandles::CurrentThread) {
-		regs[0] = SVCResult::Success;
+		regs[0] = Result::Success;
 		Handle ret = makeObject(KernelObjectType::Thread);
 		objects[ret].data = &threads[currentThreadIndex];
 

@@ -30,13 +30,6 @@ namespace GXCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-		SuccessRegisterIRQ = 0x2A07 // TODO: Is this a reference to the Ricoh 2A07 used in PAL NES systems?
-	};
-}
-
 void GPUService::reset() {
 	privilegedProcess = 0xFFFFFFFF; // Set the privileged process to an invalid handle
 	interruptEvent = std::nullopt;
@@ -100,7 +93,7 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x13, 2, 2));
-	mem.write32(messagePointer + 4, Result::SuccessRegisterIRQ); // First init returns a unique result
+	mem.write32(messagePointer + 4, Result::GSP::SuccessRegisterIRQ); // First init returns a unique result
 	mem.write32(messagePointer + 8, 0); // TODO: GSP module thread index
 	mem.write32(messagePointer + 12, 0); // Translation descriptor
 	mem.write32(messagePointer + 16, KernelHandles::GSPSharedMemHandle);
@@ -120,7 +113,7 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	u8& interruptCount = sharedMem[1];
 	u8 flagIndex = (index + interruptCount) % 0x34;
 	interruptCount++;
-	
+
 	sharedMem[2] = 0; // Set error code to 0
 	sharedMem[0xC + flagIndex] = static_cast<u8>(type); // Write interrupt type to queue
 
@@ -187,7 +180,7 @@ void GPUService::writeHwRegsWithMask(u32 messagePointer) {
 	u32 dataPointer = mem.read32(messagePointer + 16); // Data pointer
 	u32 maskPointer = mem.read32(messagePointer + 24); // Mask pointer
 
-	log("GSP::GPU::writeHwRegsWithMask (GPU address = %08X, size = %X, data address = %08X, mask address = %08X)\n", 
+	log("GSP::GPU::writeHwRegsWithMask (GPU address = %08X, size = %X, data address = %08X, mask address = %08X)\n",
 		ioAddr, size, dataPointer, maskPointer);
 
 	// Check for alignment
@@ -202,7 +195,7 @@ void GPUService::writeHwRegsWithMask(u32 messagePointer) {
 	if (ioAddr >= 0x420000) {
 		Helpers::panic("GSP::GPU::writeHwRegs offset too big");
 	}
-	
+
 	ioAddr += 0x1EB00000;
 	for (u32 i = 0; i < size; i += 4) {
 		const u32 current = gpu.readReg(ioAddr);
@@ -301,13 +294,13 @@ void GPUService::processCommandBuffer() {
 
 			commandsLeft--;
 		}
-	}	
+	}
 }
 
 // Fill 2 GPU framebuffers, buf0 and buf1, using a specific word value
 void GPUService::memoryFill(u32* cmd) {
 	u32 control = cmd[7];
-	
+
 	// buf0 parameters
 	u32 start0 = cmd[1]; // Start address for the fill. If 0, don't fill anything
 	u32 value0 = cmd[2]; // Value to fill the framebuffer with
@@ -331,9 +324,31 @@ void GPUService::memoryFill(u32* cmd) {
 	}
 }
 
+static u32 VaddrToPaddr(u32 addr) {
+	if (addr >= VirtualAddrs::VramStart && addr < (VirtualAddrs::VramStart + VirtualAddrs::VramSize)) [[likely]] {
+		return addr - VirtualAddrs::VramStart + PhysicalAddrs::VRAM;
+	}
+	
+	else if (addr >= VirtualAddrs::LinearHeapStartOld && addr < VirtualAddrs::LinearHeapEndOld) {
+		return addr - VirtualAddrs::LinearHeapStartOld + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr >= VirtualAddrs::LinearHeapStartNew && addr < VirtualAddrs::LinearHeapEndNew) {
+		return addr - VirtualAddrs::LinearHeapStartNew + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr == 0) {
+		return 0;
+	}
+
+	Helpers::warn("[GSP::GPU VaddrToPaddr] Unknown virtual address %08X", addr);
+	// Obviously garbage address
+	return 0xF3310932;
+}
+
 void GPUService::triggerDisplayTransfer(u32* cmd) {
-	const u32 inputAddr = cmd[1];
-	const u32 outputAddr = cmd[2];
+	const u32 inputAddr = VaddrToPaddr(cmd[1]);
+	const u32 outputAddr = VaddrToPaddr(cmd[2]);
 	const u32 inputSize = cmd[3];
 	const u32 outputSize = cmd[4];
 	const u32 flags = cmd[5];

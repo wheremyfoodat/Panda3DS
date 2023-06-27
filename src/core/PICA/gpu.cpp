@@ -1,9 +1,50 @@
 #include "PICA/gpu.hpp"
+
+#include <array>
+#include <cstdio>
+#include <cstddef>
+
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
-#include <cstdio>
 
 using namespace Floats;
+
+// A representation of the output vertex as it comes out of the vertex shader, with padding and all
+struct OutputVertex {
+	using vec2f = OpenGL::Vector<f24, 2>;
+	using vec3f = OpenGL::Vector<f24, 3>;
+	using vec4f = OpenGL::Vector<f24, 4>;
+
+	union {
+		struct {
+			vec4f positions;   // Vertex position
+			vec4f quaternion;  // Quaternion specifying the normal/tangent frame (for fragment lighting)
+			vec4f colour;      // Vertex color
+			vec2f texcoord0;   // Texcoords for texture unit 0 (Only U and V, W is stored separately for 3D textures!)
+			vec2f texcoord1;   // Texcoords for TU 1
+			f24 texcoord0_w;   // W component for texcoord 0 if using a 3D texture
+			u32 padding;       // Unused
+
+			vec3f view;       // View vector (for fragment lighting)
+			u32 padding2;     // Unused
+			vec2f texcoord2;  // Texcoords for TU 2
+		} s;
+
+		// The software, non-accelerated vertex loader writes here and then reads specific components from the above struct
+		f24 raw[0x20];
+	};
+	OutputVertex() {}
+};
+#define ASSERT_POS(member, pos) static_assert(offsetof(OutputVertex, s.member) == pos * sizeof(f24), "OutputVertex struct is broken!");
+
+ASSERT_POS(positions, 0)
+ASSERT_POS(quaternion, 4)
+ASSERT_POS(colour, 8)
+ASSERT_POS(texcoord0, 12)
+ASSERT_POS(texcoord1, 14)
+ASSERT_POS(texcoord0_w, 16)
+ASSERT_POS(view, 18)
+ASSERT_POS(texcoord2, 22)
 
 GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
 	vram = new u8[vramSize];
@@ -51,36 +92,37 @@ void GPU::drawArrays(bool indexed) {
 	}
 }
 
-Vertex* vertices = new Vertex[Renderer::vertexBufferSize];
+static std::array<Vertex, Renderer::vertexBufferSize> vertices;
 
 template <bool indexed, bool useShaderJIT>
 void GPU::drawArrays() {
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
-	const u32 vertexBase = ((regs[PICAInternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
-	const u32 vertexCount = regs[PICAInternalRegs::VertexCountReg]; // Total # of vertices to transfer
+	const u32 vertexBase = ((regs[PICA::InternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
+	const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg]; // Total # of vertices to transfer
 
 	// Configures the type of primitive and the number of vertex shader outputs
-	const u32 primConfig = regs[PICAInternalRegs::PrimitiveConfig];
-	const u32 primType = Helpers::getBits<8, 2>(primConfig);
-	if (primType != 0 && primType != 1 && primType != 3) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
+	const u32 primConfig = regs[PICA::InternalRegs::PrimitiveConfig];
+	const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(primConfig));
+	if (primType == PICA::PrimType::TriangleFan) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
-	if ((primType == 0 && vertexCount % 3) || (primType == 1 && vertexCount < 3)) {
+	if ((primType == PICA::PrimType::TriangleList && vertexCount % 3) ||
+		(primType == PICA::PrimType::TriangleStrip && vertexCount < 3)) {
 		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
 	}
 
 	// Get the configuration for the index buffer, used only for indexed drawing
-	u32 indexBufferConfig = regs[PICAInternalRegs::IndexBufferConfig];
+	u32 indexBufferConfig = regs[PICA::InternalRegs::IndexBufferConfig];
 	u32 indexBufferPointer = vertexBase + (indexBufferConfig & 0xfffffff);
 	bool shortIndex = Helpers::getBit<31>(indexBufferConfig); // Indicates whether vert indices are 16-bit or 8-bit
 
 	// Stuff the global attribute config registers in one u64 to make attr parsing easier
 	// TODO: Cache this when the vertex attribute format registers are written to 
-	u64 vertexCfg = u64(regs[PICAInternalRegs::AttribFormatLow]) | (u64(regs[PICAInternalRegs::AttribFormatHigh]) << 32);
+	u64 vertexCfg = u64(regs[PICA::InternalRegs::AttribFormatLow]) | (u64(regs[PICA::InternalRegs::AttribFormatHigh]) << 32);
 
 	if constexpr (!indexed) {
-		u32 offset = regs[PICAInternalRegs::VertexOffsetReg];
+		u32 offset = regs[PICA::InternalRegs::VertexOffsetReg];
 		log("PICA::DrawArrays(vertex count = %d, vertexOffset = %d)\n", vertexCount, offset);
 	} else {
 		log("PICA::DrawElements(vertex count = %d, index buffer config = %08X)\n", vertexCount, indexBufferConfig);
@@ -91,14 +133,14 @@ void GPU::drawArrays() {
 	}
 
 	// Total number of input attributes to shader. Differs between GS and VS. Currently stubbed to the VS one, as we don't have geometry shaders.
-	const u32 inputAttrCount = (regs[PICAInternalRegs::VertexShaderInputBufferCfg] & 0xf) + 1;
+	const u32 inputAttrCount = (regs[PICA::InternalRegs::VertexShaderInputBufferCfg] & 0xf) + 1;
 	const u64 inputAttrCfg = getVertexShaderInputConfig();
 		
 	for (u32 i = 0; i < vertexCount; i++) {
 		u32 vertexIndex; // Index of the vertex in the VBO
 
 		if constexpr (!indexed) {
-			vertexIndex = i + regs[PICAInternalRegs::VertexOffsetReg];
+			vertexIndex = i + regs[PICA::InternalRegs::VertexOffsetReg];
 		} else {
 			if (shortIndex) {
 				auto ptr = getPointerPhys<u16>(indexBufferPointer);
@@ -204,32 +246,42 @@ void GPU::drawArrays() {
 			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
 		}
 		
-		if constexpr (useShaderJIT) {
+        if constexpr (useShaderJIT) {
 			shaderJIT.run(shaderUnit.vs);
 		} else {
 			shaderUnit.vs.run();
 		}
 
-		std::memcpy(&vertices[i].position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
-		std::memcpy(&vertices[i].colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
-		std::memcpy(&vertices[i].UVs, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+		OutputVertex out;
+		// Map shader outputs to fixed function properties
+		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+		for (int i = 0; i < totalShaderOutputs; i++) {
+			const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
+
+			for (int j = 0; j < 4; j++) { // pls unroll
+				const u32 mapping = (config >> (j * 8)) & 0x1F;
+				out.raw[mapping] = shaderUnit.vs.outputs[i][j];
+			}
+		}
+
+		std::memcpy(&vertices[i].position, &out.s.positions, sizeof(vec4f));
+		std::memcpy(&vertices[i].colour, &out.s.colour, sizeof(vec4f));
+		std::memcpy(&vertices[i].texcoord0, &out.s.texcoord0, 2 * sizeof(f24));
+		std::memcpy(&vertices[i].texcoord1, &out.s.texcoord1, 2 * sizeof(f24));
+		std::memcpy(&vertices[i].texcoord0_w, &out.s.texcoord0_w, sizeof(f24));
+		std::memcpy(&vertices[i].texcoord2, &out.s.texcoord2, 2 * sizeof(f24));
 
 		//printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z(), (double)vertices[i].position.w());
 		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
 		//printf("(u, v      ) = (%f, %f)\n", vertices[i].UVs.u(), vertices[i].UVs.v());
 	}
 
-	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
-	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
-		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
-	};
-	const auto shape = primTypes[primType];
-	renderer.drawVertices(shape, vertices, vertexCount);
+	renderer.drawVertices(primType, std::span(vertices).first(vertexCount));
 }
 
 Vertex GPU::getImmediateModeVertex() {
 	Vertex v;
-	const int totalAttrCount = (regs[PICAInternalRegs::VertexShaderAttrNum] & 0xf) + 1;
+	const int totalAttrCount = (regs[PICA::InternalRegs::VertexShaderAttrNum] & 0xf) + 1;
 
 	// Copy immediate mode attributes to vertex shader unit
 	for (int i = 0; i < totalAttrCount; i++) {
@@ -240,11 +292,11 @@ Vertex GPU::getImmediateModeVertex() {
 	shaderUnit.vs.run();
 	std::memcpy(&v.position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
 	std::memcpy(&v.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
-	std::memcpy(&v.UVs, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+	std::memcpy(&v.texcoord0, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
 
 	printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.position.x(), (double)v.position.y(), (double)v.position.z(), (double)v.position.w());
 	printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)v.colour.r(), (double)v.colour.g(), (double)v.colour.b(), (double)v.colour.a());
-	printf("(u, v      ) = (%f, %f)\n", v.UVs.u(), v.UVs.v());
+	printf("(u, v      ) = (%f, %f)\n", v.texcoord0.u(), v.texcoord0.v());
 
 	return v;
 }

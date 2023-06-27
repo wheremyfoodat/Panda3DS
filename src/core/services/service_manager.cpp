@@ -1,13 +1,15 @@
 #include "services/service_manager.hpp"
+
 #include <map>
+
 #include "ipc.hpp"
 #include "kernel.hpp"
 
-ServiceManager::ServiceManager(std::array<u32, 16>& regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
+ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem),
-	cecd(mem, kernel), cfg(mem), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), frd(mem), fs(mem, kernel),
-	gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem),
-	ptm(mem), y2r(mem, kernel) {}
+	  cecd(mem, kernel), cfg(mem), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), frd(mem), fs(mem, kernel),
+	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem),
+	  ptm(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -55,12 +57,6 @@ namespace Commands {
 		PublishToSubscriber = 0x000C0080,
 		PublishAndGetSubscriber = 0x000D0040,
 		IsServiceRegistered = 0x000E00C0
-	};
-}
-
-namespace Result {
-	enum : u32 {
-		Success = 0
 	};
 }
 

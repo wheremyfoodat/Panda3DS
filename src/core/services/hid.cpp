@@ -13,13 +13,6 @@ namespace HIDCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-		Failure = 0xFFFFFFFF
-	};
-}
-
 void HIDService::reset() {
 	sharedMem = nullptr;
 	accelerometerEnabled = false;
@@ -90,7 +83,7 @@ void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 	constexpr float gyroscopeCoeff = 14.375f; // Same as retail 3DS
 	mem.write32(messagePointer, IPC::responseHeader(0x15, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, std::bit_cast<u32, float>(gyroscopeCoeff));
+	mem.write32(messagePointer + 8, Helpers::bit_cast<u32, float>(gyroscopeCoeff));
 }
 
 void HIDService::getIPCHandles(u32 messagePointer) {
@@ -155,7 +148,7 @@ void HIDService::updateInputs(u64 currentTick) {
 		writeSharedMem<u16>(touchEntryOffset, touchScreenX);
 		writeSharedMem<u16>(touchEntryOffset + 2, touchScreenY);
 		writeSharedMem<u8>(touchEntryOffset + 4, touchScreenPressed ? 1 : 0);
-		
+
 		// Next, update accelerometer state
 		if (nextAccelerometerIndex == 0) {
 			writeSharedMem<u64>(0x110, readSharedMem<u64>(0x108)); // Copy previous tick count

@@ -50,7 +50,7 @@ class GPU {
 	};
 
 	u64 getVertexShaderInputConfig() {
-		return u64(regs[PICAInternalRegs::VertexShaderInputCfgLow]) | (u64(regs[PICAInternalRegs::VertexShaderInputCfgHigh]) << 32);
+		return u64(regs[PICA::InternalRegs::VertexShaderInputCfgLow]) | (u64(regs[PICA::InternalRegs::VertexShaderInputCfgHigh]) << 32);
 	}
 
 	std::array<AttribInfo, maxAttribCount> attributeInfo; // Info for each of the 12 attributes

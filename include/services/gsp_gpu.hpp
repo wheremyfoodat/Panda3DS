@@ -6,6 +6,7 @@
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
+#include "result/result.hpp"
 
 enum class GPUInterrupt : u8 {
 	PSC0 = 0, // Memory fill completed

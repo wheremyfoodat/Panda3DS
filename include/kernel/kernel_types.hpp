@@ -4,33 +4,7 @@
 #include "fs/archive_base.hpp"
 #include "handles.hpp"
 #include "helpers.hpp"
-
-namespace SVCResult {
-	enum : u32 {
-		Success = 0,
-		Failure = 0xFFFFFFFF,
-        ObjectNotFound = 0xD88007FA,
-
-        // Different calls return a different value for these ones
-        InvalidEnumValue = 0xD8E007ED,
-        InvalidEnumValueAlt = 0xD8E093ED,
-        BadHandle = 0xD8E007F7,
-        BadHandleAlt = 0xD9001BF7,
-
-        InvalidCombination = 0xE0E01BEE, // Used for invalid memory permission combinations
-        UnalignedAddr = 0xE0E01BF1,
-        UnalignedSize = 0xE0E01BF2,
-
-        BadThreadPriority = 0xE0E01BFD,
-        PortNameTooLong = 0xE0E0181E,
-
-        // Returned when a thread stops waiting due to timing out
-        Timeout = 0x9401BFE,
-
-        // Returned when a thread releases a mutex it does not own
-        InvalidMutexRelease = 0xD8E0041F
-	};
-}
+#include "result/result.hpp"
 
 enum class KernelObjectType : u8 {
     AddressArbiter, Archive, Directory, File, MemoryBlock, Process, ResourceLimit, Session, Dummy,
@@ -125,7 +99,7 @@ struct Thread {
     ThreadStatus status;
     Handle handle;  // OS handle for this thread
     int index; // Index of the thread. 0 for the first thread, 1 for the second, and so on
- 
+
     // The waiting address for threads that are waiting on an AddressArbiter
     u32 waitingAddress;
 

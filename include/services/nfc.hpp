@@ -3,6 +3,7 @@
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
+#include "result/result.hpp"
 
 // You know the drill
 class Kernel;

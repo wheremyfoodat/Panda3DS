@@ -8,12 +8,6 @@ namespace CAMCommands {
 	};
 }
 
-namespace Result {
-	enum : u32 {
-		Success = 0,
-	};
-}
-
 void CAMService::reset() {}
 
 void CAMService::handleSyncRequest(u32 messagePointer) {

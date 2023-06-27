@@ -1,0 +1,14 @@
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 150
+AccessModifierOffset: -2
+TabWidth: 4
+NamespaceIndentation: All
+UseTab: ForContinuationAndIndentation
+AllowShortEnumsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: true
+Cpp11BracedListStyle: true
+PackConstructorInitializers: BinPack
+AlignAfterOpenBracket: BlockIndent
