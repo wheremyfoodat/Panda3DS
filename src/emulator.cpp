@@ -57,10 +57,25 @@ void Emulator::run() {
                         case SDLK_UP:    srv.pressKey(Keys::Up);    break;
                         case SDLK_DOWN:  srv.pressKey(Keys::Down);  break;
 
-                        case SDLK_w:     srv.setCirclepadY(0x9C);   break;
-                        case SDLK_a:     srv.setCirclepadX(-0x9C);  break;
-                        case SDLK_s:     srv.setCirclepadY(-0x9C);  break;
-                        case SDLK_d:     srv.setCirclepadX(0x9C);   break;
+                        case SDLK_w:
+							srv.setCirclepadY(0x9C);
+							keyboardAnalogY = true;
+							break;
+
+						case SDLK_a:
+							srv.setCirclepadX(-0x9C);
+							keyboardAnalogX = true;
+							break;
+
+						case SDLK_s:
+							srv.setCirclepadY(-0x9C);
+							keyboardAnalogY = true;
+							break;
+
+						case SDLK_d:
+							srv.setCirclepadX(0x9C);
+							keyboardAnalogX = true;
+							break;
 
                         case SDLK_RETURN: srv.pressKey(Keys::Start); break;
                         case SDLK_BACKSPACE: srv.pressKey(Keys::Select); break;
@@ -82,10 +97,17 @@ void Emulator::run() {
                         case SDLK_DOWN:  srv.releaseKey(Keys::Down);  break;
 
                         // Err this is probably not ideal
-                        case SDLK_w:     srv.setCirclepadY(0);  break;
-                        case SDLK_a:     srv.setCirclepadX(0);  break;
-                        case SDLK_s:     srv.setCirclepadY(0);  break;
-                        case SDLK_d:     srv.setCirclepadX(0);  break;
+						case SDLK_w:
+						case SDLK_s:
+							srv.setCirclepadY(0);
+							keyboardAnalogY = false;
+							break;
+
+						case SDLK_a:
+						case SDLK_d:
+							srv.setCirclepadX(0);
+							keyboardAnalogX = false;
+							break;
 
                         case SDLK_RETURN: srv.releaseKey(Keys::Start); break;
                         case SDLK_BACKSPACE: srv.releaseKey(Keys::Select); break;
@@ -163,29 +185,25 @@ void Emulator::run() {
         }
 
         if (gameController != nullptr) {
-            const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
-            const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
-            constexpr s16 deadzone = 3276;
-            constexpr s16 maxValue = 0x9C;
-            constexpr s16 div = 0x8000 / maxValue;
+			const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
+			const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
+			constexpr s16 deadzone = 3276;
+			constexpr s16 maxValue = 0x9C;
+			constexpr s16 div = 0x8000 / maxValue;
 
-            if (abs(stickX) < deadzone) {
-                // Avoid overriding the keyboard's circlepad input
-                if (abs(srv.getCirclepadX()) != maxValue) {
-                    srv.setCirclepadX(0);
-                }
-            } else {
-                srv.setCirclepadX(stickX / div);
-            }
+			// Avoid overriding the keyboard's circlepad input
+			if (abs(stickX) < deadzone && !keyboardAnalogX) {
+				srv.setCirclepadX(0);
+			} else {
+				srv.setCirclepadX(stickX / div);
+			}
 
-            if (abs(stickY) < deadzone) {
-                if (abs(srv.getCirclepadY()) != maxValue) {
-                    srv.setCirclepadY(0);
-                }
-            } else {
-                srv.setCirclepadY(-(stickY / div));
-            }
-        }
+			if (abs(stickY) < deadzone && !keyboardAnalogY) {
+				srv.setCirclepadY(0);
+			} else {
+				srv.setCirclepadY(-(stickY / div));
+			}
+		}
 
         // Update inputs in the HID module
         srv.updateInputs(cpu.getTicks());

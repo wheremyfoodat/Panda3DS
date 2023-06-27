@@ -28,6 +28,12 @@ class Emulator {
     SDL_GameController* gameController;
     int gameControllerID;
 
+    // Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
+    // This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
+    // And so the user can still use the keyboard to control the analog
+	bool keyboardAnalogX = false;
+	bool keyboardAnalogY = false;
+
     static constexpr u32 width = 400;
     static constexpr u32 height = 240 * 2; // * 2 because 2 screens
     ROMType romType = ROMType::None;
@@ -46,7 +52,6 @@ public:
 
         // Make SDL use consistent positional button mapping
         SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
-
         if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
             Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
         }
@@ -63,7 +68,6 @@ public:
         }
 
         glContext = SDL_GL_CreateContext(window);
-
         if (glContext == nullptr) {
             Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
         }
