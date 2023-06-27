@@ -155,4 +155,4 @@ ${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${H
 # Uncomment to enable LTO
 # set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad)
