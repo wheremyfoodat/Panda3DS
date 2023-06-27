@@ -119,11 +119,9 @@ void Emulator::run() {
                     break;
 
                 case SDL_CONTROLLERDEVICEADDED:
-                    if (gameController != nullptr) {
-                        break;
+                    if (gameController == nullptr) {
+						gameController = SDL_GameControllerOpen(event.cdevice.which);
                     }
-
-                    gameController = SDL_GameControllerOpen(event.cdevice.which);
                     break;
 
                 case SDL_CONTROLLERDEVICEREMOVED:
@@ -132,6 +130,7 @@ void Emulator::run() {
                         gameController = nullptr;
                         gameControllerID = 0;
                     }
+					break;
 
                 case SDL_CONTROLLERBUTTONUP:
                 case SDL_CONTROLLERBUTTONDOWN: {
@@ -166,9 +165,9 @@ void Emulator::run() {
         if (gameController != nullptr) {
             const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
             const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
-            const s16 deadzone = 3276;
-            const s16 maxValue = 0x9C;
-            const s16 div = 0x8000 / maxValue;
+            constexpr s16 deadzone = 3276;
+            constexpr s16 maxValue = 0x9C;
+            constexpr s16 div = 0x8000 / maxValue;
 
             if (abs(stickX) < deadzone) {
                 // Avoid overriding the keyboard's circlepad input
