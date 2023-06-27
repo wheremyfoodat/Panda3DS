@@ -117,7 +117,75 @@ void Emulator::run() {
                         srv.releaseTouchScreen();
                     }
                     break;
+
+                case SDL_CONTROLLERDEVICEADDED:
+                    if (gameController != nullptr) {
+                        break;
+                    }
+
+                    gameController = SDL_GameControllerOpen(event.cdevice.which);
+                    break;
+
+                case SDL_CONTROLLERDEVICEREMOVED:
+                    if (event.cdevice.which == gameControllerID) {
+                        SDL_GameControllerClose(gameController);
+                        gameController = nullptr;
+                        gameControllerID = 0;
+                    }
+
+                case SDL_CONTROLLERBUTTONUP:
+                case SDL_CONTROLLERBUTTONDOWN: {
+                    u32 key = 0;
+
+                    switch (event.cbutton.button) {
+                        case SDL_CONTROLLER_BUTTON_A: key = Keys::B; break;
+                        case SDL_CONTROLLER_BUTTON_B: key = Keys::A; break;
+                        case SDL_CONTROLLER_BUTTON_X: key = Keys::Y; break;
+                        case SDL_CONTROLLER_BUTTON_Y: key = Keys::X; break;
+                        case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: key = Keys::L; break;
+                        case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: key = Keys::R; break;
+                        case SDL_CONTROLLER_BUTTON_DPAD_LEFT: key = Keys::Left; break;
+                        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: key = Keys::Right; break;
+                        case SDL_CONTROLLER_BUTTON_DPAD_UP: key = Keys::Up; break;
+                        case SDL_CONTROLLER_BUTTON_DPAD_DOWN: key = Keys::Down; break;
+                        case SDL_CONTROLLER_BUTTON_BACK: key = Keys::Select; break;
+                        case SDL_CONTROLLER_BUTTON_START: key = Keys::Start; break;
+                    }
+
+                    if (key != 0) {
+                        if (event.cbutton.state == SDL_PRESSED) {
+                            srv.pressKey(key);
+                        } else {
+                            srv.releaseKey(key);
+                        }
+                    }
                 }
+            }
+        }
+
+        if (gameController != nullptr) {
+            const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
+            const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
+            const s16 deadzone = 3276;
+            const s16 maxValue = 0x9C;
+            const s16 div = 0x8000 / maxValue;
+
+            if (abs(stickX) < deadzone) {
+                // Avoid overriding the keyboard's circlepad input
+                if (abs(srv.getCirclepadX()) != maxValue) {
+                    srv.setCirclepadX(0);
+                }
+            } else {
+                srv.setCirclepadX(stickX / div);
+            }
+
+            if (abs(stickY) < deadzone) {
+                if (abs(srv.getCirclepadY()) != maxValue) {
+                    srv.setCirclepadY(0);
+                }
+            } else {
+                srv.setCirclepadY(-(stickY / div));
+            }
         }
 
         // Update inputs in the HID module

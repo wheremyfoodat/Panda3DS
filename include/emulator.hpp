@@ -23,6 +23,8 @@ class Emulator {
 
     SDL_Window* window;
     SDL_GLContext glContext;
+    SDL_GameController* gameController;
+    int gameControllerID;
 
     static constexpr u32 width = 400;
     static constexpr u32 height = 240 * 2; // * 2 because 2 screens
@@ -38,6 +40,13 @@ public:
     Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory), memory(cpu.getTicksRef()) {
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
             Helpers::panic("Failed to initialize SDL2");
+        }
+
+        // Make SDL use consistent positional button mapping
+        SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
+
+        if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
+            Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
         }
 
         // Request OpenGL 4.1 Core (Max available on MacOS)
@@ -59,6 +68,15 @@ public:
 
         if(!gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress))) {
             Helpers::panic("OpenGL init failed: %s", SDL_GetError());
+        }
+
+        if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
+            gameController = SDL_GameControllerOpen(0);
+
+            if (gameController != nullptr) {
+                SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
+                gameControllerID = SDL_JoystickInstanceID(stick);
+            }
         }
 
         reset();
