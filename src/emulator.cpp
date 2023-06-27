@@ -141,6 +141,7 @@ void Emulator::run() {
 				case SDL_CONTROLLERDEVICEADDED:
 					if (gameController == nullptr) {
 						gameController = SDL_GameControllerOpen(event.cdevice.which);
+						gameControllerID = event.cdevice.which;
 					}
 					break;
 
