@@ -1,6 +1,7 @@
 #include "PICA/gpu.hpp"
 
 #include <array>
+#include <bitset>
 #include <cstdio>
 #include <cstddef>
 
@@ -135,9 +136,19 @@ void GPU::drawArrays() {
 	// Total number of input attributes to shader. Differs between GS and VS. Currently stubbed to the VS one, as we don't have geometry shaders.
 	const u32 inputAttrCount = (regs[PICA::InternalRegs::VertexShaderInputBufferCfg] & 0xf) + 1;
 	const u64 inputAttrCfg = getVertexShaderInputConfig();
+
+	// When doing indexed rendering, we have a cache of vertices to avoid processing attributes and shaders for a single vertex many times
+	constexpr bool vertexCacheEnabled = true;
+	constexpr size_t vertexCacheSize = 64;
+
+	struct {
+		std::bitset<vertexCacheSize> validBits{0};           // Shows which tags are valid. If the corresponding bit is 1, then there's an entry
+		std::array<u32, vertexCacheSize> ids;                // IDs (ie indices of the cached vertices in the 3DS vertex buffer)
+		std::array<u32, vertexCacheSize> bufferPositions;    // Positions of the cached vertices in our own vertex buffer
+	} vertexCache;
 		
 	for (u32 i = 0; i < vertexCount; i++) {
-		u32 vertexIndex; // Index of the vertex in the VBO
+		u32 vertexIndex; // Index of the vertex in the VBO for indexed rendering
 
 		if constexpr (!indexed) {
 			vertexIndex = i + regs[PICA::InternalRegs::VertexOffsetReg];
@@ -150,6 +161,24 @@ void GPU::drawArrays() {
 				auto ptr = getPointerPhys<u8>(indexBufferPointer);
 				vertexIndex = *ptr; // TODO: This is also very unsafe
 				indexBufferPointer += 1;
+			}
+		}
+
+		// Check if the vertex corresponding to the index is in cache
+		if constexpr (indexed && vertexCacheEnabled) {
+			auto& cache = vertexCache;
+			size_t tag = vertexIndex % vertexCacheSize;
+			// Cache hit
+			if (cache.validBits[tag] && cache.ids[tag] == vertexIndex) {
+				vertices[i] = vertices[cache.bufferPositions[tag]];
+				continue;
+			}
+
+			// Cache miss. Set cache entry, fetch attributes and run shaders as normal
+			else {
+				cache.validBits[tag] = true;
+				cache.ids[tag] = vertexIndex;
+				cache.bufferPositions[tag] = i;
 			}
 		}
 
