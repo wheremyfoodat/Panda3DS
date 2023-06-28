@@ -69,7 +69,7 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
                  src/core/memory.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
