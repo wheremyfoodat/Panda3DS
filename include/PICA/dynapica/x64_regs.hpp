@@ -6,6 +6,7 @@ using namespace Xbyak;
 using namespace Xbyak::util;
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#define PANDA3DS_MS_ABI
 constexpr Reg32 arg1 = ecx;  // register where first arg is stored
 constexpr Reg32 arg2 = edx;  // register where second arg is stored
 constexpr Reg32 arg3 = r8d;  // register where third arg is stored
@@ -20,6 +21,7 @@ constexpr Xmm arg4f = xmm3;
 constexpr bool isWindows() { return true; }
 
 #else  // System V calling convention
+#define PANDA3DS_SYSV_ABI
 constexpr Reg32 arg1 = edi;
 constexpr Reg32 arg2 = esi;
 constexpr Reg32 arg3 = edx;

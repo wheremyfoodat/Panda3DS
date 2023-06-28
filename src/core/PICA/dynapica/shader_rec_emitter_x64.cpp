@@ -12,13 +12,30 @@ using namespace Xbyak;
 using namespace Xbyak::util;
 using namespace Helpers;
 
-// Register that points to PICA state
-static constexpr Reg64 statePointer = rbp;
+// The shader recompiler uses quite an odd internal ABI
+// We make use of the fact that in regular conditions, we should pretty much never be calling C++ code from recompiled shader code
+// This allows us to establish an ABI that's optimized for this sort of workflow, statically allocating volatile host registers
+// To avoid pushing/popping registers, not properly maintaining stack alignment, etc
+// This generates faster recompiled code at the cost of being actively hostile against C++ interop
+// To do C++ interop, we're going to have our callCppFunc function call the C++ function, and take extreme measures to ensure we don't violate
+// The host ABI, such as pushing/popping our temporary registers (derp), force aligning the stack and setting up an entire stack frame, etc
+// This is slow, but we do not care as we should never be calling C++ code in normal, non-debugging conditions
+// The only code that might be called are helpers that are also written in assembly, for things like log2
+
 static constexpr Xmm scratch1 = xmm0;
 static constexpr Xmm scratch2 = xmm1;
 static constexpr Xmm src1_xmm = xmm2;
 static constexpr Xmm src2_xmm = xmm3;
 static constexpr Xmm src3_xmm = xmm4;
+
+#if defined(PANDA3DS_MS_ABI)
+// Register that points to PICA state. Must be volatile for the aforementioned reasons
+static constexpr Reg64 statePointer = r8;
+#elif defined(PANDA3DS_SYSV_ABI)
+static constexpr Reg64 statePointer = rdi;
+#else
+#error Unknown ABI for x86-64 shader JIT
+#endif
 
 void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	// Constants
@@ -32,7 +49,7 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 
 	// We assume arg1 contains the pointer to the PICA state and arg2 a pointer to the code for the entrypoint
 	push(statePointer); // Back up state pointer to stack. This also aligns rsp to 16 bytes for calls
-	mov(statePointer, (uintptr_t)&shaderUnit); // Set state pointer to the proper pointer
+	mov(statePointer, arg1.cvt64()); // Set state pointer to the proper pointer
 
 	// If we add integer register allocations they should be pushed here, and the rsp should be properly fixed up
 	// However most of the PICA is floating point so yeah
@@ -81,26 +98,19 @@ void ShaderEmitter::compileUntil(const PICAShader& shaderUnit, u32 end) {
 	}
 }
 
-// This is the offset we need to add to rsp to peek the next return address in the callstack
-// Ie the PICA PC address which, when reached, will trigger a return
-size_t ShaderEmitter::getStackOffsetOfReturnPC() {
-	size_t ret = isWindows() ? (8 + 32) : 8; // Offset assuming 0 loop level
-	return ret;
-}
-
 void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	// Write current location to label for this instruction
 	L(instructionLabels[recompilerPC]);
 
 	// See if PC is a possible return PC and emit the proper code if so
 	if (std::binary_search(returnPCs.begin(), returnPCs.end(), recompilerPC)) {
-		const auto stackOffsetForPC = getStackOffsetOfReturnPC();
+		uintptr_t stackOffsetForPC = isWindows() ? (8 + 32) : 8;
 
 		Label end;
 		// Check if return address == recompilerPC, ie if we should return
 		cmp(dword[rsp + stackOffsetForPC], recompilerPC);
-		jne(end); // If not, continue with uor lives
-		ret();    // If yes, return
+		jne(end);  // If not, continue with our lives
+		ret();     // If yes, return
 
 		L(end);
 	}
@@ -793,26 +803,7 @@ void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	add(eax, 1); // The iteration count is actually uniform.x + 1
 	mov(dword[statePointer + loopRegOffset], ecx); // Set loop counter
 	
-	// TODO: This might break if an instruction in a loop decides to yield...
-	push(rax); // Push loop iteration counter
-	push(rdx); // Push loop increment
-	if constexpr (isWindows())
-		sub(rsp, 32);
-
-	Label loopStart;
-	L(loopStart);
-	compileUntil(shader, dest + 1);
-
-	const size_t stackOffsetOfLoopIncrement = isWindows() ? 32 : 0;
-	const size_t stackOffsetOfIterationCounter = stackOffsetOfLoopIncrement + 8;
-
-	mov(ecx, dword[rsp + stackOffsetOfLoopIncrement]); // ecx = Loop increment
-	add(dword[statePointer + loopRegOffset], ecx);     // Increment loop counter
-	sub(dword[rsp + stackOffsetOfIterationCounter], 1); // Subtract 1 from loop iteration counter
-
-	jnz(loopStart); // Back to loop start if not over
-	add(rsp, isWindows() ? (16 + 32) : 16);
-	loopLevel--;
+	Helpers::panic("Unimplemented LOOP instruction");
 }
 
 #endif

@@ -42,9 +42,6 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	// Compile instruction "instr"
 	void compileInstruction(const PICAShader& shaderUnit);
 
-	// Get the offset to be added to the rsp register to get the current return address
-	size_t getStackOffsetOfReturnPC();
-
 	bool isCall(u32 instruction) {
 		const u32 opcode = instruction >> 26;
 		return (opcode == ShaderOpcodes::CALL) || (opcode == ShaderOpcodes::CALLC) || (opcode == ShaderOpcodes::CALLU);
@@ -67,6 +64,9 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	// Check the value of the bool uniform for instructions like ifu and callu
 	// Result is returned in the zero flag. If the comparison is true then zero == 0, else zero == 1 (Opposite of checkCmpRegister)
 	void checkBoolUniform(const PICAShader& shader, u32 instruction);
+
+	// Emit a call to a C++ function
+	void callCppFunc(void* function) { Helpers::panic("[ShaderJIT] Unimplemented: Add support for calling C++ functions in JITted code"); }
 
 	// Instruction recompilation functions
 	void recADD(const PICAShader& shader, u32 instruction);
