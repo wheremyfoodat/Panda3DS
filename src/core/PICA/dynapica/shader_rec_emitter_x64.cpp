@@ -47,18 +47,15 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	align(16);
 	prologueCb = getCurr<PrologueCallback>();
 
-	// We assume arg1 contains the pointer to the PICA state and arg2 a pointer to the code for the entrypoint
-	push(statePointer); // Back up state pointer to stack. This also aligns rsp to 16 bytes for calls
-	mov(statePointer, arg1.cvt64()); // Set state pointer to the proper pointer
-
-	// If we add integer register allocations they should be pushed here, and the rsp should be properly fixed up
-	// However most of the PICA is floating point so yeah
+	// Set state pointer to the proper pointer
+	// state pointer is volatile, no need to preserve it
+	mov(statePointer, arg1.cvt64());
 
 	// Push a return guard on the stack. This happens due to the way we handle the PICA callstack, by pushing the return PC to stack
 	// By pushing ffff'ffff, we make it impossible for a return check to erroneously pass
 	push(qword, 0xffffffff);
-	// Allocate 32 bytes of shadow stack on windows, and 8 more bytes to realign stack to 16 bytes after our 4-byte push
-	sub(rsp, isWindows() ? (8 + 32) : 8);
+	// Lower rsp by 8 for the PICA return stack to be consistent
+	sub(rsp, 8);
 
 	// Tail call to shader code entrypoint
 	jmp(arg2);
@@ -104,7 +101,7 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 
 	// See if PC is a possible return PC and emit the proper code if so
 	if (std::binary_search(returnPCs.begin(), returnPCs.end(), recompilerPC)) {
-		uintptr_t stackOffsetForPC = isWindows() ? (8 + 32) : 8;
+		constexpr uintptr_t stackOffsetForPC = 8;
 
 		Label end;
 		// Check if return address == recompilerPC, ie if we should return
@@ -376,11 +373,8 @@ void ShaderEmitter::checkBoolUniform(const PICAShader& shader, u32 instruction) 
 
 void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
 	// Undo anything the prologue did and return
-	// Dellocate shadow stack on Windows, and deallocate the stack space taken up for the return guard
-	add(rsp, isWindows() ? (16 + 32) : 16);
-
-	// Restore registers
-	pop(statePointer);
+	// Deallocate the 8 bytes taken up for the return guard + the 8 bytes of rsp padding we inserted in the prologue
+	add(rsp, 16);
 	ret();
 }
 
@@ -718,16 +712,11 @@ void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
 	// Push return PC as stack parameter. This is a decently fast solution and Citra does the same but we should probably switch to a proper PICA-like
 	// Callstack, because it's not great to have an infinitely expanding call stack where popping from empty stack is undefined as hell
 	push(qword, dest + num);
-	if constexpr (isWindows()) {
-		// Allocate 32 bytes of shadow space on windows
-		sub(rsp, 32);
-	}
-
 	// Call subroutine, Xbyak will update the label if it hasn't been initialized yet
 	call(instructionLabels[dest]);
 
-	// Fix up stack after returning. The 8 from before becomes a 16 because we're also skipping the qword we pushed
-	add(rsp, isWindows() ? (8 + 32) : 8);
+	// Fix up stack after returning by adding 8 to rsp and "popping" the return PC
+	add(rsp, 8);
 }
 
 void ShaderEmitter::recCALLC(const PICAShader& shader, u32 instruction) {
