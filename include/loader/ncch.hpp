@@ -1,14 +1,22 @@
 #pragma once
 #include <array>
+#include <optional>
 #include <vector>
 #include "io_file.hpp"
 #include "helpers.hpp"
+#include "crypto/aes_engine.hpp"
 
 struct NCCH {
+    struct EncryptionInfo {
+        Crypto::AESKey normalKey;
+        Crypto::AESKey initialCounter;
+    };
+
     struct FSInfo { // Info on the ExeFS/RomFS
         u64 offset = 0;
         u64 size = 0;
         u64 hashRegionSize = 0;
+        std::optional<EncryptionInfo> encryptionInfo;
     };
 
     // Descriptions for .text, .data and .rodata sections
@@ -34,6 +42,8 @@ struct NCCH {
     bool mountRomFS = false;
     bool encrypted = false;
     bool fixedCryptoKey = false;
+    bool seedCrypto = false;
+    u8 secondaryKeySlot = 0;
 
     static constexpr u64 mediaUnit = 0x200;
     u64 size = 0; // Size of NCCH converted to bytes
@@ -41,6 +51,7 @@ struct NCCH {
     u32 bssSize = 0;
     u32 exheaderSize = 0;
 
+    FSInfo exheaderInfo;
     FSInfo exeFS;
     FSInfo romFS;
     CodeSetInfo text, data, rodata;
@@ -50,10 +61,9 @@ struct NCCH {
     // Contains of the cart's save data
     std::vector<u8> saveData;
 
-    // Header: 0x200 + 0x800 byte NCCH header + exheadr
     // Returns true on success, false on failure
     // Partition index/offset/size must have been set before this
-    bool loadFromHeader(u8* header, IOFile& file);
+    bool loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSInfo &info);
 
     bool hasExtendedHeader() { return exheaderSize != 0; }
     bool hasExeFS() { return exeFS.size != 0; }
@@ -61,7 +71,8 @@ struct NCCH {
     bool hasCode() { return codeFile.size() != 0; }
     bool hasSaveData() { return saveData.size() != 0; }
 
-private:
-    std::array<u8, 16> primaryKey = {}; // For exheader, ExeFS header and icons
-    std::array<u8, 16> secondaryKey = {}; // For RomFS and some files in ExeFS
+    std::pair<bool, Crypto::AESKey> getPrimaryKey(Crypto::AESEngine &aesEngine, const Crypto::AESKey &keyY);
+    std::pair<bool, Crypto::AESKey> getSecondaryKey(Crypto::AESEngine &aesEngine, const Crypto::AESKey &keyY);
+
+    std::pair<bool, std::size_t> readFromFile(IOFile& file, const FSInfo &info, u8 *dst, std::size_t offset, std::size_t size);
 };

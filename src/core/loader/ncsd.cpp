@@ -3,7 +3,7 @@
 #include "loader/ncsd.hpp"
 #include "memory.hpp"
 
-std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
+std::optional<NCSD> Memory::loadNCSD(Crypto::AESEngine &aesEngine, const std::filesystem::path& path) {
     NCSD ncsd;
     if (!ncsd.file.open(path, "rb"))
         return std::nullopt;
@@ -51,18 +51,12 @@ std::optional<NCSD> Memory::loadNCSD(const std::filesystem::path& path) {
         ncch.fileOffset = partition.offset;
 
         if (partition.length != 0) { // Initialize the NCCH of each partition
-            ncsd.file.seek(partition.offset);
+            NCCH::FSInfo ncchFsInfo;
 
-            // 0x200 bytes for the NCCH header and another 0x800 for the exheader
-            constexpr u64 headerSize = 0x200 + 0x800;
-            u8 ncchHeader[headerSize];
-            std::tie(success, bytes) = ncsd.file.readBytes(ncchHeader, headerSize);
-            if (!success || bytes != headerSize) {
-                printf("Failed to read NCCH header\n");
-                return std::nullopt;
-            }
+            ncchFsInfo.offset = partition.offset;
+            ncchFsInfo.size = partition.length;
 
-            if (!ncch.loadFromHeader(ncchHeader, ncsd.file)) {
+            if (!ncch.loadFromHeader(aesEngine, ncsd.file, ncchFsInfo)) {
                 printf("Invalid NCCH partition\n");
                 return std::nullopt;
             }

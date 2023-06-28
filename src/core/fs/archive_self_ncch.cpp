@@ -71,6 +71,8 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 	auto cxi = mem.getCXI();
 	IOFile& ioFile = mem.CXIFile;
 
+	NCCH::FSInfo fsInfo;
+
 	// Seek to file offset depending on if we're reading from RomFS, ExeFS, etc
 	switch (type) {
 		case PathType::RomFS: {
@@ -80,9 +82,8 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 				Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
 			}
 
-			if (!ioFile.seek(cxi->fileOffset + romFSOffset + offset + 0x1000)) {
-				Helpers::panic("Failed to seek while reading from RomFS");
-			}
+			fsInfo = cxi->romFS;
+			offset += 0x1000;
 			break;
 		}
 
@@ -93,9 +94,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 				Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
 			}
 
-			if (!ioFile.seek(cxi->fileOffset + exeFSOffset + offset)) { // TODO: Not sure if this needs the + 0x1000
-				Helpers::panic("Failed to seek while reading from ExeFS");
-			}
+			fsInfo = cxi->exeFS;
 			break;
 		}
 
@@ -104,7 +103,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 	}
 
 	std::unique_ptr<u8[]> data(new u8[size]);
-	auto [success, bytesRead] = ioFile.readBytes(&data[0], size);
+	auto [success, bytesRead] = cxi->readFromFile(ioFile, fsInfo, &data[0], offset, size);
 
 	if (!success) {
 		Helpers::panic("Failed to read from SelfNCCH archive");
