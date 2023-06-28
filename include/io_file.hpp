@@ -8,38 +8,29 @@ class IOFile {
 	static inline std::filesystem::path appData = "";  // Directory for holding app data. AppData on Windows
 
   public:
-	IOFile();
-	IOFile(FILE* handle);
+	IOFile() {}
+	IOFile(FILE* handle) : handle(handle) {}
 	IOFile(const std::filesystem::path& path, const char* permissions = "rb");
 
-	bool isOpen();
-
+	bool isOpen() { return handle != nullptr; }
 	bool open(const std::filesystem::path& path, const char* permissions = "rb");
-
 	bool open(const char* filename, const char* permissions = "rb");
-
 	void close();
 
 	std::pair<bool, std::size_t> read(void* data, std::size_t length, std::size_t dataSize);
-
 	std::pair<bool, std::size_t> readBytes(void* data, std::size_t count);
 
 	std::pair<bool, std::size_t> write(const void* data, std::size_t length, std::size_t dataSize);
-
 	std::pair<bool, std::size_t> writeBytes(const void* data, std::size_t count);
 
 	std::optional<std::uint64_t> size();
 
 	bool seek(std::int64_t offset, int origin = SEEK_SET);
-
 	bool rewind();
-
 	FILE* getHandle();
-
 	static void setAppDataDir(const std::filesystem::path& dir);
+	static std::filesystem::path getAppData() { return appData; }
 
 	// Sets the size of the file to "size" and returns whether it succeeded or not
 	bool setSize(std::uint64_t size);
-
-	static std::filesystem::path getAppData();
 };

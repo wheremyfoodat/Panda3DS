@@ -21,13 +21,7 @@
 #include <unistd.h>  // For ftruncate
 #endif
 
-IOFile::IOFile() {}
-
-IOFile::IOFile(FILE* handle) : handle(handle) {}
-
 IOFile::IOFile(const std::filesystem::path& path, const char* permissions) { open(path, permissions); }
-
-bool IOFile::isOpen() { return handle != nullptr; }
 
 bool IOFile::open(const std::filesystem::path& path, const char* permissions) {
 	const auto str = path.string();  // For some reason converting paths directly with c_str() doesn't work
@@ -55,17 +49,19 @@ std::pair<bool, std::size_t> IOFile::read(void* data, std::size_t length, std::s
 	return {true, std::fread(data, dataSize, length, handle)};
 }
 
-std::pair<bool, std::size_t> IOFile::readBytes(void* data, std::size_t count) { return read(data, count, sizeof(std::uint8_t)); }
-
 std::pair<bool, std::size_t> IOFile::write(const void* data, std::size_t length, std::size_t dataSize) {
 	if (!isOpen()) {
 		return {false, std::numeric_limits<std::size_t>::max()};
 	}
 
-	if (length == 0) return {true, 0};
-	return {true, std::fwrite(data, dataSize, length, handle)};
+	if (length == 0) {
+		return {true, 0};
+	} else {
+		return {true, std::fwrite(data, dataSize, length, handle)};
+	}
 }
 
+std::pair<bool, std::size_t> IOFile::readBytes(void* data, std::size_t count) { return read(data, count, sizeof(std::uint8_t)); }
 std::pair<bool, std::size_t> IOFile::writeBytes(const void* data, std::size_t count) { return write(data, count, sizeof(std::uint8_t)); }
 
 std::optional<std::uint64_t> IOFile::size() {
@@ -91,7 +87,6 @@ bool IOFile::seek(std::int64_t offset, int origin) {
 }
 
 bool IOFile::rewind() { return seek(0, SEEK_SET); }
-
 FILE* IOFile::getHandle() { return handle; }
 
 void IOFile::setAppDataDir(const std::filesystem::path& dir) {
@@ -111,5 +106,3 @@ bool IOFile::setSize(std::uint64_t size) {
 	fflush(handle);
 	return success;
 }
-
-std::filesystem::path IOFile::getAppData() { return IOFile::appData; }
