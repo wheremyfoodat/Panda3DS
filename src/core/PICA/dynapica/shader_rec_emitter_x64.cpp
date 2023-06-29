@@ -580,17 +580,26 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	loadRegister<3>(src3_xmm, shader, src3, 0, operandDescriptor);
 
 	// TODO: Implement safe PICA mul
-	// Multiply src1 * src2
-	if (haveAVX) {
-		vmulps(scratch1, src1_xmm, src2_xmm);
-	} else {
-		movaps(scratch1, src1_xmm);
-		mulps(scratch1, src2_xmm);
+	// If we have FMA3, optimize MAD to use FMA
+	if (haveFMA3) {
+		vfmadd213ps(src1_xmm, src2_xmm, src3_xmm);
+		storeRegister(src1_xmm, shader, dest, operandDescriptor);
 	}
+	
+	// If we don't have FMA3, do a multiplication and addition
+	else {
+		// Multiply src1 * src2
+		if (haveAVX) {
+			vmulps(scratch1, src1_xmm, src2_xmm);
+		} else {
+			movaps(scratch1, src1_xmm);
+			mulps(scratch1, src2_xmm);
+		}
 
-	// Add src3
-	addps(scratch1, src3_xmm);
-	storeRegister(scratch1, shader, dest, operandDescriptor);
+		// Add src3
+		addps(scratch1, src3_xmm);
+		storeRegister(scratch1, shader, dest, operandDescriptor);
+	}
 }
 
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {

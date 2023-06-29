@@ -36,6 +36,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 
 	bool haveSSE4_1 = false;  // Shows if the CPU supports SSE4.1
 	bool haveAVX = false;     // Shows if the CPU supports AVX (NOT AVX2, NOT AVX512. Regular AVX)
+	bool haveFMA3 = false;    // Shows if the CPU supports FMA3
 
 	// Compile all instructions from [current recompiler PC, end)
 	void compileUntil(const PICAShader& shaderUnit, u32 endPC);
@@ -112,6 +113,7 @@ public:
 
 		haveSSE4_1 = cpu.has(Xbyak::util::Cpu::tSSE41);
 		haveAVX = cpu.has(Xbyak::util::Cpu::tAVX);
+		haveFMA3 = cpu.has(Xbyak::util::Cpu::tFMA);
 
 		if (!cpu.has(Xbyak::util::Cpu::tSSE3)) {
 			Helpers::panic("This CPU does not support SSE3. Please use the shader interpreter instead");
