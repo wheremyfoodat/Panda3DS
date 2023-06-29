@@ -312,18 +312,29 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	} else if (haveSSE4_1) {
 		// Bit reverse the write mask because that is what blendps expects
 		u32 adjustedMask = ((writeMask >> 3) & 0b1) | ((writeMask >> 1) & 0b10) | ((writeMask << 1) & 0b100) | ((writeMask << 3) & 0b1000);
-		movaps(scratch1, xword[statePointer + offset]); // Read current value of dest
-		blendps(scratch1, source, adjustedMask);        // Blend with source
-		movaps(xword[statePointer + offset], scratch1); // Write back
+		// Don't accidentally overwrite scratch1 if that is what we're writing derp
+		Xmm temp = (source == scratch1) ? scratch2 : scratch1;
+
+		movaps(temp, xword[statePointer + offset]);     // Read current value of dest
+		blendps(temp, source, adjustedMask);            // Blend with source
+		movaps(xword[statePointer + offset], temp);     // Write back
 	} else {
 		// Blend algo referenced from Citra
 		const u8 selector = (((writeMask & 0b1000) ? 1 : 0) << 0) |
 			(((writeMask & 0b0100) ? 3 : 2) << 2) |
 			(((writeMask & 0b0010) ? 0 : 1) << 4) |
 			(((writeMask & 0b0001) ? 2 : 3) << 6);
-
-		movaps(scratch1, xword[statePointer + offset]);
-		movaps(scratch2, source);
+		
+		// Reorder instructions based on whether the source == scratch1. This is to avoid overwriting scratch1 if it's the source,
+		// While also having the memory load come first to mitigate execution hazards and give the load more time to complete before reading if possible
+		if (source != scratch1) {
+			movaps(scratch1, xword[statePointer + offset]);
+			movaps(scratch2, source);
+		} else {
+			movaps(scratch2, source);
+			movaps(scratch1, xword[statePointer + offset]);
+		}
+		
 		unpckhps(scratch2, scratch1); // Unpack X/Y components of source and destination
 		unpcklps(scratch1, source);   // Unpack Z/W components of source and destination
 		shufps(scratch1, scratch2, selector); // "merge-shuffle" dest and source using selecto
@@ -844,6 +855,7 @@ void ShaderEmitter::emitPrintLog(const PICAShader& shaderUnit) {
 	and_(rsp, ~0xF);
 
 	// Call function
+	mov(arg1, statePointer);
 	mov(rax, uintptr_t(printLog));
 	call(rax);
 
