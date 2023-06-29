@@ -65,8 +65,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	// Result is returned in the zero flag. If the comparison is true then zero == 0, else zero == 1 (Opposite of checkCmpRegister)
 	void checkBoolUniform(const PICAShader& shader, u32 instruction);
 
-	// Emit a call to a C++ function
-	void callCppFunc(void* function) { Helpers::panic("[ShaderJIT] Unimplemented: Add support for calling C++ functions in JITted code"); }
+	// Prints a log. This is not meant to be used outside of debugging so it is very slow with our internal ABI.
+	void printLog(void* ptr);
 
 	// Instruction recompilation functions
 	void recADD(const PICAShader& shader, u32 instruction);
