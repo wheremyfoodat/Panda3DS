@@ -66,7 +66,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void checkBoolUniform(const PICAShader& shader, u32 instruction);
 
 	// Prints a log. This is not meant to be used outside of debugging so it is very slow with our internal ABI.
-	void printLog(void* ptr);
+	void emitPrintLog(const PICAShader& shaderUnit);
+	static void printLog(const PICAShader& shaderUnit);
 
 	// Instruction recompilation functions
 	void recADD(const PICAShader& shader, u32 instruction);

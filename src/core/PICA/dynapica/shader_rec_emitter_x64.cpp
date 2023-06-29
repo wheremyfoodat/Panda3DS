@@ -795,4 +795,75 @@ void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	Helpers::panic("Unimplemented LOOP instruction");
 }
 
+void ShaderEmitter::printLog(const PICAShader& shaderUnit) {
+	printf("PC: %04X\n", shaderUnit.pc);
+
+	for (int i = 0; i < shaderUnit.tempRegisters.size(); i++) {
+		const auto& r = shaderUnit.tempRegisters[i];
+		printf("t%d: (%f, %f, %f, %f)\n", i, r[0].toFloat64(), r[1].toFloat64(), r[2].toFloat64(), r[3].toFloat64());
+	}
+
+	for (int i = 0; i < shaderUnit.outputs.size(); i++) {
+		const auto& r = shaderUnit.outputs[i];
+		printf("o%d: (%f, %f, %f, %f)\n", i, r[0].toFloat64(), r[1].toFloat64(), r[2].toFloat64(), r[3].toFloat64());
+	}
+
+	printf("addr: (%d, %d)\n", shaderUnit.addrRegister[0], shaderUnit.addrRegister[1]);
+	printf("cmp: (%d, %d)\n", shaderUnit.cmpRegister[0], shaderUnit.cmpRegister[1]);
+}
+
+// As we mentioned above, this function is uber slow because we don't expect the shader JIT to call HLL functions in real scenarios
+// Aside from debugging code. So we don't care for this function to be performant or anything of the like.  It is quick and dirty
+// And mostly meant to be used for generating logs to diff the JIT and interpreter
+// We also don't support stack arguments atm unless it becomes actually necessary
+void ShaderEmitter::emitPrintLog(const PICAShader& shaderUnit) {
+	const uintptr_t pcOffset = uintptr_t(&shaderUnit.pc) - uintptr_t(&shaderUnit);
+	// Write back PC to print it
+	mov(dword[statePointer + pcOffset], recompilerPC);
+
+	// Push all registers because our JIT assumes everything is non volatile
+	push(rbp);
+	push(rax);
+	push(rbx);
+	push(rcx);
+	push(rdx);
+	push(rsi);
+	push(rdi);
+	push(r8);
+	push(r9);
+	push(r10);
+	push(r11);
+	push(r12);
+	push(r13);
+	push(r14);
+	push(r15);
+
+	mov(rbp, rsp);
+	// Reserve a bunch of stack space for Windows shadow stack et al, then force align rsp to 16 bytes to respect the ABI
+	sub(rsp, 64);
+	and_(rsp, ~0xF);
+
+	// Call function
+	mov(rax, uintptr_t(printLog));
+	call(rax);
+
+	// Undo anything we did
+	mov(rsp, rbp);
+	pop(r15);
+	pop(r14);
+	pop(r13);
+	pop(r12);
+	pop(r11);
+	pop(r10);
+	pop(r9);
+	pop(r8);
+	pop(rdi);
+	pop(rsi);
+	pop(rdx);
+	pop(rcx);
+	pop(rbx);
+	pop(rax);
+	pop(rbp);
+}
+
 #endif
