@@ -97,6 +97,10 @@ static std::array<Vertex, Renderer::vertexBufferSize> vertices;
 
 template <bool indexed, bool useShaderJIT>
 void GPU::drawArrays() {
+	if constexpr (useShaderJIT) {
+		shaderJIT.prepare(shaderUnit.vs);
+	}
+
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
 	const u32 vertexBase = ((regs[PICA::InternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
@@ -127,10 +131,6 @@ void GPU::drawArrays() {
 		log("PICA::DrawArrays(vertex count = %d, vertexOffset = %d)\n", vertexCount, offset);
 	} else {
 		log("PICA::DrawElements(vertex count = %d, index buffer config = %08X)\n", vertexCount, indexBufferConfig);
-	}
-
-	if constexpr (useShaderJIT) {
-		shaderJIT.prepare(shaderUnit.vs);
 	}
 
 	// Total number of input attributes to shader. Differs between GS and VS. Currently stubbed to the VS one, as we don't have geometry shaders.
