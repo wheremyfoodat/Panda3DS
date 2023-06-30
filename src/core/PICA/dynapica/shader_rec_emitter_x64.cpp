@@ -253,6 +253,14 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 			Helpers::panic("[ShaderJIT]: Unimplemented source index type %d", index);
 	}
 
+	// Swizzle and load register into dest, from [state pointer + rcx + offset] and apply the relevant swizzle
+	auto swizzleAndLoadReg = [this, &dest, &compSwizzle, &convertedSwizzle](size_t offset) {
+		if (compSwizzle == noSwizzle)  // Avoid emitting swizzle if not necessary
+			movaps(dest, xword[statePointer + rcx + offset]);
+		else  // Swizzle is not trivial so we need to emit a shuffle instruction
+			pshufd(dest, xword[statePointer + rcx + offset], convertedSwizzle);
+	};
+
 	// Here we handle what happens when using indexed addressing & we can't predict what register will be read at compile time
 	// The index of the access is assumed to be in rax
 	// Add source register (src) and index (rax) to form the final register
@@ -268,7 +276,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	jae(maybeTemp);
 	mov(rcx, rax);
 	shl(rcx, 4);  // rcx = rax * sizeof(vec4 of floats) = rax * 16
-	movaps(dest, xword[statePointer + rcx + inputOffset]);
+	swizzleAndLoadReg(inputOffset);
 	jmp(end);
 	
 	// If (reg < 0x1F) return tempRegisters[reg - 0x10]
@@ -277,7 +285,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	jae(maybeUniform);
 	lea(rcx, qword[rax - 0x10]);
 	shl(rcx, 4);
-	movaps(dest, xword[statePointer + rcx + tempOffset]);
+	swizzleAndLoadReg(tempOffset);
 	jmp(end);
 
 	// If (reg < 0x80) return floatUniforms[reg - 0x20]
@@ -286,7 +294,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	jae(unknownReg);
 	lea(rcx, qword[rax - 0x20]);
 	shl(rcx, 4);
-	movaps(dest, xword[statePointer + rcx + uniformOffset]);
+	swizzleAndLoadReg(uniformOffset);
 	jmp(end);
 
 	L(unknownReg);
@@ -844,7 +852,24 @@ void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	add(eax, 1); // The iteration count is actually uniform.x + 1
 	mov(dword[statePointer + loopRegOffset], ecx); // Set loop counter
 	
-	Helpers::panic("Unimplemented LOOP instruction");
+	// TODO: This might break if an instruction in a loop decides to yield...
+	push(rax);  // Push loop iteration counter
+	push(rdx);  // Push loop increment
+
+	Label loopStart;
+	L(loopStart);
+	compileUntil(shader, dest + 1);
+
+	const size_t stackOffsetOfLoopIncrement = 0;
+	const size_t stackOffsetOfIterationCounter = stackOffsetOfLoopIncrement + 8;
+
+	mov(ecx, dword[rsp + stackOffsetOfLoopIncrement]);   // ecx = Loop increment
+	add(dword[statePointer + loopRegOffset], ecx);       // Increment loop counter
+	sub(dword[rsp + stackOffsetOfIterationCounter], 1);  // Subtract 1 from loop iteration counter
+
+	jnz(loopStart);  // Back to loop start if not over
+	add(rsp, 16);
+	loopLevel--;
 }
 
 void ShaderEmitter::printLog(const PICAShader& shaderUnit) {
@@ -852,12 +877,12 @@ void ShaderEmitter::printLog(const PICAShader& shaderUnit) {
 
 	for (int i = 0; i < shaderUnit.tempRegisters.size(); i++) {
 		const auto& r = shaderUnit.tempRegisters[i];
-		printf("t%d: (%f, %f, %f, %f)\n", i, r[0].toFloat64(), r[1].toFloat64(), r[2].toFloat64(), r[3].toFloat64());
+		printf("t%d: (%.2f, %.2f, %.2f, %.2f)\n", i, r[0].toFloat64(), r[1].toFloat64(), r[2].toFloat64(), r[3].toFloat64());
 	}
 
 	for (int i = 0; i < shaderUnit.outputs.size(); i++) {
 		const auto& r = shaderUnit.outputs[i];
-		printf("o%d: (%f, %f, %f, %f)\n", i, r[0].toFloat64(), r[1].toFloat64(), r[2].toFloat64(), r[3].toFloat64());
+		printf("o%d: (%.2f, %.2f, %.2f, %.2f)\n", i, r[0].toFloat64(), r[1].toFloat64(), r[2].toFloat64(), r[3].toFloat64());
 	}
 
 	printf("addr: (%d, %d)\n", shaderUnit.addrRegister[0], shaderUnit.addrRegister[1]);
