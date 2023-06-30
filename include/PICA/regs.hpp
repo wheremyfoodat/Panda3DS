@@ -22,13 +22,7 @@ namespace PICA {
 			Tex0BorderColor = 0x81,
 			Tex1BorderColor = 0x91,
 			Tex2BorderColor = 0x99,
-			TexEnv0Source = 0xC0,
-			TexEnv1Source = 0xC8,
-			TexEnv2Source = 0xD0,
-			TexEnv3Source = 0xD8,
 			TexEnvUpdateBuffer = 0xE0,
-			TexEnv4Source = 0xF0,
-			TexEnv5Source = 0xF8,
 			TexEnvBufferColor = 0xFD,
 
 			// clang-format off
