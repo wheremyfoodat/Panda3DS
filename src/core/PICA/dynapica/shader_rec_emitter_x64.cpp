@@ -150,8 +150,13 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::RCP: recRCP(shaderUnit, instruction); break;
 		case ShaderOpcodes::RSQ: recRSQ(shaderUnit, instruction); break;
 
+		// Unimplemented opcodes that don't seem to actually be used but exist in the binary
+		// EMIT/SETEMIT are used in geometry shaders, however are sometimes found in vertex shaders?
+		case ShaderOpcodes::EX2:
+		case ShaderOpcodes::LG2:
 		case ShaderOpcodes::EMIT:
 		case ShaderOpcodes::SETEMIT:
+			log("[ShaderJIT] Unknown PICA opcode: %02X\n", opcode);
 			emitPrintLog(shaderUnit);
 			break;
 
