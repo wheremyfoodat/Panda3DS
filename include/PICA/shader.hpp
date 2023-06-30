@@ -16,6 +16,7 @@ namespace ShaderOpcodes {
 		ADD = 0x00,
 		DP3 = 0x01,
 		DP4 = 0x02,
+		DPH = 0x03,
 		MUL = 0x08,
 		SLT = 0x0A,
 		FLR = 0x0B,
@@ -35,6 +36,8 @@ namespace ShaderOpcodes {
 		IFU = 0x27,
 		IFC = 0x28,
 		LOOP = 0x29,
+		EMIT = 0x2A,
+		SETEMIT = 0x2B,
 		JMPC = 0x2C,
 		JMPU = 0x2D,
 		CMP1 = 0x2E, // Both of these instructions are CMP

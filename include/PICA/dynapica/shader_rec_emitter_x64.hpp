@@ -80,6 +80,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void recCMP(const PICAShader& shader, u32 instruction);
 	void recDP3(const PICAShader& shader, u32 instruction);
 	void recDP4(const PICAShader& shader, u32 instruction);
+	void recEMIT(const PICAShader& shader, u32 instruction);
 	void recEND(const PICAShader& shader, u32 instruction);
 	void recFLR(const PICAShader& shader, u32 instruction);
 	void recIFC(const PICAShader& shader, u32 instruction);
@@ -95,6 +96,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void recMUL(const PICAShader& shader, u32 instruction);
 	void recRCP(const PICAShader& shader, u32 instruction);
 	void recRSQ(const PICAShader& shader, u32 instruction);
+	void recSETEMIT(const PICAShader& shader, u32 instruction);
 	void recSGE(const PICAShader& shader, u32 instruction);
 	void recSGEI(const PICAShader& shader, u32 instruction);
 	void recSLT(const PICAShader& shader, u32 instruction);
