@@ -582,7 +582,7 @@ void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 }
 
 void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
-	const bool isMADI = getBit<29>(instruction);
+	const bool isMADI = getBit<29>(instruction) == 0;
 
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
 	const u32 src1 = getBits<17, 5>(instruction);
