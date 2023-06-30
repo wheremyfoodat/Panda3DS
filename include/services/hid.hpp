@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <optional>
+
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -22,12 +23,12 @@ namespace HID::Keys {
 		X = 1 << 10,
 		Y = 1 << 11,
 
-		GPIO0Inv = 1 << 12,  // Inverted value of GPIO bit 0
-		GPIO14Inv = 1 << 13, // Inverted value of GPIO bit 14
+		GPIO0Inv = 1 << 12,   // Inverted value of GPIO bit 0
+		GPIO14Inv = 1 << 13,  // Inverted value of GPIO bit 14
 
-		CirclePadRight = 1 << 28, // X >= 41
-		CirclePadLeft = 1 << 29,  // X <= -41
-		CirclePadUp = 1 << 30,    // Y >= 41
+		CirclePadRight = 1 << 28,  // X >= 41
+		CirclePadLeft = 1 << 29,   // X <= -41
+		CirclePadUp = 1 << 30,     // Y >= 41
 		CirclePadDown = 1u << 31   // Y <= -41
 	};
 }
@@ -39,18 +40,18 @@ class HIDService {
 	Handle handle = KernelHandles::HID;
 	Memory& mem;
 	Kernel& kernel;
-	u8* sharedMem = nullptr; // Pointer to HID shared memory
+	u8* sharedMem = nullptr;  // Pointer to HID shared memory
 
 	uint nextPadIndex;
 	uint nextTouchscreenIndex;
 	uint nextAccelerometerIndex;
 	uint nextGyroIndex;
 
-	u32 newButtons; // The button state currently being edited
-	u32 oldButtons; // The previous pad state
+	u32 newButtons;  // The button state currently being edited
+	u32 oldButtons;  // The previous pad state
 
-	s16 circlePadX, circlePadY; // Circlepad state
-	s16 touchScreenX, touchScreenY; // Touchscreen state
+	s16 circlePadX, circlePadY;      // Circlepad state
+	s16 touchScreenX, touchScreenY;  // Touchscreen state
 
 	bool accelerometerEnabled;
 	bool eventsInitialized;
@@ -79,7 +80,7 @@ class HIDService {
 		*(T*)&sharedMem[offset] = value;
 	}
 
-public:
+  public:
 	HIDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
@@ -87,15 +88,18 @@ public:
 	void pressKey(u32 mask) { newButtons |= mask; }
 	void releaseKey(u32 mask) { newButtons &= ~mask; }
 
+	s16 getCirclepadX() { return circlePadX; }
+	s16 getCirclepadY() { return circlePadY; }
+
 	void setCirclepadX(s16 x) {
 		circlePadX = x;
 
 		// Turn bits 28 and 29 off in the new button state, which indicate whether the circlepad is steering left or right
 		// Then, set them according to the new value of x
 		newButtons &= ~0x3000'0000;
-		if (x >= 41) // Pressing right
+		if (x >= 41)  // Pressing right
 			newButtons |= 1 << 28;
-		else if (x <= -41) // Pressing left
+		else if (x <= -41)  // Pressing left
 			newButtons |= 1 << 29;
 	}
 
@@ -105,9 +109,9 @@ public:
 		// Turn bits 30 and 31 off in the new button state, which indicate whether the circlepad is steering up or down
 		// Then, set them according to the new value of y
 		newButtons &= ~0xC000'0000;
-		if (y >= 41) // Pressing up
+		if (y >= 41)  // Pressing up
 			newButtons |= 1 << 30;
-		else if (y <= -41) // Pressing down
+		else if (y <= -41)  // Pressing down
 			newButtons |= 1 << 31;
 	}
 
@@ -115,7 +119,7 @@ public:
 
 	void setSharedMem(u8* ptr) {
 		sharedMem = ptr;
-		if (ptr != nullptr) { // Zero-fill shared memory in case the process tries to read stale service data or vice versa
+		if (ptr != nullptr) {  // Zero-fill shared memory in case the process tries to read stale service data or vice versa
 			std::memset(ptr, 0, 0x2b0);
 		}
 	}

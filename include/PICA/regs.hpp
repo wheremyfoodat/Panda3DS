@@ -31,6 +31,24 @@ namespace PICA {
 			TexEnv5Source = 0xF8,
 			TexEnvBufferColor = 0xFD,
 
+			// clang-format off
+			#define defineTexEnv(index, offset)   \
+			TexEnv##index##Source   = offset + 0, \
+			TexEnv##index##Operand  = offset + 1, \
+			TexEnv##index##Combiner = offset + 2, \
+			TexEnv##index##Color    = offset + 3, \
+			TexEnv##index##Scale    = offset + 4,
+
+			defineTexEnv(0, 0xC0)
+			defineTexEnv(1, 0xC8)
+			defineTexEnv(2, 0xD0)
+			defineTexEnv(3, 0xD8)
+			defineTexEnv(4, 0xF0)
+			defineTexEnv(5, 0xF8)
+
+			#undef defineTexEnv
+			// clang-format on
+
 			// Framebuffer registers
 			ColourOperation = 0x100,
 			BlendFunc = 0x101,

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <optional>
 #include <vector>
+#include "crypto/aes_engine.hpp"
 #include "helpers.hpp"
 #include "handles.hpp"
 #include "loader/ncsd.hpp"
@@ -149,7 +150,7 @@ public:
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
 	std::optional<u32> loadELF(std::ifstream& file);
-	std::optional<NCSD> loadNCSD(const std::filesystem::path& path);
+	std::optional<NCSD> loadNCSD(Crypto::AESEngine &aesEngine, const std::filesystem::path& path);
 
 	u8 read8(u32 vaddr);
 	u16 read16(u32 vaddr);

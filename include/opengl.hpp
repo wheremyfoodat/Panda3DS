@@ -21,6 +21,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdarg>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -44,6 +45,19 @@
 #include <span>
 #endif
 
+#if defined(GPU_DEBUG_INFO)
+#define OPENGL_DEBUG_INFO
+#endif
+
+#ifdef _MSC_VER
+#include <sal.h> 
+#define OPENGL_PRINTF_FORMAT _Printf_format_string_
+#define OPENGL_PRINTF_FORMAT_ATTR(format_arg_index, dots_arg_index)
+#else
+#define OPENGL_PRINTF_FORMAT
+#define OPENGL_PRINTF_FORMAT_ATTR(format_arg_index, dots_arg_index) __attribute__((__format__(__printf__, format_arg_index, dots_arg_index)))
+#endif
+
 // Uncomment the following define if you want GL objects to automatically free themselves when their lifetime ends
 // #define OPENGL_DESTRUCTORS
 
@@ -54,7 +68,50 @@ namespace OpenGL {
     template <class...>
     constexpr std::false_type AlwaysFalse{};
 
-    struct VertexArray {
+	OPENGL_PRINTF_FORMAT_ATTR(3, 4)
+	static void setObjectLabel(GLenum identifier, GLuint name, OPENGL_PRINTF_FORMAT const char* format, ...) {
+#if defined(OPENGL_DEBUG_INFO)
+		GLchar label[256] = {};
+		va_list args;
+		va_start(args, format);
+		const GLsizei length = vsnprintf(label, std::size(label), format, args);
+		va_end(args);
+		glObjectLabel(identifier, name, length, label);
+#endif
+	}
+
+	class DebugScope {
+#if defined(OPENGL_DEBUG_INFO)
+		inline static GLuint scopeDepth = 0;
+		const GLuint m_scope_depth;
+#endif
+
+	  public:
+		OPENGL_PRINTF_FORMAT_ATTR(2, 3)
+		DebugScope(OPENGL_PRINTF_FORMAT const char* format, ...)
+#if defined(OPENGL_DEBUG_INFO)
+			: m_scope_depth(scopeDepth++) {
+			GLchar message[256] = {};
+			va_list args;
+			va_start(args, format);
+			const GLsizei length = vsnprintf(message, std::size(message), format, args);
+			va_end(args);
+			glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, m_scope_depth, length, message);
+		}
+#else
+		{
+		}
+#endif
+
+		~DebugScope() {
+#if defined(OPENGL_DEBUG_INFO)
+			glPopDebugGroup();
+			scopeDepth--;
+#endif
+		}
+	};
+
+	struct VertexArray {
         GLuint m_handle = 0;
 
         void create() {
