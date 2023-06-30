@@ -30,6 +30,8 @@ namespace ShaderOpcodes {
 		RSQ = 0x0F,
 		MOVA = 0x12,
 		MOV = 0x13,
+		DPHI = 0x18,
+		DSTI = 0x19,
 		SGEI = 0x1A,
 		SLTI = 0x1B,
 		NOP = 0x21,
@@ -137,11 +139,14 @@ private:
 	void cmp(u32 instruction);
 	void dp3(u32 instruction);
 	void dp4(u32 instruction);
+	void dphi(u32 instruction);
+	void ex2(u32 instruction);
 	void flr(u32 instruction);
 	void ifc(u32 instruction);
 	void ifu(u32 instruction);
 	void jmpc(u32 instruction);
 	void jmpu(u32 instruction);
+	void lg2(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
 	void madi(u32 instruction);
