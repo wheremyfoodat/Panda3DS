@@ -30,6 +30,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 
 	// Vector value of (-0.0, -0.0, -0.0, -0.0) for negating vectors via pxor
 	Label negateVector;
+	// Vector value of (1.0, 1.0, 1.0, 1.0) for SLT(i)/SGE(i)
+	Label onesVector;
 
 	u32 recompilerPC = 0; // PC the recompiler is currently recompiling @
 	u32 loopLevel = 0;    // The current loop nesting level (0 = not in a loop)
@@ -86,7 +88,6 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void recJMPU(const PICAShader& shader, u32 instruction);
 	void recLOOP(const PICAShader& shader, u32 instruction);
 	void recMAD(const PICAShader& shader, u32 instruction);
-	void recMADI(const PICAShader& shader, u32 instruction);
 	void recMAX(const PICAShader& shader, u32 instruction);
 	void recMIN(const PICAShader& shader, u32 instruction);
 	void recMOVA(const PICAShader& shader, u32 instruction);
@@ -97,7 +98,6 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void recSGE(const PICAShader& shader, u32 instruction);
 	void recSGEI(const PICAShader& shader, u32 instruction);
 	void recSLT(const PICAShader& shader, u32 instruction);
-	void recSLTI(const PICAShader& shader, u32 instruction);
 
 	MAKE_LOG_FUNCTION(log, shaderJITLogger)
 

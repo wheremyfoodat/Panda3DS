@@ -42,6 +42,8 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	align(16);
 	L(negateVector);
 	dd(0x80000000); dd(0x80000000); dd(0x80000000); dd(0x80000000); // -0.0 4 times
+	L(onesVector);
+	dd(0x3f800000); dd(0x3f800000); dd(0x3f800000); dd(0x3f800000); // 1.0 4 times
 
 	// Emit prologue first
 	align(16);
@@ -148,9 +150,16 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::RCP: recRCP(shaderUnit, instruction); break;
 		case ShaderOpcodes::RSQ: recRSQ(shaderUnit, instruction); break;
 
+		// We consider both MAD and MADI to be the same instruction and decode which one we actually have in recMAD
+		case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
 		case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
 			recMAD(shaderUnit, instruction);
 			break;
+
+		case ShaderOpcodes::SLT:
+		case ShaderOpcodes::SLTI:
+			recSLT(shaderUnit, instruction); break;
+
 		default:
 			Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
 	}
@@ -568,16 +577,18 @@ void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 }
 
 void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
+	const bool isMADI = getBit<29>(instruction);
+
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
 	const u32 src1 = getBits<17, 5>(instruction);
-	const u32 src2 = getBits<10, 7>(instruction);
-	const u32 src3 = getBits<5, 5>(instruction);
+	const u32 src2 = isMADI ? getBits<12, 5>(instruction) : getBits<10, 7>(instruction);
+	const u32 src3 = isMADI ? getBits<5, 7>(instruction) : getBits<5, 5>(instruction);
 	const u32 idx = getBits<22, 2>(instruction);
 	const u32 dest = getBits<24, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src1, 0, operandDescriptor);
-	loadRegister<2>(src2_xmm, shader, src2, idx, operandDescriptor);
-	loadRegister<3>(src3_xmm, shader, src3, 0, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, isMADI ? 0 : idx, operandDescriptor);
+	loadRegister<3>(src3_xmm, shader, src3, isMADI ? idx : 0, operandDescriptor);
 
 	// TODO: Implement safe PICA mul
 	// If we have FMA3, optimize MAD to use FMA
@@ -600,6 +611,22 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 		addps(scratch1, src3_xmm);
 		storeRegister(scratch1, shader, dest, operandDescriptor);
 	}
+}
+
+void ShaderEmitter::recSLT(const PICAShader& shader, u32 instruction) {
+	const bool isSLTI = (instruction >> 26) == ShaderOpcodes::SLTI;
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+
+	const u32 src1 = isSLTI ? getBits<14, 5>(instruction) : getBits<12, 7>(instruction);
+	const u32 src2 = isSLTI ? getBits<7, 7>(instruction) : getBits<7, 5>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1_xmm, shader, src1, isSLTI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, isSLTI ? idx : 0, operandDescriptor);
+	cmpltps(src1_xmm, src2_xmm);
+	andps(src1_xmm, xword[rip + onesVector]);
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
