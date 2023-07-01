@@ -8,6 +8,7 @@
 #include "PICA/shader_unit.hpp"
 #include "PICA/dynapica/shader_rec.hpp"
 #include "renderer_gl/renderer_gl.hpp"
+#include "PICA/pica_vertex.hpp"
 
 class GPU {
 	static constexpr u32 regNum = 0x300;
@@ -27,7 +28,7 @@ class GPU {
 	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
 	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
-	std::array<Vertex, 3> immediateModeVertices;
+	std::array<PicaVertex, 3> immediateModeVertices;
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
 
@@ -67,7 +68,7 @@ class GPU {
 	u32* cmdBuffCurr = nullptr;
 
 	Renderer renderer;
-	Vertex getImmediateModeVertex();
+	PicaVertex getImmediateModeVertex();
 public:
 	GPU(Memory& mem);
 	void initGraphicsContext() { renderer.initGraphicsContext(); }
