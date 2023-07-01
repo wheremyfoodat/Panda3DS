@@ -9,19 +9,10 @@
 #include "surface_cache.hpp"
 #include "textures.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/pica_vertex.hpp"
 
 // More circular dependencies!
 class GPU;
-
-struct Vertex {
-	OpenGL::vec4 position;
-	OpenGL::vec4 colour;
-	OpenGL::vec2 texcoord0;
-	OpenGL::vec2 texcoord1;
-	Floats::f24 texcoord0_w;
-	u32 padding; // pad so that texcoord2 is 64-bit aligned
-	OpenGL::vec2 texcoord2;
-};
 
 class Renderer {
 	GPU& gpu;
@@ -95,7 +86,7 @@ class Renderer {
 	void getGraphicsContext();                                                                      // Set up graphics context for rendering
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);                     // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
-	void drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices);               // Draw the given vertices
+	void drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices);               // Draw the given vertices
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize.x() = width;

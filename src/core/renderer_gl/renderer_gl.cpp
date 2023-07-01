@@ -190,14 +190,19 @@ const char* fragmentShader = R"(
 		return result;
 	}
 
+	void calcLighting(out vec4 primary_color, out vec4 secondary_color){
+		primary_color = vec4(vec3(0.5) ,1.0);
+		secondary_color = vec4(vec3(0.5) ,1.0);
+	}
+
 	void main() {
 		vec2 tex2UV = (u_textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
 
 		// TODO: what do invalid sources and disabled textures read as?
 		// And what does the "previous combiner" source read initially?
 		tevSources[0] = v_colour; // Primary/vertex color
-		tevSources[1] = vec4(vec3(0.5), 1.0); // Fragment primary color
-		tevSources[2] = vec4(vec3(0.5), 1.0); // Fragment secondary color
+		calcLighting(tevSources[1],tevSources[2]);
+
 		if ((u_textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
 		if ((u_textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
 		if ((u_textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
@@ -379,28 +384,28 @@ void Renderer::initGraphicsContext() {
 	displayProgram.use();
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
-	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
+	vbo.createFixedSize(sizeof(PicaVertex) * vertexBufferSize, GL_STREAM_DRAW);
 	vbo.bind();
 	vao.create();
 	vao.bind();
 
 	// Position (x, y, z, w) attributes
-	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, position));
+	vao.setAttributeFloat<float>(0, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.positions));
 	vao.enableAttribute(0);
 	// Colour attribute
-	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, colour));
+	vao.setAttributeFloat<float>(1, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.colour));
 	vao.enableAttribute(1);
 	// UV 0 attribute
-	vao.setAttributeFloat<float>(2, 2, sizeof(Vertex), offsetof(Vertex, texcoord0));
+	vao.setAttributeFloat<float>(2, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0));
 	vao.enableAttribute(2);
 	// UV 1 attribute
-	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, texcoord1));
+	vao.setAttributeFloat<float>(3, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord1));
 	vao.enableAttribute(3);
 	// UV 0 W-component attribute
-	vao.setAttributeFloat<float>(4, 1, sizeof(Vertex), offsetof(Vertex, texcoord0_w));
+	vao.setAttributeFloat<float>(4, 1, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0_w));
 	vao.enableAttribute(4);
 	// UV 2 attribute
-	vao.setAttributeFloat<float>(5, 2, sizeof(Vertex), offsetof(Vertex, texcoord2));
+	vao.setAttributeFloat<float>(5, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord2));
 	vao.enableAttribute(5);
 
 	dummyVBO.create();
@@ -548,7 +553,7 @@ void Renderer::bindTexturesToSlots() {
 	}
 }
 
-void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
+void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
 	  OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle

@@ -146,7 +146,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 					immediateModeAttributes[immediateModeAttrIndex++] = attr;
 					if (immediateModeAttrIndex == totalAttrCount) {
-						Vertex v = getImmediateModeVertex();
+						PicaVertex v = getImmediateModeVertex();
 						immediateModeAttrIndex = 0;
 						immediateModeVertices[immediateModeVertIndex++] = v;
 
