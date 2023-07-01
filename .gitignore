@@ -14,7 +14,7 @@ Release/
 ReleaseWithClangCL/
 Enabled/
 Disabled/
-build/
+*build*/
 
 .vs/
 .vscode/*.log
