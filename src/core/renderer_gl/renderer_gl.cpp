@@ -11,32 +11,73 @@ using namespace Helpers;
 const char* vertexShader = R"(
 	#version 410 core
 	
-	layout (location = 0) in vec4 coords;
-	layout (location = 1) in vec4 vertexColour;
-	layout (location = 2) in vec2 inUVs_texture0;
+	layout (location = 0) in vec4 a_coords;
+	layout (location = 1) in vec4 a_vertexColour;
+	layout (location = 2) in vec2 a_texcoord0;
+	layout (location = 3) in vec2 a_texcoord1;
+	layout (location = 4) in float a_texcoord0_w;
+	layout (location = 5) in vec2 a_texcoord2;
 
-	out vec4 colour;
-	out vec2 tex0_UVs;
+	out vec4 v_colour;
+	out vec3 v_texcoord0;
+	out vec2 v_texcoord1;
+	out vec2 v_texcoord2;
+	flat out vec4 v_textureEnvColor[6];
+	flat out vec4 v_textureEnvBufferColor;
+
+	// TEV uniforms
+	uniform uint u_textureEnvColor[6];
+	uniform uint u_textureEnvBufferColor;
+
+	vec4 abgr8888ToVec4(uint abgr) {
+		const float scale = 1.0 / 255.0;
+
+		return scale * vec4(
+			float(abgr & 0xffu),
+			float((abgr >> 8) & 0xffu),
+			float((abgr >> 16) & 0xffu),
+			float(abgr >> 24)
+		);
+	}
 
 	void main() {
-		gl_Position = coords;
-		colour = vertexColour;
+		gl_Position = a_coords;
+		v_colour = a_vertexColour;
 
 		// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
-		tex0_UVs = vec2(inUVs_texture0.x, 1.0 - inUVs_texture0.y);
+		v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
+		v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
+		v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+
+		for (int i = 0; i < 6; i++) {
+			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
+		}
+
+		v_textureEnvBufferColor = abgr8888ToVec4(u_textureEnvBufferColor);
 	}
 )";
 
 const char* fragmentShader = R"(
 	#version 410 core
 	
-	in vec4 colour;
-	in vec2 tex0_UVs;
+	in vec4 v_colour;
+	in vec3 v_texcoord0;
+	in vec2 v_texcoord1;
+	in vec2 v_texcoord2;
+	flat in vec4 v_textureEnvColor[6];
+	flat in vec4 v_textureEnvBufferColor;
 
 	out vec4 fragColour;
 
 	uniform uint u_alphaControl;
 	uniform uint u_textureConfig;
+
+	// TEV uniforms
+	uniform uint u_textureEnvSource[6];
+	uniform uint u_textureEnvOperand[6];
+	uniform uint u_textureEnvCombiner[6];
+	uniform uint u_textureEnvScale[6];
+	uniform uint u_textureEnvUpdateBuffer;
 
 	// Depth control uniforms
 	uniform float u_depthScale;
@@ -44,12 +85,147 @@ const char* fragmentShader = R"(
 	uniform bool u_depthmapEnable;
 
 	uniform sampler2D u_tex0;
+	uniform sampler2D u_tex1;
+	uniform sampler2D u_tex2;
+
+	vec4 tevSources[16];
+	vec4 tevNextPreviousBuffer;
+	bool tevUnimplementedSourceFlag = false;
+
+	// OpenGL ES 1.1 reference pages for TEVs (this is what the PICA200 implements):
+	// https://registry.khronos.org/OpenGL-Refpages/es1.1/xhtml/glTexEnv.xml
+
+	vec4 tevFetchSource(uint src_id) {
+		if (src_id >= 6u && src_id < 13u) {
+			tevUnimplementedSourceFlag = true;
+		}
+
+		return tevSources[src_id];
+	}
+
+	vec4 tevGetColorAndAlphaSource(int tev_id, int src_id) {
+		vec4 result;
+
+		vec4 colorSource = tevFetchSource((u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u);
+		vec4 alphaSource = tevFetchSource((u_textureEnvSource[tev_id] >> (src_id * 4 + 16)) & 15u);
+
+		uint colorOperand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
+		uint alphaOperand = (u_textureEnvOperand[tev_id] >> (12 + src_id * 4)) & 7u;
+
+		// TODO: figure out what the undocumented values do
+		switch (colorOperand) {
+			case  0u: result.rgb = colorSource.rgb; break;            // Source color
+			case  1u: result.rgb = 1.0 - colorSource.rgb; break;      // One minus source color
+			case  2u: result.rgb = vec3(colorSource.a); break;        // Source alpha
+			case  3u: result.rgb = vec3(1.0 - colorSource.a); break;  // One minus source alpha
+			case  4u: result.rgb = vec3(colorSource.r); break;        // Source red
+			case  5u: result.rgb = vec3(1.0 - colorSource.r); break;  // One minus source red
+			case  8u: result.rgb = vec3(colorSource.g); break;        // Source green
+			case  9u: result.rgb = vec3(1.0 - colorSource.g); break;  // One minus source green
+			case 12u: result.rgb = vec3(colorSource.b); break;        // Source blue
+			case 13u: result.rgb = vec3(1.0 - colorSource.b); break;  // One minus source blue
+			default: break;
+		}
+
+		// TODO: figure out what the undocumented values do
+		switch (alphaOperand) {
+			case 0u: result.a = alphaSource.a; break;        // Source alpha
+			case 1u: result.a = 1.0 - alphaSource.a; break;  // One minus source alpha
+			case 2u: result.a = alphaSource.r; break;        // Source red
+			case 3u: result.a = 1.0 - alphaSource.r; break;  // One minus source red
+			case 4u: result.a = alphaSource.g; break;        // Source green
+			case 5u: result.a = 1.0 - alphaSource.g; break;  // One minus source green
+			case 6u: result.a = alphaSource.b; break;        // Source blue
+			case 7u: result.a = 1.0 - alphaSource.b; break;  // One minus source blue
+			default: break;
+		}
+
+		return result;
+	}
+
+	vec4 tevCalculateCombiner(int tev_id) {
+		vec4 source0 = tevGetColorAndAlphaSource(tev_id, 0);
+		vec4 source1 = tevGetColorAndAlphaSource(tev_id, 1);
+		vec4 source2 = tevGetColorAndAlphaSource(tev_id, 2);
+
+		uint colorCombine = u_textureEnvCombiner[tev_id] & 15u;
+		uint alphaCombine = (u_textureEnvCombiner[tev_id] >> 16) & 15u;
+
+		vec4 result = vec4(1.0);
+
+		// TODO: figure out what the undocumented values do
+		switch (colorCombine) {
+			case 0u: result.rgb = source0.rgb; break;                                       // Replace
+			case 1u: result.rgb = source0.rgb * source1.rgb; break;                         // Modulate
+			case 2u: result.rgb = min(vec3(1.0), source0.rgb + source1.rgb); break;         // Add
+			case 3u: result.rgb = clamp(source0.rgb + source1.rgb - 0.5, 0.0, 1.0); break;  // Add signed
+			case 4u: result.rgb = mix(source1.rgb, source0.rgb, source2.rgb); break;        // Interpolate
+			case 5u: result.rgb = max(source0.rgb - source1.rgb, 0.0); break;               // Subtract
+			case 6u: result.rgb = vec3(4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5)); break;  // Dot3 RGB
+			case 7u: result     = vec4(4.0 * dot(source0.rgb - 0.5 , source1.rgb - 0.5)); break;  // Dot3 RGBA
+			case 8u: result.rgb = min(source0.rgb * source1.rgb + source2.rgb, 1.0); break;       // Multiply then add
+			case 9u: result.rgb = min((source0.rgb + source1.rgb) * source2.rgb, 1.0); break;     // Add then multiply
+			default: break;
+		}
+
+		if (colorCombine != 7u) { // The color combiner also writes the alpha channel in the "Dot3 RGBA" mode.
+			// TODO: figure out what the undocumented values do
+			// TODO: test if the alpha combiner supports all the same modes as the color combiner.
+			switch (alphaCombine) {
+				case 0u: result.a = source0.a; break;                                      // Replace
+				case 1u: result.a = source0.a * source1.a; break;                          // Modulate
+				case 2u: result.a = min(1.0, source0.a + source1.a); break;                // Add
+				case 3u: result.a = clamp(source0.a + source1.a - 0.5, 0.0, 1.0); break;   // Add signed
+				case 4u: result.a = mix(source1.a, source0.a, source2.a); break;           // Interpolate
+				case 5u: result.a = max(0.0, source0.a - source1.a); break;                // Subtract
+				case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break;    // Multiply then add
+				case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break;  // Add then multiply
+				default: break;
+			}
+		}
+
+		result.rgb *= float(1 << (u_textureEnvScale[tev_id] & 3u));
+		result.a   *= float(1 << ((u_textureEnvScale[tev_id] >> 16) & 3u));
+
+		return result;
+	}
 
 	void main() {
-		if ((u_textureConfig & 1u) != 0) { // Render texture 0 if enabled
-			fragColour = texture(u_tex0, tex0_UVs);
-		} else {
-			fragColour = colour;
+		vec2 tex2UV = (u_textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
+
+		// TODO: what do invalid sources and disabled textures read as?
+		// And what does the "previous combiner" source read initially?
+		tevSources[0] = v_colour; // Primary/vertex color
+		tevSources[1] = vec4(vec3(0.5), 1.0); // Fragment primary color
+		tevSources[2] = vec4(vec3(0.5), 1.0); // Fragment secondary color
+		if ((u_textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
+		if ((u_textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
+		if ((u_textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
+		tevSources[13] = vec4(0.0); // Previous buffer
+		tevSources[15] = vec4(0.0); // Previous combiner
+
+		tevNextPreviousBuffer = v_textureEnvBufferColor;
+
+		for (int i = 0; i < 6; i++) {
+			tevSources[14] = v_textureEnvColor[i]; // Constant color
+			tevSources[15] = tevCalculateCombiner(i);
+			tevSources[13] = tevNextPreviousBuffer;
+
+			if (i < 4) {
+				if ((u_textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
+					tevNextPreviousBuffer.rgb = tevSources[15].rgb;
+				}
+
+				if ((u_textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
+					tevNextPreviousBuffer.a = tevSources[15].a;
+				}
+			}
+		}
+
+		fragColour = tevSources[15];
+
+		if (tevUnimplementedSourceFlag) {
+			 // fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 		}
 
 		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
@@ -119,10 +295,10 @@ const char* displayVertexShader = R"(
 				vec2(1.0, 0.0), // Bottom-right
 				vec2(0.0, 1.0), // Top-left
 				vec2(0.0, 0.0)  // Bottom-left
-        );
+	);
 
 		gl_Position = positions[gl_VertexID];
-        UV = texcoords[gl_VertexID];
+	UV = texcoords[gl_VertexID];
 	}
 )";
 
@@ -179,16 +355,28 @@ void Renderer::initGraphicsContext() {
 	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
 	texUnitConfigLoc = OpenGL::uniformLocation(triangleProgram, "u_textureConfig");
 
+	textureEnvSourceLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvSource");
+	textureEnvOperandLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvOperand");
+	textureEnvCombinerLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvCombiner");
+	textureEnvColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvColor");
+	textureEnvScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvScale");
+	textureEnvUpdateBufferLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvUpdateBuffer");
+	textureEnvBufferColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvBufferColor");
+
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
 	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
-	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0); // Init sampler object
+
+	// Init sampler objects
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex1"), 1);
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex2"), 2);
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
 	displayProgram.create({ vertDisplay, fragDisplay });
-	displayProgram.use();
 
+	displayProgram.use();
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
@@ -202,21 +390,48 @@ void Renderer::initGraphicsContext() {
 	// Colour attribute
 	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, colour));
 	vao.enableAttribute(1);
-	// UV attribute
-	vao.setAttributeFloat<float>(2, 2, sizeof(Vertex), offsetof(Vertex, UVs));
+	// UV 0 attribute
+	vao.setAttributeFloat<float>(2, 2, sizeof(Vertex), offsetof(Vertex, texcoord0));
 	vao.enableAttribute(2);
+	// UV 1 attribute
+	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, texcoord1));
+	vao.enableAttribute(3);
+	// UV 0 W-component attribute
+	vao.setAttributeFloat<float>(4, 1, sizeof(Vertex), offsetof(Vertex, texcoord0_w));
+	vao.enableAttribute(4);
+	// UV 2 attribute
+	vao.setAttributeFloat<float>(5, 2, sizeof(Vertex), offsetof(Vertex, texcoord2));
+	vao.enableAttribute(5);
 
 	dummyVBO.create();
 	dummyVAO.create();
+
+	// Create texture and framebuffer for the 3DS screen
+	const u32 screenTextureWidth = 2 * 400; // Top screen is 400 pixels wide, bottom is 320
+	const u32 screenTextureHeight = 2 * 240; // Both screens are 240 pixels tall
+
+	auto prevTexture = OpenGL::getTex2D();
+	screenTexture.create(screenTextureWidth, screenTextureHeight, GL_RGBA8);
+	screenTexture.bind();
+	screenTexture.setMinFilter(OpenGL::Linear);
+	screenTexture.setMagFilter(OpenGL::Linear);
+	glBindTexture(GL_TEXTURE_2D, prevTexture);
+
+	screenFramebuffer.createWithDrawTexture(screenTexture);
+	screenFramebuffer.bind(OpenGL::DrawAndReadFramebuffer);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		Helpers::panic("Incomplete framebuffer");
+
+	// TODO: This should not clear the framebuffer contents. It should load them from VRAM.
+	GLint oldViewport[4];
+	glGetIntegerv(GL_VIEWPORT, oldViewport);
+	OpenGL::setViewport(screenTextureWidth, screenTextureHeight);
+	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
+	OpenGL::clearColor();
+	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
+
 	reset();
-}
-
-void Renderer::getGraphicsContext() {
-	OpenGL::disableScissor();
-
-	vbo.bind();
-	vao.bind();
-	triangleProgram.use();
 }
 
 // Set up the OpenGL blending context to match the emulated PICA
@@ -264,12 +479,90 @@ void Renderer::setupBlending() {
 	}
 }
 
+void Renderer::setupTextureEnvState() {
+	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
+
+	static constexpr std::array<u32, 6> ioBases = {
+	  PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source,
+	  PICA::InternalRegs::TexEnv2Source, PICA::InternalRegs::TexEnv3Source,
+	  PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source
+	};
+
+	u32 textureEnvSourceRegs[6];
+	u32 textureEnvOperandRegs[6];
+	u32 textureEnvCombinerRegs[6];
+	u32 textureEnvColourRegs[6];
+	u32 textureEnvScaleRegs[6];
+
+	for (int i = 0; i < 6; i++) {
+		const u32 ioBase = ioBases[i];
+
+		textureEnvSourceRegs[i] = regs[ioBase];
+		textureEnvOperandRegs[i] = regs[ioBase + 1];
+		textureEnvCombinerRegs[i] = regs[ioBase + 2];
+		textureEnvColourRegs[i] = regs[ioBase + 3];
+		textureEnvScaleRegs[i] = regs[ioBase + 4];
+	}
+
+	glUniform1uiv(textureEnvSourceLoc, 6, textureEnvSourceRegs);
+	glUniform1uiv(textureEnvOperandLoc, 6, textureEnvOperandRegs);
+	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
+	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
+	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
+	glUniform1ui(textureEnvUpdateBufferLoc, regs[PICA::InternalRegs::TexEnvUpdateBuffer]);
+	glUniform1ui(textureEnvBufferColorLoc, regs[PICA::InternalRegs::TexEnvBufferColor]);
+}
+
+void Renderer::bindTexturesToSlots() {
+	static constexpr std::array<u32, 3> ioBases = {
+	  PICA::InternalRegs::Tex0BorderColor, PICA::InternalRegs::Tex1BorderColor, PICA::InternalRegs::Tex2BorderColor
+	};
+
+	for (int i = 0; i < 3; i++) {
+		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
+			continue;
+		}
+
+		const size_t ioBase = ioBases[i];
+
+		const u32 dim = regs[ioBase + 1];
+		const u32 config = regs[ioBase + 2];
+		const u32 height = dim & 0x7ff;
+		const u32 width = getBits<16, 11>(dim);
+		const u32 addr = (regs[ioBase + 4] & 0x0FFFFFFF) << 3;
+		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
+
+		glActiveTexture(GL_TEXTURE0 + i);
+		Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+		OpenGL::Texture tex = getTexture(targetTex);
+		tex.bind();
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+
+	// Update the texture unit configuration uniform if it changed
+	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
+	if (oldTexUnitConfig != texUnitConfig) {
+		oldTexUnitConfig = texUnitConfig;
+		glUniform1ui(texUnitConfigLoc, texUnitConfig);
+	}
+}
+
 void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
-		OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
+	  OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
 	};
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
+
+    // TODO: We should implement a GL state tracker that tracks settings like scissor, blending, bound program, etc
+    // This way if we attempt to eg do multiple glEnable(GL_BLEND) calls in a row, it will say "Oh blending is already enabled"
+    // And not actually perform the very expensive driver call for it
+	OpenGL::disableScissor();
+
+	vbo.bind();
+	vao.bind();
+	triangleProgram.use();
 
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICA::InternalRegs::AlphaTestConfig];
@@ -313,26 +606,8 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 		glUniform1i(depthmapEnableLoc, depthMapEnable);
 	}
 
-	// Hack for rendering texture 1
-	if (regs[0x80] & 1) {
-		const u32 dim = regs[0x82];
-		const u32 config = regs[0x83];
-		const u32 height = dim & 0x7ff;
-		const u32 width = getBits<16, 11>(dim);
-		const u32 addr = (regs[0x85] & 0x0FFFFFFF) << 3;
-		const u32 format = regs[0x8E] & 0xF;
-
-		Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
-		OpenGL::Texture tex = getTexture(targetTex);
-		tex.bind();
-	}
-
-	// Update the texture unit configuration uniform if it changed
-	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
-	if (oldTexUnitConfig != texUnitConfig) {
-		oldTexUnitConfig = texUnitConfig;
-		glUniform1ui(texUnitConfigLoc, texUnitConfig);
-	}
+	setupTextureEnvState();
+	bindTexturesToSlots();
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
@@ -366,20 +641,11 @@ constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 // Quick hack to display top screen for now
 void Renderer::display() {
-	OpenGL::disableBlend();
-	OpenGL::disableDepth();
 	OpenGL::disableScissor();
 
-	OpenGL::bindScreenFramebuffer();
-	colourBufferCache[0].texture.bind();
-
-	displayProgram.use();
-
-	dummyVAO.bind();
-	OpenGL::setClearColor(0.0, 0.0, 1.0, 1.0); // Clear screen colour
-	OpenGL::clearColor();
-	OpenGL::setViewport(0, 240, 400, 240); // Actually draw our 3DS screen
-	OpenGL::draw(OpenGL::TriangleStrip, 4);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
+	glBlitFramebuffer(0, 0, 400, 480, 0, 0, 400, 480, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 }
 
 void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -455,4 +721,28 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 
 	const u32 outputWidth = outputSize & 0xffff;
 	const u32 outputGap = outputSize >> 16;
+
+	auto framebuffer = colourBufferCache.findFromAddress(inputAddr);
+	// If there's a framebuffer at this address, use it. Otherwise go back to our old hack and display framebuffer 0
+	// Displays are hard I really don't want to try implementing them because getting a fast solution is terrible
+	OpenGL::Texture& tex = framebuffer.has_value() ? framebuffer.value().get().texture : colourBufferCache[0].texture;
+
+	tex.bind();
+	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
+
+	OpenGL::disableBlend();
+	OpenGL::disableDepth();
+	OpenGL::disableScissor();
+	displayProgram.use();
+
+	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
+	// We consider output gap == 320 to mean bottom, and anything else to mean top
+	if (outputGap == 320) {
+		OpenGL::setViewport(40, 0, 320, 240); // Bottom screen viewport
+	} else {
+		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
+	}
+
+	dummyVAO.bind();
+	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
 }

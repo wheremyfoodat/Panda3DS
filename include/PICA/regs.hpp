@@ -13,9 +13,17 @@ namespace PICA {
 			DepthScale = 0x4D,
 			DepthOffset = 0x4E,
 			ShaderOutputCount = 0x4F,
+			ShaderOutmap0 = 0x50,
 
 			DepthmapEnable = 0x6D,
+
+			// Texture registers
 			TexUnitCfg = 0x80,
+			Tex0BorderColor = 0x81,
+			Tex1BorderColor = 0x91,
+			Tex2BorderColor = 0x99,
+			TexEnvUpdateBuffer = 0xE0,
+			TexEnvBufferColor = 0xFD,
 
 			// clang-format off
 			#define defineTexEnv(index, offset)   \

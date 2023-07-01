@@ -2,6 +2,7 @@
 #include <array>
 #include <span>
 
+#include "PICA/float_types.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "opengl.hpp"
@@ -15,7 +16,11 @@ class GPU;
 struct Vertex {
 	OpenGL::vec4 position;
 	OpenGL::vec4 colour;
-	OpenGL::vec2 UVs;
+	OpenGL::vec2 texcoord0;
+	OpenGL::vec2 texcoord1;
+	Floats::f24 texcoord0_w;
+	u32 padding; // pad so that texcoord2 is 64-bit aligned
+	OpenGL::vec2 texcoord2;
 };
 
 class Renderer {
@@ -27,6 +32,15 @@ class Renderer {
 	OpenGL::VertexBuffer vbo;
 	GLint alphaControlLoc = -1;
 	GLint texUnitConfigLoc = -1;
+
+	// TEV configuration uniform locations
+	GLint textureEnvSourceLoc = -1;
+	GLint textureEnvOperandLoc = -1;
+	GLint textureEnvCombinerLoc = -1;
+	GLint textureEnvColorLoc = -1;
+	GLint textureEnvScaleLoc = -1;
+	GLint textureEnvUpdateBufferLoc = -1;
+	GLint textureEnvBufferColorLoc = -1;
 
 	// Depth configuration uniform locations
 	GLint depthOffsetLoc = -1;
@@ -60,12 +74,17 @@ class Renderer {
 	static constexpr u32 regNum = 0x300;  // Number of internal PICA registers
 	const std::array<u32, regNum>& regs;
 
+	OpenGL::Texture screenTexture;
+	OpenGL::Framebuffer screenFramebuffer;
+
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();
 	void bindDepthBuffer();
+	void setupTextureEnvState();
+	void bindTexturesToSlots();
 
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}

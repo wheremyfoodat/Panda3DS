@@ -1,4 +1,5 @@
 #include "PICA/shader_unit.hpp"
+#include "cityhash.hpp"
 
 void ShaderUnit::reset() {
 	vs.reset();
@@ -30,4 +31,7 @@ void PICAShader::reset() {
 	addrRegister.x() = 0;
 	addrRegister.y() = 0;
 	loopCounter = 0;
+
+	codeHashDirty = true;
+	opdescHashDirty = true;
 }

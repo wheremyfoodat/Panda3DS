@@ -62,10 +62,9 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 void Emulator::run() {
-	while (running) {
-		gpu.getGraphicsContext();  // Give the GPU a rendering context
-		runFrame();                // Run 1 frame of instructions
-		gpu.display();             // Display graphics
+    while (running) {
+        runFrame(); // Run 1 frame of instructions
+        gpu.display(); // Display graphics
 
 		ServiceManager& srv = kernel.getServiceManager();
 

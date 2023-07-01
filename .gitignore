@@ -8,6 +8,7 @@
 
 #Clion Files
 .idea/
+cmake-build-*/
 
 Debug/
 Release/
