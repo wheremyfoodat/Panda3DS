@@ -14,6 +14,7 @@ project(Alber)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
+option(ENABLE_LTO "Enable link-time optimization" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -158,8 +159,9 @@ source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 ${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 
-# Uncomment to enable LTO
-# set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+if(ENABLE_LTO)
+  set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad cryptopp)
 
