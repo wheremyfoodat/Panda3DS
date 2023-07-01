@@ -23,12 +23,15 @@ void PICAShader::run() {
 				break;
 			case ShaderOpcodes::DP3: dp3(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
+			case ShaderOpcodes::DPHI: dphi(instruction); break;
 			case ShaderOpcodes::END: return; // Stop running shader
+			case ShaderOpcodes::EX2: ex2(instruction); break;
 			case ShaderOpcodes::FLR: flr(instruction); break;
 			case ShaderOpcodes::IFC: ifc(instruction); break;
 			case ShaderOpcodes::IFU: ifu(instruction); break;
 			case ShaderOpcodes::JMPC: jmpc(instruction); break;
 			case ShaderOpcodes::JMPU: jmpu(instruction); break;
+			case ShaderOpcodes::LG2: lg2(instruction); break;
 			case ShaderOpcodes::LOOP: loop(instruction); break;
 			case ShaderOpcodes::MAX: max(instruction); break;
 			case ShaderOpcodes::MIN: min(instruction); break;
@@ -325,6 +328,29 @@ void PICAShader::dp4(u32 instruction) {
 	}
 }
 
+void PICAShader::dphi(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	const u32 src1 = getBits<14, 5>(instruction);
+	u32 src2 = getBits<7, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	src2 = getIndexedSource(src2, idx);
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+	// srcVec1[3] is supposed to be replaced with 1.0 in the dot product, so we just add srcVec2[3] without multiplying it with anything
+	f24 dot = srcVec1[0] * srcVec2[0] + srcVec1[1] * srcVec2[1] + srcVec1[2] * srcVec2[2] + srcVec2[3];
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = dot;
+		}
+	}
+}
+
 void PICAShader::rcp(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
@@ -356,6 +382,46 @@ void PICAShader::rsq(u32 instruction) {
 
 	vec4f& destVector = getDest(dest);
 	f24 res = f24::fromFloat32(1.0f / std::sqrt(srcVec1[0].toFloat32()));
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = res;
+		}
+	}
+}
+
+void PICAShader::ex2(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	src = getIndexedSource(src, idx);
+	vec4f srcVec = getSourceSwizzled<1>(src, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+	f24 res = f24::fromFloat32(std::exp2(srcVec[0].toFloat32()));
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = res;
+		}
+	}
+}
+
+void PICAShader::lg2(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	src = getIndexedSource(src, idx);
+	vec4f srcVec = getSourceSwizzled<1>(src, operandDescriptor);
+
+	vec4f& destVector = getDest(dest);
+	f24 res = f24::fromFloat32(std::log2(srcVec[0].toFloat32()));
 
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {

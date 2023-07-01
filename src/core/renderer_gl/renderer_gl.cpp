@@ -32,11 +32,11 @@ const char* vertexShader = R"(
 	vec4 abgr8888ToVec4(uint abgr) {
 		const float scale = 1.0 / 255.0;
 
-		return vec4(
-			scale * float(abgr & 0xffu),
-			scale * float((abgr >> 8) & 0xffu),
-			scale * float((abgr >> 16) & 0xffu),
-			scale * float(abgr >> 24)
+		return scale * vec4(
+			float(abgr & 0xffu),
+			float((abgr >> 8) & 0xffu),
+			float((abgr >> 16) & 0xffu),
+			float(abgr >> 24)
 		);
 	}
 

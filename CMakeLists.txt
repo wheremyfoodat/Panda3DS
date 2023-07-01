@@ -13,6 +13,8 @@ endif()
 project(Alber)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
+
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${FMT_INCLUDE_DIR})
@@ -21,7 +23,9 @@ include_directories(third_party/elfio/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cryptopp/)
-include_directories(third_party/result/include/)
+include_directories(third_party/cityhash/include)
+include_directories(third_party/result/include)
+include_directories(third_party/xxhash/include)
 
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(SDL_MAIN_HANDLED)
@@ -46,6 +50,10 @@ add_subdirectory(third_party/cryptopp)
 # Check for x64
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
+    add_subdirectory(third_party/xbyak) # Add xbyak submodule for x86 JITs
+    include_directories(third_party/xbyak)
+    add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
+    add_compile_definitions(PANDA3DS_X64_HOST)
 else()
     set(HOST_X64 FALSE)
 endif()
@@ -53,6 +61,7 @@ endif()
 # Check for arm64
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
     set(HOST_ARM64 TRUE)
+    add_compile_definitions(PANDA3DS_ARM64_HOST)
 else()
     set(HOST_ARM64 FALSE)
 endif()
@@ -67,9 +76,10 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
                  src/core/memory.cpp
 )
+set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
                         src/core/kernel/memory_management.cpp src/core/kernel/ports.cpp
                         src/core/kernel/events.cpp src/core/kernel/threads.cpp
@@ -87,8 +97,10 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
-                      src/core/PICA/shader_interpreter.cpp
+                      src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
+                      src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
 )
+
 set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp)
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/lz77.cpp)
@@ -114,9 +126,12 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/fs/archive_ext_save_data.hpp include/services/shared_font.hpp include/fs/archive_ncch.hpp
                  include/renderer_gl/textures.hpp include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
-                 include/system_models.hpp include/services/dlp_srvr.hpp include/result/result.hpp
+                 include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
+                 include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp include/PICA/dynapica/shader_rec.hpp
+                 include/PICA/dynapica/shader_rec_emitter_x64.hpp include/PICA/pica_hash.hpp include/result/result.hpp
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
+                 include/crypto/aes_engine.hpp include/metaprogramming.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -124,10 +139,14 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/imgui/imgui_tables.cpp
                              third_party/imgui/imgui_widgets.cpp
                              third_party/imgui/imgui_demo.cpp
+
+                             third_party/cityhash/cityhash.cpp
+                             third_party/xxhash/xxhash.c
 )
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
+source_group("Source Files\\Core\\Crypto" FILES ${CRYPTO_SOURCE_FILES})
 source_group("Source Files\\Core\\Filesystem" FILES ${FS_SOURCE_FILES})
 source_group("Source Files\\Core\\Kernel" FILES ${KERNEL_SOURCE_FILES})
 source_group("Source Files\\Core\\Loader" FILES ${LOADER_SOURCE_FILES})
@@ -136,6 +155,14 @@ source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
 source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
-add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
+add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 ${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad)
+
+# Uncomment to enable LTO
+# set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad cryptopp)
+
+if(GPU_DEBUG_INFO)
+  target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
+endif()

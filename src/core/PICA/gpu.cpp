@@ -55,6 +55,7 @@ GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
 void GPU::reset() {
 	regs.fill(0);
 	shaderUnit.reset();
+	shaderJIT.reset();
 	std::memset(vram, 0, vramSize);
 
 	totalAttribCount = 0;
@@ -76,17 +77,32 @@ void GPU::reset() {
 	renderer.reset();
 }
 
+// Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
+// And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
-	if (indexed)
-		drawArrays<true>();
-	else
-		drawArrays<false>();
+	constexpr bool shaderJITEnabled = false; // TODO: Make a configurable option
+
+	if (indexed) {
+		if constexpr (ShaderJIT::isAvailable() && shaderJITEnabled)
+			drawArrays<true, true>();
+		else
+			drawArrays<true, false>();
+	} else {
+		if constexpr (ShaderJIT::isAvailable() && shaderJITEnabled)
+			drawArrays<false, true>();
+		else
+			drawArrays<false, false>();
+	}
 }
 
 static std::array<Vertex, Renderer::vertexBufferSize> vertices;
 
-template <bool indexed>
+template <bool indexed, bool useShaderJIT>
 void GPU::drawArrays() {
+	if constexpr (useShaderJIT) {
+		shaderJIT.prepare(shaderUnit.vs);
+	}
+
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
 	const u32 vertexBase = ((regs[PICA::InternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
@@ -261,9 +277,13 @@ void GPU::drawArrays() {
 			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
 		}
 		
-		shaderUnit.vs.run();
-		OutputVertex out;
+        if constexpr (useShaderJIT) {
+			shaderJIT.run(shaderUnit.vs);
+		} else {
+			shaderUnit.vs.run();
+		}
 
+		OutputVertex out;
 		// Map shader outputs to fixed function properties
 		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 		for (int i = 0; i < totalShaderOutputs; i++) {

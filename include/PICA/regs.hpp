@@ -22,14 +22,26 @@ namespace PICA {
 			Tex0BorderColor = 0x81,
 			Tex1BorderColor = 0x91,
 			Tex2BorderColor = 0x99,
-			TexEnv0Source = 0xC0,
-			TexEnv1Source = 0xC8,
-			TexEnv2Source = 0xD0,
-			TexEnv3Source = 0xD8,
 			TexEnvUpdateBuffer = 0xE0,
-			TexEnv4Source = 0xF0,
-			TexEnv5Source = 0xF8,
 			TexEnvBufferColor = 0xFD,
+
+			// clang-format off
+			#define defineTexEnv(index, offset)   \
+			TexEnv##index##Source   = offset + 0, \
+			TexEnv##index##Operand  = offset + 1, \
+			TexEnv##index##Combiner = offset + 2, \
+			TexEnv##index##Color    = offset + 3, \
+			TexEnv##index##Scale    = offset + 4,
+
+			defineTexEnv(0, 0xC0)
+			defineTexEnv(1, 0xC8)
+			defineTexEnv(2, 0xD0)
+			defineTexEnv(3, 0xD8)
+			defineTexEnv(4, 0xF0)
+			defineTexEnv(5, 0xF8)
+
+			#undef defineTexEnv
+			// clang-format on
 
 			// Framebuffer registers
 			ColourOperation = 0x100,

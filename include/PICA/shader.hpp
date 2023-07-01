@@ -5,6 +5,7 @@
 #include "helpers.hpp"
 #include "opengl.hpp"
 #include "PICA/float_types.hpp"
+#include "PICA/pica_hash.hpp"
 
 enum class ShaderType {
 	Vertex, Geometry
@@ -15,6 +16,11 @@ namespace ShaderOpcodes {
 		ADD = 0x00,
 		DP3 = 0x01,
 		DP4 = 0x02,
+		DPH = 0x03,
+		DST = 0x04,
+		EX2 = 0x05,
+		LG2 = 0x06,
+		LIT = 0x07,
 		MUL = 0x08,
 		SLT = 0x0A,
 		FLR = 0x0B,
@@ -24,6 +30,8 @@ namespace ShaderOpcodes {
 		RSQ = 0x0F,
 		MOVA = 0x12,
 		MOV = 0x13,
+		DPHI = 0x18,
+		DSTI = 0x19,
 		SGEI = 0x1A,
 		SLTI = 0x1B,
 		NOP = 0x21,
@@ -34,6 +42,8 @@ namespace ShaderOpcodes {
 		IFU = 0x27,
 		IFC = 0x28,
 		LOOP = 0x29,
+		EMIT = 0x2A,
+		SETEMIT = 0x2B,
 		JMPC = 0x2C,
 		JMPU = 0x2D,
 		CMP1 = 0x2E, // Both of these instructions are CMP
@@ -42,6 +52,7 @@ namespace ShaderOpcodes {
 	};
 }
 
+// Note: All PICA f24 vec4 registers must have the alignas(16) specifier to make them easier to access in SSE/NEON code in the JIT
 class PICAShader {
 	using f24 = Floats::f24;
 	using vec4f = OpenGL::Vector<f24, 4>;
@@ -71,8 +82,22 @@ class PICAShader {
 	bool f32UniformTransfer = false; // Are we transferring an f32 uniform or an f24 uniform?
 
 	std::array<u32, 4> floatUniformBuffer; // Buffer for temporarily caching float uniform data
+
+public:
+	// These are placed close to the temp registers and co because it helps the JIT generate better code
+	u32 entrypoint = 0; // Initial shader PC
+	u32 boolUniform;
+	std::array<OpenGL::Vector<u8, 4>, 4> intUniforms;
+	alignas(16) std::array<vec4f, 96> floatUniforms;
+
+	alignas(16) std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
+	alignas(16) std::array<vec4f, 16> inputs; // Attributes passed to the shader
+	alignas(16) std::array<vec4f, 16> outputs;
+	alignas(16) vec4f dummy = vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() }); // Dummy register used by the JIT
+
+protected:
 	std::array<u32, 128> operandDescriptors;
-	std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
+	alignas(16) std::array<vec4f, 16> tempRegisters; // General purpose registers the shader can use for temp values
 	OpenGL::Vector<s32, 2> addrRegister; // Address register
 	bool cmpRegister[2]; // Comparison registers where the result of CMP is stored in
 	u32 loopCounter;
@@ -85,13 +110,28 @@ class PICAShader {
 	std::array<Loop, 4> loopInfo;
 	std::array<ConditionalInfo, 8> conditionalInfo;
 	std::array<CallInfo, 4> callInfo;
-
 	ShaderType type;
+
+	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
+	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
+	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
+	using Hash = PICAHash::HashType;
+
+	Hash lastCodeHash = 0; // Last hash computed for the shader code (Used for the JIT caching mechanism)
+	Hash lastOpdescHash = 0;  // Last hash computed for the operand descriptors (Also used for the JIT)
+
+	bool codeHashDirty = false;
+	bool opdescHashDirty = false;
+
+	// Add these as friend classes for the JIT so it has access to all important state
+	friend class ShaderJIT;
+	friend class ShaderEmitter;
 
 	vec4f getSource(u32 source);
 	vec4f& getDest(u32 dest);
 
-	// Shader opcodes
+private:
+	// Interpreter functions for the various shader functions
 	void add(u32 instruction);
 	void call(u32 instruction);
 	void callc(u32 instruction);
@@ -99,11 +139,14 @@ class PICAShader {
 	void cmp(u32 instruction);
 	void dp3(u32 instruction);
 	void dp4(u32 instruction);
+	void dphi(u32 instruction);
+	void ex2(u32 instruction);
 	void flr(u32 instruction);
 	void ifc(u32 instruction);
 	void ifu(u32 instruction);
 	void jmpc(u32 instruction);
 	void jmpu(u32 instruction);
+	void lg2(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
 	void madi(u32 instruction);
@@ -127,15 +170,16 @@ class PICAShader {
 		u32 compSwizzle;
 		bool negate;
 
+		using namespace Helpers;
 		if constexpr (sourceIndex == 1) { // SRC1
-			negate = (Helpers::getBit<4>(opDescriptor)) != 0;
-			compSwizzle = Helpers::getBits<5, 8>(opDescriptor);
+			negate = (getBit<4>(opDescriptor)) != 0;
+			compSwizzle = getBits<5, 8>(opDescriptor);
 		} else if constexpr (sourceIndex == 2) { // SRC2
-			negate = (Helpers::getBit<13>(opDescriptor)) != 0;
-			compSwizzle = Helpers::getBits<14, 8>(opDescriptor);
+			negate = (getBit<13>(opDescriptor)) != 0;
+			compSwizzle = getBits<14, 8>(opDescriptor);
 		} else if constexpr (sourceIndex == 3) { // SRC3
-			negate = (Helpers::getBit<22>(opDescriptor)) != 0;
-			compSwizzle = Helpers::getBits<23, 8>(opDescriptor);
+			negate = (getBit<22>(opDescriptor)) != 0;
+			compSwizzle = getBits<23, 8>(opDescriptor);
 		}
 
 		// Iterate through every component of the swizzled vector in reverse order
@@ -169,17 +213,9 @@ class PICAShader {
 	bool isCondTrue(u32 instruction);
 
 public:
-	std::array<u32, 4096> loadedShader; // Currently loaded & active shader
-	std::array<u32, 4096> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
-
-	u32 entrypoint = 0; // Initial shader PC
-	u32 boolUniform;
-	std::array<OpenGL::Vector<u8, 4>, 4> intUniforms;
-	std::array<vec4f, 96> floatUniforms;
-
-	std::array<vec4f, 16> fixedAttributes; // Fixed vertex attributes
-	std::array<vec4f, 16> inputs; // Attributes passed to the shader
-	std::array<vec4f, 16> outputs;
+	static constexpr size_t maxInstructionCount = 4096;
+	std::array<u32, maxInstructionCount> loadedShader; // Currently loaded & active shader
+	std::array<u32, maxInstructionCount> bufferedShader; // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
 
 	PICAShader(ShaderType type) : type(type) {}
 
@@ -200,11 +236,15 @@ public:
 		if (bufferIndex >= 4095) Helpers::panic("o no, shader upload overflew");
 		bufferedShader[bufferIndex++] = word;
 		bufferIndex &= 0xfff;
+
+		codeHashDirty = true; // Signal the JIT if necessary that the program hash has potentially changed
 	}
 
 	void uploadDescriptor(u32 word) {
 		operandDescriptors[opDescriptorIndex++] = word;
 		opDescriptorIndex &= 0x7f;
+
+		opdescHashDirty = true; // Signal the JIT if necessary that the program hash has potentially changed
 	}
 
 	void setFloatUniformIndex(u32 word) {
@@ -237,13 +277,18 @@ public:
 	}
 
 	void uploadIntUniform(int index, u32 word) {
+		using namespace Helpers;
+
 		auto& u = intUniforms[index];
 		u.x() = word & 0xff;
-		u.y() = Helpers::getBits<8, 8>(word);
-		u.z() = Helpers::getBits<16, 8>(word);
-		u.w() = Helpers::getBits<24, 8>(word);
+		u.y() = getBits<8, 8>(word);
+		u.z() = getBits<16, 8>(word);
+		u.w() = getBits<24, 8>(word);
 	}
 
 	void run();
 	void reset();
+
+	Hash getCodeHash();
+	Hash getOpdescHash();
 };

@@ -6,6 +6,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_unit.hpp"
+#include "PICA/dynapica/shader_rec.hpp"
 #include "renderer_gl/renderer_gl.hpp"
 
 class GPU {
@@ -15,6 +16,8 @@ class GPU {
 
 	Memory& mem;
 	ShaderUnit shaderUnit;
+	ShaderJIT shaderJIT; // Doesn't do anything if JIT is disabled or not supported
+
 	u8* vram = nullptr;
 	MAKE_LOG_FUNCTION(log, gpuLogger)
 
@@ -28,7 +31,7 @@ class GPU {
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
 
-	template <bool indexed>
+	template <bool indexed, bool useShaderJIT>
 	void drawArrays();
 
 	// Silly method of avoiding linking problems. TODO: Change to something less silly
