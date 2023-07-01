@@ -3,6 +3,7 @@
 #include "resource_limits.hpp"
 #include <cassert>
 #include <chrono> // For time since epoch
+#include <ctime>
 
 using namespace KernelMemoryTypes;
 
@@ -424,9 +425,19 @@ void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
 u64 Memory::timeSince3DSEpoch() {
 	using namespace std::chrono;
 
-	// ms since Jan 1 1970
-	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-	// ms between Jan 1 1900 and Jan 1 1970 (2208988800 seconds elapsed between the two)
+	std::time_t rawTime = std::time(nullptr); // Get current UTC time
+	auto localTime = std::localtime(&rawTime); // Convert to local time
+
+	bool daylightSavings = localTime->tm_isdst; // Get if time includes DST
+	localTime = std::gmtime(&rawTime);
+
+	// Use gmtime + mktime to calculate difference between local time and UTC
+	auto timezoneDifference = rawTime - std::mktime(localTime);
+	if (daylightSavings) {
+		timezoneDifference += 60ull * 60ull; // Add 1 hour (60 seconds * 60 minutes)
+	}
+
+	milliseconds ms = duration_cast<milliseconds>(seconds(rawTime + timezoneDifference));
 	constexpr u64 offset = 2208988800ull * 1000;
 	return ms.count() + offset;
 }
