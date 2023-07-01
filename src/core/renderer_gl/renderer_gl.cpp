@@ -189,10 +189,12 @@ const char* fragmentShader = R"(
 
 		return result;
 	}
+
 	void calcLighting(out vec4 primary_color, out vec4 secondary_color){
-		primary_color = vec4(vec3(0.0),1.0);
-		secondary_color = vec4(vec3(0.0),1.0);
+		primary_color = vec4(vec3(0.5) ,1.0);
+		secondary_color = vec4(vec3(0.5) ,1.0);
 	}
+
 	void main() {
 		vec2 tex2UV = (u_textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
 

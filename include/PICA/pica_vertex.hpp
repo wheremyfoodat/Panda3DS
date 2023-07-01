@@ -28,7 +28,8 @@ struct PicaVertex {
 	};
 	PicaVertex() {}
 };
-//Float is used here instead of Floats::f24 to ensure that Floats::f24 is properly sized for direct interpretations as a float by the render backend
+
+// Float is used here instead of Floats::f24 to ensure that Floats::f24 is properly sized for direct interpretations as a float by the render backend
 #define ASSERT_POS(member, pos) static_assert(offsetof(PicaVertex, s.member) == pos * sizeof(float), "PicaVertex struct is broken!");
 
 ASSERT_POS(positions, 0)

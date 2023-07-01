@@ -247,7 +247,7 @@ void GPU::drawArrays() {
 			shaderUnit.vs.run();
 		}
 
-		PicaVertex &out=vertices[i];
+		PicaVertex& out = vertices[i];
 		// Map shader outputs to fixed function properties
 		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 		for (int i = 0; i < totalShaderOutputs; i++) {
