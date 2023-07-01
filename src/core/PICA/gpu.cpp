@@ -80,13 +80,15 @@ void GPU::reset() {
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
+	constexpr bool shaderJITEnabled = false; // TODO: Make a configurable option
+
 	if (indexed) {
-		if constexpr (ShaderJIT::isAvailable())
+		if constexpr (ShaderJIT::isAvailable() && shaderJITEnabled)
 			drawArrays<true, true>();
 		else
 			drawArrays<true, false>();
 	} else {
-		if constexpr (ShaderJIT::isAvailable())
+		if constexpr (ShaderJIT::isAvailable() && shaderJITEnabled)
 			drawArrays<false, true>();
 		else
 			drawArrays<false, false>();
