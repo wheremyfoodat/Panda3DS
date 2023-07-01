@@ -111,11 +111,11 @@ void GPU::drawArrays() {
 	// Configures the type of primitive and the number of vertex shader outputs
 	const u32 primConfig = regs[PICA::InternalRegs::PrimitiveConfig];
 	const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(primConfig));
-	if (primType == PICA::PrimType::TriangleFan) Helpers::panic("[PICA] Tried to draw unimplemented shape %d\n", primType);
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
 	if ((primType == PICA::PrimType::TriangleList && vertexCount % 3) ||
-		(primType == PICA::PrimType::TriangleStrip && vertexCount < 3)) {
+		(primType == PICA::PrimType::TriangleStrip && vertexCount < 3) ||
+		(primType == PICA::PrimType::TriangleFan && vertexCount < 3)) {
 		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
 	}
 
