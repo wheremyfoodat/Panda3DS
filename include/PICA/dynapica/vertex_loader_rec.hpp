@@ -4,7 +4,7 @@
 #include "x64_regs.hpp"
 
 // Recompiler that takes the current vertex attribute configuration, ie the format of vertices (VAO in OpenGL) and emits optimized
-// code in our CPU's native architecture for loading vertices
+// code in our CPU's native architecture for loading vertices. Unimplemented at the moment, we've only got a skeleton of it here for later
 
 class VertexLoaderJIT {
 	using PICARegs = const std::array<u32, 0x300>&;
