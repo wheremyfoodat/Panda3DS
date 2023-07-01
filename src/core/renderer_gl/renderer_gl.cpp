@@ -20,9 +20,11 @@ const char* vertexShader = R"(
 	layout (location = 6) in vec3  a_view;
 	layout (location = 7) in vec2  a_texcoord2;
 
+	out vec4 v_quaternion;
 	out vec4 v_colour;
 	out vec3 v_texcoord0;
 	out vec2 v_texcoord1;
+	out vec3 v_view;
 	out vec2 v_texcoord2;
 	flat out vec4 v_textureEnvColor[6];
 	flat out vec4 v_textureEnvBufferColor;
@@ -30,6 +32,12 @@ const char* vertexShader = R"(
 	// TEV uniforms
 	uniform uint u_textureEnvColor[6];
 	uniform uint u_textureEnvBufferColor;
+	uniform uint u_picaRegs[0x200-0x47];
+
+	//Helper so that the implementation of u_pica_regs can be changed later
+	uint readPicaReg(uint reg_addr){
+		return u_picaRegs[reg_addr-0x47];
+	}
 
 	vec4 abgr8888ToVec4(uint abgr) {
 		const float scale = 1.0 / 255.0;
@@ -50,6 +58,8 @@ const char* vertexShader = R"(
 		v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
 		v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
 		v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+		v_quaternion = a_quaternion;
+		v_view = a_view; 
 
 		for (int i = 0; i < 6; i++) {
 			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
@@ -62,9 +72,11 @@ const char* vertexShader = R"(
 const char* fragmentShader = R"(
 	#version 410 core
 	
+	in vec4 v_quaternion;
 	in vec4 v_colour;
 	in vec3 v_texcoord0;
 	in vec2 v_texcoord1;
+	in vec3 v_view;
 	in vec2 v_texcoord2;
 	flat in vec4 v_textureEnvColor[6];
 	flat in vec4 v_textureEnvBufferColor;
@@ -89,6 +101,13 @@ const char* fragmentShader = R"(
 	uniform sampler2D u_tex0;
 	uniform sampler2D u_tex1;
 	uniform sampler2D u_tex2;
+
+	uniform uint u_picaRegs[0x200-0x47];
+
+	//Helper so that the implementation of u_pica_regs can be changed later
+	uint readPicaReg(uint reg_addr){
+		return u_picaRegs[reg_addr-0x47];
+	}
 
 	vec4 tevSources[16];
 	vec4 tevNextPreviousBuffer;
@@ -193,7 +212,18 @@ const char* fragmentShader = R"(
 	}
 
 	void calcLighting(out vec4 primary_color, out vec4 secondary_color){
-		primary_color = vec4(vec3(0.5) ,1.0);
+		uint GPUREG_LIGHTING_ENABLE  = readPicaReg(0x008F);
+		if(bitfieldExtract(GPUREG_LIGHTING_ENABLE,0,1)==0){
+			primary_color = secondary_color = vec4(0.0);
+			return;
+		}
+		uint GPUREG_LIGHTING_AMBIENT = readPicaReg(0x01C0);
+		vec3 ambient = vec3(
+			float(bitfieldExtract(GPUREG_LIGHTING_AMBIENT,20,8))/255.,
+			float(bitfieldExtract(GPUREG_LIGHTING_AMBIENT,10,8))/255.,
+			float(bitfieldExtract(GPUREG_LIGHTING_AMBIENT,00,8))/255.
+		);
+		primary_color = vec4(ambient,1.0);
 		secondary_color = vec4(vec3(0.5) ,1.0);
 	}
 
@@ -373,6 +403,7 @@ void Renderer::initGraphicsContext() {
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
 	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
+	picaRegLoc = OpenGL::uniformLocation(triangleProgram, "u_picaRegs");
 
 	// Init sampler objects
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
@@ -621,6 +652,8 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 
 	setupTextureEnvState();
 	bindTexturesToSlots();
+	//Upload Pica Registers
+	glUniform1uiv(picaRegLoc,0x200-0x47,&regs[0x47]);
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;

@@ -32,6 +32,7 @@ class Renderer {
 	GLint textureEnvScaleLoc = -1;
 	GLint textureEnvUpdateBufferLoc = -1;
 	GLint textureEnvBufferColorLoc = -1;
+	GLint picaRegLoc = -1;
 
 	// Depth configuration uniform locations
 	GLint depthOffsetLoc = -1;
