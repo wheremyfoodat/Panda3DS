@@ -11,12 +11,14 @@ using namespace Helpers;
 const char* vertexShader = R"(
 	#version 410 core
 	
-	layout (location = 0) in vec4 a_coords;
-	layout (location = 1) in vec4 a_vertexColour;
-	layout (location = 2) in vec2 a_texcoord0;
-	layout (location = 3) in vec2 a_texcoord1;
-	layout (location = 4) in float a_texcoord0_w;
-	layout (location = 5) in vec2 a_texcoord2;
+	layout (location = 0) in vec4  a_coords;
+	layout (location = 1) in vec4  a_quaternion;
+	layout (location = 2) in vec4  a_vertexColour;
+	layout (location = 3) in vec2  a_texcoord0;
+	layout (location = 4) in vec2  a_texcoord1;
+	layout (location = 5) in float a_texcoord0_w;
+	layout (location = 6) in vec3  a_view;
+	layout (location = 7) in vec2  a_texcoord2;
 
 	out vec4 v_colour;
 	out vec3 v_texcoord0;
@@ -392,21 +394,27 @@ void Renderer::initGraphicsContext() {
 	// Position (x, y, z, w) attributes
 	vao.setAttributeFloat<float>(0, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.positions));
 	vao.enableAttribute(0);
-	// Colour attribute
-	vao.setAttributeFloat<float>(1, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.colour));
+	// Quaternion attribute
+	vao.setAttributeFloat<float>(1, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.quaternion));
 	vao.enableAttribute(1);
-	// UV 0 attribute
-	vao.setAttributeFloat<float>(2, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0));
+	// Colour attribute
+	vao.setAttributeFloat<float>(2, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.colour));
 	vao.enableAttribute(2);
-	// UV 1 attribute
-	vao.setAttributeFloat<float>(3, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord1));
+	// UV 0 attribute
+	vao.setAttributeFloat<float>(3, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0));
 	vao.enableAttribute(3);
-	// UV 0 W-component attribute
-	vao.setAttributeFloat<float>(4, 1, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0_w));
+	// UV 1 attribute
+	vao.setAttributeFloat<float>(4, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord1));
 	vao.enableAttribute(4);
-	// UV 2 attribute
-	vao.setAttributeFloat<float>(5, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord2));
+	// UV 0 W-component attribute
+	vao.setAttributeFloat<float>(5, 1, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0_w));
 	vao.enableAttribute(5);
+	// View
+	vao.setAttributeFloat<float>(6, 3, sizeof(PicaVertex), offsetof(PicaVertex, s.view));
+	vao.enableAttribute(6);
+	// UV 2 attribute
+	vao.setAttributeFloat<float>(7, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord2));
+	vao.enableAttribute(7);
 
 	dummyVBO.create();
 	dummyVAO.create();
