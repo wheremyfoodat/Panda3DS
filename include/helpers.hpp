@@ -30,24 +30,31 @@ using s32 = std::int32_t;
 using s64 = std::int64_t;
 
 namespace Helpers {
-	[[noreturn]] static void panic(const char* fmt, ...) {
-		std::va_list args;
-		va_start(args, fmt);
+	// Unconditional panic, unlike panicDev which does not panic on user builds
+	template <class... Args>
+	[[noreturn]] static void panic(const char* fmt, Args&&... args) {
 		std::cout << termcolor::on_red << "[FATAL] ";
-		std::vprintf(fmt, args);
+		std::printf(fmt, args...);
 		std::cout << termcolor::reset << "\n";
-		va_end(args);
 
 		exit(1);
 	}
+	
+#ifdef PANDA3DS_LIMITED_PANICS
+	template <class... Args>
+	static void panicDev(const char* fmt, Args&&... args) {}
+#else
+	template <class... Args>
+	[[noreturn]] static void panicDev(const char* fmt, Args&&... args) {
+		panic(fmt, args...);
+	}
+#endif
 
-	static void warn(const char* fmt, ...) {
-		std::va_list args;
-		va_start(args, fmt);
+	template <class... Args>
+	static void warn(const char* fmt, Args&&... args) {
 		std::cout << termcolor::on_red << "[Warning] ";
-		std::vprintf(fmt, args);
+		std::printf(fmt, args...);
 		std::cout << termcolor::reset << "\n";
-		va_end(args);
 	}
 
 	static constexpr bool buildingInDebugMode() {
@@ -55,6 +62,13 @@ namespace Helpers {
 		return false;
 #endif
 		return true;
+	}
+
+	static constexpr bool isUserBuild() {
+#ifdef PANDA3DS_USER_BUILD
+		return true;
+#endif
+		return false;
 	}
 
 	static void debug_printf(const char* fmt, ...) {

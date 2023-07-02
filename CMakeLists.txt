@@ -13,8 +13,10 @@ endif()
 project(Alber)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
+option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -159,7 +161,7 @@ source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 ${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 
-if(ENABLE_LTO)
+if(ENABLE_LTO OR ENABLE_USER_BUILD)
   set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
@@ -167,4 +169,12 @@ target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad cryptopp)
 
 if(GPU_DEBUG_INFO)
   target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
+endif()
+
+if(ENABLE_USER_BUILD)
+    target_compile_definitions(Alber PRIVATE PANDA3DS_USER_BUILD=1)
+endif()
+
+if(ENABLE_USER_BUILD OR DISABLE_PANIC_DEV)
+    target_compile_definitions(Alber PRIVATE PANDA3DS_LIMITED_PANICS=1)
 endif()

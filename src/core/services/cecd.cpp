@@ -16,7 +16,10 @@ void CECDService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case CECDCommands::GetInfoEventHandle: getInfoEventHandle(messagePointer); break;
-		default: Helpers::panic("CECD service requested. Command: %08X\n", command);
+		default:
+			Helpers::panicDev("CECD service requested. Command: %08X\n", command);
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
 	}
 }
 
