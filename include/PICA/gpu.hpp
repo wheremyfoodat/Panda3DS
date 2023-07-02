@@ -70,6 +70,38 @@ class GPU {
 	Renderer renderer;
 	PicaVertex getImmediateModeVertex();
 public:
+	enum : u32 {
+		LIGHT_LUT_D0=0,    
+		LIGHT_LUT_D1,   
+		LIGHT_LUT_FR,    
+		LIGHT_LUT_RB,   
+		LIGHT_LUT_RG,   
+		LIGHT_LUT_RR,   
+		LIGHT_LUT_SP0=0x8,
+		LIGHT_LUT_SP1,
+		LIGHT_LUT_SP2,
+		LIGHT_LUT_SP3,
+		LIGHT_LUT_SP4,
+		LIGHT_LUT_SP5,
+		LIGHT_LUT_SP6,
+		LIGHT_LUT_SP7,
+		LIGHT_LUT_DA0=0x10,
+		LIGHT_LUT_DA1,
+		LIGHT_LUT_DA2,
+		LIGHT_LUT_DA3,
+		LIGHT_LUT_DA4,
+		LIGHT_LUT_DA5,
+		LIGHT_LUT_DA6,
+		LIGHT_LUT_DA7,
+		LIGHT_LUT_COUNT
+	};
+	//256 entries per LUT with each LUT as its own row forming a 2D image 256xLIGHT_LUT_COUNT
+	//Encoded in PICA native format
+	std::array<uint32_t,LIGHT_LUT_COUNT*256> lightingLUT; 
+	//Used to prevent uploading the lighting_lut on every draw call
+	//Set to true when the CPU writes to the lighting_lut
+	//Set to false by the renderer when the lighting_lut is uploaded ot the GPU
+	bool lightingLUTDirty = false;
 	GPU(Memory& mem);
 	void initGraphicsContext() { renderer.initGraphicsContext(); }
 	void getGraphicsContext() { renderer.getGraphicsContext(); }

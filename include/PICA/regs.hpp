@@ -55,6 +55,17 @@ namespace PICA {
 			ColourBufferLoc = 0x11D,
 			FramebufferSize = 0x11E,
 
+			//LightingRegs
+			LightingLUTIndex =  0x01C5,
+			LightingLUTData0 =  0x01C8,
+			LightingLUTData1 =  0x01C9,
+			LightingLUTData2 =  0x01CA,
+			LightingLUTData3 =  0x01CB,
+			LightingLUTData4 =  0x01CC,
+			LightingLUTData5 =  0x01CD,
+			LightingLUTData6 =  0x01CE,
+			LightingLUTData7 =  0x01CF,
+			
 			// Geometry pipeline registers
 			VertexAttribLoc = 0x200,
 			AttribFormatLow = 0x201,

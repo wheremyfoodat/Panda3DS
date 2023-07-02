@@ -28,7 +28,19 @@ u32 GPU::readInternalReg(u32 index) {
 		Helpers::panic("Tried to read invalid GPU register. Index: %X\n", index);
 		return 0;
 	}
-
+	using namespace PICA::InternalRegs;
+	if(index>=LightingLUTData0&&index<=LightingLUTData7){
+		uint32_t ind = regs[LightingLUTIndex];
+		uint32_t lut_id = (ind>>8)&(0x1f);
+		uint32_t lut_addr = ind&0xff;
+		uint32_t value = 0xffffffff;
+		if(lut_id<LIGHT_LUT_COUNT){
+			value = lightingLUT[lut_id*256+lut_addr];
+		}
+		lut_addr+=1;
+		regs[LightingLUTIndex]=(ind&~0xff)|(lut_addr&0xff);
+		return value;
+	}
 	return regs[index];
 }
 
@@ -90,6 +102,25 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			renderer.setFBSize(width, height);
 			break;
 		}
+
+		case LightingLUTData0:
+		case LightingLUTData1:
+		case LightingLUTData2:
+		case LightingLUTData3:
+		case LightingLUTData4:
+		case LightingLUTData5:
+		case LightingLUTData6:
+		case LightingLUTData7:{
+			uint32_t ind = regs[LightingLUTIndex];
+			uint32_t lut_id = (ind>>8)&(0x1f);
+			uint32_t lut_addr = ind&0xff;
+			if(lut_id<LIGHT_LUT_COUNT){
+				lightingLUT[lut_id*256+lut_addr]=newValue;
+				lightingLUTDirty = true;
+			}
+			lut_addr+=1;
+			regs[LightingLUTIndex]=(ind&~0xff)|(lut_addr&0xff);
+		} break;
 
 		case VertexFloatUniformIndex:
 			shaderUnit.vs.setFloatUniformIndex(value);

@@ -67,6 +67,7 @@ class Renderer {
 	const std::array<u32, regNum>& regs;
 
 	OpenGL::Texture screenTexture;
+	GLuint lightLUTTextureArray;
 	OpenGL::Framebuffer screenFramebuffer;
 
 	OpenGL::Framebuffer getColourFBO();
@@ -77,6 +78,7 @@ class Renderer {
 	void bindDepthBuffer();
 	void setupTextureEnvState();
 	void bindTexturesToSlots();
+	void updateLightingLUT();
 
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}

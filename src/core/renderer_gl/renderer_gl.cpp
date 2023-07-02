@@ -101,6 +101,7 @@ const char* fragmentShader = R"(
 	uniform sampler2D u_tex0;
 	uniform sampler2D u_tex1;
 	uniform sampler2D u_tex2;
+	uniform sampler1DArray u_tex_lighting_lut;
 
 	uniform uint u_picaRegs[0x200-0x47];
 
@@ -218,9 +219,10 @@ const char* fragmentShader = R"(
 	#define RG_LUT 5u
 	#define RR_LUT 6u
 
-	float lutLookup(uint lut, float value){
-		//TODO: Implement this.
-		return value; 
+	float lutLookup(uint lut, uint light, float value){
+		if(lut>=FR_LUT&&lut<=RR_LUT)lut-=1;
+		if(lut==SP_LUT)lut=8+light;
+		return texture(u_tex_lighting_lut,vec2(value,lut)).r; 
 	}
 	vec3 regToColor(uint reg){
 		return vec3(
@@ -306,17 +308,17 @@ const char* fragmentShader = R"(
 
 			vec3 half_vector = normalize(normalize(light_vector)+view);
 
-			for(int i=0;i<7u;++i){
-				if(bitfieldExtract(GPUREG_LIGHTING_CONFIG1,16+i,1)==0){
-					uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE,i*4,3);
+			for(int c=0;c<7u;++c){
+				if(bitfieldExtract(GPUREG_LIGHTING_CONFIG1,16+c,1)==0){
+					uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE,c*4,3);
 					float scale = float(1u<<scale_id);
 					if(scale_id>=6u) scale/=256.0;
 
-					uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT,i*4,3);
-					if(input_id==0u)d[i] = dot(normal,half_vector);
-					else if(input_id==1u)d[i] = dot(view,half_vector);
-					else if(input_id==2u)d[i] = dot(normal,view);
-					else if(input_id==3u)d[i] = dot(light_vector,normal);
+					uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT,c*4,3);
+					if(input_id==0u)d[c] = dot(normal,half_vector);
+					else if(input_id==1u)d[c] = dot(view,half_vector);
+					else if(input_id==2u)d[c] = dot(normal,view);
+					else if(input_id==3u)d[c] = dot(light_vector,normal);
 					else if(input_id==4u){
 						uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146+0x10*light_id);
 						uint GPUREG_LIGHTi_SPOTDIR_HIGH= readPicaReg(0x0147+0x10*light_id);
@@ -325,16 +327,17 @@ const char* fragmentShader = R"(
 							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW,16,16),1,11),
 							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH,0,16),1,11)
 						);
-						d[i] = dot(-light_vector,spot_light_vector);// -L . P (aka Spotlight aka SP);
+						d[c] = dot(-light_vector,spot_light_vector);// -L . P (aka Spotlight aka SP);
 					}else if(input_id==5u){
-						d[i] = 1.0;//TODO: cos <greek symbol> (aka CP);
+						d[c] = 1.0;//TODO: cos <greek symbol> (aka CP);
 						error_unimpl = true;
-					}else d[i] = 1.0;
+					}else d[c] = 1.0;
 
-					d[i] = lutLookup(i,d[i])*scale;
-					if(bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS,2*i,1)!=0u)d[i]=abs(d[i]);
-				}else d[i]=1.0;
+					d[c] = lutLookup(c,light_id,d[c]*0.5+0.5)*scale;
+					if(bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS,2*c,1)!=0u)d[c]=abs(d[c]);
+				}else d[c]=1.0;
 			}
+			
 			uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG,4,4);
 			if(lookup_config==0){
 				d[D1_LUT] = 1.0;
@@ -421,6 +424,8 @@ const char* fragmentShader = R"(
 		if (tevUnimplementedSourceFlag) {
 			 // fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 		}
+		//fragColour.rg = texture(u_tex_lighting_lut,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
+
 
 		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
 		// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
@@ -566,6 +571,7 @@ void Renderer::initGraphicsContext() {
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex1"), 1);
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex2"), 2);
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex_lighting_lut"), 3);
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
@@ -610,6 +616,8 @@ void Renderer::initGraphicsContext() {
 	// Create texture and framebuffer for the 3DS screen
 	const u32 screenTextureWidth = 2 * 400; // Top screen is 400 pixels wide, bottom is 320
 	const u32 screenTextureHeight = 2 * 240; // Both screens are 240 pixels tall
+	
+	glGenTextures(1,&lightLUTTextureArray);
 
 	auto prevTexture = OpenGL::getTex2D();
 	screenTexture.create(screenTextureWidth, screenTextureHeight, GL_RGBA8);
@@ -739,6 +747,8 @@ void Renderer::bindTexturesToSlots() {
 		tex.bind();
 	}
 
+	glActiveTexture(GL_TEXTURE0+3);
+	glBindTexture(GL_TEXTURE_1D_ARRAY,lightLUTTextureArray);
 	glActiveTexture(GL_TEXTURE0);
 
 	// Update the texture unit configuration uniform if it changed
@@ -747,6 +757,22 @@ void Renderer::bindTexturesToSlots() {
 		oldTexUnitConfig = texUnitConfig;
 		glUniform1ui(texUnitConfigLoc, texUnitConfig);
 	}
+}
+void Renderer::updateLightingLUT(){
+	std::array<u16, sizeof(gpu.lightingLUT)/sizeof(gpu.lightingLUT[0])> u16_lightinglut; 
+	for(int i=0;i<gpu.lightingLUT.size();++i){
+		uint64_t value =  gpu.lightingLUT[i]&((1<<12)-1);
+		u16_lightinglut[i] = value*65535/4095; 
+	} 
+	glActiveTexture(GL_TEXTURE0+3);
+	glBindTexture(GL_TEXTURE_1D_ARRAY,lightLUTTextureArray);
+	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, gpu.LIGHT_LUT_COUNT,0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glActiveTexture(GL_TEXTURE0+0);
+	gpu.lightingLUTDirty=false;
 }
 
 void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices) {
@@ -811,6 +837,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 	bindTexturesToSlots();
 	//Upload Pica Registers
 	glUniform1uiv(picaRegLoc,0x200-0x47,&regs[0x47]);
+	if(gpu.lightingLUTDirty)updateLightingLUT();
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
