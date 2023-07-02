@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 12)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 12)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fbracket-depth=4096")
 endif()
 
@@ -12,6 +12,10 @@ endif()
 
 project(Alber)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
+endif() 
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
