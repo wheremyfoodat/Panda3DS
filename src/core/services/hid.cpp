@@ -7,7 +7,9 @@ namespace HIDCommands {
 	enum : u32 {
 		GetIPCHandles = 0x000A0000,
 		EnableAccelerometer = 0x00110000,
+		DisableAccelerometer = 0x00120000,
 		EnableGyroscopeLow = 0x00130000,
+		DisableGyroscopeLow = 0x00140000,
 		GetGyroscopeLowRawToDpsCoefficient = 0x00150000,
 		GetGyroscopeLowCalibrateParam = 0x00160000
 	};
@@ -36,6 +38,8 @@ void HIDService::reset() {
 void HIDService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case HIDCommands::DisableAccelerometer: disableAccelerometer(messagePointer); break;
+		case HIDCommands::DisableGyroscopeLow: disableGyroscopeLow(messagePointer); break;
 		case HIDCommands::EnableAccelerometer: enableAccelerometer(messagePointer); break;
 		case HIDCommands::EnableGyroscopeLow: enableGyroscopeLow(messagePointer); break;
 		case HIDCommands::GetGyroscopeLowCalibrateParam: getGyroscopeLowCalibrateParam(messagePointer); break;
@@ -53,11 +57,27 @@ void HIDService::enableAccelerometer(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void HIDService::disableAccelerometer(u32 messagePointer) {
+	log("HID::DisableAccelerometer\n");
+	accelerometerEnabled = false;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x12, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 void HIDService::enableGyroscopeLow(u32 messagePointer) {
 	log("HID::EnableGyroscopeLow\n");
 	gyroEnabled = true;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x13, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void HIDService::disableGyroscopeLow(u32 messagePointer) {
+	log("HID::DisableGyroscopeLow\n");
+	gyroEnabled = false;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
