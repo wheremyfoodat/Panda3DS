@@ -33,7 +33,7 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 	const u32 entryCount = mem.read32(messagePointer + 4);
 	const u32 outPointer = mem.read32(messagePointer + 12);
 	logFileIO("Directory::Read (handle = %X, entry count = %d, out pointer = %08X)\n", directory, entryCount, outPointer);
-	Helpers::panic("Unimplemented FsDir::Read");
+	Helpers::panicDev("Unimplemented FsDir::Read");
 
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0);

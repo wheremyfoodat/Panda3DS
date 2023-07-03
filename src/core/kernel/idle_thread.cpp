@@ -59,9 +59,9 @@ void Kernel::setupIdleThread() {
 	t.fpscr = FPSCR::ThreadDefault;
 
 	// Our idle thread should have as low of a priority as possible, because, well, it's an idle thread.
-	// We handle this by giving it a priority of 0xff, which is lower than is actually allowed for user threads
-	// (High priority value = low priority)
-	t.priority = 0xff;
+	// We handle this by giving it a priority of 0x40, which is lower than is actually allowed for user threads
+	// (High priority value = low priority). This is the same priority used in the retail kernel.
+	t.priority = 0x40;
 	t.status = ThreadStatus::Ready;
 
 	// Add idle thread to the list of thread indices

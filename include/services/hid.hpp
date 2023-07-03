@@ -63,6 +63,8 @@ class HIDService {
 	MAKE_LOG_FUNCTION(log, hidLogger)
 
 	// Service commands
+	void disableAccelerometer(u32 messagePointer);
+	void disableGyroscopeLow(u32 messagePointer);
 	void enableAccelerometer(u32 messagePointer);
 	void enableGyroscopeLow(u32 messagePointer);
 	void getGyroscopeLowCalibrateParam(u32 messagePointer);

@@ -931,7 +931,9 @@ void Renderer::bindDepthBuffer() {
 		tex = depthBufferCache.add(sampleBuffer).texture.m_handle;
 	}
 
-	if (PICA::DepthFmt::Depth24Stencil8 != depthBufferFormat) Helpers::panic("TODO: Should we remove stencil attachment?");
+	if (PICA::DepthFmt::Depth24Stencil8 != depthBufferFormat) {
+		Helpers::panicDev("TODO: Should we remove stencil attachment?");
+	}
 	auto attachment = depthBufferFormat == PICA::DepthFmt::Depth24Stencil8 ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
 	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, tex, 0);
 }
