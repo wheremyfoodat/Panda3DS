@@ -346,22 +346,22 @@ const char* fragmentShader = R"(
 			
 			uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG,4,4);
 			if(lookup_config==0){
-				d[D1_LUT] = 1.0;
-				d[FR_LUT] = 1.0;
+				d[D1_LUT] = 0.0;
+				d[FR_LUT] = 0.0;
 				d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
 			}else if(lookup_config==1){
-				d[D0_LUT] = 1.0;
-				d[D1_LUT] = 1.0;
+				d[D0_LUT] = 0.0;
+				d[D1_LUT] = 0.0;
 				d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
 			}else if(lookup_config==2){
-				d[FR_LUT] = 1.0;
-				d[SP_LUT] = 1.0;
+				d[FR_LUT] = 0.0;
+				d[SP_LUT] = 0.0;
 				d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
 			}else if(lookup_config==3){
-				d[SP_LUT] = 1.0;
+				d[SP_LUT] = 0.0;
 				d[RG_LUT]=d[RB_LUT]=d[RR_LUT]=1.0;
-			}else if(lookup_config==4)d[FR_LUT] = 1.0;
-			else if(lookup_config==5)d[D1_LUT] = 1.0;
+			}else if(lookup_config==4)d[FR_LUT] = 0.0;
+			else if(lookup_config==5)d[D1_LUT] = 0.0;
 			else if(lookup_config==6)d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
 
 			float distance_factor = 1.0; //a
