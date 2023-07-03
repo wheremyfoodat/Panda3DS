@@ -44,15 +44,20 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	exheaderInfo.offset = info.offset + 0x200;
 	exheaderInfo.size = exheaderSize;
 	exheaderInfo.hashRegionSize = 0;
+	exheaderInfo.encryptionInfo = std::nullopt;
 
 	exeFS.offset = info.offset + u64(*(u32*)&header[0x1A0]) * mediaUnit;
 	exeFS.size = u64(*(u32*)&header[0x1A4]) * mediaUnit;
 	exeFS.hashRegionSize = u64(*(u32*)&header[0x1A8]) * mediaUnit;
+	exeFS.encryptionInfo = std::nullopt;
 
 	romFS.offset = info.offset + u64(*(u32*)&header[0x1B0]) * mediaUnit;
 	romFS.size = u64(*(u32*)&header[0x1B4]) * mediaUnit;
 	romFS.hashRegionSize = u64(*(u32*)&header[0x1B8]) * mediaUnit;
+	romFS.encryptionInfo = std::nullopt;
 
+	// Shows whether we got the primary and secondary keys correctly
+	bool gotCryptoKeys = true;
 	if (encrypted) {
 		Crypto::AESKey primaryKeyY;
 		Crypto::AESKey secondaryKeyY;
@@ -61,44 +66,36 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		if (!seedCrypto) {
 			secondaryKeyY = primaryKeyY;
 		} else {
-			Helpers::panic("Seed crypto is not supported");
-			return false;
+			Helpers::warn("Seed crypto is not supported");
+			gotCryptoKeys = false;
 		}
 
 		auto primaryResult = getPrimaryKey(aesEngine, primaryKeyY);
-
-		if (!primaryResult.first) {
-			Helpers::panic("getPrimaryKey failed!");
-			return false;
-		}
-
-		Crypto::AESKey primaryKey = primaryResult.second;
-
 		auto secondaryResult = getSecondaryKey(aesEngine, secondaryKeyY);
 
-		if (!secondaryResult.first) {
-			Helpers::panic("getSecondaryKey failed!");
-			return false;
+		if (!primaryResult.first || !secondaryResult.first) {
+			gotCryptoKeys = false;
+		} else {
+			Crypto::AESKey primaryKey = primaryResult.second;
+			Crypto::AESKey secondaryKey = secondaryResult.second;
+
+			EncryptionInfo encryptionInfoTmp;
+			encryptionInfoTmp.normalKey = primaryKey;
+			encryptionInfoTmp.initialCounter.fill(0);
+
+			for (std::size_t i = 1; i <= sizeof(std::uint64_t) - 1; i++) {
+				encryptionInfoTmp.initialCounter[i] = header[0x108 + sizeof(std::uint64_t) - 1 - i];
+			}
+			encryptionInfoTmp.initialCounter[8] = 1;
+			exheaderInfo.encryptionInfo = encryptionInfoTmp;
+
+			encryptionInfoTmp.initialCounter[8] = 2;
+			exeFS.encryptionInfo = encryptionInfoTmp;
+
+			encryptionInfoTmp.normalKey = secondaryKey;
+			encryptionInfoTmp.initialCounter[8] = 3;
+			romFS.encryptionInfo = encryptionInfoTmp;
 		}
-
-		Crypto::AESKey secondaryKey = secondaryResult.second;
-
-		EncryptionInfo encryptionInfoTmp;
-		encryptionInfoTmp.normalKey = primaryKey;
-		encryptionInfoTmp.initialCounter.fill(0);
-
-		for (std::size_t i = 1; i <= sizeof(std::uint64_t) - 1; i++) {
-			encryptionInfoTmp.initialCounter[i] = header[0x108 + sizeof(std::uint64_t) - 1 - i];
-		}
-		encryptionInfoTmp.initialCounter[8] = 1;
-		exheaderInfo.encryptionInfo = encryptionInfoTmp;
-
-		encryptionInfoTmp.initialCounter[8] = 2;
-		exeFS.encryptionInfo = encryptionInfoTmp;
-
-		encryptionInfoTmp.normalKey = secondaryKey;
-		encryptionInfoTmp.initialCounter[8] = 3;
-		romFS.encryptionInfo = encryptionInfoTmp;
 	}
 
 	if (exheaderSize != 0) {
@@ -117,7 +114,13 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		if (u32(programID) == u32(jumpID) && encrypted) {
 			printf("NCSD is supposedly ecrypted but not actually encrypted\n");
 			encrypted = false;
+
+			// Cartridge is not actually encrypted, set all of our encryption info structures to nullopt
+			exheaderInfo.encryptionInfo = std::nullopt;
+			romFS.encryptionInfo = std::nullopt;
+			exeFS.encryptionInfo = std::nullopt;
 		}
+
 		// If it's truly encrypted, we need to read section again.
 		if (encrypted) {
 			if (!aesEngine.haveKeys()) {
@@ -125,6 +128,11 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 					"Loaded an encrypted ROM but AES keys don't seem to have been provided correctly! Navigate to the emulator's\n"
 					"app data folder and make sure you have a sysdata directory with a file called aes_keys.txt which contains your keys!"
 				);
+				return false;
+			}
+
+			if (!gotCryptoKeys) {
+				Helpers::panic("ROM is encrypted but it seems we couldn't get either the primary or the secondary key");
 				return false;
 			}
 
