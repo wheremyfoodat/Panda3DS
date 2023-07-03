@@ -20,7 +20,9 @@ const char* vertexShader = R"(
 	layout (location = 6) in vec3  a_view;
 	layout (location = 7) in vec2  a_texcoord2;
 
-	out vec4 v_quaternion;
+	out vec3 v_normal;
+	out vec3 v_tangent;
+	out vec3 v_bitangent;
 	out vec4 v_colour;
 	out vec3 v_texcoord0;
 	out vec2 v_texcoord1;
@@ -49,6 +51,11 @@ const char* vertexShader = R"(
 			float(abgr >> 24)
 		);
 	}
+	vec3 rotateVec3ByQuaternion(vec3 v, vec4 q){
+		vec3 u=q.xyz;
+		float s = q.w;
+		return 2.0*dot(u, v)*u + (s*s - dot(u, u))*v + 2.0*s*cross(u, v);
+	}
 
 	void main() {
 		gl_Position = a_coords;
@@ -58,8 +65,11 @@ const char* vertexShader = R"(
 		v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
 		v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
 		v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
-		v_quaternion = a_quaternion;
 		v_view = a_view; 
+
+		v_normal    = normalize(rotateVec3ByQuaternion(vec3(0.0,0.0,1.0), a_quaternion));
+		v_tangent   = normalize(rotateVec3ByQuaternion(vec3(1.0,0.0,0.0), a_quaternion));
+		v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0,1.0,0.0), a_quaternion));
 
 		for (int i = 0; i < 6; i++) {
 			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
@@ -72,7 +82,9 @@ const char* vertexShader = R"(
 const char* fragmentShader = R"(
 	#version 410 core
 	
-	in vec4 v_quaternion;
+	in vec3 v_tangent;
+	in vec3 v_normal;
+	in vec3 v_bitangent;
 	in vec4 v_colour;
 	in vec3 v_texcoord0;
 	in vec2 v_texcoord1;
@@ -231,11 +243,6 @@ const char* fragmentShader = R"(
 			float(bitfieldExtract(reg,00,8))/255.
 		);
 	}
-	vec3 rotateVec3ByQuaternion(vec3 v, vec4 q){
-		vec3 u=q.xyz;
-		float s = q.w;
-		return 2.0*dot(u, v)*u + (s*s - dot(u, u))*v + 2.0*s*cross(u, v);
-	}
 	float decodeFP(uint hex, uint E, uint M){
 		uint width = M + E + 1u;
 		uint bias = 128u - (1u << (E - 1u));
@@ -256,10 +263,9 @@ const char* fragmentShader = R"(
 		// Quaternions describe a transformation from surface-local space to eye space.
 		// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
 		// the tangent vector is (1,0,0), and the bitangent vector is (0,1,0).
-		vec4 quat = v_quaternion;
-		vec3 normal    = normalize(rotateVec3ByQuaternion(vec3(0.0,0.0,1.0), quat));
-		vec3 tangent   = normalize(rotateVec3ByQuaternion(vec3(1.0,0.0,0.0), quat));
-		vec3 bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0,1.0,0.0), quat));
+		vec3 normal    = normalize(v_normal   );
+		vec3 tangent   = normalize(v_tangent  );
+		vec3 bitangent = normalize(v_bitangent);
 		vec3 view = normalize(v_view);
 
 		uint GPUREG_LIGHTING_ENABLE  = readPicaReg(0x008F);
@@ -297,11 +303,11 @@ const char* fragmentShader = R"(
 			uint GPUREG_LIGHTi_VECTOR_HIGH= readPicaReg(0x0145+0x10*light_id);
 			uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149+0x10*light_id);
 
-			vec3 light_vector = vec3(
+			vec3 light_vector = normalize(vec3(
 				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW,0,16),5,10),
 				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW,16,16),5,10),
 				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH,0,16),5,10)
-			);
+			));
 			//Positional Light
 			if(bitfieldExtract(GPUREG_LIGHTi_CONFIG,0,1)==0)error_unimpl = true;
 
@@ -322,11 +328,11 @@ const char* fragmentShader = R"(
 					else if(input_id==4u){
 						uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146+0x10*light_id);
 						uint GPUREG_LIGHTi_SPOTDIR_HIGH= readPicaReg(0x0147+0x10*light_id);
-						vec3 spot_light_vector = vec3(
+						vec3 spot_light_vector = normalize(vec3(
 							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW,0,16),1,11),
 							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW,16,16),1,11),
 							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH,0,16),1,11)
-						);
+						));
 						d[c] = dot(-light_vector,spot_light_vector);// -L . P (aka Spotlight aka SP);
 					}else if(input_id==5u){
 						d[c] = 1.0;//TODO: cos <greek symbol> (aka CP);
