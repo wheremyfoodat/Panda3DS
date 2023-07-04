@@ -35,11 +35,11 @@ const char* vertexShader = R"(
 	// TEV uniforms
 	uniform uint u_textureEnvColor[6];
 	uniform uint u_textureEnvBufferColor;
-	uniform uint u_picaRegs[0x200 - 0x47];
+	uniform uint u_picaRegs[0x200 - 0x48];
 
 	// Helper so that the implementation of u_pica_regs can be changed later
 	uint readPicaReg(uint reg_addr){
-		return u_picaRegs[reg_addr - 0x47];
+		return u_picaRegs[reg_addr - 0x48];
 	}
 
 	vec4 abgr8888ToVec4(uint abgr) {
@@ -131,9 +131,6 @@ const char* fragmentShader = R"(
 
 	out vec4 fragColour;
 
-	uniform uint u_alphaControl;
-	uniform uint u_textureConfig;
-
 	// TEV uniforms
 	uniform uint u_textureEnvSource[6];
 	uniform uint u_textureEnvOperand[6];
@@ -151,11 +148,11 @@ const char* fragmentShader = R"(
 	uniform sampler2D u_tex2;
 	uniform sampler1DArray u_tex_lighting_lut;
 
-	uniform uint u_picaRegs[0x200 - 0x47];
+	uniform uint u_picaRegs[0x200 - 0x48];
 
 	// Helper so that the implementation of u_pica_regs can be changed later
 	uint readPicaReg(uint reg_addr){
-		return u_picaRegs[reg_addr - 0x47];
+		return u_picaRegs[reg_addr - 0x48];
 	}
 
 	vec4 tevSources[16];
@@ -453,16 +450,17 @@ const char* fragmentShader = R"(
 	}
 
 	void main() {
-		vec2 tex2UV = (u_textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
-
 		// TODO: what do invalid sources and disabled textures read as?
 		// And what does the "previous combiner" source read initially?
 		tevSources[0] = v_colour; // Primary/vertex color
 		calcLighting(tevSources[1],tevSources[2]);
 
-		if ((u_textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
-		if ((u_textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
-		if ((u_textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
+		uint textureConfig = readPicaReg(0x80);
+		vec2 tex2UV = (textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
+
+		if ((textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
+		if ((textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
+		if ((textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
 		tevSources[13] = vec4(0.0); // Previous buffer
 		tevSources[15] = vec4(0.0); // Previous combiner
 
@@ -503,9 +501,11 @@ const char* fragmentShader = R"(
 		// Write final fragment depth
 		gl_FragDepth = depth;
 
-		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
-			uint func = (u_alphaControl >> 4u) & 7u;
-			float reference = float((u_alphaControl >> 8u) & 0xffu) / 255.0;
+		// Perform alpha test
+		uint alphaControl = readPicaReg(0x104);
+		if ((alphaControl & 1u) != 0u) { // Check if alpha test is on
+			uint func = (alphaControl >> 4u) & 7u;
+			float reference = float((alphaControl >> 8u) & 0xffu) / 255.0;
 			float alpha = fragColour.a;
 
 			switch (func) {
@@ -593,15 +593,11 @@ void Renderer::reset() {
 		const auto oldProgram = OpenGL::getProgram();
 
 		gl.useProgram(triangleProgram);
-		oldAlphaControl = 0; // Default alpha control to 0
-		oldTexUnitConfig = 0; // Default tex unit config to 0
 		
 		oldDepthScale = -1.0; // Default depth scale to -1.0, which is what games typically use
 		oldDepthOffset = 0.0; // Default depth offset to 0
 		oldDepthmapEnable = false; // Enable w buffering
 
-		glUniform1ui(alphaControlLoc, oldAlphaControl);
-		glUniform1ui(texUnitConfigLoc, oldTexUnitConfig);
 		glUniform1f(depthScaleLoc, oldDepthScale);
 		glUniform1f(depthOffsetLoc, oldDepthOffset);
 		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
@@ -615,9 +611,6 @@ void Renderer::initGraphicsContext() {
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({ vert, frag });
 	gl.useProgram(triangleProgram);
-	
-	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
-	texUnitConfigLoc = OpenGL::uniformLocation(triangleProgram, "u_textureConfig");
 
 	textureEnvSourceLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvSource");
 	textureEnvOperandLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvOperand");
@@ -815,14 +808,8 @@ void Renderer::bindTexturesToSlots() {
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
 	glActiveTexture(GL_TEXTURE0);
-
-	// Update the texture unit configuration uniform if it changed
-	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
-	if (oldTexUnitConfig != texUnitConfig) {
-		oldTexUnitConfig = texUnitConfig;
-		glUniform1ui(texUnitConfigLoc, texUnitConfig);
-	}
 }
+
 void Renderer::updateLightingLUT(){
 	std::array<u16, GPU::LightingLutSize> u16_lightinglut; 
 	
@@ -853,13 +840,6 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	gl.bindVBO(vbo);
 	gl.bindVAO(vao);
 	gl.useProgram(triangleProgram);
-
-	// Adjust alpha test if necessary
-	const u32 alphaControl = regs[PICA::InternalRegs::AlphaTestConfig];
-	if (alphaControl != oldAlphaControl) {
-		oldAlphaControl = alphaControl;
-		glUniform1ui(alphaControlLoc, alphaControl);
-	}
 
 	OpenGL::enableClipPlane(0); // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
@@ -904,9 +884,9 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	setupTextureEnvState();
 	bindTexturesToSlots();
 
-	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x47)
+	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
 	// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
-	glUniform1uiv(picaRegLoc, 0x200 - 0x47, &regs[0x47]);
+	glUniform1uiv(picaRegLoc, 0x200 - 0x48, &regs[0x48]);
 
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT();

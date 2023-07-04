@@ -23,8 +23,6 @@ class Renderer {
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
-	GLint alphaControlLoc = -1;
-	GLint texUnitConfigLoc = -1;
 
 	// TEV configuration uniform locations
 	GLint textureEnvSourceLoc = -1;
@@ -40,9 +38,6 @@ class Renderer {
 	GLint depthOffsetLoc = -1;
 	GLint depthScaleLoc = -1;
 	GLint depthmapEnableLoc = -1;
-
-	u32 oldAlphaControl = 0;
-	u32 oldTexUnitConfig = 0;
 
 	float oldDepthScale = -1.0;
 	float oldDepthOffset = 0.0;
