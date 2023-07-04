@@ -849,11 +849,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	};
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 
-    // TODO: We should implement a GL state tracker that tracks settings like scissor, blending, bound program, etc
-    // This way if we attempt to eg do multiple glEnable(GL_BLEND) calls in a row, it will say "Oh blending is already enabled"
-    // And not actually perform the very expensive driver call for it
 	gl.disableScissor();
-
 	gl.bindVBO(vbo);
 	gl.bindVAO(vao);
 	gl.useProgram(triangleProgram);
