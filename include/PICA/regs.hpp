@@ -10,6 +10,13 @@ namespace PICA {
 			ViewportHeight = 0x43,
 			ViewportInvh = 0x44,
 
+			// Clipping plane control
+			ClipEnable = 0x47,
+			ClipData0 = 0x48,
+			ClipData1 = 0x49,
+			ClipData2 = 0x4A,
+			ClipData3 = 0x4B,
+
 			DepthScale = 0x4D,
 			DepthOffset = 0x4E,
 			ShaderOutputCount = 0x4F,

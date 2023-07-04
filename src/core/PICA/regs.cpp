@@ -26,12 +26,12 @@ void GPU::writeReg(u32 address, u32 value) {
 u32 GPU::readInternalReg(u32 index) {
 	using namespace PICA::InternalRegs;
 
-	if (index > regNum) {
+	if (index > regNum) [[unlikely]] {
 		Helpers::panic("Tried to read invalid GPU register. Index: %X\n", index);
 		return 0;
 	}
 
-	else if (index >= LightingLUTData0 && index <= LightingLUTData7) {
+	else if (index >= LightingLUTData0 && index <= LightingLUTData7) [[unlikely]] {
 		const uint32_t index = regs[LightingLUTIndex];  // Get full LUT index register
 		const uint32_t lutID = getBits<8, 5>(index);    // Get which LUT we're actually writing to
 		uint32_t lutIndex = getBits<0, 8>(index);       // And get the index inside the LUT we're writing to
@@ -53,7 +53,7 @@ u32 GPU::readInternalReg(u32 index) {
 void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 	using namespace PICA::InternalRegs;
 
-	if (index > regNum) {
+	if (index > regNum) [[unlikely]] {
 		Helpers::panic("Tried to write to invalid GPU register. Index: %X, value: %08X\n", index, value);
 		return;
 	}
