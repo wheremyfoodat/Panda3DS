@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2022 PCSX-Redux authors                                 *
+ *   Copyright (C) 2022 PCSX-Redux & Panda3DS authors                      *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -523,6 +523,9 @@ namespace OpenGL {
     static void disableDepth() { glDisable(GL_DEPTH_TEST); }
     static void enableStencil() { glEnable(GL_STENCIL_TEST); }
     static void disableStencil() { glDisable(GL_STENCIL_TEST); }
+
+    static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
+	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
 
     static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
 

@@ -69,7 +69,18 @@ class GPU {
 
 	Renderer renderer;
 	PicaVertex getImmediateModeVertex();
-public:
+
+  public:
+	// 256 entries per LUT with each LUT as its own row forming a 2D image 256 * LUT_COUNT
+	// Encoded in PICA native format
+	static constexpr size_t LightingLutSize = PICA::Lights::LUT_Count * 256;
+	std::array<uint32_t, LightingLutSize> lightingLUT;
+
+	// Used to prevent uploading the lighting_lut on every draw call
+	// Set to true when the CPU writes to the lighting_lut
+	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
+	bool lightingLUTDirty = false;
+
 	GPU(Memory& mem);
 	void initGraphicsContext() { renderer.initGraphicsContext(); }
 	void getGraphicsContext() { renderer.getGraphicsContext(); }

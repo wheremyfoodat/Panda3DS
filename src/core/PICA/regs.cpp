@@ -24,9 +24,27 @@ void GPU::writeReg(u32 address, u32 value) {
 }
 
 u32 GPU::readInternalReg(u32 index) {
-	if (index > regNum) {
+	using namespace PICA::InternalRegs;
+
+	if (index > regNum) [[unlikely]] {
 		Helpers::panic("Tried to read invalid GPU register. Index: %X\n", index);
 		return 0;
+	}
+
+	else if (index >= LightingLUTData0 && index <= LightingLUTData7) [[unlikely]] {
+		const uint32_t index = regs[LightingLUTIndex];  // Get full LUT index register
+		const uint32_t lutID = getBits<8, 5>(index);    // Get which LUT we're actually writing to
+		uint32_t lutIndex = getBits<0, 8>(index);       // And get the index inside the LUT we're writing to
+		uint32_t value = 0xffffffff;                    // Return value
+
+		if (lutID < PICA::Lights::LUT_Count) {
+			value = lightingLUT[lutID * 256 + lutIndex];
+		}
+
+		// Increment the bottom 8 bits of the lighting LUT index register
+		lutIndex += 1;
+		regs[LightingLUTIndex] = (index & ~0xff) | (lutIndex & 0xff);
+		return value;
 	}
 
 	return regs[index];
@@ -35,7 +53,7 @@ u32 GPU::readInternalReg(u32 index) {
 void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 	using namespace PICA::InternalRegs;
 
-	if (index > regNum) {
+	if (index > regNum) [[unlikely]] {
 		Helpers::panic("Tried to write to invalid GPU register. Index: %X, value: %08X\n", index, value);
 		return;
 	}
@@ -88,6 +106,30 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			const u32 width = value & 0x7ff;
 			const u32 height = getBits<12, 10>(value) + 1;
 			renderer.setFBSize(width, height);
+			break;
+		}
+
+		case LightingLUTData0:
+		case LightingLUTData1:
+		case LightingLUTData2:
+		case LightingLUTData3:
+		case LightingLUTData4:
+		case LightingLUTData5:
+		case LightingLUTData6:
+		case LightingLUTData7:{
+			const uint32_t index = regs[LightingLUTIndex];  // Get full LUT index register
+			const uint32_t lutID = getBits<8, 5>(index);    // Get which LUT we're actually writing to
+			uint32_t lutIndex = getBits<0, 8>(index);       // And get the index inside the LUT we're writing to
+
+			if (lutID < PICA::Lights::LUT_Count) {
+				lightingLUT[lutID * 256 + lutIndex] = newValue;
+				lightingLUTDirty = true;
+			}
+
+			// Increment the bottom 8 bits of the lighting LUT index register
+			lutIndex += 1;
+			regs[LightingLUTIndex] = (index & ~0xff) | (lutIndex & 0xff);
+
 			break;
 		}
 
