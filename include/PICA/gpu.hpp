@@ -28,7 +28,7 @@ class GPU {
 	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
 	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
-	std::array<PicaVertex, 3> immediateModeVertices;
+	std::array<PICA::Vertex, 3> immediateModeVertices;
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
 
@@ -68,7 +68,7 @@ class GPU {
 	u32* cmdBuffCurr = nullptr;
 
 	Renderer renderer;
-	PicaVertex getImmediateModeVertex();
+	PICA::Vertex getImmediateModeVertex();
 
   public:
 	// 256 entries per LUT with each LUT as its own row forming a 2D image 256 * LUT_COUNT

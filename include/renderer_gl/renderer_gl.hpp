@@ -91,7 +91,7 @@ class Renderer {
 	void getGraphicsContext();                                                                      // Set up graphics context for rendering
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);                     // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
-	void drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices);               // Draw the given vertices
+	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices);             // Draw the given vertices
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize.x() = width;

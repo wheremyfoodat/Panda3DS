@@ -645,34 +645,34 @@ void Renderer::initGraphicsContext() {
 	displayProgram.use();
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
-	vbo.createFixedSize(sizeof(PicaVertex) * vertexBufferSize, GL_STREAM_DRAW);
+	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
 	vbo.bind();
 	vao.create();
 	vao.bind();
 
 	// Position (x, y, z, w) attributes
-	vao.setAttributeFloat<float>(0, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.positions));
+	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
 	vao.enableAttribute(0);
 	// Quaternion attribute
-	vao.setAttributeFloat<float>(1, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.quaternion));
+	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, s.quaternion));
 	vao.enableAttribute(1);
 	// Colour attribute
-	vao.setAttributeFloat<float>(2, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.colour));
+	vao.setAttributeFloat<float>(2, 4, sizeof(Vertex), offsetof(Vertex, s.colour));
 	vao.enableAttribute(2);
 	// UV 0 attribute
-	vao.setAttributeFloat<float>(3, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0));
+	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord0));
 	vao.enableAttribute(3);
 	// UV 1 attribute
-	vao.setAttributeFloat<float>(4, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord1));
+	vao.setAttributeFloat<float>(4, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord1));
 	vao.enableAttribute(4);
 	// UV 0 W-component attribute
-	vao.setAttributeFloat<float>(5, 1, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0_w));
+	vao.setAttributeFloat<float>(5, 1, sizeof(Vertex), offsetof(Vertex, s.texcoord0_w));
 	vao.enableAttribute(5);
 	// View
-	vao.setAttributeFloat<float>(6, 3, sizeof(PicaVertex), offsetof(PicaVertex, s.view));
+	vao.setAttributeFloat<float>(6, 3, sizeof(Vertex), offsetof(Vertex, s.view));
 	vao.enableAttribute(6);
 	// UV 2 attribute
-	vao.setAttributeFloat<float>(7, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord2));
+	vao.setAttributeFloat<float>(7, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord2));
 	vao.enableAttribute(7);
 
 	dummyVBO.create();
@@ -842,7 +842,7 @@ void Renderer::updateLightingLUT(){
 	gpu.lightingLUTDirty = false;
 }
 
-void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices) {
+void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
 	  OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
