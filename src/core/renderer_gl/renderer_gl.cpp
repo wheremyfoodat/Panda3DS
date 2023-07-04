@@ -232,17 +232,25 @@ const char* fragmentShader = R"(
 	#define RR_LUT 6u
 
 	float lutLookup(uint lut, uint light, float value){
-		if(lut>=FR_LUT&&lut<=RR_LUT)lut-=1;
-		if(lut==SP_LUT)lut=8+light;
-		return texture(u_tex_lighting_lut,vec2(value,lut)).r; 
+		if (lut >= FR_LUT && lut <= RR_LUT)
+			lut-=1;
+		if (lut==SP_LUT)
+			lut=8+light;
+		return texture(u_tex_lighting_lut, vec2(value, lut)).r; 
 	}
-	vec3 regToColor(uint reg){
-		return vec3(
-			float(bitfieldExtract(reg,20,8))/255.,
-			float(bitfieldExtract(reg,10,8))/255.,
-			float(bitfieldExtract(reg,00,8))/255.
+
+	vec3 regToColor(uint reg) {
+		// Normalization scale to convert from [0...255] to [0.0...1.0]
+		const float scale = 1.0 / 255.0;
+
+		return scale * vec3(
+			float(bitfieldExtract(reg, 20, 8)),
+			float(bitfieldExtract(reg, 10, 8)),
+			float(bitfieldExtract(reg, 00, 8))
 		);
 	}
+
+	// Convert an arbitrary-width floating point literal to an f32
 	float decodeFP(uint hex, uint E, uint M){
 		uint width = M + E + 1u;
 		uint bias = 128u - (1u << (E - 1u));
@@ -254,11 +262,14 @@ const char* fragmentShader = R"(
 			if (exponent == (1u << E) - 1u) exponent = 255u;
 			else exponent += bias;
 			hex = sign | (mantissa << (23u - M)) | (exponent << 23u);
-		}else hex = sign;
+		} else {
+			hex = sign;
+		}
+
         return uintBitsToFloat(hex);
 	}
-	//Implements the following algorthm: https://mathb.in/26766
 
+	// Implements the following algorthm: https://mathb.in/26766
 	void calcLighting(out vec4 primary_color, out vec4 secondary_color){
 		// Quaternions describe a transformation from surface-local space to eye space.
 		// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
@@ -269,13 +280,13 @@ const char* fragmentShader = R"(
 		vec3 view = normalize(v_view);
 
 		uint GPUREG_LIGHTING_ENABLE  = readPicaReg(0x008F);
-		if(bitfieldExtract(GPUREG_LIGHTING_ENABLE,0,1)==0){
+		if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0){
 			primary_color = secondary_color = vec4(1.0);
 			return;
 		}
+
 		uint GPUREG_LIGHTING_AMBIENT = readPicaReg(0x01C0);
-		
-		uint GPUREG_LIGHTING_NUM_LIGHTS = (readPicaReg(0x01C2)&0x7u)+1;
+		uint GPUREG_LIGHTING_NUM_LIGHTS = (readPicaReg(0x01C2) & 0x7u) +1;
 		uint GPUREG_LIGHTING_LIGHT_PERMUTATION = readPicaReg(0x01D9);
 
 		primary_color   = vec4(vec3(0.0),1.0);
@@ -292,103 +303,114 @@ const char* fragmentShader = R"(
 
 		bool error_unimpl = false;
 
-		for(uint i = 0; i<GPUREG_LIGHTING_NUM_LIGHTS;++i){
+		for(uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++){
 			uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION,int(i*3),3);
 		
-			uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140+0x10*light_id);
-			uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141+0x10*light_id);
-			uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142+0x10*light_id);
-			uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143+0x10*light_id);
-			uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144+0x10*light_id);
-			uint GPUREG_LIGHTi_VECTOR_HIGH= readPicaReg(0x0145+0x10*light_id);
-			uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149+0x10*light_id);
+			uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142 +0x10 * light_id);
+			uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_VECTOR_HIGH= readPicaReg(0x0145 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149 + 0x10 * light_id);
 
 			vec3 light_vector = normalize(vec3(
-				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW,0,16),5,10),
-				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW,16,16),5,10),
-				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH,0,16),5,10)
+				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5, 10),
+				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5, 10),
+				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5, 10)
 			));
-			//Positional Light
-			if(bitfieldExtract(GPUREG_LIGHTi_CONFIG,0,1)==0)error_unimpl = true;
 
+			// Positional Light
+			if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0)
+				error_unimpl = true;
 
-			vec3 half_vector = normalize(normalize(light_vector)+view);
+			vec3 half_vector = normalize(normalize(light_vector) + view);
 
-			for(int c=0;c<7u;++c){
-				if(bitfieldExtract(GPUREG_LIGHTING_CONFIG1,16+c,1)==0){
-					uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE,c*4,3);
-					float scale = float(1u<<scale_id);
-					if(scale_id>=6u) scale/=256.0;
+			for(int c = 0; c < 7; c++){
+				if(bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0){
+					uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
+					float scale = float(1u << scale_id);
+					if (scale_id >= 6u)
+						scale/=256.0;
 
-					uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT,c*4,3);
-					if(input_id==0u)d[c] = dot(normal,half_vector);
-					else if(input_id==1u)d[c] = dot(view,half_vector);
-					else if(input_id==2u)d[c] = dot(normal,view);
-					else if(input_id==3u)d[c] = dot(light_vector,normal);
-					else if(input_id==4u){
-						uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146+0x10*light_id);
-						uint GPUREG_LIGHTi_SPOTDIR_HIGH= readPicaReg(0x0147+0x10*light_id);
+					uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
+					if (input_id==0u) d[c] = dot(normal,half_vector);
+					else if (input_id==1u) d[c] = dot(view,half_vector);
+					else if (input_id==2u) d[c] = dot(normal,view);
+					else if (input_id==3u) d[c] = dot(light_vector,normal);
+					else if (input_id==4u){
+						uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146 + 0x10 * light_id);
+						uint GPUREG_LIGHTi_SPOTDIR_HIGH= readPicaReg(0x0147 + 0x10 * light_id);
 						vec3 spot_light_vector = normalize(vec3(
-							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW,0,16),1,11),
-							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW,16,16),1,11),
-							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH,0,16),1,11)
+							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1, 11),
+							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1, 11),
+							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1, 11)
 						));
-						d[c] = dot(-light_vector,spot_light_vector);// -L . P (aka Spotlight aka SP);
-					}else if(input_id==5u){
-						d[c] = 1.0;//TODO: cos <greek symbol> (aka CP);
+						d[c] = dot(-light_vector, spot_light_vector); // -L dot P (aka Spotlight aka SP);
+					} else if (input_id == 5u) {
+						d[c] = 1.0; // TODO: cos <greek symbol> (aka CP);
 						error_unimpl = true;
-					}else d[c] = 1.0;
+					} else {
+						d[c] = 1.0;
+					}
 
-					d[c] = lutLookup(c,light_id,d[c]*0.5+0.5)*scale;
-					if(bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS,2*c,1)!=0u)d[c]=abs(d[c]);
-				}else d[c]=1.0;
+					d[c] = lutLookup(c, light_id, d[c] * 0.5 + 0.5) * scale;
+					if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) 
+						d[c] = abs(d[c]);
+				} else {
+					d[c] = 1.0;
+				}
 			}
 			
 			uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG,4,4);
-			if(lookup_config==0){
+			if (lookup_config == 0) {
 				d[D1_LUT] = 0.0;
 				d[FR_LUT] = 0.0;
-				d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
-			}else if(lookup_config==1){
+				d[RG_LUT]= d[RB_LUT] = d[RR_LUT];
+			} else if(lookup_config == 1) {
 				d[D0_LUT] = 0.0;
 				d[D1_LUT] = 0.0;
-				d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
-			}else if(lookup_config==2){
+				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+			} else if(lookup_config == 2) {
 				d[FR_LUT] = 0.0;
 				d[SP_LUT] = 0.0;
-				d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
-			}else if(lookup_config==3){
+				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+			} else if(lookup_config == 3) {
 				d[SP_LUT] = 0.0;
-				d[RG_LUT]=d[RB_LUT]=d[RR_LUT]=1.0;
-			}else if(lookup_config==4)d[FR_LUT] = 0.0;
-			else if(lookup_config==5)d[D1_LUT] = 0.0;
-			else if(lookup_config==6)d[RG_LUT]=d[RB_LUT]=d[RR_LUT];
+				d[RG_LUT]= d[RB_LUT] = d[RR_LUT] = 1.0;
+			} else if (lookup_config == 4) {
+				d[FR_LUT] = 0.0;
+			} else if (lookup_config == 5) {
+				d[D1_LUT] = 0.0;
+			} else if (lookup_config == 6) {
+				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+			}
 
-			float distance_factor = 1.0; //a
-			float indirect_factor = 1.0;//fi
-			float shadow_factor = 1.0;  //o
+			float distance_factor = 1.0; // a
+			float indirect_factor = 1.0; // fi
+			float shadow_factor = 1.0;   // o
 
-			float NdotL = dot(normal,light_vector); //Li*N
+			float NdotL = dot(normal, light_vector); //Li dot N
 
-			//Two sided diffuse
-			if(bitfieldExtract(GPUREG_LIGHTi_CONFIG,1,1)==0)NdotL=max(0.0,NdotL);
-			else NdotL=abs(NdotL);
+			// Two sided diffuse
+			if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0) NdotL = max(0.0, NdotL);
+			else NdotL = abs(NdotL);
 
 			float light_factor =  distance_factor*d[SP_LUT]*indirect_factor*shadow_factor;
 
-			primary_color.rgb   += light_factor*(regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE)*NdotL);
-			secondary_color.rgb += light_factor*(
-									 regToColor(GPUREG_LIGHTi_SPECULAR0)*d[D0_LUT]+
-									 regToColor(GPUREG_LIGHTi_SPECULAR1)*d[D1_LUT]*vec3(d[RR_LUT],d[RG_LUT],d[RB_LUT])
+			primary_color.rgb   += light_factor * (regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE)*NdotL);
+			secondary_color.rgb += light_factor * (
+									 regToColor(GPUREG_LIGHTi_SPECULAR0) * d[D0_LUT] +
+									 regToColor(GPUREG_LIGHTi_SPECULAR1) * d[D1_LUT] * vec3(d[RR_LUT], d[RG_LUT], d[RB_LUT])
 									);
 		}	
-		uint fresnel_output1 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0,2,1);
-		uint fresnel_output2 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0,3,1);
+		uint fresnel_output1 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 2, 1);
+		uint fresnel_output2 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 3, 1);
 
-		if(fresnel_output1==1u) primary_color.a = d[FR_LUT];
-		if(fresnel_output2==1u) secondary_color.a = d[FR_LUT];
+		if (fresnel_output1 == 1u) primary_color.a = d[FR_LUT];
+		if (fresnel_output2 == 1u) secondary_color.a = d[FR_LUT];
 
-		if(error_unimpl){
+		if (error_unimpl) {
 			secondary_color = primary_color = vec4(1.0,0.,1.0,1.0);
 		}
 	}
@@ -430,7 +452,7 @@ const char* fragmentShader = R"(
 		if (tevUnimplementedSourceFlag) {
 			 // fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 		}
-		//fragColour.rg = texture(u_tex_lighting_lut,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
+		// fragColour.rg = texture(u_tex_lighting_lut,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
 
 
 		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
@@ -573,7 +595,7 @@ void Renderer::initGraphicsContext() {
 	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
 	picaRegLoc = OpenGL::uniformLocation(triangleProgram, "u_picaRegs");
 
-	// Init sampler objects
+	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex1"), 1);
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex2"), 2);
