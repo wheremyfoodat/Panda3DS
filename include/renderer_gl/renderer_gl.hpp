@@ -3,9 +3,9 @@
 #include <span>
 
 #include "PICA/float_types.hpp"
+#include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
-#include "opengl.hpp"
 #include "surface_cache.hpp"
 #include "textures.hpp"
 #include "PICA/regs.hpp"
@@ -16,6 +16,8 @@ class GPU;
 
 class Renderer {
 	GPU& gpu;
+	GLStateManager& gl;
+
 	OpenGL::Program triangleProgram;
 	OpenGL::Program displayProgram;
 
@@ -81,7 +83,7 @@ class Renderer {
 	void updateLightingLUT();
 
   public:
-	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
+	Renderer(GPU& gpu, GLStateManager& gl, const std::array<u32, regNum>& internalRegs) : gpu(gpu), gl(gl), regs(internalRegs) {}
 
 	void reset();
 	void display();                                                                                 // Display the 3DS screen contents to the window

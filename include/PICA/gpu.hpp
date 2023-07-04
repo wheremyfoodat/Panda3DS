@@ -81,7 +81,7 @@ class GPU {
 	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
 	bool lightingLUTDirty = false;
 
-	GPU(Memory& mem);
+	GPU(Memory& mem, GLStateManager& gl);
 	void initGraphicsContext() { renderer.initGraphicsContext(); }
 	void getGraphicsContext() { renderer.getGraphicsContext(); }
 	void display() { renderer.display(); }

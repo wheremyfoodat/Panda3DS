@@ -10,8 +10,9 @@
 
 using namespace Floats;
 
-
-GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
+// Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
+// Thus, our GLStateManager being here does not negatively impact renderer-agnosticness
+GPU::GPU(Memory& mem, GLStateManager& gl) : mem(mem), renderer(*this, gl, regs) {
 	vram = new u8[vramSize];
 	mem.setVRAM(vram); // Give the bus a pointer to our VRAM
 }
