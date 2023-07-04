@@ -20,10 +20,19 @@
 struct GLStateManager {
 	bool blendEnabled;
 	bool depthEnabled;
+	bool scissorEnabled;
+
+	GLuint boundVAO;
+	GLuint boundVBO;
+	GLuint currentProgram;
 
 	void reset();
 	void resetBlend();
 	void resetDepth();
+	void resetVAO();
+	void resetVBO();
+	void resetProgram();
+	void resetScissor();
 
 	void enableDepth() {
 		if (!depthEnabled) {
@@ -52,6 +61,45 @@ struct GLStateManager {
 			OpenGL::disableBlend();
 		}
 	}
+
+	void enableScissor() {
+		if (!scissorEnabled) {
+			scissorEnabled = true;
+			OpenGL::enableScissor();
+		}
+	}
+
+	void disableScissor() {
+		if (scissorEnabled) {
+			scissorEnabled = false;
+			OpenGL::disableScissor();
+		}
+	}
+
+	void bindVAO(GLuint handle) {
+		if (boundVAO != handle) {
+			boundVAO = handle;
+			glBindVertexArray(handle);
+		}
+	}
+
+	void bindVBO(GLuint handle) {
+		if (boundVBO != handle) {
+			boundVBO = handle;
+			glBindBuffer(GL_ARRAY_BUFFER, handle);
+		}
+	}
+
+	void useProgram(GLuint handle) {
+		if (currentProgram != handle) {
+			currentProgram = handle;
+			glUseProgram(handle);
+		}
+	}
+
+	void bindVAO(const OpenGL::VertexArray& vao) { bindVAO(vao.handle()); }
+	void bindVBO(const OpenGL::VertexBuffer& vbo) { bindVBO(vbo.handle()); }
+	void useProgram(const OpenGL::Program& program) { useProgram(program.handle()); }
 };
 
 static_assert(std::is_trivially_constructible<GLStateManager>(), "OpenGL State Manager class is not trivially constructible!");

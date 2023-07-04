@@ -592,7 +592,7 @@ void Renderer::reset() {
 	if (triangleProgram.exists()) {
 		const auto oldProgram = OpenGL::getProgram();
 
-		triangleProgram.use();
+		gl.useProgram(triangleProgram);
 		oldAlphaControl = 0; // Default alpha control to 0
 		oldTexUnitConfig = 0; // Default tex unit config to 0
 		
@@ -606,7 +606,7 @@ void Renderer::reset() {
 		glUniform1f(depthOffsetLoc, oldDepthOffset);
 		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
 
-		glUseProgram(oldProgram); // Switch to old GL program
+		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
 }
 
@@ -614,7 +614,7 @@ void Renderer::initGraphicsContext() {
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({ vert, frag });
-	triangleProgram.use();
+	gl.useProgram(triangleProgram);
 	
 	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
 	texUnitConfigLoc = OpenGL::uniformLocation(triangleProgram, "u_textureConfig");
@@ -642,13 +642,13 @@ void Renderer::initGraphicsContext() {
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
 	displayProgram.create({ vertDisplay, fragDisplay });
 
-	displayProgram.use();
+	gl.useProgram(displayProgram);
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
-	vbo.bind();
+	gl.bindVBO(vbo);
 	vao.create();
-	vao.bind();
+	gl.bindVAO(vao);
 
 	// Position (x, y, z, w) attributes
 	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
@@ -725,9 +725,9 @@ void Renderer::setupBlending() {
 	};
 
 	if (!blendingEnabled) {
-		OpenGL::disableBlend();
+		gl.disableBlend();
 	} else {
-		OpenGL::enableBlend();
+		gl.enableBlend();
 
 		// Get blending equations
 		const u32 blendControl = regs[PICA::InternalRegs::BlendFunc];
@@ -852,11 +852,11 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
     // TODO: We should implement a GL state tracker that tracks settings like scissor, blending, bound program, etc
     // This way if we attempt to eg do multiple glEnable(GL_BLEND) calls in a row, it will say "Oh blending is already enabled"
     // And not actually perform the very expensive driver call for it
-	OpenGL::disableScissor();
+	gl.disableScissor();
 
-	vbo.bind();
-	vao.bind();
-	triangleProgram.use();
+	gl.bindVBO(vbo);
+	gl.bindVAO(vao);
+	gl.useProgram(triangleProgram);
 
 	// Adjust alpha test if necessary
 	const u32 alphaControl = regs[PICA::InternalRegs::AlphaTestConfig];
@@ -924,18 +924,18 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
 	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
-		OpenGL::enableDepth();
+		gl.enableDepth();
 		glDepthFunc(depthModes[depthFunc]);
 		glDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
 		bindDepthBuffer();
 	} else {
 		if (depthWriteEnable) {
-			OpenGL::enableDepth();
+			gl.enableDepth();
 			glDepthFunc(GL_ALWAYS);
 			glDepthMask(GL_TRUE);
 			bindDepthBuffer();
 		} else {
-			OpenGL::disableDepth();
+			gl.disableDepth();
 		}
 	}
 
@@ -947,7 +947,7 @@ constexpr u32 topScreenBuffer = 0x1f000000;
 constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 void Renderer::display() {
-	OpenGL::disableScissor();
+	gl.disableScissor();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
@@ -1038,12 +1038,14 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	tex.bind();
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
-	OpenGL::disableBlend();
-	OpenGL::disableDepth();
-	OpenGL::disableScissor();
+	gl.disableBlend();
+	gl.disableDepth();
+	gl.disableScissor();
+	gl.useProgram(displayProgram);
+	gl.bindVAO(dummyVAO);
+
 	OpenGL::disableClipPlane(0);
 	OpenGL::disableClipPlane(1);
-	displayProgram.use();
 
 	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
 	// We consider output gap == 320 to mean bottom, and anything else to mean top
@@ -1053,6 +1055,5 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
 	}
 
-	dummyVAO.bind();
 	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
 }
