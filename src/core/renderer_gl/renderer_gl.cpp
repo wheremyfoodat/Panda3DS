@@ -34,7 +34,6 @@ const char* vertexShader = R"(
 
 	// TEV uniforms
 	uniform uint u_textureEnvColor[6];
-	uniform uint u_textureEnvBufferColor;
 	uniform uint u_picaRegs[0x200 - 0x48];
 
 	// Helper so that the implementation of u_pica_regs can be changed later
@@ -96,7 +95,7 @@ const char* vertexShader = R"(
 			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
 		}
 
-		v_textureEnvBufferColor = abgr8888ToVec4(u_textureEnvBufferColor);
+		v_textureEnvBufferColor = abgr8888ToVec4(readPicaReg(0xFD));
 
 		// Parse clipping plane registers
 		// The plane registers describe a clipping plane in the form of Ax + By + Cz + D = 0 
@@ -136,7 +135,6 @@ const char* fragmentShader = R"(
 	uniform uint u_textureEnvOperand[6];
 	uniform uint u_textureEnvCombiner[6];
 	uniform uint u_textureEnvScale[6];
-	uniform uint u_textureEnvUpdateBuffer;
 
 	// Depth control uniforms
 	uniform float u_depthScale;
@@ -465,6 +463,7 @@ const char* fragmentShader = R"(
 		tevSources[15] = vec4(0.0); // Previous combiner
 
 		tevNextPreviousBuffer = v_textureEnvBufferColor;
+		uint textureEnvUpdateBuffer = readPicaReg(0xE0);
 
 		for (int i = 0; i < 6; i++) {
 			tevSources[14] = v_textureEnvColor[i]; // Constant color
@@ -472,11 +471,11 @@ const char* fragmentShader = R"(
 			tevSources[13] = tevNextPreviousBuffer;
 
 			if (i < 4) {
-				if ((u_textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
+				if ((textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
 					tevNextPreviousBuffer.rgb = tevSources[15].rgb;
 				}
 
-				if ((u_textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
+				if ((textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
 					tevNextPreviousBuffer.a = tevSources[15].a;
 				}
 			}
@@ -617,8 +616,6 @@ void Renderer::initGraphicsContext() {
 	textureEnvCombinerLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvCombiner");
 	textureEnvColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvColor");
 	textureEnvScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvScale");
-	textureEnvUpdateBufferLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvUpdateBuffer");
-	textureEnvBufferColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvBufferColor");
 
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
@@ -776,8 +773,6 @@ void Renderer::setupTextureEnvState() {
 	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
 	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
 	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
-	glUniform1ui(textureEnvUpdateBufferLoc, regs[PICA::InternalRegs::TexEnvUpdateBuffer]);
-	glUniform1ui(textureEnvBufferColorLoc, regs[PICA::InternalRegs::TexEnvBufferColor]);
 }
 
 void Renderer::bindTexturesToSlots() {
