@@ -30,6 +30,8 @@ class Renderer {
 	GLint textureEnvCombinerLoc = -1;
 	GLint textureEnvColorLoc = -1;
 	GLint textureEnvScaleLoc = -1;
+	
+	// Uniform of PICA registers
 	GLint picaRegLoc = -1;
 
 	// Depth configuration uniform locations

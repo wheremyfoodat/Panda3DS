@@ -335,7 +335,7 @@ const char* fragmentShader = R"(
 
 		bool error_unimpl = false;
 
-		for (uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++){
+		for (uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
 			uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION,int(i*3),3);
 		
 			uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140 + 0x10 * light_id);
@@ -358,8 +358,8 @@ const char* fragmentShader = R"(
 
 			vec3 half_vector = normalize(normalize(light_vector) + view);
 
-			for(int c = 0; c < 7; c++){
-				if(bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0){
+			for (int c = 0; c < 7; c++) {
+				if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0){
 					uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
 					float scale = float(1u << scale_id);
 					if (scale_id >= 6u)
@@ -399,15 +399,15 @@ const char* fragmentShader = R"(
 				d[D1_LUT] = 0.0;
 				d[FR_LUT] = 0.0;
 				d[RG_LUT]= d[RB_LUT] = d[RR_LUT];
-			} else if(lookup_config == 1) {
+			} else if (lookup_config == 1) {
 				d[D0_LUT] = 0.0;
 				d[D1_LUT] = 0.0;
 				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-			} else if(lookup_config == 2) {
+			} else if (lookup_config == 2) {
 				d[FR_LUT] = 0.0;
 				d[SP_LUT] = 0.0;
 				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-			} else if(lookup_config == 3) {
+			} else if (lookup_config == 3) {
 				d[SP_LUT] = 0.0;
 				d[RG_LUT]= d[RB_LUT] = d[RR_LUT] = 1.0;
 			} else if (lookup_config == 4) {
