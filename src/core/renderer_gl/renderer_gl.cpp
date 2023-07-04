@@ -30,14 +30,16 @@ const char* vertexShader = R"(
 	flat out vec4 v_textureEnvColor[6];
 	flat out vec4 v_textureEnvBufferColor;
 
+	out float gl_ClipDistance[2];
+
 	// TEV uniforms
 	uniform uint u_textureEnvColor[6];
 	uniform uint u_textureEnvBufferColor;
-	uniform uint u_picaRegs[0x200-0x47];
+	uniform uint u_picaRegs[0x200 - 0x47];
 
-	//Helper so that the implementation of u_pica_regs can be changed later
+	// Helper so that the implementation of u_pica_regs can be changed later
 	uint readPicaReg(uint reg_addr){
-		return u_picaRegs[reg_addr-0x47];
+		return u_picaRegs[reg_addr - 0x47];
 	}
 
 	vec4 abgr8888ToVec4(uint abgr) {
@@ -50,10 +52,30 @@ const char* vertexShader = R"(
 			float(abgr >> 24)
 		);
 	}
+
 	vec3 rotateVec3ByQuaternion(vec3 v, vec4 q){
-		vec3 u=q.xyz;
+		vec3 u = q.xyz;
 		float s = q.w;
-		return 2.0*dot(u, v)*u + (s*s - dot(u, u))*v + 2.0*s*cross(u, v);
+		return 2.0 * dot(u, v) * u + (s * s - dot(u, u))* v  + 2.0 * s * cross(u, v);
+	}
+
+	// Convert an arbitrary-width floating point literal to an f32
+	float decodeFP(uint hex, uint E, uint M){
+		uint width = M + E + 1u;
+		uint bias = 128u - (1u << (E - 1u));
+		uint exponent = (hex >> M) & ((1u << E) - 1u);
+		uint mantissa = hex & ((1u << M) - 1u);
+		uint sign = (hex >> (E + M)) << 31u;
+
+		if ((hex & ((1u << (width - 1u)) - 1u)) != 0) {
+			if (exponent == (1u << E) - 1u) exponent = 255u;
+			else exponent += bias;
+			hex = sign | (mantissa << (23u - M)) | (exponent << 23u);
+		} else {
+			hex = sign;
+		}
+
+        return uintBitsToFloat(hex);
 	}
 
 	void main() {
@@ -66,15 +88,30 @@ const char* vertexShader = R"(
 		v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
 		v_view = a_view; 
 
-		v_normal    = normalize(rotateVec3ByQuaternion(vec3(0.0,0.0,1.0), a_quaternion));
-		v_tangent   = normalize(rotateVec3ByQuaternion(vec3(1.0,0.0,0.0), a_quaternion));
-		v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0,1.0,0.0), a_quaternion));
+		v_normal    = normalize(rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), a_quaternion));
+		v_tangent   = normalize(rotateVec3ByQuaternion(vec3(1.0, 0.0, 0.0), a_quaternion));
+		v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0, 1.0, 0.0), a_quaternion));
 
 		for (int i = 0; i < 6; i++) {
 			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
 		}
 
 		v_textureEnvBufferColor = abgr8888ToVec4(u_textureEnvBufferColor);
+
+		// Parse clipping plane registers
+		// The plane registers describe a clipping plane in the form of Ax + By + Cz + D = 0 
+		// With n = (A, B, C) being the normal vector and D being the origin point distance
+		// Therefore, for the second clipping plane, we can just pass the dot product of the clip vector and the input coordinates to gl_ClipDistance[1]
+		vec4 clipData = vec4(
+			decodeFP(readPicaReg(0x48) & 0xffffffu, 7, 16),
+			decodeFP(readPicaReg(0x49) & 0xffffffu, 7, 16),
+			decodeFP(readPicaReg(0x4A) & 0xffffffu, 7, 16),
+			decodeFP(readPicaReg(0x4B) & 0xffffffu, 7, 16)
+		);
+
+		// There's also another, always-on clipping plane based on vertex z
+		gl_ClipDistance[0] = -a_coords.z;
+		gl_ClipDistance[1] = dot(clipData, a_coords);
 	}
 )";
 
@@ -114,11 +151,11 @@ const char* fragmentShader = R"(
 	uniform sampler2D u_tex2;
 	uniform sampler1DArray u_tex_lighting_lut;
 
-	uniform uint u_picaRegs[0x200-0x47];
+	uniform uint u_picaRegs[0x200 - 0x47];
 
-	//Helper so that the implementation of u_pica_regs can be changed later
+	// Helper so that the implementation of u_pica_regs can be changed later
 	uint readPicaReg(uint reg_addr){
-		return u_picaRegs[reg_addr-0x47];
+		return u_picaRegs[reg_addr - 0x47];
 	}
 
 	vec4 tevSources[16];
@@ -233,9 +270,9 @@ const char* fragmentShader = R"(
 
 	float lutLookup(uint lut, uint light, float value){
 		if (lut >= FR_LUT && lut <= RR_LUT)
-			lut-=1;
+			lut -= 1;
 		if (lut==SP_LUT)
-			lut=8+light;
+			lut = light + 8;
 		return texture(u_tex_lighting_lut, vec2(value, lut)).r; 
 	}
 
@@ -303,12 +340,12 @@ const char* fragmentShader = R"(
 
 		bool error_unimpl = false;
 
-		for(uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++){
+		for (uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++){
 			uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION,int(i*3),3);
 		
 			uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140 + 0x10 * light_id);
 			uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141 + 0x10 * light_id);
-			uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142 +0x10 * light_id);
+			uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142 + 0x10 * light_id);
 			uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143 + 0x10 * light_id);
 			uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144 + 0x10 * light_id);
 			uint GPUREG_LIGHTi_VECTOR_HIGH= readPicaReg(0x0145 + 0x10 * light_id);
@@ -334,11 +371,11 @@ const char* fragmentShader = R"(
 						scale/=256.0;
 
 					uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
-					if (input_id==0u) d[c] = dot(normal,half_vector);
-					else if (input_id==1u) d[c] = dot(view,half_vector);
-					else if (input_id==2u) d[c] = dot(normal,view);
-					else if (input_id==3u) d[c] = dot(light_vector,normal);
-					else if (input_id==4u){
+					if (input_id == 0u) d[c] = dot(normal,half_vector);
+					else if (input_id == 1u) d[c] = dot(view,half_vector);
+					else if (input_id == 2u) d[c] = dot(normal,view);
+					else if (input_id == 3u) d[c] = dot(light_vector,normal);
+					else if (input_id == 4u){
 						uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146 + 0x10 * light_id);
 						uint GPUREG_LIGHTi_SPOTDIR_HIGH= readPicaReg(0x0147 + 0x10 * light_id);
 						vec3 spot_light_vector = normalize(vec3(
@@ -828,6 +865,11 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 		glUniform1ui(alphaControlLoc, alphaControl);
 	}
 
+	OpenGL::enableClipPlane(0); // Clipping plane 0 is always enabled
+	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
+		OpenGL::enableClipPlane(1);
+	}
+
 	setupBlending();
 	OpenGL::Framebuffer poop = getColourFBO();
 	poop.bind(OpenGL::DrawAndReadFramebuffer);
@@ -904,7 +946,6 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 constexpr u32 topScreenBuffer = 0x1f000000;
 constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
-// Quick hack to display top screen for now
 void Renderer::display() {
 	OpenGL::disableScissor();
 
@@ -1000,6 +1041,8 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	OpenGL::disableBlend();
 	OpenGL::disableDepth();
 	OpenGL::disableScissor();
+	OpenGL::disableClipPlane(0);
+	OpenGL::disableClipPlane(1);
 	displayProgram.use();
 
 	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
