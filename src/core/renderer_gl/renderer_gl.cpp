@@ -5,8 +5,7 @@
 
 using namespace Floats;
 using namespace Helpers;
-
-// This is all hacked up to display our first triangle
+using namespace PICA;
 
 const char* vertexShader = R"(
 	#version 410 core
@@ -223,6 +222,7 @@ const char* fragmentShader = R"(
 
 		return result;
 	}
+
 	#define D0_LUT 0u
 	#define D1_LUT 1u
 	#define SP_LUT 2u
@@ -281,7 +281,7 @@ const char* fragmentShader = R"(
 		primary_color   = vec4(vec3(0.0),1.0);
 		secondary_color = vec4(vec3(0.0),1.0);
 
-		primary_color.rgb+=	regToColor(GPUREG_LIGHTING_AMBIENT);
+		primary_color.rgb += regToColor(GPUREG_LIGHTING_AMBIENT);
 
 		uint GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0);
 		uint GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1);
@@ -753,8 +753,8 @@ void Renderer::bindTexturesToSlots() {
 		tex.bind();
 	}
 
-	glActiveTexture(GL_TEXTURE0+3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY,lightLUTTextureArray);
+	glActiveTexture(GL_TEXTURE0 + 3);
+	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
 	glActiveTexture(GL_TEXTURE0);
 
 	// Update the texture unit configuration uniform if it changed
@@ -765,20 +765,22 @@ void Renderer::bindTexturesToSlots() {
 	}
 }
 void Renderer::updateLightingLUT(){
-	std::array<u16, sizeof(gpu.lightingLUT)/sizeof(gpu.lightingLUT[0])> u16_lightinglut; 
-	for(int i=0;i<gpu.lightingLUT.size();++i){
-		uint64_t value =  gpu.lightingLUT[i]&((1<<12)-1);
-		u16_lightinglut[i] = value*65535/4095; 
+	std::array<u16, GPU::LightingLutSize> u16_lightinglut; 
+	
+	for(int i = 0; i < gpu.lightingLUT.size(); i++){
+		uint64_t value =  gpu.lightingLUT[i] & ((1 << 12) - 1);
+		u16_lightinglut[i] = value * 65535 / 4095; 
 	} 
-	glActiveTexture(GL_TEXTURE0+3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY,lightLUTTextureArray);
-	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, gpu.LIGHT_LUT_COUNT,0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
+
+	glActiveTexture(GL_TEXTURE0 + 3);
+	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glActiveTexture(GL_TEXTURE0+0);
-	gpu.lightingLUTDirty=false;
+	glActiveTexture(GL_TEXTURE0);
+	gpu.lightingLUTDirty = false;
 }
 
 void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices) {
@@ -841,9 +843,14 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 
 	setupTextureEnvState();
 	bindTexturesToSlots();
-	//Upload Pica Registers
-	glUniform1uiv(picaRegLoc,0x200-0x47,&regs[0x47]);
-	if(gpu.lightingLUTDirty)updateLightingLUT();
+
+	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x47)
+	// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
+	glUniform1uiv(picaRegLoc, 0x200 - 0x47, &regs[0x47]);
+
+	if (gpu.lightingLUTDirty) {
+		updateLightingLUT();
+	}
 
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;

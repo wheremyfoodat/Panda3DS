@@ -167,6 +167,34 @@ namespace PICA {
 		};
 	}
 
+	namespace Lights {
+		enum : u32 {
+			LUT_D0 = 0,
+			LUT_D1,
+			LUT_FR,
+			LUT_RB,
+			LUT_RG,
+			LUT_RR,
+			LUT_SP0 = 0x8,
+			LUT_SP1,
+			LUT_SP2,
+			LUT_SP3,
+			LUT_SP4,
+			LUT_SP5,
+			LUT_SP6,
+			LUT_SP7,
+			LUT_DA0 = 0x10,
+			LUT_DA1,
+			LUT_DA2,
+			LUT_DA3,
+			LUT_DA4,
+			LUT_DA5,
+			LUT_DA6,
+			LUT_DA7,
+			LUT_Count
+		};
+	}
+
 	enum class TextureFmt : u32 {
 		RGBA8 = 0x0,
 		RGB8 = 0x1,

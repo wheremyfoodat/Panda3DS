@@ -24,23 +24,29 @@ void GPU::writeReg(u32 address, u32 value) {
 }
 
 u32 GPU::readInternalReg(u32 index) {
+	using namespace PICA::InternalRegs;
+
 	if (index > regNum) {
 		Helpers::panic("Tried to read invalid GPU register. Index: %X\n", index);
 		return 0;
 	}
-	using namespace PICA::InternalRegs;
-	if(index>=LightingLUTData0&&index<=LightingLUTData7){
-		uint32_t ind = regs[LightingLUTIndex];
-		uint32_t lut_id = (ind>>8)&(0x1f);
-		uint32_t lut_addr = ind&0xff;
-		uint32_t value = 0xffffffff;
-		if(lut_id<LIGHT_LUT_COUNT){
-			value = lightingLUT[lut_id*256+lut_addr];
+
+	else if (index >= LightingLUTData0 && index <= LightingLUTData7) {
+		const uint32_t index = regs[LightingLUTIndex];  // Get full LUT index register
+		const uint32_t lutID = getBits<8, 5>(index);    // Get which LUT we're actually writing to
+		uint32_t lutIndex = getBits<0, 8>(index);       // And get the index inside the LUT we're writing to
+		uint32_t value = 0xffffffff;                    // Return value
+
+		if (lutID < PICA::Lights::LUT_Count) {
+			value = lightingLUT[lutID * 256 + lutIndex];
 		}
-		lut_addr+=1;
-		regs[LightingLUTIndex]=(ind&~0xff)|(lut_addr&0xff);
+
+		// Increment the bottom 8 bits of the lighting LUT index register
+		lutIndex += 1;
+		regs[LightingLUTIndex] = (index & ~0xff) | (lutIndex & 0xff);
 		return value;
 	}
+
 	return regs[index];
 }
 
@@ -111,16 +117,21 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case LightingLUTData5:
 		case LightingLUTData6:
 		case LightingLUTData7:{
-			uint32_t ind = regs[LightingLUTIndex];
-			uint32_t lut_id = (ind>>8)&(0x1f);
-			uint32_t lut_addr = ind&0xff;
-			if(lut_id<LIGHT_LUT_COUNT){
-				lightingLUT[lut_id*256+lut_addr]=newValue;
+			const uint32_t index = regs[LightingLUTIndex];  // Get full LUT index register
+			const uint32_t lutID = getBits<8, 5>(index);    // Get which LUT we're actually writing to
+			uint32_t lutIndex = getBits<0, 8>(index);       // And get the index inside the LUT we're writing to
+
+			if (lutID < PICA::Lights::LUT_Count) {
+				lightingLUT[lutID * 256 + lutIndex] = newValue;
 				lightingLUTDirty = true;
 			}
-			lut_addr+=1;
-			regs[LightingLUTIndex]=(ind&~0xff)|(lut_addr&0xff);
-		} break;
+
+			// Increment the bottom 8 bits of the lighting LUT index register
+			lutIndex += 1;
+			regs[LightingLUTIndex] = (index & ~0xff) | (lutIndex & 0xff);
+
+			break;
+		}
 
 		case VertexFloatUniformIndex:
 			shaderUnit.vs.setFloatUniformIndex(value);
