@@ -1,5 +1,15 @@
 #include "emulator.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+
+// Gently ask to use the discrete Nvidia/AMD GPU if possible instead of integrated graphics
+extern "C" {
+_declspec(dllexport) DWORD NvOptimusEnablement = 1;
+_declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, gl), memory(cpu.getTicksRef()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
