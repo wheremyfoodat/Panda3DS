@@ -34,12 +34,11 @@ const char* vertexShader = R"(
 
 	// TEV uniforms
 	uniform uint u_textureEnvColor[6];
-	uniform uint u_textureEnvBufferColor;
-	uniform uint u_picaRegs[0x200 - 0x47];
+	uniform uint u_picaRegs[0x200 - 0x48];
 
 	// Helper so that the implementation of u_pica_regs can be changed later
 	uint readPicaReg(uint reg_addr){
-		return u_picaRegs[reg_addr - 0x47];
+		return u_picaRegs[reg_addr - 0x48];
 	}
 
 	vec4 abgr8888ToVec4(uint abgr) {
@@ -96,7 +95,7 @@ const char* vertexShader = R"(
 			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
 		}
 
-		v_textureEnvBufferColor = abgr8888ToVec4(u_textureEnvBufferColor);
+		v_textureEnvBufferColor = abgr8888ToVec4(readPicaReg(0xFD));
 
 		// Parse clipping plane registers
 		// The plane registers describe a clipping plane in the form of Ax + By + Cz + D = 0 
@@ -131,15 +130,11 @@ const char* fragmentShader = R"(
 
 	out vec4 fragColour;
 
-	uniform uint u_alphaControl;
-	uniform uint u_textureConfig;
-
 	// TEV uniforms
 	uniform uint u_textureEnvSource[6];
 	uniform uint u_textureEnvOperand[6];
 	uniform uint u_textureEnvCombiner[6];
 	uniform uint u_textureEnvScale[6];
-	uniform uint u_textureEnvUpdateBuffer;
 
 	// Depth control uniforms
 	uniform float u_depthScale;
@@ -151,11 +146,11 @@ const char* fragmentShader = R"(
 	uniform sampler2D u_tex2;
 	uniform sampler1DArray u_tex_lighting_lut;
 
-	uniform uint u_picaRegs[0x200 - 0x47];
+	uniform uint u_picaRegs[0x200 - 0x48];
 
 	// Helper so that the implementation of u_pica_regs can be changed later
 	uint readPicaReg(uint reg_addr){
-		return u_picaRegs[reg_addr - 0x47];
+		return u_picaRegs[reg_addr - 0x48];
 	}
 
 	vec4 tevSources[16];
@@ -340,7 +335,7 @@ const char* fragmentShader = R"(
 
 		bool error_unimpl = false;
 
-		for (uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++){
+		for (uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
 			uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION,int(i*3),3);
 		
 			uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140 + 0x10 * light_id);
@@ -363,8 +358,8 @@ const char* fragmentShader = R"(
 
 			vec3 half_vector = normalize(normalize(light_vector) + view);
 
-			for(int c = 0; c < 7; c++){
-				if(bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0){
+			for (int c = 0; c < 7; c++) {
+				if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0){
 					uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
 					float scale = float(1u << scale_id);
 					if (scale_id >= 6u)
@@ -404,15 +399,15 @@ const char* fragmentShader = R"(
 				d[D1_LUT] = 0.0;
 				d[FR_LUT] = 0.0;
 				d[RG_LUT]= d[RB_LUT] = d[RR_LUT];
-			} else if(lookup_config == 1) {
+			} else if (lookup_config == 1) {
 				d[D0_LUT] = 0.0;
 				d[D1_LUT] = 0.0;
 				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-			} else if(lookup_config == 2) {
+			} else if (lookup_config == 2) {
 				d[FR_LUT] = 0.0;
 				d[SP_LUT] = 0.0;
 				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-			} else if(lookup_config == 3) {
+			} else if (lookup_config == 3) {
 				d[SP_LUT] = 0.0;
 				d[RG_LUT]= d[RB_LUT] = d[RR_LUT] = 1.0;
 			} else if (lookup_config == 4) {
@@ -453,20 +448,22 @@ const char* fragmentShader = R"(
 	}
 
 	void main() {
-		vec2 tex2UV = (u_textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
-
 		// TODO: what do invalid sources and disabled textures read as?
 		// And what does the "previous combiner" source read initially?
 		tevSources[0] = v_colour; // Primary/vertex color
 		calcLighting(tevSources[1],tevSources[2]);
 
-		if ((u_textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
-		if ((u_textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
-		if ((u_textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
+		uint textureConfig = readPicaReg(0x80);
+		vec2 tex2UV = (textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
+
+		if ((textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
+		if ((textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
+		if ((textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
 		tevSources[13] = vec4(0.0); // Previous buffer
 		tevSources[15] = vec4(0.0); // Previous combiner
 
 		tevNextPreviousBuffer = v_textureEnvBufferColor;
+		uint textureEnvUpdateBuffer = readPicaReg(0xE0);
 
 		for (int i = 0; i < 6; i++) {
 			tevSources[14] = v_textureEnvColor[i]; // Constant color
@@ -474,11 +471,11 @@ const char* fragmentShader = R"(
 			tevSources[13] = tevNextPreviousBuffer;
 
 			if (i < 4) {
-				if ((u_textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
+				if ((textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
 					tevNextPreviousBuffer.rgb = tevSources[15].rgb;
 				}
 
-				if ((u_textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
+				if ((textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
 					tevNextPreviousBuffer.a = tevSources[15].a;
 				}
 			}
@@ -503,9 +500,11 @@ const char* fragmentShader = R"(
 		// Write final fragment depth
 		gl_FragDepth = depth;
 
-		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
-			uint func = (u_alphaControl >> 4u) & 7u;
-			float reference = float((u_alphaControl >> 8u) & 0xffu) / 255.0;
+		// Perform alpha test
+		uint alphaControl = readPicaReg(0x104);
+		if ((alphaControl & 1u) != 0u) { // Check if alpha test is on
+			uint func = (alphaControl >> 4u) & 7u;
+			float reference = float((alphaControl >> 8u) & 0xffu) / 255.0;
 			float alpha = fragColour.a;
 
 			switch (func) {
@@ -592,21 +591,17 @@ void Renderer::reset() {
 	if (triangleProgram.exists()) {
 		const auto oldProgram = OpenGL::getProgram();
 
-		triangleProgram.use();
-		oldAlphaControl = 0; // Default alpha control to 0
-		oldTexUnitConfig = 0; // Default tex unit config to 0
+		gl.useProgram(triangleProgram);
 		
 		oldDepthScale = -1.0; // Default depth scale to -1.0, which is what games typically use
 		oldDepthOffset = 0.0; // Default depth offset to 0
 		oldDepthmapEnable = false; // Enable w buffering
 
-		glUniform1ui(alphaControlLoc, oldAlphaControl);
-		glUniform1ui(texUnitConfigLoc, oldTexUnitConfig);
 		glUniform1f(depthScaleLoc, oldDepthScale);
 		glUniform1f(depthOffsetLoc, oldDepthOffset);
 		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
 
-		glUseProgram(oldProgram); // Switch to old GL program
+		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
 }
 
@@ -614,18 +609,13 @@ void Renderer::initGraphicsContext() {
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({ vert, frag });
-	triangleProgram.use();
-	
-	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
-	texUnitConfigLoc = OpenGL::uniformLocation(triangleProgram, "u_textureConfig");
+	gl.useProgram(triangleProgram);
 
 	textureEnvSourceLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvSource");
 	textureEnvOperandLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvOperand");
 	textureEnvCombinerLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvCombiner");
 	textureEnvColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvColor");
 	textureEnvScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvScale");
-	textureEnvUpdateBufferLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvUpdateBuffer");
-	textureEnvBufferColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvBufferColor");
 
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
@@ -642,37 +632,37 @@ void Renderer::initGraphicsContext() {
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
 	displayProgram.create({ vertDisplay, fragDisplay });
 
-	displayProgram.use();
+	gl.useProgram(displayProgram);
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
-	vbo.createFixedSize(sizeof(PicaVertex) * vertexBufferSize, GL_STREAM_DRAW);
-	vbo.bind();
+	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
+	gl.bindVBO(vbo);
 	vao.create();
-	vao.bind();
+	gl.bindVAO(vao);
 
 	// Position (x, y, z, w) attributes
-	vao.setAttributeFloat<float>(0, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.positions));
+	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
 	vao.enableAttribute(0);
 	// Quaternion attribute
-	vao.setAttributeFloat<float>(1, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.quaternion));
+	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, s.quaternion));
 	vao.enableAttribute(1);
 	// Colour attribute
-	vao.setAttributeFloat<float>(2, 4, sizeof(PicaVertex), offsetof(PicaVertex, s.colour));
+	vao.setAttributeFloat<float>(2, 4, sizeof(Vertex), offsetof(Vertex, s.colour));
 	vao.enableAttribute(2);
 	// UV 0 attribute
-	vao.setAttributeFloat<float>(3, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0));
+	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord0));
 	vao.enableAttribute(3);
 	// UV 1 attribute
-	vao.setAttributeFloat<float>(4, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord1));
+	vao.setAttributeFloat<float>(4, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord1));
 	vao.enableAttribute(4);
 	// UV 0 W-component attribute
-	vao.setAttributeFloat<float>(5, 1, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord0_w));
+	vao.setAttributeFloat<float>(5, 1, sizeof(Vertex), offsetof(Vertex, s.texcoord0_w));
 	vao.enableAttribute(5);
 	// View
-	vao.setAttributeFloat<float>(6, 3, sizeof(PicaVertex), offsetof(PicaVertex, s.view));
+	vao.setAttributeFloat<float>(6, 3, sizeof(Vertex), offsetof(Vertex, s.view));
 	vao.enableAttribute(6);
 	// UV 2 attribute
-	vao.setAttributeFloat<float>(7, 2, sizeof(PicaVertex), offsetof(PicaVertex, s.texcoord2));
+	vao.setAttributeFloat<float>(7, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord2));
 	vao.enableAttribute(7);
 
 	dummyVBO.create();
@@ -725,9 +715,9 @@ void Renderer::setupBlending() {
 	};
 
 	if (!blendingEnabled) {
-		OpenGL::disableBlend();
+		gl.disableBlend();
 	} else {
-		OpenGL::enableBlend();
+		gl.enableBlend();
 
 		// Get blending equations
 		const u32 blendControl = regs[PICA::InternalRegs::BlendFunc];
@@ -783,8 +773,6 @@ void Renderer::setupTextureEnvState() {
 	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
 	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
 	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
-	glUniform1ui(textureEnvUpdateBufferLoc, regs[PICA::InternalRegs::TexEnvUpdateBuffer]);
-	glUniform1ui(textureEnvBufferColorLoc, regs[PICA::InternalRegs::TexEnvBufferColor]);
 }
 
 void Renderer::bindTexturesToSlots() {
@@ -815,21 +803,16 @@ void Renderer::bindTexturesToSlots() {
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
 	glActiveTexture(GL_TEXTURE0);
-
-	// Update the texture unit configuration uniform if it changed
-	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
-	if (oldTexUnitConfig != texUnitConfig) {
-		oldTexUnitConfig = texUnitConfig;
-		glUniform1ui(texUnitConfigLoc, texUnitConfig);
-	}
 }
-void Renderer::updateLightingLUT(){
+
+void Renderer::updateLightingLUT() {
+	gpu.lightingLUTDirty = false;
 	std::array<u16, GPU::LightingLutSize> u16_lightinglut; 
 	
-	for(int i = 0; i < gpu.lightingLUT.size(); i++){
+	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
 		uint64_t value =  gpu.lightingLUT[i] & ((1 << 12) - 1);
 		u16_lightinglut[i] = value * 65535 / 4095; 
-	} 
+	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
@@ -839,31 +822,19 @@ void Renderer::updateLightingLUT(){
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glActiveTexture(GL_TEXTURE0);
-	gpu.lightingLUTDirty = false;
 }
 
-void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices) {
+void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
 	  OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
 	};
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 
-    // TODO: We should implement a GL state tracker that tracks settings like scissor, blending, bound program, etc
-    // This way if we attempt to eg do multiple glEnable(GL_BLEND) calls in a row, it will say "Oh blending is already enabled"
-    // And not actually perform the very expensive driver call for it
-	OpenGL::disableScissor();
-
-	vbo.bind();
-	vao.bind();
-	triangleProgram.use();
-
-	// Adjust alpha test if necessary
-	const u32 alphaControl = regs[PICA::InternalRegs::AlphaTestConfig];
-	if (alphaControl != oldAlphaControl) {
-		oldAlphaControl = alphaControl;
-		glUniform1ui(alphaControlLoc, alphaControl);
-	}
+	gl.disableScissor();
+	gl.bindVBO(vbo);
+	gl.bindVAO(vao);
+	gl.useProgram(triangleProgram);
 
 	OpenGL::enableClipPlane(0); // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
@@ -879,7 +850,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 	const bool depthWriteEnable = getBit<12>(depthControl);
 	const int depthFunc = getBits<4, 3>(depthControl);
 	const int colourMask = getBits<8, 4>(depthControl);
-	glColorMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
+	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
 
 	static constexpr std::array<GLenum, 8> depthModes = {
 		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
@@ -908,9 +879,9 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 	setupTextureEnvState();
 	bindTexturesToSlots();
 
-	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x47)
+	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
 	// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
-	glUniform1uiv(picaRegLoc, 0x200 - 0x47, &regs[0x47]);
+	glUniform1uiv(picaRegLoc, 0x200 - 0x48, &regs[0x48]);
 
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT();
@@ -924,18 +895,18 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const PicaVertex>
 	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
 	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
-		OpenGL::enableDepth();
-		glDepthFunc(depthModes[depthFunc]);
-		glDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+		gl.enableDepth();
+		gl.setDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+		gl.setDepthFunc(depthModes[depthFunc]);
 		bindDepthBuffer();
 	} else {
 		if (depthWriteEnable) {
-			OpenGL::enableDepth();
-			glDepthFunc(GL_ALWAYS);
-			glDepthMask(GL_TRUE);
+			gl.enableDepth();
+			gl.setDepthMask(GL_TRUE);
+			gl.setDepthFunc(GL_ALWAYS);
 			bindDepthBuffer();
 		} else {
-			OpenGL::disableDepth();
+			gl.disableDepth();
 		}
 	}
 
@@ -947,7 +918,7 @@ constexpr u32 topScreenBuffer = 0x1f000000;
 constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 void Renderer::display() {
-	OpenGL::disableScissor();
+	gl.disableScissor();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
@@ -1038,12 +1009,15 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	tex.bind();
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
-	OpenGL::disableBlend();
-	OpenGL::disableDepth();
-	OpenGL::disableScissor();
+	gl.disableBlend();
+	gl.disableDepth();
+	gl.disableScissor();
+	gl.setColourMask(true, true, true, true);
+	gl.useProgram(displayProgram);
+	gl.bindVAO(dummyVAO);
+
 	OpenGL::disableClipPlane(0);
 	OpenGL::disableClipPlane(1);
-	displayProgram.use();
 
 	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
 	// We consider output gap == 320 to mean bottom, and anything else to mean top
@@ -1053,6 +1027,5 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
 	}
 
-	dummyVAO.bind();
 	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
 }

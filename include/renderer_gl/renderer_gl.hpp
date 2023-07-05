@@ -3,9 +3,9 @@
 #include <span>
 
 #include "PICA/float_types.hpp"
+#include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
-#include "opengl.hpp"
 #include "surface_cache.hpp"
 #include "textures.hpp"
 #include "PICA/regs.hpp"
@@ -16,13 +16,13 @@ class GPU;
 
 class Renderer {
 	GPU& gpu;
+	GLStateManager& gl;
+
 	OpenGL::Program triangleProgram;
 	OpenGL::Program displayProgram;
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
-	GLint alphaControlLoc = -1;
-	GLint texUnitConfigLoc = -1;
 
 	// TEV configuration uniform locations
 	GLint textureEnvSourceLoc = -1;
@@ -30,17 +30,14 @@ class Renderer {
 	GLint textureEnvCombinerLoc = -1;
 	GLint textureEnvColorLoc = -1;
 	GLint textureEnvScaleLoc = -1;
-	GLint textureEnvUpdateBufferLoc = -1;
-	GLint textureEnvBufferColorLoc = -1;
+	
+	// Uniform of PICA registers
 	GLint picaRegLoc = -1;
 
 	// Depth configuration uniform locations
 	GLint depthOffsetLoc = -1;
 	GLint depthScaleLoc = -1;
 	GLint depthmapEnableLoc = -1;
-
-	u32 oldAlphaControl = 0;
-	u32 oldTexUnitConfig = 0;
 
 	float oldDepthScale = -1.0;
 	float oldDepthOffset = 0.0;
@@ -81,7 +78,7 @@ class Renderer {
 	void updateLightingLUT();
 
   public:
-	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
+	Renderer(GPU& gpu, GLStateManager& gl, const std::array<u32, regNum>& internalRegs) : gpu(gpu), gl(gl), regs(internalRegs) {}
 
 	void reset();
 	void display();                                                                                 // Display the 3DS screen contents to the window
@@ -89,7 +86,7 @@ class Renderer {
 	void getGraphicsContext();                                                                      // Set up graphics context for rendering
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);                     // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
-	void drawVertices(PICA::PrimType primType, std::span<const PicaVertex> vertices);               // Draw the given vertices
+	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices);             // Draw the given vertices
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize.x() = width;

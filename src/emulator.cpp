@@ -1,6 +1,6 @@
 #include "emulator.hpp"
 
-Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory), memory(cpu.getTicksRef()) {
+Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, gl), memory(cpu.getTicksRef()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -325,4 +325,10 @@ bool Emulator::loadELF(std::ifstream& file) {
 		Helpers::panic("Misaligned ELF entrypoint. TODO: Check if ELFs can boot in thumb mode");
 	}
 	return true;
+}
+
+// Reset our graphics context and initialize the GPU's graphics context
+void Emulator::initGraphicsContext() {
+	gl.reset(); // TODO (For when we have multiple backends): Only do this if we are using OpenGL
+	gpu.initGraphicsContext();
 }

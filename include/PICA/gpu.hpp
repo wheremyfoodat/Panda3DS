@@ -28,7 +28,7 @@ class GPU {
 	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
 	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
-	std::array<PicaVertex, 3> immediateModeVertices;
+	std::array<PICA::Vertex, 3> immediateModeVertices;
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
 
@@ -68,7 +68,7 @@ class GPU {
 	u32* cmdBuffCurr = nullptr;
 
 	Renderer renderer;
-	PicaVertex getImmediateModeVertex();
+	PICA::Vertex getImmediateModeVertex();
 
   public:
 	// 256 entries per LUT with each LUT as its own row forming a 2D image 256 * LUT_COUNT
@@ -81,7 +81,7 @@ class GPU {
 	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
 	bool lightingLUTDirty = false;
 
-	GPU(Memory& mem);
+	GPU(Memory& mem, GLStateManager& gl);
 	void initGraphicsContext() { renderer.initGraphicsContext(); }
 	void getGraphicsContext() { renderer.getGraphicsContext(); }
 	void display() { renderer.display(); }

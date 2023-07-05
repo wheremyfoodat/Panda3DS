@@ -83,8 +83,8 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
-                 src/core/memory.cpp
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/gl_state.cpp src/core/CPU/cpu_dynarmic.cpp
+                 src/core/CPU/dynarmic_cycles.cpp src/core/memory.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -138,7 +138,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp inc
                  include/PICA/dynapica/shader_rec_emitter_x64.hpp include/PICA/pica_hash.hpp include/result/result.hpp
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
-                 include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
+                 include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp include/gl_state.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

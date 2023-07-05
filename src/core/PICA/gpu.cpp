@@ -10,8 +10,9 @@
 
 using namespace Floats;
 
-
-GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
+// Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
+// Thus, our GLStateManager being here does not negatively impact renderer-agnosticness
+GPU::GPU(Memory& mem, GLStateManager& gl) : mem(mem), renderer(*this, gl, regs) {
 	vram = new u8[vramSize];
 	mem.setVRAM(vram); // Give the bus a pointer to our VRAM
 }
@@ -22,6 +23,7 @@ void GPU::reset() {
 	shaderJIT.reset();
 	std::memset(vram, 0, vramSize);
 	lightingLUT.fill(0);
+	lightingLUTDirty = true;
 
 	totalAttribCount = 0;
 	fixedAttribMask = 0;
@@ -60,7 +62,7 @@ void GPU::drawArrays(bool indexed) {
 	}
 }
 
-static std::array<PicaVertex, Renderer::vertexBufferSize> vertices;
+static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
 
 template <bool indexed, bool useShaderJIT>
 void GPU::drawArrays() {
@@ -248,7 +250,7 @@ void GPU::drawArrays() {
 			shaderUnit.vs.run();
 		}
 
-		PicaVertex& out = vertices[i];
+		PICA::Vertex& out = vertices[i];
 		// Map shader outputs to fixed function properties
 		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 		for (int i = 0; i < totalShaderOutputs; i++) {
@@ -264,8 +266,8 @@ void GPU::drawArrays() {
 	renderer.drawVertices(primType, std::span(vertices).first(vertexCount));
 }
 
-PicaVertex GPU::getImmediateModeVertex() {
-	PicaVertex v;
+PICA::Vertex GPU::getImmediateModeVertex() {
+	PICA::Vertex v;
 	const int totalAttrCount = (regs[PICA::InternalRegs::VertexShaderAttrNum] & 0xf) + 1;
 
 	// Copy immediate mode attributes to vertex shader unit
