@@ -23,6 +23,7 @@ void GPU::reset() {
 	shaderJIT.reset();
 	std::memset(vram, 0, vramSize);
 	lightingLUT.fill(0);
+	lightingLUTDirty = true;
 
 	totalAttribCount = 0;
 	fixedAttribMask = 0;
