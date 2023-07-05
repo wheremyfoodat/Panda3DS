@@ -7,12 +7,15 @@ void GLStateManager::resetBlend() {
 
 void GLStateManager::resetColourMask() {
 	redMask = greenMask = blueMask = alphaMask = true;
-	glColorMask(redMask, greenMask, blueMask, alphaMask);
+	OpenGL::setColourMask(redMask, greenMask, blueMask, alphaMask);
 }
 
 void GLStateManager::resetDepth() {
 	depthEnabled = false;
+	depthMask = true;
+
 	OpenGL::disableDepth();
+	OpenGL::setDepthMask(true);
 }
 
 void GLStateManager::resetScissor() {

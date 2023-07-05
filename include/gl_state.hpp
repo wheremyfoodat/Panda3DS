@@ -22,8 +22,9 @@ struct GLStateManager {
 	bool depthEnabled;
 	bool scissorEnabled;
 
-	// Colour mask
+	// Colour/depth masks
 	bool redMask, greenMask, blueMask, alphaMask;
+	bool depthMask;
 
 	GLuint boundVAO;
 	GLuint boundVBO;
@@ -108,7 +109,14 @@ struct GLStateManager {
 			b = blueMask;
 			a = alphaMask;
 
-			glColorMask(r, g, b, a);
+			OpenGL::setColourMask(r, g, b, a);
+		}
+	}
+
+	void setDepthMask(bool mask) {
+		if (depthMask != mask) {
+			depthMask = mask;
+			OpenGL::setDepthMask(mask);
 		}
 	}
 

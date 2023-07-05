@@ -528,6 +528,8 @@ namespace OpenGL {
 	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
 
     static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
+	static void setColourMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a) { glColorMask(r, g, b, a); }
+	static void setDepthMask(GLboolean mask) { glDepthMask(mask); }
 
     enum Primitives {
         Triangle = GL_TRIANGLES,

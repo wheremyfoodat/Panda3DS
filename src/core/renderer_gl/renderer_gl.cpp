@@ -896,14 +896,14 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
 		gl.enableDepth();
+		gl.setDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
 		glDepthFunc(depthModes[depthFunc]);
-		glDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
 		bindDepthBuffer();
 	} else {
 		if (depthWriteEnable) {
 			gl.enableDepth();
+			gl.setDepthMask(GL_TRUE);
 			glDepthFunc(GL_ALWAYS);
-			glDepthMask(GL_TRUE);
 			bindDepthBuffer();
 		} else {
 			gl.disableDepth();
