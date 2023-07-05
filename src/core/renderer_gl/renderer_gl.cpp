@@ -5,29 +5,41 @@
 
 using namespace Floats;
 using namespace Helpers;
-
-// This is all hacked up to display our first triangle
+using namespace PICA;
 
 const char* vertexShader = R"(
 	#version 410 core
 	
-	layout (location = 0) in vec4 a_coords;
-	layout (location = 1) in vec4 a_vertexColour;
-	layout (location = 2) in vec2 a_texcoord0;
-	layout (location = 3) in vec2 a_texcoord1;
-	layout (location = 4) in float a_texcoord0_w;
-	layout (location = 5) in vec2 a_texcoord2;
+	layout (location = 0) in vec4  a_coords;
+	layout (location = 1) in vec4  a_quaternion;
+	layout (location = 2) in vec4  a_vertexColour;
+	layout (location = 3) in vec2  a_texcoord0;
+	layout (location = 4) in vec2  a_texcoord1;
+	layout (location = 5) in float a_texcoord0_w;
+	layout (location = 6) in vec3  a_view;
+	layout (location = 7) in vec2  a_texcoord2;
 
+	out vec3 v_normal;
+	out vec3 v_tangent;
+	out vec3 v_bitangent;
 	out vec4 v_colour;
 	out vec3 v_texcoord0;
 	out vec2 v_texcoord1;
+	out vec3 v_view;
 	out vec2 v_texcoord2;
 	flat out vec4 v_textureEnvColor[6];
 	flat out vec4 v_textureEnvBufferColor;
 
+	out float gl_ClipDistance[2];
+
 	// TEV uniforms
 	uniform uint u_textureEnvColor[6];
-	uniform uint u_textureEnvBufferColor;
+	uniform uint u_picaRegs[0x200 - 0x48];
+
+	// Helper so that the implementation of u_pica_regs can be changed later
+	uint readPicaReg(uint reg_addr){
+		return u_picaRegs[reg_addr - 0x48];
+	}
 
 	vec4 abgr8888ToVec4(uint abgr) {
 		const float scale = 1.0 / 255.0;
@@ -40,6 +52,31 @@ const char* vertexShader = R"(
 		);
 	}
 
+	vec3 rotateVec3ByQuaternion(vec3 v, vec4 q){
+		vec3 u = q.xyz;
+		float s = q.w;
+		return 2.0 * dot(u, v) * u + (s * s - dot(u, u))* v  + 2.0 * s * cross(u, v);
+	}
+
+	// Convert an arbitrary-width floating point literal to an f32
+	float decodeFP(uint hex, uint E, uint M){
+		uint width = M + E + 1u;
+		uint bias = 128u - (1u << (E - 1u));
+		uint exponent = (hex >> M) & ((1u << E) - 1u);
+		uint mantissa = hex & ((1u << M) - 1u);
+		uint sign = (hex >> (E + M)) << 31u;
+
+		if ((hex & ((1u << (width - 1u)) - 1u)) != 0) {
+			if (exponent == (1u << E) - 1u) exponent = 255u;
+			else exponent += bias;
+			hex = sign | (mantissa << (23u - M)) | (exponent << 23u);
+		} else {
+			hex = sign;
+		}
+
+        return uintBitsToFloat(hex);
+	}
+
 	void main() {
 		gl_Position = a_coords;
 		v_colour = a_vertexColour;
@@ -48,36 +85,56 @@ const char* vertexShader = R"(
 		v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
 		v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
 		v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+		v_view = a_view; 
+
+		v_normal    = normalize(rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), a_quaternion));
+		v_tangent   = normalize(rotateVec3ByQuaternion(vec3(1.0, 0.0, 0.0), a_quaternion));
+		v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0, 1.0, 0.0), a_quaternion));
 
 		for (int i = 0; i < 6; i++) {
 			v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
 		}
 
-		v_textureEnvBufferColor = abgr8888ToVec4(u_textureEnvBufferColor);
+		v_textureEnvBufferColor = abgr8888ToVec4(readPicaReg(0xFD));
+
+		// Parse clipping plane registers
+		// The plane registers describe a clipping plane in the form of Ax + By + Cz + D = 0 
+		// With n = (A, B, C) being the normal vector and D being the origin point distance
+		// Therefore, for the second clipping plane, we can just pass the dot product of the clip vector and the input coordinates to gl_ClipDistance[1]
+		vec4 clipData = vec4(
+			decodeFP(readPicaReg(0x48) & 0xffffffu, 7, 16),
+			decodeFP(readPicaReg(0x49) & 0xffffffu, 7, 16),
+			decodeFP(readPicaReg(0x4A) & 0xffffffu, 7, 16),
+			decodeFP(readPicaReg(0x4B) & 0xffffffu, 7, 16)
+		);
+
+		// There's also another, always-on clipping plane based on vertex z
+		gl_ClipDistance[0] = -a_coords.z;
+		gl_ClipDistance[1] = dot(clipData, a_coords);
 	}
 )";
 
 const char* fragmentShader = R"(
 	#version 410 core
 	
+	in vec3 v_tangent;
+	in vec3 v_normal;
+	in vec3 v_bitangent;
 	in vec4 v_colour;
 	in vec3 v_texcoord0;
 	in vec2 v_texcoord1;
+	in vec3 v_view;
 	in vec2 v_texcoord2;
 	flat in vec4 v_textureEnvColor[6];
 	flat in vec4 v_textureEnvBufferColor;
 
 	out vec4 fragColour;
 
-	uniform uint u_alphaControl;
-	uniform uint u_textureConfig;
-
 	// TEV uniforms
 	uniform uint u_textureEnvSource[6];
 	uniform uint u_textureEnvOperand[6];
 	uniform uint u_textureEnvCombiner[6];
 	uniform uint u_textureEnvScale[6];
-	uniform uint u_textureEnvUpdateBuffer;
 
 	// Depth control uniforms
 	uniform float u_depthScale;
@@ -87,6 +144,14 @@ const char* fragmentShader = R"(
 	uniform sampler2D u_tex0;
 	uniform sampler2D u_tex1;
 	uniform sampler2D u_tex2;
+	uniform sampler1DArray u_tex_lighting_lut;
+
+	uniform uint u_picaRegs[0x200 - 0x48];
+
+	// Helper so that the implementation of u_pica_regs can be changed later
+	uint readPicaReg(uint reg_addr){
+		return u_picaRegs[reg_addr - 0x48];
+	}
 
 	vec4 tevSources[16];
 	vec4 tevNextPreviousBuffer;
@@ -190,21 +255,215 @@ const char* fragmentShader = R"(
 		return result;
 	}
 
-	void main() {
-		vec2 tex2UV = (u_textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
+	#define D0_LUT 0u
+	#define D1_LUT 1u
+	#define SP_LUT 2u
+	#define FR_LUT 3u
+	#define RB_LUT 4u
+	#define RG_LUT 5u
+	#define RR_LUT 6u
 
+	float lutLookup(uint lut, uint light, float value){
+		if (lut >= FR_LUT && lut <= RR_LUT)
+			lut -= 1;
+		if (lut==SP_LUT)
+			lut = light + 8;
+		return texture(u_tex_lighting_lut, vec2(value, lut)).r; 
+	}
+
+	vec3 regToColor(uint reg) {
+		// Normalization scale to convert from [0...255] to [0.0...1.0]
+		const float scale = 1.0 / 255.0;
+
+		return scale * vec3(
+			float(bitfieldExtract(reg, 20, 8)),
+			float(bitfieldExtract(reg, 10, 8)),
+			float(bitfieldExtract(reg, 00, 8))
+		);
+	}
+
+	// Convert an arbitrary-width floating point literal to an f32
+	float decodeFP(uint hex, uint E, uint M){
+		uint width = M + E + 1u;
+		uint bias = 128u - (1u << (E - 1u));
+		uint exponent = (hex >> M) & ((1u << E) - 1u);
+		uint mantissa = hex & ((1u << M) - 1u);
+		uint sign = (hex >> (E + M)) << 31u;
+
+		if ((hex & ((1u << (width - 1u)) - 1u)) != 0) {
+			if (exponent == (1u << E) - 1u) exponent = 255u;
+			else exponent += bias;
+			hex = sign | (mantissa << (23u - M)) | (exponent << 23u);
+		} else {
+			hex = sign;
+		}
+
+        return uintBitsToFloat(hex);
+	}
+
+	// Implements the following algorthm: https://mathb.in/26766
+	void calcLighting(out vec4 primary_color, out vec4 secondary_color){
+		// Quaternions describe a transformation from surface-local space to eye space.
+		// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
+		// the tangent vector is (1,0,0), and the bitangent vector is (0,1,0).
+		vec3 normal    = normalize(v_normal   );
+		vec3 tangent   = normalize(v_tangent  );
+		vec3 bitangent = normalize(v_bitangent);
+		vec3 view = normalize(v_view);
+
+		uint GPUREG_LIGHTING_ENABLE  = readPicaReg(0x008F);
+		if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0){
+			primary_color = secondary_color = vec4(1.0);
+			return;
+		}
+
+		uint GPUREG_LIGHTING_AMBIENT = readPicaReg(0x01C0);
+		uint GPUREG_LIGHTING_NUM_LIGHTS = (readPicaReg(0x01C2) & 0x7u) +1;
+		uint GPUREG_LIGHTING_LIGHT_PERMUTATION = readPicaReg(0x01D9);
+
+		primary_color   = vec4(vec3(0.0),1.0);
+		secondary_color = vec4(vec3(0.0),1.0);
+
+		primary_color.rgb += regToColor(GPUREG_LIGHTING_AMBIENT);
+
+		uint GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0);
+		uint GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1);
+		uint GPUREG_LIGHTING_CONFIG0 = readPicaReg(0x01C3);
+		uint GPUREG_LIGHTING_CONFIG1 = readPicaReg(0x01C4);
+		uint GPUREG_LIGHTING_LUTINPUT_SCALE =  readPicaReg(0x01D2);
+		float d[7];
+
+		bool error_unimpl = false;
+
+		for (uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
+			uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION,int(i*3),3);
+		
+			uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_VECTOR_HIGH= readPicaReg(0x0145 + 0x10 * light_id);
+			uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149 + 0x10 * light_id);
+
+			vec3 light_vector = normalize(vec3(
+				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5, 10),
+				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5, 10),
+				decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5, 10)
+			));
+
+			// Positional Light
+			if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0)
+				error_unimpl = true;
+
+			vec3 half_vector = normalize(normalize(light_vector) + view);
+
+			for (int c = 0; c < 7; c++) {
+				if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0){
+					uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
+					float scale = float(1u << scale_id);
+					if (scale_id >= 6u)
+						scale/=256.0;
+
+					uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
+					if (input_id == 0u) d[c] = dot(normal,half_vector);
+					else if (input_id == 1u) d[c] = dot(view,half_vector);
+					else if (input_id == 2u) d[c] = dot(normal,view);
+					else if (input_id == 3u) d[c] = dot(light_vector,normal);
+					else if (input_id == 4u){
+						uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146 + 0x10 * light_id);
+						uint GPUREG_LIGHTi_SPOTDIR_HIGH= readPicaReg(0x0147 + 0x10 * light_id);
+						vec3 spot_light_vector = normalize(vec3(
+							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1, 11),
+							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1, 11),
+							decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1, 11)
+						));
+						d[c] = dot(-light_vector, spot_light_vector); // -L dot P (aka Spotlight aka SP);
+					} else if (input_id == 5u) {
+						d[c] = 1.0; // TODO: cos <greek symbol> (aka CP);
+						error_unimpl = true;
+					} else {
+						d[c] = 1.0;
+					}
+
+					d[c] = lutLookup(c, light_id, d[c] * 0.5 + 0.5) * scale;
+					if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) 
+						d[c] = abs(d[c]);
+				} else {
+					d[c] = 1.0;
+				}
+			}
+			
+			uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG,4,4);
+			if (lookup_config == 0) {
+				d[D1_LUT] = 0.0;
+				d[FR_LUT] = 0.0;
+				d[RG_LUT]= d[RB_LUT] = d[RR_LUT];
+			} else if (lookup_config == 1) {
+				d[D0_LUT] = 0.0;
+				d[D1_LUT] = 0.0;
+				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+			} else if (lookup_config == 2) {
+				d[FR_LUT] = 0.0;
+				d[SP_LUT] = 0.0;
+				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+			} else if (lookup_config == 3) {
+				d[SP_LUT] = 0.0;
+				d[RG_LUT]= d[RB_LUT] = d[RR_LUT] = 1.0;
+			} else if (lookup_config == 4) {
+				d[FR_LUT] = 0.0;
+			} else if (lookup_config == 5) {
+				d[D1_LUT] = 0.0;
+			} else if (lookup_config == 6) {
+				d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+			}
+
+			float distance_factor = 1.0; // a
+			float indirect_factor = 1.0; // fi
+			float shadow_factor = 1.0;   // o
+
+			float NdotL = dot(normal, light_vector); //Li dot N
+
+			// Two sided diffuse
+			if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0) NdotL = max(0.0, NdotL);
+			else NdotL = abs(NdotL);
+
+			float light_factor =  distance_factor*d[SP_LUT]*indirect_factor*shadow_factor;
+
+			primary_color.rgb   += light_factor * (regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE)*NdotL);
+			secondary_color.rgb += light_factor * (
+									 regToColor(GPUREG_LIGHTi_SPECULAR0) * d[D0_LUT] +
+									 regToColor(GPUREG_LIGHTi_SPECULAR1) * d[D1_LUT] * vec3(d[RR_LUT], d[RG_LUT], d[RB_LUT])
+									);
+		}	
+		uint fresnel_output1 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 2, 1);
+		uint fresnel_output2 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 3, 1);
+
+		if (fresnel_output1 == 1u) primary_color.a = d[FR_LUT];
+		if (fresnel_output2 == 1u) secondary_color.a = d[FR_LUT];
+
+		if (error_unimpl) {
+			secondary_color = primary_color = vec4(1.0,0.,1.0,1.0);
+		}
+	}
+
+	void main() {
 		// TODO: what do invalid sources and disabled textures read as?
 		// And what does the "previous combiner" source read initially?
 		tevSources[0] = v_colour; // Primary/vertex color
-		tevSources[1] = vec4(vec3(0.5), 1.0); // Fragment primary color
-		tevSources[2] = vec4(vec3(0.5), 1.0); // Fragment secondary color
-		if ((u_textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
-		if ((u_textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
-		if ((u_textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
+		calcLighting(tevSources[1],tevSources[2]);
+
+		uint textureConfig = readPicaReg(0x80);
+		vec2 tex2UV = (textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
+
+		if ((textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
+		if ((textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
+		if ((textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
 		tevSources[13] = vec4(0.0); // Previous buffer
 		tevSources[15] = vec4(0.0); // Previous combiner
 
 		tevNextPreviousBuffer = v_textureEnvBufferColor;
+		uint textureEnvUpdateBuffer = readPicaReg(0xE0);
 
 		for (int i = 0; i < 6; i++) {
 			tevSources[14] = v_textureEnvColor[i]; // Constant color
@@ -212,11 +471,11 @@ const char* fragmentShader = R"(
 			tevSources[13] = tevNextPreviousBuffer;
 
 			if (i < 4) {
-				if ((u_textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
+				if ((textureEnvUpdateBuffer & (0x100u << i)) != 0u) {
 					tevNextPreviousBuffer.rgb = tevSources[15].rgb;
 				}
 
-				if ((u_textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
+				if ((textureEnvUpdateBuffer & (0x1000u << i)) != 0u) {
 					tevNextPreviousBuffer.a = tevSources[15].a;
 				}
 			}
@@ -227,6 +486,8 @@ const char* fragmentShader = R"(
 		if (tevUnimplementedSourceFlag) {
 			 // fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 		}
+		// fragColour.rg = texture(u_tex_lighting_lut,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
+
 
 		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
 		// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
@@ -239,9 +500,11 @@ const char* fragmentShader = R"(
 		// Write final fragment depth
 		gl_FragDepth = depth;
 
-		if ((u_alphaControl & 1u) != 0u) { // Check if alpha test is on
-			uint func = (u_alphaControl >> 4u) & 7u;
-			float reference = float((u_alphaControl >> 8u) & 0xffu) / 255.0;
+		// Perform alpha test
+		uint alphaControl = readPicaReg(0x104);
+		if ((alphaControl & 1u) != 0u) { // Check if alpha test is on
+			uint func = (alphaControl >> 4u) & 7u;
+			float reference = float((alphaControl >> 8u) & 0xffu) / 255.0;
 			float alpha = fragColour.a;
 
 			switch (func) {
@@ -328,21 +591,17 @@ void Renderer::reset() {
 	if (triangleProgram.exists()) {
 		const auto oldProgram = OpenGL::getProgram();
 
-		triangleProgram.use();
-		oldAlphaControl = 0; // Default alpha control to 0
-		oldTexUnitConfig = 0; // Default tex unit config to 0
+		gl.useProgram(triangleProgram);
 		
 		oldDepthScale = -1.0; // Default depth scale to -1.0, which is what games typically use
 		oldDepthOffset = 0.0; // Default depth offset to 0
 		oldDepthmapEnable = false; // Enable w buffering
 
-		glUniform1ui(alphaControlLoc, oldAlphaControl);
-		glUniform1ui(texUnitConfigLoc, oldTexUnitConfig);
 		glUniform1f(depthScaleLoc, oldDepthScale);
 		glUniform1f(depthOffsetLoc, oldDepthOffset);
 		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
 
-		glUseProgram(oldProgram); // Switch to old GL program
+		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
 }
 
@@ -350,58 +609,61 @@ void Renderer::initGraphicsContext() {
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({ vert, frag });
-	triangleProgram.use();
-	
-	alphaControlLoc = OpenGL::uniformLocation(triangleProgram, "u_alphaControl");
-	texUnitConfigLoc = OpenGL::uniformLocation(triangleProgram, "u_textureConfig");
+	gl.useProgram(triangleProgram);
 
 	textureEnvSourceLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvSource");
 	textureEnvOperandLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvOperand");
 	textureEnvCombinerLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvCombiner");
 	textureEnvColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvColor");
 	textureEnvScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvScale");
-	textureEnvUpdateBufferLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvUpdateBuffer");
-	textureEnvBufferColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvBufferColor");
 
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
 	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
+	picaRegLoc = OpenGL::uniformLocation(triangleProgram, "u_picaRegs");
 
-	// Init sampler objects
+	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex1"), 1);
 	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex2"), 2);
+	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex_lighting_lut"), 3);
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
 	displayProgram.create({ vertDisplay, fragDisplay });
 
-	displayProgram.use();
+	gl.useProgram(displayProgram);
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
-	vbo.bind();
+	gl.bindVBO(vbo);
 	vao.create();
-	vao.bind();
+	gl.bindVAO(vao);
 
 	// Position (x, y, z, w) attributes
-	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, position));
+	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
 	vao.enableAttribute(0);
-	// Colour attribute
-	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, colour));
+	// Quaternion attribute
+	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, s.quaternion));
 	vao.enableAttribute(1);
-	// UV 0 attribute
-	vao.setAttributeFloat<float>(2, 2, sizeof(Vertex), offsetof(Vertex, texcoord0));
+	// Colour attribute
+	vao.setAttributeFloat<float>(2, 4, sizeof(Vertex), offsetof(Vertex, s.colour));
 	vao.enableAttribute(2);
-	// UV 1 attribute
-	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, texcoord1));
+	// UV 0 attribute
+	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord0));
 	vao.enableAttribute(3);
-	// UV 0 W-component attribute
-	vao.setAttributeFloat<float>(4, 1, sizeof(Vertex), offsetof(Vertex, texcoord0_w));
+	// UV 1 attribute
+	vao.setAttributeFloat<float>(4, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord1));
 	vao.enableAttribute(4);
-	// UV 2 attribute
-	vao.setAttributeFloat<float>(5, 2, sizeof(Vertex), offsetof(Vertex, texcoord2));
+	// UV 0 W-component attribute
+	vao.setAttributeFloat<float>(5, 1, sizeof(Vertex), offsetof(Vertex, s.texcoord0_w));
 	vao.enableAttribute(5);
+	// View
+	vao.setAttributeFloat<float>(6, 3, sizeof(Vertex), offsetof(Vertex, s.view));
+	vao.enableAttribute(6);
+	// UV 2 attribute
+	vao.setAttributeFloat<float>(7, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord2));
+	vao.enableAttribute(7);
 
 	dummyVBO.create();
 	dummyVAO.create();
@@ -409,6 +671,8 @@ void Renderer::initGraphicsContext() {
 	// Create texture and framebuffer for the 3DS screen
 	const u32 screenTextureWidth = 2 * 400; // Top screen is 400 pixels wide, bottom is 320
 	const u32 screenTextureHeight = 2 * 240; // Both screens are 240 pixels tall
+	
+	glGenTextures(1,&lightLUTTextureArray);
 
 	auto prevTexture = OpenGL::getTex2D();
 	screenTexture.create(screenTextureWidth, screenTextureHeight, GL_RGBA8);
@@ -451,9 +715,9 @@ void Renderer::setupBlending() {
 	};
 
 	if (!blendingEnabled) {
-		OpenGL::disableBlend();
+		gl.disableBlend();
 	} else {
-		OpenGL::enableBlend();
+		gl.enableBlend();
 
 		// Get blending equations
 		const u32 blendControl = regs[PICA::InternalRegs::BlendFunc];
@@ -509,8 +773,6 @@ void Renderer::setupTextureEnvState() {
 	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
 	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
 	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
-	glUniform1ui(textureEnvUpdateBufferLoc, regs[PICA::InternalRegs::TexEnvUpdateBuffer]);
-	glUniform1ui(textureEnvBufferColorLoc, regs[PICA::InternalRegs::TexEnvBufferColor]);
 }
 
 void Renderer::bindTexturesToSlots() {
@@ -538,14 +800,28 @@ void Renderer::bindTexturesToSlots() {
 		tex.bind();
 	}
 
+	glActiveTexture(GL_TEXTURE0 + 3);
+	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
 	glActiveTexture(GL_TEXTURE0);
+}
 
-	// Update the texture unit configuration uniform if it changed
-	const u32 texUnitConfig = regs[PICA::InternalRegs::TexUnitCfg];
-	if (oldTexUnitConfig != texUnitConfig) {
-		oldTexUnitConfig = texUnitConfig;
-		glUniform1ui(texUnitConfigLoc, texUnitConfig);
+void Renderer::updateLightingLUT() {
+	gpu.lightingLUTDirty = false;
+	std::array<u16, GPU::LightingLutSize> u16_lightinglut; 
+	
+	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
+		uint64_t value =  gpu.lightingLUT[i] & ((1 << 12) - 1);
+		u16_lightinglut[i] = value * 65535 / 4095; 
 	}
+
+	glActiveTexture(GL_TEXTURE0 + 3);
+	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glActiveTexture(GL_TEXTURE0);
 }
 
 void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
@@ -555,20 +831,14 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	};
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 
-    // TODO: We should implement a GL state tracker that tracks settings like scissor, blending, bound program, etc
-    // This way if we attempt to eg do multiple glEnable(GL_BLEND) calls in a row, it will say "Oh blending is already enabled"
-    // And not actually perform the very expensive driver call for it
-	OpenGL::disableScissor();
+	gl.disableScissor();
+	gl.bindVBO(vbo);
+	gl.bindVAO(vao);
+	gl.useProgram(triangleProgram);
 
-	vbo.bind();
-	vao.bind();
-	triangleProgram.use();
-
-	// Adjust alpha test if necessary
-	const u32 alphaControl = regs[PICA::InternalRegs::AlphaTestConfig];
-	if (alphaControl != oldAlphaControl) {
-		oldAlphaControl = alphaControl;
-		glUniform1ui(alphaControlLoc, alphaControl);
+	OpenGL::enableClipPlane(0); // Clipping plane 0 is always enabled
+	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
+		OpenGL::enableClipPlane(1);
 	}
 
 	setupBlending();
@@ -580,7 +850,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	const bool depthWriteEnable = getBit<12>(depthControl);
 	const int depthFunc = getBits<4, 3>(depthControl);
 	const int colourMask = getBits<8, 4>(depthControl);
-	glColorMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
+	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
 
 	static constexpr std::array<GLenum, 8> depthModes = {
 		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
@@ -609,6 +879,14 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	setupTextureEnvState();
 	bindTexturesToSlots();
 
+	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
+	// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
+	glUniform1uiv(picaRegLoc, 0x200 - 0x48, &regs[0x48]);
+
+	if (gpu.lightingLUTDirty) {
+		updateLightingLUT();
+	}
+
 	// TODO: Actually use this
 	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
 	float viewportHeight = f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
@@ -617,18 +895,18 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
 	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
-		OpenGL::enableDepth();
-		glDepthFunc(depthModes[depthFunc]);
-		glDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+		gl.enableDepth();
+		gl.setDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+		gl.setDepthFunc(depthModes[depthFunc]);
 		bindDepthBuffer();
 	} else {
 		if (depthWriteEnable) {
-			OpenGL::enableDepth();
-			glDepthFunc(GL_ALWAYS);
-			glDepthMask(GL_TRUE);
+			gl.enableDepth();
+			gl.setDepthMask(GL_TRUE);
+			gl.setDepthFunc(GL_ALWAYS);
 			bindDepthBuffer();
 		} else {
-			OpenGL::disableDepth();
+			gl.disableDepth();
 		}
 	}
 
@@ -639,9 +917,8 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 constexpr u32 topScreenBuffer = 0x1f000000;
 constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
-// Quick hack to display top screen for now
 void Renderer::display() {
-	OpenGL::disableScissor();
+	gl.disableScissor();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
@@ -732,10 +1009,15 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	tex.bind();
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
-	OpenGL::disableBlend();
-	OpenGL::disableDepth();
-	OpenGL::disableScissor();
-	displayProgram.use();
+	gl.disableBlend();
+	gl.disableDepth();
+	gl.disableScissor();
+	gl.setColourMask(true, true, true, true);
+	gl.useProgram(displayProgram);
+	gl.bindVAO(dummyVAO);
+
+	OpenGL::disableClipPlane(0);
+	OpenGL::disableClipPlane(1);
 
 	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
 	// We consider output gap == 320 to mean bottom, and anything else to mean top
@@ -745,6 +1027,5 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
 	}
 
-	dummyVAO.bind();
 	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
 }

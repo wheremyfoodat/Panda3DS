@@ -11,7 +11,7 @@
 #include "crypto/aes_engine.hpp"
 #include "io_file.hpp"
 #include "memory.hpp"
-#include "opengl.hpp"
+#include "gl_state.hpp"
 
 enum class ROMType { None, ELF, NCSD };
 
@@ -22,6 +22,7 @@ class Emulator {
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
 
+	GLStateManager gl;
 	SDL_Window* window;
 	SDL_GLContext glContext;
 	SDL_GameController* gameController;
@@ -56,5 +57,5 @@ class Emulator {
 	bool loadNCSD(const std::filesystem::path& path);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
-	void initGraphicsContext() { gpu.initGraphicsContext(); }
+	void initGraphicsContext();
 };

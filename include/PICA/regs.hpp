@@ -10,6 +10,13 @@ namespace PICA {
 			ViewportHeight = 0x43,
 			ViewportInvh = 0x44,
 
+			// Clipping plane control
+			ClipEnable = 0x47,
+			ClipData0 = 0x48,
+			ClipData1 = 0x49,
+			ClipData2 = 0x4A,
+			ClipData3 = 0x4B,
+
 			DepthScale = 0x4D,
 			DepthOffset = 0x4E,
 			ShaderOutputCount = 0x4F,
@@ -55,6 +62,17 @@ namespace PICA {
 			ColourBufferLoc = 0x11D,
 			FramebufferSize = 0x11E,
 
+			//LightingRegs
+			LightingLUTIndex =  0x01C5,
+			LightingLUTData0 =  0x01C8,
+			LightingLUTData1 =  0x01C9,
+			LightingLUTData2 =  0x01CA,
+			LightingLUTData3 =  0x01CB,
+			LightingLUTData4 =  0x01CC,
+			LightingLUTData5 =  0x01CD,
+			LightingLUTData6 =  0x01CE,
+			LightingLUTData7 =  0x01CF,
+			
 			// Geometry pipeline registers
 			VertexAttribLoc = 0x200,
 			AttribFormatLow = 0x201,
@@ -153,6 +171,34 @@ namespace PICA {
 			VertexShaderOpDescriptorData5 = 0x2DB,
 			VertexShaderOpDescriptorData6 = 0x2DC,
 			VertexShaderOpDescriptorData7 = 0x2DD,
+		};
+	}
+
+	namespace Lights {
+		enum : u32 {
+			LUT_D0 = 0,
+			LUT_D1,
+			LUT_FR,
+			LUT_RB,
+			LUT_RG,
+			LUT_RR,
+			LUT_SP0 = 0x8,
+			LUT_SP1,
+			LUT_SP2,
+			LUT_SP3,
+			LUT_SP4,
+			LUT_SP5,
+			LUT_SP6,
+			LUT_SP7,
+			LUT_DA0 = 0x10,
+			LUT_DA1,
+			LUT_DA2,
+			LUT_DA3,
+			LUT_DA4,
+			LUT_DA5,
+			LUT_DA6,
+			LUT_DA7,
+			LUT_Count
 		};
 	}
 

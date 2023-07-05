@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2022 PCSX-Redux authors                                 *
+ *   Copyright (C) 2022 PCSX-Redux & Panda3DS authors                      *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -128,9 +128,9 @@ namespace OpenGL {
 #ifdef OPENGL_DESTRUCTORS
         ~VertexArray() { free(); }
 #endif
-        GLuint handle() { return m_handle; }
-        bool exists() { return m_handle != 0; }
-        void bind() { glBindVertexArray(m_handle); }
+        GLuint handle() const { return m_handle; }
+        bool exists() const { return m_handle != 0; }
+        void bind() const { glBindVertexArray(m_handle); }
 
         template <typename T>
         void setAttributeFloat(GLuint index, GLint size, GLsizei stride, const void* offset, bool normalized = GL_FALSE) {
@@ -299,11 +299,11 @@ namespace OpenGL {
 #ifdef OPENGL_DESTRUCTORS
         ~Texture() { free(); }
 #endif
-        GLuint handle() { return m_handle; }
-        bool exists() { return m_handle != 0; }
-        void bind() { glBindTexture(m_binding, m_handle); }
-        int width() { return m_width; }
-        int height() { return m_height; }
+        GLuint handle() const { return m_handle; }
+        bool exists() const { return m_handle != 0; }
+        void bind() const { glBindTexture(m_binding, m_handle); }
+        int width() const { return m_width; }
+        int height() const { return m_height; }
 
        void free() { glDeleteTextures(1, &m_handle); }
     };
@@ -327,10 +327,10 @@ namespace OpenGL {
 #ifdef OPENGL_DESTRUCTORS
         ~Framebuffer() { free(); }
 #endif
-        GLuint handle() { return m_handle; }
-        bool exists() { return m_handle != 0; }
-        void bind(GLenum target) { glBindFramebuffer(target, m_handle); }
-        void bind(FramebufferTypes target) { bind(static_cast<GLenum>(target)); }
+        GLuint handle() const { return m_handle; }
+        bool exists() const { return m_handle != 0; }
+        void bind(GLenum target) const { glBindFramebuffer(target, m_handle); }
+        void bind(FramebufferTypes target) const { bind(static_cast<GLenum>(target)); }
         void free() { glDeleteFramebuffers(1, &m_handle); }
 
         void createWithTexture(Texture& tex, GLenum mode = GL_FRAMEBUFFER, GLenum textureType = GL_TEXTURE_2D) {
@@ -392,8 +392,8 @@ namespace OpenGL {
             return m_handle != 0;
         }
 
-        GLuint handle() { return m_handle; }
-        bool exists() { return m_handle != 0; }
+        GLuint handle() const { return m_handle; }
+        bool exists() const { return m_handle != 0; }
     };
 
     struct Program {
@@ -421,9 +421,9 @@ namespace OpenGL {
             return m_handle != 0;
         }
 
-        GLuint handle() { return m_handle; }
-        bool exists() { return m_handle != 0; }
-        void use() { glUseProgram(m_handle); }
+        GLuint handle() const { return m_handle; }
+        bool exists() const { return m_handle != 0; }
+        void use() const { glUseProgram(m_handle); }
     };
 
     static void dispatchCompute(GLuint groupsX = 1, GLuint groupsY = 1, GLuint groupsZ = 1) {
@@ -454,9 +454,9 @@ namespace OpenGL {
 #ifdef OPENGL_DESTRUCTORS
         ~VertexBuffer() { free(); }
 #endif  
-        GLuint handle() { return m_handle; }
-        bool exists() { return m_handle != 0; }
-        void bind() { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
+        GLuint handle() const { return m_handle; }
+        bool exists() const { return m_handle != 0; }
+        void bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
         void free() { glDeleteBuffers(1, &m_handle); }
 
         // Reallocates the buffer on every call. Prefer the sub version if possible.
@@ -524,7 +524,12 @@ namespace OpenGL {
     static void enableStencil() { glEnable(GL_STENCIL_TEST); }
     static void disableStencil() { glDisable(GL_STENCIL_TEST); }
 
+    static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
+	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
+
     static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
+	static void setColourMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a) { glColorMask(r, g, b, a); }
+	static void setDepthMask(GLboolean mask) { glDepthMask(mask); }
 
     enum Primitives {
         Triangle = GL_TRIANGLES,
@@ -664,23 +669,23 @@ namespace OpenGL {
     // We're never supporting 3D rectangles, because rectangles were never meant to be 3D in the first place
     // x, y: Coords of the top left vertex
     // width, height: Dimensions of the rectangle. Initialized to 0 if not specified.
-    template <typename T>
-    struct Rectangle {
-        T x, y, width, height;
+	template <typename T>
+	struct Rectangle {
+		T x, y, width, height;
 
-        std::pair<T, T> topLeft() { return std::make_pair(x, y); }
-        std::pair<T, T> topRight() { return std::make_pair(x + width, y); }
-        std::pair<T, T> bottomLeft() { return std::make_pair(x, y + height); }
-        std::pair<T, T> bottomRight() { return std::make_pair(x + width, y + height); }
+		std::pair<T, T> topLeft() const { return std::make_pair(x, y); }
+		std::pair<T, T> topRight() const { return std::make_pair(x + width, y); }
+		std::pair<T, T> bottomLeft() const { return std::make_pair(x, y + height); }
+		std::pair<T, T> bottomRight() const { return std::make_pair(x + width, y + height); }
 
-        Rectangle() : x(0), y(0), width(0), height(0) {}
-        Rectangle(T x, T y, T width, T height) : x(x), y(y), width(width), height(height) {}
+		Rectangle() : x(0), y(0), width(0), height(0) {}
+		Rectangle(T x, T y, T width, T height) : x(x), y(y), width(width), height(height) {}
 
-        bool isEmpty() { return width == 0 && height == 0; }
-        bool isLine() { return (width == 0 && height != 0) || (width != 0 && height == 0); }
+		bool isEmpty() const { return width == 0 && height == 0; }
+		bool isLine() const { return (width == 0 && height != 0) || (width != 0 && height == 0); }
 
-        void setEmpty() { x = y = width = height = 0; }
-    };
+		void setEmpty() { x = y = width = height = 0; }
+	};
 
     using Rect = Rectangle<GLuint>;
 

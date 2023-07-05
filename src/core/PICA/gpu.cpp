@@ -10,44 +10,9 @@
 
 using namespace Floats;
 
-// A representation of the output vertex as it comes out of the vertex shader, with padding and all
-struct OutputVertex {
-	using vec2f = OpenGL::Vector<f24, 2>;
-	using vec3f = OpenGL::Vector<f24, 3>;
-	using vec4f = OpenGL::Vector<f24, 4>;
-
-	union {
-		struct {
-			vec4f positions;   // Vertex position
-			vec4f quaternion;  // Quaternion specifying the normal/tangent frame (for fragment lighting)
-			vec4f colour;      // Vertex color
-			vec2f texcoord0;   // Texcoords for texture unit 0 (Only U and V, W is stored separately for 3D textures!)
-			vec2f texcoord1;   // Texcoords for TU 1
-			f24 texcoord0_w;   // W component for texcoord 0 if using a 3D texture
-			u32 padding;       // Unused
-
-			vec3f view;       // View vector (for fragment lighting)
-			u32 padding2;     // Unused
-			vec2f texcoord2;  // Texcoords for TU 2
-		} s;
-
-		// The software, non-accelerated vertex loader writes here and then reads specific components from the above struct
-		f24 raw[0x20];
-	};
-	OutputVertex() {}
-};
-#define ASSERT_POS(member, pos) static_assert(offsetof(OutputVertex, s.member) == pos * sizeof(f24), "OutputVertex struct is broken!");
-
-ASSERT_POS(positions, 0)
-ASSERT_POS(quaternion, 4)
-ASSERT_POS(colour, 8)
-ASSERT_POS(texcoord0, 12)
-ASSERT_POS(texcoord1, 14)
-ASSERT_POS(texcoord0_w, 16)
-ASSERT_POS(view, 18)
-ASSERT_POS(texcoord2, 22)
-
-GPU::GPU(Memory& mem) : mem(mem), renderer(*this, regs) {
+// Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
+// Thus, our GLStateManager being here does not negatively impact renderer-agnosticness
+GPU::GPU(Memory& mem, GLStateManager& gl) : mem(mem), renderer(*this, gl, regs) {
 	vram = new u8[vramSize];
 	mem.setVRAM(vram); // Give the bus a pointer to our VRAM
 }
@@ -57,6 +22,8 @@ void GPU::reset() {
 	shaderUnit.reset();
 	shaderJIT.reset();
 	std::memset(vram, 0, vramSize);
+	lightingLUT.fill(0);
+	lightingLUTDirty = true;
 
 	totalAttribCount = 0;
 	fixedAttribMask = 0;
@@ -95,7 +62,7 @@ void GPU::drawArrays(bool indexed) {
 	}
 }
 
-static std::array<Vertex, Renderer::vertexBufferSize> vertices;
+static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
 
 template <bool indexed, bool useShaderJIT>
 void GPU::drawArrays() {
@@ -283,7 +250,7 @@ void GPU::drawArrays() {
 			shaderUnit.vs.run();
 		}
 
-		OutputVertex out;
+		PICA::Vertex& out = vertices[i];
 		// Map shader outputs to fixed function properties
 		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 		for (int i = 0; i < totalShaderOutputs; i++) {
@@ -294,24 +261,13 @@ void GPU::drawArrays() {
 				out.raw[mapping] = shaderUnit.vs.outputs[i][j];
 			}
 		}
-
-		std::memcpy(&vertices[i].position, &out.s.positions, sizeof(vec4f));
-		std::memcpy(&vertices[i].colour, &out.s.colour, sizeof(vec4f));
-		std::memcpy(&vertices[i].texcoord0, &out.s.texcoord0, 2 * sizeof(f24));
-		std::memcpy(&vertices[i].texcoord1, &out.s.texcoord1, 2 * sizeof(f24));
-		std::memcpy(&vertices[i].texcoord0_w, &out.s.texcoord0_w, sizeof(f24));
-		std::memcpy(&vertices[i].texcoord2, &out.s.texcoord2, 2 * sizeof(f24));
-
-		//printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)vertices[i].position.x(), (double)vertices[i].position.y(), (double)vertices[i].position.z(), (double)vertices[i].position.w());
-		//printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)vertices[i].colour.r(), (double)vertices[i].colour.g(), (double)vertices[i].colour.b(), (double)vertices[i].colour.a());
-		//printf("(u, v      ) = (%f, %f)\n", vertices[i].UVs.u(), vertices[i].UVs.v());
 	}
 
 	renderer.drawVertices(primType, std::span(vertices).first(vertexCount));
 }
 
-Vertex GPU::getImmediateModeVertex() {
-	Vertex v;
+PICA::Vertex GPU::getImmediateModeVertex() {
+	PICA::Vertex v;
 	const int totalAttrCount = (regs[PICA::InternalRegs::VertexShaderAttrNum] & 0xf) + 1;
 
 	// Copy immediate mode attributes to vertex shader unit
@@ -321,13 +277,13 @@ Vertex GPU::getImmediateModeVertex() {
 
 	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
 	shaderUnit.vs.run();
-	std::memcpy(&v.position, &shaderUnit.vs.outputs[0], sizeof(vec4f));
-	std::memcpy(&v.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
-	std::memcpy(&v.texcoord0, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+	std::memcpy(&v.s.positions, &shaderUnit.vs.outputs[0], sizeof(vec4f));
+	std::memcpy(&v.s.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
+	std::memcpy(&v.s.texcoord0, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
 
-	printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.position.x(), (double)v.position.y(), (double)v.position.z(), (double)v.position.w());
-	printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)v.colour.r(), (double)v.colour.g(), (double)v.colour.b(), (double)v.colour.a());
-	printf("(u, v      ) = (%f, %f)\n", v.texcoord0.u(), v.texcoord0.v());
+	printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.s.positions[0], (double)v.s.positions[1], (double)v.s.positions[2], (double)v.s.positions[3]);
+	printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)v.s.colour[0], (double)v.s.colour[1], (double)v.s.colour[2], (double)v.s.colour[3]);
+	printf("(u, v      ) = (%f, %f)\n", (double)v.s.texcoord0[0], (double)v.s.texcoord0[1]);
 
 	return v;
 }
