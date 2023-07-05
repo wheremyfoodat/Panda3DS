@@ -850,7 +850,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	const bool depthWriteEnable = getBit<12>(depthControl);
 	const int depthFunc = getBits<4, 3>(depthControl);
 	const int colourMask = getBits<8, 4>(depthControl);
-	glColorMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
+	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
 
 	static constexpr std::array<GLenum, 8> depthModes = {
 		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
@@ -1012,6 +1012,7 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	gl.disableBlend();
 	gl.disableDepth();
 	gl.disableScissor();
+	gl.setColourMask(true, true, true, true);
 	gl.useProgram(displayProgram);
 	gl.bindVAO(dummyVAO);
 

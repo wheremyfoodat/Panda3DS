@@ -22,12 +22,16 @@ struct GLStateManager {
 	bool depthEnabled;
 	bool scissorEnabled;
 
+	// Colour mask
+	bool redMask, greenMask, blueMask, alphaMask;
+
 	GLuint boundVAO;
 	GLuint boundVBO;
 	GLuint currentProgram;
 
 	void reset();
 	void resetBlend();
+	void resetColourMask();
 	void resetDepth();
 	void resetVAO();
 	void resetVBO();
@@ -94,6 +98,17 @@ struct GLStateManager {
 		if (currentProgram != handle) {
 			currentProgram = handle;
 			glUseProgram(handle);
+		}
+	}
+
+	void setColourMask(bool r, bool g, bool b, bool a) {
+		if (r != redMask || g != greenMask || b != blueMask || a != alphaMask) {
+			r = redMask;
+			g = greenMask;
+			b = blueMask;
+			a = alphaMask;
+
+			glColorMask(r, g, b, a);
 		}
 	}
 

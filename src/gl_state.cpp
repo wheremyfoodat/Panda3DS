@@ -5,6 +5,11 @@ void GLStateManager::resetBlend() {
 	OpenGL::disableBlend();
 }
 
+void GLStateManager::resetColourMask() {
+	redMask = greenMask = blueMask = alphaMask = true;
+	glColorMask(redMask, greenMask, blueMask, alphaMask);
+}
+
 void GLStateManager::resetDepth() {
 	depthEnabled = false;
 	OpenGL::disableDepth();
@@ -33,6 +38,7 @@ void GLStateManager::resetProgram() {
 
 void GLStateManager::reset() {
 	resetBlend();
+	resetColourMask();
 	resetDepth();
 
 	resetVAO();
