@@ -805,13 +805,14 @@ void Renderer::bindTexturesToSlots() {
 	glActiveTexture(GL_TEXTURE0);
 }
 
-void Renderer::updateLightingLUT(){
+void Renderer::updateLightingLUT() {
+	gpu.lightingLUTDirty = false;
 	std::array<u16, GPU::LightingLutSize> u16_lightinglut; 
 	
-	for(int i = 0; i < gpu.lightingLUT.size(); i++){
+	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
 		uint64_t value =  gpu.lightingLUT[i] & ((1 << 12) - 1);
 		u16_lightinglut[i] = value * 65535 / 4095; 
-	} 
+	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
@@ -821,7 +822,6 @@ void Renderer::updateLightingLUT(){
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glActiveTexture(GL_TEXTURE0);
-	gpu.lightingLUTDirty = false;
 }
 
 void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
