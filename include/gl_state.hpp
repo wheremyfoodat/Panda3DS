@@ -30,6 +30,8 @@ struct GLStateManager {
 	GLuint boundVBO;
 	GLuint currentProgram;
 
+	GLenum depthFunc;
+
 	void reset();
 	void resetBlend();
 	void resetColourMask();
@@ -102,6 +104,10 @@ struct GLStateManager {
 		}
 	}
 
+	void bindVAO(const OpenGL::VertexArray& vao) { bindVAO(vao.handle()); }
+	void bindVBO(const OpenGL::VertexBuffer& vbo) { bindVBO(vbo.handle()); }
+	void useProgram(const OpenGL::Program& program) { useProgram(program.handle()); }
+
 	void setColourMask(bool r, bool g, bool b, bool a) {
 		if (r != redMask || g != greenMask || b != blueMask || a != alphaMask) {
 			r = redMask;
@@ -120,9 +126,14 @@ struct GLStateManager {
 		}
 	}
 
-	void bindVAO(const OpenGL::VertexArray& vao) { bindVAO(vao.handle()); }
-	void bindVBO(const OpenGL::VertexBuffer& vbo) { bindVBO(vbo.handle()); }
-	void useProgram(const OpenGL::Program& program) { useProgram(program.handle()); }
+	void setDepthFunc(GLenum func) {
+		if (depthFunc != func) {
+			depthFunc = func;
+			glDepthFunc(func);
+		}
+	}
+
+	void setDepthFunc(OpenGL::DepthFunc func) { setDepthFunc(static_cast<GLenum>(func)); }
 };
 
 static_assert(std::is_trivially_constructible<GLStateManager>(), "OpenGL State Manager class is not trivially constructible!");

@@ -13,9 +13,11 @@ void GLStateManager::resetColourMask() {
 void GLStateManager::resetDepth() {
 	depthEnabled = false;
 	depthMask = true;
+	depthFunc = GL_LESS;
 
 	OpenGL::disableDepth();
 	OpenGL::setDepthMask(true);
+	OpenGL::setDepthFunc(OpenGL::DepthFunc::Less);
 }
 
 void GLStateManager::resetScissor() {

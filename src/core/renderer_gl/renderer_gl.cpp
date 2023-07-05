@@ -897,13 +897,13 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	if (depthEnable) {
 		gl.enableDepth();
 		gl.setDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
-		glDepthFunc(depthModes[depthFunc]);
+		gl.setDepthFunc(depthModes[depthFunc]);
 		bindDepthBuffer();
 	} else {
 		if (depthWriteEnable) {
 			gl.enableDepth();
 			gl.setDepthMask(GL_TRUE);
-			glDepthFunc(GL_ALWAYS);
+			gl.setDepthFunc(GL_ALWAYS);
 			bindDepthBuffer();
 		} else {
 			gl.disableDepth();
