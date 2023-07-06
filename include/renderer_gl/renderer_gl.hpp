@@ -43,8 +43,8 @@ class Renderer {
 	float oldDepthOffset = 0.0;
 	bool oldDepthmapEnable = false;
 
-	SurfaceCache<DepthBuffer, 10> depthBufferCache;
-	SurfaceCache<ColourBuffer, 10> colourBufferCache;
+	SurfaceCache<DepthBuffer, 10, true> depthBufferCache;
+	SurfaceCache<ColourBuffer, 10, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
 
 	OpenGL::uvec2 fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'

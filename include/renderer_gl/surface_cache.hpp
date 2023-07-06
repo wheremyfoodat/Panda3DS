@@ -46,7 +46,7 @@ public:
 
     OptionalRef findFromAddress(u32 address) {
         for (auto& e : buffer) {
-            if (e.location == address && e.valid)
+            if (e.location <= address && e.location+e.sizeInBytes() > address && e.valid)
                 return e;
         }
 
