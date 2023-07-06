@@ -5,8 +5,9 @@
 #include "textures.hpp"
 
 // Surface cache class that can fit "capacity" instances of the "SurfaceType" class of surfaces
-// SurfaceType *must* have all of the following
-// - An "allocate" function that allocates GL resources for the surfaces
+// SurfaceType *must* have all of the following.
+// - An "allocate" function that allocates GL resources for the surfaces. On overflow it will panic
+//   if evict_on_overflow is false, or kick out the oldest item if it is true.
 // - A "free" function that frees up all resources the surface is taking up
 // - A "matches" function that, when provided with a SurfaceType object reference
 // Will tell us if the 2 surfaces match (Only as far as location in VRAM, format, dimensions, etc)
@@ -14,7 +15,7 @@
 // Including equality of the allocated OpenGL resources, which we don't want
 // - A "valid" member that tells us whether the function is still valid or not
 // - A "location" member which tells us which location in 3DS memory this surface occupies
-template <typename SurfaceType, size_t capacity>
+template <typename SurfaceType, size_t capacity, bool evict_on_overflow=false>
 class SurfaceCache {
     // Vanilla std::optional can't hold actual references
     using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
@@ -22,11 +23,13 @@ class SurfaceCache {
         std::is_same<SurfaceType, Texture>(), "Invalid surface type");
 
     size_t size;
+    size_t eviction_index;
     std::array<SurfaceType, capacity> buffer;
 
 public:
     void reset() {
         size = 0;
+        eviction_index=0;
         for (auto& e : buffer) { // Free the VRAM of all surfaces
             e.free();
         }
@@ -53,7 +56,15 @@ public:
     // Adds a surface object to the cache and returns it
     SurfaceType& add(const SurfaceType& surface) {
         if (size >= capacity) {
-            Helpers::panic("Surface cache full! Add emptying!");
+            if(evict_on_overflow){
+                auto & e = buffer[eviction_index % size];
+                eviction_index++;
+                e.free();
+                e.valid = false;
+                e = surface;
+                e.allocate();
+                return e; 
+            }else Helpers::panic("Surface cache full! Add emptying!");
         }
         size++;
 

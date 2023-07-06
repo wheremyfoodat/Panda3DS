@@ -35,8 +35,9 @@ void Texture::setNewConfig(u32 cfg) {
 void Texture::free() {
     valid = false;
 
-    if (texture.exists())
-        Helpers::panic("Make this texture free itself");
+    if (texture.exists()){
+        glDeleteTextures(1, &texture.m_handle);
+    }
 }
 
 u64 Texture::sizeInBytes() {
