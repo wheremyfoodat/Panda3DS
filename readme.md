@@ -54,6 +54,14 @@ Simply drag and drop a ROM to the executable if supported, or invoke the executa
 - [3dmoo](https://github.com/plutooo/3dmoo), an HLE 3DS emulator which helped similarly to Citra
 - [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an LLE 3DS emulator which both served as an inspiration, as well as a nice source of documentation for some PICA200-related things
 
+# Sister Projects
+- [PCSX-Redux](https://github.com/grumpycoders/pcsx-redux): A PlayStation 1 emulator targetting developers, reverse engineers and regular PS1 fans alike
+- [SkyEmu](https://github.com/skylersaleh/SkyEmu): A seagull-themed low-level GameBoy, GameBoy Color, GameBoy Advance and Nintendo DS emulator that is designed to be easy to use, cross platform and accurate.
+- [NanoBoyAdvance](https://github.com/nba-emu/NanoBoyAdvance): A Game Boy Advance emulator focusing on hardware research and cycle-accurate emulation
+- [Dust](https://github.com/kelpsyberry/dust): Nintendo DS emulator for desktop devices and the web
+- [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
+- [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
+
 Nintendo 3DS is a registered trademark of Nintendo Co., Ltd.
 
 ![pamda](docs/img/panda.jpg)
