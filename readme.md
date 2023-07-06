@@ -62,6 +62,11 @@ Simply drag and drop a ROM to the executable if supported, or invoke the executa
 - [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
 - [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
 
+# Support
+If you find this project exciting and want to support the founder, check out [his Patreon page](https://www.patreon.com/user?u=96411951)
+<br>
+Keep in mind, funding is only aimed to cover various life costs and support development. Panda3DS is a free product and on no occasion will official builds ever be made private or limited to sponsors! Any donation is much appreciated!
+
 Nintendo 3DS is a registered trademark of Nintendo Co., Ltd.
 
 ![pamda](docs/img/panda.jpg)
