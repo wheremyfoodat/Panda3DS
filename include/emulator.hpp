@@ -13,7 +13,7 @@
 #include "memory.hpp"
 #include "gl_state.hpp"
 
-enum class ROMType { None, ELF, NCSD };
+enum class ROMType { None, ELF, NCSD, CXI };
 
 class Emulator {
 	CPU cpu;
@@ -54,7 +54,7 @@ class Emulator {
 	void runFrame();
 
 	bool loadROM(const std::filesystem::path& path);
-	bool loadNCSD(const std::filesystem::path& path);
+	bool loadNCSD(const std::filesystem::path& path, ROMType type);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 	void initGraphicsContext();

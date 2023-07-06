@@ -288,16 +288,20 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	if (extension == ".elf" || extension == ".axf")
 		return loadELF(path);
 	else if (extension == ".3ds")
-		return loadNCSD(path);
+		return loadNCSD(path, ROMType::NCSD);
+	else if (extension == ".cxi")
+		return loadNCSD(path, ROMType::CXI);
 	else {
 		printf("Unknown file type\n");
 		return false;
 	}
 }
 
-bool Emulator::loadNCSD(const std::filesystem::path& path) {
-	romType = ROMType::NCSD;
-	std::optional<NCSD> opt = memory.loadNCSD(aesEngine, path);
+// Used for loading both CXI and NCSD files since they are both so similar and use the same interface
+// (We promote CXI files to NCSD internally for ease) 
+bool Emulator::loadNCSD(const std::filesystem::path& path, ROMType type) {
+	romType = type;
+	std::optional<NCSD> opt = (type == ROMType::NCSD) ? memory.loadNCSD(aesEngine, path) : memory.loadCXI(aesEngine, path);
 
 	if (!opt.has_value()) {
 		return false;

@@ -150,7 +150,10 @@ public:
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
 	std::optional<u32> loadELF(std::ifstream& file);
-	std::optional<NCSD> loadNCSD(Crypto::AESEngine &aesEngine, const std::filesystem::path& path);
+	std::optional<NCSD> loadNCSD(Crypto::AESEngine& aesEngine, const std::filesystem::path& path);
+	std::optional<NCSD> loadCXI(Crypto::AESEngine& aesEngine, const std::filesystem::path& path);
+
+	bool mapCXI(NCSD& ncsd, NCCH& cxi);
 
 	u8 read8(u32 vaddr);
 	u16 read16(u32 vaddr);
