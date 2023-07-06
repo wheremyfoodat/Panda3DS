@@ -53,6 +53,7 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	// Back the IOFile for accessing the ROM, as well as the ROM's CXI partition, in the memory class.
 	CXIFile = ncsd.file;
 	loadedCXI = cxi;
+	return true;
 }
 
 std::optional<NCSD> Memory::loadNCSD(Crypto::AESEngine& aesEngine, const std::filesystem::path& path) {
