@@ -1,6 +1,8 @@
+#include "loader/ncsd.hpp"
+
 #include <cstring>
 #include <optional>
-#include "loader/ncsd.hpp"
+
 #include "memory.hpp"
 
 bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
@@ -53,78 +55,77 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	loadedCXI = cxi;
 }
 
-std::optional<NCSD> Memory::loadNCSD(Crypto::AESEngine &aesEngine, const std::filesystem::path& path) {
-    NCSD ncsd;
-    if (!ncsd.file.open(path, "rb"))
-        return std::nullopt;
+std::optional<NCSD> Memory::loadNCSD(Crypto::AESEngine& aesEngine, const std::filesystem::path& path) {
+	NCSD ncsd;
+	if (!ncsd.file.open(path, "rb")) return std::nullopt;
 
-    u8 magic[4]; // Must be "NCSD"
-    ncsd.file.seek(0x100);
-    auto [success, bytes] = ncsd.file.readBytes(magic, 4);
+	u8 magic[4];  // Must be "NCSD"
+	ncsd.file.seek(0x100);
+	auto [success, bytes] = ncsd.file.readBytes(magic, 4);
 
-    if (!success || bytes != 4) {
-        printf("Failed to read NCSD magic\n");
-        return std::nullopt;
-    }
+	if (!success || bytes != 4) {
+		printf("Failed to read NCSD magic\n");
+		return std::nullopt;
+	}
 
-    if (magic[0] != 'N' || magic[1] != 'C' || magic[2] != 'S' || magic[3] != 'D') {
-        printf("NCSD with wrong magic value\n");
-        return std::nullopt;
-    }
+	if (magic[0] != 'N' || magic[1] != 'C' || magic[2] != 'S' || magic[3] != 'D') {
+		printf("NCSD with wrong magic value\n");
+		return std::nullopt;
+	}
 
-    std::tie(success, bytes) = ncsd.file.readBytes(&ncsd.size, 4);
-    if (!success || bytes != 4) {
-        printf("Failed to read NCSD size\n");
-        return std::nullopt;
-    }
+	std::tie(success, bytes) = ncsd.file.readBytes(&ncsd.size, 4);
+	if (!success || bytes != 4) {
+		printf("Failed to read NCSD size\n");
+		return std::nullopt;
+	}
 
-    ncsd.size *= NCSD::mediaUnit; // Convert size to bytes
+	ncsd.size *= NCSD::mediaUnit;  // Convert size to bytes
 
-    // Read partition data
-    ncsd.file.seek(0x120);
-    // 2 u32s per partition (offset and length), 8 partitions total
-    constexpr size_t partitionDataSize = 8 * 2; // Size of partition in u32s
-    u32 partitionData[8 * 2];
-    std::tie(success, bytes) = ncsd.file.read(partitionData, partitionDataSize, sizeof(u32));
-    if (!success || bytes != partitionDataSize) {
-        printf("Failed to read NCSD partition data\n");
-        return std::nullopt;
-    }
+	// Read partition data
+	ncsd.file.seek(0x120);
+	// 2 u32s per partition (offset and length), 8 partitions total
+	constexpr size_t partitionDataSize = 8 * 2;  // Size of partition in u32s
+	u32 partitionData[8 * 2];
+	std::tie(success, bytes) = ncsd.file.read(partitionData, partitionDataSize, sizeof(u32));
+	if (!success || bytes != partitionDataSize) {
+		printf("Failed to read NCSD partition data\n");
+		return std::nullopt;
+	}
 
-    for (int i = 0; i < 8; i++) {
-        auto& partition = ncsd.partitions[i];
-        NCCH& ncch = partition.ncch;
-        partition.offset = u64(partitionData[i * 2]) * NCSD::mediaUnit;
-        partition.length = u64(partitionData[i * 2 + 1]) * NCSD::mediaUnit;
+	for (int i = 0; i < 8; i++) {
+		auto& partition = ncsd.partitions[i];
+		NCCH& ncch = partition.ncch;
+		partition.offset = u64(partitionData[i * 2]) * NCSD::mediaUnit;
+		partition.length = u64(partitionData[i * 2 + 1]) * NCSD::mediaUnit;
 
-        ncch.partitionIndex = i;
-        ncch.fileOffset = partition.offset;
+		ncch.partitionIndex = i;
+		ncch.fileOffset = partition.offset;
 
-        if (partition.length != 0) { // Initialize the NCCH of each partition
-            NCCH::FSInfo ncchFsInfo;
+		if (partition.length != 0) {  // Initialize the NCCH of each partition
+			NCCH::FSInfo ncchFsInfo;
 
-            ncchFsInfo.offset = partition.offset;
-            ncchFsInfo.size = partition.length;
+			ncchFsInfo.offset = partition.offset;
+			ncchFsInfo.size = partition.length;
 
-            if (!ncch.loadFromHeader(aesEngine, ncsd.file, ncchFsInfo)) {
-                printf("Invalid NCCH partition\n");
-                return std::nullopt;
-            }
-        }
-    }
-    
-    auto& cxi = ncsd.partitions[0].ncch;
-    if (!cxi.hasExtendedHeader() || !cxi.hasCode()) {
-        printf("NCSD with an invalid CXI in partition 0?\n");
-        return std::nullopt;
-    }
+			if (!ncch.loadFromHeader(aesEngine, ncsd.file, ncchFsInfo)) {
+				printf("Invalid NCCH partition\n");
+				return std::nullopt;
+			}
+		}
+	}
+
+	auto& cxi = ncsd.partitions[0].ncch;
+	if (!cxi.hasExtendedHeader() || !cxi.hasCode()) {
+		printf("NCSD with an invalid CXI in partition 0?\n");
+		return std::nullopt;
+	}
 
 	if (!mapCXI(ncsd, cxi)) {
 		printf("Failed to map CXI\n");
 		return std::nullopt;
 	}
 
-    return ncsd;
+	return ncsd;
 }
 
 // We are lazy so we take CXI files, easily "convert" them to NCSD internally, then use our existing NCSD infrastructure
