@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 
 #include "PICA/gpu.hpp"
 #include "cpu.hpp"
@@ -25,7 +26,7 @@ class Emulator {
 	GLStateManager gl;
 	SDL_Window* window;
 	SDL_GLContext glContext;
-	SDL_GameController* gameController;
+	SDL_GameController* gameController = nullptr;
 	int gameControllerID;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
@@ -43,6 +44,8 @@ class Emulator {
 	// This is currently only used for ELFs, NCSDs use the IOFile API instead
 	std::ifstream loadedELF;
 	NCSD loadedNCSD;
+
+	std::optional<std::filesystem::path> romPath = std::nullopt;
 
   public:
 	Emulator();

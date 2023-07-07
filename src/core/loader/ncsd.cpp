@@ -9,6 +9,27 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	printf("Text address = %08X, size = %08X\n", cxi.text.address, cxi.text.size);
 	printf("Rodata address = %08X, size = %08X\n", cxi.rodata.address, cxi.rodata.size);
 	printf("Data address = %08X, size = %08X\n", cxi.data.address, cxi.data.size);
+	printf("Stack size: %08X\n", cxi.stackSize);
+
+	if (!isAligned(cxi.stackSize)) {
+		Helpers::warn("CXI has a suspicious stack size of %08X which is not a multiple of 4KB", cxi.stackSize);
+	}
+
+	// Round up the size of the CXI stack size to a page (4KB) boundary, as the OS can only allocate memory this way
+	u32 stackSize = (cxi.stackSize + pageSize - 1) & -pageSize;
+
+	if (stackSize > 512_KB) {
+		// TODO: Figure out the actual max stack size
+		Helpers::warn("CXI stack size is %08X which seems way too big. Clamping to 512KB", stackSize);
+		stackSize = 512_KB;
+	}
+
+	// Allocate stack
+	if (!allocateMainThreadStack(stackSize)) {
+		// Should be unreachable
+		printf("Failed to allocate stack for CXI partition. Requested stack size: %08X\n", stackSize);
+		return false;
+	}
 
 	// Map code file to memory
 	auto& code = cxi.codeFile;

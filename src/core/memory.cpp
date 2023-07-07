@@ -28,16 +28,16 @@ void Memory::reset() {
 		writeTable[i] = 0;
 	}
 
-	// Map stack pages as R/W
-	// We have 16KB for the stack, so we allocate the last 16KB of APPLICATION FCRAM for the stack
-	u32 basePaddrForStack = FCRAM_APPLICATION_SIZE - VirtualAddrs::DefaultStackSize;
-	allocateMemory(VirtualAddrs::StackBottom, basePaddrForStack, VirtualAddrs::DefaultStackSize, true);
+	// Map (32 * 4) KB of FCRAM before the stack for the TLS of each thread
+	std::optional<u32> tlsBaseOpt = findPaddr(32 * 4_KB);
+	if (!tlsBaseOpt.has_value()) {  // Should be unreachable but still good to have
+		Helpers::panic("Failed to allocate memory for thread-local storage");
+	}
 
-	// And map (4 * 32)KB of FCRAM before the stack for the TLS of each thread
-	u32 basePaddrForTLS = basePaddrForStack;
+	u32 basePaddrForTLS = tlsBaseOpt.value();
 	for (int i = 0; i < appResourceLimits.maxThreads; i++) {
 		u32 vaddr = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
-		basePaddrForTLS -= VirtualAddrs::TLSSize;
+		basePaddrForTLS += VirtualAddrs::TLSSize;
 		allocateMemory(vaddr, basePaddrForTLS, VirtualAddrs::TLSSize, true);
 	}
 
@@ -57,6 +57,18 @@ void Memory::reset() {
 		readTable[i + initialPage] = pointer;
 		writeTable[i + initialPage] = pointer;
 	}
+}
+
+bool Memory::allocateMainThreadStack(u32 size) {
+	// Map stack pages as R/W
+	std::optional<u32> basePaddr = findPaddr(size);
+	if (!basePaddr.has_value()) {  // Should also be unreachable but still good to have
+		return false;
+	}
+
+	const u32 stackBottom = VirtualAddrs::StackTop - size;
+	std::optional<u32> result = allocateMemory(stackBottom, basePaddr.value(), size, true); // Should never be nullopt
+	return result.has_value();
 }
 
 u8 Memory::read8(u32 vaddr) {
