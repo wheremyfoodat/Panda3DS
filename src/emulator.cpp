@@ -289,7 +289,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		return loadELF(path);
 	else if (extension == ".3ds")
 		return loadNCSD(path, ROMType::NCSD);
-	else if (extension == ".cxi")
+	else if (extension == ".cxi" || extension == ".app")
 		return loadNCSD(path, ROMType::CXI);
 	else {
 		printf("Unknown file type\n");
