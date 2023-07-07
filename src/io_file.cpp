@@ -21,7 +21,7 @@
 #include <unistd.h>  // For ftruncate
 #endif
 
-IOFile::IOFile(const std::filesystem::path& path, const char* permissions) { open(path, permissions); }
+IOFile::IOFile(const std::filesystem::path& path, const char* permissions) : handle(nullptr) { open(path, permissions); }
 
 bool IOFile::open(const std::filesystem::path& path, const char* permissions) {
 	const auto str = path.string();  // For some reason converting paths directly with c_str() doesn't work
@@ -29,6 +29,12 @@ bool IOFile::open(const std::filesystem::path& path, const char* permissions) {
 }
 
 bool IOFile::open(const char* filename, const char* permissions) {
+	// If this IOFile is already bound to an open file descriptor, release the file descriptor
+	// To avoid leaking it and/or erroneously locking the file
+	if (isOpen()) {
+		close();
+	}
+
 	handle = std::fopen(filename, permissions);
 	return isOpen();
 }
