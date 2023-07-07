@@ -33,10 +33,11 @@ void Texture::setNewConfig(u32 cfg) {
 }
 
 void Texture::free() {
-    valid = false;
+	valid = false;
 
-    if (texture.exists())
-        Helpers::panic("Make this texture free itself");
+	if (texture.exists()) {
+		texture.free();
+	}
 }
 
 u64 Texture::sizeInBytes() {
