@@ -46,6 +46,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release # Set up compilers etc here if you'd like
 Simply drag and drop a ROM to the executable if supported, or invoke the executable from the command line with the path to the ROM as the first argument.
 
 ## Controls
+Keyboard & Mouse
 - Up button	W
 - Down button	S
 - Left button	A
@@ -58,6 +59,9 @@ Simply drag and drop a ROM to the executable if supported, or invoke the executa
 - R button	P
 - Start button	Enter
 - Select button	Backspace
+- Touch Screen Left click
+
+Panda3DS also supports controller input using the SDL2 GameController API.
 
 # Acknowledgements
 - [3DBrew](https://www.3dbrew.org/wiki/Main_Page), a wiki full of 3DS information and the main source of documentation used.
