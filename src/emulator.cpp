@@ -63,8 +63,16 @@ void Emulator::reset() {
 	// Reloading r13 and r15 needs to happen after everything has been reset
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
-	if (romType == ROMType::ELF) {           // Reload ELF if we're using one
-		loadELF(loadedELF);
+	
+	// If a ROM is active and we reset, reload it. This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
+	if (romType != ROMType::None && romPath.has_value()) {
+		bool success = loadROM(romPath.value());
+		if (!success) {
+			romType = ROMType::None;
+			romPath = std::nullopt;
+
+			Helpers::panic("Failed to reload ROM. This should pause the emulator in the future GUI");
+		}
 	}
 }
 
@@ -284,17 +292,27 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	kernel.initializeFS();
 	auto extension = path.extension();
+	bool success; // Tracks if we loaded the ROM successfully
 
 	if (extension == ".elf" || extension == ".axf")
-		return loadELF(path);
+		success = loadELF(path);
 	else if (extension == ".3ds")
-		return loadNCSD(path, ROMType::NCSD);
+		success = loadNCSD(path, ROMType::NCSD);
 	else if (extension == ".cxi" || extension == ".app")
-		return loadNCSD(path, ROMType::CXI);
+		success = loadNCSD(path, ROMType::CXI);
 	else {
 		printf("Unknown file type\n");
-		return false;
+		success = false;
 	}
+
+	if (success) {
+		romPath = path;
+	} else {
+		romPath = std::nullopt;
+		romType = ROMType::None;
+	}
+	
+	return success;
 }
 
 // Used for loading both CXI and NCSD files since they are both so similar and use the same interface
