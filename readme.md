@@ -45,6 +45,20 @@ cmake .. -DCMAKE_BUILD_TYPE=Release # Set up compilers etc here if you'd like
 # How to use
 Simply drag and drop a ROM to the executable if supported, or invoke the executable from the command line with the path to the ROM as the first argument.
 
+## Controls
+- Up button	W
+- Down button	S
+- Left button	A
+- Right button	D
+- A button	L
+- B button	K
+- X button	O
+- Y button	I
+- L button	Q
+- R button	P
+- Start button	Enter
+- Select button	Backspace
+
 # Acknowledgements
 - [3DBrew](https://www.3dbrew.org/wiki/Main_Page), a wiki full of 3DS information and the main source of documentation used.
 - [GBATek](https://www.problemkaputt.de/gbatek.htm#3dsreference), a GBA, DS and 3DS reference which provided insights on some pieces of hardware as well as neatly documenting things like certain file formats used in games.
