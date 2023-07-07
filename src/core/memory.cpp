@@ -37,8 +37,8 @@ void Memory::reset() {
 	u32 basePaddrForTLS = tlsBaseOpt.value();
 	for (int i = 0; i < appResourceLimits.maxThreads; i++) {
 		u32 vaddr = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
-		basePaddrForTLS += VirtualAddrs::TLSSize;
 		allocateMemory(vaddr, basePaddrForTLS, VirtualAddrs::TLSSize, true);
+		basePaddrForTLS += VirtualAddrs::TLSSize;
 	}
 
 	// Initialize shared memory blocks and reserve memory for them
