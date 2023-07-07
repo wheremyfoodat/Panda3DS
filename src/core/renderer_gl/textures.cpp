@@ -33,11 +33,11 @@ void Texture::setNewConfig(u32 cfg) {
 }
 
 void Texture::free() {
-    valid = false;
+	valid = false;
 
-    if (texture.exists()){
-        glDeleteTextures(1, &texture.m_handle);
-    }
+	if (texture.exists()) {
+		texture.free();
+	}
 }
 
 u64 Texture::sizeInBytes() {

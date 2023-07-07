@@ -7,7 +7,7 @@
 // Surface cache class that can fit "capacity" instances of the "SurfaceType" class of surfaces
 // SurfaceType *must* have all of the following.
 // - An "allocate" function that allocates GL resources for the surfaces. On overflow it will panic
-//   if evict_on_overflow is false, or kick out the oldest item if it is true.
+//   if evictOnOverflow is false, or kick out the oldest item if it is true (like a ring buffer)
 // - A "free" function that frees up all resources the surface is taking up
 // - A "matches" function that, when provided with a SurfaceType object reference
 // Will tell us if the 2 surfaces match (Only as far as location in VRAM, format, dimensions, etc)
@@ -15,7 +15,7 @@
 // Including equality of the allocated OpenGL resources, which we don't want
 // - A "valid" member that tells us whether the function is still valid or not
 // - A "location" member which tells us which location in 3DS memory this surface occupies
-template <typename SurfaceType, size_t capacity, bool evict_on_overflow=false>
+template <typename SurfaceType, size_t capacity, bool evictOnOverflow = false>
 class SurfaceCache {
     // Vanilla std::optional can't hold actual references
     using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
@@ -23,13 +23,13 @@ class SurfaceCache {
         std::is_same<SurfaceType, Texture>(), "Invalid surface type");
 
     size_t size;
-    size_t eviction_index;
+    size_t evictionIndex;
     std::array<SurfaceType, capacity> buffer;
 
 public:
     void reset() {
         size = 0;
-        eviction_index=0;
+        evictionIndex = 0;
         for (auto& e : buffer) { // Free the VRAM of all surfaces
             e.free();
         }
@@ -54,34 +54,42 @@ public:
     }
 
     // Adds a surface object to the cache and returns it
-    SurfaceType& add(const SurfaceType& surface) {
-        if (size >= capacity) {
-            if(evict_on_overflow){
-                auto & e = buffer[eviction_index % size];
-                eviction_index++;
-                e.free();
-                e.valid = false;
-                e = surface;
-                e.allocate();
-                return e; 
-            }else Helpers::panic("Surface cache full! Add emptying!");
-        }
-        size++;
+	SurfaceType& add(const SurfaceType& surface) {
+		if (size >= capacity) {
+			if (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
+				auto& e = buffer[evictionIndex];
+				evictionIndex = (evictionIndex + 1) % capacity;
 
-        // Find an invalid entry in the cache and overwrite it with the new surface
-        for (auto& e : buffer) {
-            if (!e.valid) {
-                e = surface;
-                e.allocate();
-                return e;
-            }
-        }
+				e.valid = false;
+				e.free();
+				e = surface;
+				e.allocate();
+				return e;
+			} else {
+				Helpers::panic("Surface cache full! Add emptying!");
+			}
+		}
 
-        // This should be unreachable but helps to panic anyways
-        Helpers::panic("Couldn't add surface to cache\n");
-    }
+		size++;
+
+		// Find an invalid entry in the cache and overwrite it with the new surface
+		for (auto& e : buffer) {
+			if (!e.valid) {
+				e = surface;
+				e.allocate();
+				return e;
+			}
+		}
+
+		// This should be unreachable but helps to panic anyways
+		Helpers::panic("Couldn't add surface to cache\n");
+	}
 
     SurfaceType& operator[](size_t i) {
+        return buffer[i];
+    }
+
+    const SurfaceType& operator[](size_t i) const {
         return buffer[i];
     }
 };
