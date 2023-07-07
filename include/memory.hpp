@@ -29,7 +29,6 @@ namespace VirtualAddrs {
 		// Stack for main ARM11 thread.
 		// Typically 0x4000 bytes, determined by exheader
 		StackTop = 0x10000000,
-		StackBottom = 0x0FFFC000,
 		DefaultStackSize = 0x4000,
 
 		NormalHeapStart = 0x08000000,
@@ -248,4 +247,5 @@ public:
 	u32 getUsedUserMem() { return usedUserMemory; }
 
 	void setVRAM(u8* pointer) { vram = pointer; }
+	bool allocateMainThreadStack(u32 size);
 };

@@ -14,6 +14,13 @@ std::optional<u32> Memory::loadELF(std::ifstream& file) {
 		return std::nullopt;
 	}
 
+    // Allocate stack space. For ELFs we use the default stack size, which is 16KB
+	if (!allocateMainThreadStack(VirtualAddrs::DefaultStackSize)) {
+		// Should be unreachable
+		printf("Failed to allocate stack space for ELF file\n");
+		return std::nullopt;
+	}
+
     auto segNum = reader.segments.size();
     printf("Number of segments: %d\n", segNum);
     printf(" #  Perms       Vaddr           File Size       Mem Size\n");
