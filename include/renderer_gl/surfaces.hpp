@@ -60,7 +60,7 @@ struct ColourBuffer {
     void free() {
         valid = false;
 
-        if (texture.exists() || fbo.exists()){
+        if (texture.exists() || fbo.exists()) {
             texture.free();
             fbo.free();
         }
@@ -130,10 +130,10 @@ struct DepthBuffer {
     }
 
     void free() {
-        if(texture.exists()){
+		valid = false;
+        if (texture.exists()) {
             texture.free();
         }
-        valid = false;
     }
 
     bool matches(DepthBuffer& other) {
