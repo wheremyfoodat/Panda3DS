@@ -59,7 +59,8 @@ Keyboard & Mouse
 - R button	P
 - Start button	Enter
 - Select button	Backspace
-- Touch Screen Left click
+- Touch Screen  Left click
+- Gyroscope     Hold right click and swipe your mouse left and right (support is kind of shaky atm, but games that require gyro here and there like Kirby should work)
 
 Panda3DS also supports controller input using the SDL2 GameController API.
 
