@@ -56,7 +56,7 @@ public:
     // Adds a surface object to the cache and returns it
 	SurfaceType& add(const SurfaceType& surface) {
 		if (size >= capacity) {
-			if (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
+			if constexpr (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
 				auto& e = buffer[evictionIndex];
 				evictionIndex = (evictionIndex + 1) % capacity;
 
