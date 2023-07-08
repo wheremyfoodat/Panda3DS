@@ -38,6 +38,8 @@ void IRUserService::initializeIrnopShared(u32 messagePointer) {
 	const u32 sharedMemHandle = mem.read32(messagePointer + 32);
 
 	log("IR:USER: InitializeIrnopShared (shared mem size = %08X, sharedMemHandle = %X) (stubbed)\n", sharedMemSize, sharedMemHandle);
+	Helpers::warn("Game is initializing IR:USER. If it explodes, this is probably why");
+
 	mem.write32(messagePointer, IPC::responseHeader(0x18, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
