@@ -172,7 +172,7 @@ void GPU::drawArrays() {
 					// Vertex attributes used as padding
 					// 12, 13, 14 and 15 are equivalent to 4, 8, 12 and 16 bytes of padding respectively
 					if (index >= 12) [[unlikely]] {
-						// Align attriubte address up to a 4 byte boundary
+						// Align attribute address up to a 4 byte boundary
 						attrAddress = (attrAddress + 3) & -4;
 						attrAddress += (index - 11) << 2;
 						continue;
