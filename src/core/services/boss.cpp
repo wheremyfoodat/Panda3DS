@@ -5,9 +5,11 @@ namespace BOSSCommands {
 	enum : u32 {
 		InitializeSession = 0x00010082,
 		UnregisterStorage = 0x00030000,
+		GetTaskStorageInfo = 0x00040000,
 		GetOptoutFlag = 0x000A0000,
 		UnregisterTask = 0x000C0082,
 		GetTaskIdList = 0x000E0000,
+		GetNsDataIdList = 0x00100102,
 		ReceiveProperty = 0x00160082,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000
@@ -21,9 +23,11 @@ void BOSSService::reset() {
 void BOSSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case BOSSCommands::GetNsDataIdList: getNsDataIdList(messagePointer); break;
 		case BOSSCommands::GetOptoutFlag: getOptoutFlag(messagePointer); break;
 		case BOSSCommands::GetStorageEntryInfo: getStorageEntryInfo(messagePointer); break;
 		case BOSSCommands::GetTaskIdList: getTaskIdList(messagePointer); break;
+		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
 		case BOSSCommands::InitializeSession: initializeSession(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
@@ -44,6 +48,13 @@ void BOSSService::getOptoutFlag(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, optoutFlag);
+}
+
+void BOSSService::getTaskStorageInfo(u32 messagePointer) {
+	log("BOSS::GetTaskStorageInfo (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x4, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0);  // Seems to be unknown what this is?
 }
 
 void BOSSService::getTaskIdList(u32 messagePointer) {
@@ -75,6 +86,15 @@ void BOSSService::unregisterTask(u32 messagePointer) {
 	log("BOSS::UnregisterTask (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void BOSSService::getNsDataIdList(u32 messagePointer) {
+	log("BOSS::GetNsDataIdList (stubbed)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x10, 3, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write16(messagePointer + 8, 0);   // u16: Actual number of output entries.
+	mem.write16(messagePointer + 12, 0);  // u16: Last word-index copied to output in the internal NsDataId list.
 }
 
 void BOSSService::registerStorageEntry(u32 messagePointer) {
