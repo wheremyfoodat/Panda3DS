@@ -11,6 +11,7 @@ namespace BOSSCommands {
 		GetTaskIdList = 0x000E0000,
 		GetNsDataIdList = 0x00100102,
 		ReceiveProperty = 0x00160082,
+		GetTaskInfo = 0x00250082,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000
 	};
@@ -27,6 +28,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetOptoutFlag: getOptoutFlag(messagePointer); break;
 		case BOSSCommands::GetStorageEntryInfo: getStorageEntryInfo(messagePointer); break;
 		case BOSSCommands::GetTaskIdList: getTaskIdList(messagePointer); break;
+		case BOSSCommands::GetTaskInfo: getTaskInfo(messagePointer); break;
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
 		case BOSSCommands::InitializeSession: initializeSession(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
@@ -60,6 +62,15 @@ void BOSSService::getTaskStorageInfo(u32 messagePointer) {
 void BOSSService::getTaskIdList(u32 messagePointer) {
 	log("BOSS::GetTaskIdList (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0xE, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// This function is completely undocumented, including on 3DBrew
+// The name GetTaskInfo is taken from Citra source and nobody seems to know what exactly it does
+// Kid Icarus: Uprising uses it on startup
+void BOSSService::getTaskInfo(u32 messagePointer) {
+	log("BOSS::GetTaskInfo (stubbed and undocumented)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x25, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
