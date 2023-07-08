@@ -1,5 +1,7 @@
 #pragma once
 #include <array>
+
+#include "config.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
@@ -16,6 +18,7 @@ class GPU {
 	using Registers = std::array<u32, regNum>;
 
 	Memory& mem;
+	EmulatorConfig& config;
 	ShaderUnit shaderUnit;
 	ShaderJIT shaderJIT; // Doesn't do anything if JIT is disabled or not supported
 
@@ -81,7 +84,7 @@ class GPU {
 	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
 	bool lightingLUTDirty = false;
 
-	GPU(Memory& mem, GLStateManager& gl);
+	GPU(Memory& mem, GLStateManager& gl, EmulatorConfig& config);
 	void initGraphicsContext() { renderer.initGraphicsContext(); }
 	void getGraphicsContext() { renderer.getGraphicsContext(); }
 	void display() { renderer.display(); }
