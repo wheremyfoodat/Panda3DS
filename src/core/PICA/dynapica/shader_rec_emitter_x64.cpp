@@ -135,11 +135,13 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
+		case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
 		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
 		case ShaderOpcodes::JMPC: recJMPC(shaderUnit, instruction); break;
 		case ShaderOpcodes::JMPU: recJMPU(shaderUnit, instruction); break;
+		case ShaderOpcodes::LG2: recLG2(shaderUnit, instruction); break;
 		case ShaderOpcodes::LOOP: recLOOP(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOVA: recMOVA(shaderUnit, instruction); break;
@@ -152,8 +154,6 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 
 		// Unimplemented opcodes that don't seem to actually be used but exist in the binary
 		// EMIT/SETEMIT are used in geometry shaders, however are sometimes found in vertex shaders?
-		case ShaderOpcodes::EX2:
-		case ShaderOpcodes::LG2:
 		case ShaderOpcodes::EMIT:
 		case ShaderOpcodes::SETEMIT:
 			log("[ShaderJIT] Unknown PICA opcode: %02X\n", opcode);
@@ -875,6 +875,74 @@ void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	jnz(loopStart);  // Back to loop start if not over
 	add(rsp, 16);
 	loopLevel--;
+}
+
+// SSE does not have a log2 instruction so we temporarily emulate this using x87 FPU
+void ShaderEmitter::recLG2(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+	const u32 writeMask = getBits<0, 4>(operandDescriptor);
+
+	// Load swizzled source, push 1.0 to the x87 stack
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);
+	fld1();
+
+	// Push source to the x87 stack
+	movd(eax, src1_xmm);
+	push(rax);
+	fld(dword[rsp]);
+
+	// Perform log2, load result to src1_xmm, write it back and undo the previous push rax
+	fyl2x();
+	fstp(dword[rsp]);
+	movss(src1_xmm, dword[rsp]);
+	add(rsp, 8);
+
+	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
+	// Otherwise we do
+	if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
+		shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
+	}
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+// SSE does not have an exp2 instruction so we temporarily emulate this using x87 FPU
+void ShaderEmitter::recEX2(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+	const u32 writeMask = getBits<0, 4>(operandDescriptor);
+
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);
+
+	// Push source to the x87 stack, then do some insane compiler-generated x87 math
+	movd(eax, src1_xmm);
+	push(rax);
+	fld(dword[rsp]);
+
+	fld(st0);
+	frndint();
+	fsub(st1, st0);
+	fxch(st1);
+	f2xm1();
+	fadd(dword[rip + onesVector]);
+	fscale();
+
+	// Load result to src1_xmm, write it back and undo the previous push rax
+	fstp(st1);
+	fstp(dword[rsp]);
+	movss(src1_xmm, dword[rsp]);
+	add(rsp, 8);
+
+	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
+	// Otherwise we do
+	if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
+		shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
+	}
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::printLog(const PICAShader& shaderUnit) {

@@ -46,7 +46,7 @@ public:
 
     OptionalRef findFromAddress(u32 address) {
         for (auto& e : buffer) {
-            if (e.location == address && e.valid)
+            if (e.location <= address && e.location + e.sizeInBytes() > address && e.valid)
                 return e;
         }
 
@@ -57,6 +57,10 @@ public:
 	SurfaceType& add(const SurfaceType& surface) {
 		if (size >= capacity) {
 			if constexpr (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
+				if constexpr (std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>()) {
+					Helpers::panicDev("Colour/Depth buffer cache overflowed, currently stubbed to do a ring-buffer. This might snap in half");
+				}
+
 				auto& e = buffer[evictionIndex];
 				evictionIndex = (evictionIndex + 1) % capacity;
 
