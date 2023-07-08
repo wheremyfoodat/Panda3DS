@@ -216,10 +216,6 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		printf("RomFS offset: %08llX, size: %08llX\n", romFS.offset, romFS.size);
 	}
 
-	if (stackSize != 0 && stackSize != VirtualAddrs::DefaultStackSize) {
-		Helpers::warn("Requested stack size is %08X bytes. Temporarily emulated as 0x4000 until adjustable sizes are added\n", stackSize);
-	}
-
 	initialized = true;
 	return true;
 }
