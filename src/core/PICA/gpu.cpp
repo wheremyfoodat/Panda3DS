@@ -12,7 +12,7 @@ using namespace Floats;
 
 // Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
 // Thus, our GLStateManager being here does not negatively impact renderer-agnosticness
-GPU::GPU(Memory& mem, GLStateManager& gl) : mem(mem), renderer(*this, gl, regs) {
+GPU::GPU(Memory& mem, GLStateManager& gl, EmulatorConfig& config) : mem(mem), renderer(*this, gl, regs), config(config) {
 	vram = new u8[vramSize];
 	mem.setVRAM(vram); // Give the bus a pointer to our VRAM
 }
@@ -47,15 +47,15 @@ void GPU::reset() {
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
-	constexpr bool shaderJITEnabled = false; // TODO: Make a configurable option
+	const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
 
 	if (indexed) {
-		if constexpr (ShaderJIT::isAvailable() && shaderJITEnabled)
+		if (shaderJITEnabled)
 			drawArrays<true, true>();
 		else
 			drawArrays<true, false>();
 	} else {
-		if constexpr (ShaderJIT::isAvailable() && shaderJITEnabled)
+		if (shaderJITEnabled)
 			drawArrays<false, true>();
 		else
 			drawArrays<false, false>();
