@@ -37,6 +37,10 @@ class Emulator {
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
 
+	// For tracking whether to update gyroscope
+	// We bind gyro to right click + mouse movement
+	bool holdingRightClick = false;
+
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;

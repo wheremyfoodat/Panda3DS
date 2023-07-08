@@ -192,6 +192,8 @@ void Emulator::run() {
 						} else {
 							srv.releaseTouchScreen();
 						}
+					} else if (event.button.button == SDL_BUTTON_RIGHT) {
+						holdingRightClick = true;
 					}
 					break;
 				}
@@ -199,6 +201,8 @@ void Emulator::run() {
 				case SDL_MOUSEBUTTONUP:
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						srv.releaseTouchScreen();
+					} else if (event.button.button == SDL_BUTTON_RIGHT) {
+						holdingRightClick = false;
 					}
 					break;
 
@@ -243,6 +247,24 @@ void Emulator::run() {
 							srv.releaseKey(key);
 						}
 					}
+				}
+
+				// Detect mouse motion events for gyroscope emulation
+				case SDL_MOUSEMOTION: {
+					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope rotation
+					if (!holdingRightClick) break;
+
+					// Relative motion since last mouse motion event
+					const s32 motionX = event.motion.xrel;
+					const s32 motionY = event.motion.yrel;
+
+					// The gyroscope involves lots of weird math I don't want to bother with atm
+					// So up until then, we will set the gyroscope euler angles to fixed values based on the direction of the relative motion
+					const s32 roll = motionX > 0 ? 0x7f : -0x7f;
+					const s32 pitch = motionY > 0 ? 0x7f : -0x7f;
+					srv.setRoll(roll);
+					srv.setPitch(pitch);
+					break;
 				}
 			}
 		}

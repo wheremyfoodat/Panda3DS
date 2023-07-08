@@ -99,4 +99,8 @@ class ServiceManager {
 	void updateInputs(u64 currentTimestamp) { hid.updateInputs(currentTimestamp); }
 	void setTouchScreenPress(u16 x, u16 y) { hid.setTouchScreenPress(x, y); }
 	void releaseTouchScreen() { hid.releaseTouchScreen(); }
+
+	void setRoll(s16 roll) { hid.setRoll(roll); }
+	void setPitch(s16 pitch) { hid.setPitch(pitch); }
+	void setYaw(s16 yaw) { hid.setYaw(yaw); }
 };
