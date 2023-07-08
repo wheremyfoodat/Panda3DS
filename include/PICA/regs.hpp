@@ -55,6 +55,8 @@ namespace PICA {
 			BlendFunc = 0x101,
 			BlendColour = 0x103,
 			AlphaTestConfig = 0x104,
+			StencilTest = 0x105,
+			StencilOp = 0x106,
 			DepthAndColorMask = 0x107,
 			DepthBufferFormat = 0x116,
 			ColourBufferFormat = 0x117,

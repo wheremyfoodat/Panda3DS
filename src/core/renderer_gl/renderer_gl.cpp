@@ -205,6 +205,51 @@ void RendererGL::setupBlending() {
 	}
 }
 
+void RendererGL::setupStencilTest(bool stencilEnable) {
+	if (!stencilEnable) {
+		OpenGL::disableStencil();
+		return;
+	}
+
+	static constexpr std::array<GLenum, 8> stencilFuncs = {
+		GL_NEVER,
+		GL_ALWAYS,
+		GL_EQUAL,
+		GL_NOTEQUAL,
+		GL_LESS,
+		GL_LEQUAL,
+		GL_GREATER,
+		GL_GEQUAL
+	};
+	OpenGL::enableStencil();
+
+	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
+	const u32 stencilFunc = getBits<4, 3>(stencilConfig);
+	const u32 stencilBufferMask = getBits<8, 8>(stencilConfig);
+	const s32 reference = s8(getBits<16, 8>(stencilConfig)); // Signed reference value
+	const u32 stencilRefMask = getBits<24, 8>(stencilConfig);
+
+	glStencilFunc(stencilFuncs[stencilFunc], reference, stencilRefMask);
+	glStencilMask(stencilBufferMask);
+
+	static constexpr std::array<GLenum, 8> stencilOps = {
+		GL_KEEP,
+		GL_ZERO,
+		GL_REPLACE,
+		GL_INCR,
+		GL_DECR,
+		GL_INVERT,
+		GL_INCR_WRAP,
+		GL_DECR_WRAP
+	};
+	const u32 stencilOpConfig = regs[PICA::InternalRegs::StencilOp];
+	const u32 stencilFailOp = getBits<0, 3>(stencilOpConfig);
+	const u32 depthFailOp = getBits<4, 3>(stencilOpConfig);
+	const u32 passOp = getBits<8, 3>(stencilOpConfig);
+
+	glStencilOp(stencilOps[stencilFailOp], stencilOps[depthFailOp], stencilOps[passOp]);
+}
+
 void RendererGL::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
 
@@ -356,6 +401,9 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	GLsizei viewportHeight = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0f);
 	OpenGL::setViewport(viewportWidth, viewportHeight);
 
+	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
+	const bool stencilEnable = getBit<0>(stencilConfig);
+
 	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
 	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
@@ -371,8 +419,14 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 			bindDepthBuffer();
 		} else {
 			gl.disableDepth();
+
+			if (stencilEnable) {
+				bindDepthBuffer();
+			}
 		}
 	}
+
+	setupStencilTest(stencilEnable);
 
 	vbo.bufferVertsSub(vertices);
 	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
@@ -476,6 +530,7 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	gl.disableBlend();
 	gl.disableDepth();
 	gl.disableScissor();
+	OpenGL::disableStencil();
 	gl.setColourMask(true, true, true, true);
 	gl.useProgram(displayProgram);
 	gl.bindVAO(dummyVAO);
