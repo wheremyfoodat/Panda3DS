@@ -42,6 +42,7 @@ namespace Log {
     static Logger<false> frdLogger;
     static Logger<false> fsLogger;
     static Logger<false> hidLogger;
+	static Logger<false> irUserLogger;
     static Logger<false> gspGPULogger;
     static Logger<false> gspLCDLogger;
     static Logger<false> ldrLogger;
