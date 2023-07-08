@@ -9,6 +9,7 @@
 
 #include "PICA/gpu.hpp"
 #include "cpu.hpp"
+#include "config.hpp"
 #include "crypto/aes_engine.hpp"
 #include "io_file.hpp"
 #include "memory.hpp"
@@ -24,6 +25,7 @@ class Emulator {
 	Crypto::AESEngine aesEngine;
 
 	GLStateManager gl;
+	EmulatorConfig config;
 	SDL_Window* window;
 	SDL_GLContext glContext;
 	SDL_GameController* gameController = nullptr;
@@ -49,6 +51,7 @@ class Emulator {
 
   public:
 	Emulator();
+	~Emulator();
 
 	void step();
 	void render();
