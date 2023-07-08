@@ -33,6 +33,7 @@ void HIDService::reset() {
 	newButtons = oldButtons = 0;
 	circlePadX = circlePadY = 0;
 	touchScreenX = touchScreenY = 0;
+	roll = pitch = yaw = 0;
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
@@ -182,6 +183,14 @@ void HIDService::updateInputs(u64 currentTick) {
 			writeSharedMem<u64>(0x160, readSharedMem<u64>(0x158)); // Copy previous tick count
 			writeSharedMem<u64>(0x158, currentTick);             // Write new tick count
 		}
+		const size_t gyroEntryOffset = 0x178 + (nextGyroIndex * 6);  // Offset in the array of 8 touchscreen entries
+		writeSharedMem<u16>(gyroEntryOffset, pitch);
+		writeSharedMem<u16>(gyroEntryOffset + 2, yaw);
+		writeSharedMem<u16>(gyroEntryOffset + 4, roll);
+
+		// Since gyroscope euler angles are relative, we zero them out here and the frontend will update them again when we receive a new rotation
+		roll = pitch = yaw = 0;
+
 		writeSharedMem<u32>(0x168, nextGyroIndex); // Index last updated by the HID module
 		nextGyroIndex = (nextGyroIndex + 1) % 32; // Move to next entry
 	}
