@@ -58,13 +58,13 @@ struct ColourBuffer {
     }
 
     void free() {
-        valid = false;
+		valid = false;
 
-        if (texture.exists() || fbo.exists()) {
-            texture.free();
-            fbo.free();
-        }
-    }
+		if (texture.exists() || fbo.exists()) {
+			texture.free();
+			fbo.free();
+		}
+	}
 
     bool matches(ColourBuffer& other) {
         return location == other.location && format == other.format &&
@@ -131,10 +131,10 @@ struct DepthBuffer {
 
     void free() {
 		valid = false;
-        if (texture.exists()) {
-            texture.free();
-        }
-    }
+		if (texture.exists()) {
+			texture.free();
+		}
+	}
 
     bool matches(DepthBuffer& other) {
         return location == other.location && format == other.format &&

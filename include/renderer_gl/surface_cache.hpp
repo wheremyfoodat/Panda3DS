@@ -59,7 +59,7 @@ public:
 			if constexpr (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
 				if constexpr (std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>()) {
 					Helpers::panicDev("Colour/Depth buffer cache overflowed, currently stubbed to do a ring-buffer. This might snap in half");
-                }
+				}
 
 				auto& e = buffer[evictionIndex];
 				evictionIndex = (evictionIndex + 1) % capacity;
