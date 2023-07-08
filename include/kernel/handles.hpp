@@ -21,6 +21,7 @@ namespace KernelHandles {
 		DLP_SRVR, // Download Play: Server. Used for network play.
 		DSP,  // DSP service (Used for audio decoding and output)
 		HID,  // HID service (Handles everything input-related including gyro)
+		IR_USER, // One of 3 infrared communication services
         FRD,  // Friend service (Miiverse friend service)
 		FS,   // Filesystem service
 		GPU,  // GPU service
@@ -68,6 +69,7 @@ namespace KernelHandles {
 			case DSP: return "DSP";
 			case DLP_SRVR: return "DLP::SRVR";
 			case HID: return "HID";
+			case IR_USER: return "IR:USER";
 			case FRD: return "FRD";
 			case FS: return "FS";
 			case GPU: return "GSP::GPU";

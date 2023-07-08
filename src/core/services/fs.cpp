@@ -24,6 +24,7 @@ namespace FSCommands {
 		FormatThisUserSaveData = 0x080F0180,
 		GetFreeBytes = 0x08120080,
 		IsSdmcDetected = 0x08170000,
+		IsSdmcWritable = 0x08180000,
 		GetFormatInfo = 0x084500C2,
 		FormatSaveData = 0x084C0242,
 		InitializeWithSdkVersion = 0x08610042,
@@ -155,6 +156,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::Initialize: initialize(messagePointer); break;
 		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
 		case FSCommands::IsSdmcDetected: isSdmcDetected(messagePointer); break;
+		case FSCommands::IsSdmcWritable: isSdmcWritable(messagePointer); break;
 		case FSCommands::OpenArchive: openArchive(messagePointer); break;
 		case FSCommands::OpenDirectory: openDirectory(messagePointer); break;
 		case FSCommands::OpenFile: [[likely]] openFile(messagePointer); break;
@@ -536,9 +538,22 @@ void FSService::setPriority(u32 messagePointer) {
 	priority = value;
 }
 
+
+// Shows whether an SD card is inserted. At the moment stubbed to no
+constexpr bool sdInserted = false;
+
 void FSService::isSdmcDetected(u32 messagePointer) {
 	log("FS::IsSdmcDetected\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x817, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Whether SD is detected. For now we emulate a 3DS without an SD.
+	mem.write8(messagePointer + 8, sdInserted ? 1 : 0);
+}
+
+// We consider our SD card to always be writable if oen is inserted for now
+// So isSdmcWritable returns 1 if an SD card is inserted (because it's always writable) and 0 if not.
+void FSService::isSdmcWritable(u32 messagePointer) {
+	log("FS::isSdmcWritable\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x818, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, sdInserted ? 1 : 0);
 }

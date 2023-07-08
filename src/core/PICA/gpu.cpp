@@ -168,7 +168,15 @@ void GPU::drawArrays() {
 
 				for (int j = 0; j < attr.componentCount; j++) {
 					uint index = (attrCfg >> (j * 4)) & 0xf; // Get index of attribute in vertexCfg
-					if (index >= 12) Helpers::panic("[PICA] Vertex attribute used as padding");
+
+					// Vertex attributes used as padding
+					// 12, 13, 14 and 15 are equivalent to 4, 8, 12 and 16 bytes of padding respectively
+					if (index >= 12) [[unlikely]] {
+						// Align attriubte address up to a 4 byte boundary
+						attrAddress = (attrAddress + 3) & -4;
+						attrAddress += (index - 11) << 2;
+						continue;
+					}
 
 					u32 attribInfo = (vertexCfg >> (index * 4)) & 0xf;
 					u32 attribType = attribInfo & 0x3; //  Type of attribute(sbyte/ubyte/short/float)

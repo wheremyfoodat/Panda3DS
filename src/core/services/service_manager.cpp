@@ -6,10 +6,9 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem),
-	  cecd(mem, kernel), cfg(mem), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), frd(mem), fs(mem, kernel),
-	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem),
-	  ptm(mem), y2r(mem, kernel) {}
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem), cecd(mem, kernel), cfg(mem),
+	  dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), ir_user(mem, kernel), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, kernel, currentPID),
+	  gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -26,6 +25,7 @@ void ServiceManager::reset() {
 	dlp_srvr.reset();
 	dsp.reset();
 	hid.reset();
+	ir_user.reset();
 	frd.reset();
 	fs.reset();
 	gsp_gpu.reset();
@@ -83,6 +83,7 @@ void ServiceManager::registerClient(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+// clang-format off
 static std::map<std::string, Handle> serviceMap = {
 	{ "ac:u", KernelHandles::AC },
 	{ "act:u", KernelHandles::ACT },
@@ -97,6 +98,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
 	{ "hid:USER", KernelHandles::HID },
+	{ "ir:USER", KernelHandles::IR_USER },
 	{ "frd:u", KernelHandles::FRD },
 	{ "fs:USER", KernelHandles::FS },
 	{ "gsp::Gpu", KernelHandles::GPU },
@@ -110,6 +112,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "ptm:sysm", KernelHandles::PTM },
 	{ "y2r:u", KernelHandles::Y2R }
 };
+// clang-format on
 
 // https://www.3dbrew.org/wiki/SRV:GetServiceHandle
 void ServiceManager::getServiceHandle(u32 messagePointer) {
@@ -179,6 +182,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
+		case KernelHandles::IR_USER: ir_user.handleSyncRequest(messagePointer); break;
         case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
         case KernelHandles::LDR_RO: ldr.handleSyncRequest(messagePointer); break;

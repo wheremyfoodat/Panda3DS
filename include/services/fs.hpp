@@ -49,6 +49,7 @@ class FSService {
 	void initialize(u32 messagePointer);
 	void initializeWithSdkVersion(u32 messagePointer);
 	void isSdmcDetected(u32 messagePointer);
+	void isSdmcWritable(u32 messagePOinter);
 	void openArchive(u32 messagePointer);
 	void openDirectory(u32 messagePointer);
 	void openFile(u32 messagePointer);
