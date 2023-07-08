@@ -6,6 +6,8 @@
 #include "toml.hpp"
 
 // Largely based on https://github.com/nba-emu/NanoBoyAdvance/blob/master/src/platform/core/src/config.cpp
+// We are legally allowed, as per the author's wish, to use the above code without any licensing restrictions
+// However we still want to follow the license as closely as possible and offer the proper attributions.
 
 void EmulatorConfig::load(const std::filesystem::path& path) {
 	// If the configuration file does not exist, create it and return
