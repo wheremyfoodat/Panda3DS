@@ -60,8 +60,10 @@ struct ColourBuffer {
     void free() {
         valid = false;
 
-        if (texture.exists() || fbo.exists())
-            Helpers::panic("Make this buffer free itself");
+        if (texture.exists() || fbo.exists()){
+            texture.free();
+            fbo.free();
+        }
     }
 
     bool matches(ColourBuffer& other) {
@@ -128,8 +130,10 @@ struct DepthBuffer {
     }
 
     void free() {
+        if(texture.exists()){
+            texture.free();
+        }
         valid = false;
-        printf("Make this depth buffer free itself\n");
     }
 
     bool matches(DepthBuffer& other) {
