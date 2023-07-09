@@ -429,7 +429,7 @@ void Emulator::pollHttpServer() {
 	if (httpServer.pendingAction) {
 		switch (httpServer.action) {
 			case HttpAction::Screenshot: {
-				screenshot(httpServerScreenshotPath);
+				screenshot(HttpServer::httpServerScreenshotPath);
 				break;
 			}
 			case HttpAction::PressKey: {

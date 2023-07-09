@@ -1,3 +1,4 @@
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "httpserver.hpp"
 
 #include <vector>
@@ -98,3 +99,5 @@ void HttpServer::startHttpServer() {
 	});
 	http_thread.detach();
 }
+
+#endif  // PANDA3DS_ENABLE_HTTP_SERVER
