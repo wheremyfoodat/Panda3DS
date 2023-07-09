@@ -14,10 +14,11 @@
 #include "io_file.hpp"
 #include "memory.hpp"
 #include "gl_state.hpp"
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+#include "httpserver.hpp"
+#endif
 
 enum class ROMType { None, ELF, NCSD, CXI };
-
-enum class HttpAction { None, Screenshot, PressKey, ReleaseKey };
 
 class Emulator {
 	CPU cpu;
@@ -49,10 +50,7 @@ class Emulator {
 	bool running = true;
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	std::atomic_bool pendingAction = false;
-	HttpAction action = HttpAction::None;
-	std::mutex actionMutex = {};
-	u32 pendingKey = 0;
+	HttpServer httpServer;
 #endif
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
@@ -80,6 +78,6 @@ class Emulator {
 	void initGraphicsContext();
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	void startHttpServer();
+	void pollHttpServer();
 #endif
 };

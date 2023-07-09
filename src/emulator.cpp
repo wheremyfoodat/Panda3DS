@@ -1,7 +1,4 @@
 #include "emulator.hpp"
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-#include <httplib.h>
-#endif
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
@@ -13,10 +10,6 @@ extern "C" {
 _declspec(dllexport) DWORD NvOptimusEnablement = 1;
 _declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
-#endif
-
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-constexpr const char* httpServerScreenshotPath = "screenshot.png";
 #endif
 
 Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, gl, config), memory(cpu.getTicksRef()) {
@@ -115,47 +108,16 @@ void Emulator::render() {}
 
 void Emulator::run() {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	startHttpServer();
+	httpServer.startHttpServer();
 #endif
 	while (running) {
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+		pollHttpServer();
+#endif
 		runFrame(); // Run 1 frame of instructions
 		gpu.display(); // Display graphics
 
 		ServiceManager& srv = kernel.getServiceManager();
-
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-		{
-			std::scoped_lock lock(actionMutex);
-			if (pendingAction) {
-				switch (action) {
-					case HttpAction::Screenshot: {
-						screenshot(httpServerScreenshotPath);
-						break;
-					}
-					case HttpAction::PressKey: {
-						if (pendingKey != 0) {
-							srv.pressKey(pendingKey);
-							pendingKey = 0;
-						}
-						break;
-					}
-					case HttpAction::ReleaseKey: {
-						if (pendingKey != 0) {
-							srv.releaseKey(pendingKey);
-							pendingKey = 0;
-						}
-						break;
-					}
-					case HttpAction::None: {
-						break;
-					}
-				}
-				action = HttpAction::None;
-				pendingAction = false;
-				pendingAction.notify_all();
-			}
-		}
-#endif
 
 		// Send VBlank interrupts
 		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
@@ -459,93 +421,38 @@ void Emulator::initGraphicsContext() {
 }
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-u32 stringToKey(const std::string& key_name) {
-	namespace Keys = HID::Keys;
-	static std::map<std::string, u32> keyMap = {
-		{"A", Keys::A},
-		{"B", Keys::B},
-		{"Select", Keys::Select},
-		{"Start", Keys::Start},
-		{"Right", Keys::Right},
-		{"Left", Keys::Left},
-		{"Up", Keys::Up},
-		{"Down", Keys::Down},
-		{"R", Keys::R},
-		{"L", Keys::L},
-		{"X", Keys::X},
-		{"Y", Keys::Y},
-		{"CirclePadRight", Keys::CirclePadRight},
-		{"CirclePadLeft", Keys::CirclePadLeft},
-		{"CirclePadUp", Keys::CirclePadUp},
-		{"CirclePadDown", Keys::CirclePadDown},
-	};
-
-	if (keyMap.find(key_name) != keyMap.end()) {
-		return keyMap[key_name];
-	}
-
-	return 0;
-}
-
-void Emulator::startHttpServer() {
-	std::thread http_thread([this]() {
-		httplib::Server server;
-
-		server.Get("/ping", [](const httplib::Request&, httplib::Response& response) {
-			response.set_content("pong", "text/plain");
-		});
-
-		server.Get("/screen", [this](const httplib::Request&, httplib::Response& response) {
-			{
-				std::scoped_lock lock(actionMutex);
-				pendingAction = true;
-				action = HttpAction::Screenshot;
+void Emulator::pollHttpServer() {
+	std::scoped_lock lock(httpServer.actionMutex);
+	
+	ServiceManager& srv = kernel.getServiceManager();
+	
+	if (httpServer.pendingAction) {
+		switch (httpServer.action) {
+			case HttpAction::Screenshot: {
+				screenshot(httpServerScreenshotPath);
+				break;
 			}
-			// wait until the screenshot is ready
-			pendingAction.wait(true);
-			std::ifstream image(httpServerScreenshotPath, std::ios::binary);
-			std::vector<char> buffer(std::istreambuf_iterator<char>(image), {});
-			response.set_content(buffer.data(), buffer.size(), "image/png");
-		});
-
-		server.Get("/input", [this](const httplib::Request& request, httplib::Response& response) {
-			bool ok = false;
-			for (auto& [keyStr, value]: request.params) {
-				auto key = stringToKey(keyStr);
-				printf("Param: %s\n", keyStr.c_str());
-				if (key != 0) {
-					std::scoped_lock lock(actionMutex);
-					pendingAction = true;
-					pendingKey = key;
-					ok = true;
-					if (value == "1") {
-						action = HttpAction::PressKey;
-					} else if (value == "0") {
-						action = HttpAction::ReleaseKey;
-					} else {
-						// Should not happen but just in case
-						pendingAction = false;
-						ok = false;
-					}
-					// Not supporting multiple keys at once for now (ever?)
-					break;
+			case HttpAction::PressKey: {
+				if (httpServer.pendingKey != 0) {
+					srv.pressKey(httpServer.pendingKey);
+					httpServer.pendingKey = 0;
 				}
+				break;
 			}
-
-			if (ok) {
-				response.set_content("ok", "text/plain");
+			case HttpAction::ReleaseKey: {
+				if (httpServer.pendingKey != 0) {
+					srv.releaseKey(httpServer.pendingKey);
+					httpServer.pendingKey = 0;
+				}
+				break;
 			}
-		});
-
-		server.Get("/step", [this](const httplib::Request&, httplib::Response& response) {
-			// TODO: implement /step
-			response.set_content("ok", "text/plain");
-		});
-
-		// TODO: ability to specify host and port
-		printf("Starting HTTP server on port 1234\n");
-		server.listen("localhost", 1234);
-	});
-	http_thread.detach();
+			case HttpAction::None: {
+				break;
+			}
+		}
+		httpServer.action = HttpAction::None;
+		httpServer.pendingAction = false;
+		httpServer.pendingAction.notify_all();
+	}
 }
 #endif
