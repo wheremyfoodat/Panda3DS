@@ -189,5 +189,5 @@ if(ENABLE_USER_BUILD OR DISABLE_PANIC_DEV)
 endif()
 
 if(ENABLE_HTTP_SERVER)
-    target_compile(Alber PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
+    target_compile_definitions(Alber PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
 endif()
