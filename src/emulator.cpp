@@ -118,6 +118,11 @@ void Emulator::run() {
 	startHttpServer();
 #endif
 	while (running) {
+		runFrame(); // Run 1 frame of instructions
+		gpu.display(); // Display graphics
+
+		ServiceManager& srv = kernel.getServiceManager();
+
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		{
 			std::scoped_lock lock(actionMutex);
@@ -127,19 +132,30 @@ void Emulator::run() {
 						screenshot(httpServerScreenshotPath);
 						break;
 					}
+					case HttpAction::PressKey: {
+						if (pendingKey != 0) {
+							srv.pressKey(pendingKey);
+							pendingKey = 0;
+						}
+						break;
+					}
+					case HttpAction::ReleaseKey: {
+						if (pendingKey != 0) {
+							srv.releaseKey(pendingKey);
+							pendingKey = 0;
+						}
+						break;
+					}
 					case HttpAction::None: {
 						break;
 					}
 				}
+				action = HttpAction::None;
 				pendingAction = false;
 				pendingAction.notify_all();
 			}
 		}
 #endif
-		runFrame(); // Run 1 frame of instructions
-		gpu.display(); // Display graphics
-
-		ServiceManager& srv = kernel.getServiceManager();
 
 		// Send VBlank interrupts
 		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
@@ -443,12 +459,42 @@ void Emulator::initGraphicsContext() {
 }
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
+u32 stringToKey(const std::string& key_name) {
+	namespace Keys = HID::Keys;
+	static std::map<std::string, u32> keyMap = {
+		{"A", Keys::A},
+		{"B", Keys::B},
+		{"Select", Keys::Select},
+		{"Start", Keys::Start},
+		{"Right", Keys::Right},
+		{"Left", Keys::Left},
+		{"Up", Keys::Up},
+		{"Down", Keys::Down},
+		{"R", Keys::R},
+		{"L", Keys::L},
+		{"X", Keys::X},
+		{"Y", Keys::Y},
+		{"CirclePadRight", Keys::CirclePadRight},
+		{"CirclePadLeft", Keys::CirclePadLeft},
+		{"CirclePadUp", Keys::CirclePadUp},
+		{"CirclePadDown", Keys::CirclePadDown},
+	};
+
+	if (keyMap.find(key_name) != keyMap.end()) {
+		return keyMap[key_name];
+	}
+
+	return 0;
+}
+
 void Emulator::startHttpServer() {
 	std::thread http_thread([this]() {
 		httplib::Server server;
+
 		server.Get("/ping", [](const httplib::Request&, httplib::Response& response) {
 			response.set_content("pong", "text/plain");
 		});
+
 		server.Get("/screen", [this](const httplib::Request&, httplib::Response& response) {
 			{
 				std::scoped_lock lock(actionMutex);
@@ -461,6 +507,41 @@ void Emulator::startHttpServer() {
 			std::vector<char> buffer(std::istreambuf_iterator<char>(image), {});
 			response.set_content(buffer.data(), buffer.size(), "image/png");
 		});
+
+		server.Get("/input", [this](const httplib::Request& request, httplib::Response& response) {
+			bool ok = false;
+			for (auto& [keyStr, value]: request.params) {
+				auto key = stringToKey(keyStr);
+				printf("Param: %s\n", keyStr.c_str());
+				if (key != 0) {
+					std::scoped_lock lock(actionMutex);
+					pendingAction = true;
+					pendingKey = key;
+					ok = true;
+					if (value == "1") {
+						action = HttpAction::PressKey;
+					} else if (value == "0") {
+						action = HttpAction::ReleaseKey;
+					} else {
+						// Should not happen but just in case
+						pendingAction = false;
+						ok = false;
+					}
+					// Not supporting multiple keys at once for now (ever?)
+					break;
+				}
+			}
+
+			if (ok) {
+				response.set_content("ok", "text/plain");
+			}
+		});
+
+		server.Get("/step", [this](const httplib::Request&, httplib::Response& response) {
+			// TODO: implement /step
+			response.set_content("ok", "text/plain");
+		});
+
 		// TODO: ability to specify host and port
 		printf("Starting HTTP server on port 1234\n");
 		server.listen("localhost", 1234);

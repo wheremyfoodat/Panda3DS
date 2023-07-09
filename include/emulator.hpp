@@ -17,7 +17,7 @@
 
 enum class ROMType { None, ELF, NCSD, CXI };
 
-enum class HttpAction { None, Screenshot };
+enum class HttpAction { None, Screenshot, PressKey, ReleaseKey };
 
 class Emulator {
 	CPU cpu;
@@ -52,6 +52,7 @@ class Emulator {
 	std::atomic_bool pendingAction = false;
 	HttpAction action = HttpAction::None;
 	std::mutex actionMutex = {};
+	u32 pendingKey = 0;
 #endif
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
