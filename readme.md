@@ -43,7 +43,14 @@ cmake .. -DCMAKE_BUILD_TYPE=Release # Set up compilers etc here if you'd like
 ```
 
 # How to use
-Simply drag and drop a ROM to the executable if supported, or invoke the executable from the command line with the path to the ROM as the first argument.
+Simply drag and drop a ROM to the executable if supported, or invoke the executable from the command line with the path to the ROM as the first argument like: `Alber.exe MyGame.3ds`
+<br>
+Panda3DS can load ROMs in the following formats:
+- .3ds
+- .cxi/.app
+- .elf/.axf
+
+Both decrypted and encrypted dumps are supported. However for encrypted dumps you must provide your AES keys file by adding a `sysdata` folder to the emulator's app data directory with a file called `aes_keys.txt` including your keys. Currently .cia files are not supported yet (support is planned for the future), however if you want you can usually use Citra to extract the .app/.cxi file out of your .cia and run that.
 
 ## Controls
 Keyboard & Mouse
