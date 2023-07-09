@@ -37,10 +37,12 @@ All you need is CMake and a generator of your choice (Make, Visual Studio, Ninja
 git clone https://github.com/wheremyfoodat/Panda3DS --recursive
 
 cd Panda3DS && mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release # Set up compilers etc here if you'd like
+cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_USER_BUILD=ON  # Set up compilers etc here if you'd like
 
 <Invoke Make, Visual Studio, or whatever you would like to use>
 ```
+
+\*If you want to contribute to the project, you may not want to enable the ENABLE_USER_BUILD option and instead familiarize yourself with the various CMake options provided in the root CMakeLists.txt
 
 # How to use
 Simply drag and drop a ROM to the executable if supported, or invoke the executable from the command line with the path to the ROM as the first argument like: `Alber.exe MyGame.3ds`
