@@ -12,6 +12,7 @@ class ACTService {
 
 	// Service commands
 	void initialize(u32 messagePointer);
+	void generateUUID(u32 messagePointer);
 
 public:
 	ACTService(Memory& mem) : mem(mem) {}
