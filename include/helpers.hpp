@@ -2,7 +2,6 @@
 #include <climits>
 #include <cstdarg>
 #include <cstdint>
-#include <conio.h>
 #include <iostream>
 #include <iterator>
 #include <sstream>
@@ -37,9 +36,9 @@ namespace Helpers {
 		std::cout << termcolor::on_red << "[FATAL] ";
 		std::printf(fmt, args...);
 		std::cout << termcolor::reset << "\n";
-		std::cout << "Press any button to exit\n";
+		std::cout << "Press enter to exit\n";
 
-		getch();
+		getchar();
 		exit(1);
 	}
 	
