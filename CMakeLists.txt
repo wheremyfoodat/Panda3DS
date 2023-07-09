@@ -21,6 +21,7 @@ option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OF
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
+option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -185,4 +186,8 @@ endif()
 
 if(ENABLE_USER_BUILD OR DISABLE_PANIC_DEV)
     target_compile_definitions(Alber PRIVATE PANDA3DS_LIMITED_PANICS=1)
+endif()
+
+if(ENABLE_HTTP_SERVER)
+    target_compile(Alber PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
 endif()
