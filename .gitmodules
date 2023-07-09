@@ -19,3 +19,9 @@
 [submodule "third_party/toml11"]
 	path = third_party/toml11
 	url = https://github.com/ToruNiina/toml11
+[submodule "cpp-httplib"]
+	path = third_party/httplib
+	url = https://github.com/yhirose/cpp-httplib
+[submodule "stb"]
+	path = third_party/stb
+	url = https://github.com/nothings/stb

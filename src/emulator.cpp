@@ -1,4 +1,9 @@
 #include "emulator.hpp"
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+#include <httplib.h>
+#endif
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -8,6 +13,10 @@ extern "C" {
 _declspec(dllexport) DWORD NvOptimusEnablement = 1;
 _declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
+#endif
+
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+constexpr const char* httpServerScreenshotPath = "screenshot.png";
 #endif
 
 Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, gl, config), memory(cpu.getTicksRef()) {
@@ -67,7 +76,7 @@ void Emulator::reset() {
 	// Reloading r13 and r15 needs to happen after everything has been reset
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
-	
+
 	// If a ROM is active and we reset, reload it. This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
 	if (romType != ROMType::None && romPath.has_value()) {
 		bool success = loadROM(romPath.value());
@@ -80,13 +89,55 @@ void Emulator::reset() {
 	}
 }
 
+void Emulator::screenshot(const std::string& name) {
+	std::vector<uint8_t> pixels, flippedPixels;
+	pixels.resize(width * height * 4);
+	flippedPixels.resize(width * height * 4);
+
+	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
+
+	// Flip the image vertically
+	for (int y = 0; y < height; y++) {
+		memcpy(&flippedPixels[y * width * 4], &pixels[(height - y - 1) * width * 4], width * 4);
+		// Swap R and B channels
+		for (int x = 0; x < width; x++) {
+			std::swap(flippedPixels[y * width * 4 + x * 4 + 0], flippedPixels[y * width * 4 + x * 4 + 2]);
+			// Set alpha to 0xFF
+			flippedPixels[y * width * 4 + x * 4 + 3] = 0xFF;
+		}
+	}
+
+	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
+}
+
 void Emulator::step() {}
 void Emulator::render() {}
 
 void Emulator::run() {
-    while (running) {
-        runFrame(); // Run 1 frame of instructions
-        gpu.display(); // Display graphics
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	startHttpServer();
+#endif
+	while (running) {
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+		{
+			std::scoped_lock lock(actionMutex);
+			if (pendingAction) {
+				switch (action) {
+					case HttpAction::Screenshot: {
+						screenshot(httpServerScreenshotPath);
+						break;
+					}
+					case HttpAction::None: {
+						break;
+					}
+				}
+				pendingAction = false;
+				pendingAction.notify_all();
+			}
+		}
+#endif
+		runFrame(); // Run 1 frame of instructions
+		gpu.display(); // Display graphics
 
 		ServiceManager& srv = kernel.getServiceManager();
 
@@ -337,12 +388,12 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		romPath = std::nullopt;
 		romType = ROMType::None;
 	}
-	
+
 	return success;
 }
 
 // Used for loading both CXI and NCSD files since they are both so similar and use the same interface
-// (We promote CXI files to NCSD internally for ease) 
+// (We promote CXI files to NCSD internally for ease)
 bool Emulator::loadNCSD(const std::filesystem::path& path, ROMType type) {
 	romType = type;
 	std::optional<NCSD> opt = (type == ROMType::NCSD) ? memory.loadNCSD(aesEngine, path) : memory.loadCXI(aesEngine, path);
@@ -390,3 +441,30 @@ void Emulator::initGraphicsContext() {
 	gl.reset(); // TODO (For when we have multiple backends): Only do this if we are using OpenGL
 	gpu.initGraphicsContext();
 }
+
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+void Emulator::startHttpServer() {
+	std::thread http_thread([this]() {
+		httplib::Server server;
+		server.Get("/ping", [](const httplib::Request&, httplib::Response& response) {
+			response.set_content("pong", "text/plain");
+		});
+		server.Get("/screen", [this](const httplib::Request&, httplib::Response& response) {
+			{
+				std::scoped_lock lock(actionMutex);
+				pendingAction = true;
+				action = HttpAction::Screenshot;
+			}
+			// wait until the screenshot is ready
+			pendingAction.wait(true);
+			std::ifstream image(httpServerScreenshotPath, std::ios::binary);
+			std::vector<char> buffer(std::istreambuf_iterator<char>(image), {});
+			response.set_content(buffer.data(), buffer.size(), "image/png");
+		});
+		// TODO: ability to specify host and port
+		printf("Starting HTTP server on port 1234\n");
+		server.listen("localhost", 1234);
+	});
+	http_thread.detach();
+}
+#endif

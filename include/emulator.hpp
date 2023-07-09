@@ -17,6 +17,8 @@
 
 enum class ROMType { None, ELF, NCSD, CXI };
 
+enum class HttpAction { None, Screenshot };
+
 class Emulator {
 	CPU cpu;
 	GPU gpu;
@@ -46,6 +48,12 @@ class Emulator {
 	ROMType romType = ROMType::None;
 	bool running = true;
 
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	std::atomic_bool pendingAction = false;
+	HttpAction action = HttpAction::None;
+	std::mutex actionMutex = {};
+#endif
+
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
 	// This is currently only used for ELFs, NCSDs use the IOFile API instead
 	std::ifstream loadedELF;
@@ -62,10 +70,15 @@ class Emulator {
 	void reset();
 	void run();
 	void runFrame();
+	void screenshot(const std::string& name);
 
 	bool loadROM(const std::filesystem::path& path);
 	bool loadNCSD(const std::filesystem::path& path, ROMType type);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 	void initGraphicsContext();
+
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	void startHttpServer();
+#endif
 };

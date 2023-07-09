@@ -34,6 +34,8 @@ include_directories(third_party/cryptopp/)
 include_directories(third_party/cityhash/include)
 include_directories(third_party/result/include)
 include_directories(third_party/xxhash/include)
+include_directories(third_party/httplib)
+include_directories(third_party/stb)
 
 add_compile_definitions(NOMINMAX)
 add_compile_definitions(SDL_MAIN_HANDLED)
