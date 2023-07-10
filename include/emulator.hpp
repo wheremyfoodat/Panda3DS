@@ -1,19 +1,22 @@
 #pragma once
 
 #include <SDL.h>
-#include <glad/gl.h>
 
 #include <filesystem>
 #include <fstream>
 #include <optional>
 
 #include "PICA/gpu.hpp"
-#include "cpu.hpp"
 #include "config.hpp"
+#include "cpu.hpp"
 #include "crypto/aes_engine.hpp"
 #include "io_file.hpp"
 #include "memory.hpp"
+
+#if ENABLE_OPENGL
 #include "gl_state.hpp"
+#endif
+
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "httpserver.hpp"
 #endif
@@ -27,10 +30,14 @@ class Emulator {
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
 
-	GLStateManager gl;
 	EmulatorConfig config;
 	SDL_Window* window;
+
+#if ENABLE_OPENGL
 	SDL_GLContext glContext;
+	GLStateManager gl;
+#endif
+
 	SDL_GameController* gameController = nullptr;
 	int gameControllerID;
 
