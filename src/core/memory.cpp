@@ -223,7 +223,10 @@ std::string Memory::readString(u32 address, u32 maxSize) {
 
 	for (std::size_t i = 0; i < maxSize; ++i) {
 		char c = read8(address++);
-		if (c == '\0') break;
+		if (c == '\0') {
+			break;
+		}
+
 		string.push_back(c);
 	}
 	string.shrink_to_fit();
@@ -256,7 +259,9 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 	// Non-linear allocation needs special handling
 	if (paddr == 0 && adjustAddrs) {
 		std::optional<u32> newPaddr = findPaddr(size);
-		if (!newPaddr.has_value()) Helpers::panic("Failed to find paddr");
+		if (!newPaddr.has_value()) {
+			Helpers::panic("Failed to find paddr");
+		}
 
 		paddr = newPaddr.value();
 		assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
@@ -277,7 +282,9 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 		}
 	}
 
-	if (!isMap) usedUserMemory += size;
+	if (!isMap) {
+		usedUserMemory += size;
+	}
 
 	// Do linear mapping
 	u32 virtualPage = vaddr >> pageShift;
