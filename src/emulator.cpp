@@ -90,14 +90,13 @@ void Emulator::run() {
 	httpServer.startHttpServer();
 #endif
 	while (running) {
+		ServiceManager& srv = kernel.getServiceManager();
 		if(romLoaded) {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 			pollHttpServer();
 #endif
 			runFrame();     // Run 1 frame of instructions
 			gpu.display();  // Display graphics
-
-			ServiceManager& srv = kernel.getServiceManager();
 
 			// Send VBlank interrupts
 			srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
