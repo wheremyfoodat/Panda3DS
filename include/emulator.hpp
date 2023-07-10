@@ -14,6 +14,9 @@
 #include "io_file.hpp"
 #include "memory.hpp"
 #include "gl_state.hpp"
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+#include "httpserver.hpp"
+#endif
 
 enum class ROMType { None, ELF, NCSD, CXI };
 
@@ -46,6 +49,10 @@ class Emulator {
 	ROMType romType = ROMType::None;
 	bool running = true;
 
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	HttpServer httpServer;
+#endif
+
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
 	// This is currently only used for ELFs, NCSDs use the IOFile API instead
 	std::ifstream loadedELF;
@@ -68,4 +75,8 @@ class Emulator {
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 	void initGraphicsContext();
+
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	void pollHttpServer();
+#endif
 };

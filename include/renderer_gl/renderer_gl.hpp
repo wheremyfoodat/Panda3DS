@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <span>
+#include <stb_image_write.h>
 
 #include "PICA/float_types.hpp"
 #include "gl_state.hpp"
@@ -87,6 +88,9 @@ class Renderer {
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);                     // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices);             // Draw the given vertices
+
+	// Take a screenshot of the screen and store it in a file
+	void screenshot(const std::string& name);
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize.x() = width;

@@ -1,4 +1,6 @@
 #include "emulator.hpp"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -67,7 +69,7 @@ void Emulator::reset() {
 	// Reloading r13 and r15 needs to happen after everything has been reset
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
-	
+
 	// If a ROM is active and we reset, reload it. This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
 	if (romType != ROMType::None && romPath.has_value()) {
 		bool success = loadROM(romPath.value());
@@ -84,9 +86,15 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 void Emulator::run() {
-    while (running) {
-        runFrame(); // Run 1 frame of instructions
-        gpu.display(); // Display graphics
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	httpServer.startHttpServer();
+#endif
+	while (running) {
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+		pollHttpServer();
+#endif
+		runFrame(); // Run 1 frame of instructions
+		gpu.display(); // Display graphics
 
 		ServiceManager& srv = kernel.getServiceManager();
 
@@ -337,12 +345,12 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		romPath = std::nullopt;
 		romType = ROMType::None;
 	}
-	
+
 	return success;
 }
 
 // Used for loading both CXI and NCSD files since they are both so similar and use the same interface
-// (We promote CXI files to NCSD internally for ease) 
+// (We promote CXI files to NCSD internally for ease)
 bool Emulator::loadNCSD(const std::filesystem::path& path, ROMType type) {
 	romType = type;
 	std::optional<NCSD> opt = (type == ROMType::NCSD) ? memory.loadNCSD(aesEngine, path) : memory.loadCXI(aesEngine, path);
@@ -390,3 +398,39 @@ void Emulator::initGraphicsContext() {
 	gl.reset(); // TODO (For when we have multiple backends): Only do this if we are using OpenGL
 	gpu.initGraphicsContext();
 }
+
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+void Emulator::pollHttpServer() {
+	std::scoped_lock lock(httpServer.actionMutex);
+	
+	ServiceManager& srv = kernel.getServiceManager();
+	
+	if (httpServer.pendingAction) {
+		switch (httpServer.action) {
+			case HttpAction::Screenshot:
+				gpu.screenshot(HttpServer::httpServerScreenshotPath);
+				break;
+
+			case HttpAction::PressKey:
+				if (httpServer.pendingKey != 0) {
+					srv.pressKey(httpServer.pendingKey);
+					httpServer.pendingKey = 0;
+				}
+				break;
+
+			case HttpAction::ReleaseKey:
+				if (httpServer.pendingKey != 0) {
+					srv.releaseKey(httpServer.pendingKey);
+					httpServer.pendingKey = 0;
+				}
+				break;
+
+			case HttpAction::None: break;
+		}
+
+		httpServer.action = HttpAction::None;
+		httpServer.pendingAction = false;
+		httpServer.pendingAction.notify_all();
+	}
+}
+#endif

@@ -88,6 +88,7 @@ class GPU {
 	void initGraphicsContext() { renderer.initGraphicsContext(); }
 	void getGraphicsContext() { renderer.getGraphicsContext(); }
 	void display() { renderer.display(); }
+	void screenshot(const std::string& name) { renderer.screenshot(name); }
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();
