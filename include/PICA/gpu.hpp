@@ -28,6 +28,7 @@ class GPU {
 	static constexpr u32 maxAttribCount = 12; // Up to 12 vertex attributes
 	static constexpr u32 vramSize = 6_MB;
 	Registers regs; // GPU internal registers
+	std::array<u32, 0x1000> external_regs; // GPU external registers
 	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 
 	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
@@ -66,9 +67,9 @@ class GPU {
 	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
 
 	// Command processor pointers for GPU command lists
-	u32* cmdBuffStart = nullptr;
-	u32* cmdBuffEnd = nullptr;
-	u32* cmdBuffCurr = nullptr;
+	std::span<u32> cmdBuffStart{};
+	u32 cmdBuffEnd = 0;
+	u32 cmdBuffCurr = 0;
 
 	Renderer renderer;
 	PICA::Vertex getImmediateModeVertex();
@@ -100,6 +101,9 @@ class GPU {
 	u32 readReg(u32 address);
 	void writeReg(u32 address, u32 value);
 
+	u32 readExternalReg(u32 index);
+	void writeExternalReg(u32 index, u32 value);
+
 	// Used when processing GPU command lists
 	u32 readInternalReg(u32 index);
 	void writeInternalReg(u32 index, u32 value, u32 mask);
@@ -116,6 +120,10 @@ class GPU {
 		renderer.displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
 	}
 
+	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalCopyBytes, u32 inputSize, u32 outputSize, u32 flags) {
+		renderer.textureCopy(inputAddr, outputAddr, totalCopyBytes, inputSize, outputSize, flags);
+	}
+
 	// Read a value of type T from physical address paddr
 	// This is necessary because vertex attribute fetching uses physical addresses
 	template <typename T>
@@ -130,17 +138,16 @@ class GPU {
 		}
 	}
 
-	// Get a pointer of type T* to the data starting from physical address paddr
+	// Get a span with the specified size of type T to the data starting from physical address paddr
 	template <typename T>
-	T* getPointerPhys(u32 paddr) {
-		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+	std::span<T> getSpanPhys(u32 paddr, u32 size) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr + size <= PhysicalAddrs::FCRAMEnd) {
 			u8* fcram = mem.getFCRAM();
 			u32 index = paddr - PhysicalAddrs::FCRAM;
-
-			return (T*)&fcram[index];
-		} else if (paddr >= PhysicalAddrs::VRAM && paddr <= PhysicalAddrs::VRAMEnd) {
+			return std::span{(T*)&fcram[index], size / sizeof(T)};
+		} else if (paddr >= PhysicalAddrs::VRAM && paddr + size <= PhysicalAddrs::VRAMEnd) {
 			u32 index = paddr - PhysicalAddrs::VRAM;
-			return (T*)&vram[index];
+			return std::span{(T*)&vram[index], size / sizeof(T)};
 		} else [[unlikely]] {
 			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
 		}

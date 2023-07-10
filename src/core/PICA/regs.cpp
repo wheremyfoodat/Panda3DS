@@ -18,9 +18,34 @@ void GPU::writeReg(u32 address, u32 value) {
 	if (address >= 0x1EF01000 && address < 0x1EF01C00) { // Internal registers
 		const u32 index = (address - 0x1EF01000) / sizeof(u32);
 		writeInternalReg(index, value, 0xffffffff);
+	} else if (address >= 0x1EF00004 && address < 0x1EF01000) {
+		const u32 index = (address - 0x1EF00004) / sizeof(u32);
+		writeExternalReg(index, value);
 	} else {
-		log("Ignoring write to external GPU register %08X. Value: %08X\n", address, value);
+		log("Ignoring write to unknown GPU register %08X. Value: %08X\n", address, value);
 	}
+}
+
+u32 GPU::readExternalReg(u32 index) {
+	using namespace PICA::ExternalRegs;
+
+	if (index > 0x1000) [[unlikely]] {
+		Helpers::panic("Tried to read invalid external GPU register. Index: %X\n", index);
+		return -1;
+	}
+
+	return external_regs[index];
+}
+
+void GPU::writeExternalReg(u32 index, u32 value) {
+	using namespace PICA::ExternalRegs;
+
+	if (index > 0x1000) [[unlikely]] {
+		Helpers::panic("Tried to write to invalid external GPU register. Index: %X, value: %08X\n", index, value);
+		return;
+	}
+
+	external_regs[index] = value;
 }
 
 u32 GPU::readInternalReg(u32 index) {
@@ -54,7 +79,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 	using namespace PICA::InternalRegs;
 
 	if (index > regNum) [[unlikely]] {
-		Helpers::panic("Tried to write to invalid GPU register. Index: %X, value: %08X\n", index, value);
+		Helpers::panic("Tried to write to invalid internal GPU register. Index: %X, value: %08X\n", index, value);
 		return;
 	}
 
@@ -275,9 +300,9 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 				u32 size = (regs[CmdBufSize0 + bufferIndex] & 0xfffff) << 3;
 
 				// Set command buffer state to execute the new buffer
-				cmdBuffStart = getPointerPhys<u32>(addr);
-				cmdBuffCurr = cmdBuffStart;
-				cmdBuffEnd = cmdBuffStart + (size / sizeof(u32));
+				cmdBuffStart = getSpanPhys<u32>(addr, size);
+				cmdBuffCurr = 0;
+				cmdBuffEnd = (size / sizeof(u32));
 			}
 			break;
 		}
@@ -308,12 +333,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 }
 
 void GPU::startCommandList(u32 addr, u32 size) {
-	cmdBuffStart = static_cast<u32*>(mem.getReadPointer(addr));
-	if (!cmdBuffStart) Helpers::panic("Couldn't get buffer for command list");
+	cmdBuffStart = getSpanPhys<u32>(addr, size);
+	if (cmdBuffStart.empty()) {
+		Helpers::panic("Couldn't get buffer for command list");
+		return;
+	}
 	// TODO: This is very memory unsafe. We get a pointer to FCRAM and just keep writing without checking if we're gonna go OoB
 
-	cmdBuffCurr = cmdBuffStart;
-	cmdBuffEnd = cmdBuffStart + (size / sizeof(u32));
+	cmdBuffCurr = 0;
+	cmdBuffEnd = (size / sizeof(u32));
 
 	// LUT for converting the parameter mask to an actual 32-bit mask
 	// The parameter mask is 4 bits long, each bit corresponding to one byte of the mask
@@ -329,13 +357,13 @@ void GPU::startCommandList(u32 addr, u32 size) {
 		// The curr pointer starts out doubleword-aligned and is increased by 4 bytes each time
 		// So to check if it is aligned, we get the number of words it's been incremented by
 		// If that number is an odd value then the buffer is not aligned, otherwise it is
-		if ((cmdBuffCurr - cmdBuffStart) % 2 != 0) {
+		if (cmdBuffCurr % 2 != 0) {
 			cmdBuffCurr++;
 		}
 
 		// The first word of a command is the command parameter and the second one is the header
-		u32 param1 = *cmdBuffCurr++;
-		u32 header = *cmdBuffCurr++;
+		u32 param1 = cmdBuffStart[cmdBuffCurr++];
+		u32 header = cmdBuffStart[cmdBuffCurr++];
 
 		u32 id = header & 0xffff;
 		u32 paramMaskIndex = getBits<16, 4>(header);
@@ -352,7 +380,7 @@ void GPU::startCommandList(u32 addr, u32 size) {
 		writeInternalReg(id, param1, mask);
 		for (u32 i = 0; i < paramCount; i++) {
 			id += idIncrement;
-			u32 param = *cmdBuffCurr++;
+			u32 param = cmdBuffStart[cmdBuffCurr++];
 			writeInternalReg(id, param, mask);
 		}
 	}

@@ -8,6 +8,12 @@
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
 
+constexpr u32 top_screen_width = 240;
+constexpr u32 top_screen_height = 400;
+
+constexpr u32 bottom_screen_width = 240;
+constexpr u32 bottom_screen_height = 300;
+
 using namespace Floats;
 
 // Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
@@ -40,6 +46,27 @@ void GPU::reset() {
 		e.config1 = 0;
 		e.config2 = 0;
 	}
+
+	// Initialize the framebuffer registers. Values taken from Citra.
+
+	using namespace PICA::ExternalRegs;
+	// Top screen addresses and dimentions.
+	external_regs[Framebuffer0AFirstAddr] = 0x181E6000;
+	external_regs[Framebuffer0ASecondAddr] = 0x1822C800;
+	external_regs[Framebuffer0BFirstAddr] = 0x18273000;
+	external_regs[Framebuffer0BSecondAddr] = 0x182B9800;
+	external_regs[Framebuffer0Size] = (top_screen_height << 16) | top_screen_width;
+	external_regs[Framebuffer0Stride] = 720;
+	external_regs[Framebuffer0Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	external_regs[Framebuffer0Select] = 0;
+
+	// Bottom screen addresses and dimentions.
+	external_regs[Framebuffer1AFirstAddr] = 0x1848F000;
+	external_regs[Framebuffer1ASecondAddr] = 0x184C7800;
+	external_regs[Framebuffer1Size] = (bottom_screen_height << 16) | bottom_screen_width;
+	external_regs[Framebuffer1Stride] = 720;
+	external_regs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	external_regs[Framebuffer1Select] = 0;
 
 	renderer.reset();
 }
@@ -123,12 +150,12 @@ void GPU::drawArrays() {
 			vertexIndex = i + regs[PICA::InternalRegs::VertexOffsetReg];
 		} else {
 			if (shortIndex) {
-				auto ptr = getPointerPhys<u16>(indexBufferPointer);
-				vertexIndex = *ptr; // TODO: This is very unsafe
+				auto ptr = getSpanPhys<u16>(indexBufferPointer, sizeof(u16));
+				vertexIndex = ptr[0]; // TODO: This is very unsafe
 				indexBufferPointer += 2;
 			} else {
-				auto ptr = getPointerPhys<u8>(indexBufferPointer);
-				vertexIndex = *ptr; // TODO: This is also very unsafe
+				auto ptr = getSpanPhys<u8>(indexBufferPointer, sizeof(u8));
+				vertexIndex = ptr[0]; // TODO: This is also very unsafe
 				indexBufferPointer += 1;
 			}
 		}
@@ -188,42 +215,46 @@ void GPU::drawArrays() {
 
 					switch (attribType) {
 						case 0: { // Signed byte
-							s8* ptr = getPointerPhys<s8>(attrAddress);
+							const u32 attr_bytes = size * sizeof(s8);
+							const auto ptr = getSpanPhys<s8>(attrAddress, attr_bytes);
 							for (component = 0; component < size; component++) {
-								float val = static_cast<float>(*ptr++);
+								float val = static_cast<float>(ptr[component]);
 								attribute[component] = f24::fromFloat32(val);
 							}
-							attrAddress += size * sizeof(s8);
+							attrAddress += attr_bytes;
 							break;
 						}
 
 						case 1: { // Unsigned byte
-							u8* ptr = getPointerPhys<u8>(attrAddress);
+							const u32 attr_bytes = size * sizeof(u8);
+							const auto ptr = getSpanPhys<u8>(attrAddress, attr_bytes);
 							for (component = 0; component < size; component++) {
-								float val = static_cast<float>(*ptr++);
+								float val = static_cast<float>(ptr[component]);
 								attribute[component] = f24::fromFloat32(val);
 							}
-							attrAddress += size * sizeof(u8);
+							attrAddress += attr_bytes;
 							break;
 						}
 
 						case 2: { // Short
-							s16* ptr = getPointerPhys<s16>(attrAddress);
+							const u32 attr_bytes = size * sizeof(s16);
+							const auto ptr = getSpanPhys<s16>(attrAddress, attr_bytes);
 							for (component = 0; component < size; component++) {
-								float val = static_cast<float>(*ptr++);
+								float val = static_cast<float>(ptr[component]);
 								attribute[component] = f24::fromFloat32(val);
 							}
-							attrAddress += size * sizeof(s16);
+							attrAddress += attr_bytes;
 							break;
 						}
 
 						case 3: { // Float
-							float* ptr = getPointerPhys<float>(attrAddress);
+							const u32 attr_bytes = size * sizeof(float);
+							const auto ptr = getSpanPhys<float>(attrAddress, attr_bytes);
 							for (component = 0; component < size; component++) {
-								float val = *ptr++;
+								float val = ptr[component];
 								attribute[component] = f24::fromFloat32(val);
 							}
-							attrAddress += size * sizeof(float);
+							attrAddress += attr_bytes;
 							break;
 						}
 

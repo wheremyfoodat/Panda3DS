@@ -576,6 +576,12 @@ const char* displayFragmentShader = R"(
     }
 )";
 
+static void APIENTRY debugHandler(GLenum source, GLenum type, GLuint id, GLenum severity,
+								  GLsizei length, const GLchar* message, const void* userParam) {
+	Helpers::warn("%d: %s\n", id, message);
+}
+
+
 void Renderer::reset() {
 	depthBufferCache.reset();
 	colourBufferCache.reset();
@@ -694,6 +700,11 @@ void Renderer::initGraphicsContext() {
 	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
 	OpenGL::clearColor();
 	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
+
+#if defined(OPENGL_DEBUG_INFO)
+	glEnable(GL_DEBUG_OUTPUT);
+	glDebugMessageCallback(debugHandler, nullptr);
+#endif
 
 	reset();
 }
@@ -919,6 +930,39 @@ constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 void Renderer::display() {
 	gl.disableScissor();
+	gl.disableBlend();
+	gl.disableDepth();
+	gl.disableScissor();
+	gl.setColourMask(true, true, true, true);
+	gl.useProgram(displayProgram);
+	gl.bindVAO(dummyVAO);
+
+	OpenGL::disableClipPlane(0);
+	OpenGL::disableClipPlane(1);
+
+	using namespace PICA::ExternalRegs;
+	const u32 topScreenAddr = gpu.readExternalReg(Framebuffer0AFirstAddr);
+	const u32 bottomScreenAddr = gpu.readExternalReg(Framebuffer1AFirstAddr);
+
+	auto topScreen = colourBufferCache.findFromAddress(topScreenAddr);
+	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
+	Helpers::warn("Top screen addr %08X\n", topScreenAddr);
+
+	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
+
+	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
+	// We consider output gap == 320 to mean bottom, and anything else to mean top
+	if (topScreen) {
+		topScreen->get().texture.bind();
+		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
+		OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+	}
+
+	if (bottomScreen) {
+		bottomScreen->get().texture.bind();
+		OpenGL::setViewport(40, 0, 320, 240);
+		OpenGL::draw(OpenGL::TriangleStrip, 4);
+	}
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
@@ -986,7 +1030,7 @@ OpenGL::Texture Renderer::getTexture(Texture& tex) {
 	if (buffer.has_value()) {
 		return buffer.value().get().texture;
 	} else {
-		const void* textureData = gpu.getPointerPhys<void*>(tex.location); // Get pointer to the texture data in 3DS memory
+		const std::span textureData = gpu.getSpanPhys<u8>(tex.location, tex.sizeInBytes()); // Get pointer to the texture data in 3DS memory
 		Texture& newTex = textureCache.add(tex);
 		newTex.decodeTexture(textureData);
 
@@ -994,40 +1038,86 @@ OpenGL::Texture Renderer::getTexture(Texture& tex) {
 	}
 }
 
+// NOTE: The GPU format has RGB5551 and RGB655 swapped compared to internal regs format
+PICA::ColorFmt ToColorFmt(u32 format) {
+	switch (format) {
+		case 2: return PICA::ColorFmt::RGB565;
+		case 3: return PICA::ColorFmt::RGBA5551;
+		default: return static_cast<PICA::ColorFmt>(format);
+	}
+}
+
 void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
 	const u32 inputWidth = inputSize & 0xffff;
-	const u32 inputGap = inputSize >> 16;
+	const u32 inputHeight = inputSize >> 16;
+	const auto inputFormat = ToColorFmt(Helpers::getBits<8, 3>(flags));
+	const auto outputFormat = ToColorFmt(Helpers::getBits<12, 3>(flags));
+	const PICA::Scaling scaling = static_cast<PICA::Scaling>(Helpers::getBits<24, 2>(flags));
 
-	const u32 outputWidth = outputSize & 0xffff;
-	const u32 outputGap = outputSize >> 16;
-
-	auto framebuffer = colourBufferCache.findFromAddress(inputAddr);
-	// If there's a framebuffer at this address, use it. Otherwise go back to our old hack and display framebuffer 0
-	// Displays are hard I really don't want to try implementing them because getting a fast solution is terrible
-	OpenGL::Texture& tex = framebuffer.has_value() ? framebuffer.value().get().texture : colourBufferCache[0].texture;
-
-	tex.bind();
-	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
-
-	gl.disableBlend();
-	gl.disableDepth();
-	gl.disableScissor();
-	gl.setColourMask(true, true, true, true);
-	gl.useProgram(displayProgram);
-	gl.bindVAO(dummyVAO);
-
-	OpenGL::disableClipPlane(0);
-	OpenGL::disableClipPlane(1);
-
-	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
-	// We consider output gap == 320 to mean bottom, and anything else to mean top
-	if (outputGap == 320) {
-		OpenGL::setViewport(40, 0, 320, 240); // Bottom screen viewport
-	} else {
-		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
+	u32 outputWidth = outputSize & 0xffff;
+	if (scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) {
+		outputWidth >>= 1;
+	}
+	u32 outputHeight = outputSize >> 16;
+	if (scaling == PICA::Scaling::XY) {
+		outputHeight >>= 1;
 	}
 
-	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+	// If there's a framebuffer at this address, use it. Otherwise go back to our old hack and display framebuffer 0
+	// Displays are hard I really don't want to try implementing them because getting a fast solution is terrible
+	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, inputHeight);
+	auto dstFramebuffer = getColourBuffer(outputAddr, outputFormat, outputWidth, outputHeight);
+
+	Helpers::warn("Display transfer with outputAddr %08X\n", outputAddr);
+
+	// Blit the framebuffers
+	srcFramebuffer.fbo.bind(OpenGL::ReadFramebuffer);
+	dstFramebuffer.fbo.bind(OpenGL::DrawFramebuffer);
+	glBlitFramebuffer(0, 0, inputWidth, inputHeight, 0, 0, outputWidth, outputHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+}
+
+void Renderer::textureCopy(u32 inputAddr, u32 outputAddr, u32 copyBytes, u32 inputSize, u32 outputSize, u32 flags) {
+	copyBytes = Helpers::alignDown(copyBytes, 16);
+	if (copyBytes == 0) [[unlikely]] {
+		return;
+	}
+
+	const u32 inputWidth = (inputSize & 0xffff) * 16;
+	const u32 inputGap = (inputSize >> 16) * 16;
+	const u32 outputWidth = (outputSize & 0xffff) * 16;
+	const u32 outputGap = (outputSize >> 16) * 16;
+
+	if (inputGap != 0 || inputWidth != outputWidth) {
+		Helpers::warn("Texture copy with non zero input gap or mismatching widths, cannot be accelerated");
+		return;
+	}
+
+	// If the texture is tiled, apps set inputWidth to the scanline size which is width * 8.
+	// HACK: We don't know if the src texture is tiled or not yet, assume it is for now, because it's the most common case.
+	// Citra handles this by letting the width/stride be set as bytes and interpreting it differently
+	// depending on the candidate surface.
+	auto srcFramebuffer = getColourBuffer(inputAddr, PICA::ColorFmt::RGBA8, inputWidth / 8, copyBytes / inputWidth);  // HACK: Assume RGBA8 format
+	auto dstFramebuffer = getColourBuffer(outputAddr, srcFramebuffer.format, outputWidth / 8, copyBytes / outputWidth);
+
+	// Blit the framebuffers
+	srcFramebuffer.fbo.bind(OpenGL::ReadFramebuffer);
+	dstFramebuffer.fbo.bind(OpenGL::DrawFramebuffer);
+	glBlitFramebuffer(0, 0, srcFramebuffer.size.x(), srcFramebuffer.size.y(),
+					  0, 0, dstFramebuffer.size.x(), dstFramebuffer.size.y(), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+}
+
+ColourBuffer Renderer::getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height) {
+	// Try to find an already existing buffer that contains the provided address
+	// This is a more relaxed check compared to getColourFBO as display transfer/texcopy may refer to
+	// subrect of a surface and in case of texcopy we don't know the format of the surface.
+	auto buffer = colourBufferCache.findFromAddress(addr);
+	if (buffer.has_value()) {
+		return buffer.value().get();
+	}
+
+	// Otherwise create and cache a new buffer.
+	ColourBuffer sampleBuffer(addr, format, width, height);
+	return colourBufferCache.add(sampleBuffer);
 }
 
 void Renderer::screenshot(const std::string& name) {

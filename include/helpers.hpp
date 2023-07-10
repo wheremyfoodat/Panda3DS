@@ -80,6 +80,13 @@ namespace Helpers {
 		}
 	}
 
+	/// Align down an arbitrary-size value to the closect possible multiple of value.
+	template <typename T>
+	static constexpr T alignDown(T value, std::size_t size) {
+		static_assert(std::is_unsigned_v<T>, "T must be an unsigned value.");
+		return static_cast<T>(value - value % size);
+	}
+
 	/// Sign extend an arbitrary-size value to 32 bits
 	static constexpr u32 inline signExtend32(u32 value, u32 startingSize) {
 		auto temp = (s32)value;

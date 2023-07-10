@@ -44,8 +44,8 @@ class Renderer {
 	float oldDepthOffset = 0.0;
 	bool oldDepthmapEnable = false;
 
-	SurfaceCache<DepthBuffer, 10, true> depthBufferCache;
-	SurfaceCache<ColourBuffer, 10, true> colourBufferCache;
+	SurfaceCache<DepthBuffer, 64, true> depthBufferCache;
+	SurfaceCache<ColourBuffer, 64, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
 
 	OpenGL::uvec2 fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'
@@ -87,6 +87,7 @@ class Renderer {
 	void getGraphicsContext();                                                                      // Set up graphics context for rendering
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);                     // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
+	void textureCopy(u32 inputAddr, u32 outputAddr, u32 copyBytes, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices);             // Draw the given vertices
 
 	// Take a screenshot of the screen and store it in a file
@@ -96,6 +97,8 @@ class Renderer {
 		fbSize.x() = width;
 		fbSize.y() = height;
 	}
+
+	ColourBuffer getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height);
 
 	void setColourFormat(PICA::ColorFmt format) { colourBufferFormat = format; }
 	void setDepthFormat(PICA::DepthFmt format) {

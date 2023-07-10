@@ -40,7 +40,7 @@ struct Texture {
 
     void allocate();
     void setNewConfig(u32 newConfig);
-    void decodeTexture(const void* data);
+    void decodeTexture(std::span<const u8> data);
     void free();
     u64 sizeInBytes();
 
@@ -53,7 +53,7 @@ struct Texture {
     static u32 getSwizzledOffset_4bpp(u32 u, u32 v, u32 width);
 
     // Returns the format of this texture as a string
-    std::string formatToString() {
+    std::string_view formatToString() {
         return PICA::textureFormatToString(format);
     }
 

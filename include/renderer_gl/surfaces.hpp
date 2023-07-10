@@ -19,6 +19,10 @@ struct ColourBuffer {
     OpenGL::Texture texture;
     OpenGL::Framebuffer fbo;
 
+	GLenum internalFormat;
+	GLenum fmt;
+	GLenum type;
+
     ColourBuffer() : valid(false) {}
 
     ColourBuffer(u32 loc, PICA::ColorFmt format, u32 x, u32 y, bool valid = true)
@@ -29,17 +33,40 @@ struct ColourBuffer {
         range = Interval<u32>(loc, (u32)endLoc);
     }
 
-    void allocate() {
+	void allocate() {
+		// Internal formats for the texture based on format
+		static constexpr std::array<GLenum, 5> internalFormats = {
+			GL_RGBA8, GL_RGB8, GL_RGB5_A1, GL_RGB565, GL_RGBA4
+		};
+
+		// Format of the texture
+		static constexpr std::array<GLenum, 5> formats = {
+			GL_RGBA, GL_BGR, GL_RGBA, GL_RGB, GL_RGBA,
+		};
+
+		static constexpr std::array<GLenum, 5> types = {
+			GL_UNSIGNED_INT_8_8_8_8, GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT_5_5_5_1,
+			GL_UNSIGNED_SHORT_5_6_5, GL_UNSIGNED_SHORT_4_4_4_4,
+		};
+
+		internalFormat = internalFormats[(int)format];
+		fmt = formats[(int)format];
+		type = types[(int)format];
+
+
         // Create texture for the FBO, setting up filters and the like
         // Reading back the current texture is slow, but allocate calls should be few and far between.
         // If this becomes a bottleneck, we can fix it semi-easily
         auto prevTexture = OpenGL::getTex2D();
-        texture.create(size.x(), size.y(), GL_RGBA8);
+        texture.create(size.x(), size.y(), internalFormat);
         texture.bind();
         texture.setMinFilter(OpenGL::Linear);
         texture.setMagFilter(OpenGL::Linear);
         glBindTexture(GL_TEXTURE_2D, prevTexture);
 
+		OpenGL::setObjectLabel(GL_TEXTURE, texture.handle(), "Surface: %dx%d %s from %08X to %08X", size.x(),
+							   size.y(), textureFormatToString(format).data(),
+							   range.lower(), range.upper());
         //Helpers::panic("Creating FBO: %d, %d\n", size.x(), size.y());
 
         fbo.createWithDrawTexture(texture);

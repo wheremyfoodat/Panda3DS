@@ -5,6 +5,7 @@
 #include <fstream>
 #include <optional>
 #include <vector>
+#include <span>
 #include "crypto/aes_engine.hpp"
 #include "helpers.hpp"
 #include "handles.hpp"
