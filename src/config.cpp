@@ -11,7 +11,8 @@
 
 void EmulatorConfig::load(const std::filesystem::path& path) {
 	// If the configuration file does not exist, create it and return
-	if (!std::filesystem::exists(path)) {
+	std::error_code error;
+	if (!std::filesystem::exists(path, error)) {
 		save(path);
 		return;
 	}
@@ -38,13 +39,19 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 void EmulatorConfig::save(const std::filesystem::path& path) {
 	toml::basic_value<toml::preserve_comments> data;
 
-	if (std::filesystem::exists(path)) {
+	std::error_code error;
+	if (std::filesystem::exists(path, error)) {
 		try {
 			data = toml::parse<toml::preserve_comments>(path);
 		} catch (std::exception& ex) {
-			Helpers::warn("Got exception trying to save config file. Exception: %s\n", ex.what());
+			Helpers::warn("Exception trying to parse config file. Exception: %s\n", ex.what());
 			return;
 		}
+	} else {
+		if (error) {
+			Helpers::warn("FileSystem error accessing %s %s\n", path.string().c_str(), error.message().c_str());
+		}
+		Helpers::warn("Saving new configuration file %s \n", path.string().c_str());
 	}
 
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
