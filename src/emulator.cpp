@@ -16,7 +16,7 @@ _declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
-Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, gl, config), memory(cpu.getTicksRef()) {
+Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config), memory(cpu.getTicksRef()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}

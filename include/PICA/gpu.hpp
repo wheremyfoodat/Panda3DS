@@ -1,39 +1,39 @@
 #pragma once
 #include <array>
 
+#include "PICA/dynapica/shader_rec.hpp"
+#include "PICA/float_types.hpp"
+#include "PICA/pica_vertex.hpp"
+#include "PICA/regs.hpp"
+#include "PICA/shader_unit.hpp"
 #include "config.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
-#include "PICA/float_types.hpp"
-#include "PICA/regs.hpp"
-#include "PICA/shader_unit.hpp"
-#include "PICA/dynapica/shader_rec.hpp"
-#include "renderer_gl/renderer_gl.hpp"
-#include "PICA/pica_vertex.hpp"
+#include "renderer.hpp"
 
 class GPU {
 	static constexpr u32 regNum = 0x300;
-	using vec4f = OpenGL::Vector<Floats::f24, 4>;
+	using vec4f = std::array<Floats::f24, 4>;
 	using Registers = std::array<u32, regNum>;
 
 	Memory& mem;
 	EmulatorConfig& config;
 	ShaderUnit shaderUnit;
-	ShaderJIT shaderJIT; // Doesn't do anything if JIT is disabled or not supported
+	ShaderJIT shaderJIT;  // Doesn't do anything if JIT is disabled or not supported
 
 	u8* vram = nullptr;
 	MAKE_LOG_FUNCTION(log, gpuLogger)
 
-	static constexpr u32 maxAttribCount = 12; // Up to 12 vertex attributes
+	static constexpr u32 maxAttribCount = 12;  // Up to 12 vertex attributes
 	static constexpr u32 vramSize = u32(6_MB);
-	Registers regs; // GPU internal registers
-	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
+	Registers regs;                           // GPU internal registers
+	std::array<vec4f, 16> currentAttributes;  // Vertex attributes before being passed to the shader
 
-	std::array<vec4f, 16> immediateModeAttributes; // Vertex attributes uploaded via immediate mode submission
+	std::array<vec4f, 16> immediateModeAttributes;  // Vertex attributes uploaded via immediate mode submission
 	std::array<PICA::Vertex, 3> immediateModeVertices;
 	uint immediateModeVertIndex;
-	uint immediateModeAttrIndex; // Index of the immediate mode attribute we're uploading
+	uint immediateModeAttrIndex;  // Index of the immediate mode attribute we're uploading
 
 	template <bool indexed, bool useShaderJIT>
 	void drawArrays();
@@ -42,35 +42,33 @@ class GPU {
 	void drawArrays(bool indexed);
 
 	struct AttribInfo {
-		u32 offset = 0; // Offset from base vertex array
-		int size = 0; // Bytes per vertex
+		u32 offset = 0;  // Offset from base vertex array
+		int size = 0;    // Bytes per vertex
 		u32 config1 = 0;
 		u32 config2 = 0;
-		u32 componentCount = 0; // Number of components for the attribute
+		u32 componentCount = 0;  // Number of components for the attribute
 
-		u64 getConfigFull() {
-			return u64(config1) | (u64(config2) << 32);
-		}
+		u64 getConfigFull() { return u64(config1) | (u64(config2) << 32); }
 	};
 
 	u64 getVertexShaderInputConfig() {
 		return u64(regs[PICA::InternalRegs::VertexShaderInputCfgLow]) | (u64(regs[PICA::InternalRegs::VertexShaderInputCfgHigh]) << 32);
 	}
 
-	std::array<AttribInfo, maxAttribCount> attributeInfo; // Info for each of the 12 attributes
-	u32 totalAttribCount = 0; // Number of vertex attributes to send to VS
-	u32 fixedAttribMask = 0; // Which attributes are fixed?
-	
-	u32 fixedAttribIndex = 0; // Which fixed attribute are we writing to ([0, 11] range)
-	u32 fixedAttribCount = 0; // How many attribute components have we written? When we get to 4 the attr will actually get submitted
-	std::array<u32, 3> fixedAttrBuff; // Buffer to hold fixed attributes in until they get submitted
+	std::array<AttribInfo, maxAttribCount> attributeInfo;  // Info for each of the 12 attributes
+	u32 totalAttribCount = 0;                              // Number of vertex attributes to send to VS
+	u32 fixedAttribMask = 0;                               // Which attributes are fixed?
+
+	u32 fixedAttribIndex = 0;          // Which fixed attribute are we writing to ([0, 11] range)
+	u32 fixedAttribCount = 0;          // How many attribute components have we written? When we get to 4 the attr will actually get submitted
+	std::array<u32, 3> fixedAttrBuff;  // Buffer to hold fixed attributes in until they get submitted
 
 	// Command processor pointers for GPU command lists
 	u32* cmdBuffStart = nullptr;
 	u32* cmdBuffEnd = nullptr;
 	u32* cmdBuffCurr = nullptr;
 
-	Renderer renderer;
+	std::unique_ptr<Renderer> renderer;
 	PICA::Vertex getImmediateModeVertex();
 
   public:
@@ -84,11 +82,9 @@ class GPU {
 	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
 	bool lightingLUTDirty = false;
 
-	GPU(Memory& mem, GLStateManager& gl, EmulatorConfig& config);
-	void initGraphicsContext() { renderer.initGraphicsContext(); }
-	void getGraphicsContext() { renderer.getGraphicsContext(); }
-	void display() { renderer.display(); }
-	void screenshot(const std::string& name) { renderer.screenshot(name); }
+	GPU(Memory& mem, EmulatorConfig& config);
+	void initGraphicsContext() { renderer->initGraphicsContext(); }
+	void display() { renderer->display(); }
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();
@@ -106,14 +102,12 @@ class GPU {
 
 	// TODO: Emulate the transfer engine & its registers
 	// Then this can be emulated by just writing the appropriate values there
-	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
-		renderer.clearBuffer(startAddress, endAddress, value, control);
-	}
+	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) { renderer->clearBuffer(startAddress, endAddress, value, control); }
 
 	// TODO: Emulate the transfer engine & its registers
 	// Then this can be emulated by just writing the appropriate values there
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
-		renderer.displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
+		renderer->displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
 	}
 
 	// Read a value of type T from physical address paddr

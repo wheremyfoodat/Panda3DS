@@ -93,7 +93,7 @@ endif()
 
 set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
-				 src/core/memory.cpp src/httpserver.cpp src/stb_image_write.c
+				 src/core/memory.cpp src/renderer.cpp src/httpserver.cpp src/stb_image_write.c
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp

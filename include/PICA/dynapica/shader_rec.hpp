@@ -21,7 +21,7 @@ class ShaderJIT {
 	ShaderCache cache;
 #endif
 
-public:
+  public:
 #ifdef PANDA3DS_SHADER_JIT_SUPPORTED
 	// Call this before starting to process a batch of vertices
 	// This will read the PICA config (uploaded shader and shader operand descriptors) and search if we've already compiled this shader
@@ -29,9 +29,7 @@ public:
 	// The caller must make sure the entrypoint has been properly set beforehand
 	void prepare(PICAShader& shaderUnit);
 	void reset();
-	void run(PICAShader& shaderUnit) {
-		prologueCallback(shaderUnit, entrypointCallback);
-	}
+	void run(PICAShader& shaderUnit) { prologueCallback(shaderUnit, entrypointCallback); }
 
 	static constexpr bool isAvailable() { return true; }
 #else
@@ -44,7 +42,7 @@ public:
 	}
 
 	// Define dummy callback. This should never be called if the shader JIT is not supported
-	using Callback = void(*)(PICAShader& shaderUnit);
+	using Callback = void (*)(PICAShader& shaderUnit);
 	Callback activeShaderCallback = nullptr;
 
 	void reset() {}

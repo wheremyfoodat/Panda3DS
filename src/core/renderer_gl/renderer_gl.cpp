@@ -1,4 +1,5 @@
 #include "renderer_gl/renderer_gl.hpp"
+
 #include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
@@ -576,7 +577,7 @@ const char* displayFragmentShader = R"(
     }
 )";
 
-void Renderer::reset() {
+void RendererGL::reset() {
 	depthBufferCache.reset();
 	colourBufferCache.reset();
 	textureCache.reset();
@@ -592,10 +593,10 @@ void Renderer::reset() {
 		const auto oldProgram = OpenGL::getProgram();
 
 		gl.useProgram(triangleProgram);
-		
-		oldDepthScale = -1.0; // Default depth scale to -1.0, which is what games typically use
-		oldDepthOffset = 0.0; // Default depth offset to 0
-		oldDepthmapEnable = false; // Enable w buffering
+
+		oldDepthScale = -1.0;       // Default depth scale to -1.0, which is what games typically use
+		oldDepthOffset = 0.0;       // Default depth offset to 0
+		oldDepthmapEnable = false;  // Enable w buffering
 
 		glUniform1f(depthScaleLoc, oldDepthScale);
 		glUniform1f(depthOffsetLoc, oldDepthOffset);
@@ -605,10 +606,10 @@ void Renderer::reset() {
 	}
 }
 
-void Renderer::initGraphicsContext() {
+void RendererGL::initGraphicsContext() {
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
-	triangleProgram.create({ vert, frag });
+	triangleProgram.create({vert, frag});
 	gl.useProgram(triangleProgram);
 
 	textureEnvSourceLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvSource");
@@ -630,10 +631,10 @@ void Renderer::initGraphicsContext() {
 
 	OpenGL::Shader vertDisplay(displayVertexShader, OpenGL::Vertex);
 	OpenGL::Shader fragDisplay(displayFragmentShader, OpenGL::Fragment);
-	displayProgram.create({ vertDisplay, fragDisplay });
+	displayProgram.create({vertDisplay, fragDisplay});
 
 	gl.useProgram(displayProgram);
-	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0); // Init sampler object
+	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
 	gl.bindVBO(vbo);
@@ -669,10 +670,10 @@ void Renderer::initGraphicsContext() {
 	dummyVAO.create();
 
 	// Create texture and framebuffer for the 3DS screen
-	const u32 screenTextureWidth = 400; // Top screen is 400 pixels wide, bottom is 320
-	const u32 screenTextureHeight = 2 * 240; // Both screens are 240 pixels tall
-	
-	glGenTextures(1,&lightLUTTextureArray);
+	const u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
+	const u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
+
+	glGenTextures(1, &lightLUTTextureArray);
 
 	auto prevTexture = OpenGL::getTex2D();
 	screenTexture.create(screenTextureWidth, screenTextureHeight, GL_RGBA8);
@@ -684,8 +685,7 @@ void Renderer::initGraphicsContext() {
 	screenFramebuffer.createWithDrawTexture(screenTexture);
 	screenFramebuffer.bind(OpenGL::DrawAndReadFramebuffer);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		Helpers::panic("Incomplete framebuffer");
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) Helpers::panic("Incomplete framebuffer");
 
 	// TODO: This should not clear the framebuffer contents. It should load them from VRAM.
 	GLint oldViewport[4];
@@ -699,20 +699,31 @@ void Renderer::initGraphicsContext() {
 }
 
 // Set up the OpenGL blending context to match the emulated PICA
-void Renderer::setupBlending() {
+void RendererGL::setupBlending() {
 	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
-	
+
 	// Map of PICA blending equations to OpenGL blending equations. The unused blending equations are equivalent to equation 0 (add)
-	static constexpr std::array<GLenum, 8> blendingEquations = {
-		GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX, GL_FUNC_ADD, GL_FUNC_ADD, GL_FUNC_ADD
-	};
-	
+	static constexpr std::array<GLenum, 8> blendingEquations = {GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX, GL_FUNC_ADD,
+																GL_FUNC_ADD, GL_FUNC_ADD};
+
 	// Map of PICA blending funcs to OpenGL blending funcs. Func = 15 is undocumented and stubbed to GL_ONE for now
 	static constexpr std::array<GLenum, 16> blendingFuncs = {
-		GL_ZERO, GL_ONE, GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR, GL_DST_COLOR, GL_ONE_MINUS_DST_COLOR, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-		GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA, GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_COLOR, GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA,
-		GL_SRC_ALPHA_SATURATE, GL_ONE
-	};
+		GL_ZERO,
+		GL_ONE,
+		GL_SRC_COLOR,
+		GL_ONE_MINUS_SRC_COLOR,
+		GL_DST_COLOR,
+		GL_ONE_MINUS_DST_COLOR,
+		GL_SRC_ALPHA,
+		GL_ONE_MINUS_SRC_ALPHA,
+		GL_DST_ALPHA,
+		GL_ONE_MINUS_DST_ALPHA,
+		GL_CONSTANT_COLOR,
+		GL_ONE_MINUS_CONSTANT_COLOR,
+		GL_CONSTANT_ALPHA,
+		GL_ONE_MINUS_CONSTANT_ALPHA,
+		GL_SRC_ALPHA_SATURATE,
+		GL_ONE};
 
 	if (!blendingEnabled) {
 		gl.disableBlend();
@@ -743,14 +754,12 @@ void Renderer::setupBlending() {
 	}
 }
 
-void Renderer::setupTextureEnvState() {
+void RendererGL::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
 
-	static constexpr std::array<u32, 6> ioBases = {
-	  PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source,
-	  PICA::InternalRegs::TexEnv2Source, PICA::InternalRegs::TexEnv3Source,
-	  PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source
-	};
+	static constexpr std::array<u32, 6> ioBases = {PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source,
+												   PICA::InternalRegs::TexEnv2Source, PICA::InternalRegs::TexEnv3Source,
+												   PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source};
 
 	u32 textureEnvSourceRegs[6];
 	u32 textureEnvOperandRegs[6];
@@ -775,10 +784,9 @@ void Renderer::setupTextureEnvState() {
 	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
 }
 
-void Renderer::bindTexturesToSlots() {
+void RendererGL::bindTexturesToSlots() {
 	static constexpr std::array<u32, 3> ioBases = {
-	  PICA::InternalRegs::Tex0BorderColor, PICA::InternalRegs::Tex1BorderColor, PICA::InternalRegs::Tex2BorderColor
-	};
+		PICA::InternalRegs::Tex0BorderColor, PICA::InternalRegs::Tex1BorderColor, PICA::InternalRegs::Tex2BorderColor};
 
 	for (int i = 0; i < 3; i++) {
 		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
@@ -805,13 +813,13 @@ void Renderer::bindTexturesToSlots() {
 	glActiveTexture(GL_TEXTURE0);
 }
 
-void Renderer::updateLightingLUT() {
+void RendererGL::updateLightingLUT() {
 	gpu.lightingLUTDirty = false;
-	std::array<u16, GPU::LightingLutSize> u16_lightinglut; 
-	
+	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
+
 	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
-		uint64_t value =  gpu.lightingLUT[i] & ((1 << 12) - 1);
-		u16_lightinglut[i] = value * 65535 / 4095; 
+		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
+		u16_lightinglut[i] = value * 65535 / 4095;
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
@@ -824,11 +832,9 @@ void Renderer::updateLightingLUT() {
 	glActiveTexture(GL_TEXTURE0);
 }
 
-void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
+void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
-	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
-	  OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle
-	};
+	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle};
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 
 	gl.disableScissor();
@@ -836,7 +842,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	gl.bindVAO(vao);
 	gl.useProgram(triangleProgram);
 
-	OpenGL::enableClipPlane(0); // Clipping plane 0 is always enabled
+	OpenGL::enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
 		OpenGL::enableClipPlane(1);
 	}
@@ -852,9 +858,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	const int colourMask = getBits<8, 4>(depthControl);
 	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
 
-	static constexpr std::array<GLenum, 8> depthModes = {
-		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL
-	};
+	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
 	const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
 	const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
@@ -865,7 +869,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 		oldDepthScale = depthScale;
 		glUniform1f(depthScaleLoc, depthScale);
 	}
-	
+
 	if (oldDepthOffset != depthOffset) {
 		oldDepthOffset = depthOffset;
 		glUniform1f(depthOffsetLoc, depthOffset);
@@ -917,7 +921,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 constexpr u32 topScreenBuffer = 0x1f000000;
 constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
-void Renderer::display() {
+void RendererGL::display() {
 	gl.disableScissor();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -925,7 +929,7 @@ void Renderer::display() {
 	glBlitFramebuffer(0, 0, 400, 480, 0, 0, 400, 480, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 }
 
-void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
 	return;
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
 
@@ -947,9 +951,9 @@ void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 cont
 	OpenGL::clearColor();
 }
 
-OpenGL::Framebuffer Renderer::getColourFBO() {
-	//We construct a colour buffer object and see if our cache has any matching colour buffers in it
-	// If not, we allocate a texture & FBO for our framebuffer and store it in the cache 
+OpenGL::Framebuffer RendererGL::getColourFBO() {
+	// We construct a colour buffer object and see if our cache has any matching colour buffers in it
+	//  If not, we allocate a texture & FBO for our framebuffer and store it in the cache
 	ColourBuffer sampleBuffer(colourBufferLoc, colourBufferFormat, fbSize.x(), fbSize.y());
 	auto buffer = colourBufferCache.find(sampleBuffer);
 
@@ -960,7 +964,7 @@ OpenGL::Framebuffer Renderer::getColourFBO() {
 	}
 }
 
-void Renderer::bindDepthBuffer() {
+void RendererGL::bindDepthBuffer() {
 	// Similar logic as the getColourFBO function
 	DepthBuffer sampleBuffer(depthBufferLoc, depthBufferFormat, fbSize.x(), fbSize.y());
 	auto buffer = depthBufferCache.find(sampleBuffer);
@@ -979,14 +983,14 @@ void Renderer::bindDepthBuffer() {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, tex, 0);
 }
 
-OpenGL::Texture Renderer::getTexture(Texture& tex) {
+OpenGL::Texture RendererGL::getTexture(Texture& tex) {
 	// Similar logic as the getColourFBO/bindDepthBuffer functions
 	auto buffer = textureCache.find(tex);
 
 	if (buffer.has_value()) {
 		return buffer.value().get().texture;
 	} else {
-		const void* textureData = gpu.getPointerPhys<void*>(tex.location); // Get pointer to the texture data in 3DS memory
+		const void* textureData = gpu.getPointerPhys<void*>(tex.location);  // Get pointer to the texture data in 3DS memory
 		Texture& newTex = textureCache.add(tex);
 		newTex.decodeTexture(textureData);
 
@@ -994,7 +998,7 @@ OpenGL::Texture Renderer::getTexture(Texture& tex) {
 	}
 }
 
-void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
+void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
 	const u32 inputWidth = inputSize & 0xffff;
 	const u32 inputGap = inputSize >> 16;
 
@@ -1022,12 +1026,12 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
 	// We consider output gap == 320 to mean bottom, and anything else to mean top
 	if (outputGap == 320) {
-		OpenGL::setViewport(40, 0, 320, 240); // Bottom screen viewport
+		OpenGL::setViewport(40, 0, 320, 240);  // Bottom screen viewport
 	} else {
-		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
+		OpenGL::setViewport(0, 240, 400, 240);  // Top screen viewport
 	}
 
-	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+	OpenGL::draw(OpenGL::TriangleStrip, 4);  // Actually draw our 3DS screen
 }
 
 void Renderer::screenshot(const std::string& name) {
@@ -1035,8 +1039,35 @@ void Renderer::screenshot(const std::string& name) {
 	constexpr uint height = 2 * 240;
 
 	std::vector<uint8_t> pixels, flippedPixels;
-	pixels.resize(width *  height * 4);
-	flippedPixels.resize(pixels.size());;
+	pixels.resize(width * height * 4);
+	flippedPixels.resize(pixels.size());
+	;
+
+	OpenGL::bindScreenFramebuffer();
+	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
+
+	// Flip the image vertically
+	for (int y = 0; y < height; y++) {
+		memcpy(&flippedPixels[y * width * 4], &pixels[(height - y - 1) * width * 4], width * 4);
+		// Swap R and B channels
+		for (int x = 0; x < width; x++) {
+			std::swap(flippedPixels[y * width * 4 + x * 4 + 0], flippedPixels[y * width * 4 + x * 4 + 2]);
+			// Set alpha to 0xFF
+			flippedPixels[y * width * 4 + x * 4 + 3] = 0xFF;
+		}
+	}
+
+	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
+}
+
+void Renderer::screenshot(const std::string& name) {
+	constexpr uint width = 400;
+	constexpr uint height = 2 * 240;
+
+	std::vector<uint8_t> pixels, flippedPixels;
+	pixels.resize(width * height * 4);
+	flippedPixels.resize(pixels.size());
+	;
 
 	OpenGL::bindScreenFramebuffer();
 	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
