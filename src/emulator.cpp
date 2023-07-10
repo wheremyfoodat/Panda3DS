@@ -289,7 +289,7 @@ void Emulator::run() {
 					char *droppedDir = event.drop.file;
 					if(droppedDir) {
 						loadROM(droppedDir);
-						free(droppedDir);
+						SDL_free(droppedDir);
 					}
 				}
 				break;
