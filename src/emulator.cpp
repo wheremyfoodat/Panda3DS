@@ -59,7 +59,7 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 
 Emulator::~Emulator() { config.save(std::filesystem::current_path() / "config.toml"); }
 
-void Emulator::reset() {
+void Emulator::stop() {
 	cpu.reset();
 	gpu.reset();
 	memory.reset();
@@ -69,7 +69,9 @@ void Emulator::reset() {
 	// Reloading r13 and r15 needs to happen after everything has been reset
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
+}
 
+void Emulator::reset() {
 	// If a ROM is active and we reset, reload it. This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
 	if (romType != ROMType::None && romPath.has_value()) {
 		bool success = loadROM(romPath.value());
@@ -328,6 +330,7 @@ void Emulator::run() {
 void Emulator::runFrame() { cpu.runFrame(); }
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
+	stop();
 	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
 	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
 	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart

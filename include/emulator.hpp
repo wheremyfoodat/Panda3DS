@@ -64,6 +64,7 @@ class Emulator {
 	Emulator();
 	~Emulator();
 
+	void stop();
 	void step();
 	void render();
 	void reset();
