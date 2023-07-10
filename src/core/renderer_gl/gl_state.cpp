@@ -1,4 +1,4 @@
-#include "gl_state.hpp"
+#include "renderer_gl/gl_state.hpp"
 
 void GLStateManager::resetBlend() {
 	blendEnabled = false;

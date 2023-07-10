@@ -13,10 +13,6 @@
 #include "io_file.hpp"
 #include "memory.hpp"
 
-#if PANDA3DS_ENABLE_OPENGL
-#include "gl_state.hpp"
-#endif
-
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "httpserver.hpp"
 #endif
@@ -35,7 +31,6 @@ class Emulator {
 
 #if PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
-	GLStateManager gl;
 #endif
 
 	SDL_GameController* gameController = nullptr;

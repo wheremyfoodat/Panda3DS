@@ -145,7 +145,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/PICA/dynapica/shader_rec_emitter_x64.hpp include/PICA/pica_hash.hpp include/result/result.hpp
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
-                 include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp include/gl_state.hpp
+                 include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
                  include/config.hpp include/services/ir_user.hpp include/httpserver.hpp
 )
 
@@ -186,10 +186,11 @@ if(PANDA3DS_ENABLE_OPENGL)
 	set(RENDERER_GL_INCLUDE_FILES include/opengl.hpp
 		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
 		include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
+		include/renderer_gl/gl_state.hpp
 	)
 	set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
 		src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
-		src/gl_state.cpp
+		src/core/renderer_gl/gl_state.cpp
 	)
 	source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
 

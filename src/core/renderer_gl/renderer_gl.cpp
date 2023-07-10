@@ -607,6 +607,8 @@ void RendererGL::reset() {
 }
 
 void RendererGL::initGraphicsContext() {
+	gl.reset();
+
 	OpenGL::Shader vert(vertexShader, OpenGL::Vertex);
 	OpenGL::Shader frag(fragmentShader, OpenGL::Fragment);
 	triangleProgram.create({vert, frag});

@@ -433,12 +433,7 @@ bool Emulator::loadELF(std::ifstream& file) {
 }
 
 // Reset our graphics context and initialize the GPU's graphics context
-void Emulator::initGraphicsContext() {
-#if PANDA3DS_ENABLE_OPENGL
-	gl.reset();  // TODO (For when we have multiple backends): Only do this if we are using OpenGL
-#endif
-	gpu.initGraphicsContext();
-}
+void Emulator::initGraphicsContext() { gpu.initGraphicsContext(); }
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 void Emulator::pollHttpServer() {
