@@ -22,7 +22,6 @@ enum class GPUInterrupt : u8 {
 class Kernel;
 
 class GPUService {
-	bool registerInterruptRelayQueueBeenHere = false;
 	Handle handle = KernelHandles::GPU;
 	Memory& mem;
 	GPU& gpu;
@@ -34,6 +33,9 @@ class GPUService {
 	// This is the PID of that process
 	u32 privilegedProcess;
 	std::optional<Handle> interruptEvent;
+
+	// Number of threads registers via RegisterInterruptRelayQueue
+	u32 gspThreadCount = 0;
 
 	MAKE_LOG_FUNCTION(log, gspGPULogger)
 	void processCommandBuffer();
