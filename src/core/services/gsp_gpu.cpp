@@ -35,6 +35,7 @@ void GPUService::reset() {
 	interruptEvent = std::nullopt;
 	gspThreadCount = 0;
 	sharedMem = nullptr;
+	registerInterruptRelayQueueBeenHere = false;
 }
 
 void GPUService::handleSyncRequest(u32 messagePointer) {
