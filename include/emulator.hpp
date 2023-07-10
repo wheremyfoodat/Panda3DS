@@ -47,7 +47,7 @@ class Emulator {
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
-	bool running = true, romLoaded = false;
+	bool running = true;
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	HttpServer httpServer;
@@ -64,7 +64,6 @@ class Emulator {
 	Emulator();
 	~Emulator();
 
-	void stop();
 	void step();
 	void render();
 	void reset();

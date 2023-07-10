@@ -22,7 +22,6 @@ enum class GPUInterrupt : u8 {
 class Kernel;
 
 class GPUService {
-	bool registerInterruptRelayQueueBeenHere = false;
 	Handle handle = KernelHandles::GPU;
 	Memory& mem;
 	GPU& gpu;
