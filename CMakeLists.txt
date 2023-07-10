@@ -43,6 +43,7 @@ add_compile_definitions(SDL_MAIN_HANDLED)
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_TEST OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/SDL2)
 add_subdirectory(third_party/glad)
 add_subdirectory(third_party/toml11)
