@@ -97,11 +97,11 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 		}
 		else {
 			for (size_t i = 0; i < bytesRead; i++) {
-				mem.write8(dataPointer + i, data[i]);
+				mem.write8(u32(dataPointer + i), data[i]);
 			}
 
 			mem.write32(messagePointer + 4, Result::Success);
-			mem.write32(messagePointer + 8, bytesRead);
+			mem.write32(messagePointer + 8, u32(bytesRead));
 		}
 
 		return;
@@ -142,7 +142,7 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 
 	std::unique_ptr<u8[]> data(new u8[size]);
 	for (size_t i = 0; i < size; i++) {
-		data[i] = mem.read8(dataPointer + i);
+		data[i] = mem.read8(u32(dataPointer + i));
 	}
 
 	IOFile f(file->fd);
@@ -153,7 +153,7 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 		Helpers::panic("Kernel::WriteFile failed");
 	} else {
 		mem.write32(messagePointer + 4, Result::Success);
-		mem.write32(messagePointer + 8, bytesWritten);
+		mem.write32(messagePointer + 8, u32(bytesWritten));
 	}
 }
 

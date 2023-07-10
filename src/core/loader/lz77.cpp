@@ -12,7 +12,7 @@ u32 CartLZ77::decompressedSize(const u8* buffer, u32 compressedSize) {
 }
 
 bool CartLZ77::decompress(std::vector<u8>& output, const std::vector<u8>& input) {
-    u32 sizeCompressed = input.size() * sizeof(u8);
+    u32 sizeCompressed = u32(input.size() * sizeof(u8));
     u32 sizeDecompressed = decompressedSize(input);
     output.resize(sizeDecompressed);
 

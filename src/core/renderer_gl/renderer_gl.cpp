@@ -888,8 +888,8 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	}
 
 	// TODO: Actually use this
-	float viewportWidth = f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0;
-	float viewportHeight = f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0;
+	GLsizei viewportWidth = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0f);
+	GLsizei viewportHeight = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0f);
 	OpenGL::setViewport(viewportWidth, viewportHeight);
 
 	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
@@ -911,7 +911,7 @@ void Renderer::drawVertices(PICA::PrimType primType, std::span<const Vertex> ver
 	}
 
 	vbo.bufferVertsSub(vertices);
-	OpenGL::draw(primitiveTopology, vertices.size());
+	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 }
 
 constexpr u32 topScreenBuffer = 0x1f000000;
@@ -929,10 +929,10 @@ void Renderer::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 cont
 	return;
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
 
-	const float r = float(getBits<24, 8>(value)) / 255.0;
-	const float g = float(getBits<16, 8>(value)) / 255.0;
-	const float b = float(getBits<8, 8>(value)) / 255.0;
-	const float a = float(value & 0xff) / 255.0;
+	const float r = float(getBits<24, 8>(value)) / 255.0f;
+	const float g = float(getBits<16, 8>(value)) / 255.0f;
+	const float b = float(getBits<8, 8>(value)) / 255.0f;
+	const float a = float(value & 0xff) / 255.0f;
 
 	if (startAddress == topScreenBuffer) {
 		log("GPU: Cleared top screen\n");
