@@ -49,9 +49,9 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 		}
 	} else {
 		if (error) {
-			Helpers::warn("FileSystem error accessing %s %s\n", path.string().c_str(), error.message().c_str());
+			Helpers::warn("Filesystem error accessing %s (error: %s)\n", path.string().c_str(), error.message().c_str());
 		}
-		Helpers::warn("Saving new configuration file %s \n", path.string().c_str());
+		printf("Saving new configuration file %s\n", path.string().c_str());
 	}
 
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
