@@ -1,11 +1,11 @@
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "httpserver.hpp"
 
-#include <vector>
-#include <map>
-#include <thread>
 #include <fstream>
+#include <map>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include "httplib.h"
 #include "services/hid.hpp"
@@ -42,9 +42,7 @@ void HttpServer::startHttpServer() {
 	std::thread http_thread([this]() {
 		httplib::Server server;
 
-		server.Get("/ping", [](const httplib::Request&, httplib::Response& response) {
-			response.set_content("pong", "text/plain");
-		});
+		server.Get("/ping", [](const httplib::Request&, httplib::Response& response) { response.set_content("pong", "text/plain"); });
 
 		server.Get("/screen", [this](const httplib::Request&, httplib::Response& response) {
 			{
@@ -61,9 +59,10 @@ void HttpServer::startHttpServer() {
 
 		server.Get("/input", [this](const httplib::Request& request, httplib::Response& response) {
 			bool ok = false;
-			for (auto& [keyStr, value]: request.params) {
+			for (auto& [keyStr, value] : request.params) {
 				auto key = stringToKey(keyStr);
 				printf("Param: %s\n", keyStr.c_str());
+
 				if (key != 0) {
 					std::scoped_lock lock(actionMutex);
 					pendingAction = true;
@@ -97,6 +96,7 @@ void HttpServer::startHttpServer() {
 		printf("Starting HTTP server on port 1234\n");
 		server.listen("localhost", 1234);
 	});
+
 	http_thread.detach();
 }
 

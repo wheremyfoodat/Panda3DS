@@ -669,7 +669,7 @@ void Renderer::initGraphicsContext() {
 	dummyVAO.create();
 
 	// Create texture and framebuffer for the 3DS screen
-	const u32 screenTextureWidth = 2 * 400; // Top screen is 400 pixels wide, bottom is 320
+	const u32 screenTextureWidth = 400; // Top screen is 400 pixels wide, bottom is 320
 	const u32 screenTextureHeight = 2 * 240; // Both screens are 240 pixels tall
 	
 	glGenTextures(1,&lightLUTTextureArray);
@@ -1028,4 +1028,29 @@ void Renderer::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32
 	}
 
 	OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+}
+
+void Renderer::screenshot(const std::string& name) {
+	constexpr uint width = 400;
+	constexpr uint height = 2 * 240;
+
+	std::vector<uint8_t> pixels, flippedPixels;
+	pixels.resize(width *  height * 4);
+	flippedPixels.resize(pixels.size());;
+
+	OpenGL::bindScreenFramebuffer();
+	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
+
+	// Flip the image vertically
+	for (int y = 0; y < height; y++) {
+		memcpy(&flippedPixels[y * width * 4], &pixels[(height - y - 1) * width * 4], width * 4);
+		// Swap R and B channels
+		for (int x = 0; x < width; x++) {
+			std::swap(flippedPixels[y * width * 4 + x * 4 + 0], flippedPixels[y * width * 4 + x * 4 + 2]);
+			// Set alpha to 0xFF
+			flippedPixels[y * width * 4 + x * 4 + 3] = 0xFF;
+		}
+	}
+
+	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
 }

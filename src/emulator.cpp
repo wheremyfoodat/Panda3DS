@@ -82,27 +82,6 @@ void Emulator::reset() {
 	}
 }
 
-void Emulator::screenshot(const std::string& name) {
-	std::vector<uint8_t> pixels, flippedPixels;
-	pixels.resize(width * height * 4);
-	flippedPixels.resize(width * height * 4);
-
-	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
-
-	// Flip the image vertically
-	for (int y = 0; y < height; y++) {
-		memcpy(&flippedPixels[y * width * 4], &pixels[(height - y - 1) * width * 4], width * 4);
-		// Swap R and B channels
-		for (int x = 0; x < width; x++) {
-			std::swap(flippedPixels[y * width * 4 + x * 4 + 0], flippedPixels[y * width * 4 + x * 4 + 2]);
-			// Set alpha to 0xFF
-			flippedPixels[y * width * 4 + x * 4 + 3] = 0xFF;
-		}
-	}
-
-	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
-}
-
 void Emulator::step() {}
 void Emulator::render() {}
 
@@ -428,28 +407,27 @@ void Emulator::pollHttpServer() {
 	
 	if (httpServer.pendingAction) {
 		switch (httpServer.action) {
-			case HttpAction::Screenshot: {
-				screenshot(HttpServer::httpServerScreenshotPath);
+			case HttpAction::Screenshot:
+				gpu.screenshot(HttpServer::httpServerScreenshotPath);
 				break;
-			}
-			case HttpAction::PressKey: {
+
+			case HttpAction::PressKey:
 				if (httpServer.pendingKey != 0) {
 					srv.pressKey(httpServer.pendingKey);
 					httpServer.pendingKey = 0;
 				}
 				break;
-			}
-			case HttpAction::ReleaseKey: {
+
+			case HttpAction::ReleaseKey:
 				if (httpServer.pendingKey != 0) {
 					srv.releaseKey(httpServer.pendingKey);
 					httpServer.pendingKey = 0;
 				}
 				break;
-			}
-			case HttpAction::None: {
-				break;
-			}
+
+			case HttpAction::None: break;
 		}
+
 		httpServer.action = HttpAction::None;
 		httpServer.pendingAction = false;
 		httpServer.pendingAction.notify_all();

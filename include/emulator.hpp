@@ -69,7 +69,6 @@ class Emulator {
 	void reset();
 	void run();
 	void runFrame();
-	void screenshot(const std::string& name);
 
 	bool loadROM(const std::filesystem::path& path);
 	bool loadNCSD(const std::filesystem::path& path, ROMType type);
