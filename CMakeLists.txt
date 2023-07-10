@@ -19,7 +19,7 @@ endif()
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
-option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
+option(PANDA3DS_ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
@@ -180,8 +180,8 @@ endif()
 
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp)
 
-if(ENABLE_OPENGL)
-	target_compile_definitions(Alber PUBLIC "ENABLE_OPENGL=1")
+if(PANDA3DS_ENABLE_OPENGL)
+	target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
 
 	set(RENDERER_GL_INCLUDE_FILES include/opengl.hpp
 		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp

@@ -8,7 +8,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
 
-#if ENABLE_OPENGL
+#if PANDA3DS_ENABLE_OPENGL
 #include "renderer_gl/renderer_gl.hpp"
 #endif
 
@@ -21,7 +21,7 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 	mem.setVRAM(vram);  // Give the bus a pointer to our VRAM
 
 	// TODO: configurable backend
-#if ENABLE_OPENGL
+#if PANDA3DS_ENABLE_OPENGL
 	renderer.reset(new RendererGL(*this, regs));
 #endif
 }

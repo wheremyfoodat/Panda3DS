@@ -13,7 +13,7 @@
 #include "io_file.hpp"
 #include "memory.hpp"
 
-#if ENABLE_OPENGL
+#if PANDA3DS_ENABLE_OPENGL
 #include "gl_state.hpp"
 #endif
 
@@ -33,7 +33,7 @@ class Emulator {
 	EmulatorConfig config;
 	SDL_Window* window;
 
-#if ENABLE_OPENGL
+#if PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
 	GLStateManager gl;
 #endif
