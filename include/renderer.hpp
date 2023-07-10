@@ -27,6 +27,8 @@ class Renderer {
 	virtual void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) = 0;  // Perform display transfer
 	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;             // Draw the given vertices
 
+	virtual void screenshot(const std::string& name) = 0;
+
 	virtual void setFBSize(u32 width, u32 height) = 0;
 
 	virtual void setColourFormat(PICA::ColorFmt format) = 0;

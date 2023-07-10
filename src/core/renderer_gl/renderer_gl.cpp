@@ -1034,7 +1034,7 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	OpenGL::draw(OpenGL::TriangleStrip, 4);  // Actually draw our 3DS screen
 }
 
-void Renderer::screenshot(const std::string& name) {
+void RendererGL::screenshot(const std::string& name) {
 	constexpr uint width = 400;
 	constexpr uint height = 2 * 240;
 

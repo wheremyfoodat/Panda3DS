@@ -1,7 +1,8 @@
 #pragma once
+#include <stb_image_write.h>
+
 #include <array>
 #include <span>
-#include <stb_image_write.h>
 
 #include "PICA/float_types.hpp"
 #include "PICA/pica_vertex.hpp"
