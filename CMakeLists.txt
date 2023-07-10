@@ -46,7 +46,7 @@ set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/SDL2)
-add_subdirectory(third_party/glad)
+
 add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
@@ -181,6 +181,8 @@ endif()
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp)
 
 if(PANDA3DS_ENABLE_OPENGL)
+	add_subdirectory(third_party/glad)
+
 	target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
 
 	set(RENDERER_GL_INCLUDE_FILES include/opengl.hpp
