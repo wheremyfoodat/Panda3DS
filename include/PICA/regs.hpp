@@ -178,6 +178,54 @@ namespace PICA {
 		};
 	}
 
+	namespace ExternalRegs {
+		enum : u32 {
+			MemFill1BufferStartPaddr = 0x3,
+			MemFill1BufferEndPAddr = 0x4,
+			MemFill1Value = 0x5,
+			MemFill1Control = 0x6,
+			MemFill2BufferStartPaddr = 0x7,
+			MemFill2BufferEndPAddr = 0x8,
+			MemFill2Value = 0x9,
+			MemFill2Control = 0xA,
+			VramBankControl = 0xB,
+			GPUBusy = 0xC,
+			BacklightControl = 0xBC,
+			// TODO: Framebuffer regs
+			Framebuffer0Size = 0x2F,
+			Framebuffer0AFirstAddr = 0x119,
+			Framebuffer0ASecondAddr = 0x11A,
+			Framebuffer0Config = 0x11B,
+			Framebuffer0Select = 0x11D,
+			Framebuffer0Stride = 0x123,
+			Framebuffer0BFirstAddr = 0x124,
+			Framebuffer0BSecondAddr = 0x125,
+			Framebuffer1Size = 0x156,
+			Framebuffer1AFirstAddr = 0x159,
+			Framebuffer1ASecondAddr = 0x15A,
+			Framebuffer1Config = 0x15B,
+			Framebuffer1Select = 0x15D,
+			Framebuffer1Stride = 0x163,
+			Framebuffer1BFirstAddr = 0x164,
+			Framebuffer1BSecondAddr = 0x165,
+			TransferInputPAddr = 0x2FF,
+			TransferOutputPAddr = 0x300,
+			DisplayTransferOutputDim = 0x301,
+			DisplayTransferInputDim = 0x302,
+			TransferFlags = 0x303,
+			TransferTrigger = 0x305,
+			TextureCopyTotalBytes = 0x307,
+			TextureCopyInputLineGap = 0x308,
+			TextureCopyOutputLineGap = 0x309,
+		};
+	}
+
+	enum class Scaling : u32 {
+		None = 0,
+		X = 1,
+		XY = 2,
+	};
+
 	namespace Lights {
 		enum : u32 {
 			LUT_D0 = 0,

@@ -44,8 +44,8 @@ class RendererGL final : public Renderer {
 	float oldDepthOffset = 0.0;
 	bool oldDepthmapEnable = false;
 
-	SurfaceCache<DepthBuffer, 10, true> depthBufferCache;
-	SurfaceCache<ColourBuffer, 10, true> colourBufferCache;
+	SurfaceCache<DepthBuffer, 64, true> depthBufferCache;
+	SurfaceCache<ColourBuffer, 64, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
 
 	// Dummy VAO/VBO for blitting the final output
@@ -77,6 +77,8 @@ class RendererGL final : public Renderer {
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
+
+	ColourBuffer getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height);
 
 	// Take a screenshot of the screen and store it in a file
 	void screenshot(const std::string& name) override;

@@ -1,4 +1,5 @@
 #include "services/gsp_gpu.hpp"
+#include "PICA/regs.hpp"
 #include "ipc.hpp"
 #include "kernel.hpp"
 
@@ -10,6 +11,7 @@ namespace ServiceCommands {
 		RegisterInterruptRelayQueue = 0x00130042,
 		WriteHwRegs = 0x00010082,
 		WriteHwRegsWithMask = 0x00020084,
+		SetBufferSwap = 0x00050200,
 		FlushDataCache = 0x00080082,
 		SetLCDForceBlack = 0x000B0040,
 		TriggerCmdReqQueue = 0x000C0000,
@@ -19,16 +21,14 @@ namespace ServiceCommands {
 }
 
 // Commands written to shared memory and processed by TriggerCmdReqQueue
-namespace GXCommands {
-	enum : u32 {
-		TriggerDMARequest = 0,
-		ProcessCommandList = 1,
-		MemoryFill = 2,
-		TriggerDisplayTransfer = 3,
-		TriggerTextureCopy = 4,
-		FlushCacheRegions = 5
-	};
-}
+enum class GXCommands : u32 {
+	TriggerDMARequest = 0,
+	ProcessCommandList = 1,
+	MemoryFill = 2,
+	TriggerDisplayTransfer = 3,
+	TriggerTextureCopy = 4,
+	FlushCacheRegions = 5
+};
 
 void GPUService::reset() {
 	privilegedProcess = 0xFFFFFFFF; // Set the privileged process to an invalid handle
@@ -44,13 +44,14 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
 		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
+		case ServiceCommands::SetBufferSwap: setBufferSwap(messagePointer); break;
 		case ServiceCommands::SetInternalPriorities: setInternalPriorities(messagePointer); break;
 		case ServiceCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
 		case ServiceCommands::StoreDataCache: storeDataCache(messagePointer); break;
 		case ServiceCommands::TriggerCmdReqQueue: [[likely]] triggerCmdReqQueue(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
-;		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
+		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
 	}
 }
 
@@ -124,15 +125,12 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	// Not emulating this causes Yoshi's Wooly World, Captain Toad, Metroid 2 et al to hang
 	if (type == GPUInterrupt::VBlank0 || type == GPUInterrupt::VBlank1) {
 		int screen = static_cast<u32>(type) - static_cast<u32>(GPUInterrupt::VBlank0); // 0 for top screen, 1 for bottom
-
-		constexpr u32 FBInfoSize = 0x40;
 		// TODO: Offset depends on GSP thread being triggered
-		u8* info = &sharedMem[0x200 + screen * FBInfoSize];
-		u8& dirtyFlag = info[1];
+		FrameBufferUpdate* update = reinterpret_cast<FrameBufferUpdate*>(&sharedMem[0x200 + screen * sizeof(FrameBufferUpdate)]);
 
-		if (dirtyFlag & 1) {
-			// TODO: Submit buffer info here
-			dirtyFlag &= ~1;
+		if (update->dirtyFlag & 1) {
+			setBufferSwapImpl(screen, update->framebufferInfo[update->index]);
+			update->dirtyFlag &= ~1;
 		}
 	}
 
@@ -261,6 +259,18 @@ void GPUService::setAxiConfigQoSMode(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void GPUService::setBufferSwap(u32 messagePointer) {
+	FramebufferInfo info{};
+	const u32 screenId = mem.read32(messagePointer + 4); // Selects either PDC0 or PDC1
+	info.activeFb = mem.read32(messagePointer + 8);
+	info.leftFramebufferVaddr = mem.read32(messagePointer + 12);
+	info.rightFramebufferVaddr = mem.read32(messagePointer + 16);
+	info.stride = mem.read32(messagePointer + 20);
+	info.format = mem.read32(messagePointer + 24);
+	info.displayFb = mem.read32(messagePointer + 28); // Selects either framebuffer A or B
+	setBufferSwapImpl(screenId, info);
+}
+
 // Seems to also be completely undocumented
 void GPUService::setInternalPriorities(u32 messagePointer) {
 	log("GSP::GPU::SetInternalPriorities\n");
@@ -283,7 +293,7 @@ void GPUService::processCommandBuffer() {
 		log("Processing %d GPU commands\n", commandsLeft);
 
 		while (commandsLeft != 0) {
-			u32 cmdID = cmd[0] & 0xff;
+			const GXCommands cmdID = static_cast<GXCommands>(cmd[0] & 0xff);
 			switch (cmdID) {
 				case GXCommands::ProcessCommandList: processCommandList(cmd); break;
 				case GXCommands::MemoryFill: memoryFill(cmd); break;
@@ -375,12 +385,45 @@ void GPUService::flushCacheRegions(u32* cmd) {
 	log("GSP::GPU::FlushCacheRegions (Stubbed)\n");
 }
 
+void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
+	using namespace PICA::ExternalRegs;
+
+	constexpr static std::array<u32, 8> fb_addresses = {
+		Framebuffer0AFirstAddr,
+		Framebuffer0ASecondAddr,
+		Framebuffer0BFirstAddr,
+		Framebuffer0BSecondAddr,
+		Framebuffer1AFirstAddr,
+		Framebuffer1ASecondAddr,
+		Framebuffer1BFirstAddr,
+		Framebuffer1BSecondAddr,
+	};
+
+	const u32 fb_index = screenId * 4 + info.activeFb * 2;
+	gpu.writeExternalReg(fb_addresses[fb_index], VaddrToPaddr(info.leftFramebufferVaddr));
+	gpu.writeExternalReg(fb_addresses[fb_index + 1], VaddrToPaddr(info.rightFramebufferVaddr));
+
+	constexpr static std::array<u32, 6> config_addresses = {
+		Framebuffer0Config,
+		Framebuffer0Select,
+		Framebuffer0Stride,
+		Framebuffer1Config,
+		Framebuffer1Select,
+		Framebuffer1Stride,
+	};
+
+	const u32 config_index = screenId * 3;
+	gpu.writeExternalReg(config_addresses[config_index], info.format);
+	gpu.writeExternalReg(config_addresses[config_index + 1], info.displayFb);
+	gpu.writeExternalReg(config_addresses[config_index + 2], info.stride);
+}
+
 // Actually send command list (aka display list) to GPU
 void GPUService::processCommandList(u32* cmd) {
 	const u32 address = cmd[1] & ~7; // Buffer address
 	const u32 size = cmd[2] & ~3; // Buffer size in bytes
-	const bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
-	const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
+	[[maybe_unused]] const bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
+	[[maybe_unused]] const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
 
 	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
 	gpu.startCommandList(address, size);

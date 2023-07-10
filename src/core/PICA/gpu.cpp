@@ -16,6 +16,12 @@
 #include "renderer_vk/renderer_vk.hpp"
 #endif
 
+constexpr u32 top_screen_width = 240;
+constexpr u32 top_screen_height = 400;
+
+constexpr u32 bottom_screen_width = 240;
+constexpr u32 bottom_screen_height = 300;
+
 using namespace Floats;
 
 // Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
@@ -77,6 +83,27 @@ void GPU::reset() {
 		e.config1 = 0;
 		e.config2 = 0;
 	}
+
+	// Initialize the framebuffer registers. Values taken from Citra.
+
+	using namespace PICA::ExternalRegs;
+	// Top screen addresses and dimentions.
+	external_regs[Framebuffer0AFirstAddr] = 0x181E6000;
+	external_regs[Framebuffer0ASecondAddr] = 0x1822C800;
+	external_regs[Framebuffer0BFirstAddr] = 0x18273000;
+	external_regs[Framebuffer0BSecondAddr] = 0x182B9800;
+	external_regs[Framebuffer0Size] = (top_screen_height << 16) | top_screen_width;
+	external_regs[Framebuffer0Stride] = 720;
+	external_regs[Framebuffer0Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	external_regs[Framebuffer0Select] = 0;
+
+	// Bottom screen addresses and dimentions.
+	external_regs[Framebuffer1AFirstAddr] = 0x1848F000;
+	external_regs[Framebuffer1ASecondAddr] = 0x184C7800;
+	external_regs[Framebuffer1Size] = (bottom_screen_height << 16) | bottom_screen_width;
+	external_regs[Framebuffer1Stride] = 720;
+	external_regs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	external_regs[Framebuffer1Select] = 0;
 
 	renderer->reset();
 }

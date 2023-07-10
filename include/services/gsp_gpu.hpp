@@ -18,6 +18,24 @@ enum class GPUInterrupt : u8 {
 	DMA = 6
 };
 
+struct FramebufferInfo {
+	u32 activeFb;
+	u32 leftFramebufferVaddr;
+	u32 rightFramebufferVaddr;
+	u32 stride;
+	u32 format;
+	u32 displayFb;
+	u32 attribute;
+};
+
+struct FrameBufferUpdate {
+	u8 index;
+	u8 dirtyFlag;
+	u16 pad0;
+	std::array<FramebufferInfo, 2> framebufferInfo;
+	u32 pad1;
+};
+
 // More circular dependencies
 class Kernel;
 
@@ -45,6 +63,7 @@ class GPUService {
 	void flushDataCache(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
 	void setAxiConfigQoSMode(u32 messagePointer);
+	void setBufferSwap(u32 messagePointer);
 	void setInternalPriorities(u32 messagePointer);
 	void setLCDForceBlack(u32 messagePointer);
 	void storeDataCache(u32 messagePointer);
@@ -59,6 +78,8 @@ class GPUService {
 	void triggerDMARequest(u32* cmd);
 	void triggerTextureCopy(u32* cmd);
 	void flushCacheRegions(u32* cmd);
+
+	void setBufferSwapImpl(u32 screen_id, const FramebufferInfo& info);
 
 public:
 	GPUService(Memory& mem, GPU& gpu, Kernel& kernel, u32& currentPID) : mem(mem), gpu(gpu),

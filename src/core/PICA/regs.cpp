@@ -19,9 +19,34 @@ void GPU::writeReg(u32 address, u32 value) {
 	if (address >= 0x1EF01000 && address < 0x1EF01C00) {  // Internal registers
 		const u32 index = (address - 0x1EF01000) / sizeof(u32);
 		writeInternalReg(index, value, 0xffffffff);
+	} else if (address >= 0x1EF00004 && address < 0x1EF01000) {
+		const u32 index = (address - 0x1EF00004) / sizeof(u32);
+		writeExternalReg(index, value);
 	} else {
-		log("Ignoring write to external GPU register %08X. Value: %08X\n", address, value);
+		log("Ignoring write to unknown GPU register %08X. Value: %08X\n", address, value);
 	}
+}
+
+u32 GPU::readExternalReg(u32 index) {
+	using namespace PICA::ExternalRegs;
+
+	if (index > 0x1000) [[unlikely]] {
+		Helpers::panic("Tried to read invalid external GPU register. Index: %X\n", index);
+		return -1;
+	}
+
+	return external_regs[index];
+}
+
+void GPU::writeExternalReg(u32 index, u32 value) {
+	using namespace PICA::ExternalRegs;
+
+	if (index > 0x1000) [[unlikely]] {
+		Helpers::panic("Tried to write to invalid external GPU register. Index: %X, value: %08X\n", index, value);
+		return;
+	}
+
+	external_regs[index] = value;
 }
 
 u32 GPU::readInternalReg(u32 index) {
@@ -162,7 +187,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			}
 			break;
 
-		// Restart immediate mode primitive drawing
+			// Restart immediate mode primitive drawing
 		case PrimitiveRestart:
 			if (value & 1) {
 				immediateModeAttrIndex = 0;

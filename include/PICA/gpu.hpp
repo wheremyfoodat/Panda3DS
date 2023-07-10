@@ -29,6 +29,7 @@ class GPU {
 	static constexpr u32 vramSize = u32(6_MB);
 	Registers regs;                           // GPU internal registers
 	std::array<vec4f, 16> currentAttributes;  // Vertex attributes before being passed to the shader
+	std::array<u32, 0x1000> external_regs; // GPU external registers
 
 	std::array<vec4f, 16> immediateModeAttributes;  // Vertex attributes uploaded via immediate mode submission
 	std::array<PICA::Vertex, 3> immediateModeVertices;
@@ -96,6 +97,9 @@ class GPU {
 	// Used by the GSP GPU service for readHwRegs/writeHwRegs/writeHwRegsMasked
 	u32 readReg(u32 address);
 	void writeReg(u32 address, u32 value);
+
+	u32 readExternalReg(u32 index);
+	void writeExternalReg(u32 index, u32 value);
 
 	// Used when processing GPU command lists
 	u32 readInternalReg(u32 index);
