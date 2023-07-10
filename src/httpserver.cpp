@@ -2,41 +2,30 @@
 #include "httpserver.hpp"
 
 #include <fstream>
-#include <map>
 #include <string>
 #include <thread>
 #include <vector>
+#include <sstream>
 
 #include "httplib.h"
 #include "services/hid.hpp"
 
-u32 stringToKey(const std::string& key_name) {
-	namespace Keys = HID::Keys;
-	static std::map<std::string, u32> keyMap = {
-		{"A", Keys::A},
-		{"B", Keys::B},
-		{"Select", Keys::Select},
-		{"Start", Keys::Start},
-		{"Right", Keys::Right},
-		{"Left", Keys::Left},
-		{"Up", Keys::Up},
-		{"Down", Keys::Down},
-		{"R", Keys::R},
-		{"L", Keys::L},
-		{"X", Keys::X},
-		{"Y", Keys::Y},
-		{"CirclePadRight", Keys::CirclePadRight},
-		{"CirclePadLeft", Keys::CirclePadLeft},
-		{"CirclePadUp", Keys::CirclePadUp},
-		{"CirclePadDown", Keys::CirclePadDown},
-	};
-
-	if (keyMap.find(key_name) != keyMap.end()) {
-		return keyMap[key_name];
+HttpServer::HttpServer() : keyMap(
+	{
+		{"A", { HID::Keys::A, false } },
+		{"B", { HID::Keys::B, false } },
+		{"Select", { HID::Keys::Select, false } },
+		{"Start", { HID::Keys::Start, false } },
+		{"Right", { HID::Keys::Right, false } },
+		{"Left", { HID::Keys::Left, false } },
+		{"Up", { HID::Keys::Up, false } },
+		{"Down", { HID::Keys::Down, false } },
+		{"R", { HID::Keys::R, false } },
+		{"L", { HID::Keys::L, false } },
+		{"X", { HID::Keys::X, false } },
+		{"Y", { HID::Keys::Y, false } },
 	}
-
-	return 0;
-}
+) {}
 
 void HttpServer::startHttpServer() {
 	std::thread http_thread([this]() {
@@ -70,8 +59,10 @@ void HttpServer::startHttpServer() {
 					ok = true;
 					if (value == "1") {
 						action = HttpAction::PressKey;
+						setKeyState(keyStr, true);
 					} else if (value == "0") {
 						action = HttpAction::ReleaseKey;
+						setKeyState(keyStr, false);
 					} else {
 						// Should not happen but just in case
 						pendingAction = false;
@@ -92,12 +83,50 @@ void HttpServer::startHttpServer() {
 			response.set_content("ok", "text/plain");
 		});
 
+		server.Get("/status", [this](const httplib::Request&, httplib::Response& response) {
+			response.set_content(status(), "text/plain");
+		});
+
 		// TODO: ability to specify host and port
 		printf("Starting HTTP server on port 1234\n");
 		server.listen("localhost", 1234);
 	});
 
 	http_thread.detach();
+}
+
+std::string HttpServer::status() {
+	std::stringstream stringStream;
+
+	stringStream << "Panda3DS\n";
+	stringStream << "Status: " << (paused ? "Paused" : "Running") << "\n";
+	for (auto& [keyStr, value] : keyMap) {
+		stringStream << keyStr << ": " << value.second << "\n";
+	}
+
+	return stringStream.str();
+}
+
+u32 HttpServer::stringToKey(const std::string& key_name) {
+	if (keyMap.find(key_name) != keyMap.end()) {
+		return keyMap[key_name].first;
+	}
+
+	return 0;
+}
+
+bool HttpServer::getKeyState(const std::string& key_name) {
+	if (keyMap.find(key_name) != keyMap.end()) {
+		return keyMap[key_name].second;
+	}
+
+	return false;
+}
+
+void HttpServer::setKeyState(const std::string& key_name, bool state) {
+	if (keyMap.find(key_name) != keyMap.end()) {
+		keyMap[key_name].second = state;
+	}
 }
 
 #endif  // PANDA3DS_ENABLE_HTTP_SERVER
