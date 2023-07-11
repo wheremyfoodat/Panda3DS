@@ -434,7 +434,6 @@ void Emulator::initGraphicsContext() {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 void Emulator::pollHttpServer() {
 	std::scoped_lock lock(httpServer.actionMutex);
-
 	ServiceManager& srv = kernel.getServiceManager();
 
 	if (httpServer.pendingAction) {
