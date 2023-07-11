@@ -70,13 +70,13 @@ class RendererGL final : public Renderer {
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
 
-	void reset();
-	void display();                                                                                 // Display the 3DS screen contents to the window
-	void initGraphicsContext();                                                                     // Initialize graphics context
-	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control);                     // Clear a GPU buffer in VRAM
-	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);  // Perform display transfer
-	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices);             // Draw the given vertices
+	void reset() override;
+	void display() override;                                                              // Display the 3DS screen contents to the window
+	void initGraphicsContext() override;                                                  // Initialize graphics context
+	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
+	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
+	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
 
 	// Take a screenshot of the screen and store it in a file
-	void screenshot(const std::string& name);
+	void screenshot(const std::string& name) override;
 };
