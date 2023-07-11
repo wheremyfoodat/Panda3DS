@@ -14,6 +14,15 @@ class Renderer {
 	static constexpr u32 regNum = 0x300;  // Number of internal PICA registers
 	const std::array<u32, regNum>& regs;
 
+	std::array<u32, 2> fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'
+
+	u32 colourBufferLoc;                // Location in 3DS VRAM for the colour buffer
+	PICA::ColorFmt colourBufferFormat;  // Format of the colours stored in the colour buffer
+
+	// Same for the depth/stencil buffer
+	u32 depthBufferLoc;
+	PICA::DepthFmt depthBufferFormat;
+
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs);
 	virtual ~Renderer();
@@ -29,11 +38,19 @@ class Renderer {
 
 	virtual void screenshot(const std::string& name) = 0;
 
-	virtual void setFBSize(u32 width, u32 height) = 0;
+	void setFBSize(u32 width, u32 height) {
+		fbSize[0] = width;
+		fbSize[1] = height;
+	}
 
-	virtual void setColourFormat(PICA::ColorFmt format) = 0;
-	virtual void setDepthFormat(PICA::DepthFmt format) = 0;
+	void setColourFormat(PICA::ColorFmt format) { colourBufferFormat = format; }
+	void setDepthFormat(PICA::DepthFmt format) {
+		if (format == PICA::DepthFmt::Unknown1) {
+			Helpers::panic("[PICA] Undocumented depth-stencil mode!");
+		}
+		depthBufferFormat = format;
+	}
 
-	virtual void setColourBufferLoc(u32 loc) = 0;
-	virtual void setDepthBufferLoc(u32 loc) = 0;
+	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
+	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
 };

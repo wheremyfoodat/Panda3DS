@@ -49,15 +49,6 @@ class RendererGL final : public Renderer {
 	SurfaceCache<ColourBuffer, 10, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
 
-	OpenGL::uvec2 fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'
-
-	u32 colourBufferLoc;                // Location in 3DS VRAM for the colour buffer
-	PICA::ColorFmt colourBufferFormat;  // Format of the colours stored in the colour buffer
-
-	// Same for the depth/stencil buffer
-	u32 depthBufferLoc;
-	PICA::DepthFmt depthBufferFormat;
-
 	// Dummy VAO/VBO for blitting the final output
 	OpenGL::VertexArray dummyVAO;
 	OpenGL::VertexBuffer dummyVBO;
@@ -88,20 +79,4 @@ class RendererGL final : public Renderer {
 
 	// Take a screenshot of the screen and store it in a file
 	void screenshot(const std::string& name);
-
-	void setFBSize(u32 width, u32 height) {
-		fbSize.x() = width;
-		fbSize.y() = height;
-	}
-
-	void setColourFormat(PICA::ColorFmt format) { colourBufferFormat = format; }
-	void setDepthFormat(PICA::DepthFmt format) {
-		if (format == PICA::DepthFmt::Unknown1) {
-			Helpers::panic("[PICA] Undocumented depth-stencil mode!");
-		}
-		depthBufferFormat = format;
-	}
-
-	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
-	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
 };

@@ -961,7 +961,7 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 OpenGL::Framebuffer RendererGL::getColourFBO() {
 	// We construct a colour buffer object and see if our cache has any matching colour buffers in it
 	//  If not, we allocate a texture & FBO for our framebuffer and store it in the cache
-	ColourBuffer sampleBuffer(colourBufferLoc, colourBufferFormat, fbSize.x(), fbSize.y());
+	ColourBuffer sampleBuffer(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
 	auto buffer = colourBufferCache.find(sampleBuffer);
 
 	if (buffer.has_value()) {
@@ -973,7 +973,7 @@ OpenGL::Framebuffer RendererGL::getColourFBO() {
 
 void RendererGL::bindDepthBuffer() {
 	// Similar logic as the getColourFBO function
-	DepthBuffer sampleBuffer(depthBufferLoc, depthBufferFormat, fbSize.x(), fbSize.y());
+	DepthBuffer sampleBuffer(depthBufferLoc, depthBufferFormat, fbSize[0], fbSize[1]);
 	auto buffer = depthBufferCache.find(sampleBuffer);
 	GLuint tex;
 
