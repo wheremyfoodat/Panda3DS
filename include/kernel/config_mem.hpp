@@ -11,20 +11,16 @@ namespace ConfigMem {
 		AppMemAlloc = 0x1FF80040,
 		HardwareType = 0x1FF81004,
 		Datetime0 = 0x1FF81020,
+		WifiMac = 0x1FF81060,
 		NetworkState = 0x1FF81067,
 		LedState3D = 0x1FF81084,
 		BatteryState = 0x1FF81085,
 		Unknown1086 = 0x1FF81086,
-		HeadphonesConnectedMaybe = 0x1FF810C0 // TODO: What is actually stored here?
+		HeadphonesConnectedMaybe = 0x1FF810C0  // TODO: What is actually stored here?
 	};
 
 	// Shows what type of hardware we're running on
 	namespace HardwareCodes {
-		enum : u8 {
-			Product = 1,
-			Devboard = 2,
-			Debugger = 3,
-			Capture = 4
-		};
+		enum : u8 { Product = 1, Devboard = 2, Debugger = 3, Capture = 4 };
 	}
-}
+}  // namespace ConfigMem

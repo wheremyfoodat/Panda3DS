@@ -104,7 +104,10 @@ u16 Memory::read16(u32 vaddr) {
 	if (pointer != 0) [[likely]] {
 		return *(u16*)(pointer + offset);
 	} else {
-		Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
+		switch (vaddr) {
+			case ConfigMem::WifiMac + 4: return 0xEEFF;  // Wifi MAC: Last 2 bytes of MAC Address
+			default: Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
+		}
 	}
 }
 
@@ -130,7 +133,8 @@ u32 Memory::read32(u32 vaddr) {
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case ConfigMem::SyscoreVer: return 2;
-			case 0x1FF81000: return 0;  // TODO: Figure out what this config mem address does
+			case 0x1FF81000: return 0;                   // TODO: Figure out what this config mem address does
+			case ConfigMem::WifiMac: return 0xFF07F440;  // Wifi MAC: First 4 bytes of MAC Address
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 					Helpers::warn("VRAM read!\n");
