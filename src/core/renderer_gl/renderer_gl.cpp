@@ -725,7 +725,8 @@ void RendererGL::setupBlending() {
 		GL_CONSTANT_ALPHA,
 		GL_ONE_MINUS_CONSTANT_ALPHA,
 		GL_SRC_ALPHA_SATURATE,
-		GL_ONE};
+		GL_ONE,
+	};
 
 	if (!blendingEnabled) {
 		gl.disableBlend();
@@ -759,9 +760,10 @@ void RendererGL::setupBlending() {
 void RendererGL::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
 
-	static constexpr std::array<u32, 6> ioBases = {PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source,
-												   PICA::InternalRegs::TexEnv2Source, PICA::InternalRegs::TexEnv3Source,
-												   PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source};
+	static constexpr std::array<u32, 6> ioBases = {
+		PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
+		PICA::InternalRegs::TexEnv3Source, PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source,
+	};
 
 	u32 textureEnvSourceRegs[6];
 	u32 textureEnvOperandRegs[6];
@@ -788,7 +790,10 @@ void RendererGL::setupTextureEnvState() {
 
 void RendererGL::bindTexturesToSlots() {
 	static constexpr std::array<u32, 3> ioBases = {
-		PICA::InternalRegs::Tex0BorderColor, PICA::InternalRegs::Tex1BorderColor, PICA::InternalRegs::Tex2BorderColor};
+		PICA::InternalRegs::Tex0BorderColor,
+		PICA::InternalRegs::Tex1BorderColor,
+		PICA::InternalRegs::Tex2BorderColor,
+	};
 
 	for (int i = 0; i < 3; i++) {
 		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
