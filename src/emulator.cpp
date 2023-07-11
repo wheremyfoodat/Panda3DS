@@ -53,12 +53,12 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 	}
 
 	config.load(std::filesystem::current_path() / "config.toml");
-	reset();
+	reset(ReloadOption::NoReload);
 }
 
 Emulator::~Emulator() { config.save(std::filesystem::current_path() / "config.toml"); }
 
-void Emulator::reset() {
+void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
 	gpu.reset();
 	memory.reset();
@@ -69,8 +69,9 @@ void Emulator::reset() {
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
 
-	// If a ROM is active and we reset, reload it. This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
-	if (romType != ROMType::None && romPath.has_value()) {
+	// If a ROM is active and we reset, with the reload option enabled then reload it.
+	// This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
+	if (reload == ReloadOption::Reload && romType != ROMType::None && romPath.has_value()) {
 		bool success = loadROM(romPath.value());
 		if (!success) {
 			romType = ROMType::None;
@@ -335,7 +336,7 @@ void Emulator::runFrame() { cpu.runFrame(); }
 bool Emulator::loadROM(const std::filesystem::path& path) {
 	// Reset the emulator if we've already loaded a ROM
 	if (romType != ROMType::None) {
-		reset();
+		reset(ReloadOption::NoReload);
 	}
 
 	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
