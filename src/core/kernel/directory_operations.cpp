@@ -21,7 +21,7 @@ void Kernel::closeDirectory(u32 messagePointer, Handle directory) {
 
 	const auto p = getObject(directory, KernelObjectType::Directory);
 	if (p == nullptr) [[unlikely]] {
-		Helpers::panic("Called CloseFile on non-existent file");
+		Helpers::panic("Called CloseDirectory on non-existent directory");
 	}
 
 	p->getData<DirectorySession>()->isOpen = false;
