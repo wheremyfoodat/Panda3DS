@@ -33,6 +33,7 @@ namespace GXCommands {
 void GPUService::reset() {
 	privilegedProcess = 0xFFFFFFFF; // Set the privileged process to an invalid handle
 	interruptEvent = std::nullopt;
+	gspThreadCount = 0;
 	sharedMem = nullptr;
 }
 
@@ -77,9 +78,10 @@ void GPUService::acquireRight(u32 messagePointer) {
 // How does the shared memory handle thing work?
 void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 	// Detect if this function is called a 2nd time because we'll likely need to impl threads properly for the GSP
-	static bool beenHere = false;
-	if (beenHere) Helpers::panic("RegisterInterruptRelayQueue called a second time. Need to implement GSP threads properly");
-	beenHere = true;
+	if (gspThreadCount >= 1) {
+		Helpers::panic("RegisterInterruptRelayQueue called a second time. Need to implement GSP threads properly");
+	}
+	gspThreadCount += 1;
 
 	const u32 flags = mem.read32(messagePointer + 4);
 	const u32 eventHandle = mem.read32(messagePointer + 12);
