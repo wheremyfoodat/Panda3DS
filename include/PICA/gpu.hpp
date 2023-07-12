@@ -26,7 +26,7 @@ class GPU {
 	MAKE_LOG_FUNCTION(log, gpuLogger)
 
 	static constexpr u32 maxAttribCount = 12; // Up to 12 vertex attributes
-	static constexpr u32 vramSize = 6_MB;
+	static constexpr u32 vramSize = u32(6_MB);
 	Registers regs; // GPU internal registers
 	std::array<vec4f, 16> currentAttributes; // Vertex attributes before being passed to the shader
 

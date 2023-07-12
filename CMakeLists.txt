@@ -43,6 +43,7 @@ add_compile_definitions(SDL_MAIN_HANDLED)
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_TEST OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/SDL2)
 add_subdirectory(third_party/glad)
 add_subdirectory(third_party/toml11)
@@ -91,7 +92,7 @@ endif()
 
 set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/gl_state.cpp src/config.cpp
                  src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp src/core/memory.cpp
-                 src/httpserver.cpp
+                 src/httpserver.cpp src/stb_image_write.c
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp

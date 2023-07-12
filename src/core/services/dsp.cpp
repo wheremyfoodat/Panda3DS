@@ -143,7 +143,7 @@ std::vector<u8> DSPService::readPipe(u32 pipe, u32 size) {
 	}
 
 	std::vector<u8>& data = pipeData[pipe];
-	size = std::min<u32>(size, data.size()); // Clamp size to the maximum available data size
+	size = std::min<u32>(size, u32(data.size())); // Clamp size to the maximum available data size
 
 	if (size == 0)
 		return {};
@@ -168,7 +168,7 @@ void DSPService::readPipeIfPossible(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write16(messagePointer + 8, data.size()); // Number of bytes read
+	mem.write16(messagePointer + 8, u16(data.size())); // Number of bytes read
 }
 
 void DSPService::recvData(u32 messagePointer) {

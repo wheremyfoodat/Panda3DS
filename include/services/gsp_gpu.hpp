@@ -34,6 +34,9 @@ class GPUService {
 	u32 privilegedProcess;
 	std::optional<Handle> interruptEvent;
 
+	// Number of threads registered via RegisterInterruptRelayQueue
+	u32 gspThreadCount = 0;
+
 	MAKE_LOG_FUNCTION(log, gspGPULogger)
 	void processCommandBuffer();
 

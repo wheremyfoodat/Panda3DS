@@ -1,5 +1,5 @@
 #include "emulator.hpp"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include <stb_image_write.h>
 
 #ifdef _WIN32
@@ -53,13 +53,12 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 	}
 
 	config.load(std::filesystem::current_path() / "config.toml");
-
-	reset();
+	reset(ReloadOption::NoReload);
 }
 
 Emulator::~Emulator() { config.save(std::filesystem::current_path() / "config.toml"); }
 
-void Emulator::reset() {
+void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
 	gpu.reset();
 	memory.reset();
@@ -70,8 +69,9 @@ void Emulator::reset() {
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
 
-	// If a ROM is active and we reset, reload it. This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
-	if (romType != ROMType::None && romPath.has_value()) {
+	// If a ROM is active and we reset, with the reload option enabled then reload it.
+	// This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
+	if (reload == ReloadOption::Reload && romType != ROMType::None && romPath.has_value()) {
 		bool success = loadROM(romPath.value());
 		if (!success) {
 			romType = ROMType::None;
@@ -89,18 +89,21 @@ void Emulator::run() {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	httpServer.startHttpServer();
 #endif
-	while (running) {
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-		pollHttpServer();
-#endif
-		runFrame(); // Run 1 frame of instructions
-		gpu.display(); // Display graphics
 
+	while (running) {
 		ServiceManager& srv = kernel.getServiceManager();
 
-		// Send VBlank interrupts
-		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
-		srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+		if (romType != ROMType::None) {
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+			pollHttpServer();
+#endif
+			runFrame();     // Run 1 frame of instructions
+			gpu.display();  // Display graphics
+
+			// Send VBlank interrupts
+			srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+			srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+		}
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -113,6 +116,8 @@ void Emulator::run() {
 					return;
 
 				case SDL_KEYDOWN:
+					if (romType == ROMType::None) break;
+
 					switch (event.key.keysym.sym) {
 						case SDLK_l: srv.pressKey(Keys::A); break;
 						case SDLK_k: srv.pressKey(Keys::B); break;
@@ -153,6 +158,8 @@ void Emulator::run() {
 					break;
 
 				case SDL_KEYUP:
+					if (romType == ROMType::None) break;
+
 					switch (event.key.keysym.sym) {
 						case SDLK_l: srv.releaseKey(Keys::A); break;
 						case SDLK_k: srv.releaseKey(Keys::B); break;
@@ -185,7 +192,9 @@ void Emulator::run() {
 					}
 					break;
 
-				case SDL_MOUSEBUTTONDOWN: {
+				case SDL_MOUSEBUTTONDOWN:
+					if (romType == ROMType::None) break;
+
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						const s32 x = event.button.x;
 						const s32 y = event.button.y;
@@ -203,10 +212,12 @@ void Emulator::run() {
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
 						holdingRightClick = true;
 					}
+
 					break;
-				}
 
 				case SDL_MOUSEBUTTONUP:
+					if (romType == ROMType::None) break;
+
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						srv.releaseTouchScreen();
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
@@ -231,6 +242,7 @@ void Emulator::run() {
 
 				case SDL_CONTROLLERBUTTONUP:
 				case SDL_CONTROLLERBUTTONDOWN: {
+					if (romType == ROMType::None) break;
 					u32 key = 0;
 
 					switch (event.cbutton.button) {
@@ -255,12 +267,13 @@ void Emulator::run() {
 							srv.releaseKey(key);
 						}
 					}
+					break;
 				}
 
 				// Detect mouse motion events for gyroscope emulation
 				case SDL_MOUSEMOTION: {
 					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope rotation
-					if (!holdingRightClick) break;
+					if (romType == ROMType::None || !holdingRightClick) break;
 
 					// Relative motion since last mouse motion event
 					const s32 motionX = event.motion.xrel;
@@ -274,32 +287,46 @@ void Emulator::run() {
 					srv.setPitch(pitch);
 					break;
 				}
+
+				case SDL_DROPFILE: {
+					char* droppedDir = event.drop.file;
+
+					if (droppedDir) {
+						loadROM(droppedDir);
+						SDL_free(droppedDir);
+					}
+					break;
+				}
 			}
 		}
 
-		if (gameController != nullptr) {
-			const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
-			const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
-			constexpr s16 deadzone = 3276;
-			constexpr s16 maxValue = 0x9C;
-			constexpr s16 div = 0x8000 / maxValue;
+		// Update controller analog sticks and HID service
+		if (romType != ROMType::None) {
+			if (gameController != nullptr) {
+				const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
+				const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
+				constexpr s16 deadzone = 3276;
+				constexpr s16 maxValue = 0x9C;
+				constexpr s16 div = 0x8000 / maxValue;
 
-			// Avoid overriding the keyboard's circlepad input
-			if (abs(stickX) < deadzone && !keyboardAnalogX) {
-				srv.setCirclepadX(0);
-			} else {
-				srv.setCirclepadX(stickX / div);
+				// Avoid overriding the keyboard's circlepad input
+				if (abs(stickX) < deadzone && !keyboardAnalogX) {
+					srv.setCirclepadX(0);
+				} else {
+					srv.setCirclepadX(stickX / div);
+				}
+
+				if (abs(stickY) < deadzone && !keyboardAnalogY) {
+					srv.setCirclepadY(0);
+				} else {
+					srv.setCirclepadY(-(stickY / div));
+				}
 			}
 
-			if (abs(stickY) < deadzone && !keyboardAnalogY) {
-				srv.setCirclepadY(0);
-			} else {
-				srv.setCirclepadY(-(stickY / div));
-			}
+			srv.updateInputs(cpu.getTicks());
 		}
 
 		// Update inputs in the HID module
-		srv.updateInputs(cpu.getTicks());
 		SDL_GL_SwapWindow(window);
 	}
 }
@@ -307,6 +334,11 @@ void Emulator::run() {
 void Emulator::runFrame() { cpu.runFrame(); }
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
+	// Reset the emulator if we've already loaded a ROM
+	if (romType != ROMType::None) {
+		reset(ReloadOption::NoReload);
+	}
+
 	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
 	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
 	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart
@@ -326,7 +358,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	kernel.initializeFS();
 	auto extension = path.extension();
-	bool success; // Tracks if we loaded the ROM successfully
+	bool success;  // Tracks if we loaded the ROM successfully
 
 	if (extension == ".elf" || extension == ".axf")
 		success = loadELF(path);
@@ -390,26 +422,24 @@ bool Emulator::loadELF(std::ifstream& file) {
 	if (entrypoint.value() & 1) {
 		Helpers::panic("Misaligned ELF entrypoint. TODO: Check if ELFs can boot in thumb mode");
 	}
+
 	return true;
 }
 
 // Reset our graphics context and initialize the GPU's graphics context
 void Emulator::initGraphicsContext() {
-	gl.reset(); // TODO (For when we have multiple backends): Only do this if we are using OpenGL
+	gl.reset();  // TODO (For when we have multiple backends): Only do this if we are using OpenGL
 	gpu.initGraphicsContext();
 }
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 void Emulator::pollHttpServer() {
 	std::scoped_lock lock(httpServer.actionMutex);
-	
 	ServiceManager& srv = kernel.getServiceManager();
-	
+
 	if (httpServer.pendingAction) {
 		switch (httpServer.action) {
-			case HttpAction::Screenshot:
-				gpu.screenshot(HttpServer::httpServerScreenshotPath);
-				break;
+			case HttpAction::Screenshot: gpu.screenshot(HttpServer::httpServerScreenshotPath); break;
 
 			case HttpAction::PressKey:
 				if (httpServer.pendingKey != 0) {

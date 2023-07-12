@@ -1,9 +1,11 @@
 #include "memory.hpp"
+
+#include <cassert>
+#include <chrono>  // For time since epoch
+#include <ctime>
+
 #include "config_mem.hpp"
 #include "resource_limits.hpp"
-#include <cassert>
-#include <chrono> // For time since epoch
-#include <ctime>
 
 using namespace KernelMemoryTypes;
 
@@ -13,15 +15,15 @@ Memory::Memory(u64& cpuTicks) : cpuTicks(cpuTicks) {
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
-	memoryInfo.reserve(32); // Pre-allocate some room for memory allocation info to avoid dynamic allocs
+	memoryInfo.reserve(32);  // Pre-allocate some room for memory allocation info to avoid dynamic allocs
 }
 
 void Memory::reset() {
 	// Unallocate all memory
 	memoryInfo.clear();
 	usedFCRAMPages.reset();
-	usedUserMemory = 0_MB;
-	usedSystemMemory = 0_MB;
+	usedUserMemory = u32(0_MB);
+	usedSystemMemory = u32(0_MB);
 
 	for (u32 i = 0; i < totalPageCount; i++) {
 		readTable[i] = 0;
@@ -35,7 +37,7 @@ void Memory::reset() {
 	}
 
 	u32 basePaddrForTLS = tlsBaseOpt.value();
-	for (int i = 0; i < appResourceLimits.maxThreads; i++) {
+	for (u32 i = 0; i < appResourceLimits.maxThreads; i++) {
 		u32 vaddr = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
 		allocateMemory(vaddr, basePaddrForTLS, VirtualAddrs::TLSSize, true);
 		basePaddrForTLS += VirtualAddrs::TLSSize;
@@ -48,8 +50,8 @@ void Memory::reset() {
 	}
 
 	// Map DSP RAM as R/W at [0x1FF00000, 0x1FF7FFFF]
-	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize; // Number of DSP RAM pages
-	constexpr u32 initialPage = VirtualAddrs::DSPMemStart / pageSize; // First page of DSP RAM in the virtual address space
+	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize;               // Number of DSP RAM pages
+	constexpr u32 initialPage = VirtualAddrs::DSPMemStart / pageSize;  // First page of DSP RAM in the virtual address space
 
 	for (u32 i = 0; i < dspRamPages; i++) {
 		auto pointer = uintptr_t(&dspRam[i * pageSize]);
@@ -67,7 +69,7 @@ bool Memory::allocateMainThreadStack(u32 size) {
 	}
 
 	const u32 stackBottom = VirtualAddrs::StackTop - size;
-	std::optional<u32> result = allocateMemory(stackBottom, basePaddr.value(), size, true); // Should never be nullopt
+	std::optional<u32> result = allocateMemory(stackBottom, basePaddr.value(), size, true);  // Should never be nullopt
 	return result.has_value();
 }
 
@@ -78,18 +80,17 @@ u8 Memory::read8(u32 vaddr) {
 	uintptr_t pointer = readTable[page];
 	if (pointer != 0) [[likely]] {
 		return *(u8*)(pointer + offset);
-	}
-	else {
+	} else {
 		switch (vaddr) {
 			case ConfigMem::BatteryState: return getBatteryState(true, true, BatteryLevel::FourBars);
 			case ConfigMem::EnvInfo: return envInfo;
 			case ConfigMem::HardwareType: return ConfigMem::HardwareCodes::Product;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
 			case ConfigMem::KernelVersionMajor: return u8(kernelVersion >> 8);
-			case ConfigMem::LedState3D: return 1; // Report the 3D LED as always off (non-zero) for now
-			case ConfigMem::NetworkState: return 2; // Report that we've got an internet connection
+			case ConfigMem::LedState3D: return 1;    // Report the 3D LED as always off (non-zero) for now
+			case ConfigMem::NetworkState: return 2;  // Report that we've got an internet connection
 			case ConfigMem::HeadphonesConnectedMaybe: return 0;
-			case ConfigMem::Unknown1086: return 1; // It's unknown what this is but some games want it to be 1
+			case ConfigMem::Unknown1086: return 1;  // It's unknown what this is but some games want it to be 1
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -102,9 +103,11 @@ u16 Memory::read16(u32 vaddr) {
 	uintptr_t pointer = readTable[page];
 	if (pointer != 0) [[likely]] {
 		return *(u16*)(pointer + offset);
-	}
-	else {
-		Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
+	} else {
+		switch (vaddr) {
+			case ConfigMem::WifiMac + 4: return 0xEEFF;  // Wifi MAC: Last 2 bytes of MAC Address
+			default: Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
+		}
 	}
 }
 
@@ -117,18 +120,21 @@ u32 Memory::read32(u32 vaddr) {
 		return *(u32*)(pointer + offset);
 	} else {
 		switch (vaddr) {
-			case ConfigMem::Datetime0: return u32(timeSince3DSEpoch()); // ms elapsed since Jan 1 1900, bottom 32 bits
-			case ConfigMem::Datetime0 + 4: return u32(timeSince3DSEpoch() >> 32); // top 32 bits
+			case ConfigMem::Datetime0: return u32(timeSince3DSEpoch());  // ms elapsed since Jan 1 1900, bottom 32 bits
+			case ConfigMem::Datetime0 + 4:
+				return u32(timeSince3DSEpoch() >> 32);  // top 32 bits
 			// Ticks since time was last updated. For now we return the current tick count
 			case ConfigMem::Datetime0 + 8: return u32(cpuTicks);
 			case ConfigMem::Datetime0 + 12: return u32(cpuTicks >> 32);
-			case ConfigMem::Datetime0 + 16: return 0xFFB0FF0; // Unknown, set by PTM
-			case ConfigMem::Datetime0 + 20: case ConfigMem::Datetime0 + 24: case ConfigMem::Datetime0 + 28:
-				return 0; // Set to 0 by PTM
+			case ConfigMem::Datetime0 + 16: return 0xFFB0FF0;  // Unknown, set by PTM
+			case ConfigMem::Datetime0 + 20:
+			case ConfigMem::Datetime0 + 24:
+			case ConfigMem::Datetime0 + 28: return 0;  // Set to 0 by PTM
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case ConfigMem::SyscoreVer: return 2;
-			case 0x1FF81000: return 0; // TODO: Figure out what this config mem address does
+			case 0x1FF81000: return 0;                   // TODO: Figure out what this config mem address does
+			case ConfigMem::WifiMac: return 0xFF07F440;  // Wifi MAC: First 4 bytes of MAC Address
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 					Helpers::warn("VRAM read!\n");
@@ -154,13 +160,12 @@ void Memory::write8(u32 vaddr, u8 value) {
 	uintptr_t pointer = writeTable[page];
 	if (pointer != 0) [[likely]] {
 		*(u8*)(pointer + offset) = value;
-	}
-	else {
+	} else {
 		// VRAM write
 		if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 			// TODO: Invalidate renderer caches here
 			vram[vaddr - VirtualAddrs::VramStart] = value;
-		} 
+		}
 
 		else {
 			Helpers::panic("Unimplemented 8-bit write, addr: %08X, val: %02X", vaddr, value);
@@ -219,11 +224,13 @@ void* Memory::getWritePointer(u32 address) {
 std::string Memory::readString(u32 address, u32 maxSize) {
 	std::string string;
 	string.reserve(maxSize);
-	
+
 	for (std::size_t i = 0; i < maxSize; ++i) {
 		char c = read8(address++);
-		if (c == '\0')
+		if (c == '\0') {
 			break;
+		}
+
 		string.push_back(c);
 	}
 	string.shrink_to_fit();
@@ -233,12 +240,9 @@ std::string Memory::readString(u32 address, u32 maxSize) {
 
 // Return a pointer to the linear heap vaddr based on the kernel ver, because it needed to be moved
 // thanks to the New 3DS having more FCRAM
-u32 Memory::getLinearHeapVaddr() {
-	return (kernelVersion < 0x22C) ? VirtualAddrs::LinearHeapStartOld : VirtualAddrs::LinearHeapStartNew;
-}
+u32 Memory::getLinearHeapVaddr() { return (kernelVersion < 0x22C) ? VirtualAddrs::LinearHeapStartOld : VirtualAddrs::LinearHeapStartNew; }
 
-std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r, bool w, bool x,
-	bool adjustAddrs, bool isMap) {
+std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r, bool w, bool x, bool adjustAddrs, bool isMap) {
 	// Kernel-allocated memory & size must always be aligned to a page boundary
 	// Additionally assert we don't OoM and that we don't try to allocate physical FCRAM past what's available to userland
 	// If we're mapping there's no fear of OoM, because we're not really allocating memory, just binding vaddrs to specific paddrs
@@ -259,8 +263,9 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 	// Non-linear allocation needs special handling
 	if (paddr == 0 && adjustAddrs) {
 		std::optional<u32> newPaddr = findPaddr(size);
-		if (!newPaddr.has_value())
+		if (!newPaddr.has_value()) {
 			Helpers::panic("Failed to find paddr");
+		}
 
 		paddr = newPaddr.value();
 		assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
@@ -281,12 +286,13 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 		}
 	}
 
-	if (!isMap)
+	if (!isMap) {
 		usedUserMemory += size;
+	}
 
 	// Do linear mapping
 	u32 virtualPage = vaddr >> pageShift;
-	u32 physPage = paddr >> pageShift; // TODO: Special handle when non-linear mapping is necessary
+	u32 physPage = paddr >> pageShift;  // TODO: Special handle when non-linear mapping is necessary
 	for (u32 i = 0; i < neededPageCount; i++) {
 		if (r) {
 			readTable[virtualPage] = uintptr_t(&fcram[physPage * pageSize]);
@@ -320,11 +326,10 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 	u32 counter = 0;
 
 	for (u32 i = 0; i < FCRAM_APPLICATION_PAGE_COUNT; i++) {
-		if (usedFCRAMPages[i]) { // Page is occupied already, go to new candidate
+		if (usedFCRAMPages[i]) {  // Page is occupied already, go to new candidate
 			candidatePage = i + 1;
 			counter = 0;
-		}
-		else { // The paddr we're testing has 1 more free page
+		} else {  // The paddr we're testing has 1 more free page
 			counter++;
 			// Check if there's enough free memory to use this page
 			// We use == instead of >= because some software does 0-byte allocations
@@ -351,12 +356,12 @@ u32 Memory::allocateSysMemory(u32 size) {
 		Helpers::panic("Memory::allocateSysMemory: Overflowed OS FCRAM");
 	}
 
-	const u32 pageCount = size / pageSize; // Number of pages that will be used up
-	const u32 startIndex = sysFCRAMIndex() + usedSystemMemory; // Starting FCRAM index
+	const u32 pageCount = size / pageSize;                      // Number of pages that will be used up
+	const u32 startIndex = sysFCRAMIndex() + usedSystemMemory;  // Starting FCRAM index
 	const u32 startingPage = startIndex / pageSize;
 
 	for (u32 i = 0; i < pageCount; i++) {
-		if (usedFCRAMPages[startingPage + i]) // Also a theoretically unreachable panic for safety
+		if (usedFCRAMPages[startingPage + i])  // Also a theoretically unreachable panic for safety
 			Helpers::panic("Memory::reserveMemory: Trying to reserve already reserved memory");
 		usedFCRAMPages[startingPage + i] = true;
 	}
@@ -419,7 +424,7 @@ void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
 	// Should theoretically be unreachable, only here for safety purposes
 	assert(isAligned(destAddress) && isAligned(sourceAddress) && isAligned(size));
 
-	const u32 pageCount = size / pageSize; // How many pages we need to mirror
+	const u32 pageCount = size / pageSize;  // How many pages we need to mirror
 	for (u32 i = 0; i < pageCount; i++) {
 		// Redo the shift here to "properly" handle wrapping around the address space instead of reading OoB
 		const u32 sourcePage = sourceAddress / pageSize;
@@ -437,16 +442,16 @@ void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
 u64 Memory::timeSince3DSEpoch() {
 	using namespace std::chrono;
 
-	std::time_t rawTime = std::time(nullptr); // Get current UTC time
-	auto localTime = std::localtime(&rawTime); // Convert to local time
+	std::time_t rawTime = std::time(nullptr);   // Get current UTC time
+	auto localTime = std::localtime(&rawTime);  // Convert to local time
 
-	bool daylightSavings = localTime->tm_isdst > 0; // Get if time includes DST
+	bool daylightSavings = localTime->tm_isdst > 0;  // Get if time includes DST
 	localTime = std::gmtime(&rawTime);
 
 	// Use gmtime + mktime to calculate difference between local time and UTC
 	auto timezoneDifference = rawTime - std::mktime(localTime);
 	if (daylightSavings) {
-		timezoneDifference += 60ull * 60ull; // Add 1 hour (60 seconds * 60 minutes)
+		timezoneDifference += 60ull * 60ull;  // Add 1 hour (60 seconds * 60 minutes)
 	}
 
 	// seconds between Jan 1 1900 and Jan 1 1970
