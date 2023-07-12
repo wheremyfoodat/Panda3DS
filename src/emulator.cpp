@@ -7,8 +7,8 @@
 
 // Gently ask to use the discrete Nvidia/AMD GPU if possible instead of integrated graphics
 extern "C" {
-_declspec(dllexport) DWORD NvOptimusEnablement = 1;
-_declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
+__declspec(dllexport) DWORD NvOptimusEnablement = 1;
+__declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
