@@ -35,7 +35,6 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 	const u32 entryCount = mem.read32(messagePointer + 4);
 	const u32 outPointer = mem.read32(messagePointer + 12);
 	logFileIO("Directory::Read (handle = %X, entry count = %d, out pointer = %08X)\n", directory, entryCount, outPointer);
-	Helpers::panicDev("Unimplemented FsDir::Read");
 	
 	const auto p = getObject(directory, KernelObjectType::Directory);
 	if (p == nullptr) [[unlikely]] {
@@ -56,7 +55,6 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 		std::filesystem::path extension = path.extension();
 		std::filesystem::path relative = path.lexically_relative(dirPath);
 		bool isDirectory = std::filesystem::is_directory(relative);
-		std::cout << "Relative path: " << relative << "\nIs directory: " << isDirectory << "\n";
 
 		std::u16string nameU16 = relative.u16string();
 		std::string nameString = relative.string();
@@ -76,6 +74,8 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 		mem.write16(utfPointer, 0); // Null terminate the UTF16 name
 
 		for (auto c : nameString) {
+			//if (c == '.') continue; // Ignore initial dot
+
 			mem.write8(namePointer, u8(c));
 			namePointer += sizeof(u8);
 		}
