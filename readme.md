@@ -48,7 +48,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_USER_BUILD=ON  # Set up compilers e
 Simply drag and drop a ROM to the executable if supported, or invoke the executable from the command line with the path to the ROM as the first argument like: `Alber.exe MyGame.3ds`
 <br>
 Panda3DS can load ROMs in the following formats:
-- .3ds
+- .3ds/.cci
 - .cxi/.app
 - .elf/.axf
 
