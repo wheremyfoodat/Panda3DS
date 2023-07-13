@@ -118,6 +118,13 @@ void IRUserService::requireConnection(u32 messagePointer) {
 void IRUserService::disconnect(u32 messagePointer) {
 	log("IR:USER: Disconnect\n");
 
+	if (sharedMemory.has_value()) {
+		u32 sharedMemAddress = sharedMemory.value().addr;
+
+		mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), 0);
+		mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, isConnected), 0);
+	}
+
 	// If there's a connected device, disconnect it and trigger the status event
 	if (connectedDevice) {
 		connectedDevice = false;
