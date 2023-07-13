@@ -56,6 +56,8 @@ void IRUserService::initializeIrnopShared(u32 messagePointer) {
 
 	// Set the initialized byte in shared mem to 1
 	mem.write8(memoryBlock->addr + offsetof(SharedMemoryStatus, isInitialized), 1);
+	mem.write64(memoryBlock->addr + 0x10, 0); // Initialize the receive buffer info to all 0s
+	mem.write64(memoryBlock->addr + 0x18, 0);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x18, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -97,7 +99,7 @@ void IRUserService::requireConnection(u32 messagePointer) {
 	if (sharedMemory.has_value()) {
 		u32 sharedMemAddress = sharedMemory.value().addr;
 
-		// What even is this device meant to be.
+		// Seems to be the CirclePad Pro ID
 		if (deviceID == 1) {
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), 2);
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionRole), 2);
