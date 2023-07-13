@@ -11,6 +11,10 @@
 class Kernel;
 
 class IRUserService {
+	enum class DeviceID : u8 {
+		CirclePadPro = 1,
+	};
+
 	Handle handle = KernelHandles::IR_USER;
 	Memory& mem;
 	Kernel& kernel;
@@ -20,10 +24,16 @@ class IRUserService {
 	void disconnect(u32 messagePointer);
 	void finalizeIrnop(u32 messagePointer);
 	void getConnectionStatusEvent(u32 messagePointer);
+	void getReceiveEvent(u32 messagePointer);
 	void initializeIrnopShared(u32 messagePointer);
 	void requireConnection(u32 messagePointer);
+	void sendIrnop(u32 messagePointer);
 
-	std::optional<Handle> connectionStatusEvent = std::nullopt;
+	using IREvent = std::optional<Handle>;
+
+	IREvent connectionStatusEvent = std::nullopt;
+	IREvent receiveEvent = std::nullopt;
+
 	std::optional<MemoryBlock> sharedMemory = std::nullopt;
 	bool connectedDevice = false;
 

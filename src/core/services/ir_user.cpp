@@ -10,13 +10,16 @@ namespace IRUserCommands {
 		FinalizeIrnop = 0x00020000,
 		RequireConnection = 0x00060040,
 		Disconnect = 0x00090000,
+		GetReceiveEvent = 0x000A0000,
 		GetConnectionStatusEvent = 0x000C0000,
+		SendIrnop = 0x000D0042, 
 		InitializeIrnopShared = 0x00180182
 	};
 }
 
 void IRUserService::reset() {
 	connectionStatusEvent = std::nullopt;
+	receiveEvent = std::nullopt;
 	sharedMemory = std::nullopt;
 	connectedDevice = false;
 }
@@ -26,9 +29,11 @@ void IRUserService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case IRUserCommands::Disconnect: disconnect(messagePointer); break;
 		case IRUserCommands::FinalizeIrnop: finalizeIrnop(messagePointer); break;
+		case IRUserCommands::GetReceiveEvent: getReceiveEvent(messagePointer); break;
 		case IRUserCommands::GetConnectionStatusEvent: getConnectionStatusEvent(messagePointer); break;
 		case IRUserCommands::InitializeIrnopShared: initializeIrnopShared(messagePointer); break;
 		case IRUserCommands::RequireConnection: requireConnection(messagePointer); break;
+		case IRUserCommands::SendIrnop: sendIrnop(messagePointer); break;
 		default: Helpers::panic("ir:USER service requested. Command: %08X\n", command);
 	}
 }
@@ -84,11 +89,26 @@ void IRUserService::getConnectionStatusEvent(u32 messagePointer) {
 	if (!connectionStatusEvent.has_value()) {
 		connectionStatusEvent = kernel.makeEvent(ResetType::OneShot);
 	}
+	//kernel.signalEvent(connectionStatusEvent.value()); // ??????????????
 
 	mem.write32(messagePointer, IPC::responseHeader(0xC, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	// TOOD: Descriptor here
 	mem.write32(messagePointer + 12, connectionStatusEvent.value());
+}
+
+void IRUserService::getReceiveEvent(u32 messagePointer) {
+	log("IR:USER: GetReceiveEvent\n");
+
+	if (!receiveEvent.has_value()) {
+		receiveEvent = kernel.makeEvent(ResetType::OneShot);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0xA, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0x40000000);
+	// TOOD: Descriptor here
+	mem.write32(messagePointer + 12, receiveEvent.value());
 }
 
 void IRUserService::requireConnection(u32 messagePointer) {
@@ -99,9 +119,8 @@ void IRUserService::requireConnection(u32 messagePointer) {
 	if (sharedMemory.has_value()) {
 		u32 sharedMemAddress = sharedMemory.value().addr;
 
-		// Seems to be the CirclePad Pro ID
-		if (deviceID == 1) {
-			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), 2);
+		if (deviceID == u8(DeviceID::CirclePadPro)) {
+			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), 2); // Citra uses 2 here but only 1 works??
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionRole), 2);
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, isConnected), 1);
 
@@ -117,6 +136,12 @@ void IRUserService::requireConnection(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void IRUserService::sendIrnop(u32 messagePointer) {
+	Helpers::panic("IR:USER: SendIrnop\n");
+
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
