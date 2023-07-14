@@ -95,14 +95,29 @@ KernelObject* Kernel::getProcessFromPID(Handle handle) {
 }
 
 void Kernel::deleteObjectData(KernelObject& object) {
-	using enum KernelObjectType;
-
-	// Resource limit and thread objects do not allocate heap data, so we don't delete anything
-	if (object.data == nullptr || object.type == ResourceLimit || object.type == Thread) {
+	if (object.data == nullptr) {
 		return;
 	}
 
-	delete object.data;
+	// Resource limit and thread objects do not allocate heap data, so we don't delete anything
+
+	switch (object.type) {
+		case KernelObjectType::AddressArbiter: delete object.getData<AddressArbiter>(); return;
+		case KernelObjectType::Archive: delete object.getData<ArchiveSession>(); return;
+		case KernelObjectType::Directory: delete object.getData<DirectorySession>(); return;
+		case KernelObjectType::Event: delete object.getData<Event>(); return;
+		case KernelObjectType::File: delete object.getData<FileSession>(); return;
+		case KernelObjectType::MemoryBlock: delete object.getData<MemoryBlock>(); return;
+		case KernelObjectType::Port: delete object.getData<Port>(); return;
+		case KernelObjectType::Process: delete object.getData<Process>(); return;
+		case KernelObjectType::ResourceLimit: Helpers::panic("not known to allocate heap data"); return;
+		case KernelObjectType::Session: delete object.getData<Session>(); return;
+		case KernelObjectType::Mutex: delete object.getData<Mutex>(); return;
+		case KernelObjectType::Semaphore: delete object.getData<Semaphore>(); return;
+		case KernelObjectType::Thread: Helpers::panic("not known to allocate heap data"); return;
+		case KernelObjectType::Dummy: Helpers::panic("not known to allocate heap data"); return;
+		default: [[unlikely]] Helpers::panic("unknown object type"); return;
+	}
 }
 
 void Kernel::reset() {
