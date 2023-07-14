@@ -110,7 +110,7 @@ void Kernel::deleteObjectData(KernelObject& object) {
 		case KernelObjectType::MemoryBlock: delete object.getData<MemoryBlock>(); return;
 		case KernelObjectType::Port: delete object.getData<Port>(); return;
 		case KernelObjectType::Process: delete object.getData<Process>(); return;
-		case KernelObjectType::ResourceLimit: Helpers::panic("not known to allocate heap data"); return;
+		case KernelObjectType::ResourceLimit: return;
 		case KernelObjectType::Session: delete object.getData<Session>(); return;
 		case KernelObjectType::Mutex: delete object.getData<Mutex>(); return;
 		case KernelObjectType::Semaphore: delete object.getData<Semaphore>(); return;
