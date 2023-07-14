@@ -114,9 +114,9 @@ void Kernel::deleteObjectData(KernelObject& object) {
 		case KernelObjectType::Session: delete object.getData<Session>(); return;
 		case KernelObjectType::Mutex: delete object.getData<Mutex>(); return;
 		case KernelObjectType::Semaphore: delete object.getData<Semaphore>(); return;
-		case KernelObjectType::Thread: Helpers::panic("not known to allocate heap data"); return;
-		case KernelObjectType::Dummy: Helpers::panic("not known to allocate heap data"); return;
-		default: [[unlikely]] Helpers::panic("unknown object type"); return;
+		case KernelObjectType::Thread: return;
+		case KernelObjectType::Dummy: return;
+		default: [[unlikely]] Helpers::warn("unknown object type"); return;
 	}
 }
 
