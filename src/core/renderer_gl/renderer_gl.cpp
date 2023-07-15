@@ -707,8 +707,9 @@ void RendererGL::setupBlending() {
 	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
 
 	// Map of PICA blending equations to OpenGL blending equations. The unused blending equations are equivalent to equation 0 (add)
-	static constexpr std::array<GLenum, 8> blendingEquations = {GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX, GL_FUNC_ADD,
-																GL_FUNC_ADD, GL_FUNC_ADD};
+	static constexpr std::array<GLenum, 8> blendingEquations = {
+		GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX, GL_FUNC_ADD, GL_FUNC_ADD, GL_FUNC_ADD,
+	};
 
 	// Map of PICA blending funcs to OpenGL blending funcs. Func = 15 is undocumented and stubbed to GL_ONE for now
 	static constexpr std::array<GLenum, 16> blendingFuncs = {

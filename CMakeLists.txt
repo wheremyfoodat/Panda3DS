@@ -19,7 +19,7 @@ endif()
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
-option(PANDA3DS_ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
+option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
@@ -93,7 +93,7 @@ endif()
 
 set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
-				 src/core/memory.cpp src/renderer.cpp src/httpserver.cpp src/stb_image_write.c src/httpserver.cpp
+				 src/core/memory.cpp src/renderer.cpp src/httpserver.cpp src/stb_image_write.c
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -158,8 +158,6 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
 )
-
-source_group("Header Files\\Core" FILES ${HEADER_FILES})
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
 source_group("Source Files\\Core\\Crypto" FILES ${CRYPTO_SOURCE_FILES})
 source_group("Source Files\\Core\\Filesystem" FILES ${FS_SOURCE_FILES})
@@ -169,10 +167,36 @@ source_group("Source Files\\Core\\Services" FILES ${SERVICE_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
-add_executable(Alber
-	${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
-	${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES}
-)
+set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with the GL renderer
+
+if(ENABLE_OPENGL)
+	add_subdirectory(third_party/glad)
+
+	set(RENDERER_GL_INCLUDE_FILES include/renderer_gl/opengl.hpp
+		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
+		include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
+		include/renderer_gl/gl_state.hpp
+	)
+
+	set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
+		src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
+		src/core/renderer_gl/gl_state.cpp
+	)
+
+    set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
+    source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
+endif()
+
+source_group("Header Files\\Core" FILES ${HEADER_FILES})
+set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
+	${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+
+if(ENABLE_OPENGL)
+    # Add the OpenGL source files to ALL_SOURCES
+    set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_GL_SOURCE_FILES})
+endif()
+
+add_executable(Alber ${ALL_SOURCES})
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
   set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -180,30 +204,13 @@ endif()
 
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp)
 
-if(PANDA3DS_ENABLE_OPENGL)
-	add_subdirectory(third_party/glad)
-
-	target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
-
-	set(RENDERER_GL_INCLUDE_FILES include/opengl.hpp
-		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
-		include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
-		include/renderer_gl/gl_state.hpp
-	)
-	set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
-		src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
-		src/core/renderer_gl/gl_state.cpp
-	)
-	source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
-
-	target_sources(Alber PRIVATE ${RENDERER_GL_SOURCE_FILES})
-
-	target_link_libraries(Alber PRIVATE glad)
-
+if(ENABLE_OPENGL)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
+    target_link_libraries(Alber PRIVATE glad)
 endif()
 
 if(GPU_DEBUG_INFO)
-  target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
+    target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
 endif()
 
 if(ENABLE_USER_BUILD)
