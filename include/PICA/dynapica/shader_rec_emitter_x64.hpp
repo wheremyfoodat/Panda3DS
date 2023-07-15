@@ -40,6 +40,15 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	bool haveAVX = false;     // Shows if the CPU supports AVX (NOT AVX2, NOT AVX512. Regular AVX)
 	bool haveFMA3 = false;    // Shows if the CPU supports FMA3
 
+	// Shows whether the loaded shader has any log2 and exp2 instructions
+	bool codeHasLog2 = false;
+	bool codeHasExp2 = false;
+	
+	Xbyak::Label log2Func, exp2Func;
+	Xbyak::Label emitLog2Func();
+	Xbyak::Label emitExp2Func();
+	Xbyak::util::Cpu cpuCaps;
+
 	// Compile all instructions from [current recompiler PC, end)
 	void compileUntil(const PICAShader& shaderUnit, u32 endPC);
 	// Compile instruction "instr"
@@ -49,8 +58,10 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 		const u32 opcode = instruction >> 26;
 		return (opcode == ShaderOpcodes::CALL) || (opcode == ShaderOpcodes::CALLC) || (opcode == ShaderOpcodes::CALLU);
 	}
+
 	// Scan the shader code for call instructions to fill up the returnPCs vector before starting compilation
-	void scanForCalls(const PICAShader& shaderUnit);
+	// We also scan for log2/exp2 instructions to see whether to emit the relevant functions
+	void scanCode(const PICAShader& shaderUnit);
 
 	// Load register with number "srcReg" indexed by index "idx" into the xmm register "reg"
 	template <int sourceIndex>
@@ -113,13 +124,13 @@ public:
 
 	// Initialize our emitter with "allocSize" bytes of RWX memory
 	ShaderEmitter() : Xbyak::CodeGenerator(allocSize) {
-		const auto cpu = Xbyak::util::Cpu();
+		cpuCaps = Xbyak::util::Cpu();
 
-		haveSSE4_1 = cpu.has(Xbyak::util::Cpu::tSSE41);
-		haveAVX = cpu.has(Xbyak::util::Cpu::tAVX);
-		haveFMA3 = cpu.has(Xbyak::util::Cpu::tFMA);
+		haveSSE4_1 = cpuCaps.has(Xbyak::util::Cpu::tSSE41);
+		haveAVX = cpuCaps.has(Xbyak::util::Cpu::tAVX);
+		haveFMA3 = cpuCaps.has(Xbyak::util::Cpu::tFMA);
 
-		if (!cpu.has(Xbyak::util::Cpu::tSSE3)) {
+		if (!cpuCaps.has(Xbyak::util::Cpu::tSSE3)) {
 			Helpers::panic("This CPU does not support SSE3. Please use the shader interpreter instead");
 		}
 	}
