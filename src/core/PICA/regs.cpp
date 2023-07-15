@@ -134,7 +134,10 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 		}
 
-		case VertexFloatUniformIndex: shaderUnit.vs.setFloatUniformIndex(value); break;
+		case VertexFloatUniformIndex: {
+			shaderUnit.vs.setFloatUniformIndex(value);
+			break;
+		}
 
 		case VertexFloatUniformData0:
 		case VertexFloatUniformData1:
@@ -143,7 +146,10 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case VertexFloatUniformData4:
 		case VertexFloatUniformData5:
 		case VertexFloatUniformData6:
-		case VertexFloatUniformData7: shaderUnit.vs.uploadFloatUniform(value); break;
+		case VertexFloatUniformData7: {
+			shaderUnit.vs.uploadFloatUniform(value);
+			break;
+		}
 
 		case FixedAttribIndex:
 			fixedAttribCount = 0;
@@ -208,7 +214,10 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 							switch (primType) {
 								// Triangle or geometry primitive. Draw a triangle and discard all vertices
 								case 0:
-								case 3: immediateModeVertIndex = 0; break;
+								case 3: {
+									immediateModeVertIndex = 0;
+									break;
+								}
 
 								// Triangle strip. Draw triangle, discard first vertex and keep the last 2
 								case 1:
@@ -233,7 +242,10 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 			break;
 
-		case VertexShaderOpDescriptorIndex: shaderUnit.vs.setOpDescriptorIndex(value); break;
+		case VertexShaderOpDescriptorIndex: {
+			shaderUnit.vs.setOpDescriptorIndex(value);
+			break;
+		}
 
 		case VertexShaderOpDescriptorData0:
 		case VertexShaderOpDescriptorData1:
@@ -242,14 +254,23 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case VertexShaderOpDescriptorData4:
 		case VertexShaderOpDescriptorData5:
 		case VertexShaderOpDescriptorData6:
-		case VertexShaderOpDescriptorData7: shaderUnit.vs.uploadDescriptor(value); break;
+		case VertexShaderOpDescriptorData7: {
+			shaderUnit.vs.uploadDescriptor(value);
+			break;
+		}
 
-		case VertexBoolUniform: shaderUnit.vs.boolUniform = value & 0xffff; break;
+		case VertexBoolUniform: {
+			shaderUnit.vs.boolUniform = value & 0xffff;
+			break;
+		}
 
 		case VertexIntUniform0:
 		case VertexIntUniform1:
 		case VertexIntUniform2:
-		case VertexIntUniform3: shaderUnit.vs.uploadIntUniform(index - VertexIntUniform0, value); break;
+		case VertexIntUniform3: {
+			shaderUnit.vs.uploadIntUniform(index - VertexIntUniform0, value);
+			break;
+		}
 
 		case VertexShaderData0:
 		case VertexShaderData1:
@@ -258,9 +279,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case VertexShaderData4:
 		case VertexShaderData5:
 		case VertexShaderData6:
-		case VertexShaderData7: shaderUnit.vs.uploadWord(value); break;
+		case VertexShaderData7: {
+			shaderUnit.vs.uploadWord(value);
+			break;
+		}
 
-		case VertexShaderEntrypoint: shaderUnit.vs.entrypoint = value & 0xffff; break;
+		case VertexShaderEntrypoint: {
+			shaderUnit.vs.entrypoint = value & 0xffff;
+			break;
+		}
 
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();

@@ -1,8 +1,6 @@
 #include "emulator.hpp"
 
-#include <stb_image_write.h>
-
-#if PANDA3DS_ENABLE_OPENGL
+#ifdef PANDA3DS_ENABLE_OPENGL
 #include <glad/gl.h>
 #endif
 
@@ -27,7 +25,7 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
 	}
 
-#if PANDA3DS_ENABLE_OPENGL
+#ifdef PANDA3DS_ENABLE_OPENGL
 	// Request OpenGL 4.1 Core (Max available on MacOS)
 	// MacOS gets mad if we don't explicitly demand a core profile
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);

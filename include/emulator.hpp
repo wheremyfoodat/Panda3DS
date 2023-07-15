@@ -17,7 +17,12 @@
 #include "httpserver.hpp"
 #endif
 
-enum class ROMType { None, ELF, NCSD, CXI };
+enum class ROMType {
+	None,
+	ELF,
+	NCSD,
+	CXI,
+};
 
 class Emulator {
 	CPU cpu;
@@ -29,7 +34,7 @@ class Emulator {
 	EmulatorConfig config;
 	SDL_Window* window;
 
-#if PANDA3DS_ENABLE_OPENGL
+#ifdef PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
 #endif
 

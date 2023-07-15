@@ -49,6 +49,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 		const u32 opcode = instruction >> 26;
 		return (opcode == ShaderOpcodes::CALL) || (opcode == ShaderOpcodes::CALLC) || (opcode == ShaderOpcodes::CALLU);
 	}
+
 	// Scan the shader code for call instructions to fill up the returnPCs vector before starting compilation
 	void scanForCalls(const PICAShader& shaderUnit);
 
@@ -106,9 +107,11 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	MAKE_LOG_FUNCTION(log, shaderJITLogger)
 
   public:
-	using InstructionCallback = const void (*)(PICAShader& shaderUnit);  // Callback type used for instructions
+	// Callback type used for instructions
+	using InstructionCallback = const void (*)(PICAShader& shaderUnit);
 	// Callback type used for the JIT prologue. This is what the caller will call
 	using PrologueCallback = const void (*)(PICAShader& shaderUnit, InstructionCallback cb);
+
 	PrologueCallback prologueCb = nullptr;
 
 	// Initialize our emitter with "allocSize" bytes of RWX memory

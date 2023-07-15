@@ -103,7 +103,9 @@ class GPU {
 
 	// TODO: Emulate the transfer engine & its registers
 	// Then this can be emulated by just writing the appropriate values there
-	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) { renderer->clearBuffer(startAddress, endAddress, value, control); }
+	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+		renderer->clearBuffer(startAddress, endAddress, value, control);
+	}
 
 	// TODO: Emulate the transfer engine & its registers
 	// Then this can be emulated by just writing the appropriate values there

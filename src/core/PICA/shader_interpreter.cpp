@@ -20,7 +20,11 @@ void PICAShader::run() {
 			case ShaderOpcodes::CALLC: callc(instruction); break;
 			case ShaderOpcodes::CALLU: callu(instruction); break;
 			case ShaderOpcodes::CMP1:
-			case ShaderOpcodes::CMP2: cmp(instruction); break;
+			case ShaderOpcodes::CMP2: {
+				cmp(instruction);
+				break;
+			}
+
 			case ShaderOpcodes::DP3: dp3(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::DPHI: dphi(instruction); break;
@@ -52,7 +56,10 @@ void PICAShader::run() {
 			case 0x34:
 			case 0x35:
 			case 0x36:
-			case 0x37: madi(instruction); break;
+			case 0x37: {
+				madi(instruction);
+				break;
+			}
 
 			case 0x38:
 			case 0x39:
@@ -61,7 +68,10 @@ void PICAShader::run() {
 			case 0x3C:
 			case 0x3D:
 			case 0x3E:
-			case 0x3F: mad(instruction); break;
+			case 0x3F: {
+				mad(instruction);
+				break;
+			}
 
 			default: Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
 		}
@@ -588,7 +598,10 @@ void PICAShader::cmp(u32 instruction) {
 				cmpRegister[i] = srcVec1[i] >= srcVec2[i];
 				break;
 
-			default: cmpRegister[i] = true; break;
+			default: {
+				cmpRegister[i] = true;
+				break;
+			}
 		}
 	}
 }
@@ -682,7 +695,9 @@ void PICAShader::loop(u32 instruction) {
 }
 
 void PICAShader::jmpc(u32 instruction) {
-	if (isCondTrue(instruction)) pc = getBits<10, 12>(instruction);
+	if (isCondTrue(instruction)) {
+		pc = getBits<10, 12>(instruction);
+	}
 }
 
 void PICAShader::jmpu(u32 instruction) {

@@ -7,7 +7,10 @@
 #include "PICA/pica_hash.hpp"
 #include "helpers.hpp"
 
-enum class ShaderType { Vertex, Geometry };
+enum class ShaderType {
+	Vertex,
+	Geometry,
+};
 
 namespace ShaderOpcodes {
 	enum : u32 {
@@ -221,11 +224,13 @@ class PICAShader {
 	void finalize() { std::memcpy(&loadedShader[0], &bufferedShader[0], 4096 * sizeof(u32)); }
 
 	void setBufferIndex(u32 index) { bufferIndex = index & 0xfff; }
-
 	void setOpDescriptorIndex(u32 index) { opDescriptorIndex = index & 0x7f; }
 
 	void uploadWord(u32 word) {
-		if (bufferIndex >= 4095) Helpers::panic("o no, shader upload overflew");
+		if (bufferIndex >= 4095) {
+			Helpers::panic("o no, shader upload overflew");
+		}
+
 		bufferedShader[bufferIndex++] = word;
 		bufferIndex &= 0xfff;
 
@@ -247,7 +252,9 @@ class PICAShader {
 
 	void uploadFloatUniform(u32 word) {
 		floatUniformBuffer[floatUniformWordCount++] = word;
-		if (floatUniformIndex >= 96) Helpers::panic("[PICA] Tried to write float uniform %d", floatUniformIndex);
+		if (floatUniformIndex >= 96) {
+			Helpers::panic("[PICA] Tried to write float uniform %d", floatUniformIndex);
+		}
 
 		if ((f32UniformTransfer && floatUniformWordCount >= 4) || (!f32UniformTransfer && floatUniformWordCount >= 3)) {
 			vec4f& uniform = floatUniforms[floatUniformIndex++];

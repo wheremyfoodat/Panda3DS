@@ -1,5 +1,7 @@
 #include "renderer_gl/renderer_gl.hpp"
 
+#include <stb_image_write.h>
+
 #include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
@@ -841,9 +843,14 @@ void RendererGL::updateLightingLUT() {
 
 void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
-	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {OpenGL::Triangle, OpenGL::TriangleStrip, OpenGL::TriangleFan, OpenGL::Triangle};
-	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
+	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
+		OpenGL::Triangle,
+		OpenGL::TriangleStrip,
+		OpenGL::TriangleFan,
+		OpenGL::Triangle,
+	};
 
+	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
 	gl.bindVBO(vbo);
 	gl.bindVAO(vao);
@@ -1048,7 +1055,6 @@ void RendererGL::screenshot(const std::string& name) {
 	std::vector<uint8_t> pixels, flippedPixels;
 	pixels.resize(width * height * 4);
 	flippedPixels.resize(pixels.size());
-	;
 
 	OpenGL::bindScreenFramebuffer();
 	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
