@@ -1,11 +1,12 @@
-#include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
+
+#include "PICA/gpu.hpp"
 
 using namespace Floats;
 using namespace Helpers;
 
 u32 GPU::readReg(u32 address) {
-	if (address >= 0x1EF01000 && address < 0x1EF01C00) { // Internal registers
+	if (address >= 0x1EF01000 && address < 0x1EF01C00) {  // Internal registers
 		const u32 index = (address - 0x1EF01000) / sizeof(u32);
 		return readInternalReg(index);
 	} else {
@@ -15,7 +16,7 @@ u32 GPU::readReg(u32 address) {
 }
 
 void GPU::writeReg(u32 address, u32 value) {
-	if (address >= 0x1EF01000 && address < 0x1EF01C00) { // Internal registers
+	if (address >= 0x1EF01000 && address < 0x1EF01C00) {  // Internal registers
 		const u32 index = (address - 0x1EF01000) / sizeof(u32);
 		writeInternalReg(index, value, 0xffffffff);
 	} else {
@@ -59,7 +60,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 	}
 
 	u32 currentValue = regs[index];
-	u32 newValue = (currentValue & ~mask) | (value & mask); // Only overwrite the bits specified by "mask"
+	u32 newValue = (currentValue & ~mask) | (value & mask);  // Only overwrite the bits specified by "mask"
 	regs[index] = newValue;
 
 	// TODO: Figure out if things like the shader index use the unmasked value or the masked one
@@ -74,38 +75,38 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 
 		case AttribFormatHigh:
-			totalAttribCount = (value >> 28) + 1; // Total number of vertex attributes
-			fixedAttribMask = getBits<16, 12>(value); // Determines which vertex attributes are fixed for all vertices
+			totalAttribCount = (value >> 28) + 1;      // Total number of vertex attributes
+			fixedAttribMask = getBits<16, 12>(value);  // Determines which vertex attributes are fixed for all vertices
 			break;
 
 		case ColourBufferLoc: {
 			u32 loc = (value & 0x0fffffff) << 3;
-			renderer.setColourBufferLoc(loc);
+			renderer->setColourBufferLoc(loc);
 			break;
 		};
 
 		case ColourBufferFormat: {
 			u32 format = getBits<16, 3>(value);
-			renderer.setColourFormat(static_cast<PICA::ColorFmt>(format));
+			renderer->setColourFormat(static_cast<PICA::ColorFmt>(format));
 			break;
 		}
 
 		case DepthBufferLoc: {
 			u32 loc = (value & 0x0fffffff) << 3;
-			renderer.setDepthBufferLoc(loc);
+			renderer->setDepthBufferLoc(loc);
 			break;
 		}
 
 		case DepthBufferFormat: {
 			u32 format = value & 0x3;
-			renderer.setDepthFormat(static_cast<PICA::DepthFmt>(format));
+			renderer->setDepthFormat(static_cast<PICA::DepthFmt>(format));
 			break;
 		}
 
 		case FramebufferSize: {
 			const u32 width = value & 0x7ff;
 			const u32 height = getBits<12, 10>(value) + 1;
-			renderer.setFBSize(width, height);
+			renderer->setFBSize(width, height);
 			break;
 		}
 
@@ -116,7 +117,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case LightingLUTData4:
 		case LightingLUTData5:
 		case LightingLUTData6:
-		case LightingLUTData7:{
+		case LightingLUTData7: {
 			const uint32_t index = regs[LightingLUTIndex];  // Get full LUT index register
 			const uint32_t lutID = getBits<8, 5>(index);    // Get which LUT we're actually writing to
 			uint32_t lutIndex = getBits<0, 8>(index);       // And get the index inside the LUT we're writing to
@@ -133,15 +134,22 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 		}
 
-		case VertexFloatUniformIndex:
+		case VertexFloatUniformIndex: {
 			shaderUnit.vs.setFloatUniformIndex(value);
 			break;
+		}
 
-		case VertexFloatUniformData0: case VertexFloatUniformData1: case VertexFloatUniformData2:
-		case VertexFloatUniformData3: case VertexFloatUniformData4: case VertexFloatUniformData5:
-		case VertexFloatUniformData6: case VertexFloatUniformData7:
+		case VertexFloatUniformData0:
+		case VertexFloatUniformData1:
+		case VertexFloatUniformData2:
+		case VertexFloatUniformData3:
+		case VertexFloatUniformData4:
+		case VertexFloatUniformData5:
+		case VertexFloatUniformData6:
+		case VertexFloatUniformData7: {
 			shaderUnit.vs.uploadFloatUniform(value);
 			break;
+		}
 
 		case FixedAttribIndex:
 			fixedAttribCount = 0;
@@ -162,7 +170,9 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			}
 			break;
 
-		case FixedAttribData0: case FixedAttribData1: case FixedAttribData2:
+		case FixedAttribData0:
+		case FixedAttribData1:
+		case FixedAttribData2:
 			fixedAttrBuff[fixedAttribCount++] = value;
 
 			if (fixedAttribCount == 3) {
@@ -170,15 +180,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 
 				vec4f attr;
 				// These are stored in the reverse order anyone would expect them to be in
-				attr.x() = f24::fromRaw(fixedAttrBuff[2] & 0xffffff);
-				attr.y() = f24::fromRaw(((fixedAttrBuff[1] & 0xffff) << 8) | (fixedAttrBuff[2] >> 24));
-				attr.z() = f24::fromRaw(((fixedAttrBuff[0] & 0xff) << 16) | (fixedAttrBuff[1] >> 16));
-				attr.w() = f24::fromRaw(fixedAttrBuff[0] >> 8);
+				attr[0] = f24::fromRaw(fixedAttrBuff[2] & 0xffffff);
+				attr[1] = f24::fromRaw(((fixedAttrBuff[1] & 0xffff) << 8) | (fixedAttrBuff[2] >> 24));
+				attr[2] = f24::fromRaw(((fixedAttrBuff[0] & 0xff) << 16) | (fixedAttrBuff[1] >> 16));
+				attr[3] = f24::fromRaw(fixedAttrBuff[0] >> 8);
 
 				// If the fixed attribute index is < 12, we're just writing to one of the fixed attributes
 				if (fixedAttribIndex < 12) [[likely]] {
 					shaderUnit.vs.fixedAttributes[fixedAttribIndex++] = attr;
-				} else if (fixedAttribIndex == 15) { // Otherwise if it's 15, we're submitting an immediate mode vertex
+				} else if (fixedAttribIndex == 15) {  // Otherwise if it's 15, we're submitting an immediate mode vertex
 					const uint totalAttrCount = (regs[PICA::InternalRegs::VertexShaderAttrNum] & 0xf) + 1;
 					if (totalAttrCount <= immediateModeAttrIndex) {
 						printf("Broken state in the immediate mode vertex submission pipeline. Failing silently\n");
@@ -199,13 +209,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						// If we've reached 3 verts, issue a draw call
 						// Handle rendering depending on the primitive type
 						if (immediateModeVertIndex == 3) {
-							renderer.drawVertices(PICA::PrimType::TriangleList, immediateModeVertices);
+							renderer->drawVertices(PICA::PrimType::TriangleList, immediateModeVertices);
 
 							switch (primType) {
 								// Triangle or geometry primitive. Draw a triangle and discard all vertices
-								case 0: case 3:
+								case 0:
+								case 3: {
 									immediateModeVertIndex = 0;
 									break;
+								}
 
 								// Triangle strip. Draw triangle, discard first vertex and keep the last 2
 								case 1:
@@ -223,54 +235,72 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 							}
 						}
 					}
-				} else { // Writing to fixed attributes 13 and 14 probably does nothing, but we'll see
+				} else {  // Writing to fixed attributes 13 and 14 probably does nothing, but we'll see
 					log("Wrote to invalid fixed vertex attribute %d\n", fixedAttribIndex);
 				}
 			}
 
 			break;
 
-		case VertexShaderOpDescriptorIndex:
+		case VertexShaderOpDescriptorIndex: {
 			shaderUnit.vs.setOpDescriptorIndex(value);
 			break;
+		}
 
-		case VertexShaderOpDescriptorData0: case VertexShaderOpDescriptorData1: case VertexShaderOpDescriptorData2:
-		case VertexShaderOpDescriptorData3: case VertexShaderOpDescriptorData4: case VertexShaderOpDescriptorData5:
-		case VertexShaderOpDescriptorData6: case VertexShaderOpDescriptorData7:
+		case VertexShaderOpDescriptorData0:
+		case VertexShaderOpDescriptorData1:
+		case VertexShaderOpDescriptorData2:
+		case VertexShaderOpDescriptorData3:
+		case VertexShaderOpDescriptorData4:
+		case VertexShaderOpDescriptorData5:
+		case VertexShaderOpDescriptorData6:
+		case VertexShaderOpDescriptorData7: {
 			shaderUnit.vs.uploadDescriptor(value);
 			break;
+		}
 
-		case VertexBoolUniform:
+		case VertexBoolUniform: {
 			shaderUnit.vs.boolUniform = value & 0xffff;
 			break;
+		}
 
-		case VertexIntUniform0: case VertexIntUniform1: case VertexIntUniform2: case VertexIntUniform3:
+		case VertexIntUniform0:
+		case VertexIntUniform1:
+		case VertexIntUniform2:
+		case VertexIntUniform3: {
 			shaderUnit.vs.uploadIntUniform(index - VertexIntUniform0, value);
 			break;
+		}
 
-		case VertexShaderData0: case VertexShaderData1: case VertexShaderData2: case VertexShaderData3:
-		case VertexShaderData4: case VertexShaderData5: case VertexShaderData6: case VertexShaderData7:
+		case VertexShaderData0:
+		case VertexShaderData1:
+		case VertexShaderData2:
+		case VertexShaderData3:
+		case VertexShaderData4:
+		case VertexShaderData5:
+		case VertexShaderData6:
+		case VertexShaderData7: {
 			shaderUnit.vs.uploadWord(value);
 			break;
+		}
 
-		case VertexShaderEntrypoint:
+		case VertexShaderEntrypoint: {
 			shaderUnit.vs.entrypoint = value & 0xffff;
 			break;
+		}
 
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;
 
-		case VertexShaderTransferIndex:
-			shaderUnit.vs.setBufferIndex(value);
-			break;
+		case VertexShaderTransferIndex: shaderUnit.vs.setBufferIndex(value); break;
 
 		// Command lists can write to the command processor registers and change the command list stream
 		// Several games are known to do this, including New Super Mario Bros 2 and Super Mario 3D Land
 		case CmdBufTrigger0:
 		case CmdBufTrigger1: {
-			if (value != 0) { // A non-zero value triggers command list processing
-				int bufferIndex = index - CmdBufTrigger0; // Index of the command buffer to execute (0 or 1)
+			if (value != 0) {                              // A non-zero value triggers command list processing
+				int bufferIndex = index - CmdBufTrigger0;  // Index of the command buffer to execute (0 or 1)
 				u32 addr = (regs[CmdBufAddr0 + bufferIndex] & 0xfffffff) << 3;
 				u32 size = (regs[CmdBufSize0 + bufferIndex] & 0xfffff) << 3;
 
@@ -285,15 +315,13 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		default:
 			// Vertex attribute registers
 			if (index >= AttribInfoStart && index <= AttribInfoEnd) {
-				uint attributeIndex = (index - AttribInfoStart) / 3; // Which attribute are we writing to
-				uint reg = (index - AttribInfoStart) % 3; // Which of this attribute's registers are we writing to?
+				uint attributeIndex = (index - AttribInfoStart) / 3;  // Which attribute are we writing to
+				uint reg = (index - AttribInfoStart) % 3;             // Which of this attribute's registers are we writing to?
 				auto& attr = attributeInfo[attributeIndex];
 
 				switch (reg) {
-					case 0: attr.offset = value & 0xfffffff; break; // Attribute offset
-					case 1: 
-						attr.config1 = value;
-						break;
+					case 0: attr.offset = value & 0xfffffff; break;  // Attribute offset
+					case 1: attr.config1 = value; break;
 					case 2:
 						attr.config2 = value;
 						attr.size = getBits<16, 8>(value);
@@ -339,13 +367,13 @@ void GPU::startCommandList(u32 addr, u32 size) {
 
 		u32 id = header & 0xffff;
 		u32 paramMaskIndex = getBits<16, 4>(header);
-		u32 paramCount = getBits<20, 8>(header); // Number of additional parameters
+		u32 paramCount = getBits<20, 8>(header);  // Number of additional parameters
 		// Bit 31 tells us whether this command is going to write to multiple sequential registers (if the bit is 1)
 		// Or if all written values will go to the same register (If the bit is 0). It's essentially the value that
 		// gets added to the "id" field after each register write
 		bool consecutiveWritingMode = (header >> 31) != 0;
 
-		u32 mask = maskLUT[paramMaskIndex]; // Actual parameter mask
+		u32 mask = maskLUT[paramMaskIndex];  // Actual parameter mask
 		// Increment the ID by 1 after each write if we're in consecutive mode, or 0 otherwise
 		u32 idIncrement = (consecutiveWritingMode) ? 1 : 0;
 

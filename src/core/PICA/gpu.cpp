@@ -2,19 +2,28 @@
 
 #include <array>
 #include <bitset>
-#include <cstdio>
 #include <cstddef>
+#include <cstdio>
 
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
+
+#ifdef PANDA3DS_ENABLE_OPENGL
+#include "renderer_gl/renderer_gl.hpp"
+#endif
 
 using namespace Floats;
 
 // Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
 // Thus, our GLStateManager being here does not negatively impact renderer-agnosticness
-GPU::GPU(Memory& mem, GLStateManager& gl, EmulatorConfig& config) : mem(mem), renderer(*this, gl, regs), config(config) {
+GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 	vram = new u8[vramSize];
-	mem.setVRAM(vram); // Give the bus a pointer to our VRAM
+	mem.setVRAM(vram);  // Give the bus a pointer to our VRAM
+
+	// TODO: Configurable backend
+#ifdef PANDA3DS_ENABLE_OPENGL
+	renderer.reset(new RendererGL(*this, regs));
+#endif
 }
 
 void GPU::reset() {
@@ -41,7 +50,7 @@ void GPU::reset() {
 		e.config2 = 0;
 	}
 
-	renderer.reset();
+	renderer->reset();
 }
 
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
@@ -73,15 +82,14 @@ void GPU::drawArrays() {
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
 	const u32 vertexBase = ((regs[PICA::InternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
-	const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg]; // Total # of vertices to transfer
+	const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg];  // Total # of vertices to transfer
 
 	// Configures the type of primitive and the number of vertex shader outputs
 	const u32 primConfig = regs[PICA::InternalRegs::PrimitiveConfig];
 	const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(primConfig));
 	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
 
-	if ((primType == PICA::PrimType::TriangleList && vertexCount % 3) ||
-		(primType == PICA::PrimType::TriangleStrip && vertexCount < 3) ||
+	if ((primType == PICA::PrimType::TriangleList && vertexCount % 3) || (primType == PICA::PrimType::TriangleStrip && vertexCount < 3) ||
 		(primType == PICA::PrimType::TriangleFan && vertexCount < 3)) {
 		Helpers::panic("Invalid vertex count for primitive. Type: %d, vert count: %d\n", primType, vertexCount);
 	}
@@ -89,10 +97,10 @@ void GPU::drawArrays() {
 	// Get the configuration for the index buffer, used only for indexed drawing
 	u32 indexBufferConfig = regs[PICA::InternalRegs::IndexBufferConfig];
 	u32 indexBufferPointer = vertexBase + (indexBufferConfig & 0xfffffff);
-	bool shortIndex = Helpers::getBit<31>(indexBufferConfig); // Indicates whether vert indices are 16-bit or 8-bit
+	bool shortIndex = Helpers::getBit<31>(indexBufferConfig);  // Indicates whether vert indices are 16-bit or 8-bit
 
 	// Stuff the global attribute config registers in one u64 to make attr parsing easier
-	// TODO: Cache this when the vertex attribute format registers are written to 
+	// TODO: Cache this when the vertex attribute format registers are written to
 	u64 vertexCfg = u64(regs[PICA::InternalRegs::AttribFormatLow]) | (u64(regs[PICA::InternalRegs::AttribFormatHigh]) << 32);
 
 	if constexpr (!indexed) {
@@ -111,24 +119,24 @@ void GPU::drawArrays() {
 	constexpr size_t vertexCacheSize = 64;
 
 	struct {
-		std::bitset<vertexCacheSize> validBits{0};           // Shows which tags are valid. If the corresponding bit is 1, then there's an entry
-		std::array<u32, vertexCacheSize> ids;                // IDs (ie indices of the cached vertices in the 3DS vertex buffer)
-		std::array<u32, vertexCacheSize> bufferPositions;    // Positions of the cached vertices in our own vertex buffer
+		std::bitset<vertexCacheSize> validBits{0};         // Shows which tags are valid. If the corresponding bit is 1, then there's an entry
+		std::array<u32, vertexCacheSize> ids;              // IDs (ie indices of the cached vertices in the 3DS vertex buffer)
+		std::array<u32, vertexCacheSize> bufferPositions;  // Positions of the cached vertices in our own vertex buffer
 	} vertexCache;
-		
+
 	for (u32 i = 0; i < vertexCount; i++) {
-		u32 vertexIndex; // Index of the vertex in the VBO for indexed rendering
+		u32 vertexIndex;  // Index of the vertex in the VBO for indexed rendering
 
 		if constexpr (!indexed) {
 			vertexIndex = i + regs[PICA::InternalRegs::VertexOffsetReg];
 		} else {
 			if (shortIndex) {
 				auto ptr = getPointerPhys<u16>(indexBufferPointer);
-				vertexIndex = *ptr; // TODO: This is very unsafe
+				vertexIndex = *ptr;  // TODO: This is very unsafe
 				indexBufferPointer += 2;
 			} else {
 				auto ptr = getPointerPhys<u8>(indexBufferPointer);
-				vertexIndex = *ptr; // TODO: This is also very unsafe
+				vertexIndex = *ptr;  // TODO: This is also very unsafe
 				indexBufferPointer += 1;
 			}
 		}
@@ -152,22 +160,22 @@ void GPU::drawArrays() {
 		}
 
 		int attrCount = 0;
-		int buffer = 0; // Vertex buffer index for non-fixed attributes
+		int buffer = 0;  // Vertex buffer index for non-fixed attributes
 
 		while (attrCount < totalAttribCount) {
 			// Check if attribute is fixed or not
-			if (fixedAttribMask & (1 << attrCount)) { // Fixed attribute
-				vec4f& fixedAttr = shaderUnit.vs.fixedAttributes[attrCount]; // TODO: Is this how it works?
+			if (fixedAttribMask & (1 << attrCount)) {                         // Fixed attribute
+				vec4f& fixedAttr = shaderUnit.vs.fixedAttributes[attrCount];  // TODO: Is this how it works?
 				vec4f& inputAttr = currentAttributes[attrCount];
-				std::memcpy(&inputAttr, &fixedAttr, sizeof(vec4f)); // Copy fixed attr to input attr
+				std::memcpy(&inputAttr, &fixedAttr, sizeof(vec4f));  // Copy fixed attr to input attr
 				attrCount++;
-			} else { // Non-fixed attribute
-				auto& attr = attributeInfo[buffer]; // Get information for this attribute
-				u64 attrCfg = attr.getConfigFull(); // Get config1 | (config2 << 32)
+			} else {                                 // Non-fixed attribute
+				auto& attr = attributeInfo[buffer];  // Get information for this attribute
+				u64 attrCfg = attr.getConfigFull();  // Get config1 | (config2 << 32)
 				u32 attrAddress = vertexBase + attr.offset + (vertexIndex * attr.size);
 
 				for (int j = 0; j < attr.componentCount; j++) {
-					uint index = (attrCfg >> (j * 4)) & 0xf; // Get index of attribute in vertexCfg
+					uint index = (attrCfg >> (j * 4)) & 0xf;  // Get index of attribute in vertexCfg
 
 					// Vertex attributes used as padding
 					// 12, 13, 14 and 15 are equivalent to 4, 8, 12 and 16 bytes of padding respectively
@@ -179,15 +187,15 @@ void GPU::drawArrays() {
 					}
 
 					u32 attribInfo = (vertexCfg >> (index * 4)) & 0xf;
-					u32 attribType = attribInfo & 0x3; //  Type of attribute(sbyte/ubyte/short/float)
-					u32 size = (attribInfo >> 2) + 1; // Total number of components
+					u32 attribType = attribInfo & 0x3;  //  Type of attribute(sbyte/ubyte/short/float)
+					u32 size = (attribInfo >> 2) + 1;   // Total number of components
 
-					//printf("vertex_attribute_strides[%d] = %d\n", attrCount, attr.size);
+					// printf("vertex_attribute_strides[%d] = %d\n", attrCount, attr.size);
 					vec4f& attribute = currentAttributes[attrCount];
-					uint component; // Current component
+					uint component;  // Current component
 
 					switch (attribType) {
-						case 0: { // Signed byte
+						case 0: {  // Signed byte
 							s8* ptr = getPointerPhys<s8>(attrAddress);
 							for (component = 0; component < size; component++) {
 								float val = static_cast<float>(*ptr++);
@@ -197,7 +205,7 @@ void GPU::drawArrays() {
 							break;
 						}
 
-						case 1: { // Unsigned byte
+						case 1: {  // Unsigned byte
 							u8* ptr = getPointerPhys<u8>(attrAddress);
 							for (component = 0; component < size; component++) {
 								float val = static_cast<float>(*ptr++);
@@ -207,7 +215,7 @@ void GPU::drawArrays() {
 							break;
 						}
 
-						case 2: { // Short
+						case 2: {  // Short
 							s16* ptr = getPointerPhys<s16>(attrAddress);
 							for (component = 0; component < size; component++) {
 								float val = static_cast<float>(*ptr++);
@@ -217,7 +225,7 @@ void GPU::drawArrays() {
 							break;
 						}
 
-						case 3: { // Float
+						case 3: {  // Float
 							float* ptr = getPointerPhys<float>(attrAddress);
 							for (component = 0; component < size; component++) {
 								float val = *ptr++;
@@ -251,8 +259,8 @@ void GPU::drawArrays() {
 			const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
 			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
 		}
-		
-        if constexpr (useShaderJIT) {
+
+		if constexpr (useShaderJIT) {
 			shaderJIT.run(shaderUnit.vs);
 		} else {
 			shaderUnit.vs.run();
@@ -264,14 +272,14 @@ void GPU::drawArrays() {
 		for (int i = 0; i < totalShaderOutputs; i++) {
 			const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
-			for (int j = 0; j < 4; j++) { // pls unroll
+			for (int j = 0; j < 4; j++) {  // pls unroll
 				const u32 mapping = (config >> (j * 8)) & 0x1F;
 				out.raw[mapping] = shaderUnit.vs.outputs[i][j];
 			}
 		}
 	}
 
-	renderer.drawVertices(primType, std::span(vertices).first(vertexCount));
+	renderer->drawVertices(primType, std::span(vertices).first(vertexCount));
 }
 
 PICA::Vertex GPU::getImmediateModeVertex() {
@@ -289,7 +297,9 @@ PICA::Vertex GPU::getImmediateModeVertex() {
 	std::memcpy(&v.s.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
 	std::memcpy(&v.s.texcoord0, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
 
-	printf("(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.s.positions[0], (double)v.s.positions[1], (double)v.s.positions[2], (double)v.s.positions[3]);
+	printf(
+		"(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.s.positions[0], (double)v.s.positions[1], (double)v.s.positions[2], (double)v.s.positions[3]
+	);
 	printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)v.s.colour[0], (double)v.s.colour[1], (double)v.s.colour[2], (double)v.s.colour[3]);
 	printf("(u, v      ) = (%f, %f)\n", (double)v.s.texcoord0[0], (double)v.s.texcoord0[1]);
 

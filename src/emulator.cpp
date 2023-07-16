@@ -1,6 +1,8 @@
 #include "emulator.hpp"
 
-#include <stb_image_write.h>
+#ifdef PANDA3DS_ENABLE_OPENGL
+#include <glad/gl.h>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -12,7 +14,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
-Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, gl, config), memory(cpu.getTicksRef()) {
+Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config), memory(cpu.getTicksRef()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -23,6 +25,7 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
 	}
 
+#ifdef PANDA3DS_ENABLE_OPENGL
 	// Request OpenGL 4.1 Core (Max available on MacOS)
 	// MacOS gets mad if we don't explicitly demand a core profile
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -42,6 +45,7 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 	if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress))) {
 		Helpers::panic("OpenGL init failed: %s", SDL_GetError());
 	}
+#endif
 
 	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
 		gameController = SDL_GameControllerOpen(0);
@@ -427,14 +431,12 @@ bool Emulator::loadELF(std::ifstream& file) {
 }
 
 // Reset our graphics context and initialize the GPU's graphics context
-void Emulator::initGraphicsContext() {
-	gl.reset();  // TODO (For when we have multiple backends): Only do this if we are using OpenGL
-	gpu.initGraphicsContext();
-}
+void Emulator::initGraphicsContext() { gpu.initGraphicsContext(); }
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 void Emulator::pollHttpServer() {
 	std::scoped_lock lock(httpServer.actionMutex);
+
 	ServiceManager& srv = kernel.getServiceManager();
 
 	if (httpServer.pendingAction) {

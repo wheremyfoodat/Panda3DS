@@ -2,17 +2,17 @@
 
 // Only do anything if we're on an x64 target with JIT support enabled
 #if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
-#include "helpers.hpp"
-#include "logger.hpp"
-#include "PICA/shader.hpp"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
-#include "x64_regs.hpp"
-
 #include <vector>
 
+#include "PICA/shader.hpp"
+#include "helpers.hpp"
+#include "logger.hpp"
+#include "x64_regs.hpp"
+#include "xbyak/xbyak.h"
+#include "xbyak/xbyak_util.h"
+
 class ShaderEmitter : public Xbyak::CodeGenerator {
-	static constexpr size_t executableMemorySize = PICAShader::maxInstructionCount * 96; // How much executable memory to alloc for each shader
+	static constexpr size_t executableMemorySize = PICAShader::maxInstructionCount * 96;  // How much executable memory to alloc for each shader
 	// Allocate some extra space as padding for security purposes in the extremely unlikely occasion we manage to overflow the above size
 	static constexpr size_t allocSize = executableMemorySize + 0x1000;
 
@@ -20,7 +20,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	static constexpr uint noSwizzle = 0x1B;
 
 	using f24 = Floats::f24;
-	using vec4f = OpenGL::Vector<f24, 4>;
+	using vec4f = std::array<f24, 4>;
 
 	// An array of labels (incl pointers) to each compiled (to x64) PICA instruction
 	std::array<Xbyak::Label, PICAShader::maxInstructionCount> instructionLabels;
@@ -33,8 +33,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	// Vector value of (1.0, 1.0, 1.0, 1.0) for SLT(i)/SGE(i)
 	Label onesVector;
 
-	u32 recompilerPC = 0; // PC the recompiler is currently recompiling @
-	u32 loopLevel = 0;    // The current loop nesting level (0 = not in a loop)
+	u32 recompilerPC = 0;  // PC the recompiler is currently recompiling @
+	u32 loopLevel = 0;     // The current loop nesting level (0 = not in a loop)
 
 	bool haveSSE4_1 = false;  // Shows if the CPU supports SSE4.1
 	bool haveAVX = false;     // Shows if the CPU supports AVX (NOT AVX2, NOT AVX512. Regular AVX)
@@ -116,10 +116,12 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 
 	MAKE_LOG_FUNCTION(log, shaderJITLogger)
 
-public:
-	using InstructionCallback = const void(*)(PICAShader& shaderUnit); // Callback type used for instructions
+  public:
+	// Callback type used for instructions
+	using InstructionCallback = const void (*)(PICAShader& shaderUnit);
 	// Callback type used for the JIT prologue. This is what the caller will call
-	using PrologueCallback = const void(*)(PICAShader& shaderUnit, InstructionCallback cb);
+	using PrologueCallback = const void (*)(PICAShader& shaderUnit, InstructionCallback cb);
+
 	PrologueCallback prologueCb = nullptr;
 
 	// Initialize our emitter with "allocSize" bytes of RWX memory
@@ -134,7 +136,7 @@ public:
 			Helpers::panic("This CPU does not support SSE3. Please use the shader interpreter instead");
 		}
 	}
-	
+
 	void compile(const PICAShader& shaderUnit);
 
 	// PC must be a valid entrypoint here. It doesn't have that much overhead in this case, so we use std::array<>::at() to assert it does
@@ -144,9 +146,7 @@ public:
 		return reinterpret_cast<InstructionCallback>(ptr);
 	}
 
-	PrologueCallback getPrologueCallback() {
-		return prologueCb;
-	}
+	PrologueCallback getPrologueCallback() { return prologueCb; }
 };
 
-#endif // x64 recompiler check
+#endif  // x64 recompiler check
