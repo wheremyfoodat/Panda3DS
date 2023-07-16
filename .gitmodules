@@ -25,3 +25,6 @@
 [submodule "stb"]
 	path = third_party/stb
 	url = https://github.com/nothings/stb
+[submodule "third_party/cmrc"]
+	path = third_party/cmrc
+	url = git@github.com:vector-of-bool/cmrc.git
