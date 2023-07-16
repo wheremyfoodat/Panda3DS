@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 
+#include "ipc.hpp"
 #include "kernel.hpp"
 
 namespace DirectoryOps {
@@ -104,6 +105,7 @@ void Kernel::closeDirectory(u32 messagePointer, Handle directory) {
 	}
 
 	p->getData<DirectorySession>()->isOpen = false;
+	mem.write32(messagePointer, IPC::responseHeader(0x802, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -169,6 +171,7 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 		session->currentEntry++;  // Increment index of the entry currently being read
 	}
 
+	mem.write32(messagePointer, IPC::responseHeader(0x801, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, count);
 }
