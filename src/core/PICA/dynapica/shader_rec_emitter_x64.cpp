@@ -945,14 +945,19 @@ void ShaderEmitter::printLog(const PICAShader& shaderUnit) {
 Xbyak::Label ShaderEmitter::emitLog2Func() {
 	Xbyak::Label subroutine;
 
+	// This code uses the fact that log2(float) = log2(2^exponent * mantissa)
+	// = log2(2^exponent) + log2(mantissa) = exponent + log2(mantissa) where mantissa has a limited range of values
+	// https://stackoverflow.com/a/45787548
+
 	// SSE does not have a log instruction, thus we must approximate.
-	// We perform this approximation first performaing a range reduction into the range [1.0, 2.0).
+	// We perform this approximation first performing a range reduction into the range [1.0, 2.0).
 	// A minimax polynomial which was fit for the function log2(x) / (x - 1) is then evaluated.
 	// We multiply the result by (x - 1) then restore the result into the appropriate range.
 
 	// Coefficients for the minimax polynomial.
 	// f(x) computes approximately log2(x) / (x - 1).
 	// f(x) = c4 + x * (c3 + x * (c2 + x * (c1 + x * c0)).
+	// We align the table of coefficients to 64 bytes, so that the whole thing will fit in 1 cache line
 	align(64);
 	const void* c0 = getCurr();
 	dd(0x3d74552f);
@@ -1055,6 +1060,7 @@ Xbyak::Label ShaderEmitter::emitExp2Func() {
 	// A minimax polynomial which was fit for the function exp2(x) is then evaluated.
 	// We then restore the result into the appropriate range.
 
+	// Similarly to log2, we align our literal pool to 64 bytes to make sure the whole thing fits in 1 cache line
 	align(64);
 	const void* input_max = getCurr();
 	dd(0x43010000);
