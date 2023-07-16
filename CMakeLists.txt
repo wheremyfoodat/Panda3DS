@@ -181,8 +181,10 @@ if(ENABLE_OPENGL)
 	)
 
 	set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
-		src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
-		src/core/renderer_gl/gl_state.cpp
+        src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
+        src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.frag
+        src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
+        src/host_shaders/opengl_fragment_shader.frag
 	)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
