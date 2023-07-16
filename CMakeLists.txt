@@ -51,6 +51,8 @@ add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
 
+add_subdirectory(third_party/cmrc)
+
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_NO_SYSTEM_PATHS ON)
@@ -185,6 +187,16 @@ if(ENABLE_OPENGL)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
     source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
+
+	cmrc_add_resource_library(
+		resources_renderer_gl
+		NAMESPACE RendererGL
+		WHENCE "src/host_shaders/"
+		"src/host_shaders/opengl_display.frag"
+		"src/host_shaders/opengl_display.vert"
+		"src/host_shaders/opengl_vertex_shader.vert"
+		"src/host_shaders/opengl_fragment_shader.frag"
+	)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
@@ -206,7 +218,7 @@ target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp)
 
 if(ENABLE_OPENGL)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
-    target_link_libraries(Alber PRIVATE glad)
+    target_link_libraries(Alber PRIVATE glad resources_renderer_gl)
 endif()
 
 if(GPU_DEBUG_INFO)
