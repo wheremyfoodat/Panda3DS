@@ -136,6 +136,7 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 		bool isDirectory = std::filesystem::is_directory(relative);
 
 		std::u16string nameU16 = relative.u16string();
+		bool isHidden = nameU16[0] == u'.'; // If the first character is a dot then this is a hidden file/folder
 
 		const u32 entryPointer = outPointer + (count * 0x228); // 0x228 is the size of a single entry
 		u32 utfPointer = entryPointer;
@@ -164,8 +165,11 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 			extensionPointer += sizeof(u8);
 		}
 
-		mem.write8(outPointer + 0x21A, 1); // Always 1 according to 3DBrew
-		mem.write8(attributePointer, entry.isDirectory ? 1 : 0); // "Is directory" attribute
+		mem.write8(outPointer + 0x21A, 1);                            // Always 1 according to 3DBrew
+		mem.write8(attributePointer, entry.isDirectory ? 1 : 0);      // "Is directory" attribute
+		mem.write8(attributePointer + 1, isHidden ? 1 : 0);           // "Is hidden" attribute
+		mem.write8(attributePointer + 2, entry.isDirectory ? 0 : 1);  // "Is archive" attribute
+		mem.write8(attributePointer + 3, 0);                          // "Is read-only" attribute
 
 		count++;                  // Increment number of read directories
 		session->currentEntry++;  // Increment index of the entry currently being read
