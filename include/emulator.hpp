@@ -25,13 +25,13 @@ enum class ROMType {
 };
 
 class Emulator {
+	EmulatorConfig config;
 	CPU cpu;
 	GPU gpu;
 	Memory memory;
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
 
-	EmulatorConfig config;
 	SDL_Window* window;
 
 #ifdef PANDA3DS_ENABLE_OPENGL

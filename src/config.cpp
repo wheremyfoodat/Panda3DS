@@ -9,6 +9,8 @@
 // We are legally allowed, as per the author's wish, to use the above code without any licensing restrictions
 // However we still want to follow the license as closely as possible and offer the proper attributions.
 
+EmulatorConfig::EmulatorConfig(const std::filesystem::path& path) { load(path); }
+
 void EmulatorConfig::load(const std::filesystem::path& path) {
 	// If the configuration file does not exist, create it and return
 	std::error_code error;

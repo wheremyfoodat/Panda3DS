@@ -8,6 +8,7 @@ struct EmulatorConfig {
 	bool shaderJitEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
 
+	EmulatorConfig(const std::filesystem::path& path);
 	void load(const std::filesystem::path& path);
 	void save(const std::filesystem::path& path);
 };
