@@ -62,7 +62,7 @@ Filename83 convertTo83(const std::string& path) {
 		}
 
 		// We already have capped the amount of characters, thus our filename is too big
-		if (validCharacterCount == filename.size()) {
+		if (validCharacterCount == 8) {
 			filenameTooBig = true;
 			break;
 		}
