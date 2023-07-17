@@ -95,7 +95,8 @@ endif()
 
 set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
-				 src/core/memory.cpp src/renderer.cpp src/httpserver.cpp src/stb_image_write.c
+				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
+				 src/httpserver.cpp src/stb_image_write.c
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -130,7 +131,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
                  include/kernel/config_mem.hpp include/services/service_manager.hpp include/services/apt.hpp
                  include/kernel/handles.hpp include/services/hid.hpp include/services/fs.hpp
-                 include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp
+                 include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp include/renderer_null/renderer_null.hpp
                  include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
                  include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
                  include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/io_file.hpp
