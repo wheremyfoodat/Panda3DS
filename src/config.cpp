@@ -31,6 +31,7 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 		if (gpuResult.is_ok()) {
 			auto gpu = gpuResult.unwrap();
 
+			rendererType = RendererType(toml::find_or<toml::integer>(gpu, "Renderer", int64_t(rendererType)));
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", false);
 		}
 	}
@@ -54,6 +55,7 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 		printf("Saving new configuration file %s\n", path.string().c_str());
 	}
 
+	data["GPU"]["Renderer"] = static_cast<s8>(rendererType);
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 
 	std::ofstream file(path, std::ios::out);

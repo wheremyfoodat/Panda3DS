@@ -6,6 +6,12 @@
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
 
+enum class RendererType : s8 {
+	// Todo: Auto = -1,
+	Null = 0,
+	OpenGL = 1,
+};
+
 class GPU;
 
 class Renderer {

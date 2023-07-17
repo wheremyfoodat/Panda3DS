@@ -70,8 +70,8 @@ class Emulator {
   public:
 	// Decides whether to reload or not reload the ROM when resetting. We use enum class over a plain bool for clarity.
 	// If NoReload is selected, the emulator will not reload its selected ROM. This is useful for things like booting up the emulator, or resetting to
-	// change ROMs. If Reload is selected, the emulator will reload its selected ROM. This is useful for eg a "reset" button that keeps the current ROM
-	// and just resets the emu
+	// change ROMs. If Reload is selected, the emulator will reload its selected ROM. This is useful for eg a "reset" button that keeps the current
+	// ROM and just resets the emu
 	enum class ReloadOption { NoReload, Reload };
 
 	Emulator();
