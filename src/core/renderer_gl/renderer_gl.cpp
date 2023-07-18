@@ -14,6 +14,8 @@ using namespace Floats;
 using namespace Helpers;
 using namespace PICA;
 
+RendererGL::~RendererGL() {}
+
 void RendererGL::reset() {
 	depthBufferCache.reset();
 	colourBufferCache.reset();

@@ -68,6 +68,7 @@ class RendererGL final : public Renderer {
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
+	~RendererGL() override;
 
 	void reset() override;
 	void display() override;                                                              // Display the 3DS screen contents to the window

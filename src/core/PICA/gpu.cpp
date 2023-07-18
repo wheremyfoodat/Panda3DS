@@ -7,7 +7,7 @@
 
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
-
+#include "renderer_null/renderer_null.hpp"
 #ifdef PANDA3DS_ENABLE_OPENGL
 #include "renderer_gl/renderer_gl.hpp"
 #endif
@@ -20,10 +20,27 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 	vram = new u8[vramSize];
 	mem.setVRAM(vram);  // Give the bus a pointer to our VRAM
 
-	// TODO: Configurable backend
+	switch (config.rendererType) {
+		case RendererType::Null: {
+			renderer.reset(new RendererNull(*this, regs));
+			break;
+		}
 #ifdef PANDA3DS_ENABLE_OPENGL
-	renderer.reset(new RendererGL(*this, regs));
+		case RendererType::OpenGL: {
+			renderer.reset(new RendererGL(*this, regs));
+			break;
+		}
 #endif
+
+		case RendererType::Vulkan: {
+			Helpers::panic("Vulkan is not supported yet, please pick another renderer");
+		}
+
+		default: {
+			Helpers::panic("Rendering backend not supported: %s", Renderer::typeToString(config.rendererType));
+			break;
+		}
+	}
 }
 
 void GPU::reset() {
