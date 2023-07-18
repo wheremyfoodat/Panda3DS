@@ -1,5 +1,7 @@
 #include "renderer.hpp"
 
+#include <algorithm>
+
 Renderer::Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
 Renderer::~Renderer() {}
 
