@@ -34,16 +34,14 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 			auto gpu = gpuResult.unwrap();
 
 			// Get renderer
-			auto rendererResult = toml::expect<std::string>(gpu, "Renderer");
-			if (rendererResult.is_ok()) {
-				auto rendererName = rendererResult.unwrap();
-				if (auto configRendererType = Renderer::typeFromString(rendererName); configRendererType.has_value()) {
-					rendererType = configRendererType.value();
-				} else {
-					Helpers::warn("Invalid renderer specified: %s\n", rendererName.c_str());
-				}
+			auto rendererName = toml::find_or<std::string>(gpu, "Renderer", "OpenGL");
+			auto configRendererType = Renderer::typeFromString(rendererName);
+
+			if (configRendererType.has_value()) {
+				rendererType = configRendererType.value();
 			} else {
-				Helpers::warn("Renderer not specified: %s\n", rendererResult.unwrap_err().c_str());
+				Helpers::warn("Invalid renderer specified: %s\n", rendererName.c_str());
+				rendererType = RendererType::OpenGL;
 			}
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", false);
@@ -58,7 +56,7 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 	if (std::filesystem::exists(path, error)) {
 		try {
 			data = toml::parse<toml::preserve_comments>(path);
-		} catch (std::exception& ex) {
+		} catch (const std::exception& ex) {
 			Helpers::warn("Exception trying to parse config file. Exception: %s\n", ex.what());
 			return;
 		}
@@ -69,8 +67,8 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 		printf("Saving new configuration file %s\n", path.string().c_str());
 	}
 
-	data["GPU"]["Renderer"] = Renderer::typeToString(rendererType);
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
+	data["GPU"]["Renderer"] = Renderer::typeToString(rendererType);
 
 	std::ofstream file(path, std::ios::out);
 	file << data;

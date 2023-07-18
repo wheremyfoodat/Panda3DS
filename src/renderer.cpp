@@ -17,10 +17,11 @@ std::optional<RendererType> Renderer::typeFromString(std::string inString) {
 	return std::nullopt;
 }
 
-const char* Renderer::typeToString(RendererType rendererType) {
+std::string Renderer::typeToString(RendererType rendererType) {
 	switch (rendererType) {
 		case RendererType::Null: return "null";
 		case RendererType::OpenGL: return "opengl";
+		case RendererType::Vulkan: return "vk";
 		default: return "Invalid";
 	}
 }
