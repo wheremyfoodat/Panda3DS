@@ -336,7 +336,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 }
 
 void GPU::startCommandList(u32 addr, u32 size) {
-	cmdBuffStart = static_cast<u32*>(mem.getReadPointer(addr));
+	cmdBuffStart = getPointerPhys<u32>(addr);
 	if (!cmdBuffStart) Helpers::panic("Couldn't get buffer for command list");
 	// TODO: This is very memory unsafe. We get a pointer to FCRAM and just keep writing without checking if we're gonna go OoB
 

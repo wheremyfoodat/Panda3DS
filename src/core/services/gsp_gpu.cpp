@@ -379,11 +379,11 @@ void GPUService::flushCacheRegions(u32* cmd) {
 void GPUService::processCommandList(u32* cmd) {
 	const u32 address = cmd[1] & ~7; // Buffer address
 	const u32 size = cmd[2] & ~3; // Buffer size in bytes
-	const bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
-	const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
+	[[maybe_unused]] const bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
+	[[maybe_unused]] const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
 
 	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
-	gpu.startCommandList(address, size);
+	gpu.startCommandList(VaddrToPaddr(address), size);
 	requestInterrupt(GPUInterrupt::P3D); // Send an IRQ when command list processing is over
 }
 
