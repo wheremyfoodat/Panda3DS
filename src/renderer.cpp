@@ -1,6 +1,9 @@
 #include "renderer.hpp"
 
-std::optional<RendererType> fromString(std::string inString) {
+Renderer::Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
+Renderer::~Renderer() {}
+
+std::optional<RendererType> Renderer::typeFromString(std::string inString) {
 	// case-insensitive
 	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
 
@@ -12,13 +15,10 @@ std::optional<RendererType> fromString(std::string inString) {
 	return std::nullopt;
 }
 
-const char* toString(RendererType rendererType) {
+const char* Renderer::typeToString(RendererType rendererType) {
 	switch (rendererType) {
 		case RendererType::Null: return "null";
 		case RendererType::OpenGL: return "opengl";
 		default: return "Invalid";
 	}
 }
-
-Renderer::Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
-Renderer::~Renderer() {}

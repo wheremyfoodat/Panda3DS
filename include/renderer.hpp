@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <span>
+#include <optional>
 
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
@@ -11,9 +12,6 @@ enum class RendererType : s8 {
 	Null = 0,
 	OpenGL = 1,
 };
-
-std::optional<RendererType> fromString(std::string inString);
-const char* toString(RendererType rendererType);
 
 class GPU;
 
@@ -37,6 +35,8 @@ class Renderer {
 	virtual ~Renderer();
 
 	static constexpr u32 vertexBufferSize = 0x10000;
+	static std::optional<RendererType> typeFromString(std::string inString);
+	static const char* typeToString(RendererType rendererType);
 
 	virtual void reset() = 0;
 	virtual void display() = 0;                                                              // Display the 3DS screen contents to the window

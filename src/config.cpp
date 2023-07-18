@@ -37,13 +37,13 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 			auto rendererResult = toml::expect<std::string>(gpu, "Renderer");
 			if (rendererResult.is_ok()) {
 				auto rendererName = rendererResult.unwrap();
-				if (auto configRendererType = fromString(rendererName); configRendererType.has_value()) {
+				if (auto configRendererType = Renderer::typeFromString(rendererName); configRendererType.has_value()) {
 					rendererType = configRendererType.value();
 				} else {
 					Helpers::warn("Invalid renderer specified: %s\n", rendererName.c_str());
 				}
 			} else {
-				Helpers::warn("Renderer not specified: %s\n", rendererResult.unwrap_err());
+				Helpers::warn("Renderer not specified: %s\n", rendererResult.unwrap_err().c_str());
 			}
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", false);
@@ -69,7 +69,7 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 		printf("Saving new configuration file %s\n", path.string().c_str());
 	}
 
-	data["GPU"]["Renderer"] = toString(rendererType);
+	data["GPU"]["Renderer"] = Renderer::typeToString(rendererType);
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 
 	std::ofstream file(path, std::ios::out);
