@@ -1,18 +1,26 @@
 #include "renderer.hpp"
 
 #include <algorithm>
+#include <unordered_map>
 
 Renderer::Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
 Renderer::~Renderer() {}
 
 std::optional<RendererType> Renderer::typeFromString(std::string inString) {
-	// case-insensitive
+	// Transform to lower-case to make the setting case-insensitive
 	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
 
-	if (inString == "null")
-		return RendererType::Null;
-	else if (inString == "opengl")
-		return RendererType::OpenGL;
+	// Huge table of possible names and misspellings
+	// Please stop misspelling Vulkan as Vulcan
+	static const std::unordered_map<std::string, RendererType> map = {
+		{"null", RendererType::Null}, {"nil", RendererType::Null},      {"none", RendererType::Null},
+		{"gl", RendererType::OpenGL}, {"ogl", RendererType::OpenGL},    {"opengl", RendererType::OpenGL},
+		{"vk", RendererType::Vulkan}, {"vulkan", RendererType::Vulkan}, {"vulcan", RendererType::Vulkan},
+	};
+
+	if (auto search = map.find(inString); search != map.end()) {
+		return search->second;
+	}
 
 	return std::nullopt;
 }
