@@ -31,6 +31,11 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 			break;
 		}
 #endif
+
+		case RendererType::Vulkan: {
+			Helpers::panic("Vulkan is not supported yet, please pick another renderer");
+		}
+
 		default: {
 			Helpers::panic("Rendering backend not supported: %s", Renderer::typeToString(config.rendererType));
 			break;
