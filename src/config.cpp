@@ -1,6 +1,7 @@
 #include "config.hpp"
 
 #include <fstream>
+#include <string>
 
 #include "helpers.hpp"
 #include "toml.hpp"
@@ -68,7 +69,7 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 	}
 
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
-	data["GPU"]["Renderer"] = Renderer::typeToString(rendererType);
+	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 
 	std::ofstream file(path, std::ios::out);
 	file << data;

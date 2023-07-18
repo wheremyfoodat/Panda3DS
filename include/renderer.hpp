@@ -1,7 +1,6 @@
 #pragma once
 #include <array>
 #include <span>
-#include <string>
 #include <optional>
 
 #include "PICA/pica_vertex.hpp"
@@ -38,7 +37,7 @@ class Renderer {
 
 	static constexpr u32 vertexBufferSize = 0x10000;
 	static std::optional<RendererType> typeFromString(std::string inString);
-	static std::string typeToString(RendererType rendererType);
+	static const char* typeToString(RendererType rendererType);
 
 	virtual void reset() = 0;
 	virtual void display() = 0;                                                              // Display the 3DS screen contents to the window
