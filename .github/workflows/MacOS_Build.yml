@@ -47,5 +47,5 @@ jobs:
     - name: Upload MacOS App
       uses: actions/upload-artifact@v2
       with:
-        name: Alber
+        name: MacOS Alber App Bundle
         path: 'Alber.zip'
