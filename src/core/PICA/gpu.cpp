@@ -32,7 +32,7 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 		}
 #endif
 		default: {
-			Helpers::panic("Invalid rendering backend index: %d", static_cast<s8>(config.rendererType));
+			Helpers::panic("Rendering backend not supported: %s", toString(config.rendererType));
 			break;
 		}
 	}

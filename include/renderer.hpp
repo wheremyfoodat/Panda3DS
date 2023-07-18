@@ -12,6 +12,9 @@ enum class RendererType : s8 {
 	OpenGL = 1,
 };
 
+std::optional<RendererType> fromString(std::string inString);
+const char* toString(RendererType rendererType);
+
 class GPU;
 
 class Renderer {
