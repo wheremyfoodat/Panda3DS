@@ -45,7 +45,7 @@ void RendererGL::reset() {
 	}
 }
 
-void RendererGL::initGraphicsContext() {
+void RendererGL::initGraphicsContext(SDL_Window* window) {
 	gl.reset();
 
 	auto gl_resources = cmrc::RendererGL::get_filesystem();

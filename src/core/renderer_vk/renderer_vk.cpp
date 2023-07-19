@@ -1,5 +1,6 @@
 #include "renderer_vk/renderer_vk.hpp"
 
+#include "SDL_vulkan.h"
 #include "helpers.hpp"
 #include "renderer_vk/vk_debug.hpp"
 
@@ -11,7 +12,7 @@ void RendererVK::reset() {}
 
 void RendererVK::display() {}
 
-void RendererVK::initGraphicsContext() {
+void RendererVK::initGraphicsContext(SDL_Window* window) {
 	// Resolve all function pointers
 	static vk::DynamicLoader dl;
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
@@ -129,6 +130,9 @@ void RendererVK::initGraphicsContext() {
 
 	// Initialize device-specific function pointers
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(device.get());
+
+	VkSurfaceKHR surface;
+	SDL_Vulkan_CreateSurface(window, instance.get(), &surface);
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
