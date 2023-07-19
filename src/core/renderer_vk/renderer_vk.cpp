@@ -39,7 +39,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	});
 
 #if defined(__APPLE__)
-	InstanceInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
+	instanceInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
 #endif
 
 	instanceInfo.ppEnabledExtensionNames = instanceExtensions.data();
