@@ -214,11 +214,11 @@ if(ENABLE_VULKAN)
 		COMPONENTS glslangValidator
 	)
 	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
-		include/renderer_vk/vulkan_api.hpp
+		include/renderer_vk/vulkan_api.hpp include/renderer_vk/vk_debug.hpp
 	)
 
 	set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
-		src/core/renderer_vk/vulkan_api.cpp
+		src/core/renderer_vk/vulkan_api.cpp src/core/renderer_vk/vk_debug.cpp
 	)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_VK_INCLUDE_FILES})

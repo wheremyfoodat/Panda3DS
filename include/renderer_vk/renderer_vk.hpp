@@ -4,6 +4,12 @@
 class GPU;
 
 class RendererVK final : public Renderer {
+	vk::UniqueInstance instance = {};
+	vk::PhysicalDevice physicalDevice = {};
+	vk::UniqueDevice device = {};
+
+	vk::UniqueDebugUtilsMessengerEXT debugMessenger;
+
   public:
 	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs);
 	~RendererVK() override;

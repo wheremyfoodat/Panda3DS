@@ -54,10 +54,10 @@ Emulator::Emulator()
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_VULKAN);
+		// window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_VULKAN);
 
 		if (window == nullptr) {
-			Helpers::panic("Window creation failed: %s", SDL_GetError());
+			// Helpers::panic("Window creation failed: %s", SDL_GetError());
 		}
 	}
 #endif
