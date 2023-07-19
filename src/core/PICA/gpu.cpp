@@ -12,6 +12,9 @@
 #ifdef PANDA3DS_ENABLE_OPENGL
 #include "renderer_gl/renderer_gl.hpp"
 #endif
+#ifdef PANDA3DS_ENABLE_VULKAN
+#include "renderer_vk/renderer_vk.hpp"
+#endif
 
 using namespace Floats;
 
@@ -38,11 +41,12 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 			break;
 		}
 #endif
-
+#ifdef PANDA3DS_ENABLE_VULKAN
 		case RendererType::Vulkan: {
-			Helpers::panic("Vulkan is not supported yet, please pick another renderer");
+			renderer.reset(new RendererVK(*this, regs));
+			break;
 		}
-
+#endif
 		default: {
 			Helpers::panic("Rendering backend not supported: %s", Renderer::typeToString(config.rendererType));
 			break;
