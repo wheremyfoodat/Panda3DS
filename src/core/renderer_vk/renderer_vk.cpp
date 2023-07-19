@@ -35,7 +35,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 #if defined(__APPLE__)
 		VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
 #endif
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 	});
 
 #if defined(__APPLE__)
@@ -131,8 +131,11 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	// Initialize device-specific function pointers
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(device.get());
 
-	VkSurfaceKHR surface;
-	SDL_Vulkan_CreateSurface(window, instance.get(), &surface);
+	if (VkSurfaceKHR newSurface; SDL_Vulkan_CreateSurface(window, instance.get(), &newSurface)) {
+		surface.reset(newSurface);
+	} else {
+		Helpers::warn("Error creating Vulkan surface");
+	}
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}

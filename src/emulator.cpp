@@ -57,7 +57,7 @@ Emulator::Emulator()
 		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_VULKAN);
 
 		if (window == nullptr) {
-			// Helpers::panic("Window creation failed: %s", SDL_GetError());
+			Helpers::warn("Window creation failed: %s", SDL_GetError());
 		}
 	}
 #endif

@@ -8,6 +8,8 @@ class RendererVK final : public Renderer {
 	vk::PhysicalDevice physicalDevice = {};
 	vk::UniqueDevice device = {};
 
+	vk::UniqueSurfaceKHR surface = {};
+
 	vk::UniqueDebugUtilsMessengerEXT debugMessenger;
 
   public:
