@@ -31,12 +31,22 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	instanceInfo.pApplicationInfo = &applicationInfo;
 
-	static const std::array instanceExtensions = std::to_array({
+	std::vector<const char*> instanceExtensions = {
 #if defined(__APPLE__)
 		VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
 #endif
-			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-	});
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+	};
+
+	// Get any additional extensions that SDL wants as well
+	{
+		unsigned int extensionCount = 0;
+		SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
+		std::vector<const char*> sdlInstanceExtensions(extensionCount);
+		SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, sdlInstanceExtensions.data());
+
+		instanceExtensions.insert(instanceExtensions.end(), sdlInstanceExtensions.begin(), sdlInstanceExtensions.end());
+	}
 
 #if defined(__APPLE__)
 	instanceInfo.flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
