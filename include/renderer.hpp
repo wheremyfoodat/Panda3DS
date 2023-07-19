@@ -16,7 +16,7 @@ enum class RendererType : s8 {
 };
 
 class GPU;
-class SDL_Window;
+struct SDL_Window;
 
 class Renderer {
   protected:
