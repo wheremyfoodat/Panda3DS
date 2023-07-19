@@ -84,21 +84,43 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		}
 	}
 
-	// Pick physical device
-	if (auto EnumerateResult = instance->enumeratePhysicalDevices(); EnumerateResult.result == vk::Result::eSuccess) {
-		std::vector<vk::PhysicalDevice> PhysicalDevices = std::move(EnumerateResult.value);
+	// Create surface
+	if (VkSurfaceKHR newSurface; SDL_Vulkan_CreateSurface(window, instance.get(), &newSurface)) {
+		surface.reset(newSurface);
+	} else {
+		Helpers::warn("Error creating Vulkan surface");
+	}
 
-		// Prefer Discrete GPUs
-		const auto IsDiscrete = [](const vk::PhysicalDevice& PhysicalDevice) -> bool {
-			return PhysicalDevice.getProperties().deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
+	// Pick physical device
+	if (auto enumerateResult = instance->enumeratePhysicalDevices(); enumerateResult.result == vk::Result::eSuccess) {
+		std::vector<vk::PhysicalDevice> physicalDevices = std::move(enumerateResult.value);
+		std::vector<vk::PhysicalDevice>::iterator partitionEnd = physicalDevices.end();
+
+		// Prefer GPUs that can access the surface
+		const auto surfaceSupport = [this](const vk::PhysicalDevice& physicalDevice) -> bool {
+			const usize queueCount = physicalDevice.getQueueFamilyProperties().size();
+			for (usize queueIndex = 0; queueIndex < queueCount; ++queueIndex) {
+				if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueIndex, surface.get());
+					supportResult.result == vk::Result::eSuccess) {
+					return supportResult.value;
+				}
+			}
+			return false;
 		};
 
-		std::partition(PhysicalDevices.begin(), PhysicalDevices.end(), IsDiscrete);
+		partitionEnd = std::stable_partition(physicalDevices.begin(), partitionEnd, surfaceSupport);
 
-		// Pick the "best" out of all of the previous criteria
-		physicalDevice = PhysicalDevices.front();
+		// Prefer Discrete GPUs
+		const auto isDiscrete = [](const vk::PhysicalDevice& physicalDevice) -> bool {
+			return physicalDevice.getProperties().deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
+		};
+		partitionEnd = std::stable_partition(physicalDevices.begin(), partitionEnd, isDiscrete);
+
+		// Pick the "best" out of all of the previous criteria, preserving the order that the
+		// driver gave us the devices in(ex: optimus configuration)
+		physicalDevice = physicalDevices.front();
 	} else {
-		Helpers::panic("Error enumerating physical devices: %s\n", vk::to_string(EnumerateResult.result).c_str());
+		Helpers::panic("Error enumerating physical devices: %s\n", vk::to_string(enumerateResult.result).c_str());
 	}
 
 	// Create Device
@@ -140,12 +162,6 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	// Initialize device-specific function pointers
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(device.get());
-
-	if (VkSurfaceKHR newSurface; SDL_Vulkan_CreateSurface(window, instance.get(), &newSurface)) {
-		surface.reset(newSurface);
-	} else {
-		Helpers::warn("Error creating Vulkan surface");
-	}
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
