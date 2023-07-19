@@ -13,7 +13,7 @@ void RendererVK::reset() {}
 void RendererVK::display() {}
 
 void RendererVK::initGraphicsContext(SDL_Window* window) {
-	// Resolve all function pointers
+	// Resolve all instance function pointers
 	static vk::DynamicLoader dl;
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
 
@@ -33,7 +33,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	static const std::array instanceExtensions = std::to_array({
 #if defined(__APPLE__)
-		VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+		VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
 #endif
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 	});
