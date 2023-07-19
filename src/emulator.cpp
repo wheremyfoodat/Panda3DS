@@ -76,6 +76,12 @@ void Emulator::reset(ReloadOption reload) {
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
 
+	// We're resetting without reloading the ROM, so yeet cheats
+	if (reload == ReloadOption::NoReload) {
+		haveCheats = false;
+		cheats.reset();
+	}
+
 	// If a ROM is active and we reset, with the reload option enabled then reload it.
 	// This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
 	if (reload == ReloadOption::Reload && romType != ROMType::None && romPath.has_value()) {
