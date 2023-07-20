@@ -5,6 +5,9 @@
 #include "action_replay.hpp"
 #include "helpers.hpp"
 
+// Forward-declare this since it's just passed and we don't want to include memory.hpp and increase compile time
+class Memory;
+
 class Cheats {
   public:
 	enum class CheatType {
@@ -17,10 +20,10 @@ class Cheats {
 		std::vector<u32> instructions;
 	};
 
-	Cheats();
+	Cheats(Memory& mem);
 	void addCheat(const Cheat& cheat);
-	void runCheats();
 	void reset();
+	void run();
 
   private:
 	ActionReplay ar; // An ActionReplay cheat machine for executing CTRPF codes

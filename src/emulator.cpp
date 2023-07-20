@@ -16,7 +16,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config),
-	  memory(cpu.getTicksRef()) {
+	  memory(cpu.getTicksRef()), cheats(memory) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -104,19 +104,8 @@ void Emulator::run() {
 #endif
 
 	while (running) {
+		runFrame();
 		ServiceManager& srv = kernel.getServiceManager();
-
-		if (romType != ROMType::None) {
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-			pollHttpServer();
-#endif
-			runFrame();     // Run 1 frame of instructions
-			gpu.display();  // Display graphics
-
-			// Send VBlank interrupts
-			srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
-			srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
-		}
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -344,7 +333,24 @@ void Emulator::run() {
 	}
 }
 
-void Emulator::runFrame() { cpu.runFrame(); }
+void Emulator::runFrame() {
+	if (romType != ROMType::None) {
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+		pollHttpServer();
+#endif
+		cpu.runFrame(); // Run 1 frame of instructions
+		gpu.display();  // Display graphics
+
+		// Send VBlank interrupts
+		ServiceManager& srv = kernel.getServiceManager();
+		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+		srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+
+		if (haveCheats) [[unlikely]] {
+			cheats.run();
+		}
+	}
+}
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
 	// Reset the emulator if we've already loaded a ROM

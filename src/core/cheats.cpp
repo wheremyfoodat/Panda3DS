@@ -1,13 +1,15 @@
 #include "cheats.hpp"
 
-Cheats::Cheats() { reset(); }
+Cheats::Cheats(Memory& mem) : ar(mem) { reset(); }
 
 void Cheats::reset() {
 	cheats.clear();  // Unload loaded cheats
-	ar.reset();      // Reset AR boi
+	ar.reset();      // Reset ActionReplay
 }
 
-void Cheats::runCheats() {
+void Cheats::addCheat(const Cheat& cheat) { cheats.push_back(cheat); }
+
+void Cheats::run() {
 	for (const Cheat& cheat : cheats) {
 		switch (cheat.type) {
 			case CheatType::ActionReplay: {

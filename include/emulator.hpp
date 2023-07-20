@@ -32,7 +32,7 @@ class Emulator {
 	Memory memory;
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
-	ActionReplay cheats;
+	Cheats cheats;
 
 	SDL_Window* window;
 
