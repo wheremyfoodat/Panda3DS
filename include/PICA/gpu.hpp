@@ -129,13 +129,13 @@ class GPU {
 
 	// Get a pointer of type T* to the data starting from physical address paddr
 	template <typename T>
-	T* getPointerPhys(u32 paddr) {
-		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+	T* getPointerPhys(u32 paddr, u32 size = 0) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr + size <= PhysicalAddrs::FCRAMEnd) {
 			u8* fcram = mem.getFCRAM();
 			u32 index = paddr - PhysicalAddrs::FCRAM;
 
 			return (T*)&fcram[index];
-		} else if (paddr >= PhysicalAddrs::VRAM && paddr <= PhysicalAddrs::VRAMEnd) {
+		} else if (paddr >= PhysicalAddrs::VRAM && paddr + size <= PhysicalAddrs::VRAMEnd) {
 			u32 index = paddr - PhysicalAddrs::VRAM;
 			return (T*)&vram[index];
 		} else [[unlikely]] {
