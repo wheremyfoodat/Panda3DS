@@ -305,9 +305,9 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 				u32 size = (regs[CmdBufSize0 + bufferIndex] & 0xfffff) << 3;
 
 				// Set command buffer state to execute the new buffer
-				cmdBuffStart = getPointerPhys<u32>(addr);
-				cmdBuffCurr = cmdBuffStart;
-				cmdBuffEnd = cmdBuffStart + (size / sizeof(u32));
+				cmdBuff = getPointerPhys<u32>(addr, size);
+				cmdBuffCurr = 0;
+				cmdBuffEnd = cmdBuff.size();
 			}
 			break;
 		}
@@ -336,12 +336,13 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 }
 
 void GPU::startCommandList(u32 addr, u32 size) {
-	cmdBuffStart = static_cast<u32*>(mem.getReadPointer(addr));
-	if (!cmdBuffStart) Helpers::panic("Couldn't get buffer for command list");
+	cmdBuff = mem.getReadPointer<u32>(addr, size);
+	if (!cmdBuff.data())
+		Helpers::panic("Couldn't get buffer for command list");
 	// TODO: This is very memory unsafe. We get a pointer to FCRAM and just keep writing without checking if we're gonna go OoB
 
-	cmdBuffCurr = cmdBuffStart;
-	cmdBuffEnd = cmdBuffStart + (size / sizeof(u32));
+	cmdBuffCurr = 0;
+	cmdBuffEnd = cmdBuff.size();
 
 	// LUT for converting the parameter mask to an actual 32-bit mask
 	// The parameter mask is 4 bits long, each bit corresponding to one byte of the mask
@@ -357,13 +358,13 @@ void GPU::startCommandList(u32 addr, u32 size) {
 		// The curr pointer starts out doubleword-aligned and is increased by 4 bytes each time
 		// So to check if it is aligned, we get the number of words it's been incremented by
 		// If that number is an odd value then the buffer is not aligned, otherwise it is
-		if ((cmdBuffCurr - cmdBuffStart) % 2 != 0) {
+		if (cmdBuffCurr % 2 != 0) {
 			cmdBuffCurr++;
 		}
 
 		// The first word of a command is the command parameter and the second one is the header
-		u32 param1 = *cmdBuffCurr++;
-		u32 header = *cmdBuffCurr++;
+		const u32 param1 = cmdBuff[cmdBuffCurr++];
+		const u32 header = cmdBuff[cmdBuffCurr++];
 
 		u32 id = header & 0xffff;
 		u32 paramMaskIndex = getBits<16, 4>(header);
@@ -380,7 +381,7 @@ void GPU::startCommandList(u32 addr, u32 size) {
 		writeInternalReg(id, param1, mask);
 		for (u32 i = 0; i < paramCount; i++) {
 			id += idIncrement;
-			u32 param = *cmdBuffCurr++;
+			u32 param = cmdBuff[cmdBuffCurr++];
 			writeInternalReg(id, param, mask);
 		}
 	}

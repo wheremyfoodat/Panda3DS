@@ -258,14 +258,14 @@ u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, const void* data) {
     }
 }
 
-void Texture::decodeTexture(const void* data) {
+void Texture::decodeTexture(std::span<const u8> data) {
     std::vector<u32> decoded;
     decoded.reserve(u64(size.u()) * u64(size.v()));
 
     // Decode texels line by line
     for (u32 v = 0; v < size.v(); v++) {
         for (u32 u = 0; u < size.u(); u++) {
-            u32 colour = decodeTexel(u, v, format, data);
+            u32 colour = decodeTexel(u, v, format, data.data());
             decoded.push_back(colour);
         }
     }

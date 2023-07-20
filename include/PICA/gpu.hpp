@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <span>
 
 #include "PICA/dynapica/shader_rec.hpp"
 #include "PICA/float_types.hpp"
@@ -64,9 +65,9 @@ class GPU {
 	std::array<u32, 3> fixedAttrBuff;  // Buffer to hold fixed attributes in until they get submitted
 
 	// Command processor pointers for GPU command lists
-	u32* cmdBuffStart = nullptr;
-	u32* cmdBuffEnd = nullptr;
-	u32* cmdBuffCurr = nullptr;
+	std::span<u32> cmdBuff{};
+	u32 cmdBuffEnd{};
+	u32 cmdBuffCurr{};
 
 	std::unique_ptr<Renderer> renderer;
 	PICA::Vertex getImmediateModeVertex();
@@ -127,17 +128,16 @@ class GPU {
 		}
 	}
 
-	// Get a pointer of type T* to the data starting from physical address paddr
+	// Get a span of type T to the data starting from physical address paddr
 	template <typename T>
-	T* getPointerPhys(u32 paddr) {
-		if (paddr >= PhysicalAddrs::FCRAM && paddr <= PhysicalAddrs::FCRAMEnd) {
+	std::span<T> getPointerPhys(u32 paddr, u32 size) {
+		if (paddr >= PhysicalAddrs::FCRAM && paddr + size <= PhysicalAddrs::FCRAMEnd) {
 			u8* fcram = mem.getFCRAM();
 			u32 index = paddr - PhysicalAddrs::FCRAM;
-
-			return (T*)&fcram[index];
-		} else if (paddr >= PhysicalAddrs::VRAM && paddr <= PhysicalAddrs::VRAMEnd) {
+			return std::span{(T*)&fcram[index], size / sizeof(T)};
+		} else if (paddr >= PhysicalAddrs::VRAM && paddr + size <= PhysicalAddrs::VRAMEnd) {
 			u32 index = paddr - PhysicalAddrs::VRAM;
-			return (T*)&vram[index];
+			return std::span{(T*)&vram[index], size / sizeof(T)};
 		} else [[unlikely]] {
 			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
 		}

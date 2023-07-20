@@ -131,12 +131,12 @@ void GPU::drawArrays() {
 			vertexIndex = i + regs[PICA::InternalRegs::VertexOffsetReg];
 		} else {
 			if (shortIndex) {
-				auto ptr = getPointerPhys<u16>(indexBufferPointer);
-				vertexIndex = *ptr;  // TODO: This is very unsafe
+				auto ptr = getPointerPhys<u16>(indexBufferPointer, 2);
+				vertexIndex = ptr[0];  // TODO: This is very unsafe
 				indexBufferPointer += 2;
 			} else {
-				auto ptr = getPointerPhys<u8>(indexBufferPointer);
-				vertexIndex = *ptr;  // TODO: This is also very unsafe
+				auto ptr = getPointerPhys<u8>(indexBufferPointer, 1);
+				vertexIndex = ptr[0];  // TODO: This is also very unsafe
 				indexBufferPointer += 1;
 			}
 		}
@@ -194,47 +194,32 @@ void GPU::drawArrays() {
 					vec4f& attribute = currentAttributes[attrCount];
 					uint component;  // Current component
 
+					const auto get_attrib = [&]<typename T>(T param) {
+						auto ptr = getPointerPhys<T>(attrAddress, size * sizeof(T));
+						for (component = 0; component < size; component++) {
+							const float val = static_cast<float>(ptr[component]);
+							attribute[component] = f24::fromFloat32(val);
+						}
+						attrAddress += size * sizeof(T);
+					};
+
 					switch (attribType) {
 						case 0: {  // Signed byte
-							s8* ptr = getPointerPhys<s8>(attrAddress);
-							for (component = 0; component < size; component++) {
-								float val = static_cast<float>(*ptr++);
-								attribute[component] = f24::fromFloat32(val);
-							}
-							attrAddress += size * sizeof(s8);
+							get_attrib(s8{});
 							break;
 						}
-
 						case 1: {  // Unsigned byte
-							u8* ptr = getPointerPhys<u8>(attrAddress);
-							for (component = 0; component < size; component++) {
-								float val = static_cast<float>(*ptr++);
-								attribute[component] = f24::fromFloat32(val);
-							}
-							attrAddress += size * sizeof(u8);
+							get_attrib(u8{});
 							break;
 						}
-
 						case 2: {  // Short
-							s16* ptr = getPointerPhys<s16>(attrAddress);
-							for (component = 0; component < size; component++) {
-								float val = static_cast<float>(*ptr++);
-								attribute[component] = f24::fromFloat32(val);
-							}
-							attrAddress += size * sizeof(s16);
+							get_attrib(s16{});
 							break;
 						}
-
 						case 3: {  // Float
-							float* ptr = getPointerPhys<float>(attrAddress);
-							for (component = 0; component < size; component++) {
-								float val = *ptr++;
-								attribute[component] = f24::fromFloat32(val);
-							}
-							attrAddress += size * sizeof(float);
+							get_attrib(float{});
 							break;
 						}
-
 						default: Helpers::panic("[PICA] Unimplemented attribute type %d", attribType);
 					}
 

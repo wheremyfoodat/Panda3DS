@@ -448,7 +448,7 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
 	if (buffer.has_value()) {
 		return buffer.value().get().texture;
 	} else {
-		const void* textureData = gpu.getPointerPhys<void*>(tex.location);  // Get pointer to the texture data in 3DS memory
+		std::span<u8> textureData = gpu.getPointerPhys<u8>(tex.location, tex.sizeInBytes());  // Get pointer to the texture data in 3DS memory
 		Texture& newTex = textureCache.add(tex);
 		newTex.decodeTexture(textureData);
 

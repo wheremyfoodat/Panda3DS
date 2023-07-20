@@ -40,7 +40,7 @@ struct Texture {
 
     void allocate();
     void setNewConfig(u32 newConfig);
-    void decodeTexture(const void* data);
+    void decodeTexture(std::span<const u8> data);
     void free();
     u64 sizeInBytes();
 

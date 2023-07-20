@@ -5,6 +5,7 @@
 #include <fstream>
 #include <optional>
 #include <vector>
+#include <span>
 #include "crypto/aes_engine.hpp"
 #include "helpers.hpp"
 #include "handles.hpp"
@@ -167,6 +168,11 @@ public:
 
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
+
+	template <class T>
+	std::span<T> getReadPointer(u32 address, u32 size) {
+		return std::span{reinterpret_cast<T*>(getReadPointer(address), size / sizeof(T))};
+	}
 
 	// Total amount of OS-only FCRAM available (Can vary depending on how much FCRAM the app requests via the cart exheader)
 	u32 totalSysFCRAM() {
