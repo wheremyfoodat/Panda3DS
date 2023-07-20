@@ -105,7 +105,7 @@ void Emulator::run() {
 
 	while (running) {
 		runFrame();
-		ServiceManager& srv = kernel.getServiceManager();
+		HIDService& hid = kernel.getServiceManager().getHID();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -121,41 +121,41 @@ void Emulator::run() {
 					if (romType == ROMType::None) break;
 
 					switch (event.key.keysym.sym) {
-						case SDLK_l: srv.pressKey(Keys::A); break;
-						case SDLK_k: srv.pressKey(Keys::B); break;
-						case SDLK_o: srv.pressKey(Keys::X); break;
-						case SDLK_i: srv.pressKey(Keys::Y); break;
+						case SDLK_l: hid.pressKey(Keys::A); break;
+						case SDLK_k: hid.pressKey(Keys::B); break;
+						case SDLK_o: hid.pressKey(Keys::X); break;
+						case SDLK_i: hid.pressKey(Keys::Y); break;
 
-						case SDLK_q: srv.pressKey(Keys::L); break;
-						case SDLK_p: srv.pressKey(Keys::R); break;
+						case SDLK_q: hid.pressKey(Keys::L); break;
+						case SDLK_p: hid.pressKey(Keys::R); break;
 
-						case SDLK_RIGHT: srv.pressKey(Keys::Right); break;
-						case SDLK_LEFT: srv.pressKey(Keys::Left); break;
-						case SDLK_UP: srv.pressKey(Keys::Up); break;
-						case SDLK_DOWN: srv.pressKey(Keys::Down); break;
+						case SDLK_RIGHT: hid.pressKey(Keys::Right); break;
+						case SDLK_LEFT: hid.pressKey(Keys::Left); break;
+						case SDLK_UP: hid.pressKey(Keys::Up); break;
+						case SDLK_DOWN: hid.pressKey(Keys::Down); break;
 
 						case SDLK_w:
-							srv.setCirclepadY(0x9C);
+							hid.setCirclepadY(0x9C);
 							keyboardAnalogY = true;
 							break;
 
 						case SDLK_a:
-							srv.setCirclepadX(-0x9C);
+							hid.setCirclepadX(-0x9C);
 							keyboardAnalogX = true;
 							break;
 
 						case SDLK_s:
-							srv.setCirclepadY(-0x9C);
+							hid.setCirclepadY(-0x9C);
 							keyboardAnalogY = true;
 							break;
 
 						case SDLK_d:
-							srv.setCirclepadX(0x9C);
+							hid.setCirclepadX(0x9C);
 							keyboardAnalogX = true;
 							break;
 
-						case SDLK_RETURN: srv.pressKey(Keys::Start); break;
-						case SDLK_BACKSPACE: srv.pressKey(Keys::Select); break;
+						case SDLK_RETURN: hid.pressKey(Keys::Start); break;
+						case SDLK_BACKSPACE: hid.pressKey(Keys::Select); break;
 					}
 					break;
 
@@ -163,34 +163,34 @@ void Emulator::run() {
 					if (romType == ROMType::None) break;
 
 					switch (event.key.keysym.sym) {
-						case SDLK_l: srv.releaseKey(Keys::A); break;
-						case SDLK_k: srv.releaseKey(Keys::B); break;
-						case SDLK_o: srv.releaseKey(Keys::X); break;
-						case SDLK_i: srv.releaseKey(Keys::Y); break;
+						case SDLK_l: hid.releaseKey(Keys::A); break;
+						case SDLK_k: hid.releaseKey(Keys::B); break;
+						case SDLK_o: hid.releaseKey(Keys::X); break;
+						case SDLK_i: hid.releaseKey(Keys::Y); break;
 
-						case SDLK_q: srv.releaseKey(Keys::L); break;
-						case SDLK_p: srv.releaseKey(Keys::R); break;
+						case SDLK_q: hid.releaseKey(Keys::L); break;
+						case SDLK_p: hid.releaseKey(Keys::R); break;
 
-						case SDLK_RIGHT: srv.releaseKey(Keys::Right); break;
-						case SDLK_LEFT: srv.releaseKey(Keys::Left); break;
-						case SDLK_UP: srv.releaseKey(Keys::Up); break;
-						case SDLK_DOWN: srv.releaseKey(Keys::Down); break;
+						case SDLK_RIGHT: hid.releaseKey(Keys::Right); break;
+						case SDLK_LEFT: hid.releaseKey(Keys::Left); break;
+						case SDLK_UP: hid.releaseKey(Keys::Up); break;
+						case SDLK_DOWN: hid.releaseKey(Keys::Down); break;
 
 						// Err this is probably not ideal
 						case SDLK_w:
 						case SDLK_s:
-							srv.setCirclepadY(0);
+							hid.setCirclepadY(0);
 							keyboardAnalogY = false;
 							break;
 
 						case SDLK_a:
 						case SDLK_d:
-							srv.setCirclepadX(0);
+							hid.setCirclepadX(0);
 							keyboardAnalogX = false;
 							break;
 
-						case SDLK_RETURN: srv.releaseKey(Keys::Start); break;
-						case SDLK_BACKSPACE: srv.releaseKey(Keys::Select); break;
+						case SDLK_RETURN: hid.releaseKey(Keys::Start); break;
+						case SDLK_BACKSPACE: hid.releaseKey(Keys::Select); break;
 					}
 					break;
 
@@ -207,9 +207,9 @@ void Emulator::run() {
 							u16 x_converted = static_cast<u16>(x) - 40;
 							u16 y_converted = static_cast<u16>(y) - 240;
 
-							srv.setTouchScreenPress(x_converted, y_converted);
+							hid.setTouchScreenPress(x_converted, y_converted);
 						} else {
-							srv.releaseTouchScreen();
+							hid.releaseTouchScreen();
 						}
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
 						holdingRightClick = true;
@@ -221,7 +221,7 @@ void Emulator::run() {
 					if (romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						srv.releaseTouchScreen();
+						hid.releaseTouchScreen();
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
 						holdingRightClick = false;
 					}
@@ -264,9 +264,9 @@ void Emulator::run() {
 
 					if (key != 0) {
 						if (event.cbutton.state == SDL_PRESSED) {
-							srv.pressKey(key);
+							hid.pressKey(key);
 						} else {
-							srv.releaseKey(key);
+							hid.releaseKey(key);
 						}
 					}
 					break;
@@ -285,8 +285,8 @@ void Emulator::run() {
 					// So up until then, we will set the gyroscope euler angles to fixed values based on the direction of the relative motion
 					const s32 roll = motionX > 0 ? 0x7f : -0x7f;
 					const s32 pitch = motionY > 0 ? 0x7f : -0x7f;
-					srv.setRoll(roll);
-					srv.setPitch(pitch);
+					hid.setRoll(roll);
+					hid.setPitch(pitch);
 					break;
 				}
 
@@ -313,19 +313,19 @@ void Emulator::run() {
 
 				// Avoid overriding the keyboard's circlepad input
 				if (abs(stickX) < deadzone && !keyboardAnalogX) {
-					srv.setCirclepadX(0);
+					hid.setCirclepadX(0);
 				} else {
-					srv.setCirclepadX(stickX / div);
+					hid.setCirclepadX(stickX / div);
 				}
 
 				if (abs(stickY) < deadzone && !keyboardAnalogY) {
-					srv.setCirclepadY(0);
+					hid.setCirclepadY(0);
 				} else {
-					srv.setCirclepadY(-(stickY / div));
+					hid.setCirclepadY(-(stickY / div));
 				}
 			}
 
-			srv.updateInputs(cpu.getTicks());
+			hid.updateInputs(cpu.getTicks());
 		}
 
 		// Update inputs in the HID module
@@ -452,7 +452,7 @@ void Emulator::initGraphicsContext() { gpu.initGraphicsContext(); }
 void Emulator::pollHttpServer() {
 	std::scoped_lock lock(httpServer.actionMutex);
 
-	ServiceManager& srv = kernel.getServiceManager();
+	HIDService& hid = kernel.getServiceManager().getHID();
 
 	if (httpServer.pendingAction) {
 		switch (httpServer.action) {
@@ -460,14 +460,14 @@ void Emulator::pollHttpServer() {
 
 			case HttpAction::PressKey:
 				if (httpServer.pendingKey != 0) {
-					srv.pressKey(httpServer.pendingKey);
+					hid.pressKey(httpServer.pendingKey);
 					httpServer.pendingKey = 0;
 				}
 				break;
 
 			case HttpAction::ReleaseKey:
 				if (httpServer.pendingKey != 0) {
-					srv.releaseKey(httpServer.pendingKey);
+					hid.releaseKey(httpServer.pendingKey);
 					httpServer.pendingKey = 0;
 				}
 				break;

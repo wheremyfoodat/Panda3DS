@@ -90,17 +90,5 @@ class ServiceManager {
 	void signalDSPEvents() { dsp.signalEvents(); }
 
 	// Input function wrappers
-	void pressKey(u32 key) { hid.pressKey(key); }
-	void releaseKey(u32 key) { hid.releaseKey(key); }
-	s16 getCirclepadX() { return hid.getCirclepadX(); }
-	s16 getCirclepadY() { return hid.getCirclepadY(); }
-	void setCirclepadX(s16 x) { hid.setCirclepadX(x); }
-	void setCirclepadY(s16 y) { hid.setCirclepadY(y); }
-	void updateInputs(u64 currentTimestamp) { hid.updateInputs(currentTimestamp); }
-	void setTouchScreenPress(u16 x, u16 y) { hid.setTouchScreenPress(x, y); }
-	void releaseTouchScreen() { hid.releaseTouchScreen(); }
-
-	void setRoll(s16 roll) { hid.setRoll(roll); }
-	void setPitch(s16 pitch) { hid.setPitch(pitch); }
-	void setYaw(s16 yaw) { hid.setYaw(yaw); }
+	HIDService& getHID() { return hid; }
 };
