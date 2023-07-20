@@ -40,11 +40,11 @@ struct Texture {
 
     void allocate();
     void setNewConfig(u32 newConfig);
-    void decodeTexture(const void* data);
+    void decodeTexture(std::span<const u8> data);
     void free();
     u64 sizeInBytes();
 
-    u32 decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, const void* data);
+    u32 decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
 
     // Get the morton interleave offset of a texel based on its U and V values
     static u32 mortonInterleave(u32 u, u32 v);
@@ -59,6 +59,6 @@ struct Texture {
 
     // Returns the texel at coordinates (u, v) of an ETC1(A4) texture
     // TODO: Make hasAlpha a template parameter
-    u32 getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, const void* data);
+    u32 getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, std::span<const u8> data);
     u32 decodeETC(u32 alpha, u32 u, u32 v, u64 colourData);
 };
