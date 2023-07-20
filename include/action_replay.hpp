@@ -14,7 +14,7 @@ class ActionReplay {
 
 	// When an instruction does not specify which offset or data register to use, we use the "active" one
 	// Which is by default #1 and may be changed by certain AR operations
-	u32 *activeOffset, *activeData;
+	u32 *activeOffset, *activeData, *activeStorage;
 	
 	// Program counter
 	u32 pc = 0;
