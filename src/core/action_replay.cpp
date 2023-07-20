@@ -42,7 +42,16 @@ void ActionReplay::runInstruction(const Cheat& cheat, u32 instruction) {
 	const u32 type = instruction >> 28;
 
 	switch (type) {
-		// 8 bit write to [XXXXXXX + offset]
+		// 16-bit write to [XXXXXXX + offset]
+		case 0x1: {
+			const u32 baseAddr = Helpers::getBits<0, 28>(instruction);
+			const u16 value = u16(cheat[pc++]);
+			write16(baseAddr + *activeOffset, value);
+			break;
+		}
+
+
+		// 8-bit write to [XXXXXXX + offset]
 		case 0x2: {
 			const u32 baseAddr = Helpers::getBits<0, 28>(instruction);
 			const u8 value = u8(cheat[pc++]);
