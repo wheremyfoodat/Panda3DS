@@ -29,14 +29,14 @@ void ActionReplay::runCheat(const Cheat& cheat) {
 		}
 		// Fetch instruction
 		const u32 instruction = cheat[pc++];
-		
+
 		// Instructions D0000000 00000000 and D2000000 00000000 are unconditional
 		bool isUnconditional = cheat[pc] == 0 && (instruction == 0xD0000000 || instruction == 0xD2000000);
 		if (ifStackIndex > 0 && !isUnconditional && !ifStack[ifStackIndex - 1]) {
-			pc++; // Eat up dummy word
-			continue; // Skip conditional instructions where the condition is false
+			pc++;      // Eat up dummy word
+			continue;  // Skip conditional instructions where the condition is false
 		}
-		
+
 		runInstruction(cheat, instruction);
 	}
 }
@@ -96,15 +96,16 @@ void ActionReplay::runInstruction(const Cheat& cheat, u32 instruction) {
 			break;
 		}
 
-		#define MAKE_IF_INSTRUCTION(opcode, comparator)                    \
-	case opcode: {                                                 \
-		const u32 baseAddr = Helpers::getBits<0, 28>(instruction); \
-		const u32 imm = cheat[pc++];                               \
-		const u32 value = read32(baseAddr + *activeOffset);        \
-                                                                   \
-		pushConditionBlock(imm comparator value);                  \
-		break;                                                     \
-	}									
+// clang-format off
+		#define MAKE_IF_INSTRUCTION(opcode, comparator)                \
+		case opcode: {                                                 \
+			const u32 baseAddr = Helpers::getBits<0, 28>(instruction); \
+			const u32 imm = cheat[pc++];                               \
+			const u32 value = read32(baseAddr + *activeOffset);        \
+				                                                       \
+			pushConditionBlock(imm comparator value);                  \
+			break;                                                     \
+		}
 
 		// Greater Than (YYYYYYYY > [XXXXXXX + offset]) (Unsigned)
 		MAKE_IF_INSTRUCTION(3, >)
@@ -112,12 +113,22 @@ void ActionReplay::runInstruction(const Cheat& cheat, u32 instruction) {
 		// Less Than (YYYYYYYY < [XXXXXXX + offset]) (Unsigned)
 		MAKE_IF_INSTRUCTION(4, <)
 
-		// Equal to (YYYYYYYY == [XXXXXXX + offset]) (Unsigned)
+		// Equal to (YYYYYYYY == [XXXXXXX + offset])
 		MAKE_IF_INSTRUCTION(5, ==)
 
-		// Not Equal (YYYYYYYY != [XXXXXXX + offset]) (Unsigned)
+		// Not Equal (YYYYYYYY != [XXXXXXX + offset])
 		MAKE_IF_INSTRUCTION(6, !=)
 		#undef MAKE_IF_INSTRUCTION
+// clang-format on
+
+		// BXXXXXXX 00000000 - offset = *(XXXXXXX + offset)
+		case 0xB: {
+			const u32 baseAddr = Helpers::getBits<0, 28>(instruction);
+			*activeOffset = read32(baseAddr + *activeOffset);
+
+			pc++;  // Eat up dummy word
+			break;
+		}
 
 		case 0xD: executeDType(cheat, instruction); break;
 		default: Helpers::panic("Unimplemented ActionReplay instruction type %X", type); break;
@@ -199,7 +210,7 @@ void ActionReplay::executeDType(const Cheat& cheat, u32 instruction) {
 		case 0xD2000000: {
 			const u32 subopcode = cheat[pc++];
 			switch (subopcode) {
-				// Ends all loop/execute blocks	
+				// Ends all loop/execute blocks
 				case 0:
 					loopStackIndex = 0;
 					ifStackIndex = 0;
