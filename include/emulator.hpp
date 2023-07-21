@@ -1,38 +1,50 @@
 #pragma once
 
 #include <SDL.h>
-#include <glad/gl.h>
 
 #include <filesystem>
 #include <fstream>
 #include <optional>
 
 #include "PICA/gpu.hpp"
-#include "cpu.hpp"
+#include "cheats.hpp"
 #include "config.hpp"
+#include "cpu.hpp"
 #include "crypto/aes_engine.hpp"
 #include "io_file.hpp"
 #include "memory.hpp"
-#include "gl_state.hpp"
+
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "httpserver.hpp"
 #endif
 
-enum class ROMType { None, ELF, NCSD, CXI };
+enum class ROMType {
+	None,
+	ELF,
+	NCSD,
+	CXI,
+};
 
 class Emulator {
+	EmulatorConfig config;
 	CPU cpu;
 	GPU gpu;
 	Memory memory;
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
+	Cheats cheats;
 
-	GLStateManager gl;
-	EmulatorConfig config;
 	SDL_Window* window;
+
+#ifdef PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
+#endif
+
 	SDL_GameController* gameController = nullptr;
 	int gameControllerID;
+
+	// Shows whether we've loaded any action replay codes
+	bool haveCheats = false;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
@@ -63,8 +75,8 @@ class Emulator {
   public:
 	// Decides whether to reload or not reload the ROM when resetting. We use enum class over a plain bool for clarity.
 	// If NoReload is selected, the emulator will not reload its selected ROM. This is useful for things like booting up the emulator, or resetting to
-	// change ROMs. If Reload is selected, the emulator will reload its selected ROM. This is useful for eg a "reset" button that keeps the current ROM
-	// and just resets the emu
+	// change ROMs. If Reload is selected, the emulator will reload its selected ROM. This is useful for eg a "reset" button that keeps the current
+	// ROM and just resets the emu
 	enum class ReloadOption { NoReload, Reload };
 
 	Emulator();

@@ -1,5 +1,6 @@
-#include "PICA/shader.hpp"
 #include <cmath>
+
+#include "PICA/shader.hpp"
 
 using namespace Helpers;
 
@@ -11,20 +12,23 @@ void PICAShader::run() {
 
 	while (true) {
 		const u32 instruction = loadedShader[pc++];
-		const u32 opcode = instruction >> 26; // Top 6 bits are the opcode
+		const u32 opcode = instruction >> 26;  // Top 6 bits are the opcode
 
 		switch (opcode) {
 			case ShaderOpcodes::ADD: add(instruction); break;
 			case ShaderOpcodes::CALL: call(instruction); break;
 			case ShaderOpcodes::CALLC: callc(instruction); break;
 			case ShaderOpcodes::CALLU: callu(instruction); break;
-			case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2: 
+			case ShaderOpcodes::CMP1:
+			case ShaderOpcodes::CMP2: {
 				cmp(instruction);
 				break;
+			}
+
 			case ShaderOpcodes::DP3: dp3(instruction); break;
 			case ShaderOpcodes::DP4: dp4(instruction); break;
 			case ShaderOpcodes::DPHI: dphi(instruction); break;
-			case ShaderOpcodes::END: return; // Stop running shader
+			case ShaderOpcodes::END: return;  // Stop running shader
 			case ShaderOpcodes::EX2: ex2(instruction); break;
 			case ShaderOpcodes::FLR: flr(instruction); break;
 			case ShaderOpcodes::IFC: ifc(instruction); break;
@@ -38,31 +42,47 @@ void PICAShader::run() {
 			case ShaderOpcodes::MOV: mov(instruction); break;
 			case ShaderOpcodes::MOVA: mova(instruction); break;
 			case ShaderOpcodes::MUL: mul(instruction); break;
-			case ShaderOpcodes::NOP: break; // Do nothing
+			case ShaderOpcodes::NOP: break;  // Do nothing
 			case ShaderOpcodes::RCP: rcp(instruction); break;
 			case ShaderOpcodes::RSQ: rsq(instruction); break;
 			case ShaderOpcodes::SGEI: sgei(instruction); break;
 			case ShaderOpcodes::SLT: slt(instruction); break;
 			case ShaderOpcodes::SLTI: slti(instruction); break;
 
-			case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
+			case 0x30:
+			case 0x31:
+			case 0x32:
+			case 0x33:
+			case 0x34:
+			case 0x35:
+			case 0x36:
+			case 0x37: {
 				madi(instruction);
 				break;
+			}
 
-			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
+			case 0x38:
+			case 0x39:
+			case 0x3A:
+			case 0x3B:
+			case 0x3C:
+			case 0x3D:
+			case 0x3E:
+			case 0x3F: {
 				mad(instruction);
 				break;
+			}
 
-			default:Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
+			default: Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
 		}
 
 		// Handle control flow statements. The ordering is important as the priority goes: LOOP > IF > CALL
 		// Handle loop
 		if (loopIndex != 0) {
 			auto& loop = loopInfo[loopIndex - 1];
-			if (pc == loop.endingPC) { // Check if the loop needs to start over
+			if (pc == loop.endingPC) {  // Check if the loop needs to start over
 				loop.iterations -= 1;
-				if (loop.iterations == 0) // If the loop ended, go one level down on the loop stack
+				if (loop.iterations == 0)  // If the loop ended, go one level down on the loop stack
 					loopIndex -= 1;
 
 				loopCounter += loop.increment;
@@ -73,7 +93,7 @@ void PICAShader::run() {
 		// Handle ifs
 		if (ifIndex != 0) {
 			auto& info = conditionalInfo[ifIndex - 1];
-			if (pc == info.endingPC) { // Check if the IF block ended
+			if (pc == info.endingPC) {  // Check if the IF block ended
 				pc = info.newPC;
 				ifIndex -= 1;
 			}
@@ -82,7 +102,7 @@ void PICAShader::run() {
 		// Handle calls
 		if (callIndex != 0) {
 			auto& info = callInfo[callIndex - 1];
-			if (pc == info.endingPC) { // Check if the CALL block ended
+			if (pc == info.endingPC) {  // Check if the CALL block ended
 				pc = info.returnPC;
 				callIndex -= 1;
 			}
@@ -92,15 +112,15 @@ void PICAShader::run() {
 
 // Calculate the actual source value using an instruction's source field and it's respective index value
 // The index value is used to apply relative addressing when index != 0 by adding one of the 3 addr registers to the
-// source field, but only with the original source field is pointing at a vector uniform register 
+// source field, but only with the original source field is pointing at a vector uniform register
 u8 PICAShader::getIndexedSource(u32 source, u32 index) {
-	if (source < 0x20) // No offset is applied if the source isn't pointing to a vector uniform reg
+	if (source < 0x20)  // No offset is applied if the source isn't pointing to a vector uniform reg
 		return source;
 
 	switch (index) {
-		case 0: [[likely]] return u8(source); // No offset applied
-		case 1: return u8(source + addrRegister.x());
-		case 2: return u8(source + addrRegister.y());
+		case 0: [[likely]] return u8(source);  // No offset applied
+		case 1: return u8(source + addrRegister[0]);
+		case 2: return u8(source + addrRegister[1]);
 		case 3: return u8(source + loopCounter);
 	}
 
@@ -117,7 +137,7 @@ PICAShader::vec4f PICAShader::getSource(u32 source) {
 		return floatUniforms[source - 0x20];
 	else {
 		Helpers::warn("[PICA] Unimplemented source value: %X\n", source);
-		return vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() });
+		return vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});
 	}
 }
 
@@ -136,13 +156,13 @@ bool PICAShader::isCondTrue(u32 instruction) {
 	bool refX = (getBit<25>(instruction)) != 0;
 
 	switch (condition) {
-		case 0: // Either cmp register matches 
+		case 0:  // Either cmp register matches
 			return cmpRegister[0] == refX || cmpRegister[1] == refY;
-		case 1: // Both cmp registers match
+		case 1:  // Both cmp registers match
 			return cmpRegister[0] == refX && cmpRegister[1] == refY;
-		case 2: // At least cmp.x matches
+		case 2:  // At least cmp.x matches
 			return cmpRegister[0] == refX;
-		default: // At least cmp.y matches
+		default:  // At least cmp.y matches
 			return cmpRegister[1] == refY;
 	}
 }
@@ -150,7 +170,7 @@ bool PICAShader::isCondTrue(u32 instruction) {
 void PICAShader::add(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -171,7 +191,7 @@ void PICAShader::add(u32 instruction) {
 void PICAShader::mul(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -210,7 +230,7 @@ void PICAShader::flr(u32 instruction) {
 void PICAShader::max(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -232,7 +252,7 @@ void PICAShader::max(u32 instruction) {
 void PICAShader::min(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -278,16 +298,16 @@ void PICAShader::mova(u32 instruction) {
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
 
 	u32 componentMask = operandDescriptor & 0xf;
-	if (componentMask & 0b1000) // x component
-		addrRegister.x() = static_cast<s32>(srcVector.x().toFloat32());
-	if (componentMask & 0b0100) // y component
-		addrRegister.y() = static_cast<s32>(srcVector.y().toFloat32());
+	if (componentMask & 0b1000)  // x component
+		addrRegister[0] = static_cast<s32>(srcVector[0].toFloat32());
+	if (componentMask & 0b0100)  // y component
+		addrRegister[1] = static_cast<s32>(srcVector[1].toFloat32());
 }
 
 void PICAShader::dp3(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -309,7 +329,7 @@ void PICAShader::dp3(u32 instruction) {
 void PICAShader::dp4(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -480,7 +500,7 @@ void PICAShader::madi(u32 instruction) {
 void PICAShader::slt(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -542,11 +562,11 @@ void PICAShader::slti(u32 instruction) {
 void PICAShader::cmp(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 cmpY = getBits<21, 3>(instruction);
 	const u32 cmpX = getBits<24, 3>(instruction);
-	const u32 cmpOperations[2] = { cmpX, cmpY };
+	const u32 cmpOperations[2] = {cmpX, cmpY};
 
 	if (idx) Helpers::panic("[PICA] CMP: idx != 0");
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
@@ -554,33 +574,34 @@ void PICAShader::cmp(u32 instruction) {
 
 	for (int i = 0; i < 2; i++) {
 		switch (cmpOperations[i]) {
-			case 0: // Equal
+			case 0:  // Equal
 				cmpRegister[i] = srcVec1[i] == srcVec2[i];
 				break;
 
-			case 1: // Not equal
+			case 1:  // Not equal
 				cmpRegister[i] = srcVec1[i] != srcVec2[i];
 				break;
 
-			case 2: // Less than
+			case 2:  // Less than
 				cmpRegister[i] = srcVec1[i] < srcVec2[i];
 				break;
 
-			case 3: // Less than or equal
+			case 3:  // Less than or equal
 				cmpRegister[i] = srcVec1[i] <= srcVec2[i];
 				break;
 
-			case 4: // Greater than
+			case 4:  // Greater than
 				cmpRegister[i] = srcVec1[i] > srcVec2[i];
 				break;
 
-			case 5: // Greater than or equal
+			case 5:  // Greater than or equal
 				cmpRegister[i] = srcVec1[i] >= srcVec2[i];
 				break;
 
-			default:
+			default: {
 				cmpRegister[i] = true;
 				break;
+			}
 		}
 	}
 }
@@ -604,7 +625,7 @@ void PICAShader::ifc(u32 instruction) {
 
 void PICAShader::ifu(u32 instruction) {
 	const u32 dest = getBits<10, 12>(instruction);
-	const u32 bit = getBits<22, 4>(instruction); // Bit of the bool uniform to check
+	const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 
 	if (boolUniform & (1 << bit)) {
 		if (ifIndex >= 8) [[unlikely]]
@@ -615,8 +636,7 @@ void PICAShader::ifu(u32 instruction) {
 		auto& block = conditionalInfo[ifIndex++];
 		block.endingPC = dest;
 		block.newPC = dest + num;
-	}
-	else {
+	} else {
 		pc = dest;
 	}
 }
@@ -637,12 +657,12 @@ void PICAShader::call(u32 instruction) {
 
 void PICAShader::callc(u32 instruction) {
 	if (isCondTrue(instruction)) {
-		call(instruction); // Pls inline
+		call(instruction);  // Pls inline
 	}
 }
 
 void PICAShader::callu(u32 instruction) {
-	const u32 bit = getBits<22, 4>(instruction); // Bit of the bool uniform to check
+	const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 
 	if (boolUniform & (1 << bit)) {
 		if (callIndex >= 4) [[unlikely]]
@@ -664,26 +684,27 @@ void PICAShader::loop(u32 instruction) {
 		Helpers::panic("[PICA] Overflowed loop stack");
 
 	u32 dest = getBits<10, 12>(instruction);
-	auto& uniform = intUniforms[getBits<22, 2>(instruction)]; // The uniform we'll get loop info from
-	loopCounter = uniform.y();
+	auto& uniform = intUniforms[getBits<22, 2>(instruction)];  // The uniform we'll get loop info from
+	loopCounter = uniform[1];
 	auto& loop = loopInfo[loopIndex++];
 
 	loop.startingPC = pc;
-	loop.endingPC = dest + 1; // Loop is inclusive so we need + 1 here
-	loop.iterations = uniform.x() + 1;
-	loop.increment = uniform.z();
+	loop.endingPC = dest + 1;  // Loop is inclusive so we need + 1 here
+	loop.iterations = uniform[0] + 1;
+	loop.increment = uniform[2];
 }
 
 void PICAShader::jmpc(u32 instruction) {
-	if (isCondTrue(instruction))
+	if (isCondTrue(instruction)) {
 		pc = getBits<10, 12>(instruction);
+	}
 }
 
 void PICAShader::jmpu(u32 instruction) {
-	const u32 test = (instruction & 1) ^ 1; // If the LSB is 0 we want to compare to true, otherwise compare to false
+	const u32 test = (instruction & 1) ^ 1;  // If the LSB is 0 we want to compare to true, otherwise compare to false
 	const u32 dest = getBits<10, 12>(instruction);
-	const u32 bit = getBits<22, 4>(instruction); // Bit of the bool uniform to check
+	const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 
-	if (((boolUniform >> bit) & 1) == test) // Jump if the bool uniform is the value we want
+	if (((boolUniform >> bit) & 1) == test)  // Jump if the bool uniform is the value we want
 		pc = dest;
 }

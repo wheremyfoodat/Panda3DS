@@ -19,6 +19,7 @@ endif()
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
+option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
@@ -45,10 +46,12 @@ set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/SDL2)
-add_subdirectory(third_party/glad)
+
 add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
+
+add_subdirectory(third_party/cmrc)
 
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
@@ -90,9 +93,10 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/gl_state.cpp src/config.cpp
-                 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp src/core/memory.cpp
-                 src/httpserver.cpp src/stb_image_write.c
+set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
+				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
+				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
+				 src/httpserver.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -117,38 +121,36 @@ set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
 )
 
-set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp)
-
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/lz77.cpp)
 set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
                     src/core/fs/archive_ext_save_data.cpp src/core/fs/archive_ncch.cpp
 )
 
-set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/opengl.hpp include/termcolor.hpp
-                 include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/kernel/kernel.hpp
+set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
+                 include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/renderer.hpp include/kernel/kernel.hpp
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
                  include/kernel/config_mem.hpp include/services/service_manager.hpp include/services/apt.hpp
                  include/kernel/handles.hpp include/services/hid.hpp include/services/fs.hpp
-                 include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp
+                 include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp include/renderer_null/renderer_null.hpp
                  include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
                  include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
                  include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/io_file.hpp
                  include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_self_ncch.hpp
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
-                 include/services/mic.hpp include/services/cecd.hpp include/renderer_gl/renderer_gl.hpp
-                 include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp include/services/ac.hpp
+                 include/services/mic.hpp include/services/cecd.hpp include/services/ac.hpp
                  include/services/am.hpp include/services/boss.hpp include/services/frd.hpp include/services/nim.hpp
                  include/fs/archive_ext_save_data.hpp include/services/shared_font.hpp include/fs/archive_ncch.hpp
-                 include/renderer_gl/textures.hpp include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
+                 include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
                  include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
                  include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp include/PICA/dynapica/shader_rec.hpp
                  include/PICA/dynapica/shader_rec_emitter_x64.hpp include/PICA/pica_hash.hpp include/result/result.hpp
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
-                 include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp include/gl_state.hpp
-                 include/config.hpp include/services/ir_user.hpp include/httpserver.hpp
+                 include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
+                 include/config.hpp include/services/ir_user.hpp include/httpserver.hpp include/cheats.hpp
+                 include/action_replay.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -160,8 +162,6 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
 )
-
-source_group("Header Files\\Core" FILES ${HEADER_FILES})
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
 source_group("Source Files\\Core\\Crypto" FILES ${CRYPTO_SOURCE_FILES})
 source_group("Source Files\\Core\\Filesystem" FILES ${FS_SOURCE_FILES})
@@ -169,20 +169,64 @@ source_group("Source Files\\Core\\Kernel" FILES ${KERNEL_SOURCE_FILES})
 source_group("Source Files\\Core\\Loader" FILES ${LOADER_SOURCE_FILES})
 source_group("Source Files\\Core\\Services" FILES ${SERVICE_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
-source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
-add_executable(Alber ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
-${PICA_SOURCE_FILES} ${RENDERER_GL_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with the GL renderer
+
+if(ENABLE_OPENGL)
+	add_subdirectory(third_party/glad)
+
+	set(RENDERER_GL_INCLUDE_FILES include/renderer_gl/opengl.hpp
+		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
+		include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
+		include/renderer_gl/gl_state.hpp
+	)
+
+	set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
+        src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
+        src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.frag
+        src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
+        src/host_shaders/opengl_fragment_shader.frag
+	)
+
+    set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
+    source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
+
+	cmrc_add_resource_library(
+		resources_renderer_gl
+		NAMESPACE RendererGL
+		WHENCE "src/host_shaders/"
+		"src/host_shaders/opengl_display.frag"
+		"src/host_shaders/opengl_display.vert"
+		"src/host_shaders/opengl_vertex_shader.vert"
+		"src/host_shaders/opengl_fragment_shader.frag"
+	)
+endif()
+
+source_group("Header Files\\Core" FILES ${HEADER_FILES})
+set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
+	${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+
+if(ENABLE_OPENGL)
+    # Add the OpenGL source files to ALL_SOURCES
+    set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_GL_SOURCE_FILES})
+endif()
+
+add_executable(Alber ${ALL_SOURCES})
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
   set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static glad cryptopp)
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp)
+
+if(ENABLE_OPENGL)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
+    target_link_libraries(Alber PRIVATE glad resources_renderer_gl)
+endif()
 
 if(GPU_DEBUG_INFO)
-  target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
+    target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
 endif()
 
 if(ENABLE_USER_BUILD)

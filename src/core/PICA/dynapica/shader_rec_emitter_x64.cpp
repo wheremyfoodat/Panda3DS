@@ -61,11 +61,14 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 
 	// Tail call to shader code entrypoint
 	jmp(arg2);
-	align(16);
-	// Scan the shader code for call instructions and add them to the list of possible return PCs. We need to do this because the PICA callstack works
-	// Pretty weirdly
-	scanForCalls(shaderUnit);
 
+	// Scan the code for call, exp2, log2, etc instructions which need some special care
+	// After that, emit exp2 and log2 functions if the corresponding instructions are present
+	scanCode(shaderUnit);
+	if (codeHasExp2) exp2Func = emitExp2Func();
+	if (codeHasLog2) log2Func = emitLog2Func();
+
+	align(16);
 	// Compile every instruction in the shader
 	// This sounds horrible but the PICA instruction memory is tiny, and most of the time it's padded wtih nops that compile to nothing
 	recompilerPC = 0;
@@ -73,17 +76,23 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	compileUntil(shaderUnit, PICAShader::maxInstructionCount);
 }
 
-void ShaderEmitter::scanForCalls(const PICAShader& shaderUnit) {
+void ShaderEmitter::scanCode(const PICAShader& shaderUnit) {
 	returnPCs.clear();
 
 	for (u32 i = 0; i < PICAShader::maxInstructionCount; i++) {
 		const u32 instruction = shaderUnit.loadedShader[i];
+		const u32 opcode = instruction >> 26;
+
 		if (isCall(instruction)) {
 			const u32 num = instruction & 0xff;
 			const u32 dest = getBits<10, 12>(instruction);
 			const u32 returnPC = num + dest; // Add them to get the return PC
 
 			returnPCs.push_back(returnPC);
+		} else if (opcode == ShaderOpcodes::EX2) {
+			codeHasExp2 = true;
+		} else if (opcode == ShaderOpcodes::LG2) {
+			codeHasLog2 = true;
 		}
 	}
 
@@ -877,7 +886,6 @@ void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	loopLevel--;
 }
 
-// SSE does not have a log2 instruction so we temporarily emulate this using x87 FPU
 void ShaderEmitter::recLG2(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src = getBits<12, 7>(instruction);
@@ -885,30 +893,16 @@ void ShaderEmitter::recLG2(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = getBits<0, 4>(operandDescriptor);
 
-	// Load swizzled source, push 1.0 to the x87 stack
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);
-	fld1();
-
-	// Push source to the x87 stack
-	movd(eax, src1_xmm);
-	push(rax);
-	fld(dword[rsp]);
-
-	// Perform log2, load result to src1_xmm, write it back and undo the previous push rax
-	fyl2x();
-	fstp(dword[rsp]);
-	movss(src1_xmm, dword[rsp]);
-	add(rsp, 8);
-
-	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
-	// Otherwise we do
+	call(log2Func); // Result is output in src1_xmm
+	
 	if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
 		shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
 	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
-// SSE does not have an exp2 instruction so we temporarily emulate this using x87 FPU
 void ShaderEmitter::recEX2(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src = getBits<12, 7>(instruction);
@@ -917,31 +911,12 @@ void ShaderEmitter::recEX2(const PICAShader& shader, u32 instruction) {
 	const u32 writeMask = getBits<0, 4>(operandDescriptor);
 
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);
+	call(exp2Func);  // Result is output in src1_xmm
 
-	// Push source to the x87 stack, then do some insane compiler-generated x87 math
-	movd(eax, src1_xmm);
-	push(rax);
-	fld(dword[rsp]);
-
-	fld(st0);
-	frndint();
-	fsub(st1, st0);
-	fxch(st1);
-	f2xm1();
-	fadd(dword[rip + onesVector]);
-	fscale();
-
-	// Load result to src1_xmm, write it back and undo the previous push rax
-	fstp(st1);
-	fstp(dword[rsp]);
-	movss(src1_xmm, dword[rsp]);
-	add(rsp, 8);
-
-	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
-	// Otherwise we do
 	if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
 		shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
 	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -960,6 +935,228 @@ void ShaderEmitter::printLog(const PICAShader& shaderUnit) {
 
 	printf("addr: (%d, %d)\n", shaderUnit.addrRegister[0], shaderUnit.addrRegister[1]);
 	printf("cmp: (%d, %d)\n", shaderUnit.cmpRegister[0], shaderUnit.cmpRegister[1]);
+}
+
+// For EXP2/LOG2, we have permission to adjust and relicense the SSE implementation from Citra for this project from the original authors
+// So we do it since EXP2/LOG2 are pretty terrible to implement.
+// ABI: Input is in the bottom bits of src1_xmm, same for output. If the result needs swizzling, the caller must handle it
+// Assume src1, src2, scratch1, scratch2, eax, edx all thrashed
+
+Xbyak::Label ShaderEmitter::emitLog2Func() {
+	Xbyak::Label subroutine;
+
+	// This code uses the fact that log2(float) = log2(2^exponent * mantissa)
+	// = log2(2^exponent) + log2(mantissa) = exponent + log2(mantissa) where mantissa has a limited range of values
+	// https://stackoverflow.com/a/45787548
+
+	// SSE does not have a log instruction, thus we must approximate.
+	// We perform this approximation first performing a range reduction into the range [1.0, 2.0).
+	// A minimax polynomial which was fit for the function log2(x) / (x - 1) is then evaluated.
+	// We multiply the result by (x - 1) then restore the result into the appropriate range.
+
+	// Coefficients for the minimax polynomial.
+	// f(x) computes approximately log2(x) / (x - 1).
+	// f(x) = c4 + x * (c3 + x * (c2 + x * (c1 + x * c0)).
+	// We align the table of coefficients to 64 bytes, so that the whole thing will fit in 1 cache line
+	align(64);
+	const void* c0 = getCurr();
+	dd(0x3d74552f);
+	const void* c1 = getCurr();
+	dd(0xbeee7397);
+	const void* c2 = getCurr();
+	dd(0x3fbd96dd);
+	const void* c3 = getCurr();
+	dd(0xc02153f6);
+	const void* c4 = getCurr();
+	dd(0x4038d96c);
+
+	align(16);
+	const void* negative_infinity_vector = getCurr();
+	dd(0xff800000);
+	dd(0xff800000);
+	dd(0xff800000);
+	dd(0xff800000);
+	const void* default_qnan_vector = getCurr();
+	dd(0x7fc00000);
+	dd(0x7fc00000);
+	dd(0x7fc00000);
+	dd(0x7fc00000);
+
+	Xbyak::Label inputIsNan, inputIsZero, inputOutOfRange;
+
+	align(16);
+	L(inputOutOfRange);
+	je(inputIsZero);
+	movaps(src1_xmm, xword[rip + default_qnan_vector]);
+	ret();
+	L(inputIsZero);
+	movaps(src1_xmm, xword[rip + negative_infinity_vector]);
+	ret();
+
+	align(16);
+	L(subroutine);
+
+	// Here we handle edge cases: input in {NaN, 0, -Inf, Negative}.
+	xorps(scratch1, scratch1);
+	ucomiss(scratch1, src1_xmm);
+	jp(inputIsNan);
+	jae(inputOutOfRange);
+
+	// Split input: SRC1=MANT[1,2) SCRATCH2=Exponent
+	if (cpuCaps.has(Cpu::tAVX512F | Cpu::tAVX512VL)) {
+		vgetexpss(scratch2, src1_xmm, src1_xmm);
+		vgetmantss(src1_xmm, src1_xmm, src1_xmm, 0);
+	} else {
+		movd(eax, src1_xmm);
+		mov(edx, eax);
+		and_(eax, 0x7f800000);
+		and_(edx, 0x007fffff);
+		or_(edx, 0x3f800000);
+		movd(src1_xmm, edx);
+		// SRC1 now contains the mantissa of the input.
+		shr(eax, 23);
+		sub(eax, 0x7f);
+		cvtsi2ss(scratch2, eax);
+		// scratch2 now contains the exponent of the input.
+	}
+
+	movss(scratch1, xword[rip + c0]);
+
+	// Complete computation of polynomial
+	if (haveFMA3) {
+		vfmadd213ss(scratch1, src1_xmm, xword[rip + c1]);
+		vfmadd213ss(scratch1, src1_xmm, xword[rip + c2]);
+		vfmadd213ss(scratch1, src1_xmm, xword[rip + c3]);
+		vfmadd213ss(scratch1, src1_xmm, xword[rip + c4]);
+		subss(src1_xmm, dword[rip + onesVector]);
+		vfmadd231ss(scratch2, scratch1, src1_xmm);
+	} else {
+		mulss(scratch1, src1_xmm);
+		addss(scratch1, xword[rip + c1]);
+		mulss(scratch1, src1_xmm);
+		addss(scratch1, xword[rip + c2]);
+		mulss(scratch1, src1_xmm);
+		addss(scratch1, xword[rip + c3]);
+		mulss(scratch1, src1_xmm);
+		subss(src1_xmm, dword[rip + onesVector]);
+		addss(scratch1, xword[rip + c4]);
+		mulss(scratch1, src1_xmm);
+		addss(scratch2, scratch1);
+	}
+
+	xorps(src1_xmm, src1_xmm);  // break dependency chain
+	movss(src1_xmm, scratch2);
+	L(inputIsNan);
+
+	ret();
+	return subroutine;
+}
+
+Xbyak::Label ShaderEmitter::emitExp2Func() {
+	Xbyak::Label subroutine;
+
+	// SSE does not have a exp instruction, thus we must approximate.
+	// We perform this approximation first performaing a range reduction into the range [-0.5, 0.5).
+	// A minimax polynomial which was fit for the function exp2(x) is then evaluated.
+	// We then restore the result into the appropriate range.
+
+	// Similarly to log2, we align our literal pool to 64 bytes to make sure the whole thing fits in 1 cache line
+	align(64);
+	const void* input_max = getCurr();
+	dd(0x43010000);
+	const void* input_min = getCurr();
+	dd(0xc2fdffff);
+	const void* c0 = getCurr();
+	dd(0x3c5dbe69);
+	const void* half = getCurr();
+	dd(0x3f000000);
+	const void* c1 = getCurr();
+	dd(0x3d5509f9);
+	const void* c2 = getCurr();
+	dd(0x3e773cc5);
+	const void* c3 = getCurr();
+	dd(0x3f3168b3);
+	const void* c4 = getCurr();
+	dd(0x3f800016);
+
+	Xbyak::Label retLabel;
+
+	align(16);
+	L(subroutine);
+
+	// Handle edge cases
+	ucomiss(src1_xmm, src1_xmm);
+	jp(retLabel);
+
+	// Decompose input:
+	// SCRATCH=2^round(input)
+	// SRC1=input-round(input) [-0.5, 0.5)
+	if (cpuCaps.has(Cpu::tAVX512F | Cpu::tAVX512VL)) {
+		// Cheat a bit and store ones in src2 since the register is unused
+		vmovaps(src2_xmm, xword[rip + onesVector]);
+		// input - 0.5
+		vsubss(scratch1, src1_xmm, xword[rip + half]);
+
+		// trunc(input - 0.5)
+		vrndscaless(scratch2, scratch1, scratch1, _MM_FROUND_TRUNC);
+
+		// SCRATCH = 1 * 2^(trunc(input - 0.5))
+		vscalefss(scratch1, src2_xmm, scratch2);
+
+		// SRC1 = input-trunc(input - 0.5)
+		vsubss(src1_xmm, src1_xmm, scratch2);
+	} else {
+		// Clamp to maximum range since we shift the value directly into the exponent.
+		minss(src1_xmm, xword[rip + input_max]);
+		maxss(src1_xmm, xword[rip + input_min]);
+
+		if (cpuCaps.has(Cpu::tAVX)) {
+			vsubss(scratch1, src1_xmm, xword[rip + half]);
+		} else {
+			movss(scratch1, src1_xmm);
+			subss(scratch1, xword[rip + half]);
+		}
+
+		if (cpuCaps.has(Cpu::tSSE41)) {
+			roundss(scratch1, scratch1, _MM_FROUND_TRUNC);
+			cvtss2si(eax, scratch1);
+		} else {
+			cvtss2si(eax, scratch1);
+			cvtsi2ss(scratch1, eax);
+		}
+		// SCRATCH now contains input rounded to the nearest integer.
+		add(eax, 0x7f);
+		subss(src1_xmm, scratch1);
+		// SRC1 contains input - round(input), which is in [-0.5, 0.5).
+		shl(eax, 23);
+		movd(scratch1, eax);
+		// SCRATCH contains 2^(round(input)).
+	}
+
+	// Complete computation of polynomial.
+	movss(scratch2, xword[rip + c0]);
+
+	if (haveFMA3) {
+		vfmadd213ss(scratch2, src1_xmm, xword[rip + c1]);
+		vfmadd213ss(scratch2, src1_xmm, xword[rip + c2]);
+		vfmadd213ss(scratch2, src1_xmm, xword[rip + c3]);
+		vfmadd213ss(src1_xmm, scratch2, xword[rip + c4]);
+	} else {
+		mulss(scratch2, src1_xmm);
+		addss(scratch2, xword[rip + c1]);
+		mulss(scratch2, src1_xmm);
+		addss(scratch2, xword[rip + c2]);
+		mulss(scratch2, src1_xmm);
+		addss(scratch2, xword[rip + c3]);
+		mulss(src1_xmm, scratch2);
+		addss(src1_xmm, xword[rip + c4]);
+	}
+
+	mulss(src1_xmm, scratch1);
+	L(retLabel);
+
+	ret();
+	return subroutine;
 }
 
 // As we mentioned above, this function is uber slow because we don't expect the shader JIT to call HLL functions in real scenarios

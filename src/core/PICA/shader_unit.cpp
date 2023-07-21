@@ -1,4 +1,5 @@
 #include "PICA/shader_unit.hpp"
+
 #include "cityhash.hpp"
 
 void ShaderUnit::reset() {
@@ -18,18 +19,18 @@ void PICAShader::reset() {
 	opDescriptorIndex = 0;
 	f32UniformTransfer = false;
 
-	const vec4f zero = vec4f({ f24::zero(), f24::zero(), f24::zero(), f24::zero() });
+	const vec4f zero = vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});
 	inputs.fill(zero);
 	floatUniforms.fill(zero);
 	outputs.fill(zero);
 	tempRegisters.fill(zero);
 
 	for (auto& e : intUniforms) {
-		e.x() = e.y() = e.z() = e.w() = 0;
+		e[0] = e[1] = e[2] = e[3] = 0;
 	}
 
-	addrRegister.x() = 0;
-	addrRegister.y() = 0;
+	addrRegister[0] = 0;
+	addrRegister[1] = 0;
 	loopCounter = 0;
 
 	codeHashDirty = true;

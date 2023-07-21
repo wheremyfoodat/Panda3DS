@@ -83,6 +83,7 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an LLE 3DS emulator which both served as an inspiration, as well as a nice source of documentation for some PICA200-related things
 
 # Sister Projects
+- [Dynarmic](https://github.com/merryhime/dynarmic): An arm32/arm64 to x86-64/ARMv8 recompiler
 - [PCSX-Redux](https://github.com/grumpycoders/pcsx-redux): A PlayStation 1 emulator targetting developers, reverse engineers and regular PS1 fans alike
 - [SkyEmu](https://github.com/skylersaleh/SkyEmu): A seagull-themed low-level GameBoy, GameBoy Color, GameBoy Advance and Nintendo DS emulator that is designed to be easy to use, cross platform and accurate.
 - [NanoBoyAdvance](https://github.com/nba-emu/NanoBoyAdvance): A Game Boy Advance emulator focusing on hardware research and cycle-accurate emulation

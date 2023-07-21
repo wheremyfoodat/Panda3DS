@@ -32,8 +32,20 @@ jobs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
-    - name: Upload executable
+    - name: Install bundle dependencies
+      run: brew install dylibbundler imagemagick
+
+    - name: Run bundle script
+      run: ./.github/mac-bundle.sh
+
+    - name: Sign the App
+      run: codesign --force -s - -vvvv Alber.app
+
+    - name: Zip it up
+      run: zip -r Alber Alber.app
+
+    - name: Upload MacOS App
       uses: actions/upload-artifact@v2
       with:
-        name: MacOS executable
-        path: './build/Alber'
+        name: MacOS Alber App Bundle
+        path: 'Alber.zip'
