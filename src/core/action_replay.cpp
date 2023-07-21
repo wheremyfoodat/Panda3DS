@@ -1,6 +1,6 @@
 #include "action_replay.hpp"
 
-ActionReplay::ActionReplay(Memory& mem) : mem(mem) { reset(); }
+ActionReplay::ActionReplay(Memory& mem, HIDService& hid) : mem(mem), hid(hid) { reset(); }
 
 void ActionReplay::reset() {
 	// Default value of storage regs is 0
@@ -119,6 +119,9 @@ void ActionReplay::executeDType(const Cheat& cheat, u32 instruction) {
 		// DD000000 XXXXXXXX - if KEYPAD has value XXXXXXXX execute next block
 		case 0xDD000000: {
 			const u32 mask = cheat[pc++];
+			const u32 buttons = hid.getOldButtons();
+
+			pushConditionBlock((buttons & mask) == mask);
 			break;
 		}
 
@@ -194,4 +197,14 @@ void ActionReplay::executeDType(const Cheat& cheat, u32 instruction) {
 
 		default: Helpers::panic("ActionReplay: Unimplemented d-type opcode: %08X", instruction); break;
 	}
+}
+
+void ActionReplay::pushConditionBlock(bool condition) {
+	if (ifStackIndex >= 32) {
+		Helpers::warn("ActionReplay if stack overflowed");
+		running = false;
+		return;
+	}
+
+	ifStack[ifStackIndex++] = condition;
 }

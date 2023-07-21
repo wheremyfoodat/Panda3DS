@@ -5,6 +5,7 @@
 
 #include "helpers.hpp"
 #include "memory.hpp"
+#include "services/hid.hpp"
 
 class ActionReplay {
 	using Cheat = std::vector<u32>;  // A cheat is really just a bunch of 64-bit opcodes neatly encoded into 32-bit chunks
@@ -24,6 +25,7 @@ class ActionReplay {
 	// Program counter
 	u32 pc = 0;
 	Memory& mem;
+	HIDService& hid;
 
 	// Has the cheat ended?
 	bool running = false;
@@ -41,8 +43,10 @@ class ActionReplay {
 	void write16(u32 addr, u16 value);
 	void write32(u32 addr, u32 value);
 
+	void pushConditionBlock(bool condition);
+
   public:
-	ActionReplay(Memory& mem);
+	ActionReplay(Memory& mem, HIDService& hid);
 	void runCheat(const Cheat& cheat);
 	void reset();
 };
