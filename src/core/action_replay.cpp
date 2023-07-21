@@ -96,14 +96,28 @@ void ActionReplay::runInstruction(const Cheat& cheat, u32 instruction) {
 			break;
 		}
 
-		// Less Than (YYYYYYYY < [XXXXXXX + offset])
-		case 0x4: {
-			const u32 baseAddr = Helpers::getBits<0, 28>(instruction);
-			const u32 imm = cheat[pc++];
-			const u32 value = read32(baseAddr + *activeOffset);
-			Helpers::panic("TODO: How do ActionReplay conditional blocks work?");
-			break;
-		}
+		#define MAKE_IF_INSTRUCTION(opcode, comparator)                    \
+	case opcode: {                                                 \
+		const u32 baseAddr = Helpers::getBits<0, 28>(instruction); \
+		const u32 imm = cheat[pc++];                               \
+		const u32 value = read32(baseAddr + *activeOffset);        \
+                                                                   \
+		pushConditionBlock(imm comparator value);                  \
+		break;                                                     \
+	}									
+
+		// Greater Than (YYYYYYYY > [XXXXXXX + offset]) (Unsigned)
+		MAKE_IF_INSTRUCTION(3, >)
+
+		// Less Than (YYYYYYYY < [XXXXXXX + offset]) (Unsigned)
+		MAKE_IF_INSTRUCTION(4, <)
+
+		// Equal to (YYYYYYYY == [XXXXXXX + offset]) (Unsigned)
+		MAKE_IF_INSTRUCTION(5, ==)
+
+		// Not Equal (YYYYYYYY != [XXXXXXX + offset]) (Unsigned)
+		MAKE_IF_INSTRUCTION(6, !=)
+		#undef MAKE_IF_INSTRUCTION
 
 		case 0xD: executeDType(cheat, instruction); break;
 		default: Helpers::panic("Unimplemented ActionReplay instruction type %X", type); break;
