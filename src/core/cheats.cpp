@@ -17,12 +17,7 @@ void Cheats::run() {
 				break;
 			}
 
-			case CheatType::Gateway: {
-				Helpers::panic("Gateway cheats not supported yet! Only Action Replay is supported!");
-				break;
-			}
-
-			default: Helpers::panic("Unknown cheat type");
+			default: Helpers::panic("Unknown cheat device!");
 		}
 	}
 }

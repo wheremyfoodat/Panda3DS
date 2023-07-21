@@ -13,7 +13,7 @@ class Cheats {
   public:
 	enum class CheatType {
 		ActionReplay,  // CTRPF cheats
-		Gateway,
+		// TODO: Other cheat devices and standards?
 	};
 
 	struct Cheat {
