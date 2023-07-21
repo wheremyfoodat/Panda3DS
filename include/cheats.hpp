@@ -4,6 +4,7 @@
 
 #include "action_replay.hpp"
 #include "helpers.hpp"
+#include "services/hid.hpp"
 
 // Forward-declare this since it's just passed and we don't want to include memory.hpp and increase compile time
 class Memory;
@@ -20,12 +21,12 @@ class Cheats {
 		std::vector<u32> instructions;
 	};
 
-	Cheats(Memory& mem);
+	Cheats(Memory& mem, HIDService& hid);
 	void addCheat(const Cheat& cheat);
 	void reset();
 	void run();
 
   private:
-	ActionReplay ar; // An ActionReplay cheat machine for executing CTRPF codes
+	ActionReplay ar;  // An ActionReplay cheat machine for executing CTRPF codes
 	std::vector<Cheat> cheats;
 };

@@ -1,6 +1,6 @@
 #include "action_replay.hpp"
 
-ActionReplay::ActionReplay(Memory& mem) : mem(mem) { reset(); }
+ActionReplay::ActionReplay(Memory& mem, HIDService& hid) : mem(mem), hid(hid) { reset(); }
 
 void ActionReplay::reset() {
 	// Default value of storage regs is 0
@@ -15,6 +15,8 @@ void ActionReplay::runCheat(const Cheat& cheat) {
 	// Set offset and data registers to 0 at the start of a cheat
 	data1 = data2 = offset1 = offset2 = 0;
 	pc = 0;
+	ifStackIndex = 0;
+	loopStackIndex = 0;
 	running = true;
 
 	activeOffset = &offset1;
@@ -25,9 +27,16 @@ void ActionReplay::runCheat(const Cheat& cheat) {
 		if (pc + 1 >= cheat.size()) {
 			return;
 		}
-
 		// Fetch instruction
 		const u32 instruction = cheat[pc++];
+		
+		// Instructions D0000000 00000000 and D2000000 00000000 are unconditional
+		bool isUnconditional = cheat[pc] == 0 && (instruction == 0xD0000000 || instruction == 0xD2000000);
+		if (ifStackIndex > 0 && !isUnconditional && !ifStack[ifStackIndex - 1]) {
+			pc++; // Eat up dummy word
+			continue; // Skip conditional instructions where the condition is false
+		}
+		
 		runInstruction(cheat, instruction);
 	}
 }
@@ -110,6 +119,9 @@ void ActionReplay::executeDType(const Cheat& cheat, u32 instruction) {
 		// DD000000 XXXXXXXX - if KEYPAD has value XXXXXXXX execute next block
 		case 0xDD000000: {
 			const u32 mask = cheat[pc++];
+			const u32 buttons = hid.getOldButtons();
+
+			pushConditionBlock((buttons & mask) == mask);
 			break;
 		}
 
@@ -162,13 +174,37 @@ void ActionReplay::executeDType(const Cheat& cheat, u32 instruction) {
 				case 0x00020000: storage1 = data1; break;
 				case 0x00020001: storage2 = data2; break;
 				default:
-					Helpers::warn("Unknown ActionReplay data operation");
+					Helpers::warn("Unknown ActionReplay data operation: %08X", subopcode);
 					running = false;
 					break;
 			}
 			break;
 		}
 
+		// Control flow block operations
+		case 0xD2000000: {
+			const u32 subopcode = cheat[pc++];
+			switch (subopcode) {
+				// Ends all loop/execute blocks	
+				case 0:
+					loopStackIndex = 0;
+					ifStackIndex = 0;
+					break;
+				default: Helpers::panic("Unknown ActionReplay control flow operation: %08X", subopcode); break;
+			}
+			break;
+		}
+
 		default: Helpers::panic("ActionReplay: Unimplemented d-type opcode: %08X", instruction); break;
 	}
+}
+
+void ActionReplay::pushConditionBlock(bool condition) {
+	if (ifStackIndex >= 32) {
+		Helpers::warn("ActionReplay if stack overflowed");
+		running = false;
+		return;
+	}
+
+	ifStack[ifStackIndex++] = condition;
 }

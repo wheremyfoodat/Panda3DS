@@ -1,6 +1,6 @@
 #include "cheats.hpp"
 
-Cheats::Cheats(Memory& mem) : ar(mem) { reset(); }
+Cheats::Cheats(Memory& mem, HIDService& hid) : ar(mem, hid) { reset(); }
 
 void Cheats::reset() {
 	cheats.clear();  // Unload loaded cheats
