@@ -201,13 +201,130 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		Helpers::panic("Error creating logical device: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
+	// Initialize device-specific function pointers
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(device.get());
+
 	presentQueue = device->getQueue(presentQueueFamily, 0);
 	graphicsQueue = device->getQueue(presentQueueFamily, 0);
 	computeQueue = device->getQueue(computeQueueFamily, 0);
 	transferQueue = device->getQueue(transferQueueFamily, 0);
 
-	// Initialize device-specific function pointers
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(device.get());
+	// Create swapchain
+	static constexpr u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
+	static constexpr u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
+	static constexpr vk::ImageUsageFlags swapchainUsageFlagsRequired =
+		(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc);
+
+	vk::Extent2D swapchainExtent;
+	{
+		int windowWidth, windowHeight;
+		SDL_Vulkan_GetDrawableSize(window, &windowHeight, &windowWidth);
+		swapchainExtent.width = windowWidth;
+		swapchainExtent.height = windowHeight;
+	}
+
+	// Extent + Image count + Usage + Surface Transform
+	u8 swapchainImageCount;
+	vk::ImageUsageFlags swapchainImageUsage;
+	vk::SurfaceTransformFlagBitsKHR swapchainSurfaceTransform;
+	if (const auto getResult = physicalDevice.getSurfaceCapabilitiesKHR(surface.get()); getResult.result == vk::Result::eSuccess) {
+		const vk::SurfaceCapabilitiesKHR& surfaceCapabilities = getResult.value;
+
+		// In the case if width == height == -1, we define the extent ourselves but must fit within the limits
+		if (surfaceCapabilities.currentExtent.width == -1 || surfaceCapabilities.currentExtent.height == -1) {
+			swapchainExtent.width = std::max(swapchainExtent.width, surfaceCapabilities.minImageExtent.width);
+			swapchainExtent.height = std::max(swapchainExtent.height, surfaceCapabilities.minImageExtent.height);
+			swapchainExtent.width = std::min(swapchainExtent.width, surfaceCapabilities.maxImageExtent.width);
+			swapchainExtent.height = std::min(swapchainExtent.height, surfaceCapabilities.maxImageExtent.height);
+		}
+
+		swapchainImageCount = surfaceCapabilities.minImageCount + 1;
+		if ((surfaceCapabilities.maxImageCount > 0) && (swapchainImageCount > surfaceCapabilities.maxImageCount)) {
+			swapchainImageCount = surfaceCapabilities.maxImageCount;
+		}
+
+		swapchainImageUsage = surfaceCapabilities.supportedUsageFlags & swapchainUsageFlagsRequired;
+
+		if ((swapchainImageUsage & swapchainUsageFlagsRequired) != swapchainUsageFlagsRequired) {
+			Helpers::panic(
+				"Unsupported swapchain image usage. Could not acquire %s\n", vk::to_string(swapchainImageUsage ^ swapchainUsageFlagsRequired).c_str()
+			);
+		}
+
+		if (surfaceCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity) {
+			swapchainSurfaceTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
+		} else {
+			swapchainSurfaceTransform = surfaceCapabilities.currentTransform;
+		}
+	} else {
+		Helpers::panic("Error getting surface capabilities: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	// Preset Mode
+	// Fifo support is required by all vulkan implementations, waits for vsync
+	vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
+	if (auto getResult = physicalDevice.getSurfacePresentModesKHR(surface.get()); getResult.result == vk::Result::eSuccess) {
+		std::vector<vk::PresentModeKHR>& presentModes = getResult.value;
+
+		// Use mailbox if available, lowest-latency vsync-enabled mode
+		if (std::find(presentModes.begin(), presentModes.end(), vk::PresentModeKHR::eMailbox) != presentModes.end()) {
+			swapchainPresentMode = vk::PresentModeKHR::eMailbox;
+		}
+	} else {
+		Helpers::panic("Error enumerating surface present modes: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	// Surface format
+	vk::SurfaceFormatKHR swapchainSurfaceFormat;
+	if (auto getResult = physicalDevice.getSurfaceFormatsKHR(surface.get()); getResult.result == vk::Result::eSuccess) {
+		std::vector<vk::SurfaceFormatKHR>& surfaceFormats = getResult.value;
+
+		// A singular undefined surface format means we can use any format we want
+		if ((surfaceFormats.size() == 1) && surfaceFormats[0].format == vk::Format::eUndefined) {
+			// Assume R8G8B8A8-SRGB by default
+			swapchainSurfaceFormat = {vk::Format::eR8G8B8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
+		} else {
+			// Find the next-best R8G8B8A8-SRGB format
+			std::vector<vk::SurfaceFormatKHR>::iterator partitionEnd = surfaceFormats.end();
+
+			const auto preferR8G8B8A8 = [](const vk::SurfaceFormatKHR& surfaceFormat) -> bool {
+				return surfaceFormat.format == vk::Format::eR8G8B8A8Snorm;
+			};
+			partitionEnd = std::stable_partition(surfaceFormats.begin(), partitionEnd, preferR8G8B8A8);
+
+			const auto preferSrgbNonLinear = [](const vk::SurfaceFormatKHR& surfaceFormat) -> bool {
+				return surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+			};
+			partitionEnd = std::stable_partition(surfaceFormats.begin(), partitionEnd, preferSrgbNonLinear);
+
+			swapchainSurfaceFormat = surfaceFormats.front();
+		}
+
+	} else {
+		Helpers::panic("Error enumerating surface formats: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	vk::SwapchainCreateInfoKHR swapchainInfo = {};
+
+	swapchainInfo.surface = surface.get();
+	swapchainInfo.minImageCount = swapchainImageCount;
+	swapchainInfo.imageFormat = swapchainSurfaceFormat.format;
+	swapchainInfo.imageColorSpace = swapchainSurfaceFormat.colorSpace;
+	swapchainInfo.imageExtent = swapchainExtent;
+	swapchainInfo.imageArrayLayers = 1;
+	swapchainInfo.imageUsage = swapchainImageUsage;
+	swapchainInfo.imageSharingMode = vk::SharingMode::eExclusive;
+	swapchainInfo.preTransform = swapchainSurfaceTransform;
+	swapchainInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+	swapchainInfo.presentMode = swapchainPresentMode;
+	swapchainInfo.clipped = true;
+	swapchainInfo.oldSwapchain = nullptr;  // Todo
+
+	if (auto createResult = device->createSwapchainKHRUnique(swapchainInfo); createResult.result == vk::Result::eSuccess) {
+		swapchain = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating swapchain: %s\n", vk::to_string(createResult.result).c_str());
+	}
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}

@@ -4,17 +4,13 @@
 class GPU;
 
 class RendererVK final : public Renderer {
+	// The order of these `Unique*` members is important, they will be destroyed in RAII order
 	vk::UniqueInstance instance = {};
-	vk::PhysicalDevice physicalDevice = {};
-	vk::UniqueDevice device = {};
+	vk::UniqueDebugUtilsMessengerEXT debugMessenger = {};
 
 	vk::UniqueSurfaceKHR surface = {};
 
-	vk::UniqueSwapchainKHR swapchain = {};
-	std::vector<vk::UniqueImage> swapchainImages = {};
-	std::vector<vk::UniqueImageView> swapchainImageViews = {};
-
-	vk::UniqueDebugUtilsMessengerEXT debugMessenger = {};
+	vk::PhysicalDevice physicalDevice = {};
 
 	vk::Queue presentQueue = {};
 	u32 presentQueueFamily = ~0u;
@@ -24,6 +20,13 @@ class RendererVK final : public Renderer {
 	u32 computeQueueFamily = ~0u;
 	vk::Queue transferQueue = {};
 	u32 transferQueueFamily = ~0u;
+
+	vk::UniqueDevice device = {};
+
+
+	vk::UniqueSwapchainKHR swapchain = {};
+	std::vector<vk::UniqueImage> swapchainImages = {};
+	std::vector<vk::UniqueImageView> swapchainImageViews = {};
 
   public:
 	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs);
