@@ -1,8 +1,25 @@
 #include "renderer_vk/renderer_vk.hpp"
 
+#include <span>
+
 #include "SDL_vulkan.h"
 #include "helpers.hpp"
 #include "renderer_vk/vk_debug.hpp"
+
+// Finds the first queue family that satisfies `queueMask` and excludes `queueExcludeMask` bits
+// Returns -1 if not found
+// Todo: Smarter selection for present/graphics/compute/transfer
+static s32 findQueueFamily(
+	std::span<const vk::QueueFamilyProperties> queueFamilies, vk::QueueFlags queueMask,
+	vk::QueueFlags queueExcludeMask = vk::QueueFlagBits::eProtected
+) {
+	for (usize i = 0; i < queueFamilies.size(); ++i) {
+		if (((queueFamilies[i].queueFlags & queueMask) == queueMask) && (queueFamilies[i].queueFlags & queueExcludeMask)) {
+			return 1;
+		}
+	}
+	return -1;
+}
 
 RendererVK::RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
 
@@ -123,14 +140,43 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		Helpers::panic("Error enumerating physical devices: %s\n", vk::to_string(enumerateResult.result).c_str());
 	}
 
+	// Get device queues
+	std::vector<vk::DeviceQueueCreateInfo> deviceQueueInfos;
+	{
+		const std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+
+		// Get present queue family
+		for (usize queueFamilyIndex = 0; queueFamilyIndex < queueFamilyProperties.size(); ++queueFamilyIndex) {
+			if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, surface.get());
+				supportResult.result == vk::Result::eSuccess) {
+				if (supportResult.value) {
+					presentQueueFamily = queueFamilyIndex;
+					break;
+				}
+			}
+		}
+
+		graphicsQueueFamily = findQueueFamily(queueFamilyProperties, vk::QueueFlagBits::eGraphics);
+		computeQueueFamily = findQueueFamily(queueFamilyProperties, vk::QueueFlagBits::eCompute);
+		transferQueueFamily = findQueueFamily(queueFamilyProperties, vk::QueueFlagBits::eTransfer);
+
+		static const float queuePriority = 1.0f;
+
+		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, presentQueueFamily, 1, {&queuePriority}));
+		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, graphicsQueueFamily, 1, {&queuePriority}));
+		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, computeQueueFamily, 1, {&queuePriority}));
+		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, transferQueueFamily, 1, {&queuePriority}));
+	}
+
 	// Create Device
 	vk::DeviceCreateInfo deviceInfo = {};
 
 	static const char* deviceExtensions[] = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #if defined(__APPLE__)
 		"VK_KHR_portability_subset",
 #endif
-		//VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
+		// VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
 	};
 	deviceInfo.ppEnabledExtensionNames = deviceExtensions;
 	deviceInfo.enabledExtensionCount = std::size(deviceExtensions);
@@ -140,25 +186,25 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	auto& deviceFeatures = deviceFeatureChain.get<vk::PhysicalDeviceFeatures2>().features;
 
 	auto& deviceTimelineFeatures = deviceFeatureChain.get<vk::PhysicalDeviceTimelineSemaphoreFeatures>();
-	//deviceTimelineFeatures.timelineSemaphore = true;
+	// deviceTimelineFeatures.timelineSemaphore = true;
 
 	deviceInfo.pNext = &deviceFeatureChain.get();
 
 	static const float queuePriority = 1.0f;
 
-	vk::DeviceQueueCreateInfo queueInfo = {};
-	queueInfo.queueFamilyIndex = 0;
-	queueInfo.queueCount = 1;
-	queueInfo.pQueuePriorities = &queuePriority;
-
-	deviceInfo.queueCreateInfoCount = 1;
-	deviceInfo.pQueueCreateInfos = &queueInfo;
+	deviceInfo.queueCreateInfoCount = deviceQueueInfos.size();
+	deviceInfo.pQueueCreateInfos = deviceQueueInfos.data();
 
 	if (auto createResult = physicalDevice.createDeviceUnique(deviceInfo); createResult.result == vk::Result::eSuccess) {
 		device = std::move(createResult.value);
 	} else {
 		Helpers::panic("Error creating logical device: %s\n", vk::to_string(createResult.result).c_str());
 	}
+
+	presentQueue = device->getQueue(presentQueueFamily, 0);
+	graphicsQueue = device->getQueue(presentQueueFamily, 0);
+	computeQueue = device->getQueue(computeQueueFamily, 0);
+	transferQueue = device->getQueue(transferQueueFamily, 0);
 
 	// Initialize device-specific function pointers
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(device.get());

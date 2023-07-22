@@ -10,7 +10,20 @@ class RendererVK final : public Renderer {
 
 	vk::UniqueSurfaceKHR surface = {};
 
-	vk::UniqueDebugUtilsMessengerEXT debugMessenger;
+	vk::UniqueSwapchainKHR swapchain = {};
+	std::vector<vk::UniqueImage> swapchainImages = {};
+	std::vector<vk::UniqueImageView> swapchainImageViews = {};
+
+	vk::UniqueDebugUtilsMessengerEXT debugMessenger = {};
+
+	vk::Queue presentQueue = {};
+	u32 presentQueueFamily = ~0u;
+	vk::Queue graphicsQueue = {};
+	u32 graphicsQueueFamily = ~0u;
+	vk::Queue computeQueue = {};
+	u32 computeQueueFamily = ~0u;
+	vk::Queue transferQueue = {};
+	u32 transferQueueFamily = ~0u;
 
   public:
 	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs);
