@@ -130,7 +130,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 #if defined(__APPLE__)
 		"VK_KHR_portability_subset",
 #endif
-		VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
+		//VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
 	};
 	deviceInfo.ppEnabledExtensionNames = deviceExtensions;
 	deviceInfo.enabledExtensionCount = std::size(deviceExtensions);
@@ -140,7 +140,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	auto& deviceFeatures = deviceFeatureChain.get<vk::PhysicalDeviceFeatures2>().features;
 
 	auto& deviceTimelineFeatures = deviceFeatureChain.get<vk::PhysicalDeviceTimelineSemaphoreFeatures>();
-	deviceTimelineFeatures.timelineSemaphore = true;
+	//deviceTimelineFeatures.timelineSemaphore = true;
 
 	deviceInfo.pNext = &deviceFeatureChain.get();
 
