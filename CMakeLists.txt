@@ -64,6 +64,7 @@ target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
 set(CRYPTOPP_BUILD_TESTING OFF)
 add_subdirectory(third_party/cryptopp)
+add_subdirectory(third_party/glad)
 
 # Check for x64
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
@@ -178,8 +179,6 @@ source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with the GL renderer
 
 if(ENABLE_OPENGL)
-	add_subdirectory(third_party/glad)
-
 	set(RENDERER_GL_INCLUDE_FILES include/renderer_gl/opengl.hpp
 		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
 		include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
@@ -222,11 +221,11 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
   set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp)
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
 
 if(ENABLE_OPENGL)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
-    target_link_libraries(Alber PRIVATE glad resources_renderer_gl)
+    target_link_libraries(Alber PRIVATE resources_renderer_gl)
 endif()
 
 if(GPU_DEBUG_INFO)
