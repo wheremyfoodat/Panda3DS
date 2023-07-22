@@ -1,8 +1,5 @@
 #include "emulator.hpp"
-
-#ifdef PANDA3DS_ENABLE_OPENGL
 #include <glad/gl.h>
-#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -27,13 +24,18 @@ Emulator::Emulator()
 		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
 	}
 
+	// We need OpenGL for software rendering or for OpenGL if it's enabled
+	bool needOpenGL = config.rendererType == RendererType::Software;
 #ifdef PANDA3DS_ENABLE_OPENGL
-	if (config.rendererType == RendererType::OpenGL) {
-		// Request OpenGL 4.1 Core (Max available on MacOS)
+	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
+#endif
+
+	if (needOpenGL) {
+		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
 		// MacOS gets mad if we don't explicitly demand a core profile
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
 		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
 
 		if (window == nullptr) {
@@ -49,7 +51,6 @@ Emulator::Emulator()
 			Helpers::panic("OpenGL init failed: %s", SDL_GetError());
 		}
 	}
-#endif
 
 	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
 		gameController = SDL_GameControllerOpen(0);

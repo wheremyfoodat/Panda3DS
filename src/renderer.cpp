@@ -13,9 +13,11 @@ std::optional<RendererType> Renderer::typeFromString(std::string inString) {
 	// Huge table of possible names and misspellings
 	// Please stop misspelling Vulkan as Vulcan
 	static const std::unordered_map<std::string, RendererType> map = {
-		{"null", RendererType::Null}, {"nil", RendererType::Null},      {"none", RendererType::Null},
-		{"gl", RendererType::OpenGL}, {"ogl", RendererType::OpenGL},    {"opengl", RendererType::OpenGL},
-		{"vk", RendererType::Vulkan}, {"vulkan", RendererType::Vulkan}, {"vulcan", RendererType::Vulkan},
+		{"null", RendererType::Null},         {"nil", RendererType::Null},      {"none", RendererType::Null},
+		{"gl", RendererType::OpenGL},         {"ogl", RendererType::OpenGL},    {"opengl", RendererType::OpenGL},
+		{"vk", RendererType::Vulkan},         {"vulkan", RendererType::Vulkan}, {"vulcan", RendererType::Vulkan},
+		{"sw", RendererType::Software},       {"soft", RendererType::Software}, {"software", RendererType::Software},
+		{"softrast", RendererType::Software},
 	};
 
 	if (auto search = map.find(inString); search != map.end()) {
@@ -30,6 +32,7 @@ const char* Renderer::typeToString(RendererType rendererType) {
 		case RendererType::Null: return "null";
 		case RendererType::OpenGL: return "opengl";
 		case RendererType::Vulkan: return "vulkan";
+		case RendererType::Software: return "software";
 		default: return "Invalid";
 	}
 }

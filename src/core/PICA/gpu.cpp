@@ -8,6 +8,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/regs.hpp"
 #include "renderer_null/renderer_null.hpp"
+#include "renderer_sw/renderer_sw.hpp"
 #ifdef PANDA3DS_ENABLE_OPENGL
 #include "renderer_gl/renderer_gl.hpp"
 #endif
@@ -25,6 +26,12 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 			renderer.reset(new RendererNull(*this, regs));
 			break;
 		}
+
+		case RendererType::Software: {
+			renderer.reset(new RendererSw(*this, regs));
+			break;
+		}
+
 #ifdef PANDA3DS_ENABLE_OPENGL
 		case RendererType::OpenGL: {
 			renderer.reset(new RendererGL(*this, regs));
