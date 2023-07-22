@@ -23,9 +23,11 @@ class RendererVK final : public Renderer {
 
 	vk::UniqueDevice device = {};
 
+	vk::UniqueSemaphore presetWaitSemaphore = {};
+	vk::UniqueSemaphore renderDoneSemaphore = {};
 
 	vk::UniqueSwapchainKHR swapchain = {};
-	std::vector<vk::UniqueImage> swapchainImages = {};
+	std::vector<vk::Image> swapchainImages = {};
 	std::vector<vk::UniqueImageView> swapchainImageViews = {};
 
   public:

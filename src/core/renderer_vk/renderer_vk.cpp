@@ -1,6 +1,7 @@
 #include "renderer_vk/renderer_vk.hpp"
 
 #include <span>
+#include <unordered_set>
 
 #include "SDL_vulkan.h"
 #include "helpers.hpp"
@@ -14,8 +15,8 @@ static s32 findQueueFamily(
 	vk::QueueFlags queueExcludeMask = vk::QueueFlagBits::eProtected
 ) {
 	for (usize i = 0; i < queueFamilies.size(); ++i) {
-		if (((queueFamilies[i].queueFlags & queueMask) == queueMask) && (queueFamilies[i].queueFlags & queueExcludeMask)) {
-			return 1;
+		if (((queueFamilies[i].queueFlags & queueMask) == queueMask) && !(queueFamilies[i].queueFlags & queueExcludeMask)) {
+			return i;
 		}
 	}
 	return -1;
@@ -27,7 +28,58 @@ RendererVK::~RendererVK() {}
 
 void RendererVK::reset() {}
 
-void RendererVK::display() {}
+void RendererVK::display() {
+	u32 swapchainImageIndex;
+	if (const auto acquireResult = device->acquireNextImageKHR(swapchain.get(), ~0ULL, presetWaitSemaphore.get());
+		acquireResult.result == vk::Result::eSuccess) {
+		swapchainImageIndex = acquireResult.value;
+	} else {
+		switch (acquireResult.result) {
+			case vk::Result::eSuboptimalKHR:
+			case vk::Result::eErrorOutOfDateKHR: {
+				// Surface resized
+				// Todo: Recreate swapchain and get a valid image index
+				break;
+			}
+			default: {
+				Helpers::panic("Error acquiring next swapchain image: %s\n", vk::to_string(acquireResult.result).c_str());
+			}
+		}
+	}
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setWaitSemaphores(presetWaitSemaphore.get());
+
+	static const vk::PipelineStageFlags waitStageMask = vk::PipelineStageFlagBits::eAllCommands;
+	submitInfo.setWaitDstStageMask(waitStageMask);
+
+	submitInfo.setCommandBuffers({});
+	submitInfo.setSignalSemaphores(renderDoneSemaphore.get());
+
+	if (const vk::Result submitResult = presentQueue.submit({submitInfo}); submitResult != vk::Result::eSuccess) {
+		Helpers::panic("Error submitting to present queue: %s\n", vk::to_string(submitResult).c_str());
+	}
+
+	vk::PresentInfoKHR presentInfo = {};
+	presentInfo.setWaitSemaphores(renderDoneSemaphore.get());
+	presentInfo.setSwapchains(swapchain.get());
+	presentInfo.setImageIndices(swapchainImageIndex);
+
+	if (const auto presentResult = presentQueue.presentKHR(presentInfo); presentResult == vk::Result::eSuccess) {
+	} else {
+		switch (presentResult) {
+			case vk::Result::eSuboptimalKHR:
+			case vk::Result::eErrorOutOfDateKHR: {
+				// Surface resized
+				// Todo: Recreate swapchain and get a valid image index
+				break;
+			}
+			default: {
+				Helpers::panic("Error presenting swapchain image: %s\n", vk::to_string(presentResult).c_str());
+			}
+		}
+	}
+}
 
 void RendererVK::initGraphicsContext(SDL_Window* window) {
 	// Resolve all instance function pointers
@@ -141,6 +193,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	}
 
 	// Get device queues
+
 	std::vector<vk::DeviceQueueCreateInfo> deviceQueueInfos;
 	{
 		const std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
@@ -156,16 +209,17 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 			}
 		}
 
+		static const float queuePriority = 1.0f;
+
 		graphicsQueueFamily = findQueueFamily(queueFamilyProperties, vk::QueueFlagBits::eGraphics);
 		computeQueueFamily = findQueueFamily(queueFamilyProperties, vk::QueueFlagBits::eCompute);
 		transferQueueFamily = findQueueFamily(queueFamilyProperties, vk::QueueFlagBits::eTransfer);
 
-		static const float queuePriority = 1.0f;
-
-		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, presentQueueFamily, 1, {&queuePriority}));
-		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, graphicsQueueFamily, 1, {&queuePriority}));
-		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, computeQueueFamily, 1, {&queuePriority}));
-		deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, transferQueueFamily, 1, {&queuePriority}));
+		// Requests a singular queue for each unique queue-family
+		const std::unordered_set<u32> queueFamilyRequests = {presentQueueFamily, graphicsQueueFamily, computeQueueFamily, transferQueueFamily};
+		for (const u32 queueFamilyIndex : queueFamilyRequests) {
+			deviceQueueInfos.emplace_back(vk::DeviceQueueCreateInfo({}, queueFamilyIndex, 1, &queuePriority));
+		}
 	}
 
 	// Create Device
@@ -190,10 +244,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	deviceInfo.pNext = &deviceFeatureChain.get();
 
-	static const float queuePriority = 1.0f;
-
-	deviceInfo.queueCreateInfoCount = deviceQueueInfos.size();
-	deviceInfo.pQueueCreateInfos = deviceQueueInfos.data();
+	deviceInfo.setQueueCreateInfos(deviceQueueInfos);
 
 	if (auto createResult = physicalDevice.createDeviceUnique(deviceInfo); createResult.result == vk::Result::eSuccess) {
 		device = std::move(createResult.value);
@@ -208,6 +259,21 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	graphicsQueue = device->getQueue(presentQueueFamily, 0);
 	computeQueue = device->getQueue(computeQueueFamily, 0);
 	transferQueue = device->getQueue(transferQueueFamily, 0);
+
+	// Synchronization primitives
+	vk::SemaphoreCreateInfo semaphoreInfo = {};
+
+	if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+		presetWaitSemaphore = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+		renderDoneSemaphore = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating 'post-render' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+	}
 
 	// Create swapchain
 	static constexpr u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
@@ -324,6 +390,30 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		swapchain = std::move(createResult.value);
 	} else {
 		Helpers::panic("Error creating swapchain: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	// Get swapchain images
+	if (auto getResult = device->getSwapchainImagesKHR(swapchain.get()); getResult.result == vk::Result::eSuccess) {
+		swapchainImages = getResult.value;
+		swapchainImageViews.resize(swapchainImages.size());
+
+		// Create image-views
+		for (usize i = 0; i < swapchainImages.size(); i++) {
+			vk::ImageViewCreateInfo viewInfo = {};
+			viewInfo.image = swapchainImages[i];
+			viewInfo.viewType = vk::ImageViewType::e2D;
+			viewInfo.format = swapchainSurfaceFormat.format;
+			viewInfo.components = vk::ComponentMapping();
+			viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+			if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
+				swapchainImageViews[i] = std::move(createResult.value);
+			} else {
+				Helpers::panic("Error creating swapchain image-view: #%zu %s\n", i, vk::to_string(getResult.result).c_str());
+			}
+		}
+	} else {
+		Helpers::panic("Error creating acquiring swapchain images: %s\n", vk::to_string(getResult.result).c_str());
 	}
 }
 
