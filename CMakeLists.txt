@@ -50,6 +50,7 @@ add_subdirectory(third_party/SDL2)
 add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
+include_directories(third_party/glm)
 
 add_subdirectory(third_party/cmrc)
 

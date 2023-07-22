@@ -28,3 +28,6 @@
 [submodule "third_party/cmrc"]
 	path = third_party/cmrc
 	url = https://github.com/vector-of-bool/cmrc
+[submodule "third_party/glm"]
+	path = third_party/glm
+	url = https://github.com/g-truc/glm
