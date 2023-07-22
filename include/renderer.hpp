@@ -12,6 +12,7 @@ enum class RendererType : s8 {
 	Null = 0,
 	OpenGL = 1,
 	Vulkan = 2,
+	Software = 3,
 };
 
 class GPU;
