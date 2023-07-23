@@ -29,8 +29,13 @@ RendererVK::~RendererVK() {}
 void RendererVK::reset() {}
 
 void RendererVK::display() {
+	// Block, on the CPU, to ensure that this swapchain-frame is ready for more work
+	if (auto waitResult = device->waitForFences({frameFinishedFences[currentFrame].get()}, true, ~0ULL); waitResult != vk::Result::eSuccess) {
+		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
+	}
+
 	u32 swapchainImageIndex = ~0u;
-	if (const auto acquireResult = device->acquireNextImageKHR(swapchain.get(), ~0ULL, presetWaitSemaphore.get());
+	if (const auto acquireResult = device->acquireNextImageKHR(swapchain.get(), ~0ULL, swapImageFreeSemaphore[currentFrame].get(), {});
 		acquireResult.result == vk::Result::eSuccess) {
 		swapchainImageIndex = acquireResult.value;
 	} else {
@@ -47,21 +52,69 @@ void RendererVK::display() {
 		}
 	}
 
-	vk::SubmitInfo submitInfo = {};
-	submitInfo.setWaitSemaphores(presetWaitSemaphore.get());
+	vk::UniqueCommandBuffer& presentCommandBuffer = presentCommandBuffers.at(currentFrame);
 
-	static const vk::PipelineStageFlags waitStageMask = vk::PipelineStageFlagBits::eAllCommands;
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+
+	if (const vk::Result beginResult = presentCommandBuffer->begin(beginInfo); beginResult != vk::Result::eSuccess) {
+		Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
+	}
+
+	{
+		static const std::array<float, 4> presentScopeColor = {{1.0f, currentFrame / 2.0f, 1.0f, 1.0f}};
+
+		Vulkan::DebugLabelScope debugScope(presentCommandBuffer.get(), presentScopeColor, "Present");
+
+		// Prepare for color-clear
+		presentCommandBuffer->pipelineBarrier(
+			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+			{vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+				vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
+				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+			)}
+		);
+
+		presentCommandBuffer->clearColorImage(
+			swapchainImages[swapchainImageIndex], vk::ImageLayout::eTransferDstOptimal, presentScopeColor,
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+		);
+
+		// Prepare for present
+		presentCommandBuffer->pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
+			{vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
+				vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
+				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+			)}
+		);
+	}
+
+	if (const vk::Result endResult = presentCommandBuffer->end(); endResult != vk::Result::eSuccess) {
+		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
+	}
+
+	vk::SubmitInfo submitInfo = {};
+	// Wait for any previous uses of the image image to finish presenting
+	submitInfo.setWaitSemaphores(swapImageFreeSemaphore[currentFrame].get());
+	// Signal when finished
+	submitInfo.setSignalSemaphores(renderFinishedSemaphore[currentFrame].get());
+
+	static const vk::PipelineStageFlags waitStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 	submitInfo.setWaitDstStageMask(waitStageMask);
 
 	submitInfo.setCommandBuffers(presentCommandBuffer.get());
-	submitInfo.setSignalSemaphores(renderDoneSemaphore.get());
 
-	if (const vk::Result submitResult = presentQueue.submit({submitInfo}); submitResult != vk::Result::eSuccess) {
-		Helpers::panic("Error submitting to present queue: %s\n", vk::to_string(submitResult).c_str());
+	device->resetFences({frameFinishedFences[currentFrame].get()});
+
+	if (const vk::Result submitResult = graphicsQueue.submit({submitInfo}, frameFinishedFences[currentFrame].get()); submitResult != vk::Result::eSuccess) {
+		Helpers::panic("Error submitting to graphics queue: %s\n", vk::to_string(submitResult).c_str());
 	}
 
 	vk::PresentInfoKHR presentInfo = {};
-	presentInfo.setWaitSemaphores(renderDoneSemaphore.get());
+	presentInfo.setWaitSemaphores(renderFinishedSemaphore[currentFrame].get());
 	presentInfo.setSwapchains(swapchain.get());
 	presentInfo.setImageIndices(swapchainImageIndex);
 
@@ -79,6 +132,8 @@ void RendererVK::display() {
 			}
 		}
 	}
+
+	currentFrame = ((currentFrame + 1) % swapchainImageCount);
 }
 
 void RendererVK::initGraphicsContext(SDL_Window* window) {
@@ -260,26 +315,11 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	computeQueue = device->getQueue(computeQueueFamily, 0);
 	transferQueue = device->getQueue(transferQueueFamily, 0);
 
-	// Synchronization primitives
-	vk::SemaphoreCreateInfo semaphoreInfo = {};
-
-	if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
-		presetWaitSemaphore = std::move(createResult.value);
-	} else {
-		Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
-	}
-
-	if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
-		renderDoneSemaphore = std::move(createResult.value);
-	} else {
-		Helpers::panic("Error creating 'post-render' semaphore: %s\n", vk::to_string(createResult.result).c_str());
-	}
-
 	// Create swapchain
 	static constexpr u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
 	static constexpr u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
 	static constexpr vk::ImageUsageFlags swapchainUsageFlagsRequired =
-		(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc);
+		(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst);
 
 	vk::Extent2D swapchainExtent;
 	{
@@ -290,7 +330,6 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	}
 
 	// Extent + Image count + Usage + Surface Transform
-	u8 swapchainImageCount;
 	vk::ImageUsageFlags swapchainImageUsage;
 	vk::SurfaceTransformFlagBitsKHR swapchainSurfaceTransform;
 	if (const auto getResult = physicalDevice.getSurfaceCapabilitiesKHR(surface.get()); getResult.result == vk::Result::eSuccess) {
@@ -426,16 +465,46 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		Helpers::panic("Error creating command pool: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
-	// Command buffer(s)
+	// Swapchain Command buffer(s)
 	vk::CommandBufferAllocateInfo commandBuffersInfo = {};
 	commandBuffersInfo.commandPool = commandPool.get();
 	commandBuffersInfo.level = vk::CommandBufferLevel::ePrimary;
-	commandBuffersInfo.commandBufferCount = 1;
+	commandBuffersInfo.commandBufferCount = swapchainImageCount;
 
 	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
-		presentCommandBuffer = std::move(allocateResult.value[0]);
+		presentCommandBuffers = std::move(allocateResult.value);
 	} else {
 		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
+	}
+
+	// Swapchain synchronization primitives
+	vk::FenceCreateInfo fenceInfo = {};
+	fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+
+	vk::SemaphoreCreateInfo semaphoreInfo = {};
+
+	swapImageFreeSemaphore.resize(swapchainImageCount);
+	renderFinishedSemaphore.resize(swapchainImageCount);
+	frameFinishedFences.resize(swapchainImageCount);
+
+	for (usize i = 0; i < swapchainImageCount; i++) {
+		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+			swapImageFreeSemaphore[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+			renderFinishedSemaphore[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'post-render' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createFenceUnique(fenceInfo); createResult.result == vk::Result::eSuccess) {
+			frameFinishedFences[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
 	}
 }
 

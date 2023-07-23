@@ -23,16 +23,24 @@ class RendererVK final : public Renderer {
 
 	vk::UniqueDevice device = {};
 
-	vk::UniqueSemaphore presetWaitSemaphore = {};
-	vk::UniqueSemaphore renderDoneSemaphore = {};
-
 	vk::UniqueSwapchainKHR swapchain = {};
+	u32 swapchainImageCount = ~0u;
 	std::vector<vk::Image> swapchainImages = {};
 	std::vector<vk::UniqueImageView> swapchainImageViews = {};
 
-	vk::UniqueCommandPool commandPool = {};
-	vk::UniqueCommandBuffer presentCommandBuffer = {};
 
+	// Global synchronization primitives
+
+	vk::UniqueCommandPool commandPool = {};
+
+	// Per-swapchain-image data
+	// Each vector is `swapchainImageCount` in size
+	std::vector<vk::UniqueCommandBuffer> presentCommandBuffers = {};
+	std::vector<vk::UniqueSemaphore> swapImageFreeSemaphore = {};
+	std::vector<vk::UniqueSemaphore> renderFinishedSemaphore = {};
+	std::vector<vk::UniqueFence> frameFinishedFences = {};
+
+	u64 currentFrame = 0;
   public:
 	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs);
 	~RendererVK() override;
