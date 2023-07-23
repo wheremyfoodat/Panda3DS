@@ -2,6 +2,7 @@
 
 #include <span>
 #include <unordered_set>
+#include <limits>
 
 #include "SDL_vulkan.h"
 #include "helpers.hpp"
@@ -30,12 +31,13 @@ void RendererVK::reset() {}
 
 void RendererVK::display() {
 	// Block, on the CPU, to ensure that this swapchain-frame is ready for more work
-	if (auto waitResult = device->waitForFences({frameFinishedFences[currentFrame].get()}, true, ~0ULL); waitResult != vk::Result::eSuccess) {
+	if (auto waitResult = device->waitForFences({frameFinishedFences[currentFrame].get()}, true, std::numeric_limits<u64>::max()); waitResult != vk::Result::eSuccess) {
 		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
 	}
 
-	u32 swapchainImageIndex = ~0u;
-	if (const auto acquireResult = device->acquireNextImageKHR(swapchain.get(), ~0ULL, swapImageFreeSemaphore[currentFrame].get(), {});
+	u32 swapchainImageIndex = std::numeric_limits<u32>::max();
+	if (const auto acquireResult =
+			device->acquireNextImageKHR(swapchain.get(), std::numeric_limits<u64>::max(), swapImageFreeSemaphore[currentFrame].get(), {});
 		acquireResult.result == vk::Result::eSuccess) {
 		swapchainImageIndex = acquireResult.value;
 	} else {
