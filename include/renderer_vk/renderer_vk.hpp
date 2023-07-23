@@ -30,6 +30,9 @@ class RendererVK final : public Renderer {
 	std::vector<vk::Image> swapchainImages = {};
 	std::vector<vk::UniqueImageView> swapchainImageViews = {};
 
+	vk::UniqueCommandPool commandPool = {};
+	vk::UniqueCommandBuffer presentCommandBuffer = {};
+
   public:
 	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs);
 	~RendererVK() override;

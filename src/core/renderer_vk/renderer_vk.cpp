@@ -29,7 +29,7 @@ RendererVK::~RendererVK() {}
 void RendererVK::reset() {}
 
 void RendererVK::display() {
-	u32 swapchainImageIndex;
+	u32 swapchainImageIndex = ~0u;
 	if (const auto acquireResult = device->acquireNextImageKHR(swapchain.get(), ~0ULL, presetWaitSemaphore.get());
 		acquireResult.result == vk::Result::eSuccess) {
 		swapchainImageIndex = acquireResult.value;
@@ -53,7 +53,7 @@ void RendererVK::display() {
 	static const vk::PipelineStageFlags waitStageMask = vk::PipelineStageFlagBits::eAllCommands;
 	submitInfo.setWaitDstStageMask(waitStageMask);
 
-	submitInfo.setCommandBuffers({});
+	submitInfo.setCommandBuffers(presentCommandBuffer.get());
 	submitInfo.setSignalSemaphores(renderDoneSemaphore.get());
 
 	if (const vk::Result submitResult = presentQueue.submit({submitInfo}); submitResult != vk::Result::eSuccess) {
@@ -284,7 +284,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	vk::Extent2D swapchainExtent;
 	{
 		int windowWidth, windowHeight;
-		SDL_Vulkan_GetDrawableSize(window, &windowHeight, &windowWidth);
+		SDL_Vulkan_GetDrawableSize(window, &windowWidth, &windowHeight);
 		swapchainExtent.width = windowWidth;
 		swapchainExtent.height = windowHeight;
 	}
@@ -414,6 +414,28 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		}
 	} else {
 		Helpers::panic("Error creating acquiring swapchain images: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	// Command pool
+	vk::CommandPoolCreateInfo commandPoolInfo = {};
+	commandPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+
+	if (auto createResult = device->createCommandPoolUnique(commandPoolInfo); createResult.result == vk::Result::eSuccess) {
+		commandPool = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating command pool: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	// Command buffer(s)
+	vk::CommandBufferAllocateInfo commandBuffersInfo = {};
+	commandBuffersInfo.commandPool = commandPool.get();
+	commandBuffersInfo.level = vk::CommandBufferLevel::ePrimary;
+	commandBuffersInfo.commandBufferCount = 1;
+
+	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
+		presentCommandBuffer = std::move(allocateResult.value[0]);
+	} else {
+		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
 	}
 }
 
