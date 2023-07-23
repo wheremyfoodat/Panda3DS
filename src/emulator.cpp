@@ -52,6 +52,16 @@ Emulator::Emulator()
 		}
 	}
 
+#ifdef PANDA3DS_ENABLE_VULKAN
+	if (config.rendererType == RendererType::Vulkan) {
+		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_VULKAN);
+
+		if (window == nullptr) {
+			Helpers::warn("Window creation failed: %s", SDL_GetError());
+		}
+	}
+#endif
+
 	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
 		gameController = SDL_GameControllerOpen(0);
 
@@ -447,7 +457,7 @@ bool Emulator::loadELF(std::ifstream& file) {
 }
 
 // Reset our graphics context and initialize the GPU's graphics context
-void Emulator::initGraphicsContext() { gpu.initGraphicsContext(); }
+void Emulator::initGraphicsContext() { gpu.initGraphicsContext(window); }
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 void Emulator::pollHttpServer() {
