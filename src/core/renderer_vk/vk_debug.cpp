@@ -70,6 +70,7 @@ namespace Vulkan {
 		return VK_FALSE;
 	}
 
+	#ifdef GPU_DEBUG_INFO
 	void setObjectName(vk::Device device, vk::ObjectType objectType, const void* objectHandle, const char* format, ...) {
 		va_list args;
 		va_start(args, format);
@@ -152,5 +153,11 @@ namespace Vulkan {
 	}
 
 	void endDebugLabel(vk::CommandBuffer commandBuffer) { commandBuffer.endDebugUtilsLabelEXT(); }
+	#else
+	void setObjectName(vk::Device device, vk::ObjectType objectType, const void* objectHandle, const char* format, ...) {}
+	void beginDebugLabel(vk::CommandBuffer commandBuffer, std::span<const float, 4> color, const char* format, ...) {}
+	void insertDebugLabel(vk::CommandBuffer commandBuffer, std::span<const float, 4> color, const char* format, ...) {}
+	void endDebugLabel(vk::CommandBuffer commandBuffer) {}
+	#endif // GPU_DEBUG_INFO
 
 }  // namespace Vulkan
