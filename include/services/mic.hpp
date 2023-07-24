@@ -15,6 +15,7 @@ class MICService {
 	void mapSharedMem(u32 messagePointer);
 	void setClamp(u32 messagePointer);
 	void setGain(u32 messagePointer);
+	void setIirFilter(u32 messagePointer);
 	void setPower(u32 messagePointer);
 	void startSampling(u32 messagePointer);
 	void theCaptainToadFunction(u32 messagePointer);

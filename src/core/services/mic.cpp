@@ -8,8 +8,9 @@ namespace MICCommands {
 		SetGain = 0x00080040,
 		GetGain = 0x00090000,
 		SetPower = 0x000A0040,
+		SetIirFilter = 0x000C0042,
 		SetClamp = 0x000D0040,
-		CaptainToadFunction = 0x00100040
+		CaptainToadFunction = 0x00100040,
 	};
 }
 
@@ -26,6 +27,7 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 		case MICCommands::MapSharedMem: mapSharedMem(messagePointer); break;
 		case MICCommands::SetClamp: setClamp(messagePointer); break;
 		case MICCommands::SetGain: setGain(messagePointer); break;
+		case MICCommands::SetIirFilter: setIirFilter(messagePointer); break;
 		case MICCommands::SetPower: setPower(messagePointer); break;
 		case MICCommands::StartSampling: startSampling(messagePointer); break;
 		case MICCommands::CaptainToadFunction: theCaptainToadFunction(messagePointer); break;
@@ -87,6 +89,15 @@ void MICService::startSampling(u32 messagePointer) {
 	);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::setIirFilter(u32 messagePointer) {
+	const u32 size = mem.read32(messagePointer + 4);
+	const u32 pointer = mem.read32(messagePointer + 12);
+	log("MIC::SetIirFilter (size = %X, pointer = %08X) (Stubbed)\n", size, pointer);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
