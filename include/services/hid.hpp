@@ -90,6 +90,7 @@ class HIDService {
 
 	void pressKey(u32 mask) { newButtons |= mask; }
 	void releaseKey(u32 mask) { newButtons &= ~mask; }
+	bool isPressed(u32 mask) { return (oldButtons & mask) != 0; }
 
 	u32 getOldButtons() { return oldButtons; }
 	s16 getCirclepadX() { return circlePadX; }

@@ -13,7 +13,11 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config),
-	  memory(cpu.getTicksRef()), cheats(memory, kernel.getServiceManager().getHID()) {
+	  memory(cpu.getTicksRef()), cheats(memory, kernel.getServiceManager().getHID())
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	  , httpServer(this)
+#endif
+{
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -100,10 +104,6 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 void Emulator::run() {
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	httpServer.startHttpServer();
-#endif
-
 	while (running) {
 		runFrame();
 		HIDService& hid = kernel.getServiceManager().getHID();
@@ -337,7 +337,7 @@ void Emulator::run() {
 void Emulator::runFrame() {
 	if (romType != ROMType::None) {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-		pollHttpServer();
+		httpServer.processActions();
 #endif
 		cpu.runFrame(); // Run 1 frame of instructions
 		gpu.display();  // Display graphics
@@ -448,37 +448,3 @@ bool Emulator::loadELF(std::ifstream& file) {
 
 // Reset our graphics context and initialize the GPU's graphics context
 void Emulator::initGraphicsContext() { gpu.initGraphicsContext(); }
-
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-void Emulator::pollHttpServer() {
-	std::scoped_lock lock(httpServer.actionMutex);
-
-	HIDService& hid = kernel.getServiceManager().getHID();
-
-	if (httpServer.pendingAction) {
-		switch (httpServer.action) {
-			case HttpAction::Screenshot: gpu.screenshot(HttpServer::httpServerScreenshotPath); break;
-
-			case HttpAction::PressKey:
-				if (httpServer.pendingKey != 0) {
-					hid.pressKey(httpServer.pendingKey);
-					httpServer.pendingKey = 0;
-				}
-				break;
-
-			case HttpAction::ReleaseKey:
-				if (httpServer.pendingKey != 0) {
-					hid.releaseKey(httpServer.pendingKey);
-					httpServer.pendingKey = 0;
-				}
-				break;
-
-			case HttpAction::None: break;
-		}
-
-		httpServer.action = HttpAction::None;
-		httpServer.pendingAction = false;
-		httpServer.pendingAction.notify_all();
-	}
-}
-#endif
