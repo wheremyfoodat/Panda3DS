@@ -37,7 +37,7 @@ PlistBuddy Alber.app/Contents/Info.plist -c "add NSHighResolutionCapable bool tr
 PlistBuddy Alber.app/Contents/version.plist -c "add ProjectName string Alber"
 
 # Bundle dylibs
-dylibbundler -od -b -x Alber.app/Contents/MacOS/Alber -d Alber.app/Contents/Frameworks/ -p @rpath
+dylibbundler -od -b -x Alber.app/Contents/MacOS/Alber -d Alber.app/Contents/Frameworks/ -p @rpath -s /Users/runner/work/Panda3DS/Panda3DS/VULKAN_SDK/lib
 
 # relative rpath
 install_name_tool -add_rpath @loader_path/../Frameworks Alber.app/Contents/MacOS/Alber

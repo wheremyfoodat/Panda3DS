@@ -20,6 +20,7 @@ endif()
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
+option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
@@ -177,6 +178,7 @@ source_group("Source Files\\Core\\Software Renderer" FILES ${RENDERER_SW_SOURCE_
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
 set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with the GL renderer
+set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
 
 if(ENABLE_OPENGL)
 	set(RENDERER_GL_INCLUDE_FILES include/renderer_gl/opengl.hpp
@@ -206,6 +208,30 @@ if(ENABLE_OPENGL)
 	)
 endif()
 
+if(ENABLE_VULKAN)
+	find_package(
+		Vulkan 1.3.206 REQUIRED
+		COMPONENTS glslangValidator
+	)
+
+	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
+		include/renderer_vk/vulkan_api.hpp include/renderer_vk/vk_debug.hpp
+	)
+
+	set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
+		src/core/renderer_vk/vulkan_api.cpp src/core/renderer_vk/vk_debug.cpp
+	)
+
+    set(HEADER_FILES ${HEADER_FILES} ${RENDERER_VK_INCLUDE_FILES})
+    source_group("Source Files\\Core\\Vulkan Renderer" FILES ${RENDERER_VK_SOURCE_FILES})
+
+	cmrc_add_resource_library(
+		resources_renderer_vk
+		NAMESPACE RendererVK
+		WHENCE "src/host_shaders/"
+	)
+endif()
+
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 	${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
@@ -213,6 +239,11 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
 if(ENABLE_OPENGL)
     # Add the OpenGL source files to ALL_SOURCES
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_GL_SOURCE_FILES})
+endif()
+
+if(ENABLE_VULKAN)
+    # Add the Vulkan source files to ALL_SOURCES
+    set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
 endif()
 
 add_executable(Alber ${ALL_SOURCES})
@@ -226,6 +257,11 @@ target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
 if(ENABLE_OPENGL)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
     target_link_libraries(Alber PRIVATE resources_renderer_gl)
+endif()
+
+if(ENABLE_VULKAN)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
+    target_link_libraries(Alber PRIVATE Vulkan::Vulkan resources_renderer_vk)
 endif()
 
 if(GPU_DEBUG_INFO)
