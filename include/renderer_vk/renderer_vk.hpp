@@ -4,6 +4,8 @@
 class GPU;
 
 class RendererVK final : public Renderer {
+	SDL_Window* targetWindow;
+
 	// The order of these `Unique*` members is important, they will be destroyed in RAII order
 	vk::UniqueInstance instance = {};
 	vk::UniqueDebugUtilsMessengerEXT debugMessenger = {};
@@ -11,6 +13,8 @@ class RendererVK final : public Renderer {
 	vk::UniqueSurfaceKHR surface = {};
 
 	vk::PhysicalDevice physicalDevice = {};
+
+	vk::UniqueDevice device = {};
 
 	vk::Queue presentQueue = {};
 	u32 presentQueueFamily = ~0u;
@@ -21,17 +25,12 @@ class RendererVK final : public Renderer {
 	vk::Queue transferQueue = {};
 	u32 transferQueueFamily = ~0u;
 
-	vk::UniqueDevice device = {};
+	vk::UniqueCommandPool commandPool = {};
 
 	vk::UniqueSwapchainKHR swapchain = {};
 	u32 swapchainImageCount = ~0u;
 	std::vector<vk::Image> swapchainImages = {};
 	std::vector<vk::UniqueImageView> swapchainImageViews = {};
-
-
-	// Global synchronization primitives
-
-	vk::UniqueCommandPool commandPool = {};
 
 	// Per-swapchain-image data
 	// Each vector is `swapchainImageCount` in size
@@ -39,6 +38,9 @@ class RendererVK final : public Renderer {
 	std::vector<vk::UniqueSemaphore> swapImageFreeSemaphore = {};
 	std::vector<vk::UniqueSemaphore> renderFinishedSemaphore = {};
 	std::vector<vk::UniqueFence> frameFinishedFences = {};
+
+	// Recreate the swapchain, possibly re-using the old one in the case of a resize
+	vk::Result recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent);
 
 	u64 currentFrame = 0;
   public:

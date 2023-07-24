@@ -1,8 +1,8 @@
 #include "renderer_vk/renderer_vk.hpp"
 
+#include <limits>
 #include <span>
 #include <unordered_set>
-#include <limits>
 
 #include "SDL_vulkan.h"
 #include "helpers.hpp"
@@ -23,6 +23,183 @@ static s32 findQueueFamily(
 	return -1;
 }
 
+vk::Result RendererVK::recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent) {
+	static constexpr u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
+	static constexpr u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
+	static constexpr vk::ImageUsageFlags swapchainUsageFlagsRequired =
+		(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst);
+
+	// Extent + Image count + Usage + Surface Transform
+	vk::ImageUsageFlags swapchainImageUsage;
+	vk::SurfaceTransformFlagBitsKHR swapchainSurfaceTransform;
+	if (const auto getResult = physicalDevice.getSurfaceCapabilitiesKHR(surface); getResult.result == vk::Result::eSuccess) {
+		const vk::SurfaceCapabilitiesKHR& surfaceCapabilities = getResult.value;
+
+		// In the case if width == height == -1, we define the extent ourselves but must fit within the limits
+		if (surfaceCapabilities.currentExtent.width == -1 || surfaceCapabilities.currentExtent.height == -1) {
+			swapchainExtent.width = std::max(swapchainExtent.width, surfaceCapabilities.minImageExtent.width);
+			swapchainExtent.height = std::max(swapchainExtent.height, surfaceCapabilities.minImageExtent.height);
+			swapchainExtent.width = std::min(swapchainExtent.width, surfaceCapabilities.maxImageExtent.width);
+			swapchainExtent.height = std::min(swapchainExtent.height, surfaceCapabilities.maxImageExtent.height);
+		}
+
+		swapchainImageCount = surfaceCapabilities.minImageCount + 1;
+		if ((surfaceCapabilities.maxImageCount > 0) && (swapchainImageCount > surfaceCapabilities.maxImageCount)) {
+			swapchainImageCount = surfaceCapabilities.maxImageCount;
+		}
+
+		swapchainImageUsage = surfaceCapabilities.supportedUsageFlags & swapchainUsageFlagsRequired;
+
+		if ((swapchainImageUsage & swapchainUsageFlagsRequired) != swapchainUsageFlagsRequired) {
+			Helpers::panic(
+				"Unsupported swapchain image usage. Could not acquire %s\n", vk::to_string(swapchainImageUsage ^ swapchainUsageFlagsRequired).c_str()
+			);
+		}
+
+		if (surfaceCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity) {
+			swapchainSurfaceTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
+		} else {
+			swapchainSurfaceTransform = surfaceCapabilities.currentTransform;
+		}
+	} else {
+		Helpers::panic("Error getting surface capabilities: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	// Preset Mode
+	// Fifo support is required by all vulkan implementations, waits for vsync
+	vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
+	if (auto getResult = physicalDevice.getSurfacePresentModesKHR(surface); getResult.result == vk::Result::eSuccess) {
+		std::vector<vk::PresentModeKHR>& presentModes = getResult.value;
+
+		// Use mailbox if available, lowest-latency vsync-enabled mode
+		if (std::find(presentModes.begin(), presentModes.end(), vk::PresentModeKHR::eMailbox) != presentModes.end()) {
+			swapchainPresentMode = vk::PresentModeKHR::eMailbox;
+		}
+	} else {
+		Helpers::panic("Error enumerating surface present modes: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	// Surface format
+	vk::SurfaceFormatKHR swapchainSurfaceFormat;
+	if (auto getResult = physicalDevice.getSurfaceFormatsKHR(surface); getResult.result == vk::Result::eSuccess) {
+		std::vector<vk::SurfaceFormatKHR>& surfaceFormats = getResult.value;
+
+		// A singular undefined surface format means we can use any format we want
+		if ((surfaceFormats.size() == 1) && surfaceFormats[0].format == vk::Format::eUndefined) {
+			// Assume R8G8B8A8-SRGB by default
+			swapchainSurfaceFormat = {vk::Format::eR8G8B8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
+		} else {
+			// Find the next-best R8G8B8A8-SRGB format
+			std::vector<vk::SurfaceFormatKHR>::iterator partitionEnd = surfaceFormats.end();
+
+			const auto preferR8G8B8A8 = [](const vk::SurfaceFormatKHR& surfaceFormat) -> bool {
+				return surfaceFormat.format == vk::Format::eR8G8B8A8Snorm;
+			};
+			partitionEnd = std::stable_partition(surfaceFormats.begin(), partitionEnd, preferR8G8B8A8);
+
+			const auto preferSrgbNonLinear = [](const vk::SurfaceFormatKHR& surfaceFormat) -> bool {
+				return surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+			};
+			partitionEnd = std::stable_partition(surfaceFormats.begin(), partitionEnd, preferSrgbNonLinear);
+
+			swapchainSurfaceFormat = surfaceFormats.front();
+		}
+
+	} else {
+		Helpers::panic("Error enumerating surface formats: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	vk::SwapchainCreateInfoKHR swapchainInfo = {};
+
+	swapchainInfo.surface = surface;
+	swapchainInfo.minImageCount = swapchainImageCount;
+	swapchainInfo.imageFormat = swapchainSurfaceFormat.format;
+	swapchainInfo.imageColorSpace = swapchainSurfaceFormat.colorSpace;
+	swapchainInfo.imageExtent = swapchainExtent;
+	swapchainInfo.imageArrayLayers = 1;
+	swapchainInfo.imageUsage = swapchainImageUsage;
+	swapchainInfo.imageSharingMode = vk::SharingMode::eExclusive;
+	swapchainInfo.preTransform = swapchainSurfaceTransform;
+	swapchainInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+	swapchainInfo.presentMode = swapchainPresentMode;
+	swapchainInfo.clipped = true;
+	swapchainInfo.oldSwapchain = swapchain.get();
+
+	if (auto createResult = device->createSwapchainKHRUnique(swapchainInfo); createResult.result == vk::Result::eSuccess) {
+		swapchain = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating swapchain: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	// Get swapchain images
+	if (auto getResult = device->getSwapchainImagesKHR(swapchain.get()); getResult.result == vk::Result::eSuccess) {
+		swapchainImages = getResult.value;
+		swapchainImageViews.resize(swapchainImages.size());
+
+		// Create image-views
+		for (usize i = 0; i < swapchainImages.size(); i++) {
+			vk::ImageViewCreateInfo viewInfo = {};
+			viewInfo.image = swapchainImages[i];
+			viewInfo.viewType = vk::ImageViewType::e2D;
+			viewInfo.format = swapchainSurfaceFormat.format;
+			viewInfo.components = vk::ComponentMapping();
+			viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+			if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
+				swapchainImageViews[i] = std::move(createResult.value);
+			} else {
+				Helpers::panic("Error creating swapchain image-view: #%zu %s\n", i, vk::to_string(getResult.result).c_str());
+			}
+		}
+	} else {
+		Helpers::panic("Error creating acquiring swapchain images: %s\n", vk::to_string(getResult.result).c_str());
+	}
+
+	// Swapchain Command buffer(s)
+	vk::CommandBufferAllocateInfo commandBuffersInfo = {};
+	commandBuffersInfo.commandPool = commandPool.get();
+	commandBuffersInfo.level = vk::CommandBufferLevel::ePrimary;
+	commandBuffersInfo.commandBufferCount = swapchainImageCount;
+
+	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
+		presentCommandBuffers = std::move(allocateResult.value);
+	} else {
+		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
+	}
+
+	// Swapchain synchronization primitives
+	vk::FenceCreateInfo fenceInfo = {};
+	fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+
+	vk::SemaphoreCreateInfo semaphoreInfo = {};
+
+	swapImageFreeSemaphore.resize(swapchainImageCount);
+	renderFinishedSemaphore.resize(swapchainImageCount);
+	frameFinishedFences.resize(swapchainImageCount);
+
+	for (usize i = 0; i < swapchainImageCount; i++) {
+		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+			swapImageFreeSemaphore[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+			renderFinishedSemaphore[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'post-render' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createFenceUnique(fenceInfo); createResult.result == vk::Result::eSuccess) {
+			frameFinishedFences[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+	}
+
+	return vk::Result::eSuccess;
+}
+
 RendererVK::RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
 
 RendererVK::~RendererVK() {}
@@ -31,7 +208,8 @@ void RendererVK::reset() {}
 
 void RendererVK::display() {
 	// Block, on the CPU, to ensure that this swapchain-frame is ready for more work
-	if (auto waitResult = device->waitForFences({frameFinishedFences[currentFrame].get()}, true, std::numeric_limits<u64>::max()); waitResult != vk::Result::eSuccess) {
+	if (auto waitResult = device->waitForFences({frameFinishedFences[currentFrame].get()}, true, std::numeric_limits<u64>::max());
+		waitResult != vk::Result::eSuccess) {
 		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
 	}
 
@@ -45,7 +223,19 @@ void RendererVK::display() {
 			case vk::Result::eSuboptimalKHR:
 			case vk::Result::eErrorOutOfDateKHR: {
 				// Surface resized
-				// Todo: Recreate swapchain and get a valid image index
+				vk::Extent2D swapchainExtent;
+				{
+					int windowWidth, windowHeight;
+					// Block until we have a valid surface-area to present to
+					// Usually this is because the window has been minimized
+					// Todo: We should still be rendering even without a valid swapchain
+					do {
+						SDL_Vulkan_GetDrawableSize(targetWindow, &windowWidth, &windowHeight);
+					} while (!windowWidth || !windowHeight);
+					swapchainExtent.width = windowWidth;
+					swapchainExtent.height = windowHeight;
+				}
+				recreateSwapchain(surface.get(), swapchainExtent);
 				break;
 			}
 			default: {
@@ -64,7 +254,7 @@ void RendererVK::display() {
 	}
 
 	{
-		static const std::array<float, 4> presentScopeColor = {{1.0f, currentFrame / 2.0f, 1.0f, 1.0f}};
+		static const std::array<float, 4> presentScopeColor = {{1.0f, 0.0f, 1.0f, 1.0f}};
 
 		Vulkan::DebugLabelScope debugScope(presentCommandBuffer.get(), presentScopeColor, "Present");
 
@@ -111,7 +301,8 @@ void RendererVK::display() {
 
 	device->resetFences({frameFinishedFences[currentFrame].get()});
 
-	if (const vk::Result submitResult = graphicsQueue.submit({submitInfo}, frameFinishedFences[currentFrame].get()); submitResult != vk::Result::eSuccess) {
+	if (const vk::Result submitResult = graphicsQueue.submit({submitInfo}, frameFinishedFences[currentFrame].get());
+		submitResult != vk::Result::eSuccess) {
 		Helpers::panic("Error submitting to graphics queue: %s\n", vk::to_string(submitResult).c_str());
 	}
 
@@ -126,7 +317,14 @@ void RendererVK::display() {
 			case vk::Result::eSuboptimalKHR:
 			case vk::Result::eErrorOutOfDateKHR: {
 				// Surface resized
-				// Todo: Recreate swapchain and get a valid image index
+				vk::Extent2D swapchainExtent;
+				{
+					int windowWidth, windowHeight;
+					SDL_Vulkan_GetDrawableSize(targetWindow, &windowWidth, &windowHeight);
+					swapchainExtent.width = windowWidth;
+					swapchainExtent.height = windowHeight;
+				}
+				recreateSwapchain(surface.get(), swapchainExtent);
 				break;
 			}
 			default: {
@@ -139,6 +337,7 @@ void RendererVK::display() {
 }
 
 void RendererVK::initGraphicsContext(SDL_Window* window) {
+	targetWindow = window;
 	// Resolve all instance function pointers
 	static vk::DynamicLoader dl;
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
@@ -317,146 +516,6 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	computeQueue = device->getQueue(computeQueueFamily, 0);
 	transferQueue = device->getQueue(transferQueueFamily, 0);
 
-	// Create swapchain
-	static constexpr u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
-	static constexpr u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
-	static constexpr vk::ImageUsageFlags swapchainUsageFlagsRequired =
-		(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst);
-
-	vk::Extent2D swapchainExtent;
-	{
-		int windowWidth, windowHeight;
-		SDL_Vulkan_GetDrawableSize(window, &windowWidth, &windowHeight);
-		swapchainExtent.width = windowWidth;
-		swapchainExtent.height = windowHeight;
-	}
-
-	// Extent + Image count + Usage + Surface Transform
-	vk::ImageUsageFlags swapchainImageUsage;
-	vk::SurfaceTransformFlagBitsKHR swapchainSurfaceTransform;
-	if (const auto getResult = physicalDevice.getSurfaceCapabilitiesKHR(surface.get()); getResult.result == vk::Result::eSuccess) {
-		const vk::SurfaceCapabilitiesKHR& surfaceCapabilities = getResult.value;
-
-		// In the case if width == height == -1, we define the extent ourselves but must fit within the limits
-		if (surfaceCapabilities.currentExtent.width == -1 || surfaceCapabilities.currentExtent.height == -1) {
-			swapchainExtent.width = std::max(swapchainExtent.width, surfaceCapabilities.minImageExtent.width);
-			swapchainExtent.height = std::max(swapchainExtent.height, surfaceCapabilities.minImageExtent.height);
-			swapchainExtent.width = std::min(swapchainExtent.width, surfaceCapabilities.maxImageExtent.width);
-			swapchainExtent.height = std::min(swapchainExtent.height, surfaceCapabilities.maxImageExtent.height);
-		}
-
-		swapchainImageCount = surfaceCapabilities.minImageCount + 1;
-		if ((surfaceCapabilities.maxImageCount > 0) && (swapchainImageCount > surfaceCapabilities.maxImageCount)) {
-			swapchainImageCount = surfaceCapabilities.maxImageCount;
-		}
-
-		swapchainImageUsage = surfaceCapabilities.supportedUsageFlags & swapchainUsageFlagsRequired;
-
-		if ((swapchainImageUsage & swapchainUsageFlagsRequired) != swapchainUsageFlagsRequired) {
-			Helpers::panic(
-				"Unsupported swapchain image usage. Could not acquire %s\n", vk::to_string(swapchainImageUsage ^ swapchainUsageFlagsRequired).c_str()
-			);
-		}
-
-		if (surfaceCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity) {
-			swapchainSurfaceTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
-		} else {
-			swapchainSurfaceTransform = surfaceCapabilities.currentTransform;
-		}
-	} else {
-		Helpers::panic("Error getting surface capabilities: %s\n", vk::to_string(getResult.result).c_str());
-	}
-
-	// Preset Mode
-	// Fifo support is required by all vulkan implementations, waits for vsync
-	vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
-	if (auto getResult = physicalDevice.getSurfacePresentModesKHR(surface.get()); getResult.result == vk::Result::eSuccess) {
-		std::vector<vk::PresentModeKHR>& presentModes = getResult.value;
-
-		// Use mailbox if available, lowest-latency vsync-enabled mode
-		if (std::find(presentModes.begin(), presentModes.end(), vk::PresentModeKHR::eMailbox) != presentModes.end()) {
-			swapchainPresentMode = vk::PresentModeKHR::eMailbox;
-		}
-	} else {
-		Helpers::panic("Error enumerating surface present modes: %s\n", vk::to_string(getResult.result).c_str());
-	}
-
-	// Surface format
-	vk::SurfaceFormatKHR swapchainSurfaceFormat;
-	if (auto getResult = physicalDevice.getSurfaceFormatsKHR(surface.get()); getResult.result == vk::Result::eSuccess) {
-		std::vector<vk::SurfaceFormatKHR>& surfaceFormats = getResult.value;
-
-		// A singular undefined surface format means we can use any format we want
-		if ((surfaceFormats.size() == 1) && surfaceFormats[0].format == vk::Format::eUndefined) {
-			// Assume R8G8B8A8-SRGB by default
-			swapchainSurfaceFormat = {vk::Format::eR8G8B8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
-		} else {
-			// Find the next-best R8G8B8A8-SRGB format
-			std::vector<vk::SurfaceFormatKHR>::iterator partitionEnd = surfaceFormats.end();
-
-			const auto preferR8G8B8A8 = [](const vk::SurfaceFormatKHR& surfaceFormat) -> bool {
-				return surfaceFormat.format == vk::Format::eR8G8B8A8Snorm;
-			};
-			partitionEnd = std::stable_partition(surfaceFormats.begin(), partitionEnd, preferR8G8B8A8);
-
-			const auto preferSrgbNonLinear = [](const vk::SurfaceFormatKHR& surfaceFormat) -> bool {
-				return surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
-			};
-			partitionEnd = std::stable_partition(surfaceFormats.begin(), partitionEnd, preferSrgbNonLinear);
-
-			swapchainSurfaceFormat = surfaceFormats.front();
-		}
-
-	} else {
-		Helpers::panic("Error enumerating surface formats: %s\n", vk::to_string(getResult.result).c_str());
-	}
-
-	vk::SwapchainCreateInfoKHR swapchainInfo = {};
-
-	swapchainInfo.surface = surface.get();
-	swapchainInfo.minImageCount = swapchainImageCount;
-	swapchainInfo.imageFormat = swapchainSurfaceFormat.format;
-	swapchainInfo.imageColorSpace = swapchainSurfaceFormat.colorSpace;
-	swapchainInfo.imageExtent = swapchainExtent;
-	swapchainInfo.imageArrayLayers = 1;
-	swapchainInfo.imageUsage = swapchainImageUsage;
-	swapchainInfo.imageSharingMode = vk::SharingMode::eExclusive;
-	swapchainInfo.preTransform = swapchainSurfaceTransform;
-	swapchainInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-	swapchainInfo.presentMode = swapchainPresentMode;
-	swapchainInfo.clipped = true;
-	swapchainInfo.oldSwapchain = nullptr;  // Todo
-
-	if (auto createResult = device->createSwapchainKHRUnique(swapchainInfo); createResult.result == vk::Result::eSuccess) {
-		swapchain = std::move(createResult.value);
-	} else {
-		Helpers::panic("Error creating swapchain: %s\n", vk::to_string(createResult.result).c_str());
-	}
-
-	// Get swapchain images
-	if (auto getResult = device->getSwapchainImagesKHR(swapchain.get()); getResult.result == vk::Result::eSuccess) {
-		swapchainImages = getResult.value;
-		swapchainImageViews.resize(swapchainImages.size());
-
-		// Create image-views
-		for (usize i = 0; i < swapchainImages.size(); i++) {
-			vk::ImageViewCreateInfo viewInfo = {};
-			viewInfo.image = swapchainImages[i];
-			viewInfo.viewType = vk::ImageViewType::e2D;
-			viewInfo.format = swapchainSurfaceFormat.format;
-			viewInfo.components = vk::ComponentMapping();
-			viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-
-			if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
-				swapchainImageViews[i] = std::move(createResult.value);
-			} else {
-				Helpers::panic("Error creating swapchain image-view: #%zu %s\n", i, vk::to_string(getResult.result).c_str());
-			}
-		}
-	} else {
-		Helpers::panic("Error creating acquiring swapchain images: %s\n", vk::to_string(getResult.result).c_str());
-	}
-
 	// Command pool
 	vk::CommandPoolCreateInfo commandPoolInfo = {};
 	commandPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
@@ -467,47 +526,15 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		Helpers::panic("Error creating command pool: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
-	// Swapchain Command buffer(s)
-	vk::CommandBufferAllocateInfo commandBuffersInfo = {};
-	commandBuffersInfo.commandPool = commandPool.get();
-	commandBuffersInfo.level = vk::CommandBufferLevel::ePrimary;
-	commandBuffersInfo.commandBufferCount = swapchainImageCount;
-
-	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
-		presentCommandBuffers = std::move(allocateResult.value);
-	} else {
-		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
+	// Create swapchain
+	vk::Extent2D swapchainExtent;
+	{
+		int windowWidth, windowHeight;
+		SDL_Vulkan_GetDrawableSize(window, &windowWidth, &windowHeight);
+		swapchainExtent.width = windowWidth;
+		swapchainExtent.height = windowHeight;
 	}
-
-	// Swapchain synchronization primitives
-	vk::FenceCreateInfo fenceInfo = {};
-	fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
-
-	vk::SemaphoreCreateInfo semaphoreInfo = {};
-
-	swapImageFreeSemaphore.resize(swapchainImageCount);
-	renderFinishedSemaphore.resize(swapchainImageCount);
-	frameFinishedFences.resize(swapchainImageCount);
-
-	for (usize i = 0; i < swapchainImageCount; i++) {
-		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
-			swapImageFreeSemaphore[i] = std::move(createResult.value);
-		} else {
-			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
-		}
-
-		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
-			renderFinishedSemaphore[i] = std::move(createResult.value);
-		} else {
-			Helpers::panic("Error creating 'post-render' semaphore: %s\n", vk::to_string(createResult.result).c_str());
-		}
-
-		if (auto createResult = device->createFenceUnique(fenceInfo); createResult.result == vk::Result::eSuccess) {
-			frameFinishedFences[i] = std::move(createResult.value);
-		} else {
-			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
-		}
-	}
+	recreateSwapchain(surface.get(), swapchainExtent);
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
