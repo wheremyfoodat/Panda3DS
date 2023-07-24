@@ -213,6 +213,7 @@ if(ENABLE_VULKAN)
 		Vulkan 1.3.206 REQUIRED
 		COMPONENTS glslangValidator
 	)
+
 	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
 		include/renderer_vk/vulkan_api.hpp include/renderer_vk/vk_debug.hpp
 	)
