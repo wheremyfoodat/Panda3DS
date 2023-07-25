@@ -8,35 +8,33 @@
 #include <vector>
 
 #include "emulator.hpp"
+#include "helpers.hpp"
 #include "httplib.h"
 
 class HttpActionScreenshot : public HttpAction {
+	DeferredResponseWrapper& response;
+
   public:
 	HttpActionScreenshot(DeferredResponseWrapper& response) : HttpAction(HttpActionType::Screenshot), response(response) {}
-
 	DeferredResponseWrapper& getResponse() { return response; }
-
-  private:
-	DeferredResponseWrapper& response;
 };
 
 class HttpActionKey : public HttpAction {
-  public:
-	HttpActionKey(uint32_t key, bool state) : HttpAction(HttpActionType::Key), key(key), state(state) {}
-
-	uint32_t getKey() const { return key; }
-	bool getState() const { return state; }
-
-  private:
-	uint32_t key;
+	u32 key;
 	bool state;
+
+  public:
+	HttpActionKey(u32 key, bool state) : HttpAction(HttpActionType::Key), key(key), state(state) {}
+
+	u32 getKey() const { return key; }
+	bool getState() const { return state; }
 };
 
 std::unique_ptr<HttpAction> HttpAction::createScreenshotAction(DeferredResponseWrapper& response) {
 	return std::make_unique<HttpActionScreenshot>(response);
 }
 
-std::unique_ptr<HttpAction> HttpAction::createKeyAction(uint32_t key, bool state) { return std::make_unique<HttpActionKey>(key, state); }
+std::unique_ptr<HttpAction> HttpAction::createKeyAction(u32 key, bool state) { return std::make_unique<HttpActionKey>(key, state); }
 
 HttpServer::HttpServer(Emulator* emulator)
 	: emulator(emulator), server(std::make_unique<httplib::Server>()), keyMap({
@@ -86,8 +84,7 @@ void HttpServer::startHttpServer() {
 			u32 key = stringToKey(keyStr);
 
 			if (key != 0) {
-				bool state = value == "1";
-
+				bool state = (value == "1");
 				if (!state && value != "0") {
 					// Invalid state
 					ok = false;
@@ -103,11 +100,7 @@ void HttpServer::startHttpServer() {
 			}
 		}
 
-		if (ok) {
-			response.set_content("ok", "text/plain");
-		} else {
-			response.set_content("error", "text/plain");
-		}
+		response.set_content(ok ? "ok" : "error", "text/plain");
 	});
 
 	server->Get("/step", [this](const httplib::Request&, httplib::Response& response) {
@@ -124,14 +117,15 @@ void HttpServer::startHttpServer() {
 
 std::string HttpServer::status() {
 	HIDService& hid = emulator->kernel.getServiceManager().getHID();
-
 	std::stringstream stringStream;
 
 	stringStream << "Panda3DS\n";
 	stringStream << "Status: " << (paused ? "Paused" : "Running") << "\n";
 
+	// TODO: This currently doesn't work for N3DS buttons
+	auto keyPressed = [](const HIDService& hid, u32 mask) { return (hid.getOldButtons() & mask) != 0; };
 	for (auto& [keyStr, value] : keyMap) {
-		stringStream << keyStr << ": " << hid.isPressed(value) << "\n";
+		stringStream << keyStr << ": " << keyPressed(hid, value) << "\n";
 	}
 
 	return stringStream.str();
@@ -160,6 +154,7 @@ void HttpServer::processActions() {
 				response.cv.notify_one();
 				break;
 			}
+
 			case HttpActionType::Key: {
 				HttpActionKey* keyAction = static_cast<HttpActionKey*>(action.get());
 				if (keyAction->getState()) {
@@ -169,9 +164,8 @@ void HttpServer::processActions() {
 				}
 				break;
 			}
-			default: {
-				break;
-			}
+
+			default: break;
 		}
 	}
 }

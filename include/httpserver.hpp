@@ -18,7 +18,7 @@ class Emulator;
 namespace httplib {
 	class Server;
 	class Response;
-}  // namespace httplib
+}
 
 // Wrapper for httplib::Response that allows the HTTP server to wait for the response to be ready
 struct DeferredResponseWrapper {
@@ -32,6 +32,8 @@ struct DeferredResponseWrapper {
 
 // Actions derive from this class and are used to communicate with the HTTP server
 class HttpAction {
+	HttpActionType type;
+
   public:
 	HttpAction(HttpActionType type) : type(type) {}
 	virtual ~HttpAction() = default;
@@ -40,22 +42,17 @@ class HttpAction {
 
 	static std::unique_ptr<HttpAction> createScreenshotAction(DeferredResponseWrapper& response);
 	static std::unique_ptr<HttpAction> createKeyAction(uint32_t key, bool state);
-
-  private:
-	HttpActionType type;
 };
 
 struct HttpServer {
 	HttpServer(Emulator* emulator);
 	~HttpServer();
-
 	void processActions();
 
   private:
 	static constexpr const char* httpServerScreenshotPath = "screenshot.png";
 
 	Emulator* emulator;
-
 	std::unique_ptr<httplib::Server> server;
 
 	std::thread httpServerThread;
