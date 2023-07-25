@@ -32,9 +32,14 @@ class RendererVK final : public Renderer {
 	std::vector<vk::Image> swapchainImages = {};
 	std::vector<vk::UniqueImageView> swapchainImageViews = {};
 
-	// Per-swapchain-image data
-	// Each vector is `swapchainImageCount` in size
-	std::vector<vk::UniqueCommandBuffer> presentCommandBuffers = {};
+	// This value is the degree of parallelism to allow multiple frames to be in-flight
+	// aka: "double-buffer"/"triple-buffering"
+	// Todo: make this a configuration option
+	static constexpr usize frameBufferingCount = 3;
+
+	// Frame-buffering data
+	// Each vector is `frameBufferingCount` in size
+	std::vector<vk::UniqueCommandBuffer> frameCommandBuffers = {};
 	std::vector<vk::UniqueSemaphore> swapImageFreeSemaphore = {};
 	std::vector<vk::UniqueSemaphore> renderFinishedSemaphore = {};
 	std::vector<vk::UniqueFence> frameFinishedFences = {};
@@ -42,7 +47,8 @@ class RendererVK final : public Renderer {
 	// Recreate the swapchain, possibly re-using the old one in the case of a resize
 	vk::Result recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent);
 
-	u64 currentFrame = 0;
+	u64 frameBufferingIndex = 0;
+
   public:
 	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	~RendererVK() override;
