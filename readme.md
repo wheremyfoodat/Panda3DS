@@ -29,7 +29,7 @@ The 3DS emulation scene is already pretty mature, with offerings such as [Citra]
 Keep in mind, these are all long-term plans. Until then, the main focus is just improving compatibility
 
 # How to build
-Panda3DS compiles on Windows, Linux and MacOS, without needing to download any system dependencies.
+Panda3DS compiles on Windows, Linux and MacOS, with only 1 system dependency, the Vulkan SDK. However, if you don't want to install the Vulkan SDK you can always build the emulator with only OpenGL support, by adding `-DENABLE_VULKAN=OFF` to the `cmake` command
 
 All you need is CMake and a generator of your choice (Make, Visual Studio, Ninja, etc). Simply clone the repo recursively and build it like your average CMake project.
 
