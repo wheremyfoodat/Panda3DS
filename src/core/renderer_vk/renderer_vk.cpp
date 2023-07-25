@@ -513,7 +513,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(device.get());
 
 	presentQueue = device->getQueue(presentQueueFamily, 0);
-	graphicsQueue = device->getQueue(presentQueueFamily, 0);
+	graphicsQueue = device->getQueue(graphicsQueueFamily, 0);
 	computeQueue = device->getQueue(computeQueueFamily, 0);
 	transferQueue = device->getQueue(transferQueueFamily, 0);
 
