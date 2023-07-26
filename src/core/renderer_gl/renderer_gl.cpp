@@ -472,13 +472,7 @@ void RendererGL::display() {
 }
 
 void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
-	return;
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
-
-	const float r = float(getBits<24, 8>(value)) / 255.0f;
-	const float g = float(getBits<16, 8>(value)) / 255.0f;
-	const float b = float(getBits<8, 8>(value)) / 255.0f;
-	const float a = float(value & 0xff) / 255.0f;
 
 	if (startAddress == topScreenBuffer) {
 		log("GPU: Cleared top screen\n");
@@ -489,8 +483,39 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		log("GPU: Clearing some unknown buffer\n");
 	}
 
-	OpenGL::setClearColor(r, g, b, a);
-	OpenGL::clearColor();
+	const auto color = colourBufferCache.findFromAddress(startAddress);
+	if (color) {
+		const float r = getBits<24, 8>(value) / 255.0f;
+		const float g = getBits<16, 8>(value) / 255.0f;
+		const float b = getBits<8, 8>(value) / 255.0f;
+		const float a = (value & 0xff) / 255.0f;
+		color->get().fbo.bind(OpenGL::DrawFramebuffer);
+		gl.setColourMask(true, true, true, true);
+		OpenGL::setClearColor(r, g, b, a);
+		OpenGL::clearColor();
+		return;
+	}
+	const auto depth = depthBufferCache.findFromAddress(startAddress);
+	if (depth) {
+		float depthVal;
+		const auto format = depth->get().format;
+		if (format == DepthFmt::Depth16) {
+			depthVal = (value & 0xffff) / 65535.0f;
+		} else {
+			depthVal = (value & 0xffffff) / 16777215.0f;
+		}
+		depth->get().fbo.bind(OpenGL::DrawFramebuffer);
+		OpenGL::setDepthMask(true);
+		OpenGL::setClearDepth(depthVal);
+		OpenGL::clearDepth();
+		if (format == DepthFmt::Depth24Stencil8) {
+			const u8 stencil = (value >> 24);
+			OpenGL::setStencilMask(0xFF);
+			OpenGL::setClearStencil(stencil);
+		}
+		return;
+	}
+	Helpers::warn("GPU: No buffer found!\n");
 }
 
 OpenGL::Framebuffer RendererGL::getColourFBO() {

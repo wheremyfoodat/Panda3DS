@@ -299,6 +299,28 @@ void GPUService::processCommandBuffer() {
 	}
 }
 
+static u32 VaddrToPaddr(u32 addr) {
+	if (addr >= VirtualAddrs::VramStart && addr < (VirtualAddrs::VramStart + VirtualAddrs::VramSize)) [[likely]] {
+		return addr - VirtualAddrs::VramStart + PhysicalAddrs::VRAM;
+	}
+
+	else if (addr >= VirtualAddrs::LinearHeapStartOld && addr < VirtualAddrs::LinearHeapEndOld) {
+		return addr - VirtualAddrs::LinearHeapStartOld + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr >= VirtualAddrs::LinearHeapStartNew && addr < VirtualAddrs::LinearHeapEndNew) {
+		return addr - VirtualAddrs::LinearHeapStartNew + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr == 0) {
+		return 0;
+	}
+
+	Helpers::warn("[GSP::GPU VaddrToPaddr] Unknown virtual address %08X", addr);
+	// Obviously garbage address
+	return 0xF3310932;
+}
+
 // Fill 2 GPU framebuffers, buf0 and buf1, using a specific word value
 void GPUService::memoryFill(u32* cmd) {
 	u32 control = cmd[7];
@@ -316,36 +338,14 @@ void GPUService::memoryFill(u32* cmd) {
 	u32 control1 = control >> 16;
 
 	if (start0 != 0) {
-		gpu.clearBuffer(start0, end0, value0, control0);
+		gpu.clearBuffer(VaddrToPaddr(start0), VaddrToPaddr(end0), value0, control0);
 		requestInterrupt(GPUInterrupt::PSC0);
 	}
 
 	if (start1 != 0) {
-		gpu.clearBuffer(start1, end1, value1, control1);
+		gpu.clearBuffer(VaddrToPaddr(start1), VaddrToPaddr(end1), value1, control1);
 		requestInterrupt(GPUInterrupt::PSC1);
 	}
-}
-
-static u32 VaddrToPaddr(u32 addr) {
-	if (addr >= VirtualAddrs::VramStart && addr < (VirtualAddrs::VramStart + VirtualAddrs::VramSize)) [[likely]] {
-		return addr - VirtualAddrs::VramStart + PhysicalAddrs::VRAM;
-	}
-	
-	else if (addr >= VirtualAddrs::LinearHeapStartOld && addr < VirtualAddrs::LinearHeapEndOld) {
-		return addr - VirtualAddrs::LinearHeapStartOld + PhysicalAddrs::FCRAM;
-	}
-
-	else if (addr >= VirtualAddrs::LinearHeapStartNew && addr < VirtualAddrs::LinearHeapEndNew) {
-		return addr - VirtualAddrs::LinearHeapStartNew + PhysicalAddrs::FCRAM;
-	}
-
-	else if (addr == 0) {
-		return 0;
-	}
-
-	Helpers::warn("[GSP::GPU VaddrToPaddr] Unknown virtual address %08X", addr);
-	// Obviously garbage address
-	return 0xF3310932;
 }
 
 void GPUService::triggerDisplayTransfer(u32* cmd) {

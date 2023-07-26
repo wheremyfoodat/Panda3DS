@@ -333,18 +333,18 @@ namespace OpenGL {
         void bind(FramebufferTypes target) const { bind(static_cast<GLenum>(target)); }
         void free() { glDeleteFramebuffers(1, &m_handle); }
 
-        void createWithTexture(Texture& tex, GLenum mode = GL_FRAMEBUFFER, GLenum textureType = GL_TEXTURE_2D) {
+        void createWithTexture(Texture& tex, GLenum mode = GL_FRAMEBUFFER, GLenum attachment = GL_COLOR_ATTACHMENT0, GLenum textureType = GL_TEXTURE_2D) {
             m_textureType = textureType;
             create();
             bind(mode);
-            glFramebufferTexture2D(mode, GL_COLOR_ATTACHMENT0, textureType, tex.handle(), 0);
+            glFramebufferTexture2D(mode, attachment, textureType, tex.handle(), 0);
         }
 
-        void createWithReadTexture(Texture& tex, GLenum textureType = GL_TEXTURE_2D) {
-            createWithTexture(tex, GL_READ_FRAMEBUFFER, textureType);
+        void createWithReadTexture(Texture& tex, GLenum attachment = GL_COLOR_ATTACHMENT0, GLenum textureType = GL_TEXTURE_2D) {
+            createWithTexture(tex, GL_READ_FRAMEBUFFER, attachment, textureType);
         }
-        void createWithDrawTexture(Texture& tex, GLenum textureType = GL_TEXTURE_2D) {
-            createWithTexture(tex, GL_DRAW_FRAMEBUFFER, textureType);
+        void createWithDrawTexture(Texture& tex, GLenum attachment = GL_COLOR_ATTACHMENT0, GLenum textureType = GL_TEXTURE_2D) {
+            createWithTexture(tex, GL_DRAW_FRAMEBUFFER, attachment, textureType);
         }
 
         void createWithTextureMSAA(Texture& tex, GLenum mode = GL_FRAMEBUFFER) {
