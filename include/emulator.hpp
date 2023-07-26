@@ -92,6 +92,7 @@ class Emulator {
 
 	void resume();  // Resume the emulator
 	void pause();   // Pause the emulator
+	void togglePause();
 
 	bool loadROM(const std::filesystem::path& path);
 	bool loadNCSD(const std::filesystem::path& path, ROMType type);
