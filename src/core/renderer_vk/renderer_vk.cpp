@@ -1,12 +1,14 @@
 #include "renderer_vk/renderer_vk.hpp"
 
 #include <limits>
+#include <ranges>
 #include <span>
 #include <unordered_set>
 
 #include "SDL_vulkan.h"
 #include "helpers.hpp"
 #include "renderer_vk/vk_debug.hpp"
+#include "renderer_vk/vk_memory.hpp"
 
 // Finds the first queue family that satisfies `queueMask` and excludes `queueExcludeMask` bits
 // Returns -1 if not found
@@ -221,15 +223,27 @@ void RendererVK::display() {
 
 		Vulkan::DebugLabelScope debugScope(frameCommandBuffer.get(), frameScopeColor, "Frame");
 
-		// Prepare for color-clear
 		if (swapchainImageIndex != swapchainImageInvalid) {
+			// Prepare images for color-clear
 			frameCommandBuffer->pipelineBarrier(
 				vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
-				{vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
-					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-				)}
+				{
+					vk::ImageMemoryBarrier(
+						vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+						vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
+						vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+					),
+					vk::ImageMemoryBarrier(
+						vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+						vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+						topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+					),
+					vk::ImageMemoryBarrier(
+						vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+						vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+						bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+					),
+				}
 			);
 
 			static const std::array<float, 4> clearColor = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -237,6 +251,56 @@ void RendererVK::display() {
 				swapchainImages[swapchainImageIndex], vk::ImageLayout::eTransferDstOptimal, clearColor,
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			);
+
+			//// Simulated rendering work, just clear the screens and get them ready to blit(transfer-src layout)
+			{
+				static const std::array<float, 4> topClearColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
+				static const std::array<float, 4> bottomClearColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
+				frameCommandBuffer->clearColorImage(
+					topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, topClearColor,
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				);
+				frameCommandBuffer->clearColorImage(
+					bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, bottomClearColor,
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				);
+				frameCommandBuffer->pipelineBarrier(
+					vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+					{
+						vk::ImageMemoryBarrier(
+							vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
+							vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+							topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+						),
+						vk::ImageMemoryBarrier(
+							vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
+							vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+							bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+						),
+					}
+				);
+			}
+
+			// Blip top/bottom screen onto swapchain image
+			{
+				static const vk::ImageBlit topScreenBlit(
+					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}},
+					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}}
+				);
+				static const vk::ImageBlit bottomScreenBlit(
+					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{320, 240, 1}},
+					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1),
+					{vk::Offset3D{(400 / 2) - (320 / 2), 240, 0}, vk::Offset3D{(400 / 2) + (320 / 2), 240 + 240, 1}}
+				);
+				frameCommandBuffer->blitImage(
+					topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
+					vk::ImageLayout::eTransferDstOptimal, {topScreenBlit}, vk::Filter::eNearest
+				);
+				frameCommandBuffer->blitImage(
+					bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
+					vk::ImageLayout::eTransferDstOptimal, {bottomScreenBlit}, vk::Filter::eNearest
+				);
+			}
 
 			// Prepare for present
 			frameCommandBuffer->pipelineBarrier(
@@ -555,14 +619,74 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	swapImageFreeSemaphore.resize(frameBufferingCount);
 	renderFinishedSemaphore.resize(frameBufferingCount);
 	frameFinishedFences.resize(frameBufferingCount);
-	vk::Extent2D swapchainExtent;
-	{
-		int windowWidth, windowHeight;
-		SDL_Vulkan_GetDrawableSize(window, &windowWidth, &windowHeight);
-		swapchainExtent.width = windowWidth;
-		swapchainExtent.height = windowHeight;
+
+	vk::ImageCreateInfo topScreenInfo = {};
+	topScreenInfo.setImageType(vk::ImageType::e2D);
+	topScreenInfo.setFormat(vk::Format::eR8G8B8A8Unorm);
+	topScreenInfo.setExtent(vk::Extent3D(400, 240, 1));
+	topScreenInfo.setMipLevels(1);
+	topScreenInfo.setArrayLayers(2);  // Two image layers, for 3D mode
+	topScreenInfo.setSamples(vk::SampleCountFlagBits::e1);
+	topScreenInfo.setTiling(vk::ImageTiling::eOptimal);
+	topScreenInfo.setUsage(
+		vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
+		vk::ImageUsageFlagBits::eTransferDst
+	);
+	topScreenInfo.setSharingMode(vk::SharingMode::eExclusive);
+	topScreenInfo.setInitialLayout(vk::ImageLayout::eUndefined);
+
+	vk::ImageCreateInfo bottomScreenInfo = topScreenInfo;
+	bottomScreenInfo.setExtent(vk::Extent3D(320, 240, 1));
+	bottomScreenInfo.setArrayLayers(1);
+
+	topScreenImages.resize(frameBufferingCount);
+	bottomScreenImages.resize(frameBufferingCount);
+
+	for (usize i = 0; i < frameBufferingCount; i++) {
+		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+			swapImageFreeSemaphore[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
+			renderFinishedSemaphore[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'post-render' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createFenceUnique(fenceInfo); createResult.result == vk::Result::eSuccess) {
+			frameFinishedFences[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createImageUnique(topScreenInfo); createResult.result == vk::Result::eSuccess) {
+			topScreenImages[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating top-screen image: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		if (auto createResult = device->createImageUnique(bottomScreenInfo); createResult.result == vk::Result::eSuccess) {
+			bottomScreenImages[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating bottom-screen image: %s\n", vk::to_string(createResult.result).c_str());
+		}
 	}
-	recreateSwapchain(surface.get(), swapchainExtent);
+
+	// Commit memory to all of our images
+	{
+		const auto getImage = [](const vk::UniqueImage& image) -> vk::Image { return image.get(); };
+		std::vector<vk::Image> images;
+		std::ranges::transform(topScreenImages, std::back_inserter(images), getImage);
+		std::ranges::transform(bottomScreenImages, std::back_inserter(images), getImage);
+
+		if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, images); result == vk::Result::eSuccess) {
+			framebufferMemory = std::move(imageMemory);
+		} else {
+			Helpers::panic("Error allocating framebuffer memory: %s\n", vk::to_string(result).c_str());
+		}
+	}
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}

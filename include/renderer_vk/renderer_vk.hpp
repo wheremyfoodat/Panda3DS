@@ -37,12 +37,17 @@ class RendererVK final : public Renderer {
 	// Todo: make this a configuration option
 	static constexpr usize frameBufferingCount = 3;
 
+	vk::UniqueDeviceMemory framebufferMemory = {};
+
 	// Frame-buffering data
 	// Each vector is `frameBufferingCount` in size
 	std::vector<vk::UniqueCommandBuffer> frameCommandBuffers = {};
 	std::vector<vk::UniqueSemaphore> swapImageFreeSemaphore = {};
 	std::vector<vk::UniqueSemaphore> renderFinishedSemaphore = {};
 	std::vector<vk::UniqueFence> frameFinishedFences = {};
+
+	std::vector<vk::UniqueImage> topScreenImages = {};
+	std::vector<vk::UniqueImage> bottomScreenImages = {};
 
 	// Recreate the swapchain, possibly re-using the old one in the case of a resize
 	vk::Result recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent);
