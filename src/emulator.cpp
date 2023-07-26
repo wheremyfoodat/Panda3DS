@@ -114,6 +114,9 @@ void Emulator::render() {}
 
 void Emulator::run() {
 	while (running) {
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+		httpServer.processActions();
+#endif
 		runFrame();
 		HIDService& hid = kernel.getServiceManager().getHID();
 
@@ -345,9 +348,6 @@ void Emulator::run() {
 
 void Emulator::runFrame() {
 	if (romType != ROMType::None) {
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-		httpServer.processActions();
-#endif
 		cpu.runFrame(); // Run 1 frame of instructions
 		gpu.display();  // Display graphics
 

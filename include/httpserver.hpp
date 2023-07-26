@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <condition_variable>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -12,7 +13,7 @@
 
 #include "helpers.hpp"
 
-enum class HttpActionType { None, Screenshot, Key };
+enum class HttpActionType { None, Screenshot, Key, LoadRom };
 
 class Emulator;
 namespace httplib {
@@ -42,6 +43,7 @@ class HttpAction {
 
 	static std::unique_ptr<HttpAction> createScreenshotAction(DeferredResponseWrapper& response);
 	static std::unique_ptr<HttpAction> createKeyAction(uint32_t key, bool state);
+	static std::unique_ptr<HttpAction> createLoadRomAction(std::filesystem::path path, bool paused);
 };
 
 struct HttpServer {

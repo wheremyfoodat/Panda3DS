@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -30,11 +31,26 @@ class HttpActionKey : public HttpAction {
 	bool getState() const { return state; }
 };
 
+class HttpActionLoadRom : public HttpAction {
+	std::filesystem::path path;
+	bool paused;
+
+  public:
+	HttpActionLoadRom(std::filesystem::path path, bool paused) : HttpAction(HttpActionType::LoadRom), path(path), paused(paused) {}
+
+	std::filesystem::path getPath() const { return path; }
+	bool getPaused() const { return paused; }
+};
+
 std::unique_ptr<HttpAction> HttpAction::createScreenshotAction(DeferredResponseWrapper& response) {
 	return std::make_unique<HttpActionScreenshot>(response);
 }
 
 std::unique_ptr<HttpAction> HttpAction::createKeyAction(u32 key, bool state) { return std::make_unique<HttpActionKey>(key, state); }
+
+std::unique_ptr<HttpAction> HttpAction::createLoadRomAction(std::filesystem::path path, bool paused) {
+	return std::make_unique<HttpActionLoadRom>(path, paused);
+}
 
 HttpServer::HttpServer(Emulator* emulator)
 	: emulator(emulator), server(std::make_unique<httplib::Server>()), keyMap({
@@ -110,6 +126,37 @@ void HttpServer::startHttpServer() {
 
 	server->Get("/status", [this](const httplib::Request&, httplib::Response& response) { response.set_content(status(), "text/plain"); });
 
+	server->Get("/load_rom", [this](const httplib::Request& request, httplib::Response& response) {
+		printf("load_rom\n");
+		auto it = request.params.find("path");
+		if (it == request.params.end()) {
+			response.set_content("error", "text/plain");
+			return;
+		}
+
+		std::filesystem::path romPath = it->second;
+		if (romPath.empty()) {
+			response.set_content("error", "text/plain");
+			return;
+		} else {
+			std::error_code error;
+			if (!std::filesystem::is_regular_file(romPath, error)) {
+				std::string message = "error: " + error.message();
+				response.set_content(message, "text/plain");
+				return;
+			}
+		}
+
+		bool paused = false;
+		it = request.params.find("paused");
+		if (it != request.params.end()) {
+			paused = (it->second == "1");
+		}
+
+		pushAction(HttpAction::createLoadRomAction(romPath, paused));
+		response.set_content("ok", "text/plain");
+	});
+
 	// TODO: ability to specify host and port
 	printf("Starting HTTP server on port 1234\n");
 	server->listen("localhost", 1234);
@@ -162,6 +209,13 @@ void HttpServer::processActions() {
 				} else {
 					hid.releaseKey(keyAction->getKey());
 				}
+				break;
+			}
+
+			case HttpActionType::LoadRom: {
+				HttpActionLoadRom* loadRomAction = static_cast<HttpActionLoadRom*>(action.get());
+				emulator->loadROM(loadRomAction->getPath());
+				paused = loadRomAction->getPaused();
 				break;
 			}
 
