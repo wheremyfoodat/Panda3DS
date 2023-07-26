@@ -172,9 +172,16 @@ void Emulator::run() {
 						case SDLK_RETURN: hid.pressKey(Keys::Start); break;
 						case SDLK_BACKSPACE: hid.pressKey(Keys::Select); break;
 
-						// Use the play button as a hot-key to pause or resume the emulator
-						case SDLK_AUDIOPLAY: {
+						// Use the F4 button as a hot-key to pause or resume the emulator
+						// We can't use the audio play/pause buttons because it's annoying 
+						case SDLK_F4: {
 							running ? pause() : resume();
+							break;
+						}
+
+						// Use F5 as a reset button
+						case SDLK_F5: {
+							reset(ReloadOption::Reload);
 							break;
 						}
 					}
