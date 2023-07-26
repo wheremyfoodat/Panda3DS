@@ -199,7 +199,7 @@ void RendererVK::display() {
 						swapchainExtent.width = windowWidth;
 						swapchainExtent.height = windowHeight;
 					}
-					recreateSwapchain(surface.get(), swapchainExtent);
+					recreateSwapchain(surface, swapchainExtent);
 					break;
 				}
 				default: {
@@ -356,7 +356,7 @@ void RendererVK::display() {
 						swapchainExtent.width = windowWidth;
 						swapchainExtent.height = windowHeight;
 					}
-					recreateSwapchain(surface.get(), swapchainExtent);
+					recreateSwapchain(surface, swapchainExtent);
 					break;
 				}
 				default: {
@@ -445,7 +445,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	// Create surface
 	if (window) {
 		if (VkSurfaceKHR newSurface; SDL_Vulkan_CreateSurface(window, instance.get(), &newSurface)) {
-			surface.reset(newSurface);
+			surface = newSurface;
 		} else {
 			Helpers::warn("Error creating Vulkan surface");
 		}
@@ -461,8 +461,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 			const auto surfaceSupport = [this](const vk::PhysicalDevice& physicalDevice) -> bool {
 				const usize queueCount = physicalDevice.getQueueFamilyProperties().size();
 				for (usize queueIndex = 0; queueIndex < queueCount; ++queueIndex) {
-					if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueIndex, surface.get());
-						supportResult.result == vk::Result::eSuccess) {
+					if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueIndex, surface); supportResult.result == vk::Result::eSuccess) {
 						return supportResult.value;
 					}
 				}
@@ -494,7 +493,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		// Get present queue family
 		if (surface) {
 			for (usize queueFamilyIndex = 0; queueFamilyIndex < queueFamilyProperties.size(); ++queueFamilyIndex) {
-				if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, surface.get());
+				if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, surface);
 					supportResult.result == vk::Result::eSuccess) {
 					if (supportResult.value) {
 						presentQueueFamily = queueFamilyIndex;
@@ -594,7 +593,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 			swapchainExtent.width = windowWidth;
 			swapchainExtent.height = windowHeight;
 		}
-		recreateSwapchain(surface.get(), swapchainExtent);
+		recreateSwapchain(surface, swapchainExtent);
 	}
 
 	// Create frame-buffering data
