@@ -250,6 +250,30 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	glStencilOp(stencilOps[stencilFailOp], stencilOps[depthFailOp], stencilOps[passOp]);
 }
 
+void RendererGL::setupLogicOp() {
+	const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
+	static constexpr std::array<GLenum, 16> logicOps = {
+		GL_CLEAR,
+		GL_AND,
+		GL_AND_REVERSE,
+		GL_COPY,
+		GL_SET,
+		GL_COPY_INVERTED,
+		GL_NOOP,
+		GL_INVERT,
+		GL_NAND,
+		GL_OR,
+		GL_NOR,
+		GL_XOR,
+		GL_EQUIV,
+		GL_AND_INVERTED,
+		GL_OR_REVERSE,
+		GL_OR_INVERTED,
+	};
+
+	glLogicOp(logicOps[logicOp]);
+}
+
 void RendererGL::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
 
@@ -427,6 +451,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	}
 
 	setupStencilTest(stencilEnable);
+	setupLogicOp();
 
 	vbo.bufferVertsSub(vertices);
 	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));

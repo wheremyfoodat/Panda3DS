@@ -53,6 +53,7 @@ namespace PICA {
 			// Framebuffer registers
 			ColourOperation = 0x100,
 			BlendFunc = 0x101,
+			LogicOp = 0x102,
 			BlendColour = 0x103,
 			AlphaTestConfig = 0x104,
 			StencilTest = 0x105,
