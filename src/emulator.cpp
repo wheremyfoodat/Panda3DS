@@ -75,6 +75,8 @@ Emulator::Emulator()
 		}
 	}
 
+	running = false;
+	programRunning = false;
 	reset(ReloadOption::NoReload);
 }
 
@@ -114,7 +116,9 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 void Emulator::run() {
-	while (running) {
+	programRunning = true;
+
+	while (programRunning) {
 		runFrame();
 		HIDService& hid = kernel.getServiceManager().getHID();
 
@@ -125,7 +129,7 @@ void Emulator::run() {
 			switch (event.type) {
 				case SDL_QUIT:
 					printf("Bye :(\n");
-					running = false;
+					programRunning = false;
 					return;
 
 				case SDL_KEYDOWN:
@@ -344,8 +348,12 @@ void Emulator::run() {
 	}
 }
 
+// Only resume if a ROM is properly loaded
+void Emulator::resume() { running = (romType != ROMType::None); }
+void Emulator::pause() { running = false; }
+
 void Emulator::runFrame() {
-	if (romType != ROMType::None) {
+	if (running) {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
@@ -408,6 +416,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		romType = ROMType::None;
 	}
 
+	resume();  // Start the emulator
 	return success;
 }
 

@@ -59,7 +59,8 @@ class Emulator {
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
-	bool running = true;
+	bool running = false;         // Is the emulator running a game?
+	bool programRunning = false;  // Is the emulator program itself running?
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	HttpServer httpServer;
@@ -88,6 +89,9 @@ class Emulator {
 	void reset(ReloadOption reload);
 	void run();
 	void runFrame();
+
+	void resume();  // Resume the emulator
+	void pause();   // Pause the emulator
 
 	bool loadROM(const std::filesystem::path& path);
 	bool loadNCSD(const std::filesystem::path& path, ROMType type);
