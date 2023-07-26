@@ -43,9 +43,6 @@ class Emulator {
 	SDL_GameController* gameController = nullptr;
 	int gameControllerID;
 
-	// Shows whether we've loaded any action replay codes
-	bool haveCheats = false;
-
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
 	// And so the user can still use the keyboard to control the analog
