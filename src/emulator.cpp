@@ -363,8 +363,8 @@ void Emulator::runFrame() {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
-		cpu.runFrame(); // Run 1 frame of instructions
-		gpu.display();  // Display graphics
+		cpu.runFrame();  // Run 1 frame of instructions
+		gpu.display();   // Display graphics
 
 		// Send VBlank interrupts
 		ServiceManager& srv = kernel.getServiceManager();
@@ -374,6 +374,10 @@ void Emulator::runFrame() {
 		if (haveCheats) [[unlikely]] {
 			cheats.run();
 		}
+	} else if (romType != ROMType::None) {
+		// If the emulator is not running and a game is loaded, we still want to display the framebuffer otherwise we will get weird
+		// double-buffering issues
+		gpu.display();
 	}
 }
 
