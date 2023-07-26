@@ -59,6 +59,7 @@ namespace PICA {
 			StencilTest = 0x105,
 			StencilOp = 0x106,
 			DepthAndColorMask = 0x107,
+			DepthBufferWrite = 0x115,
 			DepthBufferFormat = 0x116,
 			ColourBufferFormat = 0x117,
 			DepthBufferLoc = 0x11C,

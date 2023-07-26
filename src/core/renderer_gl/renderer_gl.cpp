@@ -225,9 +225,11 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 
 	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
 	const u32 stencilFunc = getBits<4, 3>(stencilConfig);
-	const u32 stencilBufferMask = getBits<8, 8>(stencilConfig);
 	const s32 reference = s8(getBits<16, 8>(stencilConfig)); // Signed reference value
 	const u32 stencilRefMask = getBits<24, 8>(stencilConfig);
+
+	const bool stencilWrite = regs[PICA::InternalRegs::DepthBufferWrite];
+	const u32 stencilBufferMask = stencilWrite ? getBits<8, 8>(stencilConfig) : 0;
 
 	glStencilFunc(stencilFuncs[stencilFunc], reference, stencilRefMask);
 	glStencilMask(stencilBufferMask);
@@ -381,6 +383,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	poop.bind(OpenGL::DrawAndReadFramebuffer);
 
 	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
+	const bool depthWrite = regs[PICA::InternalRegs::DepthBufferWrite];
 	const bool depthEnable = depthControl & 1;
 	const bool depthWriteEnable = getBit<12>(depthControl);
 	const int depthFunc = getBits<4, 3>(depthControl);
@@ -432,7 +435,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
 		gl.enableDepth();
-		gl.setDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+		gl.setDepthMask(depthWriteEnable && depthWrite ? GL_TRUE : GL_FALSE);
 		gl.setDepthFunc(depthModes[depthFunc]);
 		bindDepthBuffer();
 	} else {
