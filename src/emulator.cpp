@@ -75,6 +75,8 @@ Emulator::Emulator()
 		}
 	}
 
+	running = false;
+	programRunning = false;
 	reset(ReloadOption::NoReload);
 }
 
@@ -113,7 +115,9 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 void Emulator::run() {
-	while (running) {
+	programRunning = true;
+
+	while (programRunning) {
 		runFrame();
 		HIDService& hid = kernel.getServiceManager().getHID();
 
@@ -124,7 +128,7 @@ void Emulator::run() {
 			switch (event.type) {
 				case SDL_QUIT:
 					printf("Bye :(\n");
-					running = false;
+					programRunning = false;
 					return;
 
 				case SDL_KEYDOWN:
@@ -166,6 +170,19 @@ void Emulator::run() {
 
 						case SDLK_RETURN: hid.pressKey(Keys::Start); break;
 						case SDLK_BACKSPACE: hid.pressKey(Keys::Select); break;
+
+						// Use the F4 button as a hot-key to pause or resume the emulator
+						// We can't use the audio play/pause buttons because it's annoying 
+						case SDLK_F4: {
+							togglePause();
+							break;
+						}
+
+						// Use F5 as a reset button
+						case SDLK_F5: {
+							reset(ReloadOption::Reload);
+							break;
+						}
 					}
 					break;
 
@@ -343,13 +360,18 @@ void Emulator::run() {
 	}
 }
 
+// Only resume if a ROM is properly loaded
+void Emulator::resume() { running = (romType != ROMType::None); }
+void Emulator::pause() { running = false; }
+void Emulator::togglePause() { running ? pause() : resume(); }
+
 void Emulator::runFrame() {
-	if (romType != ROMType::None) {
+	if (running) {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
-		cpu.runFrame(); // Run 1 frame of instructions
-		gpu.display();  // Display graphics
+		cpu.runFrame();  // Run 1 frame of instructions
+		gpu.display();   // Display graphics
 
 		// Send VBlank interrupts
 		ServiceManager& srv = kernel.getServiceManager();
@@ -360,6 +382,10 @@ void Emulator::runFrame() {
 		if (cheats.haveCheats()) [[unlikely]] {
 			cheats.run();
 		}
+	} else if (romType != ROMType::None) {
+		// If the emulator is not running and a game is loaded, we still want to display the framebuffer otherwise we will get weird
+		// double-buffering issues
+		gpu.display();
 	}
 }
 
@@ -408,6 +434,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		romType = ROMType::None;
 	}
 
+	resume();  // Start the emulator
 	return success;
 }
 

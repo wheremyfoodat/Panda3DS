@@ -19,6 +19,16 @@ class HttpActionScreenshot : public HttpAction {
 	DeferredResponseWrapper& getResponse() { return response; }
 };
 
+class HttpActionTogglePause : public HttpAction {
+  public:
+	HttpActionTogglePause() : HttpAction(HttpActionType::TogglePause) {}
+};
+
+class HttpActionReset : public HttpAction {
+  public:
+	HttpActionReset() : HttpAction(HttpActionType::Reset) {}
+};
+
 class HttpActionKey : public HttpAction {
 	u32 key;
 	bool state;
@@ -35,6 +45,8 @@ std::unique_ptr<HttpAction> HttpAction::createScreenshotAction(DeferredResponseW
 }
 
 std::unique_ptr<HttpAction> HttpAction::createKeyAction(u32 key, bool state) { return std::make_unique<HttpActionKey>(key, state); }
+std::unique_ptr<HttpAction> HttpAction::createTogglePauseAction() { return std::make_unique<HttpActionTogglePause>(); }
+std::unique_ptr<HttpAction> HttpAction::createResetAction() { return std::make_unique<HttpActionReset>(); }
 
 HttpServer::HttpServer(Emulator* emulator)
 	: emulator(emulator), server(std::make_unique<httplib::Server>()), keyMap({
@@ -110,6 +122,16 @@ void HttpServer::startHttpServer() {
 
 	server->Get("/status", [this](const httplib::Request&, httplib::Response& response) { response.set_content(status(), "text/plain"); });
 
+	server->Get("/togglepause", [this](const httplib::Request&, httplib::Response& response) {
+		pushAction(HttpAction::createTogglePauseAction());
+		response.set_content("ok", "text/plain");
+	});
+
+	server->Get("/reset", [this](const httplib::Request&, httplib::Response& response) {
+		pushAction(HttpAction::createResetAction());
+		response.set_content("ok", "text/plain");
+	});
+
 	// TODO: ability to specify host and port
 	printf("Starting HTTP server on port 1234\n");
 	server->listen("localhost", 1234);
@@ -164,6 +186,9 @@ void HttpServer::processActions() {
 				}
 				break;
 			}
+
+			case HttpActionType::TogglePause: emulator->togglePause(); break;
+			case HttpActionType::Reset: emulator->reset(Emulator::ReloadOption::Reload); break;
 
 			default: break;
 		}
