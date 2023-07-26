@@ -93,7 +93,6 @@ void Emulator::reset(ReloadOption reload) {
 
 	// We're resetting without reloading the ROM, so yeet cheats
 	if (reload == ReloadOption::NoReload) {
-		haveCheats = false;
 		cheats.reset();
 	}
 
@@ -357,7 +356,8 @@ void Emulator::runFrame() {
 		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
 		srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
-		if (haveCheats) [[unlikely]] {
+		// Run cheats if any are loaded
+		if (cheats.haveCheats()) [[unlikely]] {
 			cheats.run();
 		}
 	}

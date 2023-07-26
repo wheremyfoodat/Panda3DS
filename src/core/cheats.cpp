@@ -3,11 +3,19 @@
 Cheats::Cheats(Memory& mem, HIDService& hid) : ar(mem, hid) { reset(); }
 
 void Cheats::reset() {
-	cheats.clear();  // Unload loaded cheats
-	ar.reset();      // Reset ActionReplay
+	clear();     // Clear loaded cheats
+	ar.reset();  // Reset ActionReplay
 }
 
-void Cheats::addCheat(const Cheat& cheat) { cheats.push_back(cheat); }
+void Cheats::addCheat(const Cheat& cheat) {
+	cheats.push_back(cheat);
+	cheatsLoaded = true;
+}
+
+void Cheats::clear() {
+	cheats.clear();
+	cheatsLoaded = false;
+}
 
 void Cheats::run() {
 	for (const Cheat& cheat : cheats) {

@@ -26,7 +26,11 @@ class Cheats {
 	void reset();
 	void run();
 
+	void clear();
+	bool haveCheats() const { return cheatsLoaded; }
+
   private:
 	ActionReplay ar;  // An ActionReplay cheat machine for executing CTRPF codes
 	std::vector<Cheat> cheats;
+	bool cheatsLoaded = false;
 };
