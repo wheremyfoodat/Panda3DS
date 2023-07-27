@@ -273,6 +273,7 @@ void RendererGL::setupLogicOp() {
 		GL_OR_INVERTED,
 	};
 
+	// TODO: Enable logic op lmao
 	glLogicOp(logicOps[logicOp]);
 }
 
@@ -495,6 +496,7 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		OpenGL::clearColor();
 		return;
 	}
+
 	const auto depth = depthBufferCache.findFromAddress(startAddress);
 	if (depth) {
 		float depthVal;
@@ -515,7 +517,8 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		}
 		return;
 	}
-	Helpers::warn("GPU: No buffer found!\n");
+
+	log("[RendererGL::ClearBuffer] No buffer found!\n");
 }
 
 OpenGL::Framebuffer RendererGL::getColourFBO() {
