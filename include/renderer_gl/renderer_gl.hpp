@@ -62,7 +62,6 @@ class RendererGL final : public Renderer {
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();
 	void setupStencilTest(bool stencilEnable);
-	void setupLogicOp();
 	void bindDepthBuffer();
 	void setupTextureEnvState();
 	void bindTexturesToSlots();

@@ -149,8 +149,6 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
-	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
-
 	// Map of PICA blending equations to OpenGL blending equations. The unused blending equations are equivalent to equation 0 (add)
 	static constexpr std::array<GLenum, 8> blendingEquations = {
 		GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX, GL_FUNC_ADD, GL_FUNC_ADD, GL_FUNC_ADD,
@@ -176,10 +174,21 @@ void RendererGL::setupBlending() {
 		GL_ONE,
 	};
 
-	if (!blendingEnabled) {
-		gl.disableBlend();
+	static constexpr std::array<GLenum, 16> logicOps = {
+		GL_CLEAR, GL_AND, GL_AND_REVERSE, GL_COPY, GL_SET,   GL_COPY_INVERTED, GL_NOOP,       GL_INVERT,
+		GL_NAND,  GL_OR,  GL_NOR,         GL_XOR,  GL_EQUIV, GL_AND_INVERTED,  GL_OR_REVERSE, GL_OR_INVERTED,
+	};
+
+	// Shows if blending is enabled. If it is not enabled, then logic ops are enabled instead
+	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
+
+	if (!blendingEnabled) { // Logic ops are enabled
+		const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
+		glLogicOp(logicOps[logicOp]);
+		glEnable(GL_COLOR_LOGIC_OP);
 	} else {
 		gl.enableBlend();
+		glDisable(GL_COLOR_LOGIC_OP);
 
 		// Get blending equations
 		const u32 blendControl = regs[PICA::InternalRegs::BlendFunc];
@@ -252,30 +261,6 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	glStencilOp(stencilOps[stencilFailOp], stencilOps[depthFailOp], stencilOps[passOp]);
 }
 
-void RendererGL::setupLogicOp() {
-	const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
-	static constexpr std::array<GLenum, 16> logicOps = {
-		GL_CLEAR,
-		GL_AND,
-		GL_AND_REVERSE,
-		GL_COPY,
-		GL_SET,
-		GL_COPY_INVERTED,
-		GL_NOOP,
-		GL_INVERT,
-		GL_NAND,
-		GL_OR,
-		GL_NOR,
-		GL_XOR,
-		GL_EQUIV,
-		GL_AND_INVERTED,
-		GL_OR_REVERSE,
-		GL_OR_INVERTED,
-	};
-
-	// TODO: Enable logic op lmao
-	glLogicOp(logicOps[logicOp]);
-}
 
 void RendererGL::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
@@ -455,7 +440,6 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	}
 
 	setupStencilTest(stencilEnable);
-	setupLogicOp();
 
 	vbo.bufferVertsSub(vertices);
 	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
@@ -579,6 +563,7 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
 	gl.disableBlend();
+	glDisable(GL_COLOR_LOGIC_OP);
 	gl.disableDepth();
 	gl.disableScissor();
 	gl.disableStencil();
