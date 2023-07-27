@@ -167,7 +167,7 @@ RendererVK::~RendererVK() {}
 void RendererVK::reset() {}
 
 void RendererVK::display() {
-	// Block, on the CPU, to ensure that this frame-buffering-frame is ready for more work
+	// Block, on the CPU, to ensure that this buffered-frame is ready for more work
 	if (auto waitResult = device->waitForFences({frameFinishedFences[frameBufferingIndex].get()}, true, std::numeric_limits<u64>::max());
 		waitResult != vk::Result::eSuccess) {
 		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
@@ -198,7 +198,7 @@ void RendererVK::display() {
 						swapchainExtent.width = windowWidth;
 						swapchainExtent.height = windowHeight;
 					}
-					recreateSwapchain(surface, swapchainExtent);
+					recreateSwapchain(swapchainSurface, swapchainExtent);
 					break;
 				}
 				default: {
@@ -208,7 +208,7 @@ void RendererVK::display() {
 		}
 	}
 
-	vk::UniqueCommandBuffer& frameCommandBuffer = frameCommandBuffers.at(frameBufferingIndex);
+	const vk::UniqueCommandBuffer& frameCommandBuffer = frameCommandBuffers[frameBufferingIndex];
 
 	vk::CommandBufferBeginInfo beginInfo = {};
 	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
@@ -217,100 +217,102 @@ void RendererVK::display() {
 		Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
 	}
 
+	//// Render Frame(Simulated - just clear the images to different colors for now)
 	{
 		static const std::array<float, 4> frameScopeColor = {{1.0f, 0.0f, 1.0f, 1.0f}};
 
 		Vulkan::DebugLabelScope debugScope(frameCommandBuffer.get(), frameScopeColor, "Frame");
 
-		if (swapchainImageIndex != swapchainImageInvalid) {
-			// Prepare images for color-clear
-			frameCommandBuffer->pipelineBarrier(
-				vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
-				{
-					vk::ImageMemoryBarrier(
-						vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
-						vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
-						vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-					),
-					vk::ImageMemoryBarrier(
-						vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
-						vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-						topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-					),
-					vk::ImageMemoryBarrier(
-						vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
-						vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-						bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-					),
-				}
-			);
+		// Prepare images for color-clear
+		frameCommandBuffer->pipelineBarrier(
+			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+			{
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+			}
+		);
+		static const std::array<float, 4> topClearColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
+		static const std::array<float, 4> bottomClearColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
+		frameCommandBuffer->clearColorImage(
+			topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, topClearColor,
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+		);
+		frameCommandBuffer->clearColorImage(
+			bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, bottomClearColor,
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+		);
+	}
 
-			static const std::array<float, 4> clearColor = {{0.0f, 0.0f, 0.0f, 1.0f}};
-			frameCommandBuffer->clearColorImage(
-				swapchainImages[swapchainImageIndex], vk::ImageLayout::eTransferDstOptimal, clearColor,
+	//// Present
+	if (swapchainImageIndex != swapchainImageInvalid) {
+		static const std::array<float, 4> presentScopeColor = {{1.0f, 1.0f, 0.0f, 1.0f}};
+		Vulkan::DebugLabelScope debugScope(frameCommandBuffer.get(), presentScopeColor, "Present");
+
+		// Prepare swapchain image for color-clear/blit-dst, prepare top/bottom screen for blit-src
+		frameCommandBuffer->pipelineBarrier(
+			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+			{
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
+					vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
+					vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+			}
+		);
+
+		static const std::array<float, 4> clearColor = {{0.0f, 0.0f, 0.0f, 1.0f}};
+		frameCommandBuffer->clearColorImage(
+			swapchainImages[swapchainImageIndex], vk::ImageLayout::eTransferDstOptimal, clearColor,
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+		);
+
+		// Blit top/bottom screen into swapchain image
+
+		static const vk::ImageBlit topScreenBlit(
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}},
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}}
+		);
+		static const vk::ImageBlit bottomScreenBlit(
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{320, 240, 1}},
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1),
+			{vk::Offset3D{(400 / 2) - (320 / 2), 240, 0}, vk::Offset3D{(400 / 2) + (320 / 2), 240 + 240, 1}}
+		);
+		frameCommandBuffer->blitImage(
+			topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
+			vk::ImageLayout::eTransferDstOptimal, {topScreenBlit}, vk::Filter::eNearest
+		);
+		frameCommandBuffer->blitImage(
+			bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
+			vk::ImageLayout::eTransferDstOptimal, {bottomScreenBlit}, vk::Filter::eNearest
+		);
+
+		// Prepare swapchain image for present
+		frameCommandBuffer->pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
+			{vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
+				vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-			);
-
-			//// Simulated rendering work, just clear the screens and get them ready to blit(transfer-src layout)
-			{
-				static const std::array<float, 4> topClearColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
-				static const std::array<float, 4> bottomClearColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
-				frameCommandBuffer->clearColorImage(
-					topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, topClearColor,
-					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-				);
-				frameCommandBuffer->clearColorImage(
-					bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, bottomClearColor,
-					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-				);
-				frameCommandBuffer->pipelineBarrier(
-					vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
-					{
-						vk::ImageMemoryBarrier(
-							vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
-							vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-							topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-						),
-						vk::ImageMemoryBarrier(
-							vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
-							vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-							bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-						),
-					}
-				);
-			}
-
-			// Blip top/bottom screen onto swapchain image
-			{
-				static const vk::ImageBlit topScreenBlit(
-					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}},
-					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}}
-				);
-				static const vk::ImageBlit bottomScreenBlit(
-					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{320, 240, 1}},
-					vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1),
-					{vk::Offset3D{(400 / 2) - (320 / 2), 240, 0}, vk::Offset3D{(400 / 2) + (320 / 2), 240 + 240, 1}}
-				);
-				frameCommandBuffer->blitImage(
-					topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
-					vk::ImageLayout::eTransferDstOptimal, {topScreenBlit}, vk::Filter::eNearest
-				);
-				frameCommandBuffer->blitImage(
-					bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
-					vk::ImageLayout::eTransferDstOptimal, {bottomScreenBlit}, vk::Filter::eNearest
-				);
-			}
-
-			// Prepare for present
-			frameCommandBuffer->pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
-				{vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
-					vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
-					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-				)}
-			);
-		}
+			)}
+		);
 	}
 
 	if (const vk::Result endResult = frameCommandBuffer->end(); endResult != vk::Result::eSuccess) {
@@ -355,7 +357,7 @@ void RendererVK::display() {
 						swapchainExtent.width = windowWidth;
 						swapchainExtent.height = windowHeight;
 					}
-					recreateSwapchain(surface, swapchainExtent);
+					recreateSwapchain(swapchainSurface, swapchainExtent);
 					break;
 				}
 				default: {
@@ -444,7 +446,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	// Create surface
 	if (window) {
 		if (VkSurfaceKHR newSurface; SDL_Vulkan_CreateSurface(window, instance.get(), &newSurface)) {
-			surface = newSurface;
+			swapchainSurface = newSurface;
 		} else {
 			Helpers::warn("Error creating Vulkan surface");
 		}
@@ -456,11 +458,12 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		std::vector<vk::PhysicalDevice>::iterator partitionEnd = physicalDevices.end();
 
 		// Prefer GPUs that can access the surface
-		if (surface) {
+		if (swapchainSurface) {
 			const auto surfaceSupport = [this](const vk::PhysicalDevice& physicalDevice) -> bool {
 				const usize queueCount = physicalDevice.getQueueFamilyProperties().size();
 				for (usize queueIndex = 0; queueIndex < queueCount; ++queueIndex) {
-					if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueIndex, surface); supportResult.result == vk::Result::eSuccess) {
+					if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueIndex, swapchainSurface);
+						supportResult.result == vk::Result::eSuccess) {
 						return supportResult.value;
 					}
 				}
@@ -490,9 +493,9 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		const std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
 		std::unordered_set<u32> queueFamilyRequests;
 		// Get present queue family
-		if (surface) {
+		if (swapchainSurface) {
 			for (usize queueFamilyIndex = 0; queueFamilyIndex < queueFamilyProperties.size(); ++queueFamilyIndex) {
-				if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, surface);
+				if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, swapchainSurface);
 					supportResult.result == vk::Result::eSuccess) {
 					if (supportResult.value) {
 						presentQueueFamily = queueFamilyIndex;
@@ -584,7 +587,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	}
 
 	// Create swapchain
-	if (targetWindow && surface) {
+	if (targetWindow && swapchainSurface) {
 		vk::Extent2D swapchainExtent;
 		{
 			int windowWidth, windowHeight;
@@ -592,7 +595,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 			swapchainExtent.width = windowWidth;
 			swapchainExtent.height = windowHeight;
 		}
-		recreateSwapchain(surface, swapchainExtent);
+		recreateSwapchain(swapchainSurface, swapchainExtent);
 	}
 
 	// Create frame-buffering data
@@ -623,7 +626,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	topScreenInfo.setFormat(vk::Format::eR8G8B8A8Unorm);
 	topScreenInfo.setExtent(vk::Extent3D(400, 240, 1));
 	topScreenInfo.setMipLevels(1);
-	topScreenInfo.setArrayLayers(2);  // Two image layers, for 3D mode
+	topScreenInfo.setArrayLayers(1);
 	topScreenInfo.setSamples(vk::SampleCountFlagBits::e1);
 	topScreenInfo.setTiling(vk::ImageTiling::eOptimal);
 	topScreenInfo.setUsage(
@@ -635,7 +638,6 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	vk::ImageCreateInfo bottomScreenInfo = topScreenInfo;
 	bottomScreenInfo.setExtent(vk::Extent3D(320, 240, 1));
-	bottomScreenInfo.setArrayLayers(1);
 
 	topScreenImages.resize(frameBufferingCount);
 	bottomScreenImages.resize(frameBufferingCount);

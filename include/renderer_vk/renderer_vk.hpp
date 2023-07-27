@@ -10,7 +10,7 @@ class RendererVK final : public Renderer {
 	vk::UniqueInstance instance = {};
 	vk::UniqueDebugUtilsMessengerEXT debugMessenger = {};
 
-	vk::SurfaceKHR surface = {};
+	vk::SurfaceKHR swapchainSurface = {};
 
 	vk::PhysicalDevice physicalDevice = {};
 
