@@ -18,7 +18,7 @@ enum class HttpActionType { None, Screenshot, Key, TogglePause, Reset, LoadRom }
 class Emulator;
 namespace httplib {
 	class Server;
-	class Response;
+	struct Response;
 }
 
 // Wrapper for httplib::Response that allows the HTTP server to wait for the response to be ready
