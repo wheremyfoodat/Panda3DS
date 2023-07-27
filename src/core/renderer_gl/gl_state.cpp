@@ -26,6 +26,11 @@ void GLStateManager::resetScissor() {
 	OpenGL::setScissor(0, 0, 0, 0);
 }
 
+void GLStateManager::resetStencil() {
+	stencilEnabled = false;
+	OpenGL::disableStencil();
+}
+
 void GLStateManager::resetVAO() {
 	boundVAO = 0;
 	glBindVertexArray(0);
@@ -50,4 +55,5 @@ void GLStateManager::reset() {
 	resetVBO();
 	resetProgram();
 	resetScissor();
+	resetStencil();
 }

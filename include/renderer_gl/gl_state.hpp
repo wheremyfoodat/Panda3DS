@@ -21,6 +21,7 @@ struct GLStateManager {
 	bool blendEnabled;
 	bool depthEnabled;
 	bool scissorEnabled;
+	bool stencilEnabled;
 
 	// Colour/depth masks
 	bool redMask, greenMask, blueMask, alphaMask;
@@ -40,6 +41,7 @@ struct GLStateManager {
 	void resetVBO();
 	void resetProgram();
 	void resetScissor();
+	void resetStencil();
 
 	void enableDepth() {
 		if (!depthEnabled) {
@@ -80,6 +82,20 @@ struct GLStateManager {
 		if (scissorEnabled) {
 			scissorEnabled = false;
 			OpenGL::disableScissor();
+		}
+	}
+
+	void enableStencil() {
+		if (!stencilEnabled) {
+			stencilEnabled = true;
+			OpenGL::enableStencil();
+		}
+	}
+
+	void disableStencil() {
+		if (stencilEnabled) {
+			stencilEnabled = false;
+			OpenGL::disableStencil();
 		}
 	}
 

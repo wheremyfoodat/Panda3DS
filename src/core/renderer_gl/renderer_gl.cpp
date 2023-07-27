@@ -207,7 +207,7 @@ void RendererGL::setupBlending() {
 
 void RendererGL::setupStencilTest(bool stencilEnable) {
 	if (!stencilEnable) {
-		OpenGL::disableStencil();
+		gl.disableStencil();
 		return;
 	}
 
@@ -221,7 +221,7 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 		GL_GREATER,
 		GL_GEQUAL
 	};
-	OpenGL::enableStencil();
+	gl.enableStencil();
 
 	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
 	const u32 stencilFunc = getBits<4, 3>(stencilConfig);
@@ -583,7 +583,7 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	gl.disableBlend();
 	gl.disableDepth();
 	gl.disableScissor();
-	OpenGL::disableStencil();
+	gl.disableStencil();
 	gl.setColourMask(true, true, true, true);
 	gl.useProgram(displayProgram);
 	gl.bindVAO(dummyVAO);
