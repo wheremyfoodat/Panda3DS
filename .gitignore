@@ -55,6 +55,12 @@ fb.bat
 *.idb
 
 # 3DS files
+*.3ds
 *.3dsx
+*.app
+*.cci
+*.cxi
 *.elf
 *.smdh
+
+config.toml

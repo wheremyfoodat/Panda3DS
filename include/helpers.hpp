@@ -155,4 +155,3 @@ namespace Helpers {
 constexpr size_t operator""_KB(unsigned long long int x) { return 1024ULL * x; }
 constexpr size_t operator""_MB(unsigned long long int x) { return 1024_KB * x; }
 constexpr size_t operator""_GB(unsigned long long int x) { return 1024_MB * x; }
-
