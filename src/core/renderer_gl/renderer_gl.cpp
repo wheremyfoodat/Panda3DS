@@ -184,7 +184,7 @@ void RendererGL::setupBlending() {
 
 	if (!blendingEnabled) { // Logic ops are enabled
 		const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
-		glLogicOp(logicOps[logicOp]);
+		gl.setLogicOp(logicOps[logicOp]);
 
 		// If logic ops are enabled we don't need to disable blending because they override it
 		gl.enableLogicOp();
@@ -243,7 +243,7 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	const u32 stencilBufferMask = stencilWrite ? getBits<8, 8>(stencilConfig) : 0;
 
 	glStencilFunc(stencilFuncs[stencilFunc], reference, stencilRefMask);
-	glStencilMask(stencilBufferMask);
+	gl.setStencilMask(stencilBufferMask);
 
 	static constexpr std::array<GLenum, 8> stencilOps = {
 		GL_KEEP,
@@ -489,7 +489,7 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 
 		if (format == DepthFmt::Depth24Stencil8) {
 			const u8 stencil = (value >> 24);
-			OpenGL::setStencilMask(0xff);
+			gl.setStencilMask(0xff);
 			OpenGL::setClearStencil(stencil);
 			OpenGL::clearDepthAndStencil();
 		} else {

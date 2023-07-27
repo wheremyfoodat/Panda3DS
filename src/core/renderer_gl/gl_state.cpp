@@ -3,9 +3,11 @@
 void GLStateManager::resetBlend() {
 	blendEnabled = false;
 	logicOpEnabled = false;
+	logicOp = GL_COPY;
 
 	OpenGL::disableBlend();
 	OpenGL::disableLogicOp();
+	OpenGL::setLogicOp(GL_COPY);
 }
 
 void GLStateManager::resetClipping() {
@@ -39,7 +41,10 @@ void GLStateManager::resetScissor() {
 
 void GLStateManager::resetStencil() {
 	stencilEnabled = false;
+	stencilMask = 0xff;
+
 	OpenGL::disableStencil();
+	OpenGL::setStencilMask(0xff);
 }
 
 void GLStateManager::resetVAO() {

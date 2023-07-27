@@ -497,41 +497,44 @@ namespace OpenGL {
     };
 
     static void setClearColor(float val) { glClearColor(val, val, val, val); }
-    static void setClearColor(float r, float g, float b, float a) { glClearColor(r, g, b, a); }
-    static void setClearDepth(float depth) { glClearDepthf(depth); }
-    static void setClearStencil(GLint stencil) { glClearStencil(stencil); }
-    static void clearColor() { glClear(GL_COLOR_BUFFER_BIT); }
-    static void clearDepth() { glClear(GL_DEPTH_BUFFER_BIT); }
-    static void clearStencil() { glClear(GL_STENCIL_BUFFER_BIT); }
-    static void clearColorAndDepth() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
-    static void clearColorAndStencil() { glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); }
-    static void clearDepthAndStencil() { glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); }
-    static void clearAll() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); }
+	static void setClearColor(float r, float g, float b, float a) { glClearColor(r, g, b, a); }
+	static void setClearDepth(float depth) { glClearDepthf(depth); }
+	static void setClearStencil(GLint stencil) { glClearStencil(stencil); }
+	static void clearColor() { glClear(GL_COLOR_BUFFER_BIT); }
+	static void clearDepth() { glClear(GL_DEPTH_BUFFER_BIT); }
+	static void clearStencil() { glClear(GL_STENCIL_BUFFER_BIT); }
+	static void clearColorAndDepth() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
+	static void clearColorAndStencil() { glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); }
+	static void clearDepthAndStencil() { glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); }
+	static void clearAll() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); }
 
-    static void setViewport(GLsizei width, GLsizei height) { glViewport(0, 0, width, height); }
-    static void setViewport(GLsizei x, GLsizei y, GLsizei width, GLsizei height) { glViewport(x, y, width, height); }
-    static void setScissor(GLsizei width, GLsizei height) { glScissor(0, 0, width, height); }
-    static void setScissor(GLsizei x, GLsizei y, GLsizei width, GLsizei height) { glScissor(x, y, width, height); }
-    static void setStencilMask(GLuint mask) { glStencilMask(mask); }
+	static void setViewport(GLsizei width, GLsizei height) { glViewport(0, 0, width, height); }
+	static void setViewport(GLsizei x, GLsizei y, GLsizei width, GLsizei height) { glViewport(x, y, width, height); }
+	static void setScissor(GLsizei width, GLsizei height) { glScissor(0, 0, width, height); }
+	static void setScissor(GLsizei x, GLsizei y, GLsizei width, GLsizei height) { glScissor(x, y, width, height); }
+	static void setStencilMask(GLuint mask) { glStencilMask(mask); }
 
-    static void bindScreenFramebuffer() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
-    static void enableScissor() { glEnable(GL_SCISSOR_TEST); }
-    static void disableScissor() { glDisable(GL_SCISSOR_TEST); }
-    static void enableBlend() { glEnable(GL_BLEND); }
-    static void disableBlend() { glDisable(GL_BLEND); }
+	static void bindScreenFramebuffer() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+	static void enableScissor() { glEnable(GL_SCISSOR_TEST); }
+	static void disableScissor() { glDisable(GL_SCISSOR_TEST); }
+	static void enableBlend() { glEnable(GL_BLEND); }
+	static void disableBlend() { glDisable(GL_BLEND); }
 	static void enableLogicOp() { glEnable(GL_COLOR_LOGIC_OP); }
 	static void disableLogicOp() { glDisable(GL_COLOR_LOGIC_OP); }
-    static void enableDepth() { glEnable(GL_DEPTH_TEST); }
-    static void disableDepth() { glDisable(GL_DEPTH_TEST); }
-    static void enableStencil() { glEnable(GL_STENCIL_TEST); }
-    static void disableStencil() { glDisable(GL_STENCIL_TEST); }
+	static void enableDepth() { glEnable(GL_DEPTH_TEST); }
+	static void disableDepth() { glDisable(GL_DEPTH_TEST); }
+	static void enableStencil() { glEnable(GL_STENCIL_TEST); }
+	static void disableStencil() { glDisable(GL_STENCIL_TEST); }
 
-    static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
+	static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
 	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
 
-    static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
+	static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
 	static void setColourMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a) { glColorMask(r, g, b, a); }
 	static void setDepthMask(GLboolean mask) { glDepthMask(mask); }
+
+	// TODO: Add a proper enum for this
+	static void setLogicOp(GLenum op) { glLogicOp(op); }
 
     enum Primitives {
         Triangle = GL_TRIANGLES,

@@ -34,11 +34,13 @@ struct GLStateManager {
 	bool redMask, greenMask, blueMask, alphaMask;
 	bool depthMask;
 
+	GLuint stencilMask;
 	GLuint boundVAO;
 	GLuint boundVBO;
 	GLuint currentProgram;
 
 	GLenum depthFunc;
+	GLenum logicOp;
 
 	void reset();
 	void resetBlend();
@@ -121,6 +123,13 @@ struct GLStateManager {
 		}
 	}
 
+	void setLogicOp(GLenum op) {
+		if (logicOp != op) {
+			logicOp = op;
+			OpenGL::setLogicOp(op);
+		}
+	}
+
 	void enableClipPlane(GLuint index) {
 		if (index >= clipPlaneCount) [[unlikely]] {
 			Helpers::panic("Enabled invalid clipping plane %d\n", index);
@@ -140,6 +149,13 @@ struct GLStateManager {
 		if ((enabledClipPlanes & (1 << index)) != 0) {
 			enabledClipPlanes ^= 1 << index;  // Disable relevant bit in bitfield by flipping it
 			OpenGL::disableClipPlane(index);  // Disable plane
+		}
+	}
+
+	void setStencilMask(GLuint mask) {
+		if (stencilMask != mask) {
+			stencilMask = mask;
+			OpenGL::setStencilMask(mask);
 		}
 	}
 
