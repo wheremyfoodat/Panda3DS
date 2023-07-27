@@ -39,6 +39,7 @@ vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::option
 
 	// Cache miss
 	vk::RenderPassCreateInfo renderPassInfo = {};
+	vk::SubpassDescription subPass = {};
 
 	std::vector<vk::AttachmentDescription> renderPassAttachments = {};
 
@@ -67,6 +68,32 @@ vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::option
 	}
 
 	renderPassInfo.setAttachments(renderPassAttachments);
+
+	static const vk::AttachmentReference colorAttachmentReference = {0, vk::ImageLayout::eColorAttachmentOptimal};
+	static const vk::AttachmentReference depthAttachmentReference = {1, vk::ImageLayout::eDepthStencilReadOnlyOptimal};
+
+	subPass.setColorAttachments(colorAttachmentReference);
+	if (depthFormat.has_value()) {
+		subPass.setPDepthStencilAttachment(&depthAttachmentReference);
+	}
+
+	subPass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+
+	renderPassInfo.setSubpasses(subPass);
+
+	// We only have one sub-pass and we want all render-passes to be sequential,
+	// so input/output depends on VK_SUBPASS_EXTERNAL
+	static const vk::SubpassDependency subpassDependencies[2] = {
+		vk::SubpassDependency(
+			VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eAllGraphics, vk::PipelineStageFlagBits::eAllGraphics,
+			vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eColorAttachmentWrite, vk::DependencyFlagBits::eByRegion
+		),
+		vk::SubpassDependency(
+			0, VK_SUBPASS_EXTERNAL, vk::PipelineStageFlagBits::eAllGraphics, vk::PipelineStageFlagBits::eAllGraphics,
+			vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eColorAttachmentWrite, vk::DependencyFlagBits::eByRegion
+		)};
+
+	renderPassInfo.setDependencies(subpassDependencies);
 
 	if (auto createResult = device->createRenderPassUnique(renderPassInfo); createResult.result == vk::Result::eSuccess) {
 		return (renderPassCache[renderPassHash] = std::move(createResult.value)).get();
@@ -216,7 +243,7 @@ RendererVK::RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs, co
 
 RendererVK::~RendererVK() {}
 
-void RendererVK::reset() {}
+void RendererVK::reset() { renderPassCache.clear(); }
 
 void RendererVK::display() {
 	// Block, on the CPU, to ensure that this buffered-frame is ready for more work
@@ -748,10 +775,15 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 void RendererVK::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {}
 
 void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
-	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
-	const bool depthEnable = depthControl & 1;
+	using namespace Helpers;
 
-	const vk::RenderPass curRenderPass = getRenderPass(colourBufferFormat, depthEnable ? std::make_optional(depthBufferFormat) : std::nullopt);
+	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
+	const bool depthTestEnable = depthControl & 1;
+	const bool depthWriteEnable = getBit<12>(depthControl);
+	const int depthFunc = getBits<4, 3>(depthControl);
+	const vk::ColorComponentFlags colorMask = vk::ColorComponentFlags(getBits<8, 4>(depthControl));
+
+	const vk::RenderPass curRenderPass = getRenderPass(colourBufferFormat, depthTestEnable ? std::make_optional(depthBufferFormat) : std::nullopt);
 }
 
 void RendererVK::screenshot(const std::string& name) {}
