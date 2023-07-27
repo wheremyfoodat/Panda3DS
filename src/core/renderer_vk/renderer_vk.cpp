@@ -1,7 +1,6 @@
 #include "renderer_vk/renderer_vk.hpp"
 
 #include <limits>
-#include <ranges>
 #include <span>
 #include <unordered_set>
 
@@ -677,8 +676,8 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	{
 		const auto getImage = [](const vk::UniqueImage& image) -> vk::Image { return image.get(); };
 		std::vector<vk::Image> images;
-		std::ranges::transform(topScreenImages, std::back_inserter(images), getImage);
-		std::ranges::transform(bottomScreenImages, std::back_inserter(images), getImage);
+		std::transform(topScreenImages.begin(), topScreenImages.end(), std::back_inserter(images), getImage);
+		std::transform(bottomScreenImages.begin(), bottomScreenImages.end(), std::back_inserter(images), getImage);
 
 		if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, images); result == vk::Result::eSuccess) {
 			framebufferMemory = std::move(imageMemory);
