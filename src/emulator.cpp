@@ -118,6 +118,9 @@ void Emulator::run() {
 	programRunning = true;
 
 	while (programRunning) {
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+		httpServer.processActions();
+#endif
 		runFrame();
 		HIDService& hid = kernel.getServiceManager().getHID();
 
@@ -367,11 +370,8 @@ void Emulator::togglePause() { running ? pause() : resume(); }
 
 void Emulator::runFrame() {
 	if (running) {
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-		httpServer.processActions();
-#endif
-		cpu.runFrame();  // Run 1 frame of instructions
-		gpu.display();   // Display graphics
+		cpu.runFrame(); // Run 1 frame of instructions
+		gpu.display();  // Display graphics
 
 		// Send VBlank interrupts
 		ServiceManager& srv = kernel.getServiceManager();

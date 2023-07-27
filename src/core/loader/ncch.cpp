@@ -159,8 +159,9 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 
 	// Read ExeFS
 	if (hasExeFS()) {
-		u64 exeFSOffset = fileOffset + exeFS.offset; // Offset of ExeFS in the file = exeFS offset + ncch offset
-		printf("ExeFS offset: %08llX, size: %08llX (Offset in file = %08llX)\n", exeFS.offset, exeFS.size, exeFSOffset);
+		// Offset of ExeFS in the file = exeFS offset + NCCH offset
+		// exeFS.offset has already been offset by the NCCH offset
+		printf("ExeFS offset: %08llX, size: %08llX (Offset in file = %08llX)\n", exeFS.offset - info.offset, exeFS.size, exeFS.offset);
 		constexpr size_t exeFSHeaderSize = 0x200;
 
 		u8 exeFSHeader[exeFSHeaderSize];
