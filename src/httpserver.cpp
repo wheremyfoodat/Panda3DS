@@ -20,6 +20,16 @@ class HttpActionScreenshot : public HttpAction {
 	DeferredResponseWrapper& getResponse() { return response; }
 };
 
+class HttpActionTogglePause : public HttpAction {
+  public:
+	HttpActionTogglePause() : HttpAction(HttpActionType::TogglePause) {}
+};
+
+class HttpActionReset : public HttpAction {
+  public:
+	HttpActionReset() : HttpAction(HttpActionType::Reset) {}
+};
+
 class HttpActionKey : public HttpAction {
 	u32 key;
 	bool state;
@@ -47,6 +57,8 @@ std::unique_ptr<HttpAction> HttpAction::createScreenshotAction(DeferredResponseW
 }
 
 std::unique_ptr<HttpAction> HttpAction::createKeyAction(u32 key, bool state) { return std::make_unique<HttpActionKey>(key, state); }
+std::unique_ptr<HttpAction> HttpAction::createTogglePauseAction() { return std::make_unique<HttpActionTogglePause>(); }
+std::unique_ptr<HttpAction> HttpAction::createResetAction() { return std::make_unique<HttpActionReset>(); }
 
 std::unique_ptr<HttpAction> HttpAction::createLoadRomAction(std::filesystem::path path, bool paused) {
 	return std::make_unique<HttpActionLoadRom>(path, paused);
@@ -154,6 +166,16 @@ void HttpServer::startHttpServer() {
 		}
 
 		pushAction(HttpAction::createLoadRomAction(romPath, paused));
+        response.set_content("ok", "text/plain");
+    });
+
+	server->Get("/togglepause", [this](const httplib::Request&, httplib::Response& response) {
+		pushAction(HttpAction::createTogglePauseAction());
+		response.set_content("ok", "text/plain");
+	});
+
+	server->Get("/reset", [this](const httplib::Request&, httplib::Response& response) {
+		pushAction(HttpAction::createResetAction());
 		response.set_content("ok", "text/plain");
 	});
 
@@ -218,6 +240,9 @@ void HttpServer::processActions() {
 				paused = loadRomAction->getPaused();
 				break;
 			}
+
+			case HttpActionType::TogglePause: emulator->togglePause(); break;
+			case HttpActionType::Reset: emulator->reset(Emulator::ReloadOption::Reload); break;
 
 			default: break;
 		}
