@@ -461,9 +461,6 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 }
 
-constexpr u32 topScreenBuffer = 0x1f000000;
-constexpr u32 bottomScreenBuffer = 0x1f05dc00;
-
 void RendererGL::display() {
 	gl.disableScissor();
 
@@ -474,15 +471,6 @@ void RendererGL::display() {
 
 void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
-
-	if (startAddress == topScreenBuffer) {
-		log("GPU: Cleared top screen\n");
-	} else if (startAddress == bottomScreenBuffer) {
-		log("GPU: Tried to clear bottom screen\n");
-		return;
-	} else {
-		log("GPU: Clearing some unknown buffer\n");
-	}
 
 	const auto color = colourBufferCache.findFromAddress(startAddress);
 	if (color) {
@@ -507,14 +495,16 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 			depthVal = (value & 0xffffff) / 16777215.0f;
 		}
 		depth->get().fbo.bind(OpenGL::DrawFramebuffer);
-		OpenGL::setDepthMask(true);
+		gl.setDepthMask(true);
 		OpenGL::setClearDepth(depthVal);
 		OpenGL::clearDepth();
 		if (format == DepthFmt::Depth24Stencil8) {
 			const u8 stencil = (value >> 24);
 			OpenGL::setStencilMask(0xFF);
 			OpenGL::setClearStencil(stencil);
+			OpenGL::clearStencil();
 		}
+
 		return;
 	}
 
