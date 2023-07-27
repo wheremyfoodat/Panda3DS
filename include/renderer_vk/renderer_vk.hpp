@@ -1,3 +1,6 @@
+#include <map>
+#include <optional>
+
 #include "renderer.hpp"
 #include "vk_api.hpp"
 
@@ -48,6 +51,10 @@ class RendererVK final : public Renderer {
 
 	std::vector<vk::UniqueImage> topScreenImages = {};
 	std::vector<vk::UniqueImage> bottomScreenImages = {};
+
+	std::map<u32, vk::UniqueRenderPass> renderPassCache;
+
+	vk::RenderPass getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat);
 
 	// Recreate the swapchain, possibly re-using the old one in the case of a resize
 	vk::Result recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent);

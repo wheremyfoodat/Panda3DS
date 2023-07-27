@@ -8,6 +8,7 @@
 #include "helpers.hpp"
 #include "renderer_vk/vk_debug.hpp"
 #include "renderer_vk/vk_memory.hpp"
+#include "renderer_vk/vk_pica.hpp"
 
 // Finds the first queue family that satisfies `queueMask` and excludes `queueExcludeMask` bits
 // Returns -1 if not found
@@ -22,6 +23,57 @@ static s32 findQueueFamily(
 		}
 	}
 	return -1;
+}
+
+vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat) {
+	u32 renderPassHash = static_cast<u16>(colorFormat);
+
+	if (depthFormat.has_value()) {
+		renderPassHash |= (static_cast<u32>(depthFormat.value()) << 8);
+	}
+
+	// Cache hit
+	if (renderPassCache.contains(renderPassHash)) {
+		return renderPassCache.at(renderPassHash).get();
+	}
+
+	// Cache miss
+	vk::RenderPassCreateInfo renderPassInfo = {};
+
+	std::vector<vk::AttachmentDescription> renderPassAttachments = {};
+
+	vk::AttachmentDescription colorAttachment = {};
+	colorAttachment.format = Vulkan::colorFormatToVulkan(colorFormat);
+	colorAttachment.samples = vk::SampleCountFlagBits::e1;
+	colorAttachment.loadOp = vk::AttachmentLoadOp::eLoad;
+	colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+	colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eLoad;
+	colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eStore;
+	colorAttachment.initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
+	colorAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+	renderPassAttachments.emplace_back(colorAttachment);
+
+	if (depthFormat.has_value()) {
+		vk::AttachmentDescription depthAttachment = {};
+		depthAttachment.format = Vulkan::depthFormatToVulkan(depthFormat.value());
+		depthAttachment.samples = vk::SampleCountFlagBits::e1;
+		depthAttachment.loadOp = vk::AttachmentLoadOp::eLoad;
+		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+		depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eLoad;
+		depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eStore;
+		depthAttachment.initialLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+		depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+		renderPassAttachments.emplace_back(depthAttachment);
+	}
+
+	renderPassInfo.setAttachments(renderPassAttachments);
+
+	if (auto createResult = device->createRenderPassUnique(renderPassInfo); createResult.result == vk::Result::eSuccess) {
+		return (renderPassCache[renderPassHash] = std::move(createResult.value)).get();
+	} else {
+		Helpers::panic("Error creating render pass: %s\n", vk::to_string(createResult.result).c_str());
+	}
+	return {};
 }
 
 vk::Result RendererVK::recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent) {
@@ -695,6 +747,11 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 
 void RendererVK::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {}
 
-void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {}
+void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
+	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
+	const bool depthEnable = depthControl & 1;
+
+	const vk::RenderPass curRenderPass = getRenderPass(colourBufferFormat, depthEnable ? std::make_optional(depthBufferFormat) : std::nullopt);
+}
 
 void RendererVK::screenshot(const std::string& name) {}
