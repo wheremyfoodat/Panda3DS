@@ -185,10 +185,12 @@ void RendererGL::setupBlending() {
 	if (!blendingEnabled) { // Logic ops are enabled
 		const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
 		glLogicOp(logicOps[logicOp]);
-		glEnable(GL_COLOR_LOGIC_OP);
+
+		// If logic ops are enabled we don't need to disable blending because they override it
+		gl.enableLogicOp();
 	} else {
 		gl.enableBlend();
-		glDisable(GL_COLOR_LOGIC_OP);
+		gl.disableLogicOp();
 
 		// Get blending equations
 		const u32 blendControl = regs[PICA::InternalRegs::BlendFunc];
@@ -359,9 +361,9 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	gl.bindVAO(vao);
 	gl.useProgram(triangleProgram);
 
-	OpenGL::enableClipPlane(0);  // Clipping plane 0 is always enabled
+	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
-		OpenGL::enableClipPlane(1);
+		gl.enableClipPlane(1);
 	}
 
 	setupBlending();
@@ -563,7 +565,7 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
 	gl.disableBlend();
-	glDisable(GL_COLOR_LOGIC_OP);
+	gl.disableLogicOp();
 	gl.disableDepth();
 	gl.disableScissor();
 	gl.disableStencil();
@@ -571,8 +573,8 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	gl.useProgram(displayProgram);
 	gl.bindVAO(dummyVAO);
 
-	OpenGL::disableClipPlane(0);
-	OpenGL::disableClipPlane(1);
+	gl.disableClipPlane(0);
+	gl.disableClipPlane(1);
 
 	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
 	// We consider output gap == 320 to mean bottom, and anything else to mean top

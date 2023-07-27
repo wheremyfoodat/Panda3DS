@@ -2,7 +2,18 @@
 
 void GLStateManager::resetBlend() {
 	blendEnabled = false;
+	logicOpEnabled = false;
+
 	OpenGL::disableBlend();
+	OpenGL::disableLogicOp();
+}
+
+void GLStateManager::resetClipping() {
+	// Disable all (supported) clip planes
+	enabledClipPlanes = 0;
+	for (int i = 0; i < clipPlaneCount; i++) {
+		OpenGL::disableClipPlane(i);
+	}
 }
 
 void GLStateManager::resetColourMask() {
@@ -48,6 +59,7 @@ void GLStateManager::resetProgram() {
 
 void GLStateManager::reset() {
 	resetBlend();
+	resetClipping();
 	resetColourMask();
 	resetDepth();
 

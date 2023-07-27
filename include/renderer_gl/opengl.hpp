@@ -519,6 +519,8 @@ namespace OpenGL {
     static void disableScissor() { glDisable(GL_SCISSOR_TEST); }
     static void enableBlend() { glEnable(GL_BLEND); }
     static void disableBlend() { glDisable(GL_BLEND); }
+	static void enableLogicOp() { glEnable(GL_COLOR_LOGIC_OP); }
+	static void disableLogicOp() { glDisable(GL_COLOR_LOGIC_OP); }
     static void enableDepth() { glEnable(GL_DEPTH_TEST); }
     static void disableDepth() { glDisable(GL_DEPTH_TEST); }
     static void enableStencil() { glEnable(GL_STENCIL_TEST); }
