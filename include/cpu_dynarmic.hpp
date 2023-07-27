@@ -108,7 +108,7 @@ public:
         return getCyclesForInstruction(isThumb, instruction);
     }
 
-    MyEnvironment(Memory& mem, Kernel& kernel, CPU& cpu) : mem(mem), kernel(kernel) {}
+    MyEnvironment(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 };
 
 class CPU {
