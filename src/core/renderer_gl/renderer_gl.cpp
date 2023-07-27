@@ -488,6 +488,8 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 
 	const auto depth = depthBufferCache.findFromAddress(startAddress);
 	if (depth) {
+		depth->get().fbo.bind(OpenGL::DrawFramebuffer);
+
 		float depthVal;
 		const auto format = depth->get().format;
 		if (format == DepthFmt::Depth16) {
@@ -495,15 +497,17 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		} else {
 			depthVal = (value & 0xffffff) / 16777215.0f;
 		}
-		depth->get().fbo.bind(OpenGL::DrawFramebuffer);
+
 		gl.setDepthMask(true);
 		OpenGL::setClearDepth(depthVal);
-		OpenGL::clearDepth();
+
 		if (format == DepthFmt::Depth24Stencil8) {
 			const u8 stencil = (value >> 24);
-			OpenGL::setStencilMask(0xFF);
+			OpenGL::setStencilMask(0xff);
 			OpenGL::setClearStencil(stencil);
-			OpenGL::clearStencil();
+			OpenGL::clearDepthAndStencil();
+		} else {
+			OpenGL::clearDepth();
 		}
 
 		return;
