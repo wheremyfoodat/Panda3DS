@@ -171,9 +171,9 @@ void HttpServer::startHttpServer() {
 		DeferredResponseWrapper wrapper(response);
 		std::unique_lock lock(wrapper.mutex);
 		pushAction(HttpAction::createLoadRomAction(wrapper, romPath, paused));
-        response.set_content("ok", "text/plain");
+		response.set_content("ok", "text/plain");
 		wrapper.cv.wait(lock, [&wrapper] { return wrapper.ready; });
-    });
+	});
 
 	server->Get("/togglepause", [this](const httplib::Request&, httplib::Response& response) {
 		pushAction(HttpAction::createTogglePauseAction());
@@ -245,11 +245,7 @@ void HttpServer::processActions() {
 				DeferredResponseWrapper& response = loadRomAction->getResponse();
 				bool loaded = emulator->loadROM(loadRomAction->getPath());
 
-				if (!loaded) {
-					response.inner_response.set_content("error", "text/plain");
-				} else {
-					response.inner_response.set_content("ok", "text/plain");
-				}
+				response.inner_response.set_content(loaded ? "ok" : "error", "text/plain");
 
 				std::unique_lock<std::mutex> lock(response.mutex);
 				response.ready = true;
@@ -266,7 +262,10 @@ void HttpServer::processActions() {
 				break;
 			}
 
-			case HttpActionType::TogglePause: emulator->togglePause(); paused ^= true; break;
+			case HttpActionType::TogglePause:
+				emulator->togglePause();
+				paused = !paused;
+				break;
 			case HttpActionType::Reset: emulator->reset(Emulator::ReloadOption::Reload); break;
 
 			default: break;

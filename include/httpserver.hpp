@@ -42,7 +42,7 @@ class HttpAction {
 	HttpActionType getType() const { return type; }
 
 	static std::unique_ptr<HttpAction> createScreenshotAction(DeferredResponseWrapper& response);
-	static std::unique_ptr<HttpAction> createKeyAction(uint32_t key, bool state);
+	static std::unique_ptr<HttpAction> createKeyAction(u32 key, bool state);
 	static std::unique_ptr<HttpAction> createLoadRomAction(DeferredResponseWrapper& response, const std::filesystem::path& path, bool paused);
 	static std::unique_ptr<HttpAction> createTogglePauseAction();
 	static std::unique_ptr<HttpAction> createResetAction();
