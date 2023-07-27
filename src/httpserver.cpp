@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -40,6 +41,20 @@ class HttpActionKey : public HttpAction {
 	bool getState() const { return state; }
 };
 
+class HttpActionLoadRom : public HttpAction {
+	DeferredResponseWrapper& response;
+	const std::filesystem::path& path;
+	bool paused;
+
+  public:
+	HttpActionLoadRom(DeferredResponseWrapper& response, const std::filesystem::path& path, bool paused)
+		: HttpAction(HttpActionType::LoadRom), response(response), path(path), paused(paused) {}
+
+	DeferredResponseWrapper& getResponse() { return response; }
+	const std::filesystem::path& getPath() const { return path; }
+	bool getPaused() const { return paused; }
+};
+
 std::unique_ptr<HttpAction> HttpAction::createScreenshotAction(DeferredResponseWrapper& response) {
 	return std::make_unique<HttpActionScreenshot>(response);
 }
@@ -47,6 +62,10 @@ std::unique_ptr<HttpAction> HttpAction::createScreenshotAction(DeferredResponseW
 std::unique_ptr<HttpAction> HttpAction::createKeyAction(u32 key, bool state) { return std::make_unique<HttpActionKey>(key, state); }
 std::unique_ptr<HttpAction> HttpAction::createTogglePauseAction() { return std::make_unique<HttpActionTogglePause>(); }
 std::unique_ptr<HttpAction> HttpAction::createResetAction() { return std::make_unique<HttpActionReset>(); }
+
+std::unique_ptr<HttpAction> HttpAction::createLoadRomAction(DeferredResponseWrapper& response, const std::filesystem::path& path, bool paused) {
+	return std::make_unique<HttpActionLoadRom>(response, path, paused);
+}
 
 HttpServer::HttpServer(Emulator* emulator)
 	: emulator(emulator), server(std::make_unique<httplib::Server>()), keyMap({
@@ -83,6 +102,7 @@ void HttpServer::startHttpServer() {
 	server->Get("/ping", [](const httplib::Request&, httplib::Response& response) { response.set_content("pong", "text/plain"); });
 
 	server->Get("/screen", [this](const httplib::Request&, httplib::Response& response) {
+		// TODO: make the below a DeferredResponseWrapper function
 		DeferredResponseWrapper wrapper(response);
 		// Lock the mutex before pushing the action to ensure that the condition variable is not notified before we wait on it
 		std::unique_lock lock(wrapper.mutex);
@@ -121,6 +141,39 @@ void HttpServer::startHttpServer() {
 	});
 
 	server->Get("/status", [this](const httplib::Request&, httplib::Response& response) { response.set_content(status(), "text/plain"); });
+
+	server->Get("/load_rom", [this](const httplib::Request& request, httplib::Response& response) {
+		auto it = request.params.find("path");
+		if (it == request.params.end()) {
+			response.set_content("error", "text/plain");
+			return;
+		}
+
+		std::filesystem::path romPath = it->second;
+		if (romPath.empty()) {
+			response.set_content("error", "text/plain");
+			return;
+		} else {
+			std::error_code error;
+			if (!std::filesystem::is_regular_file(romPath, error)) {
+				std::string message = "error: " + error.message();
+				response.set_content(message, "text/plain");
+				return;
+			}
+		}
+
+		bool paused = false;
+		it = request.params.find("paused");
+		if (it != request.params.end()) {
+			paused = (it->second == "1");
+		}
+
+		DeferredResponseWrapper wrapper(response);
+		std::unique_lock lock(wrapper.mutex);
+		pushAction(HttpAction::createLoadRomAction(wrapper, romPath, paused));
+		response.set_content("ok", "text/plain");
+		wrapper.cv.wait(lock, [&wrapper] { return wrapper.ready; });
+	});
 
 	server->Get("/togglepause", [this](const httplib::Request&, httplib::Response& response) {
 		pushAction(HttpAction::createTogglePauseAction());
@@ -187,7 +240,32 @@ void HttpServer::processActions() {
 				break;
 			}
 
-			case HttpActionType::TogglePause: emulator->togglePause(); break;
+			case HttpActionType::LoadRom: {
+				HttpActionLoadRom* loadRomAction = static_cast<HttpActionLoadRom*>(action.get());
+				DeferredResponseWrapper& response = loadRomAction->getResponse();
+				bool loaded = emulator->loadROM(loadRomAction->getPath());
+
+				response.inner_response.set_content(loaded ? "ok" : "error", "text/plain");
+
+				std::unique_lock<std::mutex> lock(response.mutex);
+				response.ready = true;
+				response.cv.notify_one();
+
+				if (loaded) {
+					paused = loadRomAction->getPaused();
+					if (paused) {
+						emulator->pause();
+					} else {
+						emulator->resume();
+					}
+				}
+				break;
+			}
+
+			case HttpActionType::TogglePause:
+				emulator->togglePause();
+				paused = !paused;
+				break;
 			case HttpActionType::Reset: emulator->reset(Emulator::ReloadOption::Reload); break;
 
 			default: break;

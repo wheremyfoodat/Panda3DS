@@ -61,7 +61,7 @@ class Emulator {
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	HttpServer httpServer;
-	friend class HttpServer;
+	friend struct HttpServer;
 #endif
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
