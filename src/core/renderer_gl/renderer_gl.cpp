@@ -242,6 +242,7 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	const bool stencilWrite = regs[PICA::InternalRegs::DepthBufferWrite];
 	const u32 stencilBufferMask = stencilWrite ? getBits<8, 8>(stencilConfig) : 0;
 
+	// TODO: Throw stencilFunc/stencilOp to the GL state manager
 	glStencilFunc(stencilFuncs[stencilFunc], reference, stencilRefMask);
 	gl.setStencilMask(stencilBufferMask);
 
