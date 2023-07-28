@@ -85,29 +85,21 @@ std::optional<int> Kernel::getNextThread() {
 // See if there is a higher priority, ready thread and switch to that
 void Kernel::rescheduleThreads() {
 	Thread& current = threads[currentThreadIndex];  // Current running thread
-	ThreadStatus currentStatus = current.status;    // Its status
 
 	// If the current thread is running and hasn't gone to sleep or whatever, set it to Ready instead of Running
-	// Since rescheduleThreads will put it to wait and run another thread in the meantime
-	if (currentStatus == ThreadStatus::Running) {
-		currentStatus = ThreadStatus::Ready;
+	// So that getNextThread will evaluate it properly
+	if (current.status == ThreadStatus::Running) {
+		current.status = ThreadStatus::Ready;
 	}
-
-	current.status = ThreadStatus::Dead;  // Temporarily mark it as dead so getNextThread will ignore it
+	ThreadStatus currentStatus = current.status;
 	std::optional<int> newThreadIndex = getNextThread();
-	current.status = currentStatus;  // Restore old status
 
-	// Case 1: Another thread can run (that is not the idle thread)
-	if (newThreadIndex.has_value() && newThreadIndex.value() != idleThreadIndex) {
+	// Case 1: A thread can run
+	if (newThreadIndex.has_value()) {
 		switchThread(newThreadIndex.value());
 	} 
 	
-	// Case 2: No other thread can run but this one can
-	else if (currentStatus == ThreadStatus::Running) {
-		switchThread(currentThreadIndex);
-	}
-	
-	// Case 3: No thread can run other than the idle thread
+	// Case 2: No other thread can run, straight to the idle thread
 	else {
 		switchThread(idleThreadIndex);
 	}
