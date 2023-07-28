@@ -48,6 +48,18 @@ class RendererVK final : public Renderer {
 	std::vector<vk::UniqueSemaphore> swapImageFreeSemaphore = {};
 	std::vector<vk::UniqueSemaphore> renderFinishedSemaphore = {};
 	std::vector<vk::UniqueFence> frameFinishedFences = {};
+	struct Texture {
+		vk::UniqueImage image;
+		vk::UniqueDeviceMemory imageMemory;
+		vk::UniqueImageView imageView;
+	};
+	std::map<u32, Texture> textureCache;
+
+	static u32 colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format);
+	static u32 depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format);
+
+	Texture& getColorRenderTexture();
+	Texture& getDepthRenderTexture();
 
 	std::vector<vk::UniqueImage> topScreenImages = {};
 	std::vector<vk::UniqueImage> bottomScreenImages = {};

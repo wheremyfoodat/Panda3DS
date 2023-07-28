@@ -25,6 +25,124 @@ static s32 findQueueFamily(
 	return -1;
 }
 
+u32 RendererVK::colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format) {
+	return std::rotl<u32>(loc, 17) ^ std::rotr(size, 23) ^ (static_cast<u64>(format) << 60);
+}
+u32 RendererVK::depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format) {
+	return std::rotl<u32>(loc, 17) ^ std::rotr(size, 29) ^ (static_cast<u64>(format) << 60);
+}
+
+RendererVK::Texture& RendererVK::getColorRenderTexture() {
+	const u32 renderTextureHash =
+		colorBufferHash(colourBufferLoc, fbSize[0] * fbSize[1] * PICA::sizePerPixel(colourBufferFormat), colourBufferFormat);
+
+	// Cache hit
+	if (textureCache.contains(renderTextureHash)) {
+		return textureCache.at(renderTextureHash);
+	}
+
+	// Cache miss
+	Texture& newTexture = textureCache[renderTextureHash];
+
+	vk::ImageCreateInfo textureInfo = {};
+	textureInfo.setImageType(vk::ImageType::e2D);
+	textureInfo.setFormat(Vulkan::colorFormatToVulkan(colourBufferFormat));
+	textureInfo.setExtent(vk::Extent3D(fbSize[0], fbSize[1], 1));
+	textureInfo.setMipLevels(1);
+	textureInfo.setArrayLayers(1);
+	textureInfo.setSamples(vk::SampleCountFlagBits::e1);
+	textureInfo.setTiling(vk::ImageTiling::eOptimal);
+	textureInfo.setUsage(
+		vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
+		vk::ImageUsageFlagBits::eTransferDst
+	);
+	textureInfo.setSharingMode(vk::SharingMode::eExclusive);
+	textureInfo.setInitialLayout(vk::ImageLayout::eUndefined);
+
+	if (auto createResult = device->createImageUnique(textureInfo); createResult.result == vk::Result::eSuccess) {
+		newTexture.image = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating color render-texture image: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	vk::ImageViewCreateInfo viewInfo = {};
+	viewInfo.image = newTexture.image.get();
+	viewInfo.viewType = vk::ImageViewType::e2D;
+	viewInfo.format = Vulkan::colorFormatToVulkan(colourBufferFormat);
+	viewInfo.components = vk::ComponentMapping();
+	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+
+	if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, {&newTexture.image.get(), 1});
+		result == vk::Result::eSuccess) {
+		newTexture.imageMemory = std::move(imageMemory);
+	} else {
+		Helpers::panic("Error allocating color render-texture memory: %s\n", vk::to_string(result).c_str());
+	}
+
+	if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
+		newTexture.imageView = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating color render-texture: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	return newTexture;
+}
+
+RendererVK::Texture& RendererVK::getDepthRenderTexture() {
+	const u32 renderTextureHash = depthBufferHash(depthBufferLoc, fbSize[0] * fbSize[1] * PICA::sizePerPixel(depthBufferFormat), depthBufferFormat);
+
+	// Cache hit
+	if (textureCache.contains(renderTextureHash)) {
+		return textureCache.at(renderTextureHash);
+	}
+
+	// Cache miss
+	Texture& newTexture = textureCache[renderTextureHash];
+
+	vk::ImageCreateInfo textureInfo = {};
+	textureInfo.setImageType(vk::ImageType::e2D);
+	textureInfo.setFormat(Vulkan::depthFormatToVulkan(depthBufferFormat));
+	textureInfo.setExtent(vk::Extent3D(fbSize[0], fbSize[1], 1));
+	textureInfo.setMipLevels(1);
+	textureInfo.setArrayLayers(1);
+	textureInfo.setSamples(vk::SampleCountFlagBits::e1);
+	textureInfo.setTiling(vk::ImageTiling::eOptimal);
+	textureInfo.setUsage(
+		vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
+		vk::ImageUsageFlagBits::eTransferDst
+	);
+	textureInfo.setSharingMode(vk::SharingMode::eExclusive);
+	textureInfo.setInitialLayout(vk::ImageLayout::eUndefined);
+
+	if (auto createResult = device->createImageUnique(textureInfo); createResult.result == vk::Result::eSuccess) {
+		newTexture.image = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating depth render-texture image: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	vk::ImageViewCreateInfo viewInfo = {};
+	viewInfo.image = newTexture.image.get();
+	viewInfo.viewType = vk::ImageViewType::e2D;
+	viewInfo.format = Vulkan::depthFormatToVulkan(depthBufferFormat);
+	viewInfo.components = vk::ComponentMapping();
+	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1);
+
+	if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
+		newTexture.imageView = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating depth render-texture: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, {&newTexture.image.get(), 1});
+		result == vk::Result::eSuccess) {
+		newTexture.imageMemory = std::move(imageMemory);
+	} else {
+		Helpers::panic("Error allocating depth render-texture memory: %s\n", vk::to_string(result).c_str());
+	}
+
+	return newTexture;
+}
+
 vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat) {
 	u32 renderPassHash = static_cast<u16>(colorFormat);
 
@@ -739,7 +857,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		if (auto createResult = device->createFenceUnique(fenceInfo); createResult.result == vk::Result::eSuccess) {
 			frameFinishedFences[i] = std::move(createResult.value);
 		} else {
-			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
+			Helpers::panic("Error creating 'frame-finished' fence: %s\n", vk::to_string(createResult.result).c_str());
 		}
 
 		if (auto createResult = device->createImageUnique(topScreenInfo); createResult.result == vk::Result::eSuccess) {
@@ -786,6 +904,45 @@ void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Ver
 	const vk::ColorComponentFlags colorMask = vk::ColorComponentFlags(getBits<8, 4>(depthControl));
 
 	const vk::RenderPass curRenderPass = getRenderPass(colourBufferFormat, depthTestEnable ? std::make_optional(depthBufferFormat) : std::nullopt);
+
+	// Create framebuffer, find a way to cache this!
+	vk::Framebuffer curFramebuffer = {};
+	{
+		std::vector<vk::ImageView> renderTargets;
+
+		const auto& colorTexture = getColorRenderTexture();
+		renderTargets.emplace_back(colorTexture.imageView.get());
+
+		if (depthTestEnable) {
+			const auto& depthTexture = getDepthRenderTexture();
+			renderTargets.emplace_back(depthTexture.imageView.get());
+		}
+
+		vk::FramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.setRenderPass(curRenderPass);
+		framebufferInfo.setAttachments(renderTargets);
+		framebufferInfo.setWidth(fbSize[0]);
+		framebufferInfo.setHeight(fbSize[1]);
+		framebufferInfo.setLayers(1);
+		if (auto createResult = device->createFramebufferUnique(framebufferInfo); createResult.result == vk::Result::eSuccess) {
+			curFramebuffer = (frameFramebuffers[frameBufferingIndex].emplace_back(std::move(createResult.value))).get();
+		} else {
+			Helpers::panic("Error creating render-texture framebuffer: %s\n", vk::to_string(createResult.result).c_str());
+		}
+	}
+
+	vk::RenderPassBeginInfo renderBeginInfo = {};
+	renderBeginInfo.renderPass = curRenderPass;
+	static const vk::ClearValue ClearColors[] = {
+		vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}),
+		vk::ClearDepthStencilValue(1.0f, 0),
+		vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f}),
+	};
+	renderBeginInfo.pClearValues = ClearColors;
+	renderBeginInfo.clearValueCount = std::size(ClearColors);
+	renderBeginInfo.renderArea.extent.width = fbSize[0];
+	renderBeginInfo.renderArea.extent.height = fbSize[1];
+	renderBeginInfo.framebuffer = curFramebuffer;
 }
 
 void RendererVK::screenshot(const std::string& name) {}
