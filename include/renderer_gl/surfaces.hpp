@@ -86,6 +86,7 @@ struct DepthBuffer {
     Interval<u32> range;
     // OpenGL texture used for storing depth/stencil
     OpenGL::Texture texture;
+    OpenGL::Framebuffer fbo;
 
     DepthBuffer() : valid(false) {}
 
@@ -127,6 +128,11 @@ struct DepthBuffer {
         texture.setMagFilter(OpenGL::Nearest);
         
         glBindTexture(GL_TEXTURE_2D, prevTexture);
+
+        fbo.createWithDrawTexture(texture, fmt == GL_DEPTH_STENCIL ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			Helpers::panic("Incomplete framebuffer");
     }
 
     void free() {

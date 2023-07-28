@@ -1,6 +1,7 @@
 #pragma once
 #include <type_traits>
 
+#include "helpers.hpp"
 #include "opengl.hpp"
 
 // GL state manager object for use in the OpenGL GPU renderer and potentially other things in the future (such as a potential ImGui GUI)
@@ -18,28 +19,39 @@
 // backend-agnostic as possible
 
 struct GLStateManager {
+	// We only support 6 clipping planes in our state manager because that's the minimum for GL_MAX_CLIP_PLANES
+	// And nobody needs more than 6 clip planes anyways
+	static constexpr GLint clipPlaneCount = 6;
+
 	bool blendEnabled;
+	bool logicOpEnabled;
 	bool depthEnabled;
 	bool scissorEnabled;
+	bool stencilEnabled;
+	u32 enabledClipPlanes;  // Bitfield of enabled clip planes
 
 	// Colour/depth masks
 	bool redMask, greenMask, blueMask, alphaMask;
 	bool depthMask;
 
+	GLuint stencilMask;
 	GLuint boundVAO;
 	GLuint boundVBO;
 	GLuint currentProgram;
 
 	GLenum depthFunc;
+	GLenum logicOp;
 
 	void reset();
 	void resetBlend();
+	void resetClipping();
 	void resetColourMask();
 	void resetDepth();
 	void resetVAO();
 	void resetVBO();
 	void resetProgram();
 	void resetScissor();
+	void resetStencil();
 
 	void enableDepth() {
 		if (!depthEnabled) {
@@ -80,6 +92,70 @@ struct GLStateManager {
 		if (scissorEnabled) {
 			scissorEnabled = false;
 			OpenGL::disableScissor();
+		}
+	}
+
+	void enableStencil() {
+		if (!stencilEnabled) {
+			stencilEnabled = true;
+			OpenGL::enableStencil();
+		}
+	}
+
+	void disableStencil() {
+		if (stencilEnabled) {
+			stencilEnabled = false;
+			OpenGL::disableStencil();
+		}
+	}
+
+	void enableLogicOp() {
+		if (!logicOpEnabled) {
+			logicOpEnabled = true;
+			OpenGL::enableLogicOp();
+		}
+	}
+
+	void disableLogicOp() {
+		if (logicOpEnabled) {
+			logicOpEnabled = false;
+			OpenGL::disableLogicOp();
+		}
+	}
+
+	void setLogicOp(GLenum op) {
+		if (logicOp != op) {
+			logicOp = op;
+			OpenGL::setLogicOp(op);
+		}
+	}
+
+	void enableClipPlane(GLuint index) {
+		if (index >= clipPlaneCount) [[unlikely]] {
+			Helpers::panic("Enabled invalid clipping plane %d\n", index);
+		}
+
+		if ((enabledClipPlanes & (1 << index)) == 0) {
+			enabledClipPlanes |= 1 << index;  // Enable relevant bit in clipping plane bitfield
+			OpenGL::enableClipPlane(index);   // Enable plane
+		}
+	}
+
+	void disableClipPlane(GLuint index) {
+		if (index >= clipPlaneCount) [[unlikely]] {
+			Helpers::panic("Disabled invalid clipping plane %d\n", index);
+		}
+
+		if ((enabledClipPlanes & (1 << index)) != 0) {
+			enabledClipPlanes ^= 1 << index;  // Disable relevant bit in bitfield by flipping it
+			OpenGL::disableClipPlane(index);  // Disable plane
+		}
+	}
+
+	void setStencilMask(GLuint mask) {
+		if (stencilMask != mask) {
+			stencilMask = mask;
+			OpenGL::setStencilMask(mask);
 		}
 	}
 

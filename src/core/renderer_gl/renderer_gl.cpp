@@ -149,8 +149,6 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
-	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
-
 	// Map of PICA blending equations to OpenGL blending equations. The unused blending equations are equivalent to equation 0 (add)
 	static constexpr std::array<GLenum, 8> blendingEquations = {
 		GL_FUNC_ADD, GL_FUNC_SUBTRACT, GL_FUNC_REVERSE_SUBTRACT, GL_MIN, GL_MAX, GL_FUNC_ADD, GL_FUNC_ADD, GL_FUNC_ADD,
@@ -176,10 +174,23 @@ void RendererGL::setupBlending() {
 		GL_ONE,
 	};
 
-	if (!blendingEnabled) {
-		gl.disableBlend();
+	static constexpr std::array<GLenum, 16> logicOps = {
+		GL_CLEAR, GL_AND, GL_AND_REVERSE, GL_COPY, GL_SET,   GL_COPY_INVERTED, GL_NOOP,       GL_INVERT,
+		GL_NAND,  GL_OR,  GL_NOR,         GL_XOR,  GL_EQUIV, GL_AND_INVERTED,  GL_OR_REVERSE, GL_OR_INVERTED,
+	};
+
+	// Shows if blending is enabled. If it is not enabled, then logic ops are enabled instead
+	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
+
+	if (!blendingEnabled) { // Logic ops are enabled
+		const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
+		gl.setLogicOp(logicOps[logicOp]);
+
+		// If logic ops are enabled we don't need to disable blending because they override it
+		gl.enableLogicOp();
 	} else {
 		gl.enableBlend();
+		gl.disableLogicOp();
 
 		// Get blending equations
 		const u32 blendControl = regs[PICA::InternalRegs::BlendFunc];
@@ -204,6 +215,55 @@ void RendererGL::setupBlending() {
 		glBlendFuncSeparate(blendingFuncs[rgbSourceFunc], blendingFuncs[rgbDestFunc], blendingFuncs[alphaSourceFunc], blendingFuncs[alphaDestFunc]);
 	}
 }
+
+void RendererGL::setupStencilTest(bool stencilEnable) {
+	if (!stencilEnable) {
+		gl.disableStencil();
+		return;
+	}
+
+	static constexpr std::array<GLenum, 8> stencilFuncs = {
+		GL_NEVER,
+		GL_ALWAYS,
+		GL_EQUAL,
+		GL_NOTEQUAL,
+		GL_LESS,
+		GL_LEQUAL,
+		GL_GREATER,
+		GL_GEQUAL
+	};
+	gl.enableStencil();
+
+	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
+	const u32 stencilFunc = getBits<4, 3>(stencilConfig);
+	const s32 reference = s8(getBits<16, 8>(stencilConfig)); // Signed reference value
+	const u32 stencilRefMask = getBits<24, 8>(stencilConfig);
+
+	const bool stencilWrite = regs[PICA::InternalRegs::DepthBufferWrite];
+	const u32 stencilBufferMask = stencilWrite ? getBits<8, 8>(stencilConfig) : 0;
+
+	// TODO: Throw stencilFunc/stencilOp to the GL state manager
+	glStencilFunc(stencilFuncs[stencilFunc], reference, stencilRefMask);
+	gl.setStencilMask(stencilBufferMask);
+
+	static constexpr std::array<GLenum, 8> stencilOps = {
+		GL_KEEP,
+		GL_ZERO,
+		GL_REPLACE,
+		GL_INCR,
+		GL_DECR,
+		GL_INVERT,
+		GL_INCR_WRAP,
+		GL_DECR_WRAP
+	};
+	const u32 stencilOpConfig = regs[PICA::InternalRegs::StencilOp];
+	const u32 stencilFailOp = getBits<0, 3>(stencilOpConfig);
+	const u32 depthFailOp = getBits<4, 3>(stencilOpConfig);
+	const u32 passOp = getBits<8, 3>(stencilOpConfig);
+
+	glStencilOp(stencilOps[stencilFailOp], stencilOps[depthFailOp], stencilOps[passOp]);
+}
+
 
 void RendererGL::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
@@ -302,9 +362,9 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	gl.bindVAO(vao);
 	gl.useProgram(triangleProgram);
 
-	OpenGL::enableClipPlane(0);  // Clipping plane 0 is always enabled
+	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
-		OpenGL::enableClipPlane(1);
+		gl.enableClipPlane(1);
 	}
 
 	setupBlending();
@@ -312,6 +372,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	poop.bind(OpenGL::DrawAndReadFramebuffer);
 
 	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
+	const bool depthWrite = regs[PICA::InternalRegs::DepthBufferWrite];
 	const bool depthEnable = depthControl & 1;
 	const bool depthWriteEnable = getBit<12>(depthControl);
 	const int depthFunc = getBits<4, 3>(depthControl);
@@ -356,11 +417,14 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	GLsizei viewportHeight = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0f);
 	OpenGL::setViewport(viewportWidth, viewportHeight);
 
+	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
+	const bool stencilEnable = getBit<0>(stencilConfig);
+
 	// Note: The code below must execute after we've bound the colour buffer & its framebuffer
 	// Because it attaches a depth texture to the aforementioned colour buffer
 	if (depthEnable) {
 		gl.enableDepth();
-		gl.setDepthMask(depthWriteEnable ? GL_TRUE : GL_FALSE);
+		gl.setDepthMask(depthWriteEnable && depthWrite ? GL_TRUE : GL_FALSE);
 		gl.setDepthFunc(depthModes[depthFunc]);
 		bindDepthBuffer();
 	} else {
@@ -371,15 +435,18 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 			bindDepthBuffer();
 		} else {
 			gl.disableDepth();
+
+			if (stencilEnable) {
+				bindDepthBuffer();
+			}
 		}
 	}
+
+	setupStencilTest(stencilEnable);
 
 	vbo.bufferVertsSub(vertices);
 	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 }
-
-constexpr u32 topScreenBuffer = 0x1f000000;
-constexpr u32 bottomScreenBuffer = 0x1f05dc00;
 
 void RendererGL::display() {
 	gl.disableScissor();
@@ -390,25 +457,50 @@ void RendererGL::display() {
 }
 
 void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
-	return;
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
+	gl.disableScissor();
 
-	const float r = float(getBits<24, 8>(value)) / 255.0f;
-	const float g = float(getBits<16, 8>(value)) / 255.0f;
-	const float b = float(getBits<8, 8>(value)) / 255.0f;
-	const float a = float(value & 0xff) / 255.0f;
-
-	if (startAddress == topScreenBuffer) {
-		log("GPU: Cleared top screen\n");
-	} else if (startAddress == bottomScreenBuffer) {
-		log("GPU: Tried to clear bottom screen\n");
+	const auto color = colourBufferCache.findFromAddress(startAddress);
+	if (color) {
+		const float r = getBits<24, 8>(value) / 255.0f;
+		const float g = getBits<16, 8>(value) / 255.0f;
+		const float b = getBits<8, 8>(value) / 255.0f;
+		const float a = (value & 0xff) / 255.0f;
+		color->get().fbo.bind(OpenGL::DrawFramebuffer);
+		gl.setColourMask(true, true, true, true);
+		OpenGL::setClearColor(r, g, b, a);
+		OpenGL::clearColor();
 		return;
-	} else {
-		log("GPU: Clearing some unknown buffer\n");
 	}
 
-	OpenGL::setClearColor(r, g, b, a);
-	OpenGL::clearColor();
+	const auto depth = depthBufferCache.findFromAddress(startAddress);
+	if (depth) {
+		depth->get().fbo.bind(OpenGL::DrawFramebuffer);
+
+		float depthVal;
+		const auto format = depth->get().format;
+		if (format == DepthFmt::Depth16) {
+			depthVal = (value & 0xffff) / 65535.0f;
+		} else {
+			depthVal = (value & 0xffffff) / 16777215.0f;
+		}
+
+		gl.setDepthMask(true);
+		OpenGL::setClearDepth(depthVal);
+
+		if (format == DepthFmt::Depth24Stencil8) {
+			const u8 stencil = (value >> 24);
+			gl.setStencilMask(0xff);
+			OpenGL::setClearStencil(stencil);
+			OpenGL::clearDepthAndStencil();
+		} else {
+			OpenGL::clearDepth();
+		}
+
+		return;
+	}
+
+	log("[RendererGL::ClearBuffer] No buffer found!\n");
 }
 
 OpenGL::Framebuffer RendererGL::getColourFBO() {
@@ -474,14 +566,16 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
 	gl.disableBlend();
+	gl.disableLogicOp();
 	gl.disableDepth();
 	gl.disableScissor();
+	gl.disableStencil();
 	gl.setColourMask(true, true, true, true);
 	gl.useProgram(displayProgram);
 	gl.bindVAO(dummyVAO);
 
-	OpenGL::disableClipPlane(0);
-	OpenGL::disableClipPlane(1);
+	gl.disableClipPlane(0);
+	gl.disableClipPlane(1);
 
 	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
 	// We consider output gap == 320 to mean bottom, and anything else to mean top
