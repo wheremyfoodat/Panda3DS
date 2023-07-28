@@ -92,6 +92,12 @@ bool IOFile::seek(std::int64_t offset, int origin) {
 	return true;
 }
 
+bool IOFile::flush() {
+	if (!isOpen() || fflush(handle)) return false;
+
+	return true;
+}
+
 bool IOFile::rewind() { return seek(0, SEEK_SET); }
 FILE* IOFile::getHandle() { return handle; }
 

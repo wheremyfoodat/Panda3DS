@@ -156,6 +156,8 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> SaveDataArchive::getFormatI
 
 	FormatInfo ret;
 	auto [success, bytesRead] = file.readBytes(&ret, sizeof(FormatInfo));
+	file.close();
+
 	if (!success || bytesRead != sizeof(FormatInfo)) {
 		Helpers::warn("SaveData::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
 		return Err(Result::FS::NotFormatted);
@@ -175,6 +177,8 @@ void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& 
 	// Write format info on disk
 	IOFile file(formatInfoPath, "wb");
 	file.writeBytes(&info, sizeof(info));
+	file.flush();
+	file.close();
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> SaveDataArchive::openArchive(const FSPath& path) {
