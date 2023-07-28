@@ -27,6 +27,7 @@ class IOFile {
 
 	bool seek(std::int64_t offset, int origin = SEEK_SET);
 	bool rewind();
+	bool flush();
 	FILE* getHandle();
 	static void setAppDataDir(const std::filesystem::path& dir);
 	static std::filesystem::path getAppData() { return appData; }
