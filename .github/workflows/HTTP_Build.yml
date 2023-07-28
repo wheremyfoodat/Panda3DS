@@ -1,4 +1,4 @@
-name: HTTP server build
+name: HTTP Server Build
 
 on:
   push:
