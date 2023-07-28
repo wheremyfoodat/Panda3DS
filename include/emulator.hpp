@@ -15,7 +15,7 @@
 #include "memory.hpp"
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-#include "httpserver.hpp"
+#include "http_server.hpp"
 #endif
 
 enum class ROMType {
