@@ -2,14 +2,12 @@
 #include <cstdarg>
 #include <fstream>
 
-#include "compiler_builtins.hpp"
-
 namespace Log {
 	// Our logger class
 	template <bool enabled>
 	class Logger {
 	  public:
-		ALWAYS_INLINE void log(const char* fmt, ...) {
+		void log(const char* fmt, ...) {
 			if constexpr (!enabled) return;
 
 			std::va_list args;
@@ -63,16 +61,16 @@ namespace Log {
 	// We need this because sadly due to the loggers taking variadic arguments, compilers will not properly
 	// Kill them fully even when they're disabled. The only way they will is if the function with varargs is totally empty
 
-#define MAKE_LOG_FUNCTION_USER(functionName, logger)                   \
-	template <typename... Args>                                        \
-	ALWAYS_INLINE void functionName(const char* fmt, Args&&... args) { \
-		Log::logger.log(fmt, args...);                                 \
+#define MAKE_LOG_FUNCTION_USER(functionName, logger)     \
+	template <typename... Args>                          \
+	void functionName(const char* fmt, Args&&... args) { \
+		Log::logger.log(fmt, args...);                   \
 	}
 
 #ifdef PANDA3DS_USER_BUILD
 #define MAKE_LOG_FUNCTION(functionName, logger) \
 	template <typename... Args>                 \
-	ALWAYS_INLINE void functionName(const char* fmt, Args&&... args) {}
+	void functionName(const char* fmt, Args&&... args) {}
 #else
 #define MAKE_LOG_FUNCTION(functionName, logger) MAKE_LOG_FUNCTION_USER(functionName, logger)
 #endif
