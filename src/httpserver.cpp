@@ -55,6 +55,18 @@ class HttpActionLoadRom : public HttpAction {
 	bool getPaused() const { return paused; }
 };
 
+class HttpActionStep : public HttpAction {
+	DeferredResponseWrapper& response;
+	int frames;
+
+  public:
+	HttpActionStep(DeferredResponseWrapper& response, int frames)
+		: HttpAction(HttpActionType::Step), response(response), frames(frames) {}
+
+	DeferredResponseWrapper& getResponse() { return response; }
+	int getFrames() const { return frames; }
+};
+
 std::unique_ptr<HttpAction> HttpAction::createScreenshotAction(DeferredResponseWrapper& response) {
 	return std::make_unique<HttpActionScreenshot>(response);
 }
@@ -65,6 +77,10 @@ std::unique_ptr<HttpAction> HttpAction::createResetAction() { return std::make_u
 
 std::unique_ptr<HttpAction> HttpAction::createLoadRomAction(DeferredResponseWrapper& response, const std::filesystem::path& path, bool paused) {
 	return std::make_unique<HttpActionLoadRom>(response, path, paused);
+}
+
+std::unique_ptr<HttpAction> HttpAction::createStepAction(DeferredResponseWrapper& response, int frames) {
+	return std::make_unique<HttpActionStep>(response, frames);
 }
 
 HttpServer::HttpServer(Emulator* emulator)
@@ -99,6 +115,7 @@ void HttpServer::pushAction(std::unique_ptr<HttpAction> action) {
 }
 
 void HttpServer::startHttpServer() {
+	server->set_tcp_nodelay(true);
 	server->Get("/ping", [](const httplib::Request&, httplib::Response& response) { response.set_content("pong", "text/plain"); });
 
 	server->Get("/screen", [this](const httplib::Request&, httplib::Response& response) {
@@ -135,9 +152,30 @@ void HttpServer::startHttpServer() {
 		response.set_content(ok ? "ok" : "error", "text/plain");
 	});
 
-	server->Get("/step", [this](const httplib::Request&, httplib::Response& response) {
-		// TODO: implement /step
-		response.set_content("ok", "text/plain");
+	server->Get("/step", [this](const httplib::Request& request, httplib::Response& response) {
+		auto it = request.params.find("frames");
+		if (it == request.params.end()) {
+			response.set_content("error", "text/plain");
+			return;
+		}
+
+		int frames;
+		try {
+			frames = std::stoi(it->second);
+		} catch (...) {
+			response.set_content("error", "text/plain");
+			return;
+		}
+
+		if (frames <= 0) {
+			response.set_content("error", "text/plain");
+			return;
+		}
+
+		DeferredResponseWrapper wrapper(response);
+		std::unique_lock lock(wrapper.mutex);
+		pushAction(HttpAction::createStepAction(wrapper, frames));
+		wrapper.cv.wait(lock, [&wrapper] { return wrapper.ready; });
 	});
 
 	server->Get("/status", [this](const httplib::Request&, httplib::Response& response) { response.set_content(status(), "text/plain"); });
@@ -171,7 +209,6 @@ void HttpServer::startHttpServer() {
 		DeferredResponseWrapper wrapper(response);
 		std::unique_lock lock(wrapper.mutex);
 		pushAction(HttpAction::createLoadRomAction(wrapper, romPath, paused));
-		response.set_content("ok", "text/plain");
 		wrapper.cv.wait(lock, [&wrapper] { return wrapper.ready; });
 	});
 
@@ -208,6 +245,31 @@ std::string HttpServer::status() {
 
 void HttpServer::processActions() {
 	std::scoped_lock lock(actionQueueMutex);
+
+	if (framesToRun > 0) {
+		if (!currentStepAction) {
+			// Should never happen
+			printf("framesToRun > 0 but no currentStepAction\n");
+			return;
+		}
+
+		emulator->resume();
+		framesToRun--;
+
+		if (framesToRun == 0) {
+			paused = true;
+			emulator->pause();
+
+			DeferredResponseWrapper& response = reinterpret_cast<HttpActionStep*>(currentStepAction.get())->getResponse();
+			response.inner_response.set_content("ok", "text/plain");
+			std::unique_lock<std::mutex> lock(response.mutex);
+			response.ready = true;
+			response.cv.notify_one();
+		}
+		
+		// Don't process more actions until we're done stepping
+		return;
+	}
 
 	HIDService& hid = emulator->kernel.getServiceManager().getHID();
 
@@ -253,6 +315,7 @@ void HttpServer::processActions() {
 
 				if (loaded) {
 					paused = loadRomAction->getPaused();
+					framesToRun = 0;
 					if (paused) {
 						emulator->pause();
 					} else {
@@ -263,10 +326,19 @@ void HttpServer::processActions() {
 			}
 
 			case HttpActionType::TogglePause:
+				framesToRun = 0;
 				emulator->togglePause();
 				paused = !paused;
 				break;
+
 			case HttpActionType::Reset: emulator->reset(Emulator::ReloadOption::Reload); break;
+
+			case HttpActionType::Step: {
+				HttpActionStep* stepAction = static_cast<HttpActionStep*>(action.get());
+				framesToRun = stepAction->getFrames();
+				currentStepAction = std::move(action);
+				break;
+			}
 
 			default: break;
 		}

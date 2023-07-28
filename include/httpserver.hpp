@@ -13,7 +13,7 @@
 
 #include "helpers.hpp"
 
-enum class HttpActionType { None, Screenshot, Key, TogglePause, Reset, LoadRom };
+enum class HttpActionType { None, Screenshot, Key, TogglePause, Reset, LoadRom, Step };
 
 class Emulator;
 namespace httplib {
@@ -46,6 +46,7 @@ class HttpAction {
 	static std::unique_ptr<HttpAction> createLoadRomAction(DeferredResponseWrapper& response, const std::filesystem::path& path, bool paused);
 	static std::unique_ptr<HttpAction> createTogglePauseAction();
 	static std::unique_ptr<HttpAction> createResetAction();
+	static std::unique_ptr<HttpAction> createStepAction(DeferredResponseWrapper& response, int frames);
 };
 
 struct HttpServer {
@@ -62,9 +63,11 @@ struct HttpServer {
 	std::thread httpServerThread;
 	std::queue<std::unique_ptr<HttpAction>> actionQueue;
 	std::mutex actionQueueMutex;
+	std::unique_ptr<HttpAction> currentStepAction {};
 
 	std::map<std::string, u32> keyMap;
 	bool paused = false;
+	int framesToRun = 0;
 
 	void startHttpServer();
 	void pushAction(std::unique_ptr<HttpAction> action);
