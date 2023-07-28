@@ -61,6 +61,11 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x3D: outputDebugString(); break;
 		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
+
+	if (needReschedule) {
+		needReschedule = false;
+		rescheduleThreads();
+	}
 }
 
 void Kernel::setVersion(u8 major, u8 minor) {
@@ -139,6 +144,8 @@ void Kernel::reset() {
 	portHandles.clear();
 	threadIndices.clear();
 	serviceManager.reset();
+
+	needReschedule = false;
 
 	// Allocate handle #0 to a dummy object and make a main process object
 	makeObject(KernelObjectType::Dummy);

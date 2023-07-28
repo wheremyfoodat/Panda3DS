@@ -52,6 +52,9 @@ class Kernel {
 	// Top 8 bits are the major version, bottom 8 are the minor version
 	u16 kernelVersion = 0;
 
+	// Shows whether a reschedule will be need
+	bool needReschedule = false;
+
 	Handle makeArbiter();
 	Handle makeProcess(u32 id);
 	Handle makePort(const char* name);
@@ -73,7 +76,6 @@ private:
 	void switchThread(int newThreadIndex);
 	void sortThreads();
 	std::optional<int> getNextThread();
-	void switchToNextThread();
 	void rescheduleThreads();
 	bool canThreadRun(const Thread& t);
 	bool shouldWaitOnObject(KernelObject* object);
@@ -167,6 +169,8 @@ public:
 	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);
 	void reset();
+
+	void requireReschedule() { needReschedule = true; }
 
 	Handle makeObject(KernelObjectType type) {
 		if (handleCounter > KernelHandles::Max) [[unlikely]] {

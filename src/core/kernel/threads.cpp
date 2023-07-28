@@ -82,32 +82,34 @@ std::optional<int> Kernel::getNextThread() {
 	return std::nullopt;
 }
 
-void Kernel::switchToNextThread() {
-	std::optional<int> newThreadIndex = getNextThread();
-
-	if (!newThreadIndex.has_value()) {
-		log("Kernel tried to switch to the next thread but none found. Switching to random thread\n");
-		assert(aliveThreadCount != 0);
-		Helpers::panic("rpog");
-
-		int index;
-		do {
-			index = rand() % threadCount;
-		} while (threads[index].status == ThreadStatus::Dead); // TODO: Pray this doesn't hang
-
-		switchThread(index);
-	} else {
-		switchThread(newThreadIndex.value());
-	}
-}
-
-// See if there;s a higher priority, ready thread and switch to that
+// See if there is a higher priority, ready thread and switch to that
 void Kernel::rescheduleThreads() {
-	std::optional<int> newThreadIndex = getNextThread();
+	Thread& current = threads[currentThreadIndex];  // Current running thread
+	ThreadStatus currentStatus = current.status;    // Its status
 
-	if (newThreadIndex.has_value() && newThreadIndex.value() != currentThreadIndex) {
-		threads[currentThreadIndex].status = ThreadStatus::Ready;
+	// If the current thread is running and hasn't gone to sleep or whatever, set it to Ready instead of Running
+	// Since rescheduleThreads will put it to wait and run another thread in the meantime
+	if (currentStatus == ThreadStatus::Running) {
+		currentStatus = ThreadStatus::Ready;
+	}
+
+	current.status = ThreadStatus::Dead;  // Temporarily mark it as dead so getNextThread will ignore it
+	std::optional<int> newThreadIndex = getNextThread();
+	current.status = currentStatus;  // Restore old status
+
+	// Case 1: Another thread can run (that is not the idle thread)
+	if (newThreadIndex.has_value() && newThreadIndex.value() != idleThreadIndex) {
 		switchThread(newThreadIndex.value());
+	} 
+	
+	// Case 2: No other thread can run but this one can
+	else if (currentStatus == ThreadStatus::Running) {
+		switchThread(currentThreadIndex);
+	}
+	
+	// Case 3: No thread can run other than the idle thread
+	else {
+		switchThread(idleThreadIndex);
 	}
 }
 
@@ -194,7 +196,7 @@ void Kernel::releaseMutex(Mutex* moo) {
 			moo->ownerThread = index;
 		}
 
-		rescheduleThreads();
+		requireReschedule();
 	}
 }
 
@@ -210,7 +212,7 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	t.status = ThreadStatus::WaitArbiter;
 	t.waitingAddress = waitingAddress;
 
-	switchToNextThread();
+	requireReschedule();
 }
 
 // Acquires an object that is **ready to be acquired** without waiting on it
@@ -339,19 +341,14 @@ void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
 		Helpers::panic("Sleeping a thread for a negative amount of ns");
 	} else if (ns == 0) { // Used when we want to force a thread switch
-		std::optional<int> newThreadIndex = getNextThread();
-		// If there's no other thread waiting, don't bother yielding
-		if (newThreadIndex.has_value()) {
-			threads[currentThreadIndex].status = ThreadStatus::Ready;
-			switchThread(newThreadIndex.value());
-		}
+		requireReschedule();
 	} else { // If we're sleeping for > 0 ns
 		Thread& t = threads[currentThreadIndex];
 		t.status = ThreadStatus::WaitSleep;
 		t.waitingNanoseconds = ns;
 		t.sleepTick = cpu.getTicks();
 
-		switchToNextThread();
+		requireReschedule();
 	}
 }
 
@@ -374,7 +371,7 @@ void Kernel::createThread() {
 
 	regs[0] = Result::Success;
 	regs[1] = makeThread(entrypoint, initialSP, priority, id, arg, ThreadStatus::Ready);
-	rescheduleThreads();
+	requireReschedule();
 }
 
 // void SleepThread(s64 nanoseconds)
@@ -448,7 +445,7 @@ void Kernel::setThreadPriority() {
 		}
 	}
 	sortThreads();
-	rescheduleThreads();
+	requireReschedule();
 }
 
 void Kernel::exitThread() {
@@ -472,7 +469,7 @@ void Kernel::exitThread() {
 		t.threadsWaitingForTermination = 0; // No other threads waiting
 	}
 
-	switchToNextThread();
+	requireReschedule();
 }
 
 void Kernel::svcCreateMutex() {
