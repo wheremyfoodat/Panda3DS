@@ -220,7 +220,13 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 
 		case KernelObjectType::Mutex: {
 			Mutex* moo = object->getData<Mutex>();
-			moo->locked = true; // Set locked to true, whether it's false or not because who cares
+
+			// Only reschedule if we're acquiring the mutex for the first time
+			if (!moo->locked) {
+				moo->locked = true;
+				requireReschedule();
+			}
+
 			// Increment lock count by 1. If a thread acquires a mootex multiple times, it needs to release it until count == 0
 			// For the mootex to be free.
 			moo->lockCount++;
