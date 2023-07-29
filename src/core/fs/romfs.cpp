@@ -1,136 +1,143 @@
 #include "fs/romfs.hpp"
+
+#include <cstdio>
+#include <queue>
+#include <string>
+
 #include "fs/ivfc.hpp"
 #include "helpers.hpp"
-#include <cstdio>
-#include <memory>
-#include <map>
-#include <string>
 
 namespace RomFS {
 
-    constexpr u32 metadataInvalidEntry = 0xFFFFFFFF;
+	constexpr u32 metadataInvalidEntry = 0xFFFFFFFF;
 
-    struct Level3Header {
-        uint32_t headerSize;
-        uint32_t directoryHashTableOffset;
-        uint32_t directoryHashTableSize;
-        uint32_t directoryMetadataOffset;
-        uint32_t directoryMetadataSize;
-        uint32_t fileHashTableOffset;
-        uint32_t fileHashTableSize;
-        uint32_t fileMetadataOffset;
-        uint32_t fileMetadataSize;
-        uint32_t fileDataOffset;
-    };
+	struct Level3Header {
+		u32 headerSize;
+		u32 directoryHashTableOffset;
+		u32 directoryHashTableSize;
+		u32 directoryMetadataOffset;
+		u32 directoryMetadataSize;
+		u32 fileHashTableOffset;
+		u32 fileHashTableSize;
+		u32 fileMetadataOffset;
+		u32 fileMetadataSize;
+		u32 fileDataOffset;
+	};
 
-    inline uintptr_t align(uintptr_t value, uintptr_t alignment) {
-        if (value % alignment == 0)
-            return value;
+	inline uintptr_t align(uintptr_t value, uintptr_t alignment) {
+		if (value % alignment == 0) return value;
 
-        return value + (alignment - (value % alignment));
-    }
+		return value + (alignment - (value % alignment));
+	}
 
-    inline void printNode(const RomFSNode& node, int indentation, std::string path) {
-        for (int i = 0; i < indentation; i++) {
-            printf("  ");
-        }
-        printf("%s%s\n", path.c_str(), std::string(node.name.begin(), node.name.end()).c_str());
-        path += std::string(node.name.begin(), node.name.end()) + "/";
-        indentation++;
-        for (auto& directory : node.directories) {
-            printNode(*directory, indentation, path);
-        }
-        indentation--;
-    }
+	inline void printNode(const RomFSNode& node, int indentation, std::string path) {
+		for (int i = 0; i < indentation; i++) {
+			printf("  ");
+		}
+		printf("%s%s\n", path.c_str(), std::string(node.name.begin(), node.name.end()).c_str());
+		path += std::string(node.name.begin(), node.name.end()) + "/";
+		indentation++;
+		for (auto& directory : node.directories) {
+			printNode(*directory, indentation, path);
+		}
+		indentation--;
+	}
 
-    std::vector<std::unique_ptr<RomFSNode>> parseDirectory(const uintptr_t metadataBase, const uintptr_t metadataOffset) {
-        std::vector<std::unique_ptr<RomFSNode>> directories {};
+	std::unique_ptr<RomFSNode> parseRootDirectory(uintptr_t metadataBase) {
+		std::unique_ptr<RomFSNode> rootDirectory = std::make_unique<RomFSNode>();
+		rootDirectory->isDirectory = true;
+		rootDirectory->name = u"romfs:";
+		rootDirectory->offset = 0;
 
-        // Get offset of first child directory
-        u32* metadataPtr = (u32*)(metadataBase + metadataOffset);
-        metadataPtr += 2;
-        u32 currentDirectoryOffset = *metadataPtr;
+		std::queue<RomFSNode*> directoryOffsets;
+		directoryOffsets.push(rootDirectory.get());
 
-        // Loop over all the sibling directories of the first child to get all the children directories
-        while (currentDirectoryOffset != metadataInvalidEntry) {
-            metadataPtr = (u32*)(metadataBase + currentDirectoryOffset);
-            metadataPtr++; // Skip the parent offset
-            u32 siblingDirectoryOffset = *metadataPtr++;
-            metadataPtr++; // Skip the child offset
-            metadataPtr++; // Skip the first file offset
-            metadataPtr++; // Skip the next directory in hash table offset
-            u32 nameLength = (*metadataPtr++) / 2;
+		while (!directoryOffsets.empty()) {
+			RomFSNode* currentNode = directoryOffsets.front();
+			directoryOffsets.pop();
 
-            // Arbitrary limit
-            if (nameLength > 128) {
-                printf("Invalid directory name length: %08X\n", nameLength);
-                return {};
-            }
+			u32* metadataPtr = (u32*)(metadataBase + currentNode->offset);
+			metadataPtr += 2;
 
-            char16_t* namePtr = (char16_t*)metadataPtr;
-            std::u16string name(namePtr, nameLength);
+			// Offset of first child directory
+			u32 currentDirectoryOffset = *metadataPtr;
 
-            std::unique_ptr directory = std::make_unique<RomFSNode>();
-            directory->isDirectory = true;
-            directory->name = name;
-            directory->offset = currentDirectoryOffset;
-            directories.push_back(std::move(directory));
+			// Loop over all the sibling directories of the first child to get all the children directories
+			// of the current directory
+			while (currentDirectoryOffset != metadataInvalidEntry) {
+				metadataPtr = (u32*)(metadataBase + currentDirectoryOffset);
+				metadataPtr++;  // Skip the parent offset
+				u32 siblingDirectoryOffset = *metadataPtr;
+				// Skip the rest of the fields
+				metadataPtr += 4;
+				u32 nameLength = *metadataPtr++ / 2;
 
-            currentDirectoryOffset = siblingDirectoryOffset;
-        }
+				// Arbitrary limit
+				if (nameLength > 128) {
+					printf("Invalid directory name length: %08X\n", nameLength);
+					return {};
+				}
 
-        // Loop over all the children directories to get their children
-        for (auto& directory : directories) {
-            directory->directories = parseDirectory(metadataBase, directory->offset);
-        }
+				char16_t* namePtr = (char16_t*)metadataPtr;
+				std::u16string name(namePtr, nameLength);
 
-        return directories;
-    }
+				std::unique_ptr directory = std::make_unique<RomFSNode>();
+				directory->isDirectory = true;
+				directory->name = name;
+				directory->offset = currentDirectoryOffset;
+				currentNode->directories.push_back(std::move(directory));
 
-    std::unique_ptr<RomFSNode> parseRomFSTree(uintptr_t romFS, u64 romFSSize) {
-        IVFC::IVFC ivfc;
-        size_t ivfcSize = IVFC::parseIVFC((uintptr_t)romFS, ivfc);
+				currentDirectoryOffset = siblingDirectoryOffset;
+			}
 
-        if (ivfcSize == 0) {
-            printf("Failed to parse IVFC\n");
-            return {};
-        }
+			for (auto& directory : currentNode->directories) {
+				directoryOffsets.push(directory.get());
+			}
+		}
 
-        uintptr_t masterHashOffset = RomFS::align(ivfcSize, 0x10);
-        // For a weird reason, the level 3 offset is not the one in the IVFC, instead it's
-        // the first block after the master hash
-        // TODO: Find out why and explain in the comment
-        uintptr_t level3Offset = RomFS::align(masterHashOffset + ivfc.masterHashSize, ivfc.levels[2].blockSize);
-        uintptr_t const level3Base = (uintptr_t)romFS + level3Offset;
-        u32* level3Ptr = (u32*)level3Base;
+		return rootDirectory;
+	}
 
-        Level3Header header;
-        header.headerSize = *level3Ptr++;
-        header.directoryHashTableOffset = *level3Ptr++;
-        header.directoryHashTableSize = *level3Ptr++;
-        header.directoryMetadataOffset = *level3Ptr++;
-        header.directoryMetadataSize = *level3Ptr++;
-        header.fileHashTableOffset = *level3Ptr++;
-        header.fileHashTableSize = *level3Ptr++;
-        header.fileMetadataOffset = *level3Ptr++;
-        header.fileMetadataSize = *level3Ptr++;
-        header.fileDataOffset = *level3Ptr;
+	std::unique_ptr<RomFSNode> parseRomFSTree(uintptr_t romFS, u64 romFSSize) {
+		IVFC::IVFC ivfc;
+		size_t ivfcSize = IVFC::parseIVFC((uintptr_t)romFS, ivfc);
 
-        if (header.headerSize != 0x28) {
-            printf("Invalid level 3 header size: %08X\n", header.headerSize);
-            return {};
-        }
+		if (ivfcSize == 0) {
+			printf("Failed to parse IVFC\n");
+			return {};
+		}
 
-        std::unique_ptr<RomFSNode> root = std::make_unique<RomFSNode>();
-        root->isDirectory = true;
-        root->name = u"";
-        root->offset = 0;
-        root->directories = parseDirectory(level3Base + header.directoryMetadataOffset, 0);
+		uintptr_t masterHashOffset = RomFS::align(ivfcSize, 0x10);
+		// For a weird reason, the level 3 offset is not the one in the IVFC, instead it's
+		// the first block after the master hash
+		// TODO: Find out why and explain in the comment
+		uintptr_t level3Offset = RomFS::align(masterHashOffset + ivfc.masterHashSize, ivfc.levels[2].blockSize);
+		uintptr_t level3Base = (uintptr_t)romFS + level3Offset;
+		u32* level3Ptr = (u32*)level3Base;
 
-        // If you want to print the tree, uncomment this
-        // printNode(*root, 0, "");
+		Level3Header header;
+		header.headerSize = *level3Ptr++;
+		header.directoryHashTableOffset = *level3Ptr++;
+		header.directoryHashTableSize = *level3Ptr++;
+		header.directoryMetadataOffset = *level3Ptr++;
+		header.directoryMetadataSize = *level3Ptr++;
+		header.fileHashTableOffset = *level3Ptr++;
+		header.fileHashTableSize = *level3Ptr++;
+		header.fileMetadataOffset = *level3Ptr++;
+		header.fileMetadataSize = *level3Ptr++;
+		header.fileDataOffset = *level3Ptr;
 
-        return root;
-    }
+		if (header.headerSize != 0x28) {
+			printf("Invalid level 3 header size: %08X\n", header.headerSize);
+			return {};
+		}
 
-} // namespace RomFS
+		std::unique_ptr<RomFSNode> root = parseRootDirectory(level3Base + header.directoryMetadataOffset);
+
+		// If you want to print the tree, uncomment this
+		// printNode(*root, 0, "");
+
+		return root;
+	}
+
+}  // namespace RomFS

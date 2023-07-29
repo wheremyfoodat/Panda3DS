@@ -1,22 +1,22 @@
 #pragma once
 
-#include <cstddef>
-#include <cstring>
+#include <vector>
+
 #include "helpers.hpp"
 
 namespace IVFC {
 
-    struct IVFCLevel {
-        u64 logicalOffset;
-        u64 size;
-        u64 blockSize;
-    };
+	struct IVFCLevel {
+		u64 logicalOffset;
+		u64 size;
+		u64 blockSize;
+	};
 
-    struct IVFC {
-        u64 masterHashSize;
-        std::vector<IVFCLevel> levels;
-    };
+	struct IVFC {
+		u64 masterHashSize;
+		std::vector<IVFCLevel> levels;
+	};
 
-    size_t parseIVFC(uintptr_t ivfcStart, IVFC& ivfc);
+	size_t parseIVFC(uintptr_t ivfcStart, IVFC& ivfc);
 
-} // namespace IVFC
+}  // namespace IVFC
