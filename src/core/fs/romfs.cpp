@@ -160,9 +160,10 @@ namespace RomFS {
 		}
 
 		uintptr_t masterHashOffset = RomFS::alignUp(ivfcSize, 0x10);
-		// For a weird reason, the level 3 offset is not the one in the IVFC, instead it's
-		// the first block after the master hash
-		// TODO: Find out why and explain in the comment
+		// From GBATEK:
+		// The "Logical Offsets" are completely unrelated to the physical offsets in the RomFS partition.
+		// Instead, the "Logical Offsets" might be something about where to map the Level 1-3 sections in
+		// virtual memory (with the physical Level 3,1,2 ordering being re-ordered to Level 1,2,3)?
 		uintptr_t level3Offset = RomFS::alignUp(masterHashOffset + ivfc.masterHashSize, ivfc.levels[2].blockSize);
 		uintptr_t level3Base = (uintptr_t)romFS + level3Offset;
 		u32* level3Ptr = (u32*)level3Base;
