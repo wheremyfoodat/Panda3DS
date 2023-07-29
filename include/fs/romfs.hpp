@@ -10,8 +10,9 @@ namespace RomFS {
 	struct RomFSNode {
 		std::u16string name;
 		// The file/directory offset relative to the start of the RomFS
-		u64 offset = 0;
-		u64 size = 0;
+		u64 metadataOffset = 0;
+		u64 dataOffset = 0;
+		u64 dataSize = 0;
 		bool isDirectory = false;
 
 		std::vector<std::unique_ptr<RomFSNode>> directories;

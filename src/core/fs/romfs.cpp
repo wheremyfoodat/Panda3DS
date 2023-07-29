@@ -30,24 +30,74 @@ namespace RomFS {
 		return value + (alignment - (value % alignment));
 	}
 
-	inline void printNode(const RomFSNode& node, int indentation, std::string path) {
+	inline void printNode(const RomFSNode& node, int indentation) {
 		for (int i = 0; i < indentation; i++) {
 			printf("  ");
 		}
-		printf("%s%s\n", path.c_str(), std::string(node.name.begin(), node.name.end()).c_str());
-		path += std::string(node.name.begin(), node.name.end()) + "/";
+		printf("%s/\n", std::string(node.name.begin(), node.name.end()).c_str());
+
+		for (auto& file : node.files) {
+			for (int i = 0; i <= indentation; i++) {
+				printf("  ");
+			}
+			printf("%s\n", std::string(file->name.begin(), file->name.end()).c_str());
+		}
+
 		indentation++;
 		for (auto& directory : node.directories) {
-			printNode(*directory, indentation, path);
+			printNode(*directory, indentation);
 		}
 		indentation--;
 	}
 
-	std::unique_ptr<RomFSNode> parseRootDirectory(uintptr_t metadataBase) {
+	std::vector<std::unique_ptr<RomFSNode>> getFiles(uintptr_t fileMetadataBase, u32 currentFileOffset) {
+		std::vector<std::unique_ptr<RomFSNode>> files;
+
+		while (currentFileOffset != metadataInvalidEntry) {
+			u32* metadataPtr = (u32*)(fileMetadataBase + currentFileOffset);
+			metadataPtr++;  // Skip the containing directory
+			u32 nextFileOffset = *metadataPtr++;
+			u64 fileDataOffset = *(u64*)metadataPtr;
+			metadataPtr += 2;
+			u64 fileSize = *(u64*)metadataPtr;
+			metadataPtr += 2;
+			metadataPtr++;  // Skip the offset of the next file in the same hash table bucket
+			u32 nameLength = *metadataPtr++ / 2;
+
+			// Arbitrary limit
+			if (nameLength > 128) {
+				printf("Invalid file name length: %08X\n", nameLength);
+				return {};
+			}
+
+			char16_t* namePtr = (char16_t*)metadataPtr;
+			std::u16string name(namePtr, nameLength);
+
+			std::unique_ptr file = std::make_unique<RomFSNode>();
+			file->isDirectory = false;
+			file->name = name;
+			file->metadataOffset = currentFileOffset;
+			file->dataOffset = fileDataOffset;
+			file->dataSize = fileSize;
+
+			files.push_back(std::move(file));
+
+			currentFileOffset = nextFileOffset;
+		}
+
+		return files;
+	}
+
+	std::unique_ptr<RomFSNode> parseRootDirectory(uintptr_t directoryMetadataBase, uintptr_t fileMetadataBase) {
 		std::unique_ptr<RomFSNode> rootDirectory = std::make_unique<RomFSNode>();
 		rootDirectory->isDirectory = true;
 		rootDirectory->name = u"romfs:";
-		rootDirectory->offset = 0;
+		rootDirectory->metadataOffset = 0;
+
+		u32 rootFilesOffset = *((u32*)(directoryMetadataBase) + 3);
+		if (rootFilesOffset != metadataInvalidEntry) {
+			rootDirectory->files = getFiles(fileMetadataBase, rootFilesOffset);
+		}
 
 		std::queue<RomFSNode*> directoryOffsets;
 		directoryOffsets.push(rootDirectory.get());
@@ -56,7 +106,7 @@ namespace RomFS {
 			RomFSNode* currentNode = directoryOffsets.front();
 			directoryOffsets.pop();
 
-			u32* metadataPtr = (u32*)(metadataBase + currentNode->offset);
+			u32* metadataPtr = (u32*)(directoryMetadataBase + currentNode->metadataOffset);
 			metadataPtr += 2;
 
 			// Offset of first child directory
@@ -65,11 +115,12 @@ namespace RomFS {
 			// Loop over all the sibling directories of the first child to get all the children directories
 			// of the current directory
 			while (currentDirectoryOffset != metadataInvalidEntry) {
-				metadataPtr = (u32*)(metadataBase + currentDirectoryOffset);
+				metadataPtr = (u32*)(directoryMetadataBase + currentDirectoryOffset);
 				metadataPtr++;  // Skip the parent offset
-				u32 siblingDirectoryOffset = *metadataPtr;
-				// Skip the rest of the fields
-				metadataPtr += 4;
+				u32 siblingDirectoryOffset = *metadataPtr++;
+				metadataPtr++;  // Skip offset of first child directory
+				u32 currentFileOffset = *metadataPtr++;
+				metadataPtr++;  // Skip offset of next directory in the same hash table bucket
 				u32 nameLength = *metadataPtr++ / 2;
 
 				// Arbitrary limit
@@ -84,9 +135,10 @@ namespace RomFS {
 				std::unique_ptr directory = std::make_unique<RomFSNode>();
 				directory->isDirectory = true;
 				directory->name = name;
-				directory->offset = currentDirectoryOffset;
-				currentNode->directories.push_back(std::move(directory));
+				directory->metadataOffset = currentDirectoryOffset;
+				directory->files = getFiles(fileMetadataBase, currentFileOffset);
 
+				currentNode->directories.push_back(std::move(directory));
 				currentDirectoryOffset = siblingDirectoryOffset;
 			}
 
@@ -132,10 +184,10 @@ namespace RomFS {
 			return {};
 		}
 
-		std::unique_ptr<RomFSNode> root = parseRootDirectory(level3Base + header.directoryMetadataOffset);
+		std::unique_ptr<RomFSNode> root = parseRootDirectory(level3Base + header.directoryMetadataOffset, level3Base + header.fileMetadataOffset);
 
 		// If you want to print the tree, uncomment this
-		// printNode(*root, 0, "");
+		// printNode(*root, 0);
 
 		return root;
 	}
