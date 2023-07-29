@@ -87,7 +87,7 @@ void Kernel::arbitrateAddress() {
 			Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
 	}
 
-	rescheduleThreads();
+	requireReschedule();
 }
 
 // Signal up to "threadCount" threads waiting on the arbiter indicated by "waitingAddress"
