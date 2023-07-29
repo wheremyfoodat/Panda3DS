@@ -24,13 +24,13 @@ namespace RomFS {
 		u32 fileDataOffset;
 	};
 
-	inline uintptr_t align(uintptr_t value, uintptr_t alignment) {
+	inline constexpr uintptr_t alignUp(uintptr_t value, uintptr_t alignment) {
 		if (value % alignment == 0) return value;
 
 		return value + (alignment - (value % alignment));
 	}
 
-	inline void printNode(const RomFSNode& node, int indentation) {
+	void printNode(const RomFSNode& node, int indentation) {
 		for (int i = 0; i < indentation; i++) {
 			printf("  ");
 		}
@@ -159,11 +159,11 @@ namespace RomFS {
 			return {};
 		}
 
-		uintptr_t masterHashOffset = RomFS::align(ivfcSize, 0x10);
+		uintptr_t masterHashOffset = RomFS::alignUp(ivfcSize, 0x10);
 		// For a weird reason, the level 3 offset is not the one in the IVFC, instead it's
 		// the first block after the master hash
 		// TODO: Find out why and explain in the comment
-		uintptr_t level3Offset = RomFS::align(masterHashOffset + ivfc.masterHashSize, ivfc.levels[2].blockSize);
+		uintptr_t level3Offset = RomFS::alignUp(masterHashOffset + ivfc.masterHashSize, ivfc.levels[2].blockSize);
 		uintptr_t level3Base = (uintptr_t)romFS + level3Offset;
 		u32* level3Ptr = (u32*)level3Base;
 
