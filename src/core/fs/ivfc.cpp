@@ -1,7 +1,6 @@
 #include "fs/ivfc.hpp"
 
 namespace IVFC {
-
 	size_t parseIVFC(uintptr_t ivfcStart, IVFC& ivfc) {
 		uintptr_t ivfcPointer = ivfcStart;
 
@@ -74,5 +73,4 @@ namespace IVFC {
 
 		return ivfcActualSize;
 	}
-
 }  // namespace IVFC

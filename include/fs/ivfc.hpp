@@ -5,7 +5,6 @@
 #include "helpers.hpp"
 
 namespace IVFC {
-
 	struct IVFCLevel {
 		u64 logicalOffset;
 		u64 size;
@@ -18,5 +17,4 @@ namespace IVFC {
 	};
 
 	size_t parseIVFC(uintptr_t ivfcStart, IVFC& ivfc);
-
 }  // namespace IVFC

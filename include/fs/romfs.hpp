@@ -6,7 +6,6 @@
 #include "helpers.hpp"
 
 namespace RomFS {
-
 	struct RomFSNode {
 		std::u16string name;
 		// The file/directory offset relative to the start of the RomFS
@@ -20,5 +19,4 @@ namespace RomFS {
 	};
 
 	std::unique_ptr<RomFSNode> parseRomFSTree(uintptr_t romFS, u64 romFSSize);
-
 }  // namespace RomFS

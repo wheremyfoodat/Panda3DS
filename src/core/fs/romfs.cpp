@@ -8,7 +8,6 @@
 #include "helpers.hpp"
 
 namespace RomFS {
-
 	constexpr u32 metadataInvalidEntry = 0xFFFFFFFF;
 
 	struct Level3Header {
@@ -192,5 +191,4 @@ namespace RomFS {
 
 		return root;
 	}
-
 }  // namespace RomFS
