@@ -229,6 +229,6 @@ void Kernel::waitSynchronizationN() {
 
 		requireReschedule();
 	} else {
-		Helpers::panic("WaitSynchronizatioN with waitAll");
+		Helpers::panic("WaitSynchronizationN with waitAll");
 	}
 }
