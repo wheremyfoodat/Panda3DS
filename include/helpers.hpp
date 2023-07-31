@@ -125,7 +125,7 @@ namespace Helpers {
 		return getBits<offset, bits, ValueT, ValueT>(value);
 	}
 
-#ifdef HELPERS_APPLE_CLANG
+#if defined(HELPERS_APPLE_CLANG) || defined(__ANDROID__)
 	template <class To, class From>
 	constexpr To bit_cast(const From& from) noexcept {
 		return *reinterpret_cast<const To*>(&from);
