@@ -143,6 +143,7 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 			break;
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
+		case ShaderOpcodes::DPH: recDPH(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
 		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
@@ -522,6 +523,30 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
 	dpps(src1_xmm, src2_xmm, 0b11111111); // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
+	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+
+	// Attach 1.0 to the w component of src1
+	if (haveSSE4_1) {
+		blendps(src1_xmm, xword[rip + onesVector], 0b1000);
+	} else {
+		movaps(scratch1, src1_xmm);
+		unpckhps(scratch1, xword[rip + onesVector]);
+		unpcklpd(src1_xmm, scratch1);
+	}
+
+	dpps(src1_xmm, src2_xmm, 0b11111111);  // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
