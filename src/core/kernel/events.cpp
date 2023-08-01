@@ -35,22 +35,15 @@ bool Kernel::signalEvent(Handle handle) {
 
 	// Check if there's any thread waiting on this event
 	if (event->waitlist != 0) {
-		// One-shot events get cleared once they are acquired by some thread and only wake up 1 thread at a time
+		wakeupAllThreads(event->waitlist, handle);
+		event->waitlist = 0;  // No threads waiting;
+
 		if (event->resetType == ResetType::OneShot) {
-			int index = wakeupOneThread(event->waitlist, handle); // Wake up one thread with the highest priority
-			event->waitlist ^= (1ull << index); // Remove thread from waitlist
 			event->fired = false;
-		} else {
-			wakeupAllThreads(event->waitlist, handle);
-			event->waitlist = 0; // No threads waiting;
 		}
-
-		// We must reschedule our threads if we signalled one. Some games such as FE: Awakening rely on this
-		// If this does not happen, we can have phenomena such as a thread waiting up a higher priority thread,
-		// and the higher priority thread just never running
-		requireReschedule();
 	}
-
+	
+	rescheduleThreads();
 	return true;
 }
 

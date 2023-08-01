@@ -178,6 +178,7 @@ void Kernel::releaseMutex(Mutex* moo) {
 	// If the lock count reached 0 then the thread no longer owns the mootex and it can be given to a new one
 	if (moo->lockCount == 0) {
 		moo->locked = false;
+
 		if (moo->waitlist != 0) {
 			int index = wakeupOneThread(moo->waitlist, moo->handle); // Wake up one thread and get its index
 			moo->waitlist ^= (1ull << index); // Remove thread from waitlist
@@ -338,10 +339,20 @@ void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
 void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
 		Helpers::panic("Sleeping a thread for a negative amount of ns");
-	} else if (ns == 0) { // Used when we want to force a thread switch
-		requireReschedule();
-	} else { // If we're sleeping for > 0 ns
+	} else if (ns == 0) {
+		// TODO: This is garbage, absolutely not getting merged
 		Thread& t = threads[currentThreadIndex];
+
+		t.status = ThreadStatus::Dead;
+		auto nextThreadIndex = getNextThread();
+		t.status = ThreadStatus::Ready;
+
+		if (nextThreadIndex.has_value()) {
+			switchThread(nextThreadIndex.value());
+		}
+	} else {  // If we're sleeping for >= 0 ns
+		Thread& t = threads[currentThreadIndex];
+
 		t.status = ThreadStatus::WaitSleep;
 		t.waitingNanoseconds = ns;
 		t.sleepTick = cpu.getTicks();
