@@ -228,10 +228,18 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5, 10)
 		));
 
-		// Positional Light
-		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0) error_unimpl = true;
+		vec3 half_vector;
 
-		vec3 half_vector = normalize(normalize(light_vector) + view);
+        // Positional Light
+        if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0) {
+			error_unimpl = true;
+            //half_vector = normalize(normalize(light_vector + v_view) + view);
+        }
+        
+        // Directional light
+        else {
+            half_vector = normalize(normalize(light_vector) + view);
+        }
 
 		for (int c = 0; c < 7; c++) {
 			if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0) {
