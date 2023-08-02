@@ -357,6 +357,8 @@ void Emulator::run() {
 
 			hid.updateInputs(cpu.getTicks());
 		}
+		// TODO: Should this be uncommented?
+		// kernel.evalReschedule();
 
 		// Update inputs in the HID module
 		SDL_GL_SwapWindow(window);

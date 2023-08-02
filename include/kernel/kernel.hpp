@@ -172,6 +172,13 @@ public:
 
 	void requireReschedule() { needReschedule = true; }
 
+	void evalReschedule() {
+		if (needReschedule) {
+			needReschedule = false;
+			rescheduleThreads();
+		}
+	}
+
 	Handle makeObject(KernelObjectType type) {
 		if (handleCounter > KernelHandles::Max) [[unlikely]] {
 			Helpers::panic("Hlep we somehow created enough kernel objects to overflow this thing");

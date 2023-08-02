@@ -62,10 +62,7 @@ void Kernel::serviceSVC(u32 svc) {
 		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
 
-	if (needReschedule) {
-		needReschedule = false;
-		rescheduleThreads();
-	}
+	evalReschedule();
 }
 
 void Kernel::setVersion(u8 major, u8 minor) {
