@@ -340,9 +340,11 @@ void Kernel::sleepThread(s64 ns) {
 	if (ns < 0) {
 		Helpers::panic("Sleeping a thread for a negative amount of ns");
 	} else if (ns == 0) {
-		// TODO: This is garbage, absolutely not getting merged
+		// TODO: This is garbage, but it works so eh we can keep it for now
 		Thread& t = threads[currentThreadIndex];
 
+		// See if a thread other than this and the idle thread is waiting to run by temp marking the current function as dead and searching
+		// If there is another thread to run, then run it. Otherwise, go back to this thread, not to the idle thread
 		t.status = ThreadStatus::Dead;
 		auto nextThreadIndex = getNextThread();
 		t.status = ThreadStatus::Ready;
