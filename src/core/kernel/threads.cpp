@@ -348,7 +348,11 @@ void Kernel::sleepThread(s64 ns) {
 		t.status = ThreadStatus::Ready;
 
 		if (nextThreadIndex.has_value()) {
-			switchThread(nextThreadIndex.value());
+			const auto index = nextThreadIndex.value();
+
+			if (index != idleThreadIndex) {
+				switchThread(index);
+			}
 		}
 	} else {  // If we're sleeping for >= 0 ns
 		Thread& t = threads[currentThreadIndex];
