@@ -112,7 +112,6 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	void recRSQ(const PICAShader& shader, u32 instruction);
 	void recSETEMIT(const PICAShader& shader, u32 instruction);
 	void recSGE(const PICAShader& shader, u32 instruction);
-	void recSGEI(const PICAShader& shader, u32 instruction);
 	void recSLT(const PICAShader& shader, u32 instruction);
 
 	MAKE_LOG_FUNCTION(log, shaderJITLogger)
