@@ -135,6 +135,10 @@ u32 Memory::read32(u32 vaddr) {
 			case ConfigMem::SyscoreVer: return 2;
 			case 0x1FF81000: return 0;                   // TODO: Figure out what this config mem address does
 			case ConfigMem::WifiMac: return 0xFF07F440;  // Wifi MAC: First 4 bytes of MAC Address
+
+			// 3D slider. Float in range 0.0 = off, 1.0 = max.
+			case ConfigMem::SliderState3D: return Helpers::bit_cast<u32, float>(0.0f);
+
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 					Helpers::warn("VRAM read!\n");
