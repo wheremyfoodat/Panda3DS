@@ -4,6 +4,7 @@
 #include "PICA/regs.hpp"
 #include "boost/icl/interval.hpp"
 #include "helpers.hpp"
+#include "math_util.hpp"
 #include "opengl.hpp"
 
 template <typename T>
@@ -13,7 +14,7 @@ struct Texture {
     u32 location;
     u32 config; // Magnification/minification filter, wrapping configs, etc
     PICA::TextureFmt format;
-    OpenGL::uvec2 size;
+    Math::uvec2 size;
     bool valid;
 
     // Range of VRAM taken up by buffer

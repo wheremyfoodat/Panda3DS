@@ -536,7 +536,7 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 
 OpenGL::Framebuffer RendererGL::getColourFBO() {
 	// We construct a colour buffer object and see if our cache has any matching colour buffers in it
-	//  If not, we allocate a texture & FBO for our framebuffer and store it in the cache
+	// If not, we allocate a texture & FBO for our framebuffer and store it in the cache
 	ColourBuffer sampleBuffer(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
 	auto buffer = colourBufferCache.find(sampleBuffer);
 
@@ -598,25 +598,34 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	const PICA::Scaling scaling = static_cast<PICA::Scaling>(Helpers::getBits<24, 2>(flags));
 
 	u32 outputWidth = outputSize & 0xffff;
+	u32 outputHeight = outputSize >> 16;
+
+	if (inputWidth != outputWidth) {
+		Helpers::warn("Strided display transfer is not handled correctly!\n");
+	}
+
+	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, inputHeight);
+	Math::Rect srcRect = srcFramebuffer.getSubRect(inputAddr, outputWidth, outputHeight);
+
+	// Apply scaling for the destination rectangle.
 	if (scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) {
 		outputWidth >>= 1;
 	}
-	u32 outputHeight = outputSize >> 16;
 	if (scaling == PICA::Scaling::XY) {
 		outputHeight >>= 1;
 	}
 
-	// If there's a framebuffer at this address, use it. Otherwise go back to our old hack and display framebuffer 0
-	// Displays are hard I really don't want to try implementing them because getting a fast solution is terrible
-	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, inputHeight);
 	auto dstFramebuffer = getColourBuffer(outputAddr, outputFormat, outputWidth, outputHeight);
+	Math::Rect dstRect = dstFramebuffer.getSubRect(outputAddr, outputWidth, outputHeight);
 
 	Helpers::warn("Display transfer with outputAddr %08X\n", outputAddr);
 
 	// Blit the framebuffers
 	srcFramebuffer.fbo.bind(OpenGL::ReadFramebuffer);
 	dstFramebuffer.fbo.bind(OpenGL::DrawFramebuffer);
-	glBlitFramebuffer(0, 0, inputWidth, inputHeight, 0, 0, outputWidth, outputHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	glBlitFramebuffer(srcRect.start.x(), srcRect.start.y(), srcRect.end.x(), srcRect.end.y(),
+					  dstRect.start.x(), dstRect.start.y(), dstRect.end.x(), dstRect.end.y(),
+					  GL_COLOR_BUFFER_BIT, GL_LINEAR);
 }
 
 ColourBuffer RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height) {
