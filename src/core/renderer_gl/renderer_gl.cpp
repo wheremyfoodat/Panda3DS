@@ -466,8 +466,6 @@ void RendererGL::display() {
 
 	auto topScreen = colourBufferCache.findFromAddress(topScreenAddr);
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
-	Helpers::warn("Top screen addr %08X\n", topScreenAddr);
-
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
 	if (topScreen) {
@@ -601,7 +599,7 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	u32 outputHeight = outputSize >> 16;
 
 	if (inputWidth != outputWidth) {
-		Helpers::warn("Strided display transfer is not handled correctly!\n");
+		// Helpers::warn("Strided display transfer is not handled correctly!\n");
 	}
 
 	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, inputHeight);
@@ -611,14 +609,13 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	if (scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) {
 		outputWidth >>= 1;
 	}
+
 	if (scaling == PICA::Scaling::XY) {
 		outputHeight >>= 1;
 	}
 
 	auto dstFramebuffer = getColourBuffer(outputAddr, outputFormat, outputWidth, outputHeight);
 	Math::Rect dstRect = dstFramebuffer.getSubRect(outputAddr, outputWidth, outputHeight);
-
-	Helpers::warn("Display transfer with outputAddr %08X\n", outputAddr);
 
 	// Blit the framebuffers
 	srcFramebuffer.fbo.bind(OpenGL::ReadFramebuffer);
