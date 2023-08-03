@@ -2,7 +2,7 @@
 #include <cstring>
 #include <optional>
 #include "PICA/gpu.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"

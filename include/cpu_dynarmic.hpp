@@ -6,7 +6,7 @@
 #include "dynarmic/interface/A32/config.h"
 #include "dynarmic/interface/exclusive_monitor.h"
 #include "dynarmic_cp15.hpp"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "kernel.hpp"
 #include "memory.hpp"
 

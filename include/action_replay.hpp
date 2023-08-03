@@ -3,7 +3,7 @@
 #include <bitset>
 #include <vector>
 
-#include "helpers.hpp"
+#include "types.hpp"
 #include "memory.hpp"
 #include "services/hid.hpp"
 

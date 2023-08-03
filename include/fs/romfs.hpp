@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "helpers.hpp"
+#include "types.hpp"
 
 namespace RomFS {
 	struct RomFSNode {

@@ -4,6 +4,7 @@
 #include <vector>
 #include "loader/lz77.hpp"
 #include "loader/ncch.hpp"
+#include "log_helpers.hpp"
 #include "memory.hpp"
 
 #include <iostream>

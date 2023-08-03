@@ -1,6 +1,8 @@
 #include "services/cfg.hpp"
 #include "services/dsp.hpp"
 #include "system_models.hpp"
+#include "bit_helpers.hpp"
+#include "log_helpers.hpp"
 #include "ipc.hpp"
 
 #include <array>

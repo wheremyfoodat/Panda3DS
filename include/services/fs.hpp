@@ -4,7 +4,7 @@
 #include "fs/archive_save_data.hpp"
 #include "fs/archive_sdmc.hpp"
 #include "fs/archive_self_ncch.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"

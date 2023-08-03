@@ -7,7 +7,7 @@
 #include "PICA/regs.hpp"
 #include "PICA/shader_unit.hpp"
 #include "config.hpp"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
 #include "renderer.hpp"

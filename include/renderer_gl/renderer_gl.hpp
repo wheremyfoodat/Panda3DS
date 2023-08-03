@@ -7,7 +7,7 @@
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
 #include "gl_state.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "logger.hpp"
 #include "renderer.hpp"
 #include "surface_cache.hpp"

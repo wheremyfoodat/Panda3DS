@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "helpers.hpp"
+#include "types.hpp"
 
 // For parsing the LZ77 format used for compressing the .code file in the ExeFS
 namespace CartLZ77 {

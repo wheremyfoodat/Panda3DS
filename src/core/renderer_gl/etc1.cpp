@@ -1,4 +1,5 @@
 #include <algorithm>
+#include "bit_helpers.hpp"
 #include "colour.hpp"
 #include "renderer_gl/renderer_gl.hpp"
 #include "renderer_gl/textures.hpp"

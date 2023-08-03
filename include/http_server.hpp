@@ -11,7 +11,7 @@
 #include <queue>
 #include <thread>
 
-#include "helpers.hpp"
+#include "types.hpp"
 
 enum class HttpActionType { None, Screenshot, Key, TogglePause, Reset, LoadRom, Step };
 

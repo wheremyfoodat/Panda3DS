@@ -1,5 +1,5 @@
 #pragma once
-#include "helpers.hpp"
+#include "types.hpp"
 
 // Helpers functions for converting colour channels between bit depths
 namespace Colour {

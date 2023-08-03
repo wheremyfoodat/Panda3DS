@@ -1,6 +1,5 @@
 #pragma once
-#include "helpers.hpp"
-#include "vertex_loader_rec.hpp"
+#include "types.hpp"
 
 // Common file for our PICA JITs (From vertex config -> CPU assembly and from PICA shader -> CPU assembly)
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "PICA/regs.hpp"
 #include "boost/icl/interval.hpp"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "opengl.hpp"
 
 template <typename T>

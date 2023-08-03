@@ -1,6 +1,6 @@
 #pragma once
 #include <array>
-#include "helpers.hpp"
+#include "types.hpp"
 #include "io_file.hpp"
 #include "loader/ncch.hpp"
 

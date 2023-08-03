@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstring>
 #include "loader/lz77.hpp"
+#include "bit_helpers.hpp"
 
 // The difference in size between the compressed and decompressed file is stored
 // As a footer in the compressed file. To get the decompressed size, we extract the diff

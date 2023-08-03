@@ -5,7 +5,7 @@
 #include <string>
 
 #include "fs/ivfc.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 
 namespace RomFS {
 	constexpr u32 metadataInvalidEntry = 0xFFFFFFFF;

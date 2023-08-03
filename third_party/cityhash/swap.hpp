@@ -23,7 +23,7 @@
 #include <cstdlib>
 #endif
 #include <cstring>
-#include "helpers.hpp"
+#include "types.hpp"
 
 // GCC
 #ifdef __GNUC__

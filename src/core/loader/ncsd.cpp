@@ -3,6 +3,7 @@
 #include <cstring>
 #include <optional>
 
+#include "log_helpers.hpp"
 #include "memory.hpp"
 
 bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {

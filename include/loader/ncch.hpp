@@ -3,7 +3,7 @@
 #include <optional>
 #include <vector>
 #include "io_file.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "crypto/aes_engine.hpp"
 
 struct NCCH {

@@ -1,7 +1,8 @@
 #pragma once
 #include <type_traits>
 
-#include "helpers.hpp"
+#include "log_helpers.hpp"
+#include "types.hpp"
 #include "opengl.hpp"
 
 // GL state manager object for use in the OpenGL GPU renderer and potentially other things in the future (such as a potential ImGui GUI)

@@ -132,7 +132,7 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
 
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
-set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
+set(HEADER_FILES include/emulator.hpp include/bit_helpers.hpp include/log_helpers.hpp include/string_helpers.hpp include/types.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/renderer.hpp include/kernel/kernel.hpp
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
                  include/kernel/config_mem.hpp include/services/service_manager.hpp include/services/apt.hpp

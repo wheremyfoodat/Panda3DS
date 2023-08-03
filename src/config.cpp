@@ -3,7 +3,7 @@
 #include <fstream>
 #include <string>
 
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "toml.hpp"
 
 // Largely based on https://github.com/nba-emu/NanoBoyAdvance/blob/master/src/platform/core/src/config.cpp

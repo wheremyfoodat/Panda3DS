@@ -5,6 +5,7 @@
 #include <ctime>
 
 #include "config_mem.hpp"
+#include "log_helpers.hpp"
 #include "resource_limits.hpp"
 
 using namespace KernelMemoryTypes;

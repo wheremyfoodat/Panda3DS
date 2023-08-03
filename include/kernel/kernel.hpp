@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"

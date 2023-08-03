@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "PICA/shader.hpp"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "logger.hpp"
 #include "x64_regs.hpp"
 #include "xbyak/xbyak.h"

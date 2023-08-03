@@ -1,10 +1,9 @@
 #pragma once
 #include <cstring>
-#include "helpers.hpp"
+#include "types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
 #include "region_codes.hpp"
-#include "result/result.hpp"
 
 class CFGService {
 	Handle handle = KernelHandles::CFG;

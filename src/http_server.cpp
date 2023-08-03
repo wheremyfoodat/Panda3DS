@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "emulator.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "httplib.h"
 
 class HttpActionScreenshot : public HttpAction {

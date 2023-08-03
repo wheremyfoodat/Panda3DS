@@ -5,7 +5,8 @@
 
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
+#include "types.hpp"
 
 enum class RendererType : s8 {
 	// Todo: Auto = -1,

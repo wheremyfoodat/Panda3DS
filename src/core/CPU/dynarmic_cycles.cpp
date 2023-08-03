@@ -7,7 +7,6 @@
 #include <bit>
 #include <functional>
 #include "cpu_dynarmic.hpp"
-#include "helpers.hpp"
 
 namespace {
     template <size_t N>

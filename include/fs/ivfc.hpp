@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "helpers.hpp"
+#include "types.hpp"
 
 namespace IVFC {
 	struct IVFCLevel {

@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <memory>
 
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 
 static std::uint8_t severityColor(vk::DebugUtilsMessageSeverityFlagBitsEXT Severity) {
 	switch (Severity) {

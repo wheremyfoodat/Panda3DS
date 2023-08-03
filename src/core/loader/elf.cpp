@@ -1,3 +1,4 @@
+#include "log_helpers.hpp"
 #include "memory.hpp"
 
 #include <cstring>

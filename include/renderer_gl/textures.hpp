@@ -3,7 +3,7 @@
 #include <string>
 #include "PICA/regs.hpp"
 #include "boost/icl/interval.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "opengl.hpp"
 
 template <typename T>

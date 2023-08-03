@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "action_replay.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "services/hid.hpp"
 
 // Forward-declare this since it's just passed and we don't want to include memory.hpp and increase compile time

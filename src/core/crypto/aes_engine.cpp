@@ -2,7 +2,8 @@
 #include <fstream>
 
 #include "crypto/aes_engine.hpp"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
+#include "string_helpers.hpp"
 
 namespace Crypto {
 	void AESEngine::loadKeys(const std::filesystem::path& path) {

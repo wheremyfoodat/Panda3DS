@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 #include "SDL_vulkan.h"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "renderer_vk/vk_debug.hpp"
 
 // Finds the first queue family that satisfies `queueMask` and excludes `queueExcludeMask` bits

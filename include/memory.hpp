@@ -6,7 +6,7 @@
 #include <optional>
 #include <vector>
 #include "crypto/aes_engine.hpp"
-#include "helpers.hpp"
+#include "types.hpp"
 #include "handles.hpp"
 #include "loader/ncsd.hpp"
 #include "services/shared_font.hpp"

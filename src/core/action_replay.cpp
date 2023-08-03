@@ -1,4 +1,5 @@
 #include "action_replay.hpp"
+#include "bit_helpers.hpp"
 
 ActionReplay::ActionReplay(Memory& mem, HIDService& hid) : mem(mem), hid(hid) { reset(); }
 

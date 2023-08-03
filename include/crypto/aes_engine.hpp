@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <optional>
 
-#include "helpers.hpp"
+#include "types.hpp"
 
 namespace Crypto {
 	constexpr std::size_t AesKeySize = 0x10;

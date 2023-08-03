@@ -1,5 +1,7 @@
 #include "renderer_gl/textures.hpp"
+#include "bit_helpers.hpp"
 #include "colour.hpp"
+#include "log_helpers.hpp"
 #include <array>
 
 using namespace Helpers;

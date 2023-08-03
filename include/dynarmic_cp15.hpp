@@ -3,7 +3,7 @@
 #include "dynarmic/interface/A32/a32.h"
 #include "dynarmic/interface/A32/config.h"
 #include "dynarmic/interface/A32/coprocessor.h"
-#include "helpers.hpp"
+#include "log_helpers.hpp"
 #include "memory.hpp"
 
 class CP15 final : public Dynarmic::A32::Coprocessor {
