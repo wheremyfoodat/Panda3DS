@@ -13,6 +13,7 @@ namespace ConfigMem {
 		Datetime0 = 0x1FF81020,
 		WifiMac = 0x1FF81060,
 		NetworkState = 0x1FF81067,
+		SliderState3D = 0x1FF81080,
 		LedState3D = 0x1FF81084,
 		BatteryState = 0x1FF81085,
 		Unknown1086 = 0x1FF81086,

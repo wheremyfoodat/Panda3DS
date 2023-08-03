@@ -12,12 +12,52 @@
 
 typedef struct { float x, y, z; } vertex;
 
-static const vertex vertex_list[] =
-{
+static const vertex vertex_list[] = {
 	{ 200.0f, 200.0f, 0.5f },
 	{ 100.0f, 40.0f, 0.5f },
 	{ 300.0f, 40.0f, 0.5f },
 };
+
+typedef enum {
+    Platform_Citra,
+    Platform_Panda,
+    Platform_Other
+} Platform;
+
+typedef enum {
+    SystemInfo_Citra = 0x20000,
+    SystemInfo_Panda = 0x20001
+} SystemInfoType;
+
+typedef enum {
+    SystemInfoSub_IsCitra = 0,
+    SystemInfoSub_IsPanda = 0,
+} SystemInfoSubType;
+
+// Detect the emulator this is running on
+Platform getPlatform() {
+    s64 out;
+
+    // First, attempt to detect Citra
+    Result res = svcGetSystemInfo(&out, SystemInfo_Citra, SystemInfoSub_IsCitra);
+    if (R_SUCCEEDED(res) && out == 1) {
+        return Platform_Citra;
+    }
+    
+    // Next, attempt to detect Panda3DS
+    res = svcGetSystemInfo(&out, SystemInfo_Panda, SystemInfoSub_IsPanda);
+    if (R_SUCCEEDED(res) && out == 1) {
+        return Platform_Panda;
+    }
+
+    // Unknown platform, maybe a console or another emulator
+    return Platform_Other;
+}
+
+// Print string in emulator terminal
+static void emuPrint(const char* str) {
+    svcOutputDebugString(str, strlen(str));
+}
 
 #define vertex_list_count (sizeof(vertex_list)/sizeof(vertex_list[0]))
 
@@ -28,8 +68,7 @@ static C3D_Mtx projection;
 
 static void* vbo_data;
 
-static void sceneInit(void)
-{
+static void sceneInit(void) {
 	// Load the vertex shader, create a shader program and bind it
 	vshader_dvlb = DVLB_ParseFile((u32*)vshader_shbin, vshader_shbin_size);
 	shaderProgramInit(&program);
@@ -45,8 +84,25 @@ static void sceneInit(void)
 	AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // v0=position
 	AttrInfo_AddFixed(attrInfo, 1); // v1=color
 
-	// Set the fixed attribute (color) to orange
-	C3D_FixedAttribSet(1, 1.0, 0.5, 0.2, 1.0);
+	// Set the fixed attribute (color) to a colour depending on the emulator
+
+    Platform platform = getPlatform();
+    switch (platform) {
+        case Platform_Citra:
+            emuPrint("Detected Citra\n");
+            C3D_FixedAttribSet(1, 1.0, 1.0, 0.0, 1.0);
+            break;
+        
+        case Platform_Panda:
+            emuPrint("Detected Panda3DS\n");
+            C3D_FixedAttribSet(1, 1.0, 0.0, 0.0, 1.0);
+            break;
+
+        default:
+            emuPrint("Unknown platform. Probably a real 3DS\n");
+            C3D_FixedAttribSet(1, 1.0, 0.5, 0.2, 1.0);
+            break;
+    }
 
 	// Compute the projection matrix
 	Mtx_OrthoTilt(&projection, 0.0, 400.0, 0.0, 240.0, 0.0, 1.0, true);
@@ -68,8 +124,7 @@ static void sceneInit(void)
 	C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 }
 
-static void sceneRender(void)
-{
+static void sceneRender(void) {
 	// Update the uniforms
 	C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projection);
 
@@ -77,8 +132,7 @@ static void sceneRender(void)
 	C3D_DrawArrays(GPU_TRIANGLES, 0, vertex_list_count);
 }
 
-static void sceneExit(void)
-{
+static void sceneExit(void) {
 	// Free the VBO
 	linearFree(vbo_data);
 
@@ -87,14 +141,7 @@ static void sceneExit(void)
 	DVLB_Free(vshader_dvlb);
 }
 
-// Print string in emulator terminal
-static void emuPrint(const char* str)
-{
-    svcOutputDebugString(str, strlen(str));
-}
-
-int main()
-{
+int main() {
     emuPrint("Entering main\n");
 	// Initialize graphics
 	gfxInitDefault();

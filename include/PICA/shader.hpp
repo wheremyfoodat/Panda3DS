@@ -23,6 +23,7 @@ namespace ShaderOpcodes {
 		LG2 = 0x06,
 		LIT = 0x07,
 		MUL = 0x08,
+		SGE = 0x09,
 		SLT = 0x0A,
 		FLR = 0x0B,
 		MAX = 0x0C,
