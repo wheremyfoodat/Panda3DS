@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
+cmake_policy(SET CMP0079 NEW)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -25,76 +26,9 @@ option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 
-include_directories(${PROJECT_SOURCE_DIR}/include/)
-include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
-include_directories (${FMT_INCLUDE_DIR})
-include_directories(third_party/boost/)
-include_directories(third_party/elfio/)
-include_directories(third_party/imgui/)
-include_directories(third_party/dynarmic/src)
-include_directories(third_party/cryptopp/)
-include_directories(third_party/cityhash/include)
-include_directories(third_party/result/include)
-include_directories(third_party/xxhash/include)
-include_directories(third_party/httplib)
-include_directories(third_party/stb)
-
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
-
-set(SDL_STATIC ON CACHE BOOL "" FORCE)
-set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-set(SDL_TEST OFF CACHE BOOL "" FORCE)
-add_subdirectory(third_party/SDL2)
-
-add_subdirectory(third_party/toml11)
-include_directories(${SDL2_INCLUDE_DIR})
-include_directories(third_party/toml11)
-include_directories(third_party/glm)
-
-add_subdirectory(third_party/cmrc)
-
-set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
-set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
-set(Boost_NO_SYSTEM_PATHS ON)
-add_compile_definitions(BOOST_NO_CXX98_FUNCTION_BASE) # Forbid Boost from using std::unary_function (Fixes MacOS build)
-
-add_library(boost INTERFACE)
-target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
-
-set(CRYPTOPP_BUILD_TESTING OFF)
-add_subdirectory(third_party/cryptopp)
-add_subdirectory(third_party/glad)
-
-# Check for x64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-    set(HOST_X64 TRUE)
-    add_subdirectory(third_party/xbyak) # Add xbyak submodule for x86 JITs
-    include_directories(third_party/xbyak)
-    add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
-    add_compile_definitions(PANDA3DS_X64_HOST)
-else()
-    set(HOST_X64 FALSE)
-endif()
-
-# Check for arm64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-    set(HOST_ARM64 TRUE)
-    add_compile_definitions(PANDA3DS_ARM64_HOST)
-else()
-    set(HOST_ARM64 FALSE)
-endif()
-
-if(HOST_X64 OR HOST_ARM64)
-    set(DYNARMIC_TESTS OFF)
-    #set(DYNARMIC_NO_BUNDLED_FMT ON)
-    set(DYNARMIC_FRONTENDS "A32" CACHE STRING "")
-    add_subdirectory(third_party/dynarmic)
-    add_compile_definitions(CPU_DYNARMIC)
-else()
-    message(FATAL_ERROR "Currently unsupported CPU architecture")
-endif()
 
 set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
@@ -198,6 +132,7 @@ if(ENABLE_OPENGL)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
     source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
+    add_subdirectory(third_party/cmrc)
 
 	cmrc_add_resource_library(
 		resources_renderer_gl
@@ -249,6 +184,11 @@ if(ENABLE_VULKAN)
 endif()
 
 add_executable(Alber ${ALL_SOURCES})
+add_subdirectory(third_party)
+
+target_include_directories(Alber PRIVATE ${PROJECT_SOURCE_DIR}/include/)
+target_include_directories(Alber PRIVATE ${PROJECT_SOURCE_DIR}/include/kernel)
+target_include_directories(Alber PRIVATE ${FMT_INCLUDE_DIR})
 
 if (MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -258,7 +198,7 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
   set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
+target_link_libraries(Alber PRIVATE dynamic SDL2-static cryptopp glad)
 
 if(ENABLE_OPENGL)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
