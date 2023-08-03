@@ -58,7 +58,7 @@ namespace IVFC {
 
 		// According to 3DBrew, this is usually the case but not guaranteed
 		if (ivfcActualSize != ivfcDescriptorSize) {
-			printf("IVFC descriptor size mismatch: %lx != %lx\n", ivfcActualSize, ivfcDescriptorSize);
+			printf("IVFC descriptor size mismatch: %llx != %llx\n", ivfcActualSize, ivfcDescriptorSize);
 		}
 
 		if (magicIdentifier == 0x10000 && ivfcActualSize != 0x5C) {

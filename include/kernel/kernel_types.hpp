@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstring>
+#include <string_view>
 #include "fs/archive_base.hpp"
 #include "handles.hpp"
 #include "log_helpers.hpp"
@@ -56,7 +57,7 @@ struct Event {
     ResetType resetType = ResetType::OneShot;
     bool fired = false;
 
-    Event(ResetType resetType) : resetType(resetType), waitlist(0) {}
+    Event(ResetType resetType) : waitlist(0), resetType(resetType) {}
 };
 
 struct Port {
@@ -65,10 +66,10 @@ struct Port {
     char name[maxNameLen + 1] = {};
     bool isPublic = false; // Setting name=NULL creates a private port not accessible from svcConnectToPort.
 
-    Port(const char* name) {
+    Port(std::string_view name) {
         // If the name is empty (ie the first char is the null terminator) then the port is private
         isPublic = name[0] != '\0';
-        std::strncpy(this->name, name, maxNameLen);
+        name.copy(this->name, maxNameLen);
     }
 };
 
@@ -152,7 +153,7 @@ struct Mutex {
     u32 lockCount; // Number of times this mutex has been locked by its daddy. 0 = not locked
     bool locked;
 
-    Mutex(bool lock, Handle handle) : locked(lock), waitlist(0), lockCount(lock ? 1 : 0), handle(handle) {}
+    Mutex(bool lock, Handle handle) : waitlist(0), handle(handle), lockCount(lock ? 1 : 0), locked(lock) {}
 };
 
 struct Semaphore {
@@ -160,7 +161,7 @@ struct Semaphore {
     s32 availableCount;
     s32 maximumCount;
 
-    Semaphore(s32 initialCount, s32 maximumCount) : availableCount(initialCount), maximumCount(maximumCount), waitlist(0) {}
+    Semaphore(s32 initialCount, s32 maximumCount) : waitlist(0), availableCount(initialCount), maximumCount(maximumCount) {}
 };
 
 struct MemoryBlock {

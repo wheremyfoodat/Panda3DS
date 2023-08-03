@@ -187,8 +187,8 @@ void GPU::drawArrays() {
 			}
 		}
 
-		int attrCount = 0;
-		int buffer = 0;  // Vertex buffer index for non-fixed attributes
+		u32 attrCount = 0;
+		u32 buffer = 0;  // Vertex buffer index for non-fixed attributes
 
 		while (attrCount < totalAttribCount) {
 			// Check if attribute is fixed or not
@@ -202,7 +202,7 @@ void GPU::drawArrays() {
 				u64 attrCfg = attr.getConfigFull();  // Get config1 | (config2 << 32)
 				u32 attrAddress = vertexBase + attr.offset + (vertexIndex * attr.size);
 
-				for (int j = 0; j < attr.componentCount; j++) {
+				for (u32 j = 0; j < attr.componentCount; j++) {
 					uint index = (attrCfg >> (j * 4)) & 0xf;  // Get index of attribute in vertexCfg
 
 					// Vertex attributes used as padding
@@ -283,7 +283,7 @@ void GPU::drawArrays() {
 		// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
 		// Based on the SH_ATTRIBUTES_PERMUTATION registers.
 		// Ie it might attribute #0 to v2, #1 to v7, etc
-		for (int j = 0; j < totalAttribCount; j++) {
+		for (u32 j = 0; j < totalAttribCount; j++) {
 			const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
 			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
 		}
@@ -297,7 +297,7 @@ void GPU::drawArrays() {
 		PICA::Vertex& out = vertices[i];
 		// Map shader outputs to fixed function properties
 		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
-		for (int i = 0; i < totalShaderOutputs; i++) {
+		for (u32 i = 0; i < totalShaderOutputs; i++) {
 			const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
 			for (int j = 0; j < 4; j++) {  // pls unroll

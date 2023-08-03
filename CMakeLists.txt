@@ -250,6 +250,10 @@ endif()
 
 add_executable(Alber ${ALL_SOURCES})
 
+if (MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
   set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()

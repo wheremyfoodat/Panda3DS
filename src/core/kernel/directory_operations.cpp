@@ -126,14 +126,14 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 
 	std::filesystem::path dirPath = session->pathOnDisk.value();
 
-	int count = 0;
+	u32 count = 0;
 	while (count < entryCount && session->currentEntry < session->entries.size()) {
 		const auto& entry = session->entries[session->currentEntry];
 		std::filesystem::path path = entry.path;
 		std::filesystem::path filename = path.filename();
 
 		std::filesystem::path relative = path.lexically_relative(dirPath);
-		bool isDirectory = std::filesystem::is_directory(relative);
+		[[maybe_unused]] bool isDirectory = std::filesystem::is_directory(relative);
 
 		std::u16string nameU16 = relative.u16string();
 		bool isHidden = nameU16[0] == u'.'; // If the first character is a dot then this is a hidden file/folder
@@ -143,7 +143,7 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 		u32 namePointer = entryPointer + 0x20C;
 		u32 extensionPointer = entryPointer + 0x216;
 		u32 attributePointer = entryPointer + 0x21C;
-		u32 sizePointer = entryPointer + 0x220;
+		[[maybe_unused]] u32 sizePointer = entryPointer + 0x220;
 
 		std::string filenameString = filename.string();
 		auto [shortFilename, shortExtension] = convertTo83(filenameString);

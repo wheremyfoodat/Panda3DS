@@ -58,7 +58,7 @@ bool Kernel::canThreadRun(const Thread& t) {
 		constexpr double nsPerTick = ticksPerSec / 1000000000.0;
 
 		// TODO: Set r0 to the correct error code on timeout for WaitSync{1/Any/All}
-		const s64 elapsedNs = s64(double(elapsedTicks) * nsPerTick);
+		const u64 elapsedNs = u64(double(elapsedTicks) * nsPerTick);
 		return elapsedNs >= t.waitingNanoseconds;
 	}
 
@@ -113,7 +113,7 @@ void Kernel::rescheduleThreads() {
 
 // Internal OS function to spawn a thread
 Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg, ThreadStatus status) {
-	int index; // Index of the created thread in the  threads array
+	int index{}; // Index of the created thread in the  threads array
 
 	if (threadCount < appResourceLimits.maxThreads) [[likely]] { // If we have not yet created over too many threads
 		index = threadCount++;
@@ -258,12 +258,12 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 
 	// Find the waiting thread with the highest priority.
 	// We do this by first picking the first thread in the waitlist, then checking each other thread and comparing priority
-	int threadIndex = std::countr_zero(waitlist);    // Index of first thread
-	int maxPriority = threads[threadIndex].priority; // Set initial max prio to the prio of the first thread
+	u32 threadIndex = std::countr_zero(waitlist);    // Index of first thread
+	u32 maxPriority = threads[threadIndex].priority; // Set initial max prio to the prio of the first thread
 	waitlist ^= (1ull << threadIndex); // Remove thread from the waitlist
 
 	while (waitlist != 0) {
-		int newThread = std::countr_zero(waitlist); // Get new thread and evaluate whether it has a higher priority
+		const u32 newThread = static_cast<u32>(std::countr_zero(waitlist)); // Get new thread and evaluate whether it has a higher priority
 		if (threads[newThread].priority < maxPriority) { // Low priority value means high priority
 			threadIndex = newThread;
 			maxPriority = threads[newThread].priority;
@@ -295,6 +295,9 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 		case ThreadStatus::WaitSyncAll:
 			Helpers::panic("WakeupOneThread: Thread on WaitSyncAll");
 			break;
+
+		default:
+			printf("WakeupOneThread: Unknown status %d\n", static_cast<u32>(t.status));
 	}
 
 	return threadIndex;
@@ -330,6 +333,9 @@ void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
 		case ThreadStatus::WaitSyncAll:
 			Helpers::panic("WakeupAllThreads: Thread on WaitSyncAll");
 			break;
+
+		default:
+			printf("WakeupOneThread: Unknown status %d\n", static_cast<u32>(t.status));
 		}
 	}
 }

@@ -333,8 +333,8 @@ void RendererGL::updateLightingLUT() {
 	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
 
 	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
-		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
-		u16_lightinglut[i] = value * 65535 / 4095;
+		const u32 value = gpu.lightingLUT[i] & ((1 << 12) - 1);
+		u16_lightinglut[i] = static_cast<u16>(value * 65535 / 4095);
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);

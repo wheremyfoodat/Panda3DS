@@ -17,15 +17,15 @@ static s32 findQueueFamily(
 ) {
 	for (usize i = 0; i < queueFamilies.size(); ++i) {
 		if (((queueFamilies[i].queueFlags & queueMask) == queueMask) && !(queueFamilies[i].queueFlags & queueExcludeMask)) {
-			return i;
+			return static_cast<s32>(i);
 		}
 	}
 	return -1;
 }
 
 vk::Result RendererVK::recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent) {
-	static constexpr u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
-	static constexpr u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
+	[[maybe_unused]] static constexpr u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
+	[[maybe_unused]] static constexpr u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
 	static constexpr vk::ImageUsageFlags swapchainUsageFlagsRequired =
 		(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst);
 
@@ -378,7 +378,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 #endif
 
 	instanceInfo.ppEnabledExtensionNames = instanceExtensions.data();
-	instanceInfo.enabledExtensionCount = instanceExtensions.size();
+	instanceInfo.enabledExtensionCount = static_cast<u32>(instanceExtensions.size());
 
 	if (auto createResult = vk::createInstanceUnique(instanceInfo); createResult.result == vk::Result::eSuccess) {
 		instance = std::move(createResult.value);
@@ -423,8 +423,8 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 		// Prefer GPUs that can access the surface
 		const auto surfaceSupport = [this](const vk::PhysicalDevice& physicalDevice) -> bool {
-			const usize queueCount = physicalDevice.getQueueFamilyProperties().size();
-			for (usize queueIndex = 0; queueIndex < queueCount; ++queueIndex) {
+			const u32 queueCount = static_cast<u32>(physicalDevice.getQueueFamilyProperties().size());
+			for (u32 queueIndex = 0; queueIndex < queueCount; ++queueIndex) {
 				if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueIndex, surface.get());
 					supportResult.result == vk::Result::eSuccess) {
 					return supportResult.value;
@@ -455,7 +455,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		const std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
 
 		// Get present queue family
-		for (usize queueFamilyIndex = 0; queueFamilyIndex < queueFamilyProperties.size(); ++queueFamilyIndex) {
+		for (u32 queueFamilyIndex = 0; queueFamilyIndex < static_cast<u32>(queueFamilyProperties.size()); ++queueFamilyIndex) {
 			if (auto supportResult = physicalDevice.getSurfaceSupportKHR(queueFamilyIndex, surface.get());
 				supportResult.result == vk::Result::eSuccess) {
 				if (supportResult.value) {
@@ -489,13 +489,13 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		// VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME
 	};
 	deviceInfo.ppEnabledExtensionNames = deviceExtensions;
-	deviceInfo.enabledExtensionCount = std::size(deviceExtensions);
+	deviceInfo.enabledExtensionCount = static_cast<u32>(std::size(deviceExtensions));
 
 	vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceTimelineSemaphoreFeatures> deviceFeatureChain = {};
 
-	auto& deviceFeatures = deviceFeatureChain.get<vk::PhysicalDeviceFeatures2>().features;
+	[[maybe_unused]] auto& deviceFeatures = deviceFeatureChain.get<vk::PhysicalDeviceFeatures2>().features;
 
-	auto& deviceTimelineFeatures = deviceFeatureChain.get<vk::PhysicalDeviceTimelineSemaphoreFeatures>();
+	[[maybe_unused]] auto& deviceTimelineFeatures = deviceFeatureChain.get<vk::PhysicalDeviceTimelineSemaphoreFeatures>();
 	// deviceTimelineFeatures.timelineSemaphore = true;
 
 	deviceInfo.pNext = &deviceFeatureChain.get();

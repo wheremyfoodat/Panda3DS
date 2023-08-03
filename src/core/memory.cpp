@@ -253,7 +253,7 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 	assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
 
 	// Amount of available user FCRAM pages and FCRAM pages to allocate respectively
-	const u32 availablePageCount = (FCRAM_APPLICATION_SIZE - usedUserMemory) / pageSize;
+	[[maybe_unused]] const u32 availablePageCount = (FCRAM_APPLICATION_SIZE - usedUserMemory) / pageSize;
 	const u32 neededPageCount = size / pageSize;
 
 	assert(availablePageCount >= neededPageCount || isMap);
@@ -310,7 +310,7 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 
 	// Back up the info for this allocation in our memoryInfo vector
 	u32 perms = (r ? PERMISSION_R : 0) | (w ? PERMISSION_W : 0) | (x ? PERMISSION_X : 0);
-	memoryInfo.push_back(std::move(MemoryInfo(vaddr, size, perms, KernelMemoryTypes::Reserved)));
+	memoryInfo.push_back(MemoryInfo(vaddr, size, perms, KernelMemoryTypes::Reserved));
 
 	return vaddr;
 }
