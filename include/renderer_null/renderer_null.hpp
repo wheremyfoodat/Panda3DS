@@ -4,7 +4,7 @@ class GPU;
 
 class RendererNull final : public Renderer {
   public:
-	RendererNull(GPU& gpu, const std::array<u32, regNum>& internalRegs);
+	RendererNull(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	~RendererNull() override;
 
 	void reset() override;

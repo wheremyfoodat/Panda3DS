@@ -21,8 +21,11 @@ struct SDL_Window;
 class Renderer {
   protected:
 	GPU& gpu;
-	static constexpr u32 regNum = 0x300;  // Number of internal PICA registers
+	static constexpr u32 regNum = 0x300;      // Number of internal PICA registers
+	static constexpr u32 extRegNum = 0x1000;  // Number of external PICA registers
+
 	const std::array<u32, regNum>& regs;
+	const std::array<u32, extRegNum>& externalRegs;
 
 	std::array<u32, 2> fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'
 
@@ -34,7 +37,7 @@ class Renderer {
 	PICA::DepthFmt depthBufferFormat;
 
   public:
-	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs);
+	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	virtual ~Renderer();
 
 	static constexpr u32 vertexBufferSize = 0x10000;

@@ -14,8 +14,11 @@
 
 class GPU {
 	static constexpr u32 regNum = 0x300;
+	static constexpr u32 extRegNum = 0x1000;
+
 	using vec4f = std::array<Floats::f24, 4>;
-	using Registers = std::array<u32, regNum>;
+	using Registers = std::array<u32, regNum>;  // Internal registers (named registers in short since they're the main ones)
+	using ExternalRegisters = std::array<u32, extRegNum>;
 
 	Memory& mem;
 	EmulatorConfig& config;
@@ -29,7 +32,6 @@ class GPU {
 	static constexpr u32 vramSize = u32(6_MB);
 	Registers regs;                           // GPU internal registers
 	std::array<vec4f, 16> currentAttributes;  // Vertex attributes before being passed to the shader
-	std::array<u32, 0x1000> external_regs; // GPU external registers
 
 	std::array<vec4f, 16> immediateModeAttributes;  // Vertex attributes uploaded via immediate mode submission
 	std::array<PICA::Vertex, 3> immediateModeVertices;
@@ -144,4 +146,10 @@ class GPU {
 			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
 		}
 	}
+
+  private:
+	// GPU external registers
+	// We have them in the end of the struct for cache locality reasons. Tl;dr we want the more commonly used things to be packed in the start
+	// Of the struct, instead of externalRegs being in the middle
+	ExternalRegisters externalRegs;
 };

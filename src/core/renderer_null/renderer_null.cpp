@@ -1,6 +1,7 @@
 #include "renderer_null/renderer_null.hpp"
 
-RendererNull::RendererNull(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
+RendererNull::RendererNull(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+	: Renderer(gpu, internalRegs, externalRegs) {}
 RendererNull::~RendererNull() {}
 
 void RendererNull::reset() {}

@@ -35,7 +35,7 @@ u32 GPU::readExternalReg(u32 index) {
 		return -1;
 	}
 
-	return external_regs[index];
+	return externalRegs[index];
 }
 
 void GPU::writeExternalReg(u32 index, u32 value) {
@@ -46,7 +46,7 @@ void GPU::writeExternalReg(u32 index, u32 value) {
 		return;
 	}
 
-	external_regs[index] = value;
+	externalRegs[index] = value;
 }
 
 u32 GPU::readInternalReg(u32 index) {

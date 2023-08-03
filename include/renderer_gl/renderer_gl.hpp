@@ -68,7 +68,8 @@ class RendererGL final : public Renderer {
 	void updateLightingLUT();
 
   public:
-	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
+	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+		: Renderer(gpu, internalRegs, externalRegs) {}
 	~RendererGL() override;
 
 	void reset() override;

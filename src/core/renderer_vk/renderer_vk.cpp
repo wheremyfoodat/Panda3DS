@@ -200,7 +200,8 @@ vk::Result RendererVK::recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D sw
 	return vk::Result::eSuccess;
 }
 
-RendererVK::RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
+RendererVK::RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+	: Renderer(gpu, internalRegs, externalRegs) {}
 
 RendererVK::~RendererVK() {}
 

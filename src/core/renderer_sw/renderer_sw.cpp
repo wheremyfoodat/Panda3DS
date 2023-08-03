@@ -1,6 +1,7 @@
 #include "renderer_sw/renderer_sw.hpp"
 
-RendererSw::RendererSw(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
+RendererSw::RendererSw(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+	: Renderer(gpu, internalRegs, externalRegs) {}
 RendererSw::~RendererSw() {}
 
 void RendererSw::reset() { printf("RendererSW: Unimplemented reset call\n"); }

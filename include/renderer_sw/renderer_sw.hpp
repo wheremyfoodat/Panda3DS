@@ -4,7 +4,7 @@ class GPU;
 
 class RendererSw final : public Renderer {
   public:
-	RendererSw(GPU& gpu, const std::array<u32, regNum>& internalRegs);
+	RendererSw(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	~RendererSw() override;
 
 	void reset() override;

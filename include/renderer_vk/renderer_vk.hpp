@@ -44,7 +44,7 @@ class RendererVK final : public Renderer {
 
 	u64 currentFrame = 0;
   public:
-	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs);
+	RendererVK(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	~RendererVK() override;
 
 	void reset() override;

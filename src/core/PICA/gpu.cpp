@@ -16,11 +16,11 @@
 #include "renderer_vk/renderer_vk.hpp"
 #endif
 
-constexpr u32 top_screen_width = 240;
-constexpr u32 top_screen_height = 400;
+constexpr u32 topScreenWidth = 240;
+constexpr u32 topScreenHeight = 400;
 
-constexpr u32 bottom_screen_width = 240;
-constexpr u32 bottom_screen_height = 300;
+constexpr u32 bottomScreenWidth = 240;
+constexpr u32 bottomScreenHeight = 300;
 
 using namespace Floats;
 
@@ -32,24 +32,24 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 
 	switch (config.rendererType) {
 		case RendererType::Null: {
-			renderer.reset(new RendererNull(*this, regs));
+			renderer.reset(new RendererNull(*this, regs, externalRegs));
 			break;
 		}
 
 		case RendererType::Software: {
-			renderer.reset(new RendererSw(*this, regs));
+			renderer.reset(new RendererSw(*this, regs, externalRegs));
 			break;
 		}
 
 #ifdef PANDA3DS_ENABLE_OPENGL
 		case RendererType::OpenGL: {
-			renderer.reset(new RendererGL(*this, regs));
+			renderer.reset(new RendererGL(*this, regs, externalRegs));
 			break;
 		}
 #endif
 #ifdef PANDA3DS_ENABLE_VULKAN
 		case RendererType::Vulkan: {
-			renderer.reset(new RendererVK(*this, regs));
+			renderer.reset(new RendererVK(*this, regs, externalRegs));
 			break;
 		}
 #endif
@@ -88,22 +88,22 @@ void GPU::reset() {
 
 	using namespace PICA::ExternalRegs;
 	// Top screen addresses and dimentions.
-	external_regs[Framebuffer0AFirstAddr] = 0x181E6000;
-	external_regs[Framebuffer0ASecondAddr] = 0x1822C800;
-	external_regs[Framebuffer0BFirstAddr] = 0x18273000;
-	external_regs[Framebuffer0BSecondAddr] = 0x182B9800;
-	external_regs[Framebuffer0Size] = (top_screen_height << 16) | top_screen_width;
-	external_regs[Framebuffer0Stride] = 720;
-	external_regs[Framebuffer0Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
-	external_regs[Framebuffer0Select] = 0;
+	externalRegs[Framebuffer0AFirstAddr] = 0x181E6000;
+	externalRegs[Framebuffer0ASecondAddr] = 0x1822C800;
+	externalRegs[Framebuffer0BFirstAddr] = 0x18273000;
+	externalRegs[Framebuffer0BSecondAddr] = 0x182B9800;
+	externalRegs[Framebuffer0Size] = (topScreenHeight << 16) | topScreenWidth;
+	externalRegs[Framebuffer0Stride] = 720;
+	externalRegs[Framebuffer0Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	externalRegs[Framebuffer0Select] = 0;
 
 	// Bottom screen addresses and dimentions.
-	external_regs[Framebuffer1AFirstAddr] = 0x1848F000;
-	external_regs[Framebuffer1ASecondAddr] = 0x184C7800;
-	external_regs[Framebuffer1Size] = (bottom_screen_height << 16) | bottom_screen_width;
-	external_regs[Framebuffer1Stride] = 720;
-	external_regs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
-	external_regs[Framebuffer1Select] = 0;
+	externalRegs[Framebuffer1AFirstAddr] = 0x1848F000;
+	externalRegs[Framebuffer1ASecondAddr] = 0x184C7800;
+	externalRegs[Framebuffer1Size] = (bottomScreenHeight << 16) | bottomScreenWidth;
+	externalRegs[Framebuffer1Stride] = 720;
+	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	externalRegs[Framebuffer1Select] = 0;
 
 	renderer->reset();
 }
