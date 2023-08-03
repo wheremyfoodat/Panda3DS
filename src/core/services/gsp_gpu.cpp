@@ -21,14 +21,16 @@ namespace ServiceCommands {
 }
 
 // Commands written to shared memory and processed by TriggerCmdReqQueue
-enum class GXCommands : u32 {
-	TriggerDMARequest = 0,
-	ProcessCommandList = 1,
-	MemoryFill = 2,
-	TriggerDisplayTransfer = 3,
-	TriggerTextureCopy = 4,
-	FlushCacheRegions = 5
-};
+namespace GXCommands {
+	enum : u32 {
+		TriggerDMARequest = 0,
+		ProcessCommandList = 1,
+		MemoryFill = 2,
+		TriggerDisplayTransfer = 3,
+		TriggerTextureCopy = 4,
+		FlushCacheRegions = 5
+	};
+}
 
 void GPUService::reset() {
 	privilegedProcess = 0xFFFFFFFF; // Set the privileged process to an invalid handle
@@ -293,7 +295,7 @@ void GPUService::processCommandBuffer() {
 		log("Processing %d GPU commands\n", commandsLeft);
 
 		while (commandsLeft != 0) {
-			const GXCommands cmdID = static_cast<GXCommands>(cmd[0] & 0xff);
+			const u32 cmdID = cmd[0] & 0xff;
 			switch (cmdID) {
 				case GXCommands::ProcessCommandList: processCommandList(cmd); break;
 				case GXCommands::MemoryFill: memoryFill(cmd); break;
