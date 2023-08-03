@@ -128,6 +128,7 @@ private:
 	void getResourceLimit();
 	void getResourceLimitLimitValues();
 	void getResourceLimitCurrentValues();
+	void getSystemInfo();
 	void getSystemTick();
 	void getThreadID();
 	void getThreadPriority();
