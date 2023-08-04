@@ -6,6 +6,8 @@
 #include "memory.hpp"
 #include "result/result.hpp"
 
+#include "applets/mii_selector.hpp"
+
 // Yay, more circular dependencies
 class Kernel;
 
@@ -23,6 +25,9 @@ class APTService {
 	std::optional<Handle> resumeEvent = std::nullopt;
 
 	ConsoleModel model = ConsoleModel::Old3DS;
+
+	// Applets here
+	Applets::MiiSelectorApplet miiSelector;
 
 	MAKE_LOG_FUNCTION(log, aptLogger)
 
@@ -67,7 +72,7 @@ class APTService {
 	u32 screencapPostPermission;
 
 public:
-	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
+	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel), miiSelector(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

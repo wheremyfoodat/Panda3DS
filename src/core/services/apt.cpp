@@ -58,6 +58,8 @@ void APTService::reset() {
 	lockHandle = std::nullopt;
 	notificationEvent = std::nullopt;
 	resumeEvent = std::nullopt;
+
+	miiSelector.reset();
 }
 
 void APTService::handleSyncRequest(u32 messagePointer) {

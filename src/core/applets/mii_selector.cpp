@@ -1,5 +1,6 @@
 #include "applets/mii_selector.hpp"
 
-void MiiSelectorApplet::reset() {}
+using namespace Applets;
 
+void MiiSelectorApplet::reset() {}
 Result::HorizonResult MiiSelectorApplet::start() { return Result::Success; }
