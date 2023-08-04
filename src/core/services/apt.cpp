@@ -242,7 +242,7 @@ void APTService::getApplicationCpuTimeLimit(u32 messagePointer) {
 
 void APTService::setScreencapPostPermission(u32 messagePointer) {
 	u32 perm = mem.read32(messagePointer + 4);
-	log("APT::SetScreencapPostPermission (perm = %d)\n");
+	log("APT::SetScreencapPostPermission (perm = %d)\n", perm);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x55, 1, 0));
 	// Apparently only 1-3 are valid values, but I see 0 used in some games like Pokemon Rumble
