@@ -43,7 +43,9 @@ class GPUService {
 	// Service commands
 	void acquireRight(u32 messagePointer);
 	void flushDataCache(u32 messagePointer);
+	void importDisplayCaptureInfo(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
+	void saveVramSysArea(u32 messagePointer);
 	void setAxiConfigQoSMode(u32 messagePointer);
 	void setInternalPriorities(u32 messagePointer);
 	void setLCDForceBlack(u32 messagePointer);
