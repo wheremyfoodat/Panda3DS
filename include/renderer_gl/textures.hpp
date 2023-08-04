@@ -14,7 +14,7 @@ struct Texture {
     u32 location;
     u32 config; // Magnification/minification filter, wrapping configs, etc
     PICA::TextureFmt format;
-    Math::uvec2 size;
+    OpenGL::uvec2 size;
     bool valid;
 
     // Range of VRAM taken up by buffer

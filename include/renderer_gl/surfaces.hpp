@@ -11,7 +11,7 @@ using Interval = boost::icl::right_open_interval<T>;
 struct ColourBuffer {
     u32 location;
     PICA::ColorFmt format;
-    Math::uvec2 size;
+    OpenGL::uvec2 size;
     bool valid;
 
     // Range of VRAM taken up by buffer
@@ -91,7 +91,7 @@ struct ColourBuffer {
 		}
 	}
 
-	Math::Rect getSubRect(u32 inputAddress, u32 width, u32 height) {
+	Math::Rect<u32> getSubRect(u32 inputAddress, u32 width, u32 height) {
 		// PICA textures have top-left origin while OpenGL has bottom-left origin.
 		// Flip the rectangle on the x axis to account for this.
 		const u32 startOffset = (inputAddress - location) / sizePerPixel(format);
@@ -113,7 +113,7 @@ struct ColourBuffer {
 struct DepthBuffer {
     u32 location;
     PICA::DepthFmt format;
-    Math::uvec2 size; // Implicitly set to the size of the framebuffer
+    OpenGL::uvec2 size; // Implicitly set to the size of the framebuffer
     bool valid;
 
     // Range of VRAM taken up by buffer

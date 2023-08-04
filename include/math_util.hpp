@@ -1,80 +1,73 @@
+// Copyright 2013 Dolphin Emulator Project / 2014 Citra Emulator Project / 2023 Panda3DS Emulator Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included.
+
 #pragma once
-#include <array>
+
+#include <cstdlib>
+#include <type_traits>
 
 namespace Math {
-	// Abstraction for GLSL vectors
-	template <typename T, int size>
-	class Vector {
-		// A GLSL vector can only have 2, 3 or 4 elements
-		static_assert(size == 2 || size == 3 || size == 4);
-		T m_storage[size];
 
-	  public:
-		T& r() { return m_storage[0]; }
-		T& g() { return m_storage[1]; }
-		T& b() {
-			static_assert(size >= 3, "Out of bounds OpenGL::Vector access");
-			return m_storage[2];
-		}
-		T& a() {
-			static_assert(size >= 4, "Out of bounds OpenGL::Vector access");
-			return m_storage[3];
-		}
+template <class T>
+struct Rectangle {
+    T left{};
+    T top{};
+    T right{};
+    T bottom{};
 
-		T& x() { return r(); }
-		T& y() { return g(); }
-		T& z() { return b(); }
-		T& w() { return a(); }
-		T& operator[](size_t index) { return m_storage[index]; }
-		const T& operator[](size_t index) const { return m_storage[index]; }
+    constexpr Rectangle() = default;
 
-		T& u() { return r(); }
-		T& v() { return g(); }
+    constexpr Rectangle(T left, T top, T right, T bottom)
+        : left(left), top(top), right(right), bottom(bottom) {}
 
-		T& s() { return r(); }
-		T& t() { return g(); }
-		T& p() { return b(); }
-		T& q() { return a(); }
+    [[nodiscard]] constexpr bool operator==(const Rectangle<T>& rhs) const {
+        return (left == rhs.left) && (top == rhs.top) && (right == rhs.right) &&
+               (bottom == rhs.bottom);
+    }
 
-		Vector(std::array<T, size> list) { std::copy(list.begin(), list.end(), &m_storage[0]); }
+    [[nodiscard]] constexpr bool operator!=(const Rectangle<T>& rhs) const {
+        return !operator==(rhs);
+    }
 
-		Vector() {}
-	};
+    [[nodiscard]] constexpr Rectangle<T> operator*(const T value) const {
+        return Rectangle{left * value, top * value, right * value, bottom * value};
+    }
+    
+    [[nodiscard]] constexpr Rectangle<T> operator/(const T value) const {
+        return Rectangle{left / value, top / value, right / value, bottom / value};
+    }
 
-	using vec2 = Vector<float, 2>;
-	using vec3 = Vector<float, 3>;
-	using vec4 = Vector<float, 4>;
+    [[nodiscard]] T getWidth() const {
+        return std::abs(static_cast<std::make_signed_t<T>>(right - left));
+    }
+    
+    [[nodiscard]] T getHeight() const {
+        return std::abs(static_cast<std::make_signed_t<T>>(bottom - top));
+    }
 
-	using dvec2 = Vector<double, 2>;
-	using dvec3 = Vector<double, 3>;
-	using dvec4 = Vector<double, 4>;
+    [[nodiscard]] T getArea() const {
+        return getWidth() * getHeight();
+    }
+    
+    [[nodiscard]] Rectangle<T> translateX(const T x) const {
+        return Rectangle{left + x, top, right + x, bottom};
+    }
+    
+    [[nodiscard]] Rectangle<T> translateY(const T y) const {
+        return Rectangle{left, top + y, right, bottom + y};
+    }
 
-	using ivec2 = Vector<int, 2>;
-	using ivec3 = Vector<int, 3>;
-	using ivec4 = Vector<int, 4>;
+    [[nodiscard]] Rectangle<T> scale(const float s) const {
+        return Rectangle{left, top, static_cast<T>(left + getWidth() * s),
+                         static_cast<T>(top + getHeight() * s)};
+    }
+};
 
-	using uvec2 = Vector<unsigned int, 2>;
-	using uvec3 = Vector<unsigned int, 3>;
-	using uvec4 = Vector<unsigned int, 4>;
+template <typename T>
+Rectangle(T, T, T, T) -> Rectangle<T>;
 
-	// A 2D rectangle, meant to be used for stuff like scissor rects or viewport rects
-	// We're never supporting 3D rectangles, because rectangles were never meant to be 3D in the first place
-	template <typename T>
-	struct Rectangle {
-		Vector<T, 2> start;
-		Vector<T, 2> end;
+template <typename T>
+using Rect = Rectangle<T>;
 
-		Rectangle() : start({0}), end({0}) {}
-		Rectangle(T x0, T y0, T x1, T y1) : start({x0, y0}), end({x1, y1}) {}
-
-		T getWidth() const {
-			return std::abs(end.x() - start.x());
-		}
-
-		T getHeight() const {
-			return std::abs(end.y() - start.y());
-		}
-	};
-
-	using Rect = Rectangle<unsigned int>;
-}
+} // end namespace Math

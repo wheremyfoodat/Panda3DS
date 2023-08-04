@@ -7,6 +7,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
+#include "math_util.hpp"
 
 CMRC_DECLARE(RendererGL);
 
@@ -603,7 +604,7 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	}
 
 	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, inputHeight);
-	Math::Rect srcRect = srcFramebuffer.getSubRect(inputAddr, outputWidth, outputHeight);
+	Math::Rect<u32> srcRect = srcFramebuffer.getSubRect(inputAddr, outputWidth, outputHeight);
 
 	// Apply scaling for the destination rectangle.
 	if (scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) {
@@ -614,15 +615,16 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 		outputHeight >>= 1;
 	}
 
-	auto dstFramebuffer = getColourBuffer(outputAddr, outputFormat, outputWidth, outputHeight);
-	Math::Rect dstRect = dstFramebuffer.getSubRect(outputAddr, outputWidth, outputHeight);
+	auto destFramebuffer = getColourBuffer(outputAddr, outputFormat, outputWidth, outputHeight);
+	Math::Rect<u32> destRect = destFramebuffer.getSubRect(outputAddr, outputWidth, outputHeight);
 
 	// Blit the framebuffers
 	srcFramebuffer.fbo.bind(OpenGL::ReadFramebuffer);
-	dstFramebuffer.fbo.bind(OpenGL::DrawFramebuffer);
-	glBlitFramebuffer(srcRect.start.x(), srcRect.start.y(), srcRect.end.x(), srcRect.end.y(),
-					  dstRect.start.x(), dstRect.start.y(), dstRect.end.x(), dstRect.end.y(),
-					  GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	destFramebuffer.fbo.bind(OpenGL::DrawFramebuffer);
+	glBlitFramebuffer(
+		srcRect.left, srcRect.top, srcRect.right, srcRect.bottom, destRect.left, destRect.top, destRect.right, destRect.bottom, GL_COLOR_BUFFER_BIT,
+		GL_LINEAR
+	);
 }
 
 ColourBuffer RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height) {
