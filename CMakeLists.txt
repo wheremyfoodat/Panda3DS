@@ -38,6 +38,7 @@ include_directories(third_party/result/include)
 include_directories(third_party/xxhash/include)
 include_directories(third_party/httplib)
 include_directories(third_party/stb)
+include_directories(third_party/opengl)
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
@@ -183,7 +184,8 @@ set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with
 set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
 
 if(ENABLE_OPENGL)
-	set(RENDERER_GL_INCLUDE_FILES include/renderer_gl/opengl.hpp
+    # This may look weird but opengl.hpp is our header even if it's in the third_party folder
+	set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
 		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
 		include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
 		include/renderer_gl/gl_state.hpp

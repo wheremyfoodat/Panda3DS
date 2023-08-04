@@ -615,4 +615,82 @@ namespace OpenGL {
         glBlendFuncSeparate(fac1, fac2, fac3, fac4);
     }
 
+    // Abstraction for GLSL vectors
+    template <typename T, int size>
+    class Vector {
+        // A GLSL vector can only have 2, 3 or 4 elements
+        static_assert(size == 2 || size == 3 || size == 4);
+        T m_storage[size];
+
+    public:
+        T& r() { return m_storage[0]; }
+        T& g() { return m_storage[1]; }
+        T& b() {
+            static_assert(size >= 3, "Out of bounds OpenGL::Vector access");
+            return m_storage[2];
+        }
+        T& a() {
+            static_assert(size >= 4, "Out of bounds OpenGL::Vector access");
+            return m_storage[3];
+        }
+
+        T& x() { return r(); }
+        T& y() { return g(); }
+        T& z() { return b(); }
+        T& w() { return a(); }
+        T& operator[](size_t index) { return m_storage[index]; }
+        const T& operator[](size_t index) const { return m_storage[index]; }
+
+        T& u() { return r(); }
+        T& v() { return g(); }
+
+        T& s() { return r(); }
+        T& t() { return g(); }
+        T& p() { return b(); }
+        T& q() { return a(); }
+
+        Vector(std::array<T, size> list) { std::copy(list.begin(), list.end(), &m_storage[0]); }
+
+        Vector() {}
+    };
+
+    using vec2 = Vector<GLfloat, 2>;
+    using vec3 = Vector<GLfloat, 3>;
+    using vec4 = Vector<GLfloat, 4>;
+
+    using dvec2 = Vector<GLdouble, 2>;
+    using dvec3 = Vector<GLdouble, 3>;
+    using dvec4 = Vector<GLdouble, 4>;
+
+    using ivec2 = Vector<GLint, 2>;
+    using ivec3 = Vector<GLint, 3>;
+    using ivec4 = Vector<GLint, 4>;
+
+    using uvec2 = Vector<GLuint, 2>;
+    using uvec3 = Vector<GLuint, 3>;
+    using uvec4 = Vector<GLuint, 4>;
+
+    // A 2D rectangle, meant to be used for stuff like scissor rects or viewport rects
+    // We're never supporting 3D rectangles, because rectangles were never meant to be 3D in the first place
+    // x, y: Coords of the top left vertex
+    // width, height: Dimensions of the rectangle. Initialized to 0 if not specified.
+	template <typename T>
+	struct Rectangle {
+		T x, y, width, height;
+
+		std::pair<T, T> topLeft() const { return std::make_pair(x, y); }
+		std::pair<T, T> topRight() const { return std::make_pair(x + width, y); }
+		std::pair<T, T> bottomLeft() const { return std::make_pair(x, y + height); }
+		std::pair<T, T> bottomRight() const { return std::make_pair(x + width, y + height); }
+
+		Rectangle() : x(0), y(0), width(0), height(0) {}
+		Rectangle(T x, T y, T width, T height) : x(x), y(y), width(width), height(height) {}
+
+		bool isEmpty() const { return width == 0 && height == 0; }
+
+		void setEmpty() { x = y = width = height = 0; }
+	};
+
+    using Rect = Rectangle<GLuint>;
+
 }  // end namespace OpenGL
