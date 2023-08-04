@@ -97,7 +97,7 @@ struct ColourBuffer {
 		const u32 startOffset = (inputAddress - location) / sizePerPixel(format);
 		const u32 x0 = (startOffset % (size.x() * 8)) / 8;
 		const u32 y0 = (startOffset / (size.x() * 8)) * 8;
-		return Math::Rect{x0, size.y() - y0, x0 + width, size.y() - height - y0};
+		return Math::Rect<u32>{x0, size.y() - y0, x0 + width, size.y() - height - y0};
 	}
 
     bool matches(ColourBuffer& other) {

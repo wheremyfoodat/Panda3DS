@@ -18,24 +18,6 @@ enum class GPUInterrupt : u8 {
 	DMA = 6
 };
 
-struct FramebufferInfo {
-	u32 activeFb;
-	u32 leftFramebufferVaddr;
-	u32 rightFramebufferVaddr;
-	u32 stride;
-	u32 format;
-	u32 displayFb;
-	u32 attribute;
-};
-
-struct FrameBufferUpdate {
-	u8 index;
-	u8 dirtyFlag;
-	u16 pad0;
-	std::array<FramebufferInfo, 2> framebufferInfo;
-	u32 pad1;
-};
-
 // More circular dependencies
 class Kernel;
 
@@ -57,6 +39,26 @@ class GPUService {
 
 	MAKE_LOG_FUNCTION(log, gspGPULogger)
 	void processCommandBuffer();
+
+	struct FramebufferInfo {
+		u32 activeFb;
+		u32 leftFramebufferVaddr;
+		u32 rightFramebufferVaddr;
+		u32 stride;
+		u32 format;
+		u32 displayFb;
+		u32 attribute;
+	};
+	static_assert(sizeof(FramebufferInfo) == 28, "GSP::GPU::FramebufferInfo has the wrong size");
+
+	struct FramebufferUpdate {
+		u8 index;
+		u8 dirtyFlag;
+		u16 pad0;
+		std::array<FramebufferInfo, 2> framebufferInfo;
+		u32 pad1;
+	};
+	static_assert(sizeof(FramebufferUpdate) == 64, "GSP::GPU::FramebufferUpdate has the wrong size");
 
 	// Service commands
 	void acquireRight(u32 messagePointer);

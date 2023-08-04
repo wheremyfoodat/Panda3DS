@@ -128,7 +128,7 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	if (type == GPUInterrupt::VBlank0 || type == GPUInterrupt::VBlank1) {
 		int screen = static_cast<u32>(type) - static_cast<u32>(GPUInterrupt::VBlank0); // 0 for top screen, 1 for bottom
 		// TODO: Offset depends on GSP thread being triggered
-		FrameBufferUpdate* update = reinterpret_cast<FrameBufferUpdate*>(&sharedMem[0x200 + screen * sizeof(FrameBufferUpdate)]);
+		FramebufferUpdate* update = reinterpret_cast<FramebufferUpdate*>(&sharedMem[0x200 + screen * sizeof(FramebufferUpdate)]);
 
 		if (update->dirtyFlag & 1) {
 			setBufferSwapImpl(screen, update->framebufferInfo[update->index]);
