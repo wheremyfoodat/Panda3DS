@@ -10,6 +10,7 @@ namespace APTCommands {
 		GetAppletInfo = 0x00060040,
 		IsRegistered = 0x00090040,
 		InquireNotification = 0x000B0040,
+		SendParameter = 0x000C0104,
 		ReceiveParameter = 0x000D0080,
 		GlanceParameter = 0x000E0080,
 		PreloadLibraryApplet = 0x00160040,
@@ -97,6 +98,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
+		case APTCommands::SendParameter: sendParameter(messagePointer); break;
 		case APTCommands::SetScreencapPostPermission: setScreencapPostPermission(messagePointer); break;
 		case APTCommands::TheSmashBrosFunction: theSmashBrosFunction(messagePointer); break;
 		default:
@@ -214,6 +216,22 @@ void APTService::notifyToWait(u32 messagePointer) {
 	log("APT::NotifyToWait\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x43, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::sendParameter(u32 messagePointer) {
+	const u32 sourceAppID = mem.read32(messagePointer + 4);
+	const u32 destAppID = mem.read32(messagePointer + 8);
+	const u32 cmd = mem.read32(messagePointer + 12);
+	const u32 paramSize = mem.read32(messagePointer + 16);
+
+	const u32 parameterHandle = mem.read32(messagePointer + 24); // What dis?
+	const u32 parameterPointer = mem.read32(messagePointer + 32);
+	log("APT::SendParameter (source app = %X, dest app = %X, cmd = %X, size = %X) (Stubbed)", sourceAppID, destAppID, cmd, paramSize);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	kernel.signalEvent(notificationEvent.value());
 }
 
 void APTService::receiveParameter(u32 messagePointer) {
