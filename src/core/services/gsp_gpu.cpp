@@ -220,7 +220,7 @@ void GPUService::flushDataCache(u32 messagePointer) {
 	u32 address = mem.read32(messagePointer + 4);
 	u32 size = mem.read32(messagePointer + 8);
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
-	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
+	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -230,7 +230,7 @@ void GPUService::storeDataCache(u32 messagePointer) {
 	u32 address = mem.read32(messagePointer + 4);
 	u32 size = mem.read32(messagePointer + 8);
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
-	log("GSP::GPU::StoreDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
+	log("GSP::GPU::StoreDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
