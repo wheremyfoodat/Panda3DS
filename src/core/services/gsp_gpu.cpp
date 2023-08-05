@@ -263,14 +263,20 @@ void GPUService::setAxiConfigQoSMode(u32 messagePointer) {
 
 void GPUService::setBufferSwap(u32 messagePointer) {
 	FramebufferInfo info{};
-	const u32 screenId = mem.read32(messagePointer + 4); // Selects either PDC0 or PDC1
+	const u32 screenId = mem.read32(messagePointer + 4);  // Selects either PDC0 or PDC1
 	info.activeFb = mem.read32(messagePointer + 8);
 	info.leftFramebufferVaddr = mem.read32(messagePointer + 12);
 	info.rightFramebufferVaddr = mem.read32(messagePointer + 16);
 	info.stride = mem.read32(messagePointer + 20);
 	info.format = mem.read32(messagePointer + 24);
-	info.displayFb = mem.read32(messagePointer + 28); // Selects either framebuffer A or B
+	info.displayFb = mem.read32(messagePointer + 28);  // Selects either framebuffer A or B
+
+	log("GSP::GPU::SetBufferSwap\n");
+	Helpers::panic("Untested GSP::GPU::SetBufferSwap call");
+
 	setBufferSwapImpl(screenId, info);
+	mem.write32(messagePointer, IPC::responseHeader(0x05, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 // Seems to also be completely undocumented
