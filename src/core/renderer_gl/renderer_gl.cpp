@@ -458,8 +458,8 @@ void RendererGL::display() {
 	gl.useProgram(displayProgram);
 	gl.bindVAO(dummyVAO);
 
-	OpenGL::disableClipPlane(0);
-	OpenGL::disableClipPlane(1);
+	gl.disableClipPlane(0);
+	gl.disableClipPlane(1);
 
 	using namespace PICA::ExternalRegs;
 	const u32 topScreenAddr = externalRegs[Framebuffer0AFirstAddr];
