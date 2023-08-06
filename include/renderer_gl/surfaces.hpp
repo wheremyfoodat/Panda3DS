@@ -65,8 +65,10 @@ struct ColourBuffer {
         texture.setMagFilter(OpenGL::Linear);
         glBindTexture(GL_TEXTURE_2D, prevTexture);
 
+#ifdef GPU_DEBUG_INFO
 		const auto name = Helpers::format("Surface %dx%d %s from 0x%08X", size.x(), size.y(), PICA::textureFormatToString(format), location);
 		OpenGL::setObjectLabel(GL_TEXTURE, texture.handle(), name.c_str());
+#endif
 
         fbo.createWithDrawTexture(texture);
         fbo.bind(OpenGL::DrawAndReadFramebuffer);
