@@ -394,7 +394,8 @@ MemoryInfo Memory::queryMemory(u32 vaddr) {
 u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms) {
 	for (auto& e : sharedMemBlocks) {
 		if (e.handle == handle) {
-			if (e.mapped) Helpers::panic("Allocated shared memory block twice. Is this allowed?");
+			// Virtual Console titles trigger this. TODO: Investigate how it should work
+			if (e.mapped) Helpers::warn("Allocated shared memory block twice. Is this allowed?");
 
 			const u32 paddr = e.paddr;
 			const u32 size = e.size;
