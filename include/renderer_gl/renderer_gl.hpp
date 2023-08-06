@@ -44,8 +44,8 @@ class RendererGL final : public Renderer {
 	float oldDepthOffset = 0.0;
 	bool oldDepthmapEnable = false;
 
-	SurfaceCache<DepthBuffer, 64, true> depthBufferCache;
-	SurfaceCache<ColourBuffer, 64, true> colourBufferCache;
+	SurfaceCache<DepthBuffer, 16, true> depthBufferCache;
+	SurfaceCache<ColourBuffer, 16, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
 
 	// Dummy VAO/VBO for blitting the final output
