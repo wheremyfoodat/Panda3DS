@@ -542,6 +542,8 @@ void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 
 void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {}
 
+void RendererVK::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {}
+
 void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {}
 
 void RendererVK::screenshot(const std::string& name) {}

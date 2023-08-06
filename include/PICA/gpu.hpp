@@ -117,6 +117,10 @@ class GPU {
 		renderer->displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
 	}
 
+	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
+		renderer->textureCopy(inputAddr, outputAddr, totalBytes, inputSize, outputSize, flags);
+	}
+
 	// Read a value of type T from physical address paddr
 	// This is necessary because vertex attribute fetching uses physical addresses
 	template <typename T>

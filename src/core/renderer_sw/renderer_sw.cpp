@@ -14,6 +14,10 @@ void RendererSw::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	printf("RendererSW: Unimplemented displayTransfer call\n");
 }
 
+void RendererSw::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
+	printf("RendererSW: Unimplemented textureCopy call\n");
+}
+
 void RendererSw::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
 	printf("RendererSW: Unimplemented drawVertices call\n");
 }

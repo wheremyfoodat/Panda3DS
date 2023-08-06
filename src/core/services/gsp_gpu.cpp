@@ -441,7 +441,15 @@ void GPUService::processCommandList(u32* cmd) {
 // TODO: Emulate the transfer engine & its registers
 // Then this can be emulated by just writing the appropriate values there
 void GPUService::triggerTextureCopy(u32* cmd) {
-	Helpers::warn("GSP::GPU::TriggerTextureCopy (unimplemented)\n");
+	const u32 inputAddr = VaddrToPaddr(cmd[1]);
+	const u32 outputAddr = VaddrToPaddr(cmd[2]);
+	const u32 totalBytes = cmd[3];
+	const u32 inputSize = cmd[4];
+	const u32 outputSize = cmd[5];
+	const u32 flags = cmd[6];
+
+	log("GSP::GPU::TriggerTextureCopy (Stubbed)\n");
+	gpu.textureCopy(inputAddr, outputAddr, totalBytes, inputSize, outputSize, flags);
 	// This uses the transfer engine and thus needs to fire a PPF interrupt.
 	// NSMB2 relies on this
 	requestInterrupt(GPUInterrupt::PPF);
