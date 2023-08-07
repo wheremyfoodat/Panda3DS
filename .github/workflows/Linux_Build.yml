@@ -23,6 +23,9 @@ jobs:
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
+    - name: Install X11 packages
+      run: sudo apt install libx11-dev
+
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@v1.2.0
       with:
