@@ -34,6 +34,12 @@ Emulator::Emulator()
 	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
 #endif
 
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	if (config.discordRpcEnabled) {
+		discordRpc.init();
+	}
+#endif
+
 	if (needOpenGL) {
 		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
 		// MacOS gets mad if we don't explicitly demand a core profile
@@ -80,7 +86,13 @@ Emulator::Emulator()
 	reset(ReloadOption::NoReload);
 }
 
-Emulator::~Emulator() { config.save(std::filesystem::current_path() / "config.toml"); }
+Emulator::~Emulator() {
+	config.save(std::filesystem::current_path() / "config.toml");
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	discordRpc.stop();
+#endif
+}
 
 void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
@@ -121,6 +133,7 @@ void Emulator::run() {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
+
 		runFrame();
 		HIDService& hid = kernel.getServiceManager().getHID();
 
@@ -431,6 +444,12 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	if (success) {
 		romPath = path;
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+		if (config.discordRpcEnabled) {
+			updateDiscord();
+		}
+#endif
 	} else {
 		romPath = std::nullopt;
 		romType = ROMType::None;
@@ -487,3 +506,10 @@ bool Emulator::loadELF(std::ifstream& file) {
 
 // Reset our graphics context and initialize the GPU's graphics context
 void Emulator::initGraphicsContext() { gpu.initGraphicsContext(window); }
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+void Emulator::updateDiscord() {
+	auto status = running ? Discord::RPCStatus::Playing : Discord::RPCStatus::Idling;
+	discordRpc.update(status);
+}
+#endif

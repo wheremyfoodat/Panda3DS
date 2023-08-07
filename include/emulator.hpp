@@ -11,6 +11,7 @@
 #include "config.hpp"
 #include "cpu.hpp"
 #include "crypto/aes_engine.hpp"
+#include "discord_rpc.hpp"
 #include "io_file.hpp"
 #include "memory.hpp"
 
@@ -62,6 +63,11 @@ class Emulator {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	HttpServer httpServer;
 	friend struct HttpServer;
+#endif
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	Discord::RPC discordRpc;
+	void updateDiscord();
 #endif
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it

@@ -106,6 +106,7 @@ set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
+                 src/discord_rpc.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -163,7 +164,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
                  include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
-                 include/fs/romfs.hpp include/fs/ivfc.hpp
+                 include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -257,13 +258,14 @@ endif()
 add_executable(Alber ${ALL_SOURCES})
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
-  set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
 
 if(ENABLE_DISCORD_RPC)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
+    target_link_libraries(Alber PRIVATE discord-rpc)
 endif()
 
 if(ENABLE_OPENGL)
