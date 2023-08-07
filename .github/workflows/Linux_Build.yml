@@ -24,7 +24,7 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Install misc packages
-      run: sudo apt install libx11-dev libgl1-mesa-dev
+      run: sudo apt install libx11-dev libgl1-mesa-glx
 
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@v1.2.0
