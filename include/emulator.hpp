@@ -67,8 +67,8 @@ class Emulator {
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	Discord::RPC discordRpc;
-	void updateDiscord();
 #endif
+	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
 	// This is currently only used for ELFs, NCSDs use the IOFile API instead

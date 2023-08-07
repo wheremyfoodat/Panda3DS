@@ -13,7 +13,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config),
-	  memory(cpu.getTicksRef()), cheats(memory, kernel.getServiceManager().getHID())
+	  memory(cpu.getTicksRef()), cheats(memory, kernel.getServiceManager().getHID()), running(false), programRunning(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  , httpServer(this)
 #endif
@@ -37,6 +37,7 @@ Emulator::Emulator()
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
+		updateDiscord();
 	}
 #endif
 
@@ -81,8 +82,6 @@ Emulator::Emulator()
 		}
 	}
 
-	running = false;
-	programRunning = false;
 	reset(ReloadOption::NoReload);
 }
 
@@ -444,11 +443,8 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	if (success) {
 		romPath = path;
-
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
-		if (config.discordRpcEnabled) {
-			updateDiscord();
-		}
+		updateDiscord();
 #endif
 	} else {
 		romPath = std::nullopt;
@@ -509,7 +505,15 @@ void Emulator::initGraphicsContext() { gpu.initGraphicsContext(window); }
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 void Emulator::updateDiscord() {
-	auto status = running ? Discord::RPCStatus::Playing : Discord::RPCStatus::Idling;
-	discordRpc.update(status);
+	if (config.discordRpcEnabled) {
+		if (romType != ROMType::None) {
+			const auto name = romPath.value().stem();
+			discordRpc.update(Discord::RPCStatus::Playing, name.string());
+		} else {
+			discordRpc.update(Discord::RPCStatus::Idling, "");
+		}
+	}
 }
+#else
+void Emulator::updateDiscord() {}
 #endif

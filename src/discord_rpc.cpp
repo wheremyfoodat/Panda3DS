@@ -13,11 +13,15 @@ void Discord::RPC::init() {
 	enabled = true;
 }
 
-void Discord::RPC::update(Discord::RPCStatus status) {
+void Discord::RPC::update(Discord::RPCStatus status, const std::string& game) {
 	DiscordRichPresence rpc{};
 
-	rpc.details = "Panda";
-	rpc.state = "Petting a panda";
+	if (status == Discord::RPCStatus::Playing) {
+		rpc.details = "Playing a game";
+		rpc.state = game.c_str();
+	} else {
+		rpc.details = "Idle";
+	}
 
 	rpc.largeImageKey = "pand";
 	rpc.largeImageText = "Panda3DS is a 3DS emulator for Windows, MacOS and Linux";

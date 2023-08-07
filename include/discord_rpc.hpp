@@ -4,6 +4,7 @@
 #include <discord_rpc.h>
 
 #include <cstdint>
+#include <string>
 
 namespace Discord {
 	enum class RPCStatus { Idling, Playing };
@@ -14,7 +15,7 @@ namespace Discord {
 
 	  public:
 		void init();
-		void update(RPCStatus status);
+		void update(RPCStatus status, const std::string& title);
 		void stop();
 	};
 }  // namespace Discord
