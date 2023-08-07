@@ -13,7 +13,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config),
-	  memory(cpu.getTicksRef()), cheats(memory, kernel.getServiceManager().getHID())
+	  memory(cpu.getTicksRef()), cheats(memory, kernel.getServiceManager().getHID()), running(false), programRunning(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  , httpServer(this)
 #endif
@@ -32,6 +32,13 @@ Emulator::Emulator()
 	bool needOpenGL = config.rendererType == RendererType::Software;
 #ifdef PANDA3DS_ENABLE_OPENGL
 	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
+#endif
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	if (config.discordRpcEnabled) {
+		discordRpc.init();
+		updateDiscord();
+	}
 #endif
 
 	if (needOpenGL) {
@@ -75,12 +82,16 @@ Emulator::Emulator()
 		}
 	}
 
-	running = false;
-	programRunning = false;
 	reset(ReloadOption::NoReload);
 }
 
-Emulator::~Emulator() { config.save(std::filesystem::current_path() / "config.toml"); }
+Emulator::~Emulator() {
+	config.save(std::filesystem::current_path() / "config.toml");
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	discordRpc.stop();
+#endif
+}
 
 void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
@@ -121,6 +132,7 @@ void Emulator::run() {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
+
 		runFrame();
 		HIDService& hid = kernel.getServiceManager().getHID();
 
@@ -431,6 +443,9 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	if (success) {
 		romPath = path;
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+		updateDiscord();
+#endif
 	} else {
 		romPath = std::nullopt;
 		romType = ROMType::None;
@@ -487,3 +502,18 @@ bool Emulator::loadELF(std::ifstream& file) {
 
 // Reset our graphics context and initialize the GPU's graphics context
 void Emulator::initGraphicsContext() { gpu.initGraphicsContext(window); }
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+void Emulator::updateDiscord() {
+	if (config.discordRpcEnabled) {
+		if (romType != ROMType::None) {
+			const auto name = romPath.value().stem();
+			discordRpc.update(Discord::RPCStatus::Playing, name.string());
+		} else {
+			discordRpc.update(Discord::RPCStatus::Idling, "");
+		}
+	}
+}
+#else
+void Emulator::updateDiscord() {}
+#endif

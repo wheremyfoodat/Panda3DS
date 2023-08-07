@@ -31,3 +31,6 @@
 [submodule "third_party/glm"]
 	path = third_party/glm
 	url = https://github.com/g-truc/glm
+[submodule "third_party/discord-rpc"]
+	path = third_party/discord-rpc
+	url = https://github.com/discord/discord-rpc
