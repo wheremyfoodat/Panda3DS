@@ -24,6 +24,7 @@ option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
+option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -42,6 +43,11 @@ include_directories(third_party/stb)
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
+
+if(ENABLE_DISCORD_RPC)
+    add_subdirectory(third_party/discord-rpc)
+    include_directories(third_party/discord-rpc/include)
+endif()
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
@@ -255,6 +261,10 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
 endif()
 
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
+
+if(ENABLE_DISCORD_RPC)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
+endif()
 
 if(ENABLE_OPENGL)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
