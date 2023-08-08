@@ -115,6 +115,8 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		for (u32 i = 0; i < size; i += 4) {
 			mem.write32(output + i, 0);
 		}
+	} else if (size == 4 && blockID == 0x170000) {  // Miiverse access key
+		mem.write32(output, 0);
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}
