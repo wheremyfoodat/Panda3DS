@@ -11,6 +11,7 @@ class BOSSService {
 	MAKE_LOG_FUNCTION(log, bossLogger)
 
 	// Service commands
+	void cancelTask(u32 messagePointer);
 	void initializeSession(u32 messagePointer);
 	void getNsDataIdList(u32 messagePointer);
 	void getOptoutFlag(u32 messagePointer);
