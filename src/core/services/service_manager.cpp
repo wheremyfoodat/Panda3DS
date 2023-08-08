@@ -7,8 +7,8 @@
 
 ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem), cecd(mem, kernel), cfg(mem),
-	  dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), ir_user(mem, kernel), frd(mem), fs(mem, kernel), gsp_gpu(mem, gpu, kernel, currentPID),
-	  gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), y2r(mem, kernel) {}
+	  dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel),
+	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -25,6 +25,7 @@ void ServiceManager::reset() {
 	dlp_srvr.reset();
 	dsp.reset();
 	hid.reset();
+	http.reset();
 	ir_user.reset();
 	frd.reset();
 	fs.reset();
@@ -98,6 +99,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
 	{ "hid:USER", KernelHandles::HID },
+	{ "http:C", KernelHandles::HTTP },
 	{ "ir:USER", KernelHandles::IR_USER },
 	{ "frd:u", KernelHandles::FRD },
 	{ "fs:USER", KernelHandles::FS },
@@ -182,6 +184,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
+		case KernelHandles::HTTP: http.handleSyncRequest(messagePointer); break;
 		case KernelHandles::IR_USER: ir_user.handleSyncRequest(messagePointer); break;
         case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
