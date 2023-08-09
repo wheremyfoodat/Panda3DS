@@ -191,8 +191,7 @@ namespace PICA {
 			VramBankControl = 0xB,
 			GPUBusy = 0xC,
 			BacklightControl = 0xBC,
-			// TODO: Framebuffer regs
-			Framebuffer0Size = 0x2F,
+			Framebuffer0Size = 0x118,
 			Framebuffer0AFirstAddr = 0x119,
 			Framebuffer0ASecondAddr = 0x11A,
 			Framebuffer0Config = 0x11B,

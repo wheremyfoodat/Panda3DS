@@ -398,16 +398,16 @@ void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
 
 	constexpr static std::array<u32, 8> fb_addresses = {
 		Framebuffer0AFirstAddr,
-		Framebuffer0ASecondAddr,
 		Framebuffer0BFirstAddr,
-		Framebuffer0BSecondAddr,
 		Framebuffer1AFirstAddr,
-		Framebuffer1ASecondAddr,
 		Framebuffer1BFirstAddr,
+		Framebuffer0ASecondAddr,
+		Framebuffer0BSecondAddr,
+		Framebuffer1ASecondAddr,
 		Framebuffer1BSecondAddr,
 	};
 
-	const u32 fb_index = screenId * 4 + info.activeFb * 2;
+	const u32 fb_index = info.activeFb * 4 + screenId * 2;
 	gpu.writeExternalReg(fb_addresses[fb_index], VaddrToPaddr(info.leftFramebufferVaddr));
 	gpu.writeExternalReg(fb_addresses[fb_index + 1], VaddrToPaddr(info.rightFramebufferVaddr));
 

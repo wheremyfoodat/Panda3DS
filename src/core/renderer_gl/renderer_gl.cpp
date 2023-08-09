@@ -462,12 +462,16 @@ void RendererGL::display() {
 	gl.disableClipPlane(1);
 
 	using namespace PICA::ExternalRegs;
-	const u32 topScreenAddr = externalRegs[Framebuffer0AFirstAddr];
-	const u32 bottomScreenAddr = externalRegs[Framebuffer1AFirstAddr];
+	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
+	const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
+	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
+	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
 
 	auto topScreen = colourBufferCache.findFromAddress(topScreenAddr);
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
+
+	OpenGL::clearColor();
 
 	if (topScreen) {
 		topScreen->get().texture.bind();
