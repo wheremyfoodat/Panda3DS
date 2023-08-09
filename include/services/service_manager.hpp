@@ -21,6 +21,7 @@
 #include "services/gsp_gpu.hpp"
 #include "services/gsp_lcd.hpp"
 #include "services/hid.hpp"
+#include "services/http.hpp"
 #include "services/ir_user.hpp"
 #include "services/ldr_ro.hpp"
 #include "services/mic.hpp"
@@ -53,6 +54,7 @@ class ServiceManager {
 	DlpSrvrService dlp_srvr;
 	DSPService dsp;
 	HIDService hid;
+	HTTPService http;
 	IRUserService ir_user;
 	FRDService frd;
 	FSService fs;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "result_cfg.hpp"
 #include "result_common.hpp"
 #include "result_kernel.hpp"
 #include "result_os.hpp"

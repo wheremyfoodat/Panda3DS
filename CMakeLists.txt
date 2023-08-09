@@ -134,7 +134,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/frd.cpp src/core/services/nim.cpp src/core/services/shared_font.cpp
                          src/core/services/y2r.cpp src/core/services/cam.cpp src/core/services/ldr_ro.cpp
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
-                         src/core/services/ir_user.cpp
+                         src/core/services/ir_user.cpp src/core/services/http.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
@@ -174,7 +174,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
                  include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
-                 include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp
+                 include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp

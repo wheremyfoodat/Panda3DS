@@ -5,6 +5,8 @@
 
 #include <array>
 #include <bit>
+#include <string>
+#include <unordered_map>
 
 namespace CFGCommands {
 	enum : u32 {
@@ -12,7 +14,8 @@ namespace CFGCommands {
 		SecureInfoGetRegion = 0x00020000,
 		GenHashConsoleUnique = 0x00030040,
 		GetRegionCanadaUSA = 0x00040000,
-		GetSystemModel = 0x00050000
+		GetSystemModel = 0x00050000,
+		GetCountryCodeID = 0x000A0040,
 	};
 }
 
@@ -22,6 +25,7 @@ void CFGService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;
+		case CFGCommands::GetCountryCodeID: getCountryCodeID(messagePointer); break;
 		case CFGCommands::GetRegionCanadaUSA: getRegionCanadaUSA(messagePointer); break;
 		case CFGCommands::GetSystemModel: getSystemModel(messagePointer); break;
 		case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
@@ -115,6 +119,8 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		for (u32 i = 0; i < size; i += 4) {
 			mem.write32(output + i, 0);
 		}
+	} else if (size == 4 && blockID == 0x170000) {  // Miiverse access key
+		mem.write32(output, 0);
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}
@@ -152,4 +158,43 @@ void CFGService::getRegionCanadaUSA(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x4, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, ret);
+}
+
+constexpr u16 C(const char name[3]) { return name[0] | (name[1] << 8); }
+static std::unordered_map<u16, u16> countryCodeToTableIDMap = {
+	{C("JP"), 1},   {C("AI"), 8},   {C("AG"), 9},   {C("AR"), 10},  {C("AW"), 11},  {C("BS"), 12},  {C("BB"), 13},  {C("BZ"), 14},  {C("BO"), 15},
+	{C("BR"), 16},  {C("VG"), 17},  {C("CA"), 18},  {C("KY"), 19},  {C("CL"), 20},  {C("CO"), 21},  {C("CR"), 22},  {C("DM"), 23},  {C("DO"), 24},
+	{C("EC"), 25},  {C("SV"), 26},  {C("GF"), 27},  {C("GD"), 28},  {C("GP"), 29},  {C("GT"), 30},  {C("GY"), 31},  {C("HT"), 32},  {C("HN"), 33},
+	{C("JM"), 34},  {C("MQ"), 35},  {C("MX"), 36},  {C("MS"), 37},  {C("AN"), 38},  {C("NI"), 39},  {C("PA"), 40},  {C("PY"), 41},  {C("PE"), 42},
+	{C("KN"), 43},  {C("LC"), 44},  {C("VC"), 45},  {C("SR"), 46},  {C("TT"), 47},  {C("TC"), 48},  {C("US"), 49},  {C("UY"), 50},  {C("VI"), 51},
+	{C("VE"), 52},  {C("AL"), 64},  {C("AU"), 65},  {C("AT"), 66},  {C("BE"), 67},  {C("BA"), 68},  {C("BW"), 69},  {C("BG"), 70},  {C("HR"), 71},
+	{C("CY"), 72},  {C("CZ"), 73},  {C("DK"), 74},  {C("EE"), 75},  {C("FI"), 76},  {C("FR"), 77},  {C("DE"), 78},  {C("GR"), 79},  {C("HU"), 80},
+	{C("IS"), 81},  {C("IE"), 82},  {C("IT"), 83},  {C("LV"), 84},  {C("LS"), 85},  {C("LI"), 86},  {C("LT"), 87},  {C("LU"), 88},  {C("MK"), 89},
+	{C("MT"), 90},  {C("ME"), 91},  {C("MZ"), 92},  {C("NA"), 93},  {C("NL"), 94},  {C("NZ"), 95},  {C("NO"), 96},  {C("PL"), 97},  {C("PT"), 98},
+	{C("RO"), 99},  {C("RU"), 100}, {C("RS"), 101}, {C("SK"), 102}, {C("SI"), 103}, {C("ZA"), 104}, {C("ES"), 105}, {C("SZ"), 106}, {C("SE"), 107},
+	{C("CH"), 108}, {C("TR"), 109}, {C("GB"), 110}, {C("ZM"), 111}, {C("ZW"), 112}, {C("AZ"), 113}, {C("MR"), 114}, {C("ML"), 115}, {C("NE"), 116},
+	{C("TD"), 117}, {C("SD"), 118}, {C("ER"), 119}, {C("DJ"), 120}, {C("SO"), 121}, {C("AD"), 122}, {C("GI"), 123}, {C("GG"), 124}, {C("IM"), 125},
+	{C("JE"), 126}, {C("MC"), 127}, {C("TW"), 128}, {C("KR"), 136}, {C("HK"), 144}, {C("MO"), 145}, {C("ID"), 152}, {C("SG"), 153}, {C("TH"), 154},
+	{C("PH"), 155}, {C("MY"), 156}, {C("CN"), 160}, {C("AE"), 168}, {C("IN"), 169}, {C("EG"), 170}, {C("OM"), 171}, {C("QA"), 172}, {C("KW"), 173},
+	{C("SA"), 174}, {C("SY"), 175}, {C("BH"), 176}, {C("JO"), 177}, {C("SM"), 184}, {C("VA"), 185}, {C("BM"), 186},
+};
+
+void CFGService::getCountryCodeID(u32 messagePointer) {
+	// Read the character code as a u16 instead of as ASCII, and use it to index the unordered_map above and get the result
+	const u16 characterCode = mem.read16(messagePointer + 4);
+	log("CFG::GetCountryCodeID (code = %04X)\n", characterCode);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0A, 2, 0));
+	
+	// If the character code is valid, return its table ID and a success code
+	if (auto search = countryCodeToTableIDMap.find(characterCode); search != countryCodeToTableIDMap.end()) {
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write16(messagePointer + 8, search->second);
+	}
+	
+	else {
+		Helpers::warn("CFG::GetCountryCodeID: Invalid country code %X", characterCode);
+		mem.write32(messagePointer + 4, Result::CFG::NotFound);
+		mem.write16(messagePointer + 8, 0xFF);
+	}
 }
