@@ -11,6 +11,7 @@ namespace BOSSCommands {
 		GetTaskIdList = 0x000E0000,
 		GetNsDataIdList = 0x00100102,
 		ReceiveProperty = 0x00160082,
+		CancelTask = 0x001E0042,
 		GetTaskInfo = 0x00250082,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000
@@ -24,6 +25,7 @@ void BOSSService::reset() {
 void BOSSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case BOSSCommands::CancelTask: cancelTask(messagePointer); break;
 		case BOSSCommands::GetNsDataIdList: getNsDataIdList(messagePointer); break;
 		case BOSSCommands::GetOptoutFlag: getOptoutFlag(messagePointer); break;
 		case BOSSCommands::GetStorageEntryInfo: getStorageEntryInfo(messagePointer); break;
@@ -91,6 +93,12 @@ void BOSSService::receiveProperty(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Read size
+}
+
+void BOSSService::cancelTask(u32 messagePointer) {
+	log("BOSS::CancelTask (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::unregisterTask(u32 messagePointer) {

@@ -29,6 +29,15 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 		return;
 	}
 
+	if (data.contains("General")) {
+		auto generalResult = toml::expect<toml::value>(data.at("General"));
+		if (generalResult.is_ok()) {
+			auto general = generalResult.unwrap();
+
+			discordRpcEnabled = toml::find_or<toml::boolean>(general, "EnableDiscordRPC", false);
+		}
+	}
+
 	if (data.contains("GPU")) {
 		auto gpuResult = toml::expect<toml::value>(data.at("GPU"));
 		if (gpuResult.is_ok()) {
@@ -68,6 +77,7 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 		printf("Saving new configuration file %s\n", path.string().c_str());
 	}
 
+	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 

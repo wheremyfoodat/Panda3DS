@@ -6,6 +6,7 @@
 // Remember to initialize every field here to its default value otherwise bad things will happen
 struct EmulatorConfig {
 	bool shaderJitEnabled = false;
+	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
 
 	EmulatorConfig(const std::filesystem::path& path);
