@@ -39,8 +39,8 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	code.resize(code.size() + bssSize, 0);  // Pad the .code file with zeroes for the BSS segment
 
 	if (code.size() < totalSize) {
-		Helpers::panic("Total code size as reported by the exheader is larger than the .code file");
-		return false;
+		Helpers::warn("Total code size as reported by the exheader is larger than the .code file");
+		//return false;
 	}
 
 	const auto opt = findPaddr(totalSize);
