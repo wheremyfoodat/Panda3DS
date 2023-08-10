@@ -168,6 +168,11 @@ Handle Kernel::makeMutex(bool locked) {
 		moo->ownerThread = currentThreadIndex;
 	}
 
+	// Push the new mutex to our list of mutex handles
+	// We need a list of mutex handles so that when a thread is killed, we can look which mutexes from this list the thread owns and free them
+	// Alternatively this could be a per-thread list, but I don't want to push_back and remove on every mutex lock and release
+	// Since some mutexes like the APT service mutex are locked and unlocked constantly, while ExitThread is a relatively "rare" SVC
+	mutexHandles.push_back(ret);
 	return ret;
 }
 
@@ -465,6 +470,23 @@ void Kernel::setThreadPriority() {
 
 void Kernel::exitThread() {
 	logSVC("ExitThread\n");
+
+	// Find which mutexes this thread owns, release them
+	for (auto handle : mutexHandles) {
+		KernelObject* object = getObject(handle, KernelObjectType::Mutex);
+
+		// Make sure that the handle actually matches to a mutex, and if our exiting thread owns the mutex, release it
+		if (object != nullptr) {
+			Mutex* moo = object->getData<Mutex>();
+
+			if (moo->locked && moo->ownerThread == currentThreadIndex) {
+				// Release the mutex by setting lock count to 1 and releasing it once. We set lock count to 1 since it's a recursive mutex
+				// Therefore if its lock count was > 1, simply calling releaseMutex would not fully release it
+				moo->lockCount = 1;
+				releaseMutex(moo);
+			}
+		}
+	}
 
 	// Remove the index of this thread from the thread indices vector
 	for (int i = 0; i < threadIndices.size(); i++) {

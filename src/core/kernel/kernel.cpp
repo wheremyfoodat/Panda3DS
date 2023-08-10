@@ -6,6 +6,7 @@
 Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
+	mutexHandles.reserve(8);
 	portHandles.reserve(32);
 	threadIndices.reserve(appResourceLimits.maxThreads);
 
@@ -139,6 +140,7 @@ void Kernel::reset() {
 		deleteObjectData(object);
 	}
 	objects.clear();
+	mutexHandles.clear();
 	portHandles.clear();
 	threadIndices.clear();
 	serviceManager.reset();
