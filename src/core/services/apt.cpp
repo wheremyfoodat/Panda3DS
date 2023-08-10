@@ -105,6 +105,7 @@ void APTService::appletUtility(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x4B, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, Result::Success);
 }
 
 void APTService::preloadLibraryApplet(u32 messagePointer) {
