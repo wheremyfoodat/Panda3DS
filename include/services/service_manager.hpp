@@ -29,6 +29,7 @@
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
 #include "services/ptm.hpp"
+#include "services/soc.hpp"
 #include "services/y2r.hpp"
 
 // More circular dependencies!!
@@ -66,6 +67,7 @@ class ServiceManager {
     NIMService nim;
 	NDMService ndm;
 	PTMService ptm;
+	SOCService soc;
 	Y2RService y2r;
 
 	// "srv:" commands

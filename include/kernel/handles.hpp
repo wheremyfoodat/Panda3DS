@@ -33,6 +33,7 @@ namespace KernelHandles {
 		NIM,  // Updates, DLC, etc
 		NDM,  // ?????
 		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
+		SOC,  // Socket service
 		Y2R,  // Also does camera stuff
 
 		MinServiceHandle = AC,
@@ -82,6 +83,7 @@ namespace KernelHandles {
 			case NFC: return "NFC";
 			case NIM: return "NIM";
 			case PTM: return "PTM";
+			case SOC: return "SOC";
 			case Y2R: return "Y2R";
 			default: return "Unknown";
 		}
