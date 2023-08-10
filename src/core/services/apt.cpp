@@ -2,6 +2,8 @@
 #include "ipc.hpp"
 #include "kernel.hpp"
 
+#include <vector>
+
 namespace APTCommands {
 	enum : u32 {
 		GetLockHandle = 0x00010040,
