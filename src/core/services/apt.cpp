@@ -96,6 +96,13 @@ void APTService::appletUtility(u32 messagePointer) {
 
 	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X) (Stubbed)\n", utility, inputSize,
 		outputSize, inputPointer);
+
+	const u32 outputBuffer = messagePointer + 0x104;
+	if (outputSize >= 1 && utility == 6) {
+		// TryLockTransition expects a bool indicating success in the output buffer. Set it to true to avoid games panicking (Thanks to Citra)
+		mem.write8(outputBuffer, true);
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x4B, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
