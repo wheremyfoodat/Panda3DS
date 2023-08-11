@@ -7,7 +7,6 @@
 #include "result/result.hpp"
 
 class CFGService {
-	Handle handle = KernelHandles::CFG;
 	Memory& mem;
 	CountryCodes country = CountryCodes::US; // Default to USA
 	MAKE_LOG_FUNCTION(log, cfgLogger)

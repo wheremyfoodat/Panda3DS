@@ -97,7 +97,8 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "boss:U", KernelHandles::BOSS },
 	{ "cam:u", KernelHandles::CAM },
 	{ "cecd:u", KernelHandles::CECD },
-	{ "cfg:u", KernelHandles::CFG },
+	{ "cfg:u", KernelHandles::CFG_U },
+	{ "cfg:i", KernelHandles::CFG_I },
 	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
 	{ "hid:USER", KernelHandles::HID },
@@ -184,7 +185,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
         case KernelHandles::BOSS: boss.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CAM: cam.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
-		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
+		case KernelHandles::CFG_U: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HTTP: http.handleSyncRequest(messagePointer); break;
