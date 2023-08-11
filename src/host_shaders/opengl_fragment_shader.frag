@@ -13,11 +13,10 @@ flat in vec4 v_textureEnvBufferColor;
 
 out vec4 fragColour;
 
-// TEV uniforms
-uniform uint u_textureEnvSource[6];
-uniform uint u_textureEnvOperand[6];
-uniform uint u_textureEnvCombiner[6];
-uniform uint u_textureEnvScale[6];
+flat in uint v_textureEnvSource[6];
+flat in uint v_textureEnvOperand[6];
+flat in uint v_textureEnvCombiner[6];
+flat in uint v_textureEnvScale[6];
 
 // Depth control uniforms
 uniform float u_depthScale;
@@ -52,11 +51,11 @@ vec4 tevFetchSource(uint src_id) {
 vec4 tevGetColorAndAlphaSource(int tev_id, int src_id) {
 	vec4 result;
 
-	vec4 colorSource = tevFetchSource((u_textureEnvSource[tev_id] >> (src_id * 4)) & 15u);
-	vec4 alphaSource = tevFetchSource((u_textureEnvSource[tev_id] >> (src_id * 4 + 16)) & 15u);
+	vec4 colorSource = tevFetchSource((v_textureEnvSource[tev_id] >> (src_id * 4)) & 15u);
+	vec4 alphaSource = tevFetchSource((v_textureEnvSource[tev_id] >> (src_id * 4 + 16)) & 15u);
 
-	uint colorOperand = (u_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
-	uint alphaOperand = (u_textureEnvOperand[tev_id] >> (12 + src_id * 4)) & 7u;
+	uint colorOperand = (v_textureEnvOperand[tev_id] >> (src_id * 4)) & 15u;
+	uint alphaOperand = (v_textureEnvOperand[tev_id] >> (12 + src_id * 4)) & 7u;
 
 	// TODO: figure out what the undocumented values do
 	switch (colorOperand) {
@@ -94,8 +93,8 @@ vec4 tevCalculateCombiner(int tev_id) {
 	vec4 source1 = tevGetColorAndAlphaSource(tev_id, 1);
 	vec4 source2 = tevGetColorAndAlphaSource(tev_id, 2);
 
-	uint colorCombine = u_textureEnvCombiner[tev_id] & 15u;
-	uint alphaCombine = (u_textureEnvCombiner[tev_id] >> 16) & 15u;
+	uint colorCombine = v_textureEnvCombiner[tev_id] & 15u;
+	uint alphaCombine = (v_textureEnvCombiner[tev_id] >> 16) & 15u;
 
 	vec4 result = vec4(1.0);
 
@@ -130,8 +129,8 @@ vec4 tevCalculateCombiner(int tev_id) {
 		}
 	}
 
-	result.rgb *= float(1 << (u_textureEnvScale[tev_id] & 3u));
-	result.a *= float(1 << ((u_textureEnvScale[tev_id] >> 16) & 3u));
+	result.rgb *= float(1 << (v_textureEnvScale[tev_id] & 3u));
+	result.a *= float(1 << ((v_textureEnvScale[tev_id] >> 16) & 3u));
 
 	return result;
 }

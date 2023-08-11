@@ -17,13 +17,16 @@ out vec3 v_texcoord0;
 out vec2 v_texcoord1;
 out vec3 v_view;
 out vec2 v_texcoord2;
-flat out vec4 v_textureEnvColor[6];
-flat out vec4 v_textureEnvBufferColor;
 
+flat out vec4 v_textureEnvColor[6];
+flat out uint v_textureEnvSource[6];
+flat out uint v_textureEnvOperand[6];
+flat out uint v_textureEnvCombiner[6];
+flat out uint v_textureEnvScale[6];
+flat out vec4 v_textureEnvBufferColor;
 out float gl_ClipDistance[2];
 
 // TEV uniforms
-uniform uint u_textureEnvColor[6];
 uniform uint u_picaRegs[0x200 - 0x48];
 
 // Helper so that the implementation of u_pica_regs can be changed later
@@ -62,6 +65,9 @@ float decodeFP(uint hex, uint E, uint M) {
 	return uintBitsToFloat(hex);
 }
 
+// Sorry for the line below but multi-line macros aren't in standard GLSL and I want to force unroll this
+#define UPLOAD_TEV_REGS(stage, ioBase) v_textureEnvSource[stage] = readPicaReg(ioBase); v_textureEnvOperand[stage] = readPicaReg(ioBase + 1); v_textureEnvCombiner[stage] = readPicaReg(ioBase + 2); v_textureEnvColor[stage] = abgr8888ToVec4(readPicaReg(ioBase + 3)); v_textureEnvScale[stage] = readPicaReg(ioBase + 4);
+
 void main() {
 	gl_Position = a_coords;
 	v_colour = a_vertexColour;
@@ -76,9 +82,12 @@ void main() {
 	v_tangent = normalize(rotateVec3ByQuaternion(vec3(1.0, 0.0, 0.0), a_quaternion));
 	v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0, 1.0, 0.0), a_quaternion));
 
-	for (int i = 0; i < 6; i++) {
-		v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
-	}
+	UPLOAD_TEV_REGS(0, 0xC0)
+	UPLOAD_TEV_REGS(1, 0xC8)
+	UPLOAD_TEV_REGS(2, 0xD0)
+	UPLOAD_TEV_REGS(3, 0xD8)
+	UPLOAD_TEV_REGS(4, 0xF0)
+	UPLOAD_TEV_REGS(5, 0xF8)
 
 	v_textureEnvBufferColor = abgr8888ToVec4(readPicaReg(0xFD));
 
