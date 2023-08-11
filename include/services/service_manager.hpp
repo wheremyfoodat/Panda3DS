@@ -30,6 +30,7 @@
 #include "services/nim.hpp"
 #include "services/ptm.hpp"
 #include "services/soc.hpp"
+#include "services/ssl.hpp"
 #include "services/y2r.hpp"
 
 // More circular dependencies!!
@@ -68,6 +69,7 @@ class ServiceManager {
 	NDMService ndm;
 	PTMService ptm;
 	SOCService soc;
+	SSLService ssl;
 	Y2RService y2r;
 
 	// "srv:" commands

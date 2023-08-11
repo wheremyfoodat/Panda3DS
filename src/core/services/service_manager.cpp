@@ -9,7 +9,7 @@ ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem), cecd(mem, kernel), cfg(mem),
 	  dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel),
 	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), soc(mem),
-	  y2r(mem, kernel) {}
+	  ssl(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -38,6 +38,7 @@ void ServiceManager::reset() {
 	ndm.reset();
 	ptm.reset();
 	soc.reset();
+	ssl.reset();
 	y2r.reset();
 
 	notificationSemaphore = std::nullopt;
@@ -116,6 +117,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "ptm:u", KernelHandles::PTM }, // TODO: ptm:u and ptm:sysm have very different command sets
 	{ "ptm:sysm", KernelHandles::PTM },
 	{ "soc:U", KernelHandles::SOC },
+	{ "ssl:C", KernelHandles::SSL },
 	{ "y2r:u", KernelHandles::Y2R }
 };
 // clang-format on
@@ -199,6 +201,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::SOC: soc.handleSyncRequest(messagePointer); break;
+		case KernelHandles::SSL: ssl.handleSyncRequest(messagePointer); break;
 		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
