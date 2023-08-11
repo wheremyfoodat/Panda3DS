@@ -6,6 +6,7 @@
 Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
 	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
+	mutexHandles.reserve(8);
 	portHandles.reserve(32);
 	threadIndices.reserve(appResourceLimits.maxThreads);
 
@@ -139,6 +140,7 @@ void Kernel::reset() {
 		deleteObjectData(object);
 	}
 	objects.clear();
+	mutexHandles.clear();
 	portHandles.clear();
 	threadIndices.clear();
 	serviceManager.reset();
@@ -256,6 +258,7 @@ void Kernel::duplicateHandle() {
 
 namespace SystemInfoType {
 	enum : u32 {
+		MemoryInformation = 0,
 		// Gets information related to Citra (We don't implement this, we just report this emulator is not Citra)
 		CitraInformation = 0x20000,
 		// Gets information related to this emulator
@@ -292,6 +295,22 @@ void Kernel::getSystemInfo() {
 
 	regs[0] = Result::Success;
 	switch (infoType) {
+		case SystemInfoType::MemoryInformation: {
+			switch (subtype) {
+				// Total used memory size in the APPLICATION memory region
+				case 1:
+					regs[1] = mem.getUsedUserMem();
+					regs[2] = 0;
+					break;
+
+				default:
+					Helpers::panic("GetSystemInfo: Unknown MemoryInformation subtype %x\n", subtype);
+					regs[0] = Result::FailurePlaceholder;
+					break;
+			}
+			break;
+		}
+
 		case SystemInfoType::CitraInformation: {
 			switch (subtype) {
 				case CitraInfoType::IsCitra:

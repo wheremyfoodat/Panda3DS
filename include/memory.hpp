@@ -139,6 +139,19 @@ private:
 	// Report a retail unit without JTAG
 	static constexpr u32 envInfo = 1;
 
+	// Stored in Configuration Memory starting @ 0x1FF80060 
+	struct FirmwareInfo {
+		u8 unk; // Usually 0 according to 3DBrew
+		u8 revision;
+		u8 minor;
+		u8 major;
+		u32 syscoreVer;
+		u32 sdkVer;
+	};
+
+	// Values taken from 3DBrew and Citra
+	static constexpr FirmwareInfo firm{.unk = 0, .revision = 0, .minor = 0x34, .major = 2, .syscoreVer = 2, .sdkVer = 0x0000F297};
+
 public:
 	u16 kernelVersion = 0;
 	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)

@@ -17,7 +17,8 @@ namespace KernelHandles {
 		BOSS, // Streetpass stuff?
 		CAM,  // Camera service
 		CECD, // More Streetpass stuff?
-		CFG,  // CFG service (Console & region info)
+		CFG_U,  // CFG service (Console & region info)
+		CFG_I,
 		DLP_SRVR, // Download Play: Server. Used for network play.
 		DSP,  // DSP service (Used for audio decoding and output)
 		HID,  // HID service (Handles input-related things including gyro. Does NOT handle New3DS controls or CirclePadPro)
@@ -33,6 +34,7 @@ namespace KernelHandles {
 		NIM,  // Updates, DLC, etc
 		NDM,  // ?????
 		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
+		SOC,  // Socket service
 		Y2R,  // Also does camera stuff
 
 		MinServiceHandle = AC,
@@ -66,7 +68,8 @@ namespace KernelHandles {
 			case BOSS: return "BOSS";
 			case CAM: return "CAM";
 			case CECD: return "CECD";
-			case CFG: return "CFG";
+			case CFG_U: return "CFG:U";
+			case CFG_I: return "CFG:I";
 			case DSP: return "DSP";
 			case DLP_SRVR: return "DLP::SRVR";
 			case HID: return "HID";
@@ -82,6 +85,7 @@ namespace KernelHandles {
 			case NFC: return "NFC";
 			case NIM: return "NIM";
 			case PTM: return "PTM";
+			case SOC: return "SOC";
 			case Y2R: return "Y2R";
 			default: return "Unknown";
 		}

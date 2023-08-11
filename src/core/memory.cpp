@@ -91,6 +91,12 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::NetworkState: return 2;  // Report that we've got an internet connection
 			case ConfigMem::HeadphonesConnectedMaybe: return 0;
 			case ConfigMem::Unknown1086: return 1;  // It's unknown what this is but some games want it to be 1
+
+			case ConfigMem::FirmUnknown: return firm.unk;
+			case ConfigMem::FirmRevision: return firm.revision;
+			case ConfigMem::FirmVersionMinor: return firm.minor;
+			case ConfigMem::FirmVersionMajor: return firm.major;
+
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -138,6 +144,8 @@ u32 Memory::read32(u32 vaddr) {
 
 			// 3D slider. Float in range 0.0 = off, 1.0 = max.
 			case ConfigMem::SliderState3D: return Helpers::bit_cast<u32, float>(0.0f);
+			case ConfigMem::FirmUnknown:
+				return u32(read8(vaddr)) | (u32(read8(vaddr + 1)) << 8) | (u32(read8(vaddr + 2)) << 16) | (u32(read8(vaddr + 3)) << 24);
 
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {

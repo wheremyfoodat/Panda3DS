@@ -8,7 +8,8 @@
 ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem), cecd(mem, kernel), cfg(mem),
 	  dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel),
-	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), y2r(mem, kernel) {}
+	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), soc(mem),
+	  y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -36,6 +37,7 @@ void ServiceManager::reset() {
 	nim.reset();
 	ndm.reset();
 	ptm.reset();
+	soc.reset();
 	y2r.reset();
 
 	notificationSemaphore = std::nullopt;
@@ -95,7 +97,8 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "boss:U", KernelHandles::BOSS },
 	{ "cam:u", KernelHandles::CAM },
 	{ "cecd:u", KernelHandles::CECD },
-	{ "cfg:u", KernelHandles::CFG },
+	{ "cfg:u", KernelHandles::CFG_U },
+	{ "cfg:i", KernelHandles::CFG_I },
 	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
 	{ "hid:USER", KernelHandles::HID },
@@ -112,6 +115,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "nim:aoc", KernelHandles::NIM },
 	{ "ptm:u", KernelHandles::PTM }, // TODO: ptm:u and ptm:sysm have very different command sets
 	{ "ptm:sysm", KernelHandles::PTM },
+	{ "soc:U", KernelHandles::SOC },
 	{ "y2r:u", KernelHandles::Y2R }
 };
 // clang-format on
@@ -181,7 +185,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
         case KernelHandles::BOSS: boss.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CAM: cam.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
-		case KernelHandles::CFG: cfg.handleSyncRequest(messagePointer); break;
+		case KernelHandles::CFG_U: cfg.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HTTP: http.handleSyncRequest(messagePointer); break;
@@ -194,6 +198,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
         case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
+		case KernelHandles::SOC: soc.handleSyncRequest(messagePointer); break;
 		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
