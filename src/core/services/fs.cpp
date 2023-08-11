@@ -499,6 +499,12 @@ void FSService::controlArchive(u32 messagePointer) {
 		case 0: // Commit save data changes. Shouldn't need us to do anything
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
+
+		case 1: // Retrieves a file's last-modified timestamp. Seen in DDLC, stubbed for the moment
+			Helpers::warn("FS::ControlArchive: Tried to retrieve a file's last-modified timestamp");
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
+
 		default:
 			Helpers::panic("Unimplemented action for ControlArchive (action = %X)\n", action);
 			break;
