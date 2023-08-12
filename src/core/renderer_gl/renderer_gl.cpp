@@ -369,8 +369,8 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	}
 
 	setupBlending();
-	OpenGL::Framebuffer poop = getColourFBO();
-	poop.bind(OpenGL::DrawAndReadFramebuffer);
+	auto poop = getColourBuffer(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
+	poop->fbo.bind(OpenGL::DrawAndReadFramebuffer);
 
 	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
 	const bool depthWrite = regs[PICA::InternalRegs::DepthBufferWrite];
@@ -413,10 +413,12 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		updateLightingLUT();
 	}
 
-	// TODO: Actually use this
-	GLsizei viewportWidth = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0f);
-	GLsizei viewportHeight = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0f);
-	OpenGL::setViewport(viewportWidth, viewportHeight);
+	const GLsizei viewportX = regs[PICA::InternalRegs::ViewportXY] & 0x3ff;
+	const GLsizei viewportY = (regs[PICA::InternalRegs::ViewportXY] >> 16) & 0x3ff;
+	const GLsizei viewportWidth = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0f);
+	const GLsizei viewportHeight = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0f);
+	const auto rect = poop->getSubRect(colourBufferLoc, fbSize[0], fbSize[1]);
+	OpenGL::setViewport(rect.left + viewportX, rect.bottom + viewportY, viewportWidth, viewportHeight);
 
 	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
 	const bool stencilEnable = getBit<0>(stencilConfig);
@@ -628,8 +630,10 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	// Blit the framebuffers
 	srcFramebuffer->fbo.bind(OpenGL::ReadFramebuffer);
 	destFramebuffer->fbo.bind(OpenGL::DrawFramebuffer);
+	gl.disableScissor();
+
 	glBlitFramebuffer(
-		srcRect.left, srcRect.top, srcRect.right, srcRect.bottom, destRect.left, destRect.top, destRect.right, destRect.bottom, GL_COLOR_BUFFER_BIT,
+		srcRect.left, srcRect.bottom, srcRect.right, srcRect.top, destRect.left, destRect.bottom, destRect.right, destRect.top, GL_COLOR_BUFFER_BIT,
 		GL_LINEAR
 	);
 }
@@ -694,8 +698,10 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	// Blit the framebuffers
 	srcFramebuffer->fbo.bind(OpenGL::ReadFramebuffer);
 	destFramebuffer->fbo.bind(OpenGL::DrawFramebuffer);
+	gl.disableScissor();
+
 	glBlitFramebuffer(
-		srcRect.left, srcRect.top, srcRect.right, srcRect.bottom, destRect.left, destRect.top, destRect.right, destRect.bottom, GL_COLOR_BUFFER_BIT,
+		srcRect.left, srcRect.bottom, srcRect.right, srcRect.top, destRect.left, destRect.bottom, destRect.right, destRect.top, GL_COLOR_BUFFER_BIT,
 		GL_LINEAR
 	);
 }

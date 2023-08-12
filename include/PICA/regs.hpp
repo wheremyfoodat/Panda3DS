@@ -22,6 +22,7 @@ namespace PICA {
 			ShaderOutputCount = 0x4F,
 			ShaderOutmap0 = 0x50,
 
+			ViewportXY = 0x68,
 			DepthmapEnable = 0x6D,
 
 			// Texture registers
