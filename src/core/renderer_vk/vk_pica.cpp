@@ -14,10 +14,20 @@ namespace Vulkan {
 	}
 	vk::Format depthFormatToVulkan(PICA::DepthFmt depthFormat) {
 		switch (depthFormat) {
+			// VK_FORMAT_D16_UNORM is mandated by the vulkan specification
 			case PICA::DepthFmt::Depth16: return vk::Format::eD16Unorm;
 			case PICA::DepthFmt::Unknown1: return vk::Format::eUndefined;
-			case PICA::DepthFmt::Depth24: return vk::Format::eX8D24UnormPack32;
-			case PICA::DepthFmt::Depth24Stencil8: return vk::Format::eD24UnormS8Uint;
+			// The GPU may _not_ support these formats natively
+			// Only one of:
+			// VK_FORMAT_X8_D24_UNORM_PACK32 and VK_FORMAT_D32_SFLOAT
+			// and one of:
+			// VK_FORMAT_D24_UNORM_S8_UINT and VK_FORMAT_D32_SFLOAT_S8_UINT
+			// will be supported
+			// TODO: Detect this!
+			// case PICA::DepthFmt::Depth24: return vk::Format::eX8D24UnormPack32;
+			// case PICA::DepthFmt::Depth24Stencil8: return vk::Format::eD24UnormS8Uint;
+			case PICA::DepthFmt::Depth24: return vk::Format::eD32Sfloat;
+			case PICA::DepthFmt::Depth24Stencil8: return vk::Format::eD32SfloatS8Uint;
 		}
 		return vk::Format::eUndefined;
 	}
