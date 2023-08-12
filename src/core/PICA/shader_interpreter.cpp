@@ -45,6 +45,7 @@ void PICAShader::run() {
 			case ShaderOpcodes::NOP: break;  // Do nothing
 			case ShaderOpcodes::RCP: rcp(instruction); break;
 			case ShaderOpcodes::RSQ: rsq(instruction); break;
+			case ShaderOpcodes::SGE: sge(instruction); break;
 			case ShaderOpcodes::SGEI: sgei(instruction); break;
 			case ShaderOpcodes::SLT: slt(instruction); break;
 			case ShaderOpcodes::SLTI: slti(instruction); break;
@@ -513,6 +514,26 @@ void PICAShader::slt(u32 instruction) {
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
 			destVector[3 - i] = srcVec1[3 - i] < srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
+		}
+	}
+}
+
+void PICAShader::sge(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src1 = getBits<12, 7>(instruction);
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	src1 = getIndexedSource(src1, idx);
+	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
+	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
+	auto& destVector = getDest(dest);
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = srcVec1[3 - i] >= srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
 		}
 	}
 }
