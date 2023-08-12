@@ -94,6 +94,7 @@ class GPU {
 	void reset();
 
 	Registers& getRegisters() { return regs; }
+	ExternalRegisters& getExtRegisters() { return externalRegs; }
 	void startCommandList(u32 addr, u32 size);
 
 	// Used by the GSP GPU service for readHwRegs/writeHwRegs/writeHwRegsMasked

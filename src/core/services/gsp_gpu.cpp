@@ -396,7 +396,7 @@ void GPUService::flushCacheRegions(u32* cmd) {
 void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
 	using namespace PICA::ExternalRegs;
 
-	constexpr static std::array<u32, 8> fb_addresses = {
+	static constexpr std::array<u32, 8> fbAddresses = {
 		Framebuffer0AFirstAddr,
 		Framebuffer0BFirstAddr,
 		Framebuffer1AFirstAddr,
@@ -407,11 +407,13 @@ void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
 		Framebuffer1BSecondAddr,
 	};
 
-	const u32 fb_index = info.activeFb * 4 + screenId * 2;
-	gpu.writeExternalReg(fb_addresses[fb_index], VaddrToPaddr(info.leftFramebufferVaddr));
-	gpu.writeExternalReg(fb_addresses[fb_index + 1], VaddrToPaddr(info.rightFramebufferVaddr));
+	auto& regs = gpu.getExtRegisters();
 
-	constexpr static std::array<u32, 6> config_addresses = {
+	const u32 fbIndex = info.activeFb * 4 + screenId * 2;
+	regs[fbAddresses[fbIndex]] = VaddrToPaddr(info.leftFramebufferVaddr);
+	regs[fbAddresses[fbIndex + 1]] = VaddrToPaddr(info.rightFramebufferVaddr);
+
+	static constexpr std::array<u32, 6> configAddresses = {
 		Framebuffer0Config,
 		Framebuffer0Select,
 		Framebuffer0Stride,
@@ -420,10 +422,10 @@ void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
 		Framebuffer1Stride,
 	};
 
-	const u32 config_index = screenId * 3;
-	gpu.writeExternalReg(config_addresses[config_index], info.format);
-	gpu.writeExternalReg(config_addresses[config_index + 1], info.displayFb);
-	gpu.writeExternalReg(config_addresses[config_index + 2], info.stride);
+	const u32 configIndex = screenId * 3;
+	regs[configAddresses[configIndex]] = info.format;
+	regs[configAddresses[configIndex + 1]] = info.displayFb;
+	regs[configAddresses[configIndex + 2]] = info.stride;
 }
 
 // Actually send command list (aka display list) to GPU
