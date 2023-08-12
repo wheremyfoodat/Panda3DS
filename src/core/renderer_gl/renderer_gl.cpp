@@ -141,7 +141,7 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 	GLint oldViewport[4];
 	glGetIntegerv(GL_VIEWPORT, oldViewport);
 	OpenGL::setViewport(screenTextureWidth, screenTextureHeight);
-	OpenGL::setClearColor(0.0, 0.0, 0.0, 1.0);
+	gl.setClearColour(0.0, 0.0, 0.0, 1.0);
 	OpenGL::clearColor();
 	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 
@@ -473,7 +473,7 @@ void RendererGL::display() {
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
-	OpenGL::setClearColor(0.f);
+	gl.setClearColour(0.f, 0.f, 0.f, 1.f);
 	OpenGL::clearColor();
 
 	if (topScreen) {
@@ -504,8 +504,9 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		const float b = getBits<8, 8>(value) / 255.0f;
 		const float a = (value & 0xff) / 255.0f;
 		color->get().fbo.bind(OpenGL::DrawFramebuffer);
+
 		gl.setColourMask(true, true, true, true);
-		OpenGL::setClearColor(r, g, b, a);
+		gl.setClearColour(r, g, b, a);
 		OpenGL::clearColor();
 		return;
 	}
