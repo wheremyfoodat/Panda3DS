@@ -458,6 +458,8 @@ void RendererGL::display() {
 	gl.disableBlend();
 	gl.disableDepth();
 	gl.disableScissor();
+	// This will work fine whether or not logic ops are enabled. We set logic op to copy instead of disabling to avoid state changes
+	gl.setLogicOp(GL_COPY);
 	gl.setColourMask(true, true, true, true);
 	gl.useProgram(displayProgram);
 	gl.bindVAO(dummyVAO);
@@ -465,18 +467,14 @@ void RendererGL::display() {
 	gl.disableClipPlane(0);
 	gl.disableClipPlane(1);
 
+	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
+	gl.setClearColour(0.f, 0.f, 0.f, 1.f);
+	OpenGL::clearColor();
+
 	using namespace PICA::ExternalRegs;
 	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
 	const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
-	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
-	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
-
 	auto topScreen = colourBufferCache.findFromAddress(topScreenAddr);
-	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
-	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
-
-	gl.setClearColour(0.f, 0.f, 0.f, 1.f);
-	OpenGL::clearColor();
 
 	if (topScreen) {
 		topScreen->get().texture.bind();
@@ -484,6 +482,10 @@ void RendererGL::display() {
 		OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
 	}
 
+	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
+	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
+	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
+	
 	if (bottomScreen) {
 		bottomScreen->get().texture.bind();
 		OpenGL::setViewport(40, 0, 320, 240);
