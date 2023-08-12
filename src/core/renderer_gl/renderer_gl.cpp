@@ -473,6 +473,7 @@ void RendererGL::display() {
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
 	screenFramebuffer.bind(OpenGL::DrawFramebuffer);
 
+	OpenGL::setClearColor(0.f);
 	OpenGL::clearColor();
 
 	if (topScreen) {
