@@ -687,7 +687,6 @@ namespace OpenGL {
 		Rectangle(T x, T y, T width, T height) : x(x), y(y), width(width), height(height) {}
 
 		bool isEmpty() const { return width == 0 && height == 0; }
-		bool isLine() const { return (width == 0 && height != 0) || (width != 0 && height == 0); }
 
 		void setEmpty() { x = y = width = height = 0; }
 	};

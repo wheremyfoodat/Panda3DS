@@ -16,6 +16,12 @@
 #include "renderer_vk/renderer_vk.hpp"
 #endif
 
+constexpr u32 topScreenWidth = 240;
+constexpr u32 topScreenHeight = 400;
+
+constexpr u32 bottomScreenWidth = 240;
+constexpr u32 bottomScreenHeight = 300;
+
 using namespace Floats;
 
 // Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
@@ -26,24 +32,24 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 
 	switch (config.rendererType) {
 		case RendererType::Null: {
-			renderer.reset(new RendererNull(*this, regs));
+			renderer.reset(new RendererNull(*this, regs, externalRegs));
 			break;
 		}
 
 		case RendererType::Software: {
-			renderer.reset(new RendererSw(*this, regs));
+			renderer.reset(new RendererSw(*this, regs, externalRegs));
 			break;
 		}
 
 #ifdef PANDA3DS_ENABLE_OPENGL
 		case RendererType::OpenGL: {
-			renderer.reset(new RendererGL(*this, regs));
+			renderer.reset(new RendererGL(*this, regs, externalRegs));
 			break;
 		}
 #endif
 #ifdef PANDA3DS_ENABLE_VULKAN
 		case RendererType::Vulkan: {
-			renderer.reset(new RendererVK(*this, regs));
+			renderer.reset(new RendererVK(*this, regs, externalRegs));
 			break;
 		}
 #endif
@@ -77,6 +83,27 @@ void GPU::reset() {
 		e.config1 = 0;
 		e.config2 = 0;
 	}
+
+	// Initialize the framebuffer registers. Values taken from Citra.
+
+	using namespace PICA::ExternalRegs;
+	// Top screen addresses and dimentions.
+	externalRegs[Framebuffer0AFirstAddr] = 0x181E6000;
+	externalRegs[Framebuffer0ASecondAddr] = 0x1822C800;
+	externalRegs[Framebuffer0BFirstAddr] = 0x18273000;
+	externalRegs[Framebuffer0BSecondAddr] = 0x182B9800;
+	externalRegs[Framebuffer0Size] = (topScreenHeight << 16) | topScreenWidth;
+	externalRegs[Framebuffer0Stride] = 720;
+	externalRegs[Framebuffer0Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	externalRegs[Framebuffer0Select] = 0;
+
+	// Bottom screen addresses and dimentions.
+	externalRegs[Framebuffer1AFirstAddr] = 0x1848F000;
+	externalRegs[Framebuffer1ASecondAddr] = 0x184C7800;
+	externalRegs[Framebuffer1Size] = (bottomScreenHeight << 16) | bottomScreenWidth;
+	externalRegs[Framebuffer1Stride] = 720;
+	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+	externalRegs[Framebuffer1Select] = 0;
 
 	renderer->reset();
 }
@@ -321,15 +348,17 @@ PICA::Vertex GPU::getImmediateModeVertex() {
 
 	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
 	shaderUnit.vs.run();
-	std::memcpy(&v.s.positions, &shaderUnit.vs.outputs[0], sizeof(vec4f));
-	std::memcpy(&v.s.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
-	std::memcpy(&v.s.texcoord0, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+	
+	// Map shader outputs to fixed function properties
+	const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+	for (int i = 0; i < totalShaderOutputs; i++) {
+		const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
-	printf(
-		"(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.s.positions[0], (double)v.s.positions[1], (double)v.s.positions[2], (double)v.s.positions[3]
-	);
-	printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)v.s.colour[0], (double)v.s.colour[1], (double)v.s.colour[2], (double)v.s.colour[3]);
-	printf("(u, v      ) = (%f, %f)\n", (double)v.s.texcoord0[0], (double)v.s.texcoord0[1]);
+		for (int j = 0; j < 4; j++) {  // pls unroll
+			const u32 mapping = (config >> (j * 8)) & 0x1F;
+			v.raw[mapping] = shaderUnit.vs.outputs[i][j];
+		}
+	}
 
 	return v;
 }

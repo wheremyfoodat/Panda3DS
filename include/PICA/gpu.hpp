@@ -14,8 +14,11 @@
 
 class GPU {
 	static constexpr u32 regNum = 0x300;
+	static constexpr u32 extRegNum = 0x1000;
+
 	using vec4f = std::array<Floats::f24, 4>;
-	using Registers = std::array<u32, regNum>;
+	using Registers = std::array<u32, regNum>;  // Internal registers (named registers in short since they're the main ones)
+	using ExternalRegisters = std::array<u32, extRegNum>;
 
 	Memory& mem;
 	EmulatorConfig& config;
@@ -91,11 +94,15 @@ class GPU {
 	void reset();
 
 	Registers& getRegisters() { return regs; }
+	ExternalRegisters& getExtRegisters() { return externalRegs; }
 	void startCommandList(u32 addr, u32 size);
 
 	// Used by the GSP GPU service for readHwRegs/writeHwRegs/writeHwRegsMasked
 	u32 readReg(u32 address);
 	void writeReg(u32 address, u32 value);
+
+	u32 readExternalReg(u32 index);
+	void writeExternalReg(u32 index, u32 value);
 
 	// Used when processing GPU command lists
 	u32 readInternalReg(u32 index);
@@ -109,6 +116,10 @@ class GPU {
 	// Then this can be emulated by just writing the appropriate values there
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
 		renderer->displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
+	}
+
+	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
+		renderer->textureCopy(inputAddr, outputAddr, totalBytes, inputSize, outputSize, flags);
 	}
 
 	// Read a value of type T from physical address paddr
@@ -140,4 +151,10 @@ class GPU {
 			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
 		}
 	}
+
+  private:
+	// GPU external registers
+	// We have them in the end of the struct for cache locality reasons. Tl;dr we want the more commonly used things to be packed in the start
+	// Of the struct, instead of externalRegs being in the middle
+	ExternalRegisters externalRegs;
 };
