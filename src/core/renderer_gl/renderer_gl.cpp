@@ -667,7 +667,7 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 							 inputAddr, outputAddr, totalBytes, inputWidth, inputGap, outputWidth, outputGap);
 
 	if (inputGap != 0 || outputGap != 0) {
-		//Helpers::warn("Strided texture copy\n");
+		// Helpers::warn("Strided texture copy\n");
 	}
 	if (inputWidth != outputWidth) {
 		Helpers::warn("Input width does not match output width, cannot accelerate texture copy!");
@@ -695,7 +695,12 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	// Find the source surface.
 	auto srcFramebuffer = getColourBuffer(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
 	if (!srcFramebuffer) {
-		printf("TextureCopy failed to locate src framebuffer!\n");
+		static int shutUpCounter = 0; // Don't want to spam the console too much, so shut up after 5 times
+
+		if (shutUpCounter < 5) {
+			shutUpCounter++;
+			printf("RendererGL::TextureCopy failed to locate src framebuffer!\n");
+		}
 		return;
 	}
 
