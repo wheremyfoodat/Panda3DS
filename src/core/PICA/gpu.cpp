@@ -348,15 +348,17 @@ PICA::Vertex GPU::getImmediateModeVertex() {
 
 	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
 	shaderUnit.vs.run();
-	std::memcpy(&v.s.positions, &shaderUnit.vs.outputs[0], sizeof(vec4f));
-	std::memcpy(&v.s.colour, &shaderUnit.vs.outputs[1], sizeof(vec4f));
-	std::memcpy(&v.s.texcoord0, &shaderUnit.vs.outputs[2], 2 * sizeof(f24));
+	
+	// Map shader outputs to fixed function properties
+	const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+	for (int i = 0; i < totalShaderOutputs; i++) {
+		const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
-	printf(
-		"(x, y, z, w) = (%f, %f, %f, %f)\n", (double)v.s.positions[0], (double)v.s.positions[1], (double)v.s.positions[2], (double)v.s.positions[3]
-	);
-	printf("(r, g, b, a) = (%f, %f, %f, %f)\n", (double)v.s.colour[0], (double)v.s.colour[1], (double)v.s.colour[2], (double)v.s.colour[3]);
-	printf("(u, v      ) = (%f, %f)\n", (double)v.s.texcoord0[0], (double)v.s.texcoord0[1]);
+		for (int j = 0; j < 4; j++) {  // pls unroll
+			const u32 mapping = (config >> (j * 8)) & 0x1F;
+			v.raw[mapping] = shaderUnit.vs.outputs[i][j];
+		}
+	}
 
 	return v;
 }

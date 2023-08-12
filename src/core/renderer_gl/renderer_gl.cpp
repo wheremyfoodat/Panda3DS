@@ -135,7 +135,9 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 	screenFramebuffer.createWithDrawTexture(screenTexture);
 	screenFramebuffer.bind(OpenGL::DrawAndReadFramebuffer);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) Helpers::panic("Incomplete framebuffer");
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		Helpers::panic("Incomplete framebuffer");
+	}
 
 	// TODO: This should not clear the framebuffer contents. It should load them from VRAM.
 	GLint oldViewport[4];
