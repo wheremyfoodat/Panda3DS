@@ -600,16 +600,21 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	const u32 inputHeight = inputSize >> 16;
 	const auto inputFormat = ToColorFmt(Helpers::getBits<8, 3>(flags));
 	const auto outputFormat = ToColorFmt(Helpers::getBits<12, 3>(flags));
+	const bool verticalFlip = flags & 1;
 	const PICA::Scaling scaling = static_cast<PICA::Scaling>(Helpers::getBits<24, 2>(flags));
 
 	u32 outputWidth = outputSize & 0xffff;
 	u32 outputHeight = outputSize >> 16;
 
-	OpenGL::DebugScope scope("DisplayTransfer inputAddr 0x%08X outputAddr 0x%08X inputWidth %d outputWidth %d inputWidth %d outputHeight %d",
+	OpenGL::DebugScope scope("DisplayTransfer inputAddr 0x%08X outputAddr 0x%08X inputWidth %d outputWidth %d inputHeight %d outputHeight %d",
 							 inputAddr, outputAddr, inputWidth, outputWidth, inputHeight, outputHeight);
 
 	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, outputHeight);
 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
+
+	if (verticalFlip) {
+		std::swap(srcRect.bottom, srcRect.top);
+	}
 
 	// Apply scaling for the destination rectangle.
 	if (scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) {
@@ -656,10 +661,10 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 							 inputAddr, outputAddr, totalBytes, inputWidth, inputGap, outputWidth, outputGap);
 
 	if (inputGap != 0 || outputGap != 0) {
-		Helpers::warn("Strided texture copy\n");
+		//Helpers::warn("Strided texture copy\n");
 	}
 	if (inputWidth != outputWidth) {
-		Helpers::warn("Input width does not match output width, cannot accelerate texture copy!\n");
+		Helpers::warn("Input width does not match output width, cannot accelerate texture copy!");
 		return;
 	}
 
