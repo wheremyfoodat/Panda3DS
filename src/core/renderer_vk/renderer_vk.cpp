@@ -587,12 +587,30 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	instanceInfo.pApplicationInfo = &applicationInfo;
 
-	std::vector<const char*> instanceExtensions = {
+	std::unordered_set<std::string> instanceExtensionsAvailable = {};
+	if (const auto enumerateResult = vk::enumerateInstanceExtensionProperties(); enumerateResult.result == vk::Result::eSuccess) {
+		for (const auto& curExtension : enumerateResult.value) {
+			instanceExtensionsAvailable.emplace(curExtension.extensionName);
+		}
+	}
+
+	std::vector<const char*> instanceExtensions = {};
+
+	if (instanceExtensionsAvailable.contains(VK_KHR_SURFACE_EXTENSION_NAME)) {
+		instanceExtensions.emplace_back(VK_KHR_SURFACE_EXTENSION_NAME);
+	}
+
+	bool debugUtils = false;
+	if (instanceExtensionsAvailable.contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)) {
+		instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		debugUtils = true;
+	}
+
 #if defined(__APPLE__)
-		VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+	if (instanceExtensionsAvailable.contains(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
+		instanceExtensionNames.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+	}
 #endif
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-	};
 
 	// Get any additional extensions that SDL wants as well
 	if (targetWindow) {
@@ -620,13 +638,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(instance.get());
 
 	// Enable debug messenger if the instance was able to be created with debug_utils
-	if (std::find(
-			instanceExtensions.begin(), instanceExtensions.end(),
-			// std::string_view has a way to compare itself to `const char*`
-			// so by casting it, we get the actual string comparisons
-			// and not pointer-comparisons
-			std::string_view(VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
-		) != instanceExtensions.end()) {
+	if (debugUtils) {
 		vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 		debugCreateInfo.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
 										  vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning;
