@@ -67,6 +67,7 @@ public:
 	Handle makeEvent(ResetType resetType); // Needs to be public to be accessible to the APT/HID services
 	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
 	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
+	Handle makeTimer(ResetType resetType);
 
 	// Signals an event, returns true on success or false if the event does not exist
 	bool signalEvent(Handle e);
@@ -135,14 +136,18 @@ private:
 	void getThreadPriority();
 	void sendSyncRequest();
 	void setThreadPriority();
+	void svcCancelTimer();
 	void svcClearEvent();
+	void svcClearTimer();
 	void svcCloseHandle();
 	void svcCreateEvent();
 	void svcCreateMutex();
 	void svcCreateSemaphore();
+	void svcCreateTimer();
 	void svcReleaseMutex();
 	void svcReleaseSemaphore();
 	void svcSignalEvent();
+	void svcSetTimer();
 	void svcSleepThread();
 	void connectToPort();
 	void outputDebugString();

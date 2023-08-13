@@ -42,6 +42,10 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x17: svcCreateEvent(); break;
 		case 0x18: svcSignalEvent(); break;
 		case 0x19: svcClearEvent(); break;
+		case 0x1A: svcCreateTimer(); break;
+		case 0x1B: svcSetTimer(); break;
+		case 0x1C: svcCancelTimer(); break;
+		case 0x1D: svcClearTimer(); break;
 		case 0x1E: createMemoryBlock(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;

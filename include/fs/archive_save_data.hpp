@@ -5,7 +5,7 @@ class SaveDataArchive : public ArchiveBase {
 public:
 	SaveDataArchive(Memory& mem) : ArchiveBase(mem) {}
 
-	u64 getFreeBytes() override { Helpers::panic("SaveData::GetFreeBytes unimplemented"); return 0; }
+	u64 getFreeBytes() override { return 32_MB; }
 	std::string name() override { return "SaveData"; }
 
 	HorizonResult createDirectory(const FSPath& path) override;
