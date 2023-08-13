@@ -108,7 +108,7 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture() {
 	textureInfo.setSamples(vk::SampleCountFlagBits::e1);
 	textureInfo.setTiling(vk::ImageTiling::eOptimal);
 	textureInfo.setUsage(
-		vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
+		vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
 		vk::ImageUsageFlagBits::eTransferDst
 	);
 	textureInfo.setSharingMode(vk::SharingMode::eExclusive);
@@ -125,7 +125,7 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture() {
 	viewInfo.viewType = vk::ImageViewType::e2D;
 	viewInfo.format = Vulkan::depthFormatToVulkan(depthBufferFormat);
 	viewInfo.components = vk::ComponentMapping();
-	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1);
+	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
 
 	if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
 		newTexture.imageView = std::move(createResult.value);
@@ -364,12 +364,6 @@ RendererVK::~RendererVK() {}
 void RendererVK::reset() { renderPassCache.clear(); }
 
 void RendererVK::display() {
-	// Block, on the CPU, to ensure that this buffered-frame is ready for more work
-	if (auto waitResult = device->waitForFences({frameFinishedFences[frameBufferingIndex].get()}, true, std::numeric_limits<u64>::max());
-		waitResult != vk::Result::eSuccess) {
-		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
-	}
-
 	// Get the next available swapchain image, and signal the semaphore when it's ready
 	static constexpr u32 swapchainImageInvalid = std::numeric_limits<u32>::max();
 	u32 swapchainImageIndex = swapchainImageInvalid;
@@ -405,7 +399,11 @@ void RendererVK::display() {
 		}
 	}
 
-	const vk::UniqueCommandBuffer& frameCommandBuffer = frameCommandBuffers[frameBufferingIndex];
+	if (const vk::Result endResult = frameGraphicsCommandBuffers[frameBufferingIndex]->end(); endResult != vk::Result::eSuccess) {
+		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
+	}
+
+	const vk::UniqueCommandBuffer& frameCommandBuffer = framePresentCommandBuffers[frameBufferingIndex];
 
 	vk::CommandBufferBeginInfo beginInfo = {};
 	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
@@ -426,24 +424,15 @@ void RendererVK::display() {
 			{
 				vk::ImageMemoryBarrier(
 					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-				),
-				vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
 			}
 		);
 		static const std::array<float, 4> topClearColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
 		static const std::array<float, 4> bottomClearColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
 		frameCommandBuffer->clearColorImage(
-			topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, topClearColor,
-			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-		);
-		frameCommandBuffer->clearColorImage(
-			bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, bottomClearColor,
+			screenTexture[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, topClearColor,
 			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 		);
 	}
@@ -464,13 +453,8 @@ void RendererVK::display() {
 				),
 				vk::ImageMemoryBarrier(
 					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
-					vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					topScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-				),
-				vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
-					vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					bottomScreenImages[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+					vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
 			}
 		);
@@ -483,22 +467,13 @@ void RendererVK::display() {
 
 		// Blit top/bottom screen into swapchain image
 
-		static const vk::ImageBlit topScreenBlit(
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}},
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240, 1}}
-		);
-		static const vk::ImageBlit bottomScreenBlit(
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{320, 240, 1}},
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1),
-			{vk::Offset3D{(400 / 2) - (320 / 2), 240, 0}, vk::Offset3D{(400 / 2) + (320 / 2), 240 + 240, 1}}
+		static const vk::ImageBlit screenBlit(
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240 * 2, 1}},
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240 * 2, 1}}
 		);
 		frameCommandBuffer->blitImage(
-			topScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
-			vk::ImageLayout::eTransferDstOptimal, {topScreenBlit}, vk::Filter::eNearest
-		);
-		frameCommandBuffer->blitImage(
-			bottomScreenImages[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
-			vk::ImageLayout::eTransferDstOptimal, {bottomScreenBlit}, vk::Filter::eNearest
+			screenTexture[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
+			vk::ImageLayout::eTransferDstOptimal, {screenBlit}, vk::Filter::eNearest
 		);
 
 		// Prepare swapchain image for present
@@ -565,6 +540,27 @@ void RendererVK::display() {
 	}
 
 	frameBufferingIndex = ((frameBufferingIndex + 1) % frameBufferingCount);
+
+	// Wait for next frame to be ready
+
+	// Block, on the CPU, to ensure that this buffered-frame is ready for more work
+	if (auto waitResult = device->waitForFences({frameFinishedFences[frameBufferingIndex].get()}, true, std::numeric_limits<u64>::max());
+		waitResult != vk::Result::eSuccess) {
+		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
+	}
+
+	{
+		frameFramebuffers[frameBufferingIndex].clear();
+
+		frameGraphicsCommandBuffers[frameBufferingIndex]->reset();
+
+		vk::CommandBufferBeginInfo beginInfo = {};
+		beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+
+		if (const vk::Result beginResult = frameGraphicsCommandBuffers[frameBufferingIndex]->begin(beginInfo); beginResult != vk::Result::eSuccess) {
+			Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
+		}
+	}
 }
 
 void RendererVK::initGraphicsContext(SDL_Window* window) {
@@ -608,7 +604,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 #if defined(__APPLE__)
 	if (instanceExtensionsAvailable.contains(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME)) {
-		instanceExtensionNames.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+		instanceExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 	}
 #endif
 
@@ -817,9 +813,23 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	commandBuffersInfo.commandBufferCount = frameBufferingCount;
 
 	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
-		frameCommandBuffers = std::move(allocateResult.value);
+		framePresentCommandBuffers = std::move(allocateResult.value);
 	} else {
 		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
+	}
+
+	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
+		frameGraphicsCommandBuffers = std::move(allocateResult.value);
+	} else {
+		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
+	}
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+	for (const auto& graphicsCommandBuffer : frameGraphicsCommandBuffers) {
+		if (const vk::Result beginResult = graphicsCommandBuffer->begin(beginInfo); beginResult != vk::Result::eSuccess) {
+			Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
+		}
 	}
 
 	// Frame-buffering synchronization primitives
@@ -831,27 +841,25 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	swapImageFreeSemaphore.resize(frameBufferingCount);
 	renderFinishedSemaphore.resize(frameBufferingCount);
 	frameFinishedFences.resize(frameBufferingCount);
+	frameFramebuffers.resize(frameBufferingCount);
+	frameGraphicsCommandBuffers.resize(frameBufferingCount);
 
-	vk::ImageCreateInfo topScreenInfo = {};
-	topScreenInfo.setImageType(vk::ImageType::e2D);
-	topScreenInfo.setFormat(vk::Format::eR8G8B8A8Unorm);
-	topScreenInfo.setExtent(vk::Extent3D(400, 240, 1));
-	topScreenInfo.setMipLevels(1);
-	topScreenInfo.setArrayLayers(1);
-	topScreenInfo.setSamples(vk::SampleCountFlagBits::e1);
-	topScreenInfo.setTiling(vk::ImageTiling::eOptimal);
-	topScreenInfo.setUsage(
+	vk::ImageCreateInfo screenTextureInfo = {};
+	screenTextureInfo.setImageType(vk::ImageType::e2D);
+	screenTextureInfo.setFormat(vk::Format::eR8G8B8A8Unorm);
+	screenTextureInfo.setExtent(vk::Extent3D(400, 240, 1));
+	screenTextureInfo.setMipLevels(1);
+	screenTextureInfo.setArrayLayers(1);
+	screenTextureInfo.setSamples(vk::SampleCountFlagBits::e1);
+	screenTextureInfo.setTiling(vk::ImageTiling::eOptimal);
+	screenTextureInfo.setUsage(
 		vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
 		vk::ImageUsageFlagBits::eTransferDst
 	);
-	topScreenInfo.setSharingMode(vk::SharingMode::eExclusive);
-	topScreenInfo.setInitialLayout(vk::ImageLayout::eUndefined);
+	screenTextureInfo.setSharingMode(vk::SharingMode::eExclusive);
+	screenTextureInfo.setInitialLayout(vk::ImageLayout::eUndefined);
 
-	vk::ImageCreateInfo bottomScreenInfo = topScreenInfo;
-	bottomScreenInfo.setExtent(vk::Extent3D(320, 240, 1));
-
-	topScreenImages.resize(frameBufferingCount);
-	bottomScreenImages.resize(frameBufferingCount);
+	screenTexture.resize(frameBufferingCount);
 
 	for (usize i = 0; i < frameBufferingCount; i++) {
 		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
@@ -872,16 +880,10 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 			Helpers::panic("Error creating 'frame-finished' fence: %s\n", vk::to_string(createResult.result).c_str());
 		}
 
-		if (auto createResult = device->createImageUnique(topScreenInfo); createResult.result == vk::Result::eSuccess) {
-			topScreenImages[i] = std::move(createResult.value);
+		if (auto createResult = device->createImageUnique(screenTextureInfo); createResult.result == vk::Result::eSuccess) {
+			screenTexture[i] = std::move(createResult.value);
 		} else {
 			Helpers::panic("Error creating top-screen image: %s\n", vk::to_string(createResult.result).c_str());
-		}
-
-		if (auto createResult = device->createImageUnique(bottomScreenInfo); createResult.result == vk::Result::eSuccess) {
-			bottomScreenImages[i] = std::move(createResult.value);
-		} else {
-			Helpers::panic("Error creating bottom-screen image: %s\n", vk::to_string(createResult.result).c_str());
 		}
 	}
 
@@ -889,8 +891,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	{
 		const auto getImage = [](const vk::UniqueImage& image) -> vk::Image { return image.get(); };
 		std::vector<vk::Image> images;
-		std::transform(topScreenImages.begin(), topScreenImages.end(), std::back_inserter(images), getImage);
-		std::transform(bottomScreenImages.begin(), bottomScreenImages.end(), std::back_inserter(images), getImage);
+		std::transform(screenTexture.begin(), screenTexture.end(), std::back_inserter(images), getImage);
 
 		if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, images); result == vk::Result::eSuccess) {
 			framebufferMemory = std::move(imageMemory);
@@ -902,7 +903,112 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
 
-void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {}
+void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
+	return;
+	if (fbSize[0] == 0 || fbSize[1] == 0) {
+		return;
+	}
+	const u32 inputWidth = inputSize & 0xffff;
+	const u32 inputGap = inputSize >> 16;
+
+	const u32 outputWidth = outputSize & 0xffff;
+	const u32 outputGap = outputSize >> 16;
+
+	Texture& colorTexture = getColorRenderTexture();
+
+	vk::ImageBlit blitRegion = {};
+	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
+	// We consider output gap == 320 to mean bottom, and anything else to mean top
+	if (outputGap == 320) {
+		// Bottom screen
+		blitRegion = vk::ImageBlit(
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{0, 0, 0}, vk::Offset3D{320, 240, 1}},
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{40, 240, 0}, vk::Offset3D{40 + 320, 240 + 240, 1}}
+		);
+	} else {
+		// Top screen
+		blitRegion = vk::ImageBlit(
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{0, 0, 0}, vk::Offset3D{400, 240, 1}},
+			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{0, 0, 0}, vk::Offset3D{400, 240, 1}}
+		);
+	}
+
+	vk::CommandBufferAllocateInfo commandBuffersInfo = {};
+	commandBuffersInfo.commandPool = commandPool.get();
+	commandBuffersInfo.level = vk::CommandBufferLevel::ePrimary;
+	commandBuffersInfo.commandBufferCount = 1;
+
+	vk::UniqueCommandBuffer blitCommandBuffer = {};
+	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
+		blitCommandBuffer = std::move(allocateResult.value[0]);
+	} else {
+		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
+	}
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+
+	if (const vk::Result beginResult = blitCommandBuffer->begin(beginInfo); beginResult != vk::Result::eSuccess) {
+		Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
+	}
+
+	blitCommandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+		{
+			vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eColorAttachmentOptimal,
+				vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, colorTexture.image.get(),
+				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+			),
+			vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eColorAttachmentOptimal,
+				vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
+				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+			),
+		}
+	);
+
+	blitCommandBuffer->blitImage(
+		colorTexture.image.get(), vk::ImageLayout::eTransferSrcOptimal, screenTexture[frameBufferingIndex].get(),
+		vk::ImageLayout::eTransferDstOptimal, {blitRegion}, vk::Filter::eNearest
+	);
+
+	if (const vk::Result endResult = frameGraphicsCommandBuffers[frameBufferingIndex]->end(); endResult != vk::Result::eSuccess) {
+		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
+	}
+
+	blitCommandBuffer->pipelineBarrier(
+		vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+		{
+			vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eTransferRead, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferSrcOptimal,
+				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, colorTexture.image.get(),
+				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+			),
+			vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
+				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
+				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+			),
+		}
+	);
+
+	vk::FenceCreateInfo fenceInfo = {};
+	vk::UniqueFence finishedFence = {};
+	if (auto createResult = device->createFenceUnique(fenceInfo); createResult.result == vk::Result::eSuccess) {
+		finishedFence = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating fence: %s\n", vk::to_string(createResult.result).c_str());
+	}
+
+	vk::SubmitInfo submitInfo = {};
+
+	submitInfo.setCommandBuffers(blitCommandBuffer.get());
+
+	if (const vk::Result submitResult = graphicsQueue.submit({submitInfo}, finishedFence.get()); submitResult != vk::Result::eSuccess) {
+		Helpers::panic("Error submitting to graphics queue: %s\n", vk::to_string(submitResult).c_str());
+	}
+}
 
 void RendererVK::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {}
 
@@ -955,6 +1061,11 @@ void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Ver
 	renderBeginInfo.renderArea.extent.width = fbSize[0];
 	renderBeginInfo.renderArea.extent.height = fbSize[1];
 	renderBeginInfo.framebuffer = curFramebuffer;
+
+	const vk::UniqueCommandBuffer& commandBuffer = frameGraphicsCommandBuffers[frameBufferingIndex];
+
+	commandBuffer->beginRenderPass(renderBeginInfo, vk::SubpassContents::eInline);
+	commandBuffer->endRenderPass();
 }
 
 void RendererVK::screenshot(const std::string& name) {}

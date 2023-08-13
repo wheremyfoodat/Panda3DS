@@ -44,15 +44,21 @@ class RendererVK final : public Renderer {
 
 	// Frame-buffering data
 	// Each vector is `frameBufferingCount` in size
-	std::vector<vk::UniqueCommandBuffer> frameCommandBuffers = {};
+	std::vector<vk::UniqueCommandBuffer> framePresentCommandBuffers = {};
 	std::vector<vk::UniqueSemaphore> swapImageFreeSemaphore = {};
 	std::vector<vk::UniqueSemaphore> renderFinishedSemaphore = {};
 	std::vector<vk::UniqueFence> frameFinishedFences = {};
+	std::vector<std::vector<vk::UniqueFramebuffer>> frameFramebuffers = {};
+	std::vector<vk::UniqueCommandBuffer> frameGraphicsCommandBuffers = {};
+
+	// Todo:
+	// Use `{colourBuffer,depthBuffer}Loc` to maintain an std::map-cache of framebuffers
 	struct Texture {
 		vk::UniqueImage image;
 		vk::UniqueDeviceMemory imageMemory;
 		vk::UniqueImageView imageView;
 	};
+	// Hash(loc, size, format) -> Texture
 	std::map<u32, Texture> textureCache;
 
 	static u32 colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format);
@@ -61,8 +67,9 @@ class RendererVK final : public Renderer {
 	Texture& getColorRenderTexture();
 	Texture& getDepthRenderTexture();
 
-	std::vector<vk::UniqueImage> topScreenImages = {};
-	std::vector<vk::UniqueImage> bottomScreenImages = {};
+	// Use `lower_bound` to find nearest texture for an address
+	// Blit them during `display()`
+	std::vector<vk::UniqueImage> screenTexture = {};
 
 	std::map<u32, vk::UniqueRenderPass> renderPassCache;
 
