@@ -134,7 +134,7 @@ void CFGService::secureInfoGetRegion(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, static_cast<u32>(Regions::USA)); // TODO: Detect the game region and report it
+	mem.write32(messagePointer + 8, static_cast<u32>(mem.getConsoleRegion()));
 }
 
 void CFGService::genUniqueConsoleHash(u32 messagePointer) {
@@ -153,7 +153,16 @@ void CFGService::genUniqueConsoleHash(u32 messagePointer) {
 // Used for market restriction-related stuff
 void CFGService::getRegionCanadaUSA(u32 messagePointer) {
 	log("CFG::GetRegionCanadaUSA\n");
-	const u8 ret = (country == CountryCodes::US || country == CountryCodes::CA) ? 1 : 0;
+	bool regionUSA = mem.getConsoleRegion() == Regions::USA;
+	u8 ret;
+
+	// First, this function checks that the console region is 1 (USA). If not then it instantly returns 0
+	// Then it checks whether the country is US or Canda. If yes it returns 1, else it returns 0.
+	if (!regionUSA) {
+		ret = 0;
+	} else {
+		ret = (country == CountryCodes::US || country == CountryCodes::CA) ? 1 : 0;
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x4, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
