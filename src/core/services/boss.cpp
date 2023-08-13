@@ -12,7 +12,7 @@ namespace BOSSCommands {
 		GetNsDataIdList = 0x00100102,
 		ReceiveProperty = 0x00160082,
 		CancelTask = 0x001E0042,
-		GetTaskStatus = 0x00200082,
+		GetTaskState = 0x00200082,
 		GetTaskInfo = 0x00250082,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000,
@@ -32,7 +32,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetStorageEntryInfo: getStorageEntryInfo(messagePointer); break;
 		case BOSSCommands::GetTaskIdList: getTaskIdList(messagePointer); break;
 		case BOSSCommands::GetTaskInfo: getTaskInfo(messagePointer); break;
-		case BOSSCommands::GetTaskStatus: getTaskStatus(messagePointer); break;
+		case BOSSCommands::GetTaskState: getTaskState(messagePointer); break;
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
 		case BOSSCommands::InitializeSession: initializeSession(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
@@ -56,23 +56,23 @@ void BOSSService::getOptoutFlag(u32 messagePointer) {
 	mem.write8(messagePointer + 8, optoutFlag);
 }
 
-void BOSSService::getTaskStatus(u32 messagePointer) {
+void BOSSService::getTaskState(u32 messagePointer) {
 	const u32 taskIDBufferSize = mem.read32(messagePointer + 4);
 	const u32 taskIDDataPointer = mem.read32(messagePointer + 16);
 	log("BOSS::GetTaskStatus (task buffer size: %08X, task data pointer: %08X) (stubbed)\n", taskIDBufferSize, taskIDDataPointer);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x20, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, 0); // TODO: What is this?
+	mem.write8(messagePointer + 8, 0);    // TaskStatus: Report the task finished successfully
+	mem.write32(messagePointer + 12, 0);  // Current state value for task PropertyID 0x4
+	mem.write8(messagePointer + 16, 0);  // TODO: Figure out what this should be
 }
 
 void BOSSService::getTaskStorageInfo(u32 messagePointer) {
 	log("BOSS::GetTaskStorageInfo (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x4, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0);   // TaskStatus: Report the task finished successfully
-	mem.write32(messagePointer + 12, 0);  // Same
-	mem.write32(messagePointer + 16, 5);  // TODO: Figure out what this should be
+	mem.write32(messagePointer + 8, 0);
 }
 
 void BOSSService::getTaskIdList(u32 messagePointer) {
