@@ -11,6 +11,9 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	printf("Data address = %08X, size = %08X\n", cxi.data.address, cxi.data.size);
 	printf("Stack size: %08X\n", cxi.stackSize);
 
+	// Set autodetected 3DS region to one of the values allowed by the CXI's SMDH
+	region = cxi.region.value();
+
 	if (!isAligned(cxi.stackSize)) {
 		Helpers::warn("CXI has a suspicious stack size of %08X which is not a multiple of 4KB", cxi.stackSize);
 	}

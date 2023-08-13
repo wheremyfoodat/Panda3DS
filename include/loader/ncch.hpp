@@ -5,6 +5,7 @@
 #include "io_file.hpp"
 #include "helpers.hpp"
 #include "crypto/aes_engine.hpp"
+#include "services/region_codes.hpp"
 
 struct NCCH {
     struct EncryptionInfo {
@@ -60,6 +61,8 @@ struct NCCH {
     std::vector<u8> codeFile;
     // Contains of the cart's save data
     std::vector<u8> saveData;
+    // The cart region. Only the CXI's region matters to us. Necessary to get past region locking
+	std::optional<Regions> region = std::nullopt;
 
     // Returns true on success, false on failure
     // Partition index/offset/size must have been set before this
@@ -70,6 +73,9 @@ struct NCCH {
     bool hasRomFS() { return romFS.size != 0; }
     bool hasCode() { return codeFile.size() != 0; }
     bool hasSaveData() { return saveData.size() != 0; }
+
+    // Parse SMDH for region info and such. Returns false on failure, true on success
+    bool parseSMDH(const std::vector<u8>& smdh);
 
     std::pair<bool, Crypto::AESKey> getPrimaryKey(Crypto::AESEngine &aesEngine, const Crypto::AESKey &keyY);
     std::pair<bool, Crypto::AESKey> getSecondaryKey(Crypto::AESEngine &aesEngine, const Crypto::AESKey &keyY);

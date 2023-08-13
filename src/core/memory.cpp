@@ -59,6 +59,9 @@ void Memory::reset() {
 		readTable[i + initialPage] = pointer;
 		writeTable[i + initialPage] = pointer;
 	}
+
+	// Later adjusted based on ROM header when possible
+	region = Regions::USA;
 }
 
 bool Memory::allocateMainThreadStack(u32 size) {
@@ -471,4 +474,10 @@ u64 Memory::timeSince3DSEpoch() {
 	constexpr u64 offset = 2208988800ull;
 	milliseconds ms = duration_cast<milliseconds>(seconds(rawTime + timezoneDifference + offset));
 	return ms.count();
+}
+
+Regions Memory::getConsoleRegion() {
+	// TODO: Let the user force the console region as they want
+	// For now we pick one based on the ROM header
+	return region;
 }
