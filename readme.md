@@ -8,14 +8,14 @@ Join our Discord server by pressing on the banner below!
 
 [![Discord Banner 2](https://discord.com/api/guilds/1118695732958994532/widget.png?style=banner2)](https://discord.gg/ZYbugsEmsw)
 
-![screenshot1](docs/img/MK7.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png) ![screenshot4](docs/img/Sims3Loading.png)
+![screenshot1](docs/img/MK7.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
 
 # Compatibility
 Panda3DS is still in the early stages of development. Many games boot, many don't. Most games have at least some hilariously broken graphics, audio is not supported, performance leaves a bit to be desired mainly thanks to lack of shader acceleration, and most QoL features (including a GUI) are missing.
 
 In addition, some games don't quiiite work with the upstream code. A lot of them might need some panics in the source code to be commented out before they work, etc. However, just the fact things can work as well as they do now is promising in itself.
 
-Check out [this Google spreadsheet](https://docs.google.com/spreadsheets/d/1nWZTzfaMPkZdyhqHEawMRBaP0qSMmQdxrVfAbgapYrM/edit?usp=sharing) for an compatability list.
+Check out [this Google spreadsheet](https://docs.google.com/spreadsheets/d/1nWZTzfaMPkZdyhqHEawMRBaP0qSMmQdxrVfAbgapYrM/edit?usp=sharing) for an unofficial compatibility list.
 # Why?
 The 3DS emulation scene is already pretty mature, with offerings such as [Citra](https://github.com/citra-emu/citra) which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
 
