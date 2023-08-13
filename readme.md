@@ -15,10 +15,11 @@ Panda3DS is still in the early stages of development. Many games boot, many don'
 
 In addition, some games don't quiiite work with the upstream code. A lot of them might need some panics in the source code to be commented out before they work, etc. However, just the fact things can work as well as they do now is promising in itself.
 
+Check out [this Google spreadsheet](https://docs.google.com/spreadsheets/d/1nWZTzfaMPkZdyhqHEawMRBaP0qSMmQdxrVfAbgapYrM/edit?usp=sharing) for an unofficial compatibility list.
 # Why?
 The 3DS emulation scene is already pretty mature, with offerings such as [Citra](https://github.com/citra-emu/citra) which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
 
-- Virtualization. What motivated the creation of this emulator was actually a discussion on whether it is possible to get fast 3DS emulation on low-end hardware such as the Raspberry Pi 4, using the KVM API. At the moment, Panda3DS is powered by dynarmic rather than using virtualization, but this is definitely a concept I want to explore in the future.
+- Virtualization. What motivated the creation of this emulator was actually a discussion on whether it is possible to get fast 3DS emulation on low-end hardware such as the Raspberry Pi 4, using the KVM API. At the moment, Panda3DS is powered by Dynarmic rather than using virtualization, but this is definitely a concept I want to explore in the future.
 
 - Debugging, reverse engineering and modding tools. While contributing to [PCSX-Redux](https://github.com/grumpycoders/pcsx-redux) and collaborating with the other developers, I had the chance to find out how useful tools like these can be. They can serve as indispensable tools for the homebrew devs, modders, reverse engineers, as well as emulator developers themselves. Some tools can even become fun toys the casual user can mess around with. As such, I think they can really improve the experience in a project like this. Of course, I'd like to thank @nicolasnoble and the entire Redux team for helping me learn the value of these tools, as well as making me improve as a programmer.
 
@@ -99,5 +100,5 @@ Keep in mind, funding is only aimed to cover various life costs and support deve
 
 Nintendo 3DS is a registered trademark of Nintendo Co., Ltd.
 
-![pamda](docs/img/panda.jpg)
+![panda](docs/img/panda.jpg)
 Here's a panda it go blep
