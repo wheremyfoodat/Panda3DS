@@ -9,6 +9,7 @@
 #include "helpers.hpp"
 #include "handles.hpp"
 #include "loader/ncsd.hpp"
+#include "services/region_codes.hpp"
 #include "services/shared_font.hpp"
 
 namespace PhysicalAddrs {
@@ -151,6 +152,8 @@ private:
 
 	// Values taken from 3DBrew and Citra
 	static constexpr FirmwareInfo firm{.unk = 0, .revision = 0, .minor = 0x34, .major = 2, .syscoreVer = 2, .sdkVer = 0x0000F297};
+	// Adjusted upon loading a ROM based on the ROM header. Used by CFG::SecureInfoGetArea to get past region locks
+	Regions region = Regions::USA;
 
 public:
 	u16 kernelVersion = 0;
@@ -261,4 +264,5 @@ public:
 
 	void setVRAM(u8* pointer) { vram = pointer; }
 	bool allocateMainThreadStack(u32 size);
+	Regions getConsoleRegion();
 };
