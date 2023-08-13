@@ -612,6 +612,9 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 		case KernelObjectType::Thread: // Waiting on a thread waits until it's dead. If it's dead then no need to wait
 			return object->getData<Thread>()->status != ThreadStatus::Dead;
 
+		case KernelObjectType::Timer: // We should wait on a timer only if it has not been signalled
+			return !object->getData<Timer>()->fired;
+
 		case KernelObjectType::Semaphore: // Wait if the semaphore count <= 0
 			return object->getData<Semaphore>()->availableCount <= 0;
 

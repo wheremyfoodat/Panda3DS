@@ -163,6 +163,17 @@ struct Semaphore {
     Semaphore(s32 initialCount, s32 maximumCount) : availableCount(initialCount), maximumCount(maximumCount), waitlist(0) {}
 };
 
+struct Timer {
+	u64 waitlist;  // Refer to the getWaitlist function below for documentation
+	ResetType resetType = ResetType::OneShot;
+
+    u64 initialDelay; // Number of ns until the timer fires for the first time
+	u64 interval;     // Number of ns until the timer fires for the second and future times
+	bool fired;       // Has this Timer been signalled?
+
+	Timer(ResetType type) : resetType(type), initialDelay(0), interval(0), waitlist(0), fired(false) {}
+};
+
 struct MemoryBlock {
     u32 addr = 0;
     u32 size = 0;
