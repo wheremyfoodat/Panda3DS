@@ -11,8 +11,11 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	printf("Data address = %08X, size = %08X\n", cxi.data.address, cxi.data.size);
 	printf("Stack size: %08X\n", cxi.stackSize);
 
+	static constexpr std::array<const char*, 7> regionNames = {"Japan", "North America", "Europe", "Australia", "China", "Korea", "Taiwan" };
+
 	// Set autodetected 3DS region to one of the values allowed by the CXI's SMDH
 	region = cxi.region.value();
+	printf("Console region autodetected to: %s\n", regionNames[static_cast<size_t>(region)]);
 
 	if (!isAligned(cxi.stackSize)) {
 		Helpers::warn("CXI has a suspicious stack size of %08X which is not a multiple of 4KB", cxi.stackSize);
