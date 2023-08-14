@@ -67,9 +67,9 @@ void main() {
 	v_colour = a_vertexColour;
 
 	// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
-	v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
-	v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
-	v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+        v_texcoord0 = vec3(a_texcoord0.x, a_texcoord0.y, a_texcoord0_w);
+        v_texcoord1 = vec2(a_texcoord1.x, a_texcoord1.y);
+        v_texcoord2 = vec2(a_texcoord2.x, a_texcoord2.y);
 	v_view = a_view;
 
 	v_normal = normalize(rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), a_quaternion));

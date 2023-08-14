@@ -254,7 +254,7 @@ void Texture::decodeTexture(std::span<const u8> data) {
     // Decode texels line by line
     for (u32 v = 0; v < size.v(); v++) {
         for (u32 u = 0; u < size.u(); u++) {
-            u32 colour = decodeTexel(u, v, format, data);
+            u32 colour = decodeTexel(u, size.v() - v - 1, format, data);
             decoded.push_back(colour);
         }
     }
