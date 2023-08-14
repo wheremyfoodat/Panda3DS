@@ -75,6 +75,8 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 
 		if (!primaryResult.first || !secondaryResult.first) {
 			gotCryptoKeys = false;
+			if (!primaryResult.first) printf("Do not have primary key\n");
+			if (!secondaryResult.first) printf("Do not have secondary key\n");
 		} else {
 			Crypto::AESKey primaryKey = primaryResult.second;
 			Crypto::AESKey secondaryKey = secondaryResult.second;
