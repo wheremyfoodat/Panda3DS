@@ -252,6 +252,14 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 		case KernelObjectType::Thread:
 			break;
 
+		case KernelObjectType::Timer: {
+			Timer* timer = object->getData<Timer>();
+			if (timer->resetType == ResetType::OneShot) {  // One-shot timers automatically get cleared after waking up a thread
+				timer->fired = false;
+			}
+			break;
+		}
+
 		default: Helpers::panic("Acquiring unimplemented sync object %s", object->getTypeName());
 	}
 }
