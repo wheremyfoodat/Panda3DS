@@ -1,19 +1,22 @@
 #include "services/cam.hpp"
 #include "ipc.hpp"
+#include "kernel.hpp"
 
 namespace CAMCommands {
 	enum : u32 {
+		GetBufferErrorInterruptEvent = 0x00060040,
 		DriverInitialize = 0x00390000,
-		GetMaxLines = 0x000A0080
+		GetMaxLines = 0x000A0080,
 	};
 }
 
-void CAMService::reset() {}
+void CAMService::reset() { bufferErrorInterruptEvents.fill(std::nullopt); }
 
 void CAMService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case CAMCommands::DriverInitialize: driverInitialize(messagePointer); break;
+		case CAMCommands::GetBufferErrorInterruptEvent: getBufferErrorInterruptEvent(messagePointer); break;
 		case CAMCommands::GetMaxLines: getMaxLines(messagePointer); break;
 		default: Helpers::panic("CAM service requested. Command: %08X\n", command);
 	}
@@ -54,5 +57,25 @@ void CAMService::getMaxLines(u32 messagePointer) {
 		mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
 		mem.write32(messagePointer + 4, result);
 		mem.write16(messagePointer + 8, lines);
+	}
+}
+
+void CAMService::getBufferErrorInterruptEvent(u32 messagePointer) {
+	const u32 port = mem.read32(messagePointer + 4);
+	log("CAM::GetBufferErrorInterruptEvent (port = %d)\n", port);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 2));
+
+	if (port >= portCount) {
+		Helpers::panic("CAM::GetBufferErrorInterruptEvent: Invalid port");
+	} else {
+		auto& event = bufferErrorInterruptEvents[port];
+		if (!event.has_value()) {
+			event = kernel.makeEvent(ResetType::OneShot);
+		}
+
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 8, 0);
+		mem.write32(messagePointer + 12, event.value());
 	}
 }
