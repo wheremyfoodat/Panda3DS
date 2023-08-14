@@ -321,6 +321,12 @@ void RendererGL::bindTexturesToSlots() {
 		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
 
 		glActiveTexture(GL_TEXTURE0 + i);
+		auto fb = getColourBuffer(addr, static_cast<PICA::ColorFmt>(format), width, height, false);
+		if (fb.has_value()) {
+			fb->texture.bind();
+			continue;
+		}
+
 		Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
 		OpenGL::Texture tex = getTexture(targetTex);
 		tex.bind();
