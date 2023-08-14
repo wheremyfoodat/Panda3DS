@@ -5,6 +5,7 @@ namespace MICCommands {
 	enum : u32 {
 		MapSharedMem = 0x00010042,
 		StartSampling = 0x00030140,
+		StopSampling = 0x00050000,
 		SetGain = 0x00080040,
 		GetGain = 0x00090000,
 		SetPower = 0x000A0040,
@@ -17,6 +18,7 @@ namespace MICCommands {
 void MICService::reset() {
 	micEnabled = false;
 	shouldClamp = false;
+	isSampling = false;
 	gain = 0;
 }
 
@@ -30,6 +32,7 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 		case MICCommands::SetIirFilter: setIirFilter(messagePointer); break;
 		case MICCommands::SetPower: setPower(messagePointer); break;
 		case MICCommands::StartSampling: startSampling(messagePointer); break;
+		case MICCommands::StopSampling: stopSampling(messagePointer); break;
 		case MICCommands::CaptainToadFunction: theCaptainToadFunction(messagePointer); break;
 		default: Helpers::panic("MIC service requested. Command: %08X\n", command);
 	}
@@ -88,7 +91,16 @@ void MICService::startSampling(u32 messagePointer) {
 		encoding, sampleRate, offset, dataSize, loop ? "yes" : "no"
 	);
 
+	isSampling = true;
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::stopSampling(u32 messagePointer) {
+	log("MIC::StopSampling\n");
+	isSampling = false;
+	
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
