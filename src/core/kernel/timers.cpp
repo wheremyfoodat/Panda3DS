@@ -72,7 +72,7 @@ void Kernel::svcSetTimer() {
 	// TODO: Is this actually s64 or u64? 3DBrew says s64, but u64 makes more sense
 	const s64 initial = s64(u64(regs[1]) | (u64(regs[2]) << 32));
 	const s64 interval = s64(u64(regs[3]) | (u64(regs[4]) << 32));
-	logSVC("SetTimer (handle = %X, initial delay = %llxX, interval delay = %llx)\n", handle, initial, interval);
+	logSVC("SetTimer (handle = %X, initial delay = %llX, interval delay = %llX)\n", handle, initial, interval);
 
 	KernelObject* object = getObject(handle, KernelObjectType::Timer);
 
