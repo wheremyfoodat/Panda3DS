@@ -35,6 +35,7 @@ class Kernel {
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 	std::vector<Handle> mutexHandles;
+	std::vector<Handle> timerHandles;
 
 	// Thread indices, sorted by priority
 	std::vector<int> threadIndices;
@@ -84,6 +85,7 @@ private:
 	void releaseMutex(Mutex* moo);
 	void cancelTimer(Timer* timer);
 	void signalTimer(Handle timerHandle, Timer* timer);
+	void updateTimer(Handle timerHandle, Timer* timer);
 
 	// Wake up the thread with the highest priority out of all threads in the waitlist
 	// Returns the index of the woken up thread
@@ -182,6 +184,14 @@ public:
 	void requireReschedule() { needReschedule = true; }
 
 	void evalReschedule() {
+		for (auto handle : timerHandles) {
+			const auto object = getObject(handle, KernelObjectType::Timer);
+			if (object != nullptr) {
+				Timer* timer = object->getData<Timer>();
+				updateTimer(handle, timer);
+			}
+		}
+
 		if (needReschedule) {
 			needReschedule = false;
 			rescheduleThreads();

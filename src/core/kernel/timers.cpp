@@ -1,26 +1,55 @@
 #include "kernel.hpp"
+#include "cpu.hpp"
 
 Handle Kernel::makeTimer(ResetType type) {
 	Handle ret = makeObject(KernelObjectType::Timer);
 	objects[ret].data = new Timer(type);
 
-	if (type == ResetType::Pulse) Helpers::panic("Created pulse timer");
+	if (type == ResetType::Pulse) {
+		Helpers::panic("Created pulse timer");
+	}
 
+	timerHandles.push_back(ret);
 	return ret;
 }
 
+void Kernel::updateTimer(Handle handle, Timer* timer) {
+	if (timer->running) {
+		const u64 currentTicks = cpu.getTicks();
+		u64 elapsedTicks = currentTicks - timer->startTick;
+
+		constexpr double ticksPerSec = double(CPU::ticksPerSec);
+		constexpr double nsPerTick = ticksPerSec / 1000000000.0;
+		const s64 elapsedNs = s64(double(elapsedTicks) * nsPerTick);
+
+		// Timer has fired
+		if (elapsedNs >= timer->currentDelay) {
+			timer->startTick = currentTicks;
+			timer->currentDelay = timer->interval;
+			signalTimer(handle, timer);
+		}
+	}
+}
+
 void Kernel::cancelTimer(Timer* timer) {
+	timer->running = false;
 	// TODO: When we have a scheduler this should properly cancel timer events in the scheduler
 }
 
 void Kernel::signalTimer(Handle timerHandle, Timer* timer) {
 	timer->fired = true;
-	wakeupAllThreads(timer->waitlist, timerHandle);
+	requireReschedule();
 
-	switch (timer->resetType) {
-		case ResetType::OneShot: timer->fired = false; break;
-		case ResetType::Sticky: break;
-		case ResetType::Pulse: Helpers::panic("Signalled pulsing timer"); break;
+	// Check if there's any thread waiting on this event
+	if (timer->waitlist != 0) {
+		wakeupAllThreads(timer->waitlist, timerHandle);
+		timer->waitlist = 0;  // No threads waiting;
+
+		switch (timer->resetType) {
+			case ResetType::OneShot: timer->fired = false; break;
+			case ResetType::Sticky: break;
+			case ResetType::Pulse: Helpers::panic("Signalled pulsing timer"); break;
+		}
 	}
 }
 
@@ -54,8 +83,10 @@ void Kernel::svcSetTimer() {
 
 	Timer* timer = object->getData<Timer>();
 	cancelTimer(timer);
-	timer->initialDelay = initial;
+	timer->currentDelay = initial;
 	timer->interval = interval;
+	timer->running = true;
+	timer->startTick = cpu.getTicks();
 
 	// If the initial delay is 0 then instantly signal the timer
 	if (initial == 0) {
@@ -81,4 +112,16 @@ void Kernel::svcClearTimer() {
 	}
 }
 
-void Kernel::svcCancelTimer() { Helpers::panic("Kernel::CancelTimer"); }
+void Kernel::svcCancelTimer() {
+	Handle handle = regs[0];
+	logSVC("CancelTimer (handle = %X)\n", handle);
+	KernelObject* object = getObject(handle, KernelObjectType::Timer);
+
+	if (object == nullptr) {
+		Helpers::panic("Tried to cancel non-existent timer %X\n", handle);
+		regs[0] = Result::Kernel::InvalidHandle;
+	} else {
+		cancelTimer(object->getData<Timer>());
+		regs[0] = Result::Success;
+	}
+}
