@@ -232,8 +232,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 
 		// Positional Light
 		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0) {
-			error_unimpl = true;
-			// half_vector = normalize(normalize(light_vector + v_view) + view);
+			//error_unimpl = true;
+			half_vector = normalize(normalize(light_vector + v_view) + view);
 		}
 
 		// Directional light
@@ -328,7 +328,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	if (fresnel_output2 == 1u) secondary_color.a = d[FR_LUT];
 
 	if (error_unimpl) {
-		secondary_color = primary_color = vec4(1.0, 0., 1.0, 1.0);
+		//secondary_color = primary_color = vec4(1.0, 0., 1.0, 1.0);
 	}
 }
 
