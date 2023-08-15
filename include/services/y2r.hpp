@@ -75,6 +75,7 @@ class Y2RService {
 	void setInputLineWidth(u32 messagePointer);
 	void setInputLines(u32 messagePointer);
 	void setOutputFormat(u32 messagePointer);
+	void setPackageParameter(u32 messagePointer);
 	void setReceiving(u32 messagePointer);
 	void setRotation(u32 messagePointer);
 	void setSendingY(u32 messagePointer);
