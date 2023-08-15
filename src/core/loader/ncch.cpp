@@ -131,6 +131,13 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 				return false;
 			}
 
+			if (!aesEngine.haveGenerator()) {
+				Helpers::panic(
+					"Loading an encrypted ROM but your AES keys don't seem to provide the \"generator\" constant which Panda3DS requires for decryption\n"
+					"Please add it to your aes_keys.txt in a line like \"generator=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\" where the Xs are replaced with the actual generator constant value"
+				);
+			}
+
 			if (!gotCryptoKeys) {
 				Helpers::panic("ROM is encrypted but it seems we couldn't get either the primary or the secondary key");
 				return false;
