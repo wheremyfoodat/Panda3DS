@@ -25,11 +25,14 @@ static s32 findQueueFamily(
 	return -1;
 }
 
+static u32 rotl32(u32 x, u32 n) { return (x << n) | (x >> (32 - n)); }
+static u32 ror32(u32 x, u32 n) { return (x >> n) | (x << (32 - n)); }
+
 u32 RendererVK::colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format) {
-	return std::rotl<u32>(loc, 17) ^ std::rotr(size, 23) ^ (static_cast<u64>(format) << 60);
+	return rotl32(loc, 17) ^ ror32(size, 23) ^ (static_cast<u64>(format) << 60);
 }
 u32 RendererVK::depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format) {
-	return std::rotl<u32>(loc, 17) ^ std::rotr(size, 29) ^ (static_cast<u64>(format) << 60);
+	return rotl32(loc, 17) ^ ror32(size, 29) ^ (static_cast<u64>(format) << 60);
 }
 
 RendererVK::Texture& RendererVK::getColorRenderTexture() {
