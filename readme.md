@@ -92,6 +92,7 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
 - [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
 - [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
+- [shadPS4](https://github.com/georgemoralis/shadPS4): Work-in-progress PS4 emulator by the creator of PCSX, PCSX2 and more
 
 # Support
 If you find this project exciting and want to support the founder, check out [his Patreon page](https://www.patreon.com/wheremyfoodat)
