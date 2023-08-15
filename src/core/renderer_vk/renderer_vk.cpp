@@ -589,7 +589,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	std::unordered_set<std::string> instanceExtensionsAvailable = {};
 	if (const auto enumerateResult = vk::enumerateInstanceExtensionProperties(); enumerateResult.result == vk::Result::eSuccess) {
 		for (const auto& curExtension : enumerateResult.value) {
-			instanceExtensionsAvailable.emplace(curExtension.extensionName);
+			instanceExtensionsAvailable.emplace(curExtension.extensionName.data());
 		}
 	}
 
