@@ -14,6 +14,7 @@ namespace BOSSCommands {
 		ReceiveProperty = 0x00160082,
 		CancelTask = 0x001E0042,
 		GetTaskState = 0x00200082,
+		GetTaskStatus = 0x002300C2,
 		GetTaskInfo = 0x00250082,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000,
@@ -34,6 +35,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetTaskIdList: getTaskIdList(messagePointer); break;
 		case BOSSCommands::GetTaskInfo: getTaskInfo(messagePointer); break;
 		case BOSSCommands::GetTaskState: getTaskState(messagePointer); break;
+		case BOSSCommands::GetTaskStatus: getTaskStatus(messagePointer); break;
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
 		case BOSSCommands::InitializeSession: initializeSession(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
@@ -68,6 +70,17 @@ void BOSSService::getTaskState(u32 messagePointer) {
 	mem.write8(messagePointer + 8, 0);    // TaskStatus: Report the task finished successfully
 	mem.write32(messagePointer + 12, 0);  // Current state value for task PropertyID 0x4
 	mem.write8(messagePointer + 16, 0);  // TODO: Figure out what this should be
+}
+
+void BOSSService::getTaskStatus(u32 messagePointer) {
+	// TODO: 3DBrew does not mention what the parameters are, or what the return values are.
+	log("BOSS::GetTaskStatus (Stubbed)\n");
+
+	// Response values stubbed based on Citra
+	mem.write32(messagePointer, IPC::responseHeader(0x23, 2, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0);
+	// TODO: Citra pushes a buffer here?
 }
 
 void BOSSService::getTaskStorageInfo(u32 messagePointer) {
