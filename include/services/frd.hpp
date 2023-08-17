@@ -29,6 +29,7 @@ class FRDService {
 	void getMyScreenName(u32 messsagePointer);
 	void setClientSDKVersion(u32 messagePointer);
 	void setNotificationMask(u32 messagePointer);
+	void updateGameModeDescription(u32 messagePointer);
 
 public:
 	FRDService(Memory& mem) : mem(mem) {}

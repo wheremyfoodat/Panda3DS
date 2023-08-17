@@ -1,7 +1,9 @@
-#include <string>
 #include "services/frd.hpp"
-#include "services/region_codes.hpp"
+
+#include <string>
+
 #include "ipc.hpp"
+#include "services/region_codes.hpp"
 
 namespace FRDCommands {
 	enum : u32 {
@@ -13,7 +15,8 @@ namespace FRDCommands {
 		GetMyPresence = 0x00080000,
 		GetMyScreenName = 0x00090000,
 		GetMyMii = 0x000A0000,
-		GetFriendKeyList = 0x00110080
+		GetFriendKeyList = 0x00110080,
+		UpdateGameModeDescription = 0x001D0002,
 	};
 }
 
@@ -31,12 +34,21 @@ void FRDService::handleSyncRequest(u32 messagePointer) {
 		case FRDCommands::GetMyScreenName: getMyScreenName(messagePointer); break;
 		case FRDCommands::SetClientSdkVersion: setClientSDKVersion(messagePointer); break;
 		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
+		case FRDCommands::UpdateGameModeDescription: updateGameModeDescription(messagePointer); break;
 		default: Helpers::panic("FRD service requested. Command: %08X\n", command);
 	}
 }
 
 void FRDService::attachToEventNotification(u32 messagePointer) {
 	log("FRD::AttachToEventNotification (Undocumented)\n");
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// This is supposed to post stuff on your user profile so uhh can't really emulate it
+void FRDService::updateGameModeDescription(u32 messagePointer) {
+	log("FRD::UpdateGameModeDescription\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1D, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
