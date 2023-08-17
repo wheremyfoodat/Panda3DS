@@ -20,9 +20,11 @@ HorizonResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 		// Create a file of size "size" by creating an empty one, seeking to size - 1 and just writing a 0 there
 		IOFile file(p.string().c_str(), "wb");
 		if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
+			file.close();
 			return Result::Success;
 		}
 
+		file.close();
 		return Result::FS::FileTooLarge;
 	}
 
