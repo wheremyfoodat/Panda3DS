@@ -5,7 +5,11 @@ namespace Vulkan {
 	vk::Format colorFormatToVulkan(PICA::ColorFmt colorFormat) {
 		switch (colorFormat) {
 			case PICA::ColorFmt::RGBA8: return vk::Format::eR8G8B8A8Unorm;
-			case PICA::ColorFmt::RGB8: return vk::Format::eR8G8B8Unorm;
+			// VK_FORMAT_R8G8B8A8_UNORM is mandated by the vulkan specification
+			// VK_FORMAT_R8G8B8_UNORM may not be supported
+			// TODO: Detect this!
+			// case PICA::ColorFmt::RGB8: return vk::Format::eR8G8B8Unorm;
+			case PICA::ColorFmt::RGB8: return vk::Format::eR8G8B8A8Unorm;
 			case PICA::ColorFmt::RGBA5551: return vk::Format::eR5G5B5A1UnormPack16;
 			case PICA::ColorFmt::RGB565: return vk::Format::eR5G6B5UnormPack16;
 			case PICA::ColorFmt::RGBA4: return vk::Format::eR4G4B4A4UnormPack16;
