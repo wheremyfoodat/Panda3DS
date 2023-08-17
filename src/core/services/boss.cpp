@@ -6,6 +6,7 @@ namespace BOSSCommands {
 		InitializeSession = 0x00010082,
 		UnregisterStorage = 0x00030000,
 		GetTaskStorageInfo = 0x00040000,
+		RegisterNewArrivalEvent = 0x00080002,
 		GetOptoutFlag = 0x000A0000,
 		UnregisterTask = 0x000C0082,
 		GetTaskIdList = 0x000E0000,
@@ -36,6 +37,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
 		case BOSSCommands::InitializeSession: initializeSession(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
+		case BOSSCommands::RegisterNewArrivalEvent: registerNewArrivalEvent(messagePointer); break;
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
 		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
@@ -107,6 +109,16 @@ void BOSSService::receiveProperty(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Read size
+}
+
+// This seems to accept a KEvent as a parameter and register it for something Spotpass related
+// I need to update the 3DBrew page when it's known what it does properly
+void BOSSService::registerNewArrivalEvent(u32 messagePointer) {
+	const Handle eventHandle = mem.read32(messagePointer + 4); // Kernel event handle to register
+	log("BOSS::RegisterNewArrivalEvent (handle = %X)\n", eventHandle);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::cancelTask(u32 messagePointer) {
