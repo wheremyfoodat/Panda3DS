@@ -6,6 +6,7 @@ namespace BOSSCommands {
 		InitializeSession = 0x00010082,
 		UnregisterStorage = 0x00030000,
 		GetTaskStorageInfo = 0x00040000,
+		RegisterNewArrivalEvent = 0x00080002,
 		GetOptoutFlag = 0x000A0000,
 		UnregisterTask = 0x000C0082,
 		GetTaskIdList = 0x000E0000,
@@ -13,6 +14,7 @@ namespace BOSSCommands {
 		ReceiveProperty = 0x00160082,
 		CancelTask = 0x001E0042,
 		GetTaskState = 0x00200082,
+		GetTaskStatus = 0x002300C2,
 		GetTaskInfo = 0x00250082,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000,
@@ -33,9 +35,11 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetTaskIdList: getTaskIdList(messagePointer); break;
 		case BOSSCommands::GetTaskInfo: getTaskInfo(messagePointer); break;
 		case BOSSCommands::GetTaskState: getTaskState(messagePointer); break;
+		case BOSSCommands::GetTaskStatus: getTaskStatus(messagePointer); break;
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
 		case BOSSCommands::InitializeSession: initializeSession(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
+		case BOSSCommands::RegisterNewArrivalEvent: registerNewArrivalEvent(messagePointer); break;
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
 		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
@@ -66,6 +70,17 @@ void BOSSService::getTaskState(u32 messagePointer) {
 	mem.write8(messagePointer + 8, 0);    // TaskStatus: Report the task finished successfully
 	mem.write32(messagePointer + 12, 0);  // Current state value for task PropertyID 0x4
 	mem.write8(messagePointer + 16, 0);  // TODO: Figure out what this should be
+}
+
+void BOSSService::getTaskStatus(u32 messagePointer) {
+	// TODO: 3DBrew does not mention what the parameters are, or what the return values are.
+	log("BOSS::GetTaskStatus (Stubbed)\n");
+
+	// Response values stubbed based on Citra
+	mem.write32(messagePointer, IPC::responseHeader(0x23, 2, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0);
+	// TODO: Citra pushes a buffer here?
 }
 
 void BOSSService::getTaskStorageInfo(u32 messagePointer) {
@@ -107,6 +122,16 @@ void BOSSService::receiveProperty(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Read size
+}
+
+// This seems to accept a KEvent as a parameter and register it for something Spotpass related
+// I need to update the 3DBrew page when it's known what it does properly
+void BOSSService::registerNewArrivalEvent(u32 messagePointer) {
+	const Handle eventHandle = mem.read32(messagePointer + 4); // Kernel event handle to register
+	log("BOSS::RegisterNewArrivalEvent (handle = %X)\n", eventHandle);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void BOSSService::cancelTask(u32 messagePointer) {
