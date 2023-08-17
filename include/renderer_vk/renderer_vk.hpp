@@ -1,6 +1,7 @@
 #include <map>
 #include <optional>
 
+#include "math_util.hpp"
 #include "renderer.hpp"
 #include "vk_api.hpp"
 
@@ -40,8 +41,6 @@ class RendererVK final : public Renderer {
 	// Todo: make this a configuration option
 	static constexpr usize frameBufferingCount = 3;
 
-	vk::UniqueDeviceMemory framebufferMemory = {};
-
 	// Frame-buffering data
 	// Each vector is `frameBufferingCount` in size
 	std::vector<vk::UniqueCommandBuffer> framePresentCommandBuffers = {};
@@ -54,9 +53,21 @@ class RendererVK final : public Renderer {
 	// Todo:
 	// Use `{colourBuffer,depthBuffer}Loc` to maintain an std::map-cache of framebuffers
 	struct Texture {
+		u32 loc = 0;
+		u32 sizePerPixel = 0;
+		std::array<u32, 2> size = {};
+
 		vk::UniqueImage image;
 		vk::UniqueDeviceMemory imageMemory;
 		vk::UniqueImageView imageView;
+
+		Math::Rect<u32> getSubRect(u32 inputAddress, u32 width, u32 height) {
+			// PICA textures have top-left origin, same as Vulkan
+			const u32 startOffset = (inputAddress - loc) / sizePerPixel;
+			const u32 x0 = (startOffset % (size[0] * 8)) / 8;
+			const u32 y0 = (startOffset / (size[0] * 8)) * 8;
+			return Math::Rect<u32>{x0, y0, x0 + width, y0 + height};
+		}
 	};
 	// Hash(loc, size, format) -> Texture
 	std::map<u32, Texture> textureCache;
@@ -64,12 +75,12 @@ class RendererVK final : public Renderer {
 	static u32 colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format);
 	static u32 depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format);
 
-	Texture& getColorRenderTexture();
-	Texture& getDepthRenderTexture();
+	Texture& getColorRenderTexture(u32 addr, PICA::ColorFmt format, u32 width, u32 height);
+	Texture& getDepthRenderTexture(u32 addr, PICA::DepthFmt format, u32 width, u32 height);
 
-	// Use `lower_bound` to find nearest texture for an address
-	// Blit them during `display()`
+	// Framebuffer for the top/bottom image
 	std::vector<vk::UniqueImage> screenTexture = {};
+	vk::UniqueDeviceMemory framebufferMemory = {};
 
 	std::map<u32, vk::UniqueRenderPass> renderPassCache;
 

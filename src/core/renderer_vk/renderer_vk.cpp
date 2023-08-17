@@ -35,9 +35,8 @@ u32 RendererVK::depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format) {
 	return rotl32(loc, 17) ^ ror32(size, 29) ^ (static_cast<u64>(format) << 60);
 }
 
-RendererVK::Texture& RendererVK::getColorRenderTexture() {
-	const u32 renderTextureHash =
-		colorBufferHash(colourBufferLoc, fbSize[0] * fbSize[1] * PICA::sizePerPixel(colourBufferFormat), colourBufferFormat);
+RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt format, u32 width, u32 height) {
+	const u32 renderTextureHash = colorBufferHash(addr, width * height * PICA::sizePerPixel(format), format);
 
 	// Cache hit
 	if (textureCache.contains(renderTextureHash)) {
@@ -46,11 +45,14 @@ RendererVK::Texture& RendererVK::getColorRenderTexture() {
 
 	// Cache miss
 	Texture& newTexture = textureCache[renderTextureHash];
+	newTexture.loc = addr;
+	newTexture.sizePerPixel = PICA::sizePerPixel(format);
+	newTexture.size = fbSize;
 
 	vk::ImageCreateInfo textureInfo = {};
 	textureInfo.setImageType(vk::ImageType::e2D);
-	textureInfo.setFormat(Vulkan::colorFormatToVulkan(colourBufferFormat));
-	textureInfo.setExtent(vk::Extent3D(fbSize[0], fbSize[1], 1));
+	textureInfo.setFormat(Vulkan::colorFormatToVulkan(format));
+	textureInfo.setExtent(vk::Extent3D(width, height, 1));
 	textureInfo.setMipLevels(1);
 	textureInfo.setArrayLayers(1);
 	textureInfo.setSamples(vk::SampleCountFlagBits::e1);
@@ -71,7 +73,7 @@ RendererVK::Texture& RendererVK::getColorRenderTexture() {
 	vk::ImageViewCreateInfo viewInfo = {};
 	viewInfo.image = newTexture.image.get();
 	viewInfo.viewType = vk::ImageViewType::e2D;
-	viewInfo.format = Vulkan::colorFormatToVulkan(colourBufferFormat);
+	viewInfo.format = textureInfo.format;
 	viewInfo.components = vk::ComponentMapping();
 	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
@@ -91,8 +93,8 @@ RendererVK::Texture& RendererVK::getColorRenderTexture() {
 	return newTexture;
 }
 
-RendererVK::Texture& RendererVK::getDepthRenderTexture() {
-	const u32 renderTextureHash = depthBufferHash(depthBufferLoc, fbSize[0] * fbSize[1] * PICA::sizePerPixel(depthBufferFormat), depthBufferFormat);
+RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt format, u32 width, u32 height) {
+	const u32 renderTextureHash = depthBufferHash(addr, width * height * PICA::sizePerPixel(format), format);
 
 	// Cache hit
 	if (textureCache.contains(renderTextureHash)) {
@@ -101,11 +103,14 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture() {
 
 	// Cache miss
 	Texture& newTexture = textureCache[renderTextureHash];
+	newTexture.loc = addr;
+	newTexture.sizePerPixel = PICA::sizePerPixel(format);
+	newTexture.size = fbSize;
 
 	vk::ImageCreateInfo textureInfo = {};
 	textureInfo.setImageType(vk::ImageType::e2D);
-	textureInfo.setFormat(Vulkan::depthFormatToVulkan(depthBufferFormat));
-	textureInfo.setExtent(vk::Extent3D(fbSize[0], fbSize[1], 1));
+	textureInfo.setFormat(Vulkan::depthFormatToVulkan(format));
+	textureInfo.setExtent(vk::Extent3D(width, height, 1));
 	textureInfo.setMipLevels(1);
 	textureInfo.setArrayLayers(1);
 	textureInfo.setSamples(vk::SampleCountFlagBits::e1);
@@ -126,21 +131,21 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture() {
 	vk::ImageViewCreateInfo viewInfo = {};
 	viewInfo.image = newTexture.image.get();
 	viewInfo.viewType = vk::ImageViewType::e2D;
-	viewInfo.format = Vulkan::depthFormatToVulkan(depthBufferFormat);
+	viewInfo.format = textureInfo.format;
 	viewInfo.components = vk::ComponentMapping();
 	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
-
-	if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
-		newTexture.imageView = std::move(createResult.value);
-	} else {
-		Helpers::panic("Error creating depth render-texture: %s\n", vk::to_string(createResult.result).c_str());
-	}
 
 	if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, {&newTexture.image.get(), 1});
 		result == vk::Result::eSuccess) {
 		newTexture.imageMemory = std::move(imageMemory);
 	} else {
 		Helpers::panic("Error allocating depth render-texture memory: %s\n", vk::to_string(result).c_str());
+	}
+
+	if (auto createResult = device->createImageViewUnique(viewInfo); createResult.result == vk::Result::eSuccess) {
+		newTexture.imageView = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating depth render-texture: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
 	return newTexture;
@@ -270,7 +275,7 @@ vk::Result RendererVK::recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D sw
 	// Fifo support is required by all vulkan implementations, waits for vsync
 	vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
 	if (auto getResult = physicalDevice.getSurfacePresentModesKHR(surface); getResult.result == vk::Result::eSuccess) {
-		std::vector<vk::PresentModeKHR>& presentModes = getResult.value;
+		const std::vector<vk::PresentModeKHR>& presentModes = getResult.value;
 
 		// Use mailbox if available, lowest-latency vsync-enabled mode
 		if (std::find(presentModes.begin(), presentModes.end(), vk::PresentModeKHR::eMailbox) != presentModes.end()) {
@@ -414,6 +419,13 @@ void RendererVK::display() {
 	if (const vk::Result beginResult = frameCommandBuffer->begin(beginInfo); beginResult != vk::Result::eSuccess) {
 		Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
 	}
+
+	const bool topActiveFb = externalRegs[PICA::ExternalRegs::Framebuffer0Select] & 1;
+	const u32 topScreenAddr = externalRegs[topActiveFb ? PICA::ExternalRegs::Framebuffer0AFirstAddr : PICA::ExternalRegs::Framebuffer0ASecondAddr];
+
+	const bool bottomActiveFb = externalRegs[PICA::ExternalRegs::Framebuffer1Select] & 1;
+	const u32 bottomScreenAddr =
+		externalRegs[bottomActiveFb ? PICA::ExternalRegs::Framebuffer1AFirstAddr : PICA::ExternalRegs::Framebuffer1ASecondAddr];
 
 	//// Render Frame(Simulated - just clear the images to different colors for now)
 	{
@@ -850,7 +862,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	vk::ImageCreateInfo screenTextureInfo = {};
 	screenTextureInfo.setImageType(vk::ImageType::e2D);
 	screenTextureInfo.setFormat(vk::Format::eR8G8B8A8Unorm);
-	screenTextureInfo.setExtent(vk::Extent3D(400, 240, 1));
+	screenTextureInfo.setExtent(vk::Extent3D(400, 240 * 2, 1));
 	screenTextureInfo.setMipLevels(1);
 	screenTextureInfo.setArrayLayers(1);
 	screenTextureInfo.setSamples(vk::SampleCountFlagBits::e1);
@@ -906,35 +918,55 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
 
+// NOTE: The GPU format has RGB5551 and RGB655 swapped compared to internal regs format
+static PICA::ColorFmt ToColorFmt(u32 format) {
+	switch (format) {
+		case 2: return PICA::ColorFmt::RGB565;
+		case 3: return PICA::ColorFmt::RGBA5551;
+		default: return static_cast<PICA::ColorFmt>(format);
+	}
+}
+
 void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
-	return;
-	if (fbSize[0] == 0 || fbSize[1] == 0) {
-		return;
-	}
 	const u32 inputWidth = inputSize & 0xffff;
-	const u32 inputGap = inputSize >> 16;
+	const u32 inputHeight = inputSize >> 16;
+	const PICA::ColorFmt inputFormat = ToColorFmt(Helpers::getBits<8, 3>(flags));
+	const PICA::ColorFmt outputFormat = ToColorFmt(Helpers::getBits<12, 3>(flags));
+	const bool verticalFlip = flags & 1;
+	const PICA::Scaling scaling = static_cast<PICA::Scaling>(Helpers::getBits<24, 2>(flags));
 
-	const u32 outputWidth = outputSize & 0xffff;
-	const u32 outputGap = outputSize >> 16;
+	u32 outputWidth = outputSize & 0xffff;
+	u32 outputHeight = outputSize >> 16;
 
-	Texture& colorTexture = getColorRenderTexture();
+	Texture& srcFramebuffer = getColorRenderTexture(inputAddr, inputFormat, inputWidth, inputHeight);
+	Math::Rect<u32> srcRect = srcFramebuffer.getSubRect(inputAddr, outputWidth, outputHeight);
 
-	vk::ImageBlit blitRegion = {};
-	// Hack: Detect whether we are writing to the top or bottom screen by checking output gap and drawing to the proper part of the output texture
-	// We consider output gap == 320 to mean bottom, and anything else to mean top
-	if (outputGap == 320) {
-		// Bottom screen
-		blitRegion = vk::ImageBlit(
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{0, 0, 0}, vk::Offset3D{320, 240, 1}},
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{40, 240, 0}, vk::Offset3D{40 + 320, 240 + 240, 1}}
-		);
-	} else {
-		// Top screen
-		blitRegion = vk::ImageBlit(
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{0, 0, 0}, vk::Offset3D{400, 240, 1}},
-			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{0, 0, 0}, vk::Offset3D{400, 240, 1}}
-		);
+	if (verticalFlip) {
+		std::swap(srcRect.bottom, srcRect.top);
 	}
+
+	// Apply scaling for the destination rectangle.
+	if (scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) {
+		outputWidth >>= 1;
+	}
+
+	if (scaling == PICA::Scaling::XY) {
+		outputHeight >>= 1;
+	}
+
+	Texture& destFramebuffer = getColorRenderTexture(outputAddr, outputFormat, outputWidth, outputHeight);
+	Math::Rect<u32> destRect = destFramebuffer.getSubRect(outputAddr, outputWidth, outputHeight);
+
+	if (inputWidth != outputWidth) {
+		// Helpers::warn("Strided display transfer is not handled correctly!\n");
+	}
+
+	const vk::ImageBlit blitRegion(
+		vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1),
+		{vk::Offset3D{(int)srcRect.left, (int)srcRect.top, 0}, vk::Offset3D{(int)srcRect.right, (int)srcRect.bottom, 1}},
+		vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1),
+		{vk::Offset3D{(int)destRect.left, (int)destRect.top, 0}, vk::Offset3D{(int)destRect.right, (int)destRect.bottom, 1}}
+	);
 
 	vk::CommandBufferAllocateInfo commandBuffersInfo = {};
 	commandBuffersInfo.commandPool = commandPool.get();
@@ -960,20 +992,20 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 		{
 			vk::ImageMemoryBarrier(
 				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eColorAttachmentOptimal,
-				vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, colorTexture.image.get(),
+				vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, srcFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
 			vk::ImageMemoryBarrier(
 				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eColorAttachmentOptimal,
-				vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
+				vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, destFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
 		}
 	);
 
 	blitCommandBuffer->blitImage(
-		colorTexture.image.get(), vk::ImageLayout::eTransferSrcOptimal, screenTexture[frameBufferingIndex].get(),
-		vk::ImageLayout::eTransferDstOptimal, {blitRegion}, vk::Filter::eNearest
+		srcFramebuffer.image.get(), vk::ImageLayout::eTransferSrcOptimal, destFramebuffer.image.get(), vk::ImageLayout::eTransferDstOptimal,
+		{blitRegion}, vk::Filter::eLinear
 	);
 
 	if (const vk::Result endResult = frameGraphicsCommandBuffers[frameBufferingIndex]->end(); endResult != vk::Result::eSuccess) {
@@ -981,20 +1013,24 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	}
 
 	blitCommandBuffer->pipelineBarrier(
-		vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
 		{
 			vk::ImageMemoryBarrier(
 				vk::AccessFlagBits::eTransferRead, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferSrcOptimal,
-				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, colorTexture.image.get(),
+				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, srcFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
 			vk::ImageMemoryBarrier(
 				vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
-				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
+				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, destFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
 		}
 	);
+
+	if (const vk::Result endResult = blitCommandBuffer->end(); endResult != vk::Result::eSuccess) {
+		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
+	}
 
 	vk::FenceCreateInfo fenceInfo = {};
 	vk::UniqueFence finishedFence = {};
@@ -1010,6 +1046,11 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 
 	if (const vk::Result submitResult = graphicsQueue.submit({submitInfo}, finishedFence.get()); submitResult != vk::Result::eSuccess) {
 		Helpers::panic("Error submitting to graphics queue: %s\n", vk::to_string(submitResult).c_str());
+	}
+
+	// Block, on the CPU, to ensure that this buffered-frame is ready for more work
+	if (auto waitResult = device->waitForFences({finishedFence.get()}, true, std::numeric_limits<u64>::max()); waitResult != vk::Result::eSuccess) {
+		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
 	}
 }
 
@@ -1031,11 +1072,11 @@ void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Ver
 	{
 		std::vector<vk::ImageView> renderTargets;
 
-		const auto& colorTexture = getColorRenderTexture();
+		const auto& colorTexture = getColorRenderTexture(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
 		renderTargets.emplace_back(colorTexture.imageView.get());
 
 		if (depthTestEnable) {
-			const auto& depthTexture = getDepthRenderTexture();
+			const auto& depthTexture = getDepthRenderTexture(depthBufferLoc, depthBufferFormat, fbSize[0], fbSize[1]);
 			renderTargets.emplace_back(depthTexture.imageView.get());
 		}
 
