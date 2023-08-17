@@ -8,7 +8,7 @@ Join our Discord server by pressing on the banner below!
 
 [![Discord Banner 2](https://discord.com/api/guilds/1118695732958994532/widget.png?style=banner2)](https://discord.gg/ZYbugsEmsw)
 
-![screenshot1](docs/img/MK7.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
+![screenshot1](docs/img/KirbyRobobot.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
 
 # Compatibility
 Panda3DS is still in the early stages of development. Many games boot, many don't. Most games have at least some hilariously broken graphics, audio is not supported, performance leaves a bit to be desired mainly thanks to lack of shader acceleration, and most QoL features (including a GUI) are missing.
