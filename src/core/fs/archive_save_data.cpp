@@ -29,6 +29,7 @@ HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 			return Result::Success;
 		}
 
+		file.close();
 		return Result::FS::FileTooLarge;
 	}
 
