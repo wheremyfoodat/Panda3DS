@@ -50,6 +50,8 @@ class RendererVK final : public Renderer {
 	std::vector<std::vector<vk::UniqueFramebuffer>> frameFramebuffers = {};
 	std::vector<vk::UniqueCommandBuffer> frameGraphicsCommandBuffers = {};
 
+	const vk::CommandBuffer& getCurrentCommandBuffer() const { return frameGraphicsCommandBuffers[frameBufferingIndex].get(); }
+
 	// Todo:
 	// Use `{colourBuffer,depthBuffer}Loc` to maintain an std::map-cache of framebuffers
 	struct Texture {

@@ -407,7 +407,7 @@ void RendererVK::display() {
 		}
 	}
 
-	if (const vk::Result endResult = frameGraphicsCommandBuffers[frameBufferingIndex]->end(); endResult != vk::Result::eSuccess) {
+	if (const vk::Result endResult = getCurrentCommandBuffer().end(); endResult != vk::Result::eSuccess) {
 		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
 	}
 
@@ -554,6 +554,7 @@ void RendererVK::display() {
 		}
 	}
 
+	// We are now working on the next frame
 	frameBufferingIndex = ((frameBufferingIndex + 1) % frameBufferingCount);
 
 	// Wait for next frame to be ready
@@ -567,12 +568,12 @@ void RendererVK::display() {
 	{
 		frameFramebuffers[frameBufferingIndex].clear();
 
-		frameGraphicsCommandBuffers[frameBufferingIndex]->reset();
+		getCurrentCommandBuffer().reset();
 
 		vk::CommandBufferBeginInfo beginInfo = {};
 		beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
 
-		if (const vk::Result beginResult = frameGraphicsCommandBuffers[frameBufferingIndex]->begin(beginInfo); beginResult != vk::Result::eSuccess) {
+		if (const vk::Result beginResult = getCurrentCommandBuffer().begin(beginInfo); beginResult != vk::Result::eSuccess) {
 			Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
 		}
 	}
@@ -968,26 +969,16 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 		{vk::Offset3D{(int)destRect.left, (int)destRect.top, 0}, vk::Offset3D{(int)destRect.right, (int)destRect.bottom, 1}}
 	);
 
-	vk::CommandBufferAllocateInfo commandBuffersInfo = {};
-	commandBuffersInfo.commandPool = commandPool.get();
-	commandBuffersInfo.level = vk::CommandBufferLevel::ePrimary;
-	commandBuffersInfo.commandBufferCount = 1;
+	const vk::CommandBuffer& blitCommandBuffer = getCurrentCommandBuffer();
 
-	vk::UniqueCommandBuffer blitCommandBuffer = {};
-	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
-		blitCommandBuffer = std::move(allocateResult.value[0]);
-	} else {
-		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
-	}
+	static const std::array<float, 4> displayTransferColor = {{1.0f, 1.0f, 0.0f, 1.0f}};
+	Vulkan::DebugLabelScope scope(
+		blitCommandBuffer, displayTransferColor,
+		"DisplayTransfer inputAddr 0x%08X outputAddr 0x%08X inputWidth %d outputWidth %d inputHeight %d outputHeight %d", inputAddr, outputAddr,
+		inputWidth, outputWidth, inputHeight, outputHeight
+	);
 
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-
-	if (const vk::Result beginResult = blitCommandBuffer->begin(beginInfo); beginResult != vk::Result::eSuccess) {
-		Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
-	}
-
-	blitCommandBuffer->pipelineBarrier(
+	blitCommandBuffer.pipelineBarrier(
 		vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
 		{
 			vk::ImageMemoryBarrier(
@@ -1003,16 +994,12 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 		}
 	);
 
-	blitCommandBuffer->blitImage(
+	blitCommandBuffer.blitImage(
 		srcFramebuffer.image.get(), vk::ImageLayout::eTransferSrcOptimal, destFramebuffer.image.get(), vk::ImageLayout::eTransferDstOptimal,
 		{blitRegion}, vk::Filter::eLinear
 	);
 
-	if (const vk::Result endResult = frameGraphicsCommandBuffers[frameBufferingIndex]->end(); endResult != vk::Result::eSuccess) {
-		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
-	}
-
-	blitCommandBuffer->pipelineBarrier(
+	blitCommandBuffer.pipelineBarrier(
 		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
 		{
 			vk::ImageMemoryBarrier(
@@ -1027,31 +1014,6 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 			),
 		}
 	);
-
-	if (const vk::Result endResult = blitCommandBuffer->end(); endResult != vk::Result::eSuccess) {
-		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
-	}
-
-	vk::FenceCreateInfo fenceInfo = {};
-	vk::UniqueFence finishedFence = {};
-	if (auto createResult = device->createFenceUnique(fenceInfo); createResult.result == vk::Result::eSuccess) {
-		finishedFence = std::move(createResult.value);
-	} else {
-		Helpers::panic("Error creating fence: %s\n", vk::to_string(createResult.result).c_str());
-	}
-
-	vk::SubmitInfo submitInfo = {};
-
-	submitInfo.setCommandBuffers(blitCommandBuffer.get());
-
-	if (const vk::Result submitResult = graphicsQueue.submit({submitInfo}, finishedFence.get()); submitResult != vk::Result::eSuccess) {
-		Helpers::panic("Error submitting to graphics queue: %s\n", vk::to_string(submitResult).c_str());
-	}
-
-	// Block, on the CPU, to ensure that this buffered-frame is ready for more work
-	if (auto waitResult = device->waitForFences({finishedFence.get()}, true, std::numeric_limits<u64>::max()); waitResult != vk::Result::eSuccess) {
-		Helpers::panic("Error waiting on swapchain fence: %s\n", vk::to_string(waitResult).c_str());
-	}
 }
 
 void RendererVK::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {}
@@ -1106,10 +1068,10 @@ void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Ver
 	renderBeginInfo.renderArea.extent.height = fbSize[1];
 	renderBeginInfo.framebuffer = curFramebuffer;
 
-	const vk::UniqueCommandBuffer& commandBuffer = frameGraphicsCommandBuffers[frameBufferingIndex];
+	const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
 
-	commandBuffer->beginRenderPass(renderBeginInfo, vk::SubpassContents::eInline);
-	commandBuffer->endRenderPass();
+	commandBuffer.beginRenderPass(renderBeginInfo, vk::SubpassContents::eInline);
+	commandBuffer.endRenderPass();
 }
 
 void RendererVK::screenshot(const std::string& name) {}
