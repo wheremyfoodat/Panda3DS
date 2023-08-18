@@ -30,6 +30,7 @@ class NFCService {
 	void initialize(u32 messagePointer);
 	void getTagInRangeEvent(u32 messagePointer);
 	void getTagOutOfRangeEvent(u32 messagePointer);
+	void stopCommunication(u32 messagePointer);
 
 public:
 	NFCService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
