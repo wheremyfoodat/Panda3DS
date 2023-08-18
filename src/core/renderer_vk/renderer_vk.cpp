@@ -508,10 +508,23 @@ void RendererVK::display() {
 
 	vk::SubmitInfo submitInfo = {};
 	// Wait for any previous uses of the image image to finish presenting
-	if (swapchainImageIndex != swapchainImageInvalid) {
-		submitInfo.setWaitSemaphores(swapImageFreeSemaphore[frameBufferingIndex].get());
-		static const vk::PipelineStageFlags waitStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		submitInfo.setWaitDstStageMask(waitStageMask);
+	std::vector<vk::Semaphore> waitSemaphores;
+	std::vector<vk::PipelineStageFlags> waitSemaphoreStages;
+	{
+		if (swapchainImageIndex != swapchainImageInvalid) {
+			waitSemaphores.emplace_back(swapImageFreeSemaphore[frameBufferingIndex].get());
+			static const vk::PipelineStageFlags waitStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+			waitSemaphoreStages.emplace_back(waitStageMask);
+		}
+
+		// Ensure a proper semaphore wait on render-finished
+		// We already wait on the fence, but this must be done to be compliant
+		// to validation layers
+		waitSemaphores.emplace_back(renderFinishedSemaphore[frameBufferingIndex].get());
+		waitSemaphoreStages.emplace_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+
+		submitInfo.setWaitSemaphores(waitSemaphores);
+		submitInfo.setWaitDstStageMask(waitSemaphoreStages);
 	}
 	// Signal when finished
 	submitInfo.setSignalSemaphores(renderFinishedSemaphore[frameBufferingIndex].get());
@@ -880,12 +893,16 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	for (usize i = 0; i < frameBufferingCount; i++) {
 		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
 			swapImageFreeSemaphore[i] = std::move(createResult.value);
+
+			Vulkan::setObjectName(device.get(), swapImageFreeSemaphore[i].get(), "swapImageFreeSemaphore#%zu", i);
 		} else {
 			Helpers::panic("Error creating 'present-ready' semaphore: %s\n", vk::to_string(createResult.result).c_str());
 		}
 
 		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
 			renderFinishedSemaphore[i] = std::move(createResult.value);
+
+			Vulkan::setObjectName(device.get(), renderFinishedSemaphore[i].get(), "renderFinishedSemaphore#%zu", i);
 		} else {
 			Helpers::panic("Error creating 'post-render' semaphore: %s\n", vk::to_string(createResult.result).c_str());
 		}
