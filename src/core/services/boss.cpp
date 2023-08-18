@@ -8,11 +8,15 @@ namespace BOSSCommands {
 		GetTaskStorageInfo = 0x00040000,
 		RegisterNewArrivalEvent = 0x00080002,
 		GetOptoutFlag = 0x000A0000,
+		RegisterTask = 0x000B00C2,
 		UnregisterTask = 0x000C0082,
 		GetTaskIdList = 0x000E0000,
 		GetNsDataIdList = 0x00100102,
+		GetNsDataIdList1 = 0x00110102,
 		SendProperty = 0x00140082,
 		ReceiveProperty = 0x00160082,
+		GetTaskServiceStatus = 0x001B0042,
+		StartTask = 0x001C0042,
 		CancelTask = 0x001E0042,
 		GetTaskState = 0x00200082,
 		GetTaskStatus = 0x002300C2,
@@ -30,11 +34,14 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case BOSSCommands::CancelTask: cancelTask(messagePointer); break;
-		case BOSSCommands::GetNsDataIdList: getNsDataIdList(messagePointer); break;
+		case BOSSCommands::GetNsDataIdList:
+		case BOSSCommands::GetNsDataIdList1: 
+			getNsDataIdList(messagePointer, command); break;
 		case BOSSCommands::GetOptoutFlag: getOptoutFlag(messagePointer); break;
 		case BOSSCommands::GetStorageEntryInfo: getStorageEntryInfo(messagePointer); break;
 		case BOSSCommands::GetTaskIdList: getTaskIdList(messagePointer); break;
 		case BOSSCommands::GetTaskInfo: getTaskInfo(messagePointer); break;
+		case BOSSCommands::GetTaskServiceStatus: getTaskServiceStatus(messagePointer); break;
 		case BOSSCommands::GetTaskState: getTaskState(messagePointer); break;
 		case BOSSCommands::GetTaskStatus: getTaskStatus(messagePointer); break;
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
@@ -42,7 +49,9 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
 		case BOSSCommands::RegisterNewArrivalEvent: registerNewArrivalEvent(messagePointer); break;
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
+		case BOSSCommands::RegisterTask: registerTask(messagePointer); break;
 		case BOSSCommands::SendProperty: sendProperty(messagePointer); break;
+		case BOSSCommands::StartTask: startTask(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
 		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
 		default: Helpers::panic("BOSS service requested. Command: %08X\n", command);
@@ -83,6 +92,17 @@ void BOSSService::getTaskStatus(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, 0);
 	// TODO: Citra pushes a buffer here?
+}
+
+void BOSSService::getTaskServiceStatus(u32 messagePointer) {
+	// TODO: 3DBrew does not mention what the parameters are, or what the return values are... again
+	log("BOSS::GetTaskServiceStatus (Stubbed)\n");
+
+	// Response values stubbed based on Citra
+	mem.write32(messagePointer, IPC::responseHeader(0x1B, 2, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0);
+	// TODO: Citra pushes a buffer here too?
 }
 
 void BOSSService::getTaskStorageInfo(u32 messagePointer) {
@@ -149,9 +169,28 @@ void BOSSService::registerNewArrivalEvent(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void BOSSService::startTask(u32 messagePointer) {
+	log("BOSS::StartTask (stubbed)\n");
+	const u32 bufferSize = mem.read32(messagePointer + 4);
+	const u32 descriptor = mem.read32(messagePointer + 8);
+	const u32 bufferData = mem.read32(messagePointer + 12);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1C, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 void BOSSService::cancelTask(u32 messagePointer) {
 	log("BOSS::CancelTask (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void BOSSService::registerTask(u32 messagePointer) {
+	log("BOSS::RegisterTask (stubbed)\n");
+	const u32 bufferSize = mem.read32(messagePointer + 4);
+	const u32 dataPointr = mem.read32(messagePointer + 20);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0B, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -161,10 +200,11 @@ void BOSSService::unregisterTask(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-void BOSSService::getNsDataIdList(u32 messagePointer) {
+// There's multiple aliases for this command. commandWord is the first word in the IPC buffer with the command word, needed for the response header
+void BOSSService::getNsDataIdList(u32 messagePointer, u32 commandWord) {
 	log("BOSS::GetNsDataIdList (stubbed)\n");
 
-	mem.write32(messagePointer, IPC::responseHeader(0x10, 3, 2));
+	mem.write32(messagePointer, IPC::responseHeader(commandWord >> 16, 3, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write16(messagePointer + 8, 0);   // u16: Actual number of output entries.
 	mem.write16(messagePointer + 12, 0);  // u16: Last word-index copied to output in the internal NsDataId list.
