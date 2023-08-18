@@ -11,6 +11,7 @@ namespace BOSSCommands {
 		UnregisterTask = 0x000C0082,
 		GetTaskIdList = 0x000E0000,
 		GetNsDataIdList = 0x00100102,
+		SendProperty = 0x00140082,
 		ReceiveProperty = 0x00160082,
 		CancelTask = 0x001E0042,
 		GetTaskState = 0x00200082,
@@ -41,6 +42,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
 		case BOSSCommands::RegisterNewArrivalEvent: registerNewArrivalEvent(messagePointer); break;
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
+		case BOSSCommands::SendProperty: sendProperty(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
 		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
 		default: Helpers::panic("BOSS service requested. Command: %08X\n", command);
@@ -113,12 +115,25 @@ void BOSSService::getStorageEntryInfo(u32 messagePointer) {
 	mem.write16(messagePointer + 12, 0); // s16, unknown meaning
 }
 
+void BOSSService::sendProperty(u32 messagePointer) {
+	const u32 id = mem.read32(messagePointer + 4);
+	const u32 size = mem.read32(messagePointer + 8);
+	const u32 ptr = mem.read32(messagePointer + 16);
+
+	log("BOSS::SendProperty (id = %d, size = %08X, ptr = %08X) (stubbed)\n", id, size, ptr);
+	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0);  // Read size
+	// TODO: Should this do anything else?
+}
+
+
 void BOSSService::receiveProperty(u32 messagePointer) {
 	const u32 id = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
 	const u32 ptr = mem.read32(messagePointer + 16);
 
-	log("BOSS::ReceiveProperty(stubbed) (id = %d, size = %08X, ptr = %08X)\n", id, size, ptr);
+	log("BOSS::ReceiveProperty (id = %d, size = %08X, ptr = %08X) (stubbed)\n", id, size, ptr);
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Read size

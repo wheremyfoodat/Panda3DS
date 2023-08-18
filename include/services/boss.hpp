@@ -24,6 +24,7 @@ class BOSSService {
 	void receiveProperty(u32 messagePointer);
 	void registerNewArrivalEvent(u32 messagePointer);
 	void registerStorageEntry(u32 messagePointer);
+	void sendProperty(u32 messagePointer);
 	void unregisterStorage(u32 messagePointer);
 	void unregisterTask(u32 messagePointer);
 
