@@ -33,7 +33,7 @@
 #include "services/ssl.hpp"
 #include "services/y2r.hpp"
 
-class EmulatorConfig;
+struct EmulatorConfig;
 // More circular dependencies!!
 class Kernel;
 
