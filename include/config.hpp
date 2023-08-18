@@ -9,6 +9,10 @@ struct EmulatorConfig {
 	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
 
+	bool chargerPlugged = true;
+	// Default to 3% battery to make users suffer
+	int batteryPercentage = 3;
+
 	EmulatorConfig(const std::filesystem::path& path);
 	void load(const std::filesystem::path& path);
 	void save(const std::filesystem::path& path);

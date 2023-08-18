@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "config.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -171,7 +172,7 @@ private:
 	void readDirectory(u32 messagePointer, Handle directory);
 
 public:
-	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
+	Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config);
 	void initializeFS() { return serviceManager.initializeFS(); }
 	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);
