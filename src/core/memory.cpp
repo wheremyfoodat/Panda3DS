@@ -152,8 +152,13 @@ u32 Memory::read32(u32 vaddr) {
 
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
-					Helpers::warn("VRAM read!\n");
-					return 0;
+					static int shutUpCounter = 0;
+					if (shutUpCounter < 5) { // Stop spamming about VRAM reads after the first 5
+						Helpers::warn("VRAM read!\n");
+					}
+
+					// TODO: Properly handle framebuffer readbacks and the like
+					return *(u32*)&vram[vaddr - VirtualAddrs::VramStart];
 				}
 
 				Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
