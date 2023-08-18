@@ -5,10 +5,10 @@
 #include "ipc.hpp"
 #include "kernel.hpp"
 
-ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel)
+ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel), cfg(mem),
 	  dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel),
-	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem), soc(mem),
+	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mic(mem), nfc(mem, kernel), nim(mem), ndm(mem), ptm(mem, config), soc(mem),
 	  ssl(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;

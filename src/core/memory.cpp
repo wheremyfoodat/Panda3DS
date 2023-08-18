@@ -6,10 +6,11 @@
 
 #include "config_mem.hpp"
 #include "resource_limits.hpp"
+#include "services/ptm.hpp"
 
 using namespace KernelMemoryTypes;
 
-Memory::Memory(u64& cpuTicks) : cpuTicks(cpuTicks) {
+Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks), config(config) {
 	fcram = new uint8_t[FCRAM_SIZE]();
 	dspRam = new uint8_t[DSP_RAM_SIZE]();
 
@@ -85,7 +86,18 @@ u8 Memory::read8(u32 vaddr) {
 		return *(u8*)(pointer + offset);
 	} else {
 		switch (vaddr) {
-			case ConfigMem::BatteryState: return getBatteryState(true, true, BatteryLevel::FourBars);
+			case ConfigMem::BatteryState: {
+				// Set by the PTM module
+				// Charger plugged: Shows whether the charger is plugged
+				// Charging: Shows whether the charger is plugged and the console is actually charging, ie the battery is not full
+				// BatteryLevel: A battery level calculated via PTM::GetBatteryLevel
+				// These are all assembled into a bitfield and returned via config memory
+				const bool chargerPlugged = config.chargerPlugged;
+				const bool charging = config.chargerPlugged && (config.batteryPercentage < 100);
+				const auto batteryLevel = static_cast<BatteryLevel>(PTMService::batteryPercentToLevel(config.batteryPercentage));
+
+				return getBatteryState(chargerPlugged, charging, batteryLevel);
+			}
 			case ConfigMem::EnvInfo: return envInfo;
 			case ConfigMem::HardwareType: return ConfigMem::HardwareCodes::Product;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);

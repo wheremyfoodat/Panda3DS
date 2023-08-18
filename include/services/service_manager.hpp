@@ -33,6 +33,7 @@
 #include "services/ssl.hpp"
 #include "services/y2r.hpp"
 
+struct EmulatorConfig;
 // More circular dependencies!!
 class Kernel;
 
@@ -80,7 +81,7 @@ class ServiceManager {
 	void subscribe(u32 messagePointer);
 
   public:
-	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel);
+	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config);
 	void reset();
 	void initializeFS() { fs.initializeFilesystem(); }
 	void handleSyncRequest(u32 messagePointer);

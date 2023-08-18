@@ -1,4 +1,5 @@
 #pragma once
+#include "config.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -10,6 +11,8 @@ class PTMService {
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, ptmLogger)
 
+	const EmulatorConfig& config;
+
 	// Service commands
 	void configureNew3DSCPU(u32 messagePointer);
 	void getAdapterState(u32 messagePointer);
@@ -18,7 +21,7 @@ class PTMService {
 	void getTotalStepCount(u32 messagePointer);
 
 public:
-	PTMService(Memory& mem) : mem(mem) {}
+	PTMService(Memory& mem, const EmulatorConfig& config) : mem(mem), config(config) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 

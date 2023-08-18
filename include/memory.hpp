@@ -5,9 +5,11 @@
 #include <fstream>
 #include <optional>
 #include <vector>
+
+#include "config.hpp"
 #include "crypto/aes_engine.hpp"
-#include "helpers.hpp"
 #include "handles.hpp"
+#include "helpers.hpp"
 #include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
 #include "services/shared_font.hpp"
@@ -154,13 +156,14 @@ private:
 	static constexpr FirmwareInfo firm{.unk = 0, .revision = 0, .minor = 0x34, .major = 2, .syscoreVer = 2, .sdkVer = 0x0000F297};
 	// Adjusted upon loading a ROM based on the ROM header. Used by CFG::SecureInfoGetArea to get past region locks
 	Regions region = Regions::USA;
+	const EmulatorConfig& config;
 
 public:
 	u16 kernelVersion = 0;
 	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
 	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
 
-	Memory(u64& cpuTicks);
+	Memory(u64& cpuTicks, const EmulatorConfig& config);
 	void reset();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
