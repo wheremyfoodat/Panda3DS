@@ -118,6 +118,7 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 
 	dummyVBO.create();
 	dummyVAO.create();
+	gl.disableScissor();
 
 	// Create texture and framebuffer for the 3DS screen
 	const u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
@@ -126,6 +127,24 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 	glGenTextures(1, &lightLUTTextureArray);
 
 	auto prevTexture = OpenGL::getTex2D();
+
+	// Create a plain black texture for when a game reads an invalid texture. It is common for games to configure the PICA to read texture info from NULL.
+	// Some games that do this are Pokemon X, Cars 2, Tomodachi Life, and more. We bind the texture to an FBO, clear it, and free the FBO
+	blankTexture.create(8, 8, GL_RGBA8);
+	blankTexture.bind();
+	blankTexture.setMinFilter(OpenGL::Linear);
+	blankTexture.setMagFilter(OpenGL::Linear);
+
+	OpenGL::Framebuffer dummyFBO;
+	dummyFBO.createWithDrawTexture(blankTexture);  // Create FBO and bind our texture to it
+	dummyFBO.bind(OpenGL::DrawFramebuffer);
+
+	// Clear the texture and then delete FBO
+	OpenGL::setViewport(8, 8);
+	gl.setClearColour(0.0, 0.0, 0.0, 1.0);
+	OpenGL::clearColor();
+	dummyFBO.free();
+
 	screenTexture.create(screenTextureWidth, screenTextureHeight, GL_RGBA8);
 	screenTexture.bind();
 	screenTexture.setMinFilter(OpenGL::Linear);
@@ -143,7 +162,6 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 	GLint oldViewport[4];
 	glGetIntegerv(GL_VIEWPORT, oldViewport);
 	OpenGL::setViewport(screenTextureWidth, screenTextureHeight);
-	gl.setClearColour(0.0, 0.0, 0.0, 1.0);
 	OpenGL::clearColor();
 	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 
@@ -321,9 +339,17 @@ void RendererGL::bindTexturesToSlots() {
 		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
 
 		glActiveTexture(GL_TEXTURE0 + i);
-		Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
-		OpenGL::Texture tex = getTexture(targetTex);
-		tex.bind();
+
+		if (addr != 0) [[likely]] {
+			Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+			OpenGL::Texture tex = getTexture(targetTex);
+			tex.bind();
+		} else {
+			// Mapping a texture from NULL. PICA seems to read the last sampled colour, but for now we will display a black texture instead since it is far easier.
+			// Games that do this don't really care what it does, they just expect the PICA to not crash, since it doesn't have a PU/MMU and can do all sorts of
+			// Weird invalid memory accesses without crashing
+			blankTexture.bind();
+		}
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);

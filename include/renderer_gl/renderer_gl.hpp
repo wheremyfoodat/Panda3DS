@@ -55,6 +55,7 @@ class RendererGL final : public Renderer {
 	OpenGL::Texture screenTexture;
 	GLuint lightLUTTextureArray;
 	OpenGL::Framebuffer screenFramebuffer;
+	OpenGL::Texture blankTexture;
 
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
