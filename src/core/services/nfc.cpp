@@ -8,6 +8,7 @@ namespace NFCCommands {
 		StopCommunication = 0x00040000,
 		GetTagInRangeEvent = 0x000B0000,
 		GetTagOutOfRangeEvent = 0x000C0000,
+		GetTagState = 0x000D0000,
 		CommunicationGetStatus = 0x000F0000,
 	};
 }
@@ -16,7 +17,8 @@ void NFCService::reset() {
 	tagInRangeEvent = std::nullopt;
 	tagOutOfRangeEvent = std::nullopt;
 
-	adapterStatus = Old3DSAdapterStatus::NotInitialized;
+	adapterStatus = Old3DSAdapterStatus::Idle;
+	tagStatus = TagStatus::NotInitialized;
 }
 
 void NFCService::handleSyncRequest(u32 messagePointer) {
@@ -26,6 +28,7 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 		case NFCCommands::Initialize: initialize(messagePointer); break;
 		case NFCCommands::GetTagInRangeEvent: getTagInRangeEvent(messagePointer); break;
 		case NFCCommands::GetTagOutOfRangeEvent: getTagOutOfRangeEvent(messagePointer); break;
+		case NFCCommands::GetTagState: getTagState(messagePointer); break;
 		case NFCCommands::StopCommunication: stopCommunication(messagePointer); break;
 		default: Helpers::panic("NFC service requested. Command: %08X\n", command);
 	}
@@ -36,6 +39,7 @@ void NFCService::initialize(u32 messagePointer) {
 	log("NFC::Initialize (type = %d)\n", type);
 
 	adapterStatus = Old3DSAdapterStatus::InitializationComplete;
+	tagStatus = TagStatus::Initialized;
 	// TODO: This should error if already initialized. Also sanitize type.
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -74,6 +78,14 @@ void NFCService::getTagOutOfRangeEvent(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	// TODO: Translation descriptor here
 	mem.write32(messagePointer + 12, tagOutOfRangeEvent.value());
+}
+
+void NFCService::getTagState(u32 messagePointer) {
+	log("NFC::GetTagState");
+
+	mem.write32(messagePointer, IPC::responseHeader(0xD, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, static_cast<u8>(tagStatus));
 }
 
 void NFCService::communicationGetStatus(u32 messagePointer) {
