@@ -43,14 +43,13 @@ class RendererVK final : public Renderer {
 
 	// Frame-buffering data
 	// Each vector is `frameBufferingCount` in size
-	std::vector<vk::UniqueCommandBuffer> framePresentCommandBuffers = {};
 	std::vector<vk::UniqueSemaphore> swapImageFreeSemaphore = {};
 	std::vector<vk::UniqueSemaphore> renderFinishedSemaphore = {};
 	std::vector<vk::UniqueFence> frameFinishedFences = {};
 	std::vector<std::vector<vk::UniqueFramebuffer>> frameFramebuffers = {};
-	std::vector<vk::UniqueCommandBuffer> frameGraphicsCommandBuffers = {};
+	std::vector<vk::UniqueCommandBuffer> frameCommandBuffers = {};
 
-	const vk::CommandBuffer& getCurrentCommandBuffer() const { return frameGraphicsCommandBuffers[frameBufferingIndex].get(); }
+	const vk::CommandBuffer& getCurrentCommandBuffer() const { return frameCommandBuffers[frameBufferingIndex].get(); }
 
 	// Todo:
 	// Use `{colourBuffer,depthBuffer}Loc` to maintain an std::map-cache of framebuffers

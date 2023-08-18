@@ -407,19 +407,6 @@ void RendererVK::display() {
 		}
 	}
 
-	if (const vk::Result endResult = getCurrentCommandBuffer().end(); endResult != vk::Result::eSuccess) {
-		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
-	}
-
-	const vk::UniqueCommandBuffer& frameCommandBuffer = framePresentCommandBuffers[frameBufferingIndex];
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-
-	if (const vk::Result beginResult = frameCommandBuffer->begin(beginInfo); beginResult != vk::Result::eSuccess) {
-		Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
-	}
-
 	const bool topActiveFb = externalRegs[PICA::ExternalRegs::Framebuffer0Select] & 1;
 	const u32 topScreenAddr = externalRegs[topActiveFb ? PICA::ExternalRegs::Framebuffer0AFirstAddr : PICA::ExternalRegs::Framebuffer0ASecondAddr];
 
@@ -431,10 +418,10 @@ void RendererVK::display() {
 	{
 		static const std::array<float, 4> frameScopeColor = {{1.0f, 0.0f, 1.0f, 1.0f}};
 
-		Vulkan::DebugLabelScope debugScope(frameCommandBuffer.get(), frameScopeColor, "Frame");
+		Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), frameScopeColor, "Frame");
 
 		// Prepare images for color-clear
-		frameCommandBuffer->pipelineBarrier(
+		getCurrentCommandBuffer().pipelineBarrier(
 			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
 			{
 				vk::ImageMemoryBarrier(
@@ -446,7 +433,7 @@ void RendererVK::display() {
 		);
 		static const std::array<float, 4> topClearColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
 		static const std::array<float, 4> bottomClearColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
-		frameCommandBuffer->clearColorImage(
+		getCurrentCommandBuffer().clearColorImage(
 			screenTexture[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, topClearColor,
 			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 		);
@@ -455,10 +442,10 @@ void RendererVK::display() {
 	//// Present
 	if (swapchainImageIndex != swapchainImageInvalid) {
 		static const std::array<float, 4> presentScopeColor = {{1.0f, 1.0f, 0.0f, 1.0f}};
-		Vulkan::DebugLabelScope debugScope(frameCommandBuffer.get(), presentScopeColor, "Present");
+		Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), presentScopeColor, "Present");
 
 		// Prepare swapchain image for color-clear/blit-dst, prepare top/bottom screen for blit-src
-		frameCommandBuffer->pipelineBarrier(
+		getCurrentCommandBuffer().pipelineBarrier(
 			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
 			{
 				vk::ImageMemoryBarrier(
@@ -475,7 +462,7 @@ void RendererVK::display() {
 		);
 
 		static const std::array<float, 4> clearColor = {{0.0f, 0.0f, 0.0f, 1.0f}};
-		frameCommandBuffer->clearColorImage(
+		getCurrentCommandBuffer().clearColorImage(
 			swapchainImages[swapchainImageIndex], vk::ImageLayout::eTransferDstOptimal, clearColor,
 			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 		);
@@ -486,13 +473,13 @@ void RendererVK::display() {
 			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240 * 2, 1}},
 			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240 * 2, 1}}
 		);
-		frameCommandBuffer->blitImage(
+		getCurrentCommandBuffer().blitImage(
 			screenTexture[frameBufferingIndex].get(), vk::ImageLayout::eTransferSrcOptimal, swapchainImages[swapchainImageIndex],
 			vk::ImageLayout::eTransferDstOptimal, {screenBlit}, vk::Filter::eNearest
 		);
 
 		// Prepare swapchain image for present
-		frameCommandBuffer->pipelineBarrier(
+		getCurrentCommandBuffer().pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
 			{vk::ImageMemoryBarrier(
 				vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
@@ -502,7 +489,7 @@ void RendererVK::display() {
 		);
 	}
 
-	if (const vk::Result endResult = frameCommandBuffer->end(); endResult != vk::Result::eSuccess) {
+	if (const vk::Result endResult = getCurrentCommandBuffer().end(); endResult != vk::Result::eSuccess) {
 		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
 	}
 
@@ -529,7 +516,7 @@ void RendererVK::display() {
 	// Signal when finished
 	submitInfo.setSignalSemaphores(renderFinishedSemaphore[frameBufferingIndex].get());
 
-	submitInfo.setCommandBuffers(frameCommandBuffer.get());
+	submitInfo.setCommandBuffers(getCurrentCommandBuffer());
 
 	device->resetFences({frameFinishedFences[frameBufferingIndex].get()});
 
@@ -842,23 +829,17 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	commandBuffersInfo.commandBufferCount = frameBufferingCount;
 
 	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
-		framePresentCommandBuffers = std::move(allocateResult.value);
+		frameCommandBuffers = std::move(allocateResult.value);
 	} else {
 		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
 	}
 
-	if (auto allocateResult = device->allocateCommandBuffersUnique(commandBuffersInfo); allocateResult.result == vk::Result::eSuccess) {
-		frameGraphicsCommandBuffers = std::move(allocateResult.value);
-	} else {
-		Helpers::panic("Error allocating command buffer: %s\n", vk::to_string(allocateResult.result).c_str());
-	}
-
+	// Initialize the first command buffer to be in the RECORDING state
 	vk::CommandBufferBeginInfo beginInfo = {};
 	beginInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-	for (const auto& graphicsCommandBuffer : frameGraphicsCommandBuffers) {
-		if (const vk::Result beginResult = graphicsCommandBuffer->begin(beginInfo); beginResult != vk::Result::eSuccess) {
-			Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
-		}
+
+	if (const vk::Result beginResult = frameCommandBuffers[frameBufferingIndex]->begin(beginInfo); beginResult != vk::Result::eSuccess) {
+		Helpers::panic("Error beginning command buffer recording: %s\n", vk::to_string(beginResult).c_str());
 	}
 
 	// Frame-buffering synchronization primitives
@@ -871,7 +852,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	renderFinishedSemaphore.resize(frameBufferingCount);
 	frameFinishedFences.resize(frameBufferingCount);
 	frameFramebuffers.resize(frameBufferingCount);
-	frameGraphicsCommandBuffers.resize(frameBufferingCount);
+	frameCommandBuffers.resize(frameBufferingCount);
 
 	vk::ImageCreateInfo screenTextureInfo = {};
 	screenTextureInfo.setImageType(vk::ImageType::e2D);
