@@ -478,6 +478,7 @@ void Kernel::getCurrentProcessorNumber() {
 
 	// Until we properly implement per-core schedulers, return whatever processor ID passed to svcCreateThread
 	switch (id) {
+		// TODO: This is picked from exheader
 		case ProcessorID::Default:
 			ret = static_cast<s32>(ProcessorID::AppCore);
 			break;
@@ -494,7 +495,7 @@ void Kernel::getCurrentProcessorNumber() {
 		Helpers::warn("GetCurrentProcessorNumber: Thread not running on appcore\n");
 	}
 
-	regs[0] = ret;
+	regs[0] = static_cast<u32>(ret);
 }
 
 void Kernel::exitThread() {
