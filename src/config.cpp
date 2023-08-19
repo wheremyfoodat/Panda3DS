@@ -71,6 +71,16 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 			batteryPercentage = std::clamp(batteryPercentage, 0, 100);
 		}
 	}
+
+	if (data.contains("SD")) {
+		auto sdResult = toml::expect<toml::value>(data.at("SD"));
+		if (sdResult.is_ok()) {
+			auto sd = sdResult.unwrap();
+
+			sdCardInserted = toml::find_or<toml::boolean>(sd, "UseVirtualSD", true);
+			sdWriteProtected = toml::find_or<toml::boolean>(sd, "WriteProtectVirtualSD", false);
+		}
+	}
 }
 
 void EmulatorConfig::save(const std::filesystem::path& path) {
@@ -97,6 +107,9 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 
 	data["Battery"]["ChargerPlugged"] = chargerPlugged;
 	data["Battery"]["BatteryPercentage"] = batteryPercentage;
+
+	data["SD"]["UseVirtualSD"] = sdCardInserted;
+	data["SD"]["WriteProtectVirtualSD"] = sdWriteProtected;
 
 	std::ofstream file(path, std::ios::out);
 	file << data;
