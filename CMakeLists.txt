@@ -55,7 +55,7 @@ add_compile_definitions(NOMINMAX)             # Make windows.h not define min/ma
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
 
-if(ENABLE_DISCORD_RPC)
+if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
 endif()
@@ -277,7 +277,7 @@ endif()
 
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
 
-if(ENABLE_DISCORD_RPC)
+if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
     target_link_libraries(Alber PRIVATE discord-rpc)
 endif()
