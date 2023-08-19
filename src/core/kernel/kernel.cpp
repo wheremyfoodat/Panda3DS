@@ -35,6 +35,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x0A: svcSleepThread(); break;
 		case 0x0B: getThreadPriority(); break;
 		case 0x0C: setThreadPriority(); break;
+		case 0x11: getCurrentProcessorNumber(); break;
 		case 0x13: svcCreateMutex(); break;
 		case 0x14: svcReleaseMutex(); break;
 		case 0x15: svcCreateSemaphore(); break;
@@ -158,7 +159,7 @@ void Kernel::reset() {
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30. TODO: This creates a dummy context for thread 0,
 	// which is thankfully not used. Maybe we should prevent this
-	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, -2, 0, ThreadStatus::Running);
+	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, ProcessorID::Default, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
 	setupIdleThread();
 
