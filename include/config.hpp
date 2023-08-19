@@ -9,6 +9,9 @@ struct EmulatorConfig {
 	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
 
+	bool sdCardInserted = true;
+	bool sdWriteProtected = false;
+
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;
