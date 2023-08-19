@@ -61,7 +61,7 @@ class Kernel {
 	Handle makeProcess(u32 id);
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
-	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
+	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
 	Handle makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
 
 public:
@@ -126,6 +126,7 @@ private:
 	void exitThread();
 	void mapMemoryBlock();
 	void queryMemory();
+	void getCurrentProcessorNumber();
 	void getProcessID();
 	void getProcessInfo();
 	void getResourceLimit();
