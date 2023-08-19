@@ -16,8 +16,8 @@ void ACService::reset() {}
 void ACService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
-		case ACCommands::CloseAsync: closeAsync(messagePointer); break;
 		case ACCommands::CancelConnectAsync: cancelConnectAsync(messagePointer); break;
+		case ACCommands::CloseAsync: closeAsync(messagePointer); break;
 		case ACCommands::CreateDefaultConfig: createDefaultConfig(messagePointer); break;
 		case ACCommands::GetLastErrorCode: getLastErrorCode(messagePointer); break;
 		case ACCommands::SetClientVersion: setClientVersion(messagePointer); break;
