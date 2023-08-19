@@ -32,7 +32,7 @@ void ServiceManager::reset() {
 	fs.reset();
 	gsp_gpu.reset();
 	gsp_lcd.reset();
-    ldr.reset();
+	ldr.reset();
 	mcu_hwc.reset();
 	mic.reset();
 	nim.reset();
