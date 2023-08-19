@@ -24,6 +24,7 @@
 #include "services/http.hpp"
 #include "services/ir_user.hpp"
 #include "services/ldr_ro.hpp"
+#include "services/mcu/mcu_hwc.hpp"
 #include "services/mic.hpp"
 #include "services/ndm.hpp"
 #include "services/nfc.hpp"
@@ -72,6 +73,8 @@ class ServiceManager {
 	SOCService soc;
 	SSLService ssl;
 	Y2RService y2r;
+
+	MCU::HWCService mcu_hwc;
 
 	// "srv:" commands
 	void enableNotification(u32 messagePointer);
