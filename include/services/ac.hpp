@@ -11,6 +11,8 @@ class ACService {
 	MAKE_LOG_FUNCTION(log, acLogger)
 
 	// Service commands
+	void cancelConnectAsync(u32 messagePointer);
+	void createDefaultConfig(u32 messagePointer);
 	void getLastErrorCode(u32 messagePointer);
 	void setClientVersion(u32 messagePointer);
 
