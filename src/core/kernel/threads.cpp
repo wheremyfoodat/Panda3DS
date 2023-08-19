@@ -389,10 +389,8 @@ void Kernel::createThread() {
 		return;
 	}
 
-	if (id < -2 && id > 3) {
-		Helpers::warn("Invalid processor ID in CreateThread");
-		// TODO: This should return an error
-		id = static_cast<s32>(ProcessorID::AppCore);
+	if (id < -2 || id > 3) {
+		Helpers::panic("Invalid processor ID in CreateThread");
 	}
 
 	regs[0] = Result::Success;
