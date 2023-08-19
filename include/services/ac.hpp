@@ -12,6 +12,7 @@ class ACService {
 
 	// Service commands
 	void cancelConnectAsync(u32 messagePointer);
+	void closeAsync(u32 messagePointer);
 	void createDefaultConfig(u32 messagePointer);
 	void getLastErrorCode(u32 messagePointer);
 	void setClientVersion(u32 messagePointer);
