@@ -83,8 +83,9 @@ class RendererVK final : public Renderer {
 	std::vector<vk::UniqueImage> screenTexture = {};
 	vk::UniqueDeviceMemory framebufferMemory = {};
 
-	std::map<u32, vk::UniqueRenderPass> renderPassCache;
+	std::map<u64, vk::UniqueRenderPass> renderPassCache;
 
+	vk::RenderPass getRenderPass(vk::Format colorFormat, std::optional<vk::Format> depthFormat);
 	vk::RenderPass getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat);
 
 	// Recreate the swapchain, possibly re-using the old one in the case of a resize

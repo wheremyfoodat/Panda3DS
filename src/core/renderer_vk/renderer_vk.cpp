@@ -151,11 +151,11 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	return newTexture;
 }
 
-vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat) {
-	u32 renderPassHash = static_cast<u16>(colorFormat);
+vk::RenderPass RendererVK::getRenderPass(vk::Format colorFormat, std::optional<vk::Format> depthFormat) {
+	u64 renderPassHash = static_cast<u32>(colorFormat);
 
 	if (depthFormat.has_value()) {
-		renderPassHash |= (static_cast<u32>(depthFormat.value()) << 8);
+		renderPassHash |= (static_cast<u64>(depthFormat.value()) << 32);
 	}
 
 	// Cache hit
@@ -170,7 +170,7 @@ vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::option
 	std::vector<vk::AttachmentDescription> renderPassAttachments = {};
 
 	vk::AttachmentDescription colorAttachment = {};
-	colorAttachment.format = Vulkan::colorFormatToVulkan(colorFormat);
+	colorAttachment.format = colorFormat;
 	colorAttachment.samples = vk::SampleCountFlagBits::e1;
 	colorAttachment.loadOp = vk::AttachmentLoadOp::eLoad;
 	colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -182,7 +182,7 @@ vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::option
 
 	if (depthFormat.has_value()) {
 		vk::AttachmentDescription depthAttachment = {};
-		depthAttachment.format = Vulkan::depthFormatToVulkan(depthFormat.value());
+		depthAttachment.format = depthFormat.value();
 		depthAttachment.samples = vk::SampleCountFlagBits::e1;
 		depthAttachment.loadOp = vk::AttachmentLoadOp::eLoad;
 		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -227,6 +227,14 @@ vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::option
 		Helpers::panic("Error creating render pass: %s\n", vk::to_string(createResult.result).c_str());
 	}
 	return {};
+}
+
+vk::RenderPass RendererVK::getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat) {
+	if (depthFormat.has_value()) {
+		return getRenderPass(Vulkan::colorFormatToVulkan(colorFormat), Vulkan::depthFormatToVulkan(depthFormat.value()));
+	} else {
+		return getRenderPass(Vulkan::colorFormatToVulkan(colorFormat), {});
+	}
 }
 
 vk::Result RendererVK::recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent) {
