@@ -1,4 +1,5 @@
 #pragma once
+#include "config.hpp"
 #include "fs/archive_ext_save_data.hpp"
 #include "fs/archive_ncch.hpp"
 #include "fs/archive_save_data.hpp"
@@ -8,7 +9,6 @@
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
-#include "result/result.hpp"
 
 // Yay, more circular dependencies
 class Kernel;
@@ -34,6 +34,8 @@ class FSService {
 	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
 	FSPath readPath(u32 type, u32 pointer, u32 size);
+
+	const EmulatorConfig& config;
 
 	// Service commands
 	void createDirectory(u32 messagePointer);
@@ -62,9 +64,9 @@ class FSService {
 	u32 priority;
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem),
-		sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"),
-		sdmc(mem), selfNcch(mem), ncch(mem), kernel(kernel)
+	FSService(Memory& mem, Kernel& kernel, const EmulatorConfig& config) : mem(mem), saveData(mem),
+		sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem), selfNcch(mem),
+		ncch(mem), kernel(kernel), config(config)
 	{}
 
 	void reset();

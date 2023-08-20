@@ -8,7 +8,7 @@ class SDMCArchive : public ArchiveBase {
 public:
 	SDMCArchive(Memory& mem) : ArchiveBase(mem) {}
 
-	u64 getFreeBytes() override { Helpers::panic("SDMC::GetFreeBytes unimplemented"); return 0;  }
+	u64 getFreeBytes() override { return 1_GB; }
 	std::string name() override { return "SDMC"; }
 
 	HorizonResult createFile(const FSPath& path, u64 size) override;

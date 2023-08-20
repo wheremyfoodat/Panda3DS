@@ -2,6 +2,7 @@
 #include "kernel/kernel.hpp"
 #include "io_file.hpp"
 #include "ipc.hpp"
+#include "result/result.hpp"
 
 #ifdef CreateFile // windows.h defines CreateFile & DeleteFile because of course it does.
 #undef CreateDirectory
@@ -338,7 +339,8 @@ void FSService::openFileDirectly(u32 messagePointer) {
 	std::optional<Handle> handle = openFileHandle(archive, filePath, archivePath, perms);
 	mem.write32(messagePointer, IPC::responseHeader(0x803, 1, 2));
 	if (!handle.has_value()) {
-		Helpers::panic("OpenFileDirectly: Failed to open file with given path");
+		printf("OpenFileDirectly failed\n");
+		mem.write32(messagePointer + 4, Result::FS::FileNotFound);
 	} else {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write32(messagePointer + 12, handle.value());
@@ -582,22 +584,21 @@ void FSService::setPriority(u32 messagePointer) {
 	priority = value;
 }
 
-
-// Shows whether an SD card is inserted. At the moment stubbed to no
-constexpr bool sdInserted = false;
-
 void FSService::isSdmcDetected(u32 messagePointer) {
 	log("FS::IsSdmcDetected\n");
+
 	mem.write32(messagePointer, IPC::responseHeader(0x817, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, sdInserted ? 1 : 0);
+	mem.write8(messagePointer + 8, config.sdCardInserted ? 1 : 0);
 }
 
-// We consider our SD card to always be writable if oen is inserted for now
-// So isSdmcWritable returns 1 if an SD card is inserted (because it's always writable) and 0 if not.
+// We consider our SD card to always be writable if one is inserted for now
+// However we do make sure to respect the configs and properly return the correct value here
 void FSService::isSdmcWritable(u32 messagePointer) {
 	log("FS::isSdmcWritable\n");
+	const bool writeProtected = (!config.sdCardInserted) || (config.sdCardInserted && config.sdWriteProtected);
+
 	mem.write32(messagePointer, IPC::responseHeader(0x818, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, sdInserted ? 1 : 0);
+	mem.write8(messagePointer + 8, writeProtected ? 0 : 1);
 }
