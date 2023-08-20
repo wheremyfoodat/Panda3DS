@@ -21,6 +21,7 @@ namespace BOSSCommands {
 		GetTaskState = 0x00200082,
 		GetTaskStatus = 0x002300C2,
 		GetTaskInfo = 0x00250082,
+		GetErrorCode = 0x002E0040,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000,
 	};
@@ -34,6 +35,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case BOSSCommands::CancelTask: cancelTask(messagePointer); break;
+		case BOSSCommands::GetErrorCode: getErrorCode(messagePointer); break;
 		case BOSSCommands::GetNsDataIdList:
 		case BOSSCommands::GetNsDataIdList1: 
 			getNsDataIdList(messagePointer, command); break;
@@ -125,6 +127,13 @@ void BOSSService::getTaskInfo(u32 messagePointer) {
 	log("BOSS::GetTaskInfo (stubbed and undocumented)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x25, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void BOSSService::getErrorCode(u32 messagePointer) {
+	log("BOSS::GetErrorCode (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x2E, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, Result::Success); // No error code
 }
 
 void BOSSService::getStorageEntryInfo(u32 messagePointer) {
