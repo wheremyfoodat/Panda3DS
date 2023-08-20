@@ -4,7 +4,8 @@
 namespace AMCommands {
 	enum : u32 {
 		GetDLCTitleInfo = 0x10050084,
-		ListTitleInfo = 0x10070102
+		ListTitleInfo = 0x10070102,
+		GetPatchTitleInfo = 0x100D0084,
 	};
 }
 
@@ -13,6 +14,7 @@ void AMService::reset() {}
 void AMService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case AMCommands::GetPatchTitleInfo: getPatchTitleInfo(messagePointer); break;
 		case AMCommands::GetDLCTitleInfo: getDLCTitleInfo(messagePointer); break;
 		case AMCommands::ListTitleInfo: listTitleInfo(messagePointer); break;
 		default: Helpers::panic("AM service requested. Command: %08X\n", command);
@@ -42,7 +44,16 @@ void AMService::listTitleInfo(u32 messagePointer) {
 
 void AMService::getDLCTitleInfo(u32 messagePointer) {
 	log("AM::GetDLCTitleInfo (stubbed to fail)\n");
+	Helpers::warn("Unimplemented AM::GetDLCTitleInfo. Will need to be implemented to support DLC\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1005, 1, 4));
-	mem.write32(messagePointer + 4, -1);
+	mem.write32(messagePointer + 4, Result::FailurePlaceholder);
+}
+
+void AMService::getPatchTitleInfo(u32 messagePointer) {
+	log("AM::GetPatchTitleInfo (stubbed to fail)\n");
+	Helpers::warn("Unimplemented AM::GetDLCTitleInfo. Will need to be implemented to support updates\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x100D, 1, 4));
+	mem.write32(messagePointer + 4, Result::FailurePlaceholder);
 }
