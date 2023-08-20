@@ -19,7 +19,11 @@ FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms)
 			Helpers::panic("Unsafe path in SaveData::OpenFile");
 		}
 
-		if (perms.raw == 0 || (perms.create() && !perms.write())) {
+		FilePerms realPerms = perms;
+		// SD card always has read permission
+		realPerms.raw |= (1 << 0);
+
+		if ((realPerms.create() && !realPerms.write())) {
 			Helpers::panic("[SaveData] Unsupported flags for OpenFile");
 		}
 
@@ -33,7 +37,7 @@ FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms)
 			return file.isOpen() ? file.getHandle() : FileError;
 		} else {
 			// If the file is not found, create it if the create flag is on
-			if (perms.create()) {
+			if (realPerms.create()) {
 				IOFile file(p.string().c_str(), "wb");  // Create file
 				file.close();                           // Close it
 
