@@ -1,6 +1,6 @@
 # We need to be able to use enable_language(OBJC) on Mac, so we need CMake 3.16 vs the 3.10 we use otherwise. Blame Apple.
 if (APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
     cmake_minimum_required(VERSION 3.16)
 else()
     cmake_minimum_required(VERSION 3.10)

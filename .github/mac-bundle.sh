@@ -43,7 +43,7 @@ PlistBuddy Alber.app/Contents/Info.plist -c "add CFBundleName string Panda3DS"
 PlistBuddy Alber.app/Contents/Info.plist -c "add CFBundlePackageType string APPL"
 PlistBuddy Alber.app/Contents/Info.plist -c "add NSHumanReadableCopyright string Copyright 2023 Panda3DS Team"
 
-PlistBuddy Alber.app/Contents/Info.plist -c "set LSMinimumSystemVersion 11.0"
+PlistBuddy Alber.app/Contents/Info.plist -c "set LSMinimumSystemVersion 10.15"
 
 # Bundle dylibs
 dylibbundler -od -b -x Alber.app/Contents/MacOS/Alber -d Alber.app/Contents/Frameworks/ -p @rpath -s /Users/runner/work/Panda3DS/Panda3DS/VULKAN_SDK/lib
