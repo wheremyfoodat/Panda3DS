@@ -135,6 +135,7 @@ private:
 	void getSystemInfo();
 	void getSystemTick();
 	void getThreadID();
+	void getThreadIdealProcessor();
 	void getThreadPriority();
 	void sendSyncRequest();
 	void setThreadPriority();

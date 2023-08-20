@@ -286,6 +286,7 @@ bool NCCH::parseSMDH(const std::vector<u8>& smdh) {
 	} else if (taiwan) {
 		region = Regions::Taiwan;
 	}
+	return true;
 }
 
 std::pair<bool, Crypto::AESKey> NCCH::getPrimaryKey(Crypto::AESEngine &aesEngine, const Crypto::AESKey &keyY) {

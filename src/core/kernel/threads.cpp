@@ -445,6 +445,15 @@ void Kernel::getThreadPriority() {
 	}
 }
 
+void Kernel::getThreadIdealProcessor() {
+	const Handle handle = regs[1];  // Thread handle
+	logSVC("GetThreadIdealProcessor (handle = %X)\n", handle);
+
+	// TODO: Not documented what this is or what it does. Citra doesn't implement it at all. Return AppCore as the ideal processor for now
+	regs[0] = Result::Success;
+	regs[1] = static_cast<u32>(ProcessorID::AppCore);
+}
+
 void Kernel::setThreadPriority() {
 	const Handle handle = regs[0];
 	const u32 priority = regs[1];
