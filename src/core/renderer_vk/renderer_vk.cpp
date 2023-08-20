@@ -31,6 +31,156 @@ static inline vk::UniqueShaderModule createShaderModule(vk::Device device, cmrc:
 	return createShaderModule(device, std::span<const std::byte>(reinterpret_cast<const std::byte*>(shaderFile.begin()), shaderFile.size()));
 }
 
+std::tuple<vk::UniquePipeline, vk::UniquePipelineLayout> createGraphicsPipeline(
+	vk::Device device, std::span<const vk::PushConstantRange> pushConstants, std::span<const vk::DescriptorSetLayout> setLayouts,
+	vk::ShaderModule vertModule, vk::ShaderModule fragModule, std::span<const vk::VertexInputBindingDescription> vertexBindingDescriptions,
+	std::span<const vk::VertexInputAttributeDescription> vertexAttributeDescriptions, vk::RenderPass renderPass
+) {
+	// Create Pipeline Layout
+	vk::PipelineLayoutCreateInfo graphicsPipelineLayoutInfo = {};
+
+	graphicsPipelineLayoutInfo.pSetLayouts = setLayouts.data();
+	graphicsPipelineLayoutInfo.setLayoutCount = setLayouts.size();
+	graphicsPipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
+	graphicsPipelineLayoutInfo.pushConstantRangeCount = pushConstants.size();
+
+	vk::UniquePipelineLayout graphicsPipelineLayout = {};
+	if (auto createResult = device.createPipelineLayoutUnique(graphicsPipelineLayoutInfo); createResult.result == vk::Result::eSuccess) {
+		graphicsPipelineLayout = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating pipeline layout: %s\n", vk::to_string(createResult.result).c_str());
+		return {};
+	}
+
+	// Describe the stage and entry point of each shader
+	const vk::PipelineShaderStageCreateInfo ShaderStagesInfo[2] = {
+		vk::PipelineShaderStageCreateInfo(
+			{},                                // Flags
+			vk::ShaderStageFlagBits::eVertex,  // Shader Stage
+			vertModule,                        // Shader Module
+			"main",                            // Shader entry point function name
+			{}                                 // Shader specialization info
+		),
+		vk::PipelineShaderStageCreateInfo(
+			{},                                  // Flags
+			vk::ShaderStageFlagBits::eFragment,  // Shader Stage
+			fragModule,                          // Shader Module
+			"main",                              // Shader entry point function name
+			{}                                   // Shader specialization info
+		),
+	};
+
+	vk::PipelineVertexInputStateCreateInfo vertexInputState = {};
+
+	vertexInputState.vertexBindingDescriptionCount = vertexBindingDescriptions.size();
+	vertexInputState.pVertexBindingDescriptions = vertexBindingDescriptions.data();
+
+	vertexInputState.vertexAttributeDescriptionCount = vertexAttributeDescriptions.size();
+	vertexInputState.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
+
+	vk::PipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
+	inputAssemblyState.topology = vk::PrimitiveTopology::eTriangleList;
+	inputAssemblyState.primitiveRestartEnable = false;
+
+	vk::PipelineViewportStateCreateInfo viewportState = {};
+
+	static const vk::Viewport defaultViewport = {0, 0, 16, 16, 0.0f, 1.0f};
+	static const vk::Rect2D defaultScissor = {{0, 0}, {16, 16}};
+	viewportState.viewportCount = 1;
+	viewportState.pViewports = &defaultViewport;
+	viewportState.scissorCount = 1;
+	viewportState.pScissors = &defaultScissor;
+
+	vk::PipelineRasterizationStateCreateInfo rasterizationState = {};
+
+	rasterizationState.depthClampEnable = false;
+	rasterizationState.rasterizerDiscardEnable = false;
+	rasterizationState.polygonMode = vk::PolygonMode::eFill;
+	rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
+	rasterizationState.frontFace = vk::FrontFace::eClockwise;
+	rasterizationState.depthBiasEnable = false;
+	rasterizationState.depthBiasConstantFactor = 0.0f;
+	rasterizationState.depthBiasClamp = 0.0f;
+	rasterizationState.depthBiasSlopeFactor = 0.0;
+	rasterizationState.lineWidth = 1.0f;
+
+	vk::PipelineMultisampleStateCreateInfo multisampleState = {};
+
+	multisampleState.rasterizationSamples = vk::SampleCountFlagBits::e1;
+	multisampleState.sampleShadingEnable = false;
+	multisampleState.minSampleShading = 1.0f;
+	multisampleState.pSampleMask = nullptr;
+	multisampleState.alphaToCoverageEnable = true;
+	multisampleState.alphaToOneEnable = false;
+
+	vk::PipelineDepthStencilStateCreateInfo depthStencilState = {};
+
+	depthStencilState.depthTestEnable = true;
+	depthStencilState.depthWriteEnable = true;
+	depthStencilState.depthCompareOp = vk::CompareOp::eLessOrEqual;
+	depthStencilState.depthBoundsTestEnable = false;
+	depthStencilState.stencilTestEnable = false;
+	depthStencilState.front = vk::StencilOp::eKeep;
+	depthStencilState.back = vk::StencilOp::eKeep;
+	depthStencilState.minDepthBounds = 0.0f;
+	depthStencilState.maxDepthBounds = 1.0f;
+
+	vk::PipelineColorBlendStateCreateInfo colorBlendState = {};
+
+	colorBlendState.logicOpEnable = false;
+	colorBlendState.logicOp = vk::LogicOp::eClear;
+	colorBlendState.attachmentCount = 1;
+
+	vk::PipelineColorBlendAttachmentState blendAttachmentState = {};
+
+	blendAttachmentState.blendEnable = false;
+	blendAttachmentState.srcColorBlendFactor = vk::BlendFactor::eZero;
+	blendAttachmentState.dstColorBlendFactor = vk::BlendFactor::eZero;
+	blendAttachmentState.colorBlendOp = vk::BlendOp::eAdd;
+	blendAttachmentState.srcAlphaBlendFactor = vk::BlendFactor::eZero;
+	blendAttachmentState.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+	blendAttachmentState.alphaBlendOp = vk::BlendOp::eAdd;
+	blendAttachmentState.colorWriteMask =
+		vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+
+	colorBlendState.pAttachments = &blendAttachmentState;
+
+	vk::PipelineDynamicStateCreateInfo dynamicState = {};
+	static vk::DynamicState dynamicStates[] = {// The viewport and scissor of the framebuffer will be dynamic at
+											   // run-time
+											   vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+	dynamicState.dynamicStateCount = std::size(dynamicStates);
+	dynamicState.pDynamicStates = dynamicStates;
+
+	vk::GraphicsPipelineCreateInfo renderPipelineInfo = {};
+
+	renderPipelineInfo.stageCount = 2;  // Vert + Frag stages
+	renderPipelineInfo.pStages = ShaderStagesInfo;
+	renderPipelineInfo.pVertexInputState = &vertexInputState;
+	renderPipelineInfo.pInputAssemblyState = &inputAssemblyState;
+	renderPipelineInfo.pViewportState = &viewportState;
+	renderPipelineInfo.pRasterizationState = &rasterizationState;
+	renderPipelineInfo.pMultisampleState = &multisampleState;
+	renderPipelineInfo.pDepthStencilState = &depthStencilState;
+	renderPipelineInfo.pColorBlendState = &colorBlendState;
+	renderPipelineInfo.pDynamicState = &dynamicState;
+	renderPipelineInfo.subpass = 0;
+	renderPipelineInfo.renderPass = renderPass;
+	renderPipelineInfo.layout = graphicsPipelineLayout.get();
+
+	// Create Pipeline
+	vk::UniquePipeline pipeline = {};
+
+	if (auto createResult = device.createGraphicsPipelineUnique({}, renderPipelineInfo); createResult.result == vk::Result::eSuccess) {
+		pipeline = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating graphics pipeline: %s\n", vk::to_string(createResult.result).c_str());
+		return {};
+	}
+
+	return std::make_tuple(std::move(pipeline), std::move(graphicsPipelineLayout));
+}
+
 // Finds the first queue family that satisfies `queueMask` and excludes `queueExcludeMask` bits
 // Returns -1 if not found
 // Todo: Smarter selection for present/graphics/compute/transfer
@@ -951,6 +1101,10 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	vk::UniqueShaderModule displayFragmentShaderModule = createShaderModule(device.get(), displayFragmentShader);
 
 	vk::RenderPass screenTextureRenderPass = getRenderPass(screenTextureInfo.format, {});
+
+	auto [pipeline, pipelineLayout] = createGraphicsPipeline(
+		device.get(), {}, {}, displayVertexShaderModule.get(), displayFragmentShaderModule.get(), {}, {}, screenTextureRenderPass
+	);
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
