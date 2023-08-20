@@ -64,28 +64,39 @@ FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms)
 }
 
 HorizonResult SDMCArchive::createDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path)) {
-			Helpers::panic("Unsafe path in SDMCArchive::OpenFile");
-		}
+	std::filesystem::path p = IOFile::getAppData() / "SDMC";
 
-		fs::path p = IOFile::getAppData() / "SDMC";
-		p += fs::path(path.utf16_string).make_preferred();
+	switch (path.type) {
+		case PathType::ASCII:
+			if (!isPathSafe<PathType::ASCII>(path)) {
+				Helpers::panic("Unsafe path in SDMCArchive::OpenFile");
+			}
 
-		if (fs::is_directory(p)) {
-			return Result::FS::AlreadyExists;
-		}
+			p += fs::path(path.string).make_preferred();
+			break;
 
-		if (fs::is_regular_file(p)) {
-			Helpers::panic("File path passed to SDMCArchive::CreateDirectory");
-		}
+		case PathType::UTF16:
+			if (!isPathSafe<PathType::UTF16>(path)) {
+				Helpers::panic("Unsafe path in SDMCArchive::OpenFile");
+			}
 
-		std::error_code ec;
-		bool success = fs::create_directory(p, ec);
-		return success ? Result::Success : Result::FS::UnexpectedFileOrDir;
-	} else {
-		Helpers::panic("Unimplemented SDMC::CreateDirectory path type");
+			p += fs::path(path.utf16_string).make_preferred();
+			break;
+
+		default: Helpers::panic("SDMCArchive::CreateDirectory: Failed. Path type: %d", path.type); return Result::FailurePlaceholder;
 	}
+
+	if (fs::is_directory(p)) {
+		return Result::FS::AlreadyExists;
+	}
+
+	if (fs::is_regular_file(p)) {
+		Helpers::panic("File path passed to SDMCArchive::CreateDirectory");
+	}
+
+	std::error_code ec;
+	bool success = fs::create_directory(p, ec);
+	return success ? Result::Success : Result::FS::UnexpectedFileOrDir;
 }
 
 Rust::Result<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const FSPath& path) {
