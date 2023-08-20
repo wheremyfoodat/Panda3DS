@@ -39,14 +39,17 @@ HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 
 HorizonResult SaveDataArchive::createDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
+		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::OpenFile");
+		}
 
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
 
-		if (fs::is_directory(p))
+		if (fs::is_directory(p)) {
 			return Result::FS::AlreadyExists;
+		}
+
 		if (fs::is_regular_file(p)) {
 			Helpers::panic("File path passed to SaveData::CreateDirectory");
 		}
@@ -128,8 +131,9 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 
 Rust::Result<DirectorySession, HorizonResult> SaveDataArchive::openDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
+		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
+		}
 
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
