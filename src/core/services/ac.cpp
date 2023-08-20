@@ -7,6 +7,7 @@ namespace ACCommands {
 		CancelConnectAsync = 0x00070002,
 		CloseAsync = 0x00080004,
 		GetLastErrorCode = 0x000A0000,
+		RegisterDisconnectEvent = 0x00300004,
 		SetClientVersion = 0x00400042,
 	};
 }
@@ -20,6 +21,7 @@ void ACService::handleSyncRequest(u32 messagePointer) {
 		case ACCommands::CloseAsync: closeAsync(messagePointer); break;
 		case ACCommands::CreateDefaultConfig: createDefaultConfig(messagePointer); break;
 		case ACCommands::GetLastErrorCode: getLastErrorCode(messagePointer); break;
+		case ACCommands::RegisterDisconnectEvent: registerDisconnectEvent(messagePointer); break;
 		case ACCommands::SetClientVersion: setClientVersion(messagePointer); break;
 		default: Helpers::panic("AC service requested. Command: %08X\n", command);
 	}
@@ -62,5 +64,16 @@ void ACService::setClientVersion(u32 messagePointer) {
 	log("AC::SetClientVersion (version = %d)\n", version);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x40, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void ACService::registerDisconnectEvent(u32 messagePointer) {
+	log("AC::RegisterDisconnectEvent (stubbed)\n");
+	const u32 pidHeader = mem.read32(messagePointer + 4);
+	const u32 copyHandleHeader = mem.read32(messagePointer + 12);
+	// Event signaled when disconnecting from AC
+	const Handle eventHandle = mem.read32(messagePointer + 16);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x30, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
