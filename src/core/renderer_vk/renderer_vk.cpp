@@ -1,5 +1,6 @@
 #include "renderer_vk/renderer_vk.hpp"
 
+#include <cmrc/cmrc.hpp>
 #include <limits>
 #include <span>
 #include <unordered_set>
@@ -9,6 +10,26 @@
 #include "renderer_vk/vk_debug.hpp"
 #include "renderer_vk/vk_memory.hpp"
 #include "renderer_vk/vk_pica.hpp"
+
+CMRC_DECLARE(RendererVK);
+
+static vk::UniqueShaderModule createShaderModule(vk::Device device, std::span<const std::byte> shaderCode) {
+	vk::ShaderModuleCreateInfo shaderModuleInfo = {};
+	shaderModuleInfo.pCode = reinterpret_cast<const u32*>(shaderCode.data());
+	shaderModuleInfo.codeSize = shaderCode.size();
+
+	vk::UniqueShaderModule shaderModule = {};
+	if (auto createResult = device.createShaderModuleUnique(shaderModuleInfo); createResult.result == vk::Result::eSuccess) {
+		shaderModule = std::move(createResult.value);
+	} else {
+		Helpers::panic("Error creating shader module: %s\n", vk::to_string(createResult.result).c_str());
+	}
+	return shaderModule;
+}
+
+static inline vk::UniqueShaderModule createShaderModule(vk::Device device, cmrc::file shaderFile) {
+	return createShaderModule(device, std::span<const std::byte>(reinterpret_cast<const std::byte*>(shaderFile.begin()), shaderFile.size()));
+}
 
 // Finds the first queue family that satisfies `queueMask` and excludes `queueExcludeMask` bits
 // Returns -1 if not found
@@ -921,6 +942,15 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 			Helpers::panic("Error allocating framebuffer memory: %s\n", vk::to_string(result).c_str());
 		}
 	}
+
+	auto vk_resources = cmrc::RendererVK::get_filesystem();
+	auto displayVertexShader = vk_resources.open("vulkan_display.vert.spv");
+	auto displayFragmentShader = vk_resources.open("vulkan_display.frag.spv");
+
+	vk::UniqueShaderModule displayVertexShaderModule = createShaderModule(device.get(), displayVertexShader);
+	vk::UniqueShaderModule displayFragmentShaderModule = createShaderModule(device.get(), displayFragmentShader);
+
+	vk::RenderPass screenTextureRenderPass = getRenderPass(screenTextureInfo.format, {});
 }
 
 void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
