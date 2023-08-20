@@ -482,6 +482,7 @@ void Kernel::setThreadPriority() {
 }
 
 void Kernel::getCurrentProcessorNumber() {
+	logSVC("GetCurrentProcessorNumber()\n");
 	const ProcessorID id = threads[currentThreadIndex].processorID;
 	s32 ret;
 

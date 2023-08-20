@@ -20,7 +20,7 @@ You can download stable builds from the Releases tab, or you can download the la
 |Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Linux_Build/master/Linux%20executable.zip)|
 
 # Compatibility
-Panda3DS is still in the early stages of development. Many games boot, many don't. Most games have at least some hilariously broken graphics, audio is not supported, performance leaves a bit to be desired mainly thanks to lack of shader acceleration, and most QoL features (including a GUI) are missing.
+Panda3DS is still in the early stages of development. Many games boot, many don't. Most games have at least some hilariously broken graphics, audio is not supported, and some QoL features (including a GUI) are missing.
 
 In addition, some games don't quiiite work with the upstream code. A lot of them might need some panics in the source code to be commented out before they work, etc. However, just the fact things can work as well as they do now is promising in itself.
 
@@ -80,6 +80,9 @@ Keyboard & Mouse
 - Select button	Backspace
 - Touch Screen  Left click
 - Gyroscope     Hold right click and swipe your mouse left and right (support is kind of shaky atm, but games that require gyro here and there like Kirby should work)
+- Pause/Resume  F4
+- Reload        F5
+
 
 Panda3DS also supports controller input using the SDL2 GameController API.
 
@@ -101,6 +104,8 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
 - [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
 - [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
+- [shadPS4](https://github.com/georgemoralis/shadPS4): Work-in-progress PS4 emulator by the founder of PCSX, PCSX2 and more
+- [Hydra](https://github.com/hydra-emu/hydra): Cross-platform GameBoy, NES, N64 and Chip-8 emulator
 
 # Support
 If you find this project exciting and want to support the founder, check out [his Patreon page](https://www.patreon.com/wheremyfoodat)

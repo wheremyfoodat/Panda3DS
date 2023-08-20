@@ -71,6 +71,7 @@ class HIDService {
 	void getGyroscopeLowCalibrateParam(u32 messagePointer);
 	void getGyroscopeCoefficient(u32 messagePointer);
 	void getIPCHandles(u32 messagePointer);
+	void getSoundVolume(u32 messagePointer);
 
 	// Don't call these prior to initializing shared mem pls
 	template <typename T>

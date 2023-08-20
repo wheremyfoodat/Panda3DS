@@ -1,5 +1,6 @@
 # We need to be able to use enable_language(OBJC) on Mac, so we need CMake 3.16 vs the 3.10 we use otherwise. Blame Apple.
 if (APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
     cmake_minimum_required(VERSION 3.16)
 else()
     cmake_minimum_required(VERSION 3.10)
@@ -55,7 +56,7 @@ add_compile_definitions(NOMINMAX)             # Make windows.h not define min/ma
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
 
-if(ENABLE_DISCORD_RPC)
+if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
 endif()
@@ -277,7 +278,7 @@ endif()
 
 target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
 
-if(ENABLE_DISCORD_RPC)
+if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
     target_link_libraries(Alber PRIVATE discord-rpc)
 endif()

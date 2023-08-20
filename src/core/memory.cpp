@@ -166,6 +166,7 @@ u32 Memory::read32(u32 vaddr) {
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 					static int shutUpCounter = 0;
 					if (shutUpCounter < 5) { // Stop spamming about VRAM reads after the first 5
+						shutUpCounter++;
 						Helpers::warn("VRAM read!\n");
 					}
 
