@@ -142,4 +142,6 @@ class HIDService {
 	void releaseTouchScreen() {
 		touchScreenPressed = false;
 	}
+
+	bool isTouchScreenPressed() { return touchScreenPressed; }
 };
