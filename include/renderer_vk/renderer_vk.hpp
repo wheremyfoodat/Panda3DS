@@ -5,6 +5,7 @@
 #include "renderer.hpp"
 #include "vk_api.hpp"
 #include "vk_descriptor_heap.hpp"
+#include "vk_descriptor_update_batch.hpp"
 
 class GPU;
 
@@ -72,7 +73,7 @@ class RendererVK final : public Renderer {
 		}
 	};
 	// Hash(loc, size, format) -> Texture
-	std::map<u32, Texture> textureCache;
+	std::map<u64, Texture> textureCache;
 
 	static u32 colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format);
 	static u32 depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format);
@@ -82,6 +83,8 @@ class RendererVK final : public Renderer {
 
 	// Framebuffer for the top/bottom image
 	std::vector<vk::UniqueImage> screenTexture = {};
+	std::vector<vk::UniqueImageView> screenTextureViews = {};
+	std::vector<vk::UniqueFramebuffer> screenTextureFramebuffers = {};
 	vk::UniqueDeviceMemory framebufferMemory = {};
 
 	std::map<u64, vk::UniqueRenderPass> renderPassCache;
@@ -89,9 +92,14 @@ class RendererVK final : public Renderer {
 	vk::RenderPass getRenderPass(vk::Format colorFormat, std::optional<vk::Format> depthFormat);
 	vk::RenderPass getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat);
 
+	std::unique_ptr<Vulkan::DescriptorUpdateBatch> descriptorUpdateBatch;
+
+	// Display pipeline data
 	std::unique_ptr<Vulkan::DescriptorHeap> displayDescriptorHeap;
 	vk::UniquePipeline displayPipeline;
 	vk::UniquePipelineLayout displayPipelineLayout;
+	std::vector<vk::DescriptorSet> topDisplayPipelineDescriptorSet;
+	std::vector<vk::DescriptorSet> bottomDisplayPipelineDescriptorSet;
 
 	// Recreate the swapchain, possibly re-using the old one in the case of a resize
 	vk::Result recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent);

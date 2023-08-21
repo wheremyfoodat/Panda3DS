@@ -595,27 +595,53 @@ void RendererVK::display() {
 
 	//// Render Frame(Simulated - just clear the images to different colors for now)
 	{
-		static const std::array<float, 4> frameScopeColor = {{1.0f, 0.0f, 1.0f, 1.0f}};
+		static const std::array<float, 4> renderScreenScopeColor = {{1.0f, 0.0f, 1.0f, 1.0f}};
 
-		Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), frameScopeColor, "Frame");
-
-		// Prepare images for color-clear
+		Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), renderScreenScopeColor, "Render Screen");
+		// Prepare screen texture for rendering into
 		getCurrentCommandBuffer().pipelineBarrier(
-			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
 			{
 				vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
-					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eUndefined,
+					vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					screenTexture[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
 			}
 		);
-		static const std::array<float, 4> topClearColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
-		static const std::array<float, 4> bottomClearColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
-		getCurrentCommandBuffer().clearColorImage(
-			screenTexture[frameBufferingIndex].get(), vk::ImageLayout::eTransferDstOptimal, topClearColor,
-			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-		);
+
+		vk::RenderPassBeginInfo renderPassBeginInfo = {};
+		renderPassBeginInfo.renderPass = getRenderPass(vk::Format::eR8G8B8A8Unorm, {});
+
+		renderPassBeginInfo.framebuffer = screenTextureFramebuffers[frameBufferingIndex].get();
+		renderPassBeginInfo.renderArea.offset = vk::Offset2D();
+		renderPassBeginInfo.renderArea.extent = vk::Extent2D(400, 240 * 2);
+
+		getCurrentCommandBuffer().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+		// Render top screen
+		if (topActiveFb) {
+			getCurrentCommandBuffer().bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {topDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
+			);
+			getCurrentCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics, displayPipeline.get());
+			getCurrentCommandBuffer().setViewport(0, vk::Viewport(0, 0, 400, 240));
+			getCurrentCommandBuffer().setScissor(0, vk::Rect2D({0, 0}, {400, 240}));
+			getCurrentCommandBuffer().draw(3, 1, 0, 0);
+		}
+
+		// Render bottom screen
+		if (bottomActiveFb) {
+			getCurrentCommandBuffer().bindDescriptorSets(
+				vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {bottomDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
+			);
+			getCurrentCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics, displayPipeline.get());
+			getCurrentCommandBuffer().setViewport(0, vk::Viewport(40, 0, 320, 240));
+			getCurrentCommandBuffer().setScissor(0, vk::Rect2D({40, 0}, {320, 240}));
+			getCurrentCommandBuffer().draw(3, 1, 0, 0);
+		}
+
+		getCurrentCommandBuffer().endRenderPass();
 	}
 
 	//// Present
@@ -1049,8 +1075,10 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	screenTextureInfo.setInitialLayout(vk::ImageLayout::eUndefined);
 
 	screenTexture.resize(frameBufferingCount);
+	screenTextureViews.resize(frameBufferingCount);
+	screenTextureFramebuffers.resize(frameBufferingCount);
 
-	for (usize i = 0; i < frameBufferingCount; i++) {
+	for (usize i = 0; i < frameBufferingCount; ++i) {
 		if (auto createResult = device->createSemaphoreUnique(semaphoreInfo); createResult.result == vk::Result::eSuccess) {
 			swapImageFreeSemaphore[i] = std::move(createResult.value);
 
@@ -1093,15 +1121,66 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		}
 	}
 
+	// Memory is bounded, create views and framebuffer for screentexture
+	vk::ImageViewCreateInfo screenTextureViewCreateInfo = {};
+	screenTextureViewCreateInfo.viewType = vk::ImageViewType::e2D;
+	screenTextureViewCreateInfo.format = vk::Format::eR8G8B8A8Unorm;
+	screenTextureViewCreateInfo.components.r = vk::ComponentSwizzle::eR;
+	screenTextureViewCreateInfo.components.g = vk::ComponentSwizzle::eG;
+	screenTextureViewCreateInfo.components.b = vk::ComponentSwizzle::eB;
+	screenTextureViewCreateInfo.components.a = vk::ComponentSwizzle::eA;
+	screenTextureViewCreateInfo.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+
+	for (usize i = 0; i < frameBufferingCount; ++i) {
+		screenTextureViewCreateInfo.image = screenTexture[i].get();
+
+		if (auto createResult = device->createImageViewUnique(screenTextureViewCreateInfo); createResult.result == vk::Result::eSuccess) {
+			screenTextureViews[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating screen texture view: %s\n", vk::to_string(createResult.result).c_str());
+		}
+
+		vk::FramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.setRenderPass(getRenderPass(vk::Format::eR8G8B8A8Unorm, {}));
+		framebufferInfo.setAttachments(screenTextureViews[i].get());
+		framebufferInfo.setWidth(400);
+		framebufferInfo.setHeight(240 * 2);
+		framebufferInfo.setLayers(1);
+		if (auto createResult = device->createFramebufferUnique(framebufferInfo); createResult.result == vk::Result::eSuccess) {
+			screenTextureFramebuffers[i] = std::move(createResult.value);
+		} else {
+			Helpers::panic("Error creating screen-texture framebuffer: %s\n", vk::to_string(createResult.result).c_str());
+		}
+	}
+
 	static vk::DescriptorSetLayoutBinding displayShaderLayout[] = {
 		{// Just a singular texture slot
 		 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment},
 	};
 
+	if (auto createResult = Vulkan::DescriptorUpdateBatch::create(device.get()); createResult.has_value()) {
+		descriptorUpdateBatch = std::make_unique<Vulkan::DescriptorUpdateBatch>(std::move(createResult.value()));
+	} else {
+		Helpers::panic("Error creating descriptor update batch\n");
+	}
+
 	if (auto createResult = Vulkan::DescriptorHeap::create(device.get(), displayShaderLayout); createResult.has_value()) {
 		displayDescriptorHeap = std::make_unique<Vulkan::DescriptorHeap>(std::move(createResult.value()));
 	} else {
 		Helpers::panic("Error creating descriptor heap\n");
+	}
+
+	for (usize i = 0; i < frameBufferingCount; ++i) {
+		if (auto allocateResult = displayDescriptorHeap->allocateDescriptorSet(); allocateResult.has_value()) {
+			topDisplayPipelineDescriptorSet.emplace_back(allocateResult.value());
+		} else {
+			Helpers::panic("Error creating descriptor set\n");
+		}
+		if (auto allocateResult = displayDescriptorHeap->allocateDescriptorSet(); allocateResult.has_value()) {
+			bottomDisplayPipelineDescriptorSet.emplace_back(allocateResult.value());
+		} else {
+			Helpers::panic("Error creating descriptor set\n");
+		}
 	}
 
 	auto vk_resources = cmrc::RendererVK::get_filesystem();
