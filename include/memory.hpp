@@ -12,7 +12,6 @@
 #include "helpers.hpp"
 #include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
-#include "services/shared_font.hpp"
 
 namespace PhysicalAddrs {
 	enum : u32 {
@@ -113,7 +112,7 @@ class Memory {
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
 	std::array<SharedMemoryBlock, 3> sharedMemBlocks = {
-		SharedMemoryBlock(0, u32(_shared_font_len), KernelHandles::FontSharedMemHandle), // Shared memory for the system font
+		SharedMemoryBlock(0, 0, KernelHandles::FontSharedMemHandle), // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
 		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
 		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
  	};
@@ -268,4 +267,5 @@ public:
 	void setVRAM(u8* pointer) { vram = pointer; }
 	bool allocateMainThreadStack(u32 size);
 	Regions getConsoleRegion();
+	void copySharedFont(u8* ptr);
 };
