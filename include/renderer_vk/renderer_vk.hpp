@@ -88,6 +88,9 @@ class RendererVK final : public Renderer {
 	vk::RenderPass getRenderPass(vk::Format colorFormat, std::optional<vk::Format> depthFormat);
 	vk::RenderPass getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat);
 
+	vk::UniquePipeline displayPipeline;
+	vk::UniquePipelineLayout displayPipelineLayout;
+
 	// Recreate the swapchain, possibly re-using the old one in the case of a resize
 	vk::Result recreateSwapchain(vk::SurfaceKHR surface, vk::Extent2D swapchainExtent);
 

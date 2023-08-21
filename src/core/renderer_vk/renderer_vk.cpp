@@ -1102,7 +1102,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	vk::RenderPass screenTextureRenderPass = getRenderPass(screenTextureInfo.format, {});
 
-	auto [pipeline, pipelineLayout] = createGraphicsPipeline(
+	std::tie(displayPipeline, displayPipelineLayout) = createGraphicsPipeline(
 		device.get(), {}, {}, displayVertexShaderModule.get(), displayFragmentShaderModule.get(), {}, {}, screenTextureRenderPass
 	);
 }
