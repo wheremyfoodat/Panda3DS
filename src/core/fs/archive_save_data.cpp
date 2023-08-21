@@ -19,14 +19,17 @@ HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 
 		// If the size is 0, leave the file empty and return success
 		if (size == 0) {
+			file.close();
 			return Result::Success;
 		}
 
 		// If it is not empty, seek to size - 1 and write a 0 to create a file of size "size"
 		else if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
+			file.close();
 			return Result::Success;
 		}
 
+		file.close();
 		return Result::FS::FileTooLarge;
 	}
 
@@ -156,6 +159,8 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> SaveDataArchive::getFormatI
 
 	FormatInfo ret;
 	auto [success, bytesRead] = file.readBytes(&ret, sizeof(FormatInfo));
+	file.close();
+
 	if (!success || bytesRead != sizeof(FormatInfo)) {
 		Helpers::warn("SaveData::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
 		return Err(Result::FS::NotFormatted);
@@ -175,6 +180,8 @@ void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& 
 	// Write format info on disk
 	IOFile file(formatInfoPath, "wb");
 	file.writeBytes(&info, sizeof(info));
+	file.flush();
+	file.close();
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> SaveDataArchive::openArchive(const FSPath& path) {

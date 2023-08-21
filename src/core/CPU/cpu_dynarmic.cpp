@@ -2,7 +2,7 @@
 #include "cpu_dynarmic.hpp"
 #include "arm_defs.hpp"
 
-CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, *this) {
+CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel) {
     cp15 = std::make_shared<CP15>();
 
     Dynarmic::A32::UserConfig config;

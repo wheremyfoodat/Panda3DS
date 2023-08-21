@@ -35,22 +35,15 @@ bool Kernel::signalEvent(Handle handle) {
 
 	// Check if there's any thread waiting on this event
 	if (event->waitlist != 0) {
-		// One-shot events get cleared once they are acquired by some thread and only wake up 1 thread at a time
+		wakeupAllThreads(event->waitlist, handle);
+		event->waitlist = 0;  // No threads waiting;
+
 		if (event->resetType == ResetType::OneShot) {
-			int index = wakeupOneThread(event->waitlist, handle); // Wake up one thread with the highest priority
-			event->waitlist ^= (1ull << index); // Remove thread from waitlist
 			event->fired = false;
-		} else {
-			wakeupAllThreads(event->waitlist, handle);
-			event->waitlist = 0; // No threads waiting;
 		}
-
-		// We must reschedule our threads if we signalled one. Some games such as FE: Awakening rely on this
-		// If this does not happen, we can have phenomena such as a thread waiting up a higher priority thread,
-		// and the higher priority thread just never running
-		rescheduleThreads();
 	}
-
+	
+	rescheduleThreads();
 	return true;
 }
 
@@ -121,7 +114,6 @@ void Kernel::waitSynchronization1() {
 	if (!shouldWaitOnObject(object)) {
 		acquireSyncObject(object, threads[currentThreadIndex]); // Acquire the object since it's ready
 		regs[0] = Result::Success;
-		rescheduleThreads();
 	} else {
 		// Timeout is 0, don't bother waiting, instantly timeout
 		if (ns == 0) {
@@ -141,7 +133,7 @@ void Kernel::waitSynchronization1() {
 		// Add the current thread to the object's wait list
 		object->getWaitlist() |= (1ull << currentThreadIndex);
 
-		switchToNextThread();
+		requireReschedule();
 	}
 }
 
@@ -204,14 +196,13 @@ void Kernel::waitSynchronizationN() {
 
 	auto& t = threads[currentThreadIndex];
 
-	// We only need to wait on one object. Easy...?!
+	// We only need to wait on one object. Easy.
 	if (!waitAll) {
 		// If there's ready objects, acquire the first one and return
 		if (oneObjectReady) {
 			regs[0] = Result::Success;
 			regs[1] = firstReadyObjectIndex; // Return index of the acquired object
 			acquireSyncObject(waitObjects[firstReadyObjectIndex].second, t); // Acquire object
-			rescheduleThreads();
 			return;
 		}
 
@@ -229,8 +220,8 @@ void Kernel::waitSynchronizationN() {
 			waitObjects[i].second->getWaitlist() |= (1ull << currentThreadIndex); // And add the thread to the object's waitlist
 		}
 
-		switchToNextThread();
+		requireReschedule();
 	} else {
-		Helpers::panic("WaitSynchronizatioN with waitAll");
+		Helpers::panic("WaitSynchronizationN with waitAll");
 	}
 }

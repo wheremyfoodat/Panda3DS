@@ -131,6 +131,13 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 				return false;
 			}
 
+			if (!aesEngine.haveGenerator()) {
+				Helpers::panic(
+					"Loading an encrypted ROM but your AES keys don't seem to provide the \"generator\" constant which Panda3DS requires for decryption\n"
+					"Please add it to your aes_keys.txt in a line like \"generator=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\" where the Xs are replaced with the actual generator constant value"
+				);
+			}
+
 			if (!gotCryptoKeys) {
 				Helpers::panic("ROM is encrypted but it seems we couldn't get either the primary or the secondary key");
 				return false;
@@ -159,8 +166,9 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 
 	// Read ExeFS
 	if (hasExeFS()) {
-		u64 exeFSOffset = fileOffset + exeFS.offset; // Offset of ExeFS in the file = exeFS offset + ncch offset
-		printf("ExeFS offset: %08llX, size: %08llX (Offset in file = %08llX)\n", exeFS.offset, exeFS.size, exeFSOffset);
+		// Offset of ExeFS in the file = exeFS offset + NCCH offset
+		// exeFS.offset has already been offset by the NCCH offset
+		printf("ExeFS offset: %08llX, size: %08llX (Offset in file = %08llX)\n", exeFS.offset - info.offset, exeFS.size, exeFS.offset);
 		constexpr size_t exeFSHeaderSize = 0x200;
 
 		u8 exeFSHeader[exeFSHeaderSize];
@@ -208,8 +216,23 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 					codeFile.resize(fileSize);
 					readFromFile(file, exeFS, codeFile.data(), fileOffset + exeFSHeaderSize, fileSize);
 				}
+			} else if (std::strcmp(name, "icon") == 0) {
+				// Parse icon file to extract region info and more in the future (logo, etc)
+				std::vector<u8> tmp;
+				tmp.resize(fileSize);
+				readFromFile(file, exeFS, tmp.data(), fileOffset + exeFSHeaderSize, fileSize);
+
+				if (!parseSMDH(tmp)) {
+					printf("Failed to parse SMDH!\n");
+				}
 			}
 		}
+	}
+
+	// If no region has been detected for CXI, set the region to USA by default
+	if (!region.has_value() && partitionIndex == 0) {
+		printf("No region detected for CXI, defaulting to USA\n");
+		region = Regions::USA;
 	}
 
 	if (hasRomFS()) {
@@ -217,6 +240,52 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	}
 
 	initialized = true;
+	return true;
+}
+
+bool NCCH::parseSMDH(const std::vector<u8>& smdh) {
+	if (smdh.size() < 0x36C0) {
+		printf("The cartridge .icon file is too small, considered invalid. Must be 0x36C0 bytes minimum\n");
+		return false;
+	}
+
+	if (char(smdh[0]) != 'S' || char(smdh[1]) != 'M' || char(smdh[2]) != 'D' || char(smdh[3]) != 'H') {
+		printf("Invalid SMDH magic!\n");
+		return false;
+	}
+
+	// Bitmask showing which regions are allowed.
+	// https://www.3dbrew.org/wiki/SMDH#Region_Lockout
+	const u32 regionMasks = *(u32*)&smdh[0x2018];
+	// Detect when games are region free (ie all regions are allowed) for future use
+	[[maybe_unused]] const bool isRegionFree = (regionMasks & 0x7f) == 0x7f;
+
+	// See which countries are allowed
+	const bool japan = (regionMasks & 0x1) != 0;
+	const bool northAmerica = (regionMasks & 0x2) != 0;
+	const bool europe = (regionMasks & 0x4) != 0;
+	const bool australia = (regionMasks & 0x8) != 0;
+	const bool china = (regionMasks & 0x10) != 0;
+	const bool korea = (regionMasks & 0x20) != 0;
+	const bool taiwan = (regionMasks & 0x40) != 0;
+
+	// Based on the allowed regions, set the autodetected 3DS region. We currently prefer English-speaking regions for practical purposes.
+	// But this should be configurable later.
+	if (northAmerica) {
+		region = Regions::USA;
+	} else if (europe) {
+		region = Regions::Europe;
+	} else if (australia) {
+		region = Regions::Australia;
+	} else if (japan) {
+		region = Regions::Japan;
+	} else if (korea) {
+		region = Regions::Korea;
+	} else if (china) {
+		region = Regions::China;
+	} else if (taiwan) {
+		region = Regions::Taiwan;
+	}
 	return true;
 }
 

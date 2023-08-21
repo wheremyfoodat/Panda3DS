@@ -5,17 +5,20 @@ namespace MICCommands {
 	enum : u32 {
 		MapSharedMem = 0x00010042,
 		StartSampling = 0x00030140,
+		StopSampling = 0x00050000,
 		SetGain = 0x00080040,
 		GetGain = 0x00090000,
 		SetPower = 0x000A0040,
+		SetIirFilter = 0x000C0042,
 		SetClamp = 0x000D0040,
-		CaptainToadFunction = 0x00100040
+		CaptainToadFunction = 0x00100040,
 	};
 }
 
 void MICService::reset() {
 	micEnabled = false;
 	shouldClamp = false;
+	isSampling = false;
 	gain = 0;
 }
 
@@ -26,8 +29,10 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 		case MICCommands::MapSharedMem: mapSharedMem(messagePointer); break;
 		case MICCommands::SetClamp: setClamp(messagePointer); break;
 		case MICCommands::SetGain: setGain(messagePointer); break;
+		case MICCommands::SetIirFilter: setIirFilter(messagePointer); break;
 		case MICCommands::SetPower: setPower(messagePointer); break;
 		case MICCommands::StartSampling: startSampling(messagePointer); break;
+		case MICCommands::StopSampling: stopSampling(messagePointer); break;
 		case MICCommands::CaptainToadFunction: theCaptainToadFunction(messagePointer); break;
 		default: Helpers::panic("MIC service requested. Command: %08X\n", command);
 	}
@@ -86,7 +91,25 @@ void MICService::startSampling(u32 messagePointer) {
 		encoding, sampleRate, offset, dataSize, loop ? "yes" : "no"
 	);
 
+	isSampling = true;
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::stopSampling(u32 messagePointer) {
+	log("MIC::StopSampling\n");
+	isSampling = false;
+	
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::setIirFilter(u32 messagePointer) {
+	const u32 size = mem.read32(messagePointer + 4);
+	const u32 pointer = mem.read32(messagePointer + 12);
+	log("MIC::SetIirFilter (size = %X, pointer = %08X) (Stubbed)\n", size, pointer);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

@@ -23,6 +23,7 @@ namespace ShaderOpcodes {
 		LG2 = 0x06,
 		LIT = 0x07,
 		MUL = 0x08,
+		SGE = 0x09,
 		SLT = 0x0A,
 		FLR = 0x0B,
 		MAX = 0x0C,
@@ -158,6 +159,7 @@ class PICAShader {
 	void mul(u32 instruction);
 	void rcp(u32 instruction);
 	void rsq(u32 instruction);
+	void sge(u32 instruction);
 	void sgei(u32 instruction);
 	void slt(u32 instruction);
 	void slti(u32 instruction);

@@ -2,7 +2,29 @@
 
 void GLStateManager::resetBlend() {
 	blendEnabled = false;
+	logicOpEnabled = false;
+	logicOp = GL_COPY;
+
 	OpenGL::disableBlend();
+	OpenGL::disableLogicOp();
+	OpenGL::setLogicOp(GL_COPY);
+}
+
+void GLStateManager::resetClearing() {
+	clearRed = 0.f;
+	clearBlue = 0.f;
+	clearGreen = 0.f;
+	clearAlpha = 1.f;
+
+	OpenGL::setClearColor(clearRed, clearBlue, clearGreen, clearAlpha);
+}
+
+void GLStateManager::resetClipping() {
+	// Disable all (supported) clip planes
+	enabledClipPlanes = 0;
+	for (int i = 0; i < clipPlaneCount; i++) {
+		OpenGL::disableClipPlane(i);
+	}
 }
 
 void GLStateManager::resetColourMask() {
@@ -26,6 +48,14 @@ void GLStateManager::resetScissor() {
 	OpenGL::setScissor(0, 0, 0, 0);
 }
 
+void GLStateManager::resetStencil() {
+	stencilEnabled = false;
+	stencilMask = 0xff;
+
+	OpenGL::disableStencil();
+	OpenGL::setStencilMask(0xff);
+}
+
 void GLStateManager::resetVAO() {
 	boundVAO = 0;
 	glBindVertexArray(0);
@@ -43,6 +73,8 @@ void GLStateManager::resetProgram() {
 
 void GLStateManager::reset() {
 	resetBlend();
+	resetClearing();
+	resetClipping();
 	resetColourMask();
 	resetDepth();
 
@@ -50,4 +82,5 @@ void GLStateManager::reset() {
 	resetVBO();
 	resetProgram();
 	resetScissor();
+	resetStencil();
 }

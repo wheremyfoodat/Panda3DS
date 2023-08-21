@@ -76,6 +76,11 @@ void Kernel::sendSyncRequest() {
 	u32 messagePointer = getTLSPointer() + 0x80; // The message is stored starting at TLS+0x80
 	logSVC("SendSyncRequest(session handle = %X)\n", handle);
 
+	// Service calls via SendSyncRequest and file access needs to put the caller to sleep for a given amount of time
+	// To make sure that the other threads don't get starved. Various games rely on this (including Sonic Boom: Shattering Crystal it seems)
+	constexpr u64 syncRequestDelayNs = 39000;
+	sleepThread(syncRequestDelayNs);
+
 	// The sync request is being sent at a service rather than whatever port, so have the service manager intercept it
 	if (KernelHandles::isServiceHandle(handle)) {
 		// The service call might cause a reschedule and change threads. Hence, set r0 before executing the service call
@@ -104,7 +109,7 @@ void Kernel::sendSyncRequest() {
 	// If we're actually communicating with a port
 	const auto session = getObject(handle, KernelObjectType::Session);
 	if (session == nullptr) [[unlikely]] {
-		Helpers::panic("SendSyncRequest: Invalid handle");
+		Helpers::warn("SendSyncRequest: Invalid handle");
 		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}

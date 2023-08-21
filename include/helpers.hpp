@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "termcolor.hpp"
 
@@ -30,6 +31,17 @@ using s32 = std::int32_t;
 using s64 = std::int64_t;
 
 namespace Helpers {
+	template <class... Args>
+	std::string format(const std::string& fmt, Args&&... args) {
+		const int size = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1;
+		if (size <= 0) {
+			return {};
+		}
+		const auto buf = std::make_unique<char[]>(size);
+		std::snprintf(buf.get(), size, fmt.c_str(), args ...);
+		return std::string(buf.get(), buf.get() + size - 1);
+	}
+
 	// Unconditional panic, unlike panicDev which does not panic on user builds
 	template <class... Args>
 	[[noreturn]] static void panic(const char* fmt, Args&&... args) {
@@ -125,7 +137,7 @@ namespace Helpers {
 		return getBits<offset, bits, ValueT, ValueT>(value);
 	}
 
-#ifdef HELPERS_APPLE_CLANG
+#if defined(HELPERS_APPLE_CLANG) || defined(__ANDROID__)
 	template <class To, class From>
 	constexpr To bit_cast(const From& from) noexcept {
 		return *reinterpret_cast<const To*>(&from);
@@ -155,4 +167,3 @@ namespace Helpers {
 constexpr size_t operator""_KB(unsigned long long int x) { return 1024ULL * x; }
 constexpr size_t operator""_MB(unsigned long long int x) { return 1024_KB * x; }
 constexpr size_t operator""_GB(unsigned long long int x) { return 1024_MB * x; }
-

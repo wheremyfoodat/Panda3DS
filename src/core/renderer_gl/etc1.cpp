@@ -9,7 +9,7 @@ static constexpr u32 signExtend3To32(u32 val) {
     return (u32)(s32(val) << 29 >> 29);
 }
 
-u32 Texture::getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, const void* data) {
+u32 Texture::getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, std::span<const u8> data) {
     // Pixel offset of the 8x8 tile based on u, v and the width of the texture
     u32 offs = ((u & ~7) * 8) + ((v & ~7) * width);
     if (!hasAlpha)
@@ -30,8 +30,7 @@ u32 Texture::getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, const void* dat
     offs += subTileSize * subTileIndex;
 
     u32 alpha;
-    const u8* tmp = static_cast<const u8*>(data) + offs; // Pointer to colour and alpha data as u8*
-    const u64* ptr = reinterpret_cast<const u64*>(tmp); // Cast to u64*
+    const u64* ptr = reinterpret_cast<const u64*>(data.data() + offs); // Cast to u64*
 
     if (hasAlpha) {
         // First 64 bits of the 4x4 subtile are alpha data

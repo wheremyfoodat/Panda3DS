@@ -1,9 +1,9 @@
 #include "emulator.hpp"
 
-int main (int argc, char *argv[]) {
-    Emulator emu;
+int main(int argc, char *argv[]) {
+	Emulator emu;
 
-    emu.initGraphicsContext();
+	emu.initGraphicsContext();
 
 	if (argc > 1) {
 		auto romPath = std::filesystem::current_path() / argv[1];

@@ -45,7 +45,7 @@ static void sceneInit(void)
 	AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // v0=position
 	AttrInfo_AddFixed(attrInfo, 1); // v1=color
 
-	// Set the fixed attribute (color) to solid white
+	// Set the fixed attribute (color) to orange
 	C3D_FixedAttribSet(1, 1.0, 0.5, 0.2, 1.0);
 
 	// Compute the projection matrix

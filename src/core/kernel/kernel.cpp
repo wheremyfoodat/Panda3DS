@@ -3,9 +3,10 @@
 #include "kernel_types.hpp"
 #include "cpu.hpp"
 
-Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
-	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this) {
+Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config)
+	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
+	mutexHandles.reserve(8);
 	portHandles.reserve(32);
 	threadIndices.reserve(appResourceLimits.maxThreads);
 
@@ -34,6 +35,8 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x0A: svcSleepThread(); break;
 		case 0x0B: getThreadPriority(); break;
 		case 0x0C: setThreadPriority(); break;
+		case 0x0F: getThreadIdealProcessor(); break;
+		case 0x11: getCurrentProcessorNumber(); break;
 		case 0x13: svcCreateMutex(); break;
 		case 0x14: svcReleaseMutex(); break;
 		case 0x15: svcCreateSemaphore(); break;
@@ -41,6 +44,10 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x17: svcCreateEvent(); break;
 		case 0x18: svcSignalEvent(); break;
 		case 0x19: svcClearEvent(); break;
+		case 0x1A: svcCreateTimer(); break;
+		case 0x1B: svcSetTimer(); break;
+		case 0x1C: svcCancelTimer(); break;
+		case 0x1D: svcClearTimer(); break;
 		case 0x1E: createMemoryBlock(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
@@ -50,6 +57,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x25: waitSynchronizationN(); break;
 		case 0x27: duplicateHandle(); break;
 		case 0x28: getSystemTick(); break;
+		case 0x2A: getSystemInfo(); break;
 		case 0x2B: getProcessInfo(); break;
 		case 0x2D: connectToPort(); break;
 		case 0x32: sendSyncRequest(); break;
@@ -61,6 +69,8 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x3D: outputDebugString(); break;
 		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
+
+	evalReschedule();
 }
 
 void Kernel::setVersion(u8 major, u8 minor) {
@@ -136,9 +146,12 @@ void Kernel::reset() {
 		deleteObjectData(object);
 	}
 	objects.clear();
+	mutexHandles.clear();
 	portHandles.clear();
 	threadIndices.clear();
 	serviceManager.reset();
+
+	needReschedule = false;
 
 	// Allocate handle #0 to a dummy object and make a main process object
 	makeObject(KernelObjectType::Dummy);
@@ -147,7 +160,7 @@ void Kernel::reset() {
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30. TODO: This creates a dummy context for thread 0,
 	// which is thankfully not used. Maybe we should prevent this
-	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, -2, 0, ThreadStatus::Running);
+	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, ProcessorID::Default, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
 	setupIdleThread();
 
@@ -246,6 +259,99 @@ void Kernel::duplicateHandle() {
 		regs[1] = ret;
 	} else {
 		Helpers::panic("DuplicateHandle: unimplemented handle type");
+	}
+}
+
+namespace SystemInfoType {
+	enum : u32 {
+		MemoryInformation = 0,
+		// Gets information related to Citra (We don't implement this, we just report this emulator is not Citra)
+		CitraInformation = 0x20000,
+		// Gets information related to this emulator
+		PandaInformation = 0x20001,
+	};
+};
+
+namespace CitraInfoType {
+	enum : u32 {
+		IsCitra = 0,
+		BuildName = 10,     // (ie: Nightly, Canary).
+		BuildVersion = 11,  // Build version.
+		BuildDate1 = 20,    // Build date first 7 characters.
+		BuildDate2 = 21,    // Build date next 7 characters.
+		BuildDate3 = 22,    // Build date next 7 characters.
+		BuildDate4 = 23,    // Build date last 7 characters.
+		BuildBranch1 = 30,  // Git branch first 7 characters.
+		BuildBranch2 = 31,  // Git branch last 7 characters.
+		BuildDesc1 = 40,    // Git description (commit) first 7 characters.
+		BuildDesc2 = 41,    // Git description (commit) last 7 characters.
+	};
+}
+
+namespace PandaInfoType {
+	enum : u32 {
+		IsPanda = 0,
+	};
+}
+
+void Kernel::getSystemInfo() {
+	const u32 infoType = regs[1];
+	const u32 subtype = regs[2];
+	log("GetSystemInfo (type = %X, subtype = %X)\n", infoType, subtype);
+
+	regs[0] = Result::Success;
+	switch (infoType) {
+		case SystemInfoType::MemoryInformation: {
+			switch (subtype) {
+				// Total used memory size in the APPLICATION memory region
+				case 1:
+					regs[1] = mem.getUsedUserMem();
+					regs[2] = 0;
+					break;
+
+				default:
+					Helpers::panic("GetSystemInfo: Unknown MemoryInformation subtype %x\n", subtype);
+					regs[0] = Result::FailurePlaceholder;
+					break;
+			}
+			break;
+		}
+
+		case SystemInfoType::CitraInformation: {
+			switch (subtype) {
+				case CitraInfoType::IsCitra:
+					// Report that we're not Citra
+					regs[1] = 0;
+					regs[2] = 0;
+					break;
+
+				default:
+					Helpers::warn("GetSystemInfo: Unknown CitraInformation subtype %x\n", subtype);
+					regs[0] = Result::FailurePlaceholder;
+					break;
+			}
+
+			break;
+		}
+
+		case SystemInfoType::PandaInformation: {
+			switch (subtype) {
+				case PandaInfoType::IsPanda:
+					// This is indeed us, set output to 1
+					regs[1] = 1;
+					regs[2] = 0;
+					break;
+
+				default: 
+					Helpers::warn("GetSystemInfo: Unknown PandaInformation subtype %x\n", subtype);
+					regs[0] = Result::FailurePlaceholder;
+					break;
+			}
+
+			break;
+		}
+
+		default: Helpers::panic("GetSystemInfo: Unknown system info type: %x (subtype: %x)\n", infoType, subtype); break;
 	}
 }
 

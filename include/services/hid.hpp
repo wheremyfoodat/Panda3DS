@@ -71,6 +71,7 @@ class HIDService {
 	void getGyroscopeLowCalibrateParam(u32 messagePointer);
 	void getGyroscopeCoefficient(u32 messagePointer);
 	void getIPCHandles(u32 messagePointer);
+	void getSoundVolume(u32 messagePointer);
 
 	// Don't call these prior to initializing shared mem pls
 	template <typename T>
@@ -91,8 +92,9 @@ class HIDService {
 	void pressKey(u32 mask) { newButtons |= mask; }
 	void releaseKey(u32 mask) { newButtons &= ~mask; }
 
-	s16 getCirclepadX() { return circlePadX; }
-	s16 getCirclepadY() { return circlePadY; }
+	u32 getOldButtons() const { return oldButtons; }
+	s16 getCirclepadX() const { return circlePadX; }
+	s16 getCirclepadY() const { return circlePadY; }
 
 	void setCirclepadX(s16 x) {
 		circlePadX = x;
@@ -140,4 +142,6 @@ class HIDService {
 	void releaseTouchScreen() {
 		touchScreenPressed = false;
 	}
+
+	bool isTouchScreenPressed() { return touchScreenPressed; }
 };

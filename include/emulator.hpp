@@ -7,14 +7,16 @@
 #include <optional>
 
 #include "PICA/gpu.hpp"
+#include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
 #include "crypto/aes_engine.hpp"
+#include "discord_rpc.hpp"
 #include "io_file.hpp"
 #include "memory.hpp"
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-#include "httpserver.hpp"
+#include "http_server.hpp"
 #endif
 
 enum class ROMType {
@@ -25,13 +27,14 @@ enum class ROMType {
 };
 
 class Emulator {
+	EmulatorConfig config;
 	CPU cpu;
 	GPU gpu;
 	Memory memory;
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
+	Cheats cheats;
 
-	EmulatorConfig config;
 	SDL_Window* window;
 
 #ifdef PANDA3DS_ENABLE_OPENGL
@@ -54,11 +57,18 @@ class Emulator {
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
-	bool running = true;
+	bool running = false;         // Is the emulator running a game?
+	bool programRunning = false;  // Is the emulator program itself running?
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	HttpServer httpServer;
+	friend struct HttpServer;
 #endif
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	Discord::RPC discordRpc;
+#endif
+	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
 	// This is currently only used for ELFs, NCSDs use the IOFile API instead
@@ -70,8 +80,8 @@ class Emulator {
   public:
 	// Decides whether to reload or not reload the ROM when resetting. We use enum class over a plain bool for clarity.
 	// If NoReload is selected, the emulator will not reload its selected ROM. This is useful for things like booting up the emulator, or resetting to
-	// change ROMs. If Reload is selected, the emulator will reload its selected ROM. This is useful for eg a "reset" button that keeps the current ROM
-	// and just resets the emu
+	// change ROMs. If Reload is selected, the emulator will reload its selected ROM. This is useful for eg a "reset" button that keeps the current
+	// ROM and just resets the emu
 	enum class ReloadOption { NoReload, Reload };
 
 	Emulator();
@@ -83,13 +93,13 @@ class Emulator {
 	void run();
 	void runFrame();
 
+	void resume();  // Resume the emulator
+	void pause();   // Pause the emulator
+	void togglePause();
+
 	bool loadROM(const std::filesystem::path& path);
 	bool loadNCSD(const std::filesystem::path& path, ROMType type);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 	void initGraphicsContext();
-
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	void pollHttpServer();
-#endif
 };

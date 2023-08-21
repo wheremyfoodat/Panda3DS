@@ -22,6 +22,7 @@ namespace PICA {
 			ShaderOutputCount = 0x4F,
 			ShaderOutmap0 = 0x50,
 
+			ViewportXY = 0x68,
 			DepthmapEnable = 0x6D,
 
 			// Texture registers
@@ -53,9 +54,13 @@ namespace PICA {
 			// Framebuffer registers
 			ColourOperation = 0x100,
 			BlendFunc = 0x101,
+			LogicOp = 0x102,
 			BlendColour = 0x103,
 			AlphaTestConfig = 0x104,
+			StencilTest = 0x105,
+			StencilOp = 0x106,
 			DepthAndColorMask = 0x107,
+			DepthBufferWrite = 0x115,
 			DepthBufferFormat = 0x116,
 			ColourBufferFormat = 0x117,
 			DepthBufferLoc = 0x11C,
@@ -173,6 +178,53 @@ namespace PICA {
 			VertexShaderOpDescriptorData7 = 0x2DD,
 		};
 	}
+
+	namespace ExternalRegs {
+		enum : u32 {
+			MemFill1BufferStartPaddr = 0x3,
+			MemFill1BufferEndPAddr = 0x4,
+			MemFill1Value = 0x5,
+			MemFill1Control = 0x6,
+			MemFill2BufferStartPaddr = 0x7,
+			MemFill2BufferEndPAddr = 0x8,
+			MemFill2Value = 0x9,
+			MemFill2Control = 0xA,
+			VramBankControl = 0xB,
+			GPUBusy = 0xC,
+			BacklightControl = 0xBC,
+			Framebuffer0Size = 0x118,
+			Framebuffer0AFirstAddr = 0x119,
+			Framebuffer0ASecondAddr = 0x11A,
+			Framebuffer0Config = 0x11B,
+			Framebuffer0Select = 0x11D,
+			Framebuffer0Stride = 0x123,
+			Framebuffer0BFirstAddr = 0x124,
+			Framebuffer0BSecondAddr = 0x125,
+			Framebuffer1Size = 0x156,
+			Framebuffer1AFirstAddr = 0x159,
+			Framebuffer1ASecondAddr = 0x15A,
+			Framebuffer1Config = 0x15B,
+			Framebuffer1Select = 0x15D,
+			Framebuffer1Stride = 0x163,
+			Framebuffer1BFirstAddr = 0x164,
+			Framebuffer1BSecondAddr = 0x165,
+			TransferInputPAddr = 0x2FF,
+			TransferOutputPAddr = 0x300,
+			DisplayTransferOutputDim = 0x301,
+			DisplayTransferInputDim = 0x302,
+			TransferFlags = 0x303,
+			TransferTrigger = 0x305,
+			TextureCopyTotalBytes = 0x307,
+			TextureCopyInputLineGap = 0x308,
+			TextureCopyOutputLineGap = 0x309,
+		};
+	}
+
+	enum class Scaling : u32 {
+		None = 0,
+		X = 1,
+		XY = 2,
+	};
 
 	namespace Lights {
 		enum : u32 {

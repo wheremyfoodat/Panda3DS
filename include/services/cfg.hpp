@@ -7,7 +7,6 @@
 #include "result/result.hpp"
 
 class CFGService {
-	Handle handle = KernelHandles::CFG;
 	Memory& mem;
 	CountryCodes country = CountryCodes::US; // Default to USA
 	MAKE_LOG_FUNCTION(log, cfgLogger)
@@ -16,6 +15,7 @@ class CFGService {
 
 	// Service functions
 	void getConfigInfoBlk2(u32 messagePointer);
+	void getCountryCodeID(u32 messagePointer);
 	void getRegionCanadaUSA(u32 messagePointer);
 	void getSystemModel(u32 messagePointer);
 	void genUniqueConsoleHash(u32 messagePointer);

@@ -143,6 +143,9 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 			break;
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
+		case ShaderOpcodes::DPH:
+		case ShaderOpcodes::DPHI:
+			recDPH(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
 		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
@@ -178,6 +181,10 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::SLT:
 		case ShaderOpcodes::SLTI:
 			recSLT(shaderUnit, instruction); break;
+
+		case ShaderOpcodes::SGE:
+		case ShaderOpcodes::SGEI:
+			recSGE(shaderUnit, instruction); break;
 
 		default:
 			Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
@@ -525,6 +532,32 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
+void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
+	const bool isDPHI = (instruction >> 26) == ShaderOpcodes::DPHI;
+
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src1 = isDPHI ? getBits<14, 5>(instruction) : getBits<12, 7>(instruction);
+	const u32 src2 = isDPHI ? getBits<7, 7>(instruction) : getBits<7, 5>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
+	loadRegister<1>(src1_xmm, shader, src1, isDPHI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, isDPHI ? idx : 0, operandDescriptor);
+
+	// Attach 1.0 to the w component of src1
+	if (haveSSE4_1) {
+		blendps(src1_xmm, xword[rip + onesVector], 0b1000);
+	} else {
+		movaps(scratch1, src1_xmm);
+		unpckhps(scratch1, xword[rip + onesVector]);
+		unpcklpd(src1_xmm, scratch1);
+	}
+
+	dpps(src1_xmm, src2_xmm, 0b11111111);  // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA
+	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
 void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
@@ -654,6 +687,24 @@ void ShaderEmitter::recSLT(const PICAShader& shader, u32 instruction) {
 	cmpltps(src1_xmm, src2_xmm);
 	andps(src1_xmm, xword[rip + onesVector]);
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recSGE(const PICAShader& shader, u32 instruction) {
+	const bool isSGEI = (instruction >> 26) == ShaderOpcodes::SGEI;
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+
+	const u32 src1 = isSGEI ? getBits<14, 5>(instruction) : getBits<12, 7>(instruction);
+	const u32 src2 = isSGEI ? getBits<7, 7>(instruction) : getBits<7, 5>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1_xmm, shader, src1, isSGEI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, isSGEI ? idx : 0, operandDescriptor);
+	
+	// SSE does not have a cmpgeps instruction so we turn src1 >= src2 to src2 <= src1, result in src2
+	cmpleps(src2_xmm, src1_xmm);
+	andps(src2_xmm, xword[rip + onesVector]);
+	storeRegister(src2_xmm, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {

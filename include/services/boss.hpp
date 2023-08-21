@@ -11,15 +11,24 @@ class BOSSService {
 	MAKE_LOG_FUNCTION(log, bossLogger)
 
 	// Service commands
+	void cancelTask(u32 messagePointer);
 	void initializeSession(u32 messagePointer);
-	void getNsDataIdList(u32 messagePointer);
+	void getErrorCode(u32 messagePointer);
+	void getNsDataIdList(u32 messagePointer, u32 commandWord);
 	void getOptoutFlag(u32 messagePointer);
 	void getStorageEntryInfo(u32 messagePointer); // Unknown what this is, name taken from Citra
 	void getTaskIdList(u32 messagePointer);
-	void getTaskInfo(u32 messagePOinter);
+	void getTaskInfo(u32 messagePointer);
+	void getTaskServiceStatus(u32 messagePointer);
+	void getTaskState(u32 messagePointer);
+	void getTaskStatus(u32 messagePointer);
 	void getTaskStorageInfo(u32 messagePointer);
 	void receiveProperty(u32 messagePointer);
+	void registerNewArrivalEvent(u32 messagePointer);
 	void registerStorageEntry(u32 messagePointer);
+	void registerTask(u32 messagePointer);
+	void sendProperty(u32 messagePointer);
+	void startTask(u32 messagePointer);
 	void unregisterStorage(u32 messagePointer);
 	void unregisterTask(u32 messagePointer);
 

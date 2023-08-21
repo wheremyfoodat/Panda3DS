@@ -11,7 +11,8 @@ namespace HIDCommands {
 		EnableGyroscopeLow = 0x00130000,
 		DisableGyroscopeLow = 0x00140000,
 		GetGyroscopeLowRawToDpsCoefficient = 0x00150000,
-		GetGyroscopeLowCalibrateParam = 0x00160000
+		GetGyroscopeLowCalibrateParam = 0x00160000,
+		GetSoundVolume = 0x00170000,
 	};
 }
 
@@ -46,6 +47,7 @@ void HIDService::handleSyncRequest(u32 messagePointer) {
 		case HIDCommands::GetGyroscopeLowCalibrateParam: getGyroscopeLowCalibrateParam(messagePointer); break;
 		case HIDCommands::GetGyroscopeLowRawToDpsCoefficient: getGyroscopeCoefficient(messagePointer); break;
 		case HIDCommands::GetIPCHandles: getIPCHandles(messagePointer); break;
+		case HIDCommands::GetSoundVolume: getSoundVolume(messagePointer); break;
 		default: Helpers::panic("HID service requested. Command: %08X\n", command);
 	}
 }
@@ -105,6 +107,18 @@ void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x15, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, Helpers::bit_cast<u32, float>(gyroscopeCoeff));
+}
+
+// The volume here is in the range [0, 0x3F]
+// It is read directly from I2C Device 3 register 0x09
+// Since we currently do not have audio, set the volume a bit below max (0x30)
+void HIDService::getSoundVolume(u32 messagePointer) {
+	log("HID::GetSoundVolume\n");
+	constexpr u8 volume = 0x30;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x17, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, volume);
 }
 
 void HIDService::getIPCHandles(u32 messagePointer) {

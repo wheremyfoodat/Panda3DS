@@ -1,8 +1,5 @@
 #include "emulator.hpp"
-
-#ifdef PANDA3DS_ENABLE_OPENGL
 #include <glad/gl.h>
-#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,7 +11,13 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
-Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config), memory(cpu.getTicksRef()) {
+Emulator::Emulator()
+	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu, config), cpu(memory, kernel), gpu(memory, config),
+	  memory(cpu.getTicksRef(), config), cheats(memory, kernel.getServiceManager().getHID()), running(false), programRunning(false)
+#ifdef PANDA3DS_ENABLE_HTTP_SERVER
+	  , httpServer(this)
+#endif
+{
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -25,25 +28,48 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
 	}
 
+	// We need OpenGL for software rendering or for OpenGL if it's enabled
+	bool needOpenGL = config.rendererType == RendererType::Software;
 #ifdef PANDA3DS_ENABLE_OPENGL
-	// Request OpenGL 4.1 Core (Max available on MacOS)
-	// MacOS gets mad if we don't explicitly demand a core profile
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-	window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
+	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
+#endif
 
-	if (window == nullptr) {
-		Helpers::panic("Window creation failed: %s", SDL_GetError());
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	if (config.discordRpcEnabled) {
+		discordRpc.init();
+		updateDiscord();
+	}
+#endif
+
+	if (needOpenGL) {
+		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
+		// MacOS gets mad if we don't explicitly demand a core profile
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
+		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL);
+
+		if (window == nullptr) {
+			Helpers::panic("Window creation failed: %s", SDL_GetError());
+		}
+
+		glContext = SDL_GL_CreateContext(window);
+		if (glContext == nullptr) {
+			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+		}
+
+		if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress))) {
+			Helpers::panic("OpenGL init failed: %s", SDL_GetError());
+		}
 	}
 
-	glContext = SDL_GL_CreateContext(window);
-	if (glContext == nullptr) {
-		Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
-	}
+#ifdef PANDA3DS_ENABLE_VULKAN
+	if (config.rendererType == RendererType::Vulkan) {
+		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_VULKAN);
 
-	if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress))) {
-		Helpers::panic("OpenGL init failed: %s", SDL_GetError());
+		if (window == nullptr) {
+			Helpers::warn("Window creation failed: %s", SDL_GetError());
+		}
 	}
 #endif
 
@@ -56,11 +82,16 @@ Emulator::Emulator() : kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory
 		}
 	}
 
-	config.load(std::filesystem::current_path() / "config.toml");
 	reset(ReloadOption::NoReload);
 }
 
-Emulator::~Emulator() { config.save(std::filesystem::current_path() / "config.toml"); }
+Emulator::~Emulator() {
+	config.save(std::filesystem::current_path() / "config.toml");
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	discordRpc.stop();
+#endif
+}
 
 void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
@@ -72,6 +103,11 @@ void Emulator::reset(ReloadOption reload) {
 	// Reloading r13 and r15 needs to happen after everything has been reset
 	// Otherwise resetting the kernel or cpu might nuke them
 	cpu.setReg(13, VirtualAddrs::StackTop);  // Set initial SP
+
+	// We're resetting without reloading the ROM, so yeet cheats
+	if (reload == ReloadOption::NoReload) {
+		cheats.reset();
+	}
 
 	// If a ROM is active and we reset, with the reload option enabled then reload it.
 	// This is necessary to set up stack, executable memory, .data/.rodata/.bss all over again
@@ -90,24 +126,15 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 void Emulator::run() {
+	programRunning = true;
+
+	while (programRunning) {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	httpServer.startHttpServer();
+		httpServer.processActions();
 #endif
 
-	while (running) {
-		ServiceManager& srv = kernel.getServiceManager();
-
-		if (romType != ROMType::None) {
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-			pollHttpServer();
-#endif
-			runFrame();     // Run 1 frame of instructions
-			gpu.display();  // Display graphics
-
-			// Send VBlank interrupts
-			srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
-			srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
-		}
+		runFrame();
+		HIDService& hid = kernel.getServiceManager().getHID();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -116,48 +143,61 @@ void Emulator::run() {
 			switch (event.type) {
 				case SDL_QUIT:
 					printf("Bye :(\n");
-					running = false;
+					programRunning = false;
 					return;
 
 				case SDL_KEYDOWN:
 					if (romType == ROMType::None) break;
 
 					switch (event.key.keysym.sym) {
-						case SDLK_l: srv.pressKey(Keys::A); break;
-						case SDLK_k: srv.pressKey(Keys::B); break;
-						case SDLK_o: srv.pressKey(Keys::X); break;
-						case SDLK_i: srv.pressKey(Keys::Y); break;
+						case SDLK_l: hid.pressKey(Keys::A); break;
+						case SDLK_k: hid.pressKey(Keys::B); break;
+						case SDLK_o: hid.pressKey(Keys::X); break;
+						case SDLK_i: hid.pressKey(Keys::Y); break;
 
-						case SDLK_q: srv.pressKey(Keys::L); break;
-						case SDLK_p: srv.pressKey(Keys::R); break;
+						case SDLK_q: hid.pressKey(Keys::L); break;
+						case SDLK_p: hid.pressKey(Keys::R); break;
 
-						case SDLK_RIGHT: srv.pressKey(Keys::Right); break;
-						case SDLK_LEFT: srv.pressKey(Keys::Left); break;
-						case SDLK_UP: srv.pressKey(Keys::Up); break;
-						case SDLK_DOWN: srv.pressKey(Keys::Down); break;
+						case SDLK_RIGHT: hid.pressKey(Keys::Right); break;
+						case SDLK_LEFT: hid.pressKey(Keys::Left); break;
+						case SDLK_UP: hid.pressKey(Keys::Up); break;
+						case SDLK_DOWN: hid.pressKey(Keys::Down); break;
 
 						case SDLK_w:
-							srv.setCirclepadY(0x9C);
+							hid.setCirclepadY(0x9C);
 							keyboardAnalogY = true;
 							break;
 
 						case SDLK_a:
-							srv.setCirclepadX(-0x9C);
+							hid.setCirclepadX(-0x9C);
 							keyboardAnalogX = true;
 							break;
 
 						case SDLK_s:
-							srv.setCirclepadY(-0x9C);
+							hid.setCirclepadY(-0x9C);
 							keyboardAnalogY = true;
 							break;
 
 						case SDLK_d:
-							srv.setCirclepadX(0x9C);
+							hid.setCirclepadX(0x9C);
 							keyboardAnalogX = true;
 							break;
 
-						case SDLK_RETURN: srv.pressKey(Keys::Start); break;
-						case SDLK_BACKSPACE: srv.pressKey(Keys::Select); break;
+						case SDLK_RETURN: hid.pressKey(Keys::Start); break;
+						case SDLK_BACKSPACE: hid.pressKey(Keys::Select); break;
+
+						// Use the F4 button as a hot-key to pause or resume the emulator
+						// We can't use the audio play/pause buttons because it's annoying 
+						case SDLK_F4: {
+							togglePause();
+							break;
+						}
+
+						// Use F5 as a reset button
+						case SDLK_F5: {
+							reset(ReloadOption::Reload);
+							break;
+						}
 					}
 					break;
 
@@ -165,34 +205,34 @@ void Emulator::run() {
 					if (romType == ROMType::None) break;
 
 					switch (event.key.keysym.sym) {
-						case SDLK_l: srv.releaseKey(Keys::A); break;
-						case SDLK_k: srv.releaseKey(Keys::B); break;
-						case SDLK_o: srv.releaseKey(Keys::X); break;
-						case SDLK_i: srv.releaseKey(Keys::Y); break;
+						case SDLK_l: hid.releaseKey(Keys::A); break;
+						case SDLK_k: hid.releaseKey(Keys::B); break;
+						case SDLK_o: hid.releaseKey(Keys::X); break;
+						case SDLK_i: hid.releaseKey(Keys::Y); break;
 
-						case SDLK_q: srv.releaseKey(Keys::L); break;
-						case SDLK_p: srv.releaseKey(Keys::R); break;
+						case SDLK_q: hid.releaseKey(Keys::L); break;
+						case SDLK_p: hid.releaseKey(Keys::R); break;
 
-						case SDLK_RIGHT: srv.releaseKey(Keys::Right); break;
-						case SDLK_LEFT: srv.releaseKey(Keys::Left); break;
-						case SDLK_UP: srv.releaseKey(Keys::Up); break;
-						case SDLK_DOWN: srv.releaseKey(Keys::Down); break;
+						case SDLK_RIGHT: hid.releaseKey(Keys::Right); break;
+						case SDLK_LEFT: hid.releaseKey(Keys::Left); break;
+						case SDLK_UP: hid.releaseKey(Keys::Up); break;
+						case SDLK_DOWN: hid.releaseKey(Keys::Down); break;
 
 						// Err this is probably not ideal
 						case SDLK_w:
 						case SDLK_s:
-							srv.setCirclepadY(0);
+							hid.setCirclepadY(0);
 							keyboardAnalogY = false;
 							break;
 
 						case SDLK_a:
 						case SDLK_d:
-							srv.setCirclepadX(0);
+							hid.setCirclepadX(0);
 							keyboardAnalogX = false;
 							break;
 
-						case SDLK_RETURN: srv.releaseKey(Keys::Start); break;
-						case SDLK_BACKSPACE: srv.releaseKey(Keys::Select); break;
+						case SDLK_RETURN: hid.releaseKey(Keys::Start); break;
+						case SDLK_BACKSPACE: hid.releaseKey(Keys::Select); break;
 					}
 					break;
 
@@ -209,9 +249,9 @@ void Emulator::run() {
 							u16 x_converted = static_cast<u16>(x) - 40;
 							u16 y_converted = static_cast<u16>(y) - 240;
 
-							srv.setTouchScreenPress(x_converted, y_converted);
+							hid.setTouchScreenPress(x_converted, y_converted);
 						} else {
-							srv.releaseTouchScreen();
+							hid.releaseTouchScreen();
 						}
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
 						holdingRightClick = true;
@@ -223,7 +263,7 @@ void Emulator::run() {
 					if (romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						srv.releaseTouchScreen();
+						hid.releaseTouchScreen();
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
 						holdingRightClick = false;
 					}
@@ -266,9 +306,9 @@ void Emulator::run() {
 
 					if (key != 0) {
 						if (event.cbutton.state == SDL_PRESSED) {
-							srv.pressKey(key);
+							hid.pressKey(key);
 						} else {
-							srv.releaseKey(key);
+							hid.releaseKey(key);
 						}
 					}
 					break;
@@ -276,19 +316,36 @@ void Emulator::run() {
 
 				// Detect mouse motion events for gyroscope emulation
 				case SDL_MOUSEMOTION: {
+					if (romType == ROMType::None) break;
+
+					// Handle "dragging" across the touchscreen
+					if (hid.isTouchScreenPressed()) {
+						const s32 x = event.motion.x;
+						const s32 y = event.motion.y;
+
+						// Check if touch falls in the touch screen area and register the new touch screen position
+						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
+							// Convert to 3DS coordinates
+							u16 x_converted = static_cast<u16>(x) - 40;
+							u16 y_converted = static_cast<u16>(y) - 240;
+
+							hid.setTouchScreenPress(x_converted, y_converted);
+						}
+					}
+
 					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope rotation
-					if (romType == ROMType::None || !holdingRightClick) break;
+					if (holdingRightClick) {
+						// Relative motion since last mouse motion event
+						const s32 motionX = event.motion.xrel;
+						const s32 motionY = event.motion.yrel;
 
-					// Relative motion since last mouse motion event
-					const s32 motionX = event.motion.xrel;
-					const s32 motionY = event.motion.yrel;
-
-					// The gyroscope involves lots of weird math I don't want to bother with atm
-					// So up until then, we will set the gyroscope euler angles to fixed values based on the direction of the relative motion
-					const s32 roll = motionX > 0 ? 0x7f : -0x7f;
-					const s32 pitch = motionY > 0 ? 0x7f : -0x7f;
-					srv.setRoll(roll);
-					srv.setPitch(pitch);
+						// The gyroscope involves lots of weird math I don't want to bother with atm
+						// So up until then, we will set the gyroscope euler angles to fixed values based on the direction of the relative motion
+						const s32 roll = motionX > 0 ? 0x7f : -0x7f;
+						const s32 pitch = motionY > 0 ? 0x7f : -0x7f;
+						hid.setRoll(roll);
+						hid.setPitch(pitch);
+					}
 					break;
 				}
 
@@ -315,27 +372,53 @@ void Emulator::run() {
 
 				// Avoid overriding the keyboard's circlepad input
 				if (abs(stickX) < deadzone && !keyboardAnalogX) {
-					srv.setCirclepadX(0);
+					hid.setCirclepadX(0);
 				} else {
-					srv.setCirclepadX(stickX / div);
+					hid.setCirclepadX(stickX / div);
 				}
 
 				if (abs(stickY) < deadzone && !keyboardAnalogY) {
-					srv.setCirclepadY(0);
+					hid.setCirclepadY(0);
 				} else {
-					srv.setCirclepadY(-(stickY / div));
+					hid.setCirclepadY(-(stickY / div));
 				}
 			}
 
-			srv.updateInputs(cpu.getTicks());
+			hid.updateInputs(cpu.getTicks());
 		}
+		// TODO: Should this be uncommented?
+		// kernel.evalReschedule();
 
 		// Update inputs in the HID module
 		SDL_GL_SwapWindow(window);
 	}
 }
 
-void Emulator::runFrame() { cpu.runFrame(); }
+// Only resume if a ROM is properly loaded
+void Emulator::resume() { running = (romType != ROMType::None); }
+void Emulator::pause() { running = false; }
+void Emulator::togglePause() { running ? pause() : resume(); }
+
+void Emulator::runFrame() {
+	if (running) {
+		cpu.runFrame(); // Run 1 frame of instructions
+		gpu.display();  // Display graphics
+
+		// Send VBlank interrupts
+		ServiceManager& srv = kernel.getServiceManager();
+		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+		srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+
+		// Run cheats if any are loaded
+		if (cheats.haveCheats()) [[unlikely]] {
+			cheats.run();
+		}
+	} else if (romType != ROMType::None) {
+		// If the emulator is not running and a game is loaded, we still want to display the framebuffer otherwise we will get weird
+		// double-buffering issues
+		gpu.display();
+	}
+}
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
 	// Reset the emulator if we've already loaded a ROM
@@ -377,11 +460,15 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	if (success) {
 		romPath = path;
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+		updateDiscord();
+#endif
 	} else {
 		romPath = std::nullopt;
 		romType = ROMType::None;
 	}
 
+	resume();  // Start the emulator
 	return success;
 }
 
@@ -431,38 +518,19 @@ bool Emulator::loadELF(std::ifstream& file) {
 }
 
 // Reset our graphics context and initialize the GPU's graphics context
-void Emulator::initGraphicsContext() { gpu.initGraphicsContext(); }
+void Emulator::initGraphicsContext() { gpu.initGraphicsContext(window); }
 
-#ifdef PANDA3DS_ENABLE_HTTP_SERVER
-void Emulator::pollHttpServer() {
-	std::scoped_lock lock(httpServer.actionMutex);
-
-	ServiceManager& srv = kernel.getServiceManager();
-
-	if (httpServer.pendingAction) {
-		switch (httpServer.action) {
-			case HttpAction::Screenshot: gpu.screenshot(HttpServer::httpServerScreenshotPath); break;
-
-			case HttpAction::PressKey:
-				if (httpServer.pendingKey != 0) {
-					srv.pressKey(httpServer.pendingKey);
-					httpServer.pendingKey = 0;
-				}
-				break;
-
-			case HttpAction::ReleaseKey:
-				if (httpServer.pendingKey != 0) {
-					srv.releaseKey(httpServer.pendingKey);
-					httpServer.pendingKey = 0;
-				}
-				break;
-
-			case HttpAction::None: break;
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+void Emulator::updateDiscord() {
+	if (config.discordRpcEnabled) {
+		if (romType != ROMType::None) {
+			const auto name = romPath.value().stem();
+			discordRpc.update(Discord::RPCStatus::Playing, name.string());
+		} else {
+			discordRpc.update(Discord::RPCStatus::Idling, "");
 		}
-
-		httpServer.action = HttpAction::None;
-		httpServer.pendingAction = false;
-		httpServer.pendingAction.notify_all();
 	}
 }
+#else
+void Emulator::updateDiscord() {}
 #endif

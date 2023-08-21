@@ -25,3 +25,12 @@
 [submodule "stb"]
 	path = third_party/stb
 	url = https://github.com/nothings/stb
+[submodule "third_party/cmrc"]
+	path = third_party/cmrc
+	url = https://github.com/vector-of-bool/cmrc
+[submodule "third_party/glm"]
+	path = third_party/glm
+	url = https://github.com/g-truc/glm
+[submodule "third_party/discord-rpc"]
+	path = third_party/discord-rpc
+	url = https://github.com/Panda3DS-emu/discord-rpc

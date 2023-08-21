@@ -8,17 +8,27 @@ Join our Discord server by pressing on the banner below!
 
 [![Discord Banner 2](https://discord.com/api/guilds/1118695732958994532/widget.png?style=banner2)](https://discord.gg/ZYbugsEmsw)
 
-![screenshot1](docs/img/MK7.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
+![screenshot1](docs/img/KirbyRobobot.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
+
+# Download
+You can download stable builds from the Releases tab, or you can download the latest build from the table below
+
+|Platform|Status|Download|
+|--------|------------|--------|
+|Windows build|[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Windows_Build/master/Windows%20executable.zip)|
+|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Linux_Build/master/Linux%20executable.zip)|
 
 # Compatibility
-Panda3DS is still in the early stages of development. Many games boot, many don't. Most games have at least some hilariously broken graphics, audio is not supported, performance leaves a bit to be desired mainly thanks to lack of shader acceleration, and most QoL features (including a GUI) are missing.
+Panda3DS is still in the early stages of development. Many games boot, many don't. Most games have at least some hilariously broken graphics, audio is not supported, and some QoL features (including a GUI) are missing.
 
 In addition, some games don't quiiite work with the upstream code. A lot of them might need some panics in the source code to be commented out before they work, etc. However, just the fact things can work as well as they do now is promising in itself.
 
+Check out [this Google spreadsheet](https://docs.google.com/spreadsheets/d/1nWZTzfaMPkZdyhqHEawMRBaP0qSMmQdxrVfAbgapYrM/edit?usp=sharing) for an unofficial compatibility list.
 # Why?
 The 3DS emulation scene is already pretty mature, with offerings such as [Citra](https://github.com/citra-emu/citra) which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
 
-- Virtualization. What motivated the creation of this emulator was actually a discussion on whether it is possible to get fast 3DS emulation on low-end hardware such as the Raspberry Pi 4, using the KVM API. At the moment, Panda3DS is powered by dynarmic rather than using virtualization, but this is definitely a concept I want to explore in the future.
+- Virtualization. What motivated the creation of this emulator was actually a discussion on whether it is possible to get fast 3DS emulation on low-end hardware such as the Raspberry Pi 4, using the KVM API. At the moment, Panda3DS is powered by Dynarmic rather than using virtualization, but this is definitely a concept I want to explore in the future.
 
 - Debugging, reverse engineering and modding tools. While contributing to [PCSX-Redux](https://github.com/grumpycoders/pcsx-redux) and collaborating with the other developers, I had the chance to find out how useful tools like these can be. They can serve as indispensable tools for the homebrew devs, modders, reverse engineers, as well as emulator developers themselves. Some tools can even become fun toys the casual user can mess around with. As such, I think they can really improve the experience in a project like this. Of course, I'd like to thank @nicolasnoble and the entire Redux team for helping me learn the value of these tools, as well as making me improve as a programmer.
 
@@ -29,7 +39,7 @@ The 3DS emulation scene is already pretty mature, with offerings such as [Citra]
 Keep in mind, these are all long-term plans. Until then, the main focus is just improving compatibility
 
 # How to build
-Panda3DS compiles on Windows, Linux and MacOS, without needing to download any system dependencies.
+Panda3DS compiles on Windows, Linux and MacOS, with only 1 system dependency, the Vulkan SDK. However, if you don't want to install the Vulkan SDK you can always build the emulator with only OpenGL support, by adding `-DENABLE_VULKAN=OFF` to the `cmake` command
 
 All you need is CMake and a generator of your choice (Make, Visual Studio, Ninja, etc). Simply clone the repo recursively and build it like your average CMake project.
 
@@ -70,6 +80,9 @@ Keyboard & Mouse
 - Select button	Backspace
 - Touch Screen  Left click
 - Gyroscope     Hold right click and swipe your mouse left and right (support is kind of shaky atm, but games that require gyro here and there like Kirby should work)
+- Pause/Resume  F4
+- Reload        F5
+
 
 Panda3DS also supports controller input using the SDL2 GameController API.
 
@@ -91,6 +104,8 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
 - [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
 - [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
+- [shadPS4](https://github.com/georgemoralis/shadPS4): Work-in-progress PS4 emulator by the founder of PCSX, PCSX2 and more
+- [Hydra](https://github.com/hydra-emu/hydra): Cross-platform GameBoy, NES, N64 and Chip-8 emulator
 
 # Support
 If you find this project exciting and want to support the founder, check out [his Patreon page](https://www.patreon.com/wheremyfoodat)
@@ -99,5 +114,5 @@ Keep in mind, funding is only aimed to cover various life costs and support deve
 
 Nintendo 3DS is a registered trademark of Nintendo Co., Ltd.
 
-![pamda](docs/img/panda.jpg)
+![panda](docs/img/panda.jpg)
 Here's a panda it go blep

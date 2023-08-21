@@ -1,4 +1,5 @@
 #include "services/gsp_gpu.hpp"
+#include "PICA/regs.hpp"
 #include "ipc.hpp"
 #include "kernel.hpp"
 
@@ -10,6 +11,7 @@ namespace ServiceCommands {
 		RegisterInterruptRelayQueue = 0x00130042,
 		WriteHwRegs = 0x00010082,
 		WriteHwRegsWithMask = 0x00020084,
+		SetBufferSwap = 0x00050200,
 		FlushDataCache = 0x00080082,
 		SetLCDForceBlack = 0x000B0040,
 		TriggerCmdReqQueue = 0x000C0000,
@@ -44,13 +46,14 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
 		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
+		case ServiceCommands::SetBufferSwap: setBufferSwap(messagePointer); break;
 		case ServiceCommands::SetInternalPriorities: setInternalPriorities(messagePointer); break;
 		case ServiceCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
 		case ServiceCommands::StoreDataCache: storeDataCache(messagePointer); break;
 		case ServiceCommands::TriggerCmdReqQueue: [[likely]] triggerCmdReqQueue(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
-;		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
+		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
 	}
 }
 
@@ -124,15 +127,12 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	// Not emulating this causes Yoshi's Wooly World, Captain Toad, Metroid 2 et al to hang
 	if (type == GPUInterrupt::VBlank0 || type == GPUInterrupt::VBlank1) {
 		int screen = static_cast<u32>(type) - static_cast<u32>(GPUInterrupt::VBlank0); // 0 for top screen, 1 for bottom
-
-		constexpr u32 FBInfoSize = 0x40;
 		// TODO: Offset depends on GSP thread being triggered
-		u8* info = &sharedMem[0x200 + screen * FBInfoSize];
-		u8& dirtyFlag = info[1];
+		FramebufferUpdate* update = reinterpret_cast<FramebufferUpdate*>(&sharedMem[0x200 + screen * sizeof(FramebufferUpdate)]);
 
-		if (dirtyFlag & 1) {
-			// TODO: Submit buffer info here
-			dirtyFlag &= ~1;
+		if (update->dirtyFlag & 1) {
+			setBufferSwapImpl(screen, update->framebufferInfo[update->index]);
+			update->dirtyFlag &= ~1;
 		}
 	}
 
@@ -220,7 +220,7 @@ void GPUService::flushDataCache(u32 messagePointer) {
 	u32 address = mem.read32(messagePointer + 4);
 	u32 size = mem.read32(messagePointer + 8);
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
-	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
+	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -230,7 +230,7 @@ void GPUService::storeDataCache(u32 messagePointer) {
 	u32 address = mem.read32(messagePointer + 4);
 	u32 size = mem.read32(messagePointer + 8);
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
-	log("GSP::GPU::StoreDataCache(address = %08X, size = %X, process = %X\n", address, size, processHandle);
+	log("GSP::GPU::StoreDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -261,6 +261,24 @@ void GPUService::setAxiConfigQoSMode(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void GPUService::setBufferSwap(u32 messagePointer) {
+	FramebufferInfo info{};
+	const u32 screenId = mem.read32(messagePointer + 4);  // Selects either PDC0 or PDC1
+	info.activeFb = mem.read32(messagePointer + 8);
+	info.leftFramebufferVaddr = mem.read32(messagePointer + 12);
+	info.rightFramebufferVaddr = mem.read32(messagePointer + 16);
+	info.stride = mem.read32(messagePointer + 20);
+	info.format = mem.read32(messagePointer + 24);
+	info.displayFb = mem.read32(messagePointer + 28);  // Selects either framebuffer A or B
+
+	log("GSP::GPU::SetBufferSwap\n");
+	Helpers::panic("Untested GSP::GPU::SetBufferSwap call");
+
+	setBufferSwapImpl(screenId, info);
+	mem.write32(messagePointer, IPC::responseHeader(0x05, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 // Seems to also be completely undocumented
 void GPUService::setInternalPriorities(u32 messagePointer) {
 	log("GSP::GPU::SetInternalPriorities\n");
@@ -283,7 +301,7 @@ void GPUService::processCommandBuffer() {
 		log("Processing %d GPU commands\n", commandsLeft);
 
 		while (commandsLeft != 0) {
-			u32 cmdID = cmd[0] & 0xff;
+			const u32 cmdID = cmd[0] & 0xff;
 			switch (cmdID) {
 				case GXCommands::ProcessCommandList: processCommandList(cmd); break;
 				case GXCommands::MemoryFill: memoryFill(cmd); break;
@@ -297,6 +315,28 @@ void GPUService::processCommandBuffer() {
 			commandsLeft--;
 		}
 	}
+}
+
+static u32 VaddrToPaddr(u32 addr) {
+	if (addr >= VirtualAddrs::VramStart && addr < (VirtualAddrs::VramStart + VirtualAddrs::VramSize)) [[likely]] {
+		return addr - VirtualAddrs::VramStart + PhysicalAddrs::VRAM;
+	}
+
+	else if (addr >= VirtualAddrs::LinearHeapStartOld && addr < VirtualAddrs::LinearHeapEndOld) {
+		return addr - VirtualAddrs::LinearHeapStartOld + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr >= VirtualAddrs::LinearHeapStartNew && addr < VirtualAddrs::LinearHeapEndNew) {
+		return addr - VirtualAddrs::LinearHeapStartNew + PhysicalAddrs::FCRAM;
+	}
+
+	else if (addr == 0) {
+		return 0;
+	}
+
+	Helpers::warn("[GSP::GPU VaddrToPaddr] Unknown virtual address %08X", addr);
+	// Obviously garbage address
+	return 0xF3310932;
 }
 
 // Fill 2 GPU framebuffers, buf0 and buf1, using a specific word value
@@ -316,36 +356,14 @@ void GPUService::memoryFill(u32* cmd) {
 	u32 control1 = control >> 16;
 
 	if (start0 != 0) {
-		gpu.clearBuffer(start0, end0, value0, control0);
+		gpu.clearBuffer(VaddrToPaddr(start0), VaddrToPaddr(end0), value0, control0);
 		requestInterrupt(GPUInterrupt::PSC0);
 	}
 
 	if (start1 != 0) {
-		gpu.clearBuffer(start1, end1, value1, control1);
+		gpu.clearBuffer(VaddrToPaddr(start1), VaddrToPaddr(end1), value1, control1);
 		requestInterrupt(GPUInterrupt::PSC1);
 	}
-}
-
-static u32 VaddrToPaddr(u32 addr) {
-	if (addr >= VirtualAddrs::VramStart && addr < (VirtualAddrs::VramStart + VirtualAddrs::VramSize)) [[likely]] {
-		return addr - VirtualAddrs::VramStart + PhysicalAddrs::VRAM;
-	}
-	
-	else if (addr >= VirtualAddrs::LinearHeapStartOld && addr < VirtualAddrs::LinearHeapEndOld) {
-		return addr - VirtualAddrs::LinearHeapStartOld + PhysicalAddrs::FCRAM;
-	}
-
-	else if (addr >= VirtualAddrs::LinearHeapStartNew && addr < VirtualAddrs::LinearHeapEndNew) {
-		return addr - VirtualAddrs::LinearHeapStartNew + PhysicalAddrs::FCRAM;
-	}
-
-	else if (addr == 0) {
-		return 0;
-	}
-
-	Helpers::warn("[GSP::GPU VaddrToPaddr] Unknown virtual address %08X", addr);
-	// Obviously garbage address
-	return 0xF3310932;
 }
 
 void GPUService::triggerDisplayTransfer(u32* cmd) {
@@ -375,12 +393,47 @@ void GPUService::flushCacheRegions(u32* cmd) {
 	log("GSP::GPU::FlushCacheRegions (Stubbed)\n");
 }
 
+void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
+	using namespace PICA::ExternalRegs;
+
+	static constexpr std::array<u32, 8> fbAddresses = {
+		Framebuffer0AFirstAddr,
+		Framebuffer0BFirstAddr,
+		Framebuffer1AFirstAddr,
+		Framebuffer1BFirstAddr,
+		Framebuffer0ASecondAddr,
+		Framebuffer0BSecondAddr,
+		Framebuffer1ASecondAddr,
+		Framebuffer1BSecondAddr,
+	};
+
+	auto& regs = gpu.getExtRegisters();
+
+	const u32 fbIndex = info.activeFb * 4 + screenId * 2;
+	regs[fbAddresses[fbIndex]] = VaddrToPaddr(info.leftFramebufferVaddr);
+	regs[fbAddresses[fbIndex + 1]] = VaddrToPaddr(info.rightFramebufferVaddr);
+
+	static constexpr std::array<u32, 6> configAddresses = {
+		Framebuffer0Config,
+		Framebuffer0Select,
+		Framebuffer0Stride,
+		Framebuffer1Config,
+		Framebuffer1Select,
+		Framebuffer1Stride,
+	};
+
+	const u32 configIndex = screenId * 3;
+	regs[configAddresses[configIndex]] = info.format;
+	regs[configAddresses[configIndex + 1]] = info.displayFb;
+	regs[configAddresses[configIndex + 2]] = info.stride;
+}
+
 // Actually send command list (aka display list) to GPU
 void GPUService::processCommandList(u32* cmd) {
 	const u32 address = cmd[1] & ~7; // Buffer address
 	const u32 size = cmd[2] & ~3; // Buffer size in bytes
-	const bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
-	const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
+	[[maybe_unused]] const bool updateGas = cmd[3] == 1; // Update gas additive blend results (0 = don't update, 1 = update)
+	[[maybe_unused]] const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
 
 	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
 	gpu.startCommandList(address, size);
@@ -390,7 +443,15 @@ void GPUService::processCommandList(u32* cmd) {
 // TODO: Emulate the transfer engine & its registers
 // Then this can be emulated by just writing the appropriate values there
 void GPUService::triggerTextureCopy(u32* cmd) {
-	Helpers::warn("GSP::GPU::TriggerTextureCopy (unimplemented)\n");
+	const u32 inputAddr = VaddrToPaddr(cmd[1]);
+	const u32 outputAddr = VaddrToPaddr(cmd[2]);
+	const u32 totalBytes = cmd[3];
+	const u32 inputSize = cmd[4];
+	const u32 outputSize = cmd[5];
+	const u32 flags = cmd[6];
+
+	log("GSP::GPU::TriggerTextureCopy (Stubbed)\n");
+	gpu.textureCopy(inputAddr, outputAddr, totalBytes, inputSize, outputSize, flags);
 	// This uses the transfer engine and thus needs to fire a PPF interrupt.
 	// NSMB2 relies on this
 	requestInterrupt(GPUInterrupt::PPF);

@@ -116,15 +116,34 @@ struct ArchiveSession {
     ArchiveSession(ArchiveBase* archive, const FSPath& filePath, bool isOpen = true) : archive(archive), path(filePath), isOpen(isOpen) {}
 };
 
-struct DirectorySession {
-    ArchiveBase* archive = nullptr;
-    // For directories which are mirrored to a specific path on the disk, this contains that path
-    // Otherwise this is a nullopt
-    std::optional<std::filesystem::path> pathOnDisk;
-    bool isOpen;
+struct DirectoryEntry {
+	std::filesystem::path path;
+	bool isDirectory;
+};
 
-    DirectorySession(ArchiveBase* archive, std::filesystem::path path, bool isOpen = true) : archive(archive), pathOnDisk(path),
-        isOpen(isOpen) {}
+struct DirectorySession {
+	ArchiveBase* archive = nullptr;
+	// For directories which are mirrored to a specific path on the disk, this contains that path
+	// Otherwise this is a nullopt
+	std::optional<std::filesystem::path> pathOnDisk;
+
+	// The list of directory entries + the index of the entry we're currently inspecting
+	std::vector<DirectoryEntry> entries;
+	size_t currentEntry;
+
+	bool isOpen;
+
+	DirectorySession(ArchiveBase* archive, std::filesystem::path path, bool isOpen = true) : archive(archive), pathOnDisk(path), isOpen(isOpen) {
+		currentEntry = 0;  // Start from entry 0
+
+		// Read all directory entries, cache them
+		for (auto& e : std::filesystem::directory_iterator(path)) {
+			DirectoryEntry entry;
+			entry.path = e.path();
+			entry.isDirectory = std::filesystem::is_directory(e);
+			entries.push_back(entry);
+		}
+	}
 };
 
 // Represents a file descriptor obtained from OpenFile. If the optional is nullopt, opening the file failed.

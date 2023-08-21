@@ -1,0 +1,3 @@
+#include "renderer_vk/vulkan_api.hpp"
+
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE;
