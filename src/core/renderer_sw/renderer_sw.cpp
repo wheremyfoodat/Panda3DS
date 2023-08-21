@@ -1,6 +1,7 @@
 #include "renderer_sw/renderer_sw.hpp"
 
-RendererSw::RendererSw(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
+RendererSw::RendererSw(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+	: Renderer(gpu, internalRegs, externalRegs) {}
 RendererSw::~RendererSw() {}
 
 void RendererSw::reset() { printf("RendererSW: Unimplemented reset call\n"); }
@@ -11,6 +12,10 @@ void RendererSw::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 
 void RendererSw::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
 	printf("RendererSW: Unimplemented displayTransfer call\n");
+}
+
+void RendererSw::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
+	printf("RendererSW: Unimplemented textureCopy call\n");
 }
 
 void RendererSw::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {

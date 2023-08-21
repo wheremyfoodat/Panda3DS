@@ -106,7 +106,7 @@ void Kernel::rescheduleThreads() {
 }
 
 // Internal OS function to spawn a thread
-Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg, ThreadStatus status) {
+Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status) {
 	int index; // Index of the created thread in the  threads array
 
 	if (threadCount < appResourceLimits.maxThreads) [[likely]] { // If we have not yet created over too many threads
@@ -168,6 +168,11 @@ Handle Kernel::makeMutex(bool locked) {
 		moo->ownerThread = currentThreadIndex;
 	}
 
+	// Push the new mutex to our list of mutex handles
+	// We need a list of mutex handles so that when a thread is killed, we can look which mutexes from this list the thread owns and free them
+	// Alternatively this could be a per-thread list, but I don't want to push_back and remove on every mutex lock and release
+	// Since some mutexes like the APT service mutex are locked and unlocked constantly, while ExitThread is a relatively "rare" SVC
+	mutexHandles.push_back(ret);
 	return ret;
 }
 
@@ -384,8 +389,12 @@ void Kernel::createThread() {
 		return;
 	}
 
+	if (id < -2 || id > 3) {
+		Helpers::panic("Invalid processor ID in CreateThread");
+	}
+
 	regs[0] = Result::Success;
-	regs[1] = makeThread(entrypoint, initialSP, priority, id, arg, ThreadStatus::Ready);
+	regs[1] = makeThread(entrypoint, initialSP, priority, static_cast<ProcessorID>(id), arg, ThreadStatus::Ready);
 	requireReschedule();
 }
 
@@ -436,6 +445,15 @@ void Kernel::getThreadPriority() {
 	}
 }
 
+void Kernel::getThreadIdealProcessor() {
+	const Handle handle = regs[1];  // Thread handle
+	logSVC("GetThreadIdealProcessor (handle = %X)\n", handle);
+
+	// TODO: Not documented what this is or what it does. Citra doesn't implement it at all. Return AppCore as the ideal processor for now
+	regs[0] = Result::Success;
+	regs[1] = static_cast<u32>(ProcessorID::AppCore);
+}
+
 void Kernel::setThreadPriority() {
 	const Handle handle = regs[0];
 	const u32 priority = regs[1];
@@ -463,8 +481,52 @@ void Kernel::setThreadPriority() {
 	requireReschedule();
 }
 
+void Kernel::getCurrentProcessorNumber() {
+	logSVC("GetCurrentProcessorNumber()\n");
+	const ProcessorID id = threads[currentThreadIndex].processorID;
+	s32 ret;
+
+	// Until we properly implement per-core schedulers, return whatever processor ID passed to svcCreateThread
+	switch (id) {
+		// TODO: This is picked from exheader
+		case ProcessorID::Default:
+			ret = static_cast<s32>(ProcessorID::AppCore);
+			break;
+
+		case ProcessorID::AllCPUs:
+			ret = static_cast<s32>(ProcessorID::AppCore);
+			Helpers::warn("GetCurrentProcessorNumber on thread created to run on all CPUs...?\n");
+			break;
+
+		default: ret = static_cast<s32>(id); break;
+	}
+
+	if (ret != static_cast<s32>(ProcessorID::AppCore)) {
+		Helpers::warn("GetCurrentProcessorNumber: Thread not running on appcore\n");
+	}
+
+	regs[0] = static_cast<u32>(ret);
+}
+
 void Kernel::exitThread() {
 	logSVC("ExitThread\n");
+
+	// Find which mutexes this thread owns, release them
+	for (auto handle : mutexHandles) {
+		KernelObject* object = getObject(handle, KernelObjectType::Mutex);
+
+		// Make sure that the handle actually matches to a mutex, and if our exiting thread owns the mutex, release it
+		if (object != nullptr) {
+			Mutex* moo = object->getData<Mutex>();
+
+			if (moo->locked && moo->ownerThread == currentThreadIndex) {
+				// Release the mutex by setting lock count to 1 and releasing it once. We set lock count to 1 since it's a recursive mutex
+				// Therefore if its lock count was > 1, simply calling releaseMutex would not fully release it
+				moo->lockCount = 1;
+				releaseMutex(moo);
+			}
+		}
+	}
 
 	// Remove the index of this thread from the thread indices vector
 	for (int i = 0; i < threadIndices.size(); i++) {

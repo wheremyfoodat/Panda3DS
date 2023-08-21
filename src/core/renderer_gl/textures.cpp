@@ -9,6 +9,11 @@ void Texture::allocate() {
     texture.create(size.u(), size.v(), GL_RGBA8);
     texture.bind();
 
+#ifdef GPU_DEBUG_INFO
+	const auto name = Helpers::format("Surface %dx%d %s from 0x%08X", size.x(), size.y(), PICA::textureFormatToString(format), location);
+	OpenGL::setObjectLabel(GL_TEXTURE, texture.handle(), name.c_str());
+#endif
+
     setNewConfig(config);
 }
 

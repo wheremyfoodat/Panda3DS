@@ -18,6 +18,7 @@ class CECDService {
 
 	// Service commands
 	void getInfoEventHandle(u32 messagePointer);
+	void openAndRead(u32 messagePointer);
 
 public:
 	CECDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}

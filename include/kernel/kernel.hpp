@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "config.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -34,6 +35,7 @@ class Kernel {
 
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
+	std::vector<Handle> mutexHandles;
 
 	// Thread indices, sorted by priority
 	std::vector<int> threadIndices;
@@ -59,13 +61,14 @@ class Kernel {
 	Handle makeProcess(u32 id);
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
-	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
+	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
 	Handle makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
 
 public:
 	Handle makeEvent(ResetType resetType); // Needs to be public to be accessible to the APT/HID services
 	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
 	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
+	Handle makeTimer(ResetType resetType);
 
 	// Signals an event, returns true on success or false if the event does not exist
 	bool signalEvent(Handle e);
@@ -123,6 +126,7 @@ private:
 	void exitThread();
 	void mapMemoryBlock();
 	void queryMemory();
+	void getCurrentProcessorNumber();
 	void getProcessID();
 	void getProcessInfo();
 	void getResourceLimit();
@@ -131,17 +135,22 @@ private:
 	void getSystemInfo();
 	void getSystemTick();
 	void getThreadID();
+	void getThreadIdealProcessor();
 	void getThreadPriority();
 	void sendSyncRequest();
 	void setThreadPriority();
+	void svcCancelTimer();
 	void svcClearEvent();
+	void svcClearTimer();
 	void svcCloseHandle();
 	void svcCreateEvent();
 	void svcCreateMutex();
 	void svcCreateSemaphore();
+	void svcCreateTimer();
 	void svcReleaseMutex();
 	void svcReleaseSemaphore();
 	void svcSignalEvent();
+	void svcSetTimer();
 	void svcSleepThread();
 	void connectToPort();
 	void outputDebugString();
@@ -165,7 +174,7 @@ private:
 	void readDirectory(u32 messagePointer, Handle directory);
 
 public:
-	Kernel(CPU& cpu, Memory& mem, GPU& gpu);
+	Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config);
 	void initializeFS() { return serviceManager.initializeFS(); }
 	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);

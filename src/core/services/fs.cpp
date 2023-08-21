@@ -27,6 +27,8 @@ namespace FSCommands {
 		IsSdmcWritable = 0x08180000,
 		GetFormatInfo = 0x084500C2,
 		FormatSaveData = 0x084C0242,
+		CreateExtSaveData = 0x08510242,
+		DeleteExtSaveData = 0x08520100,
 		InitializeWithSdkVersion = 0x08610042,
 		SetPriority = 0x08620040,
 		GetPriority = 0x08630000
@@ -144,9 +146,11 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case FSCommands::CreateDirectory: createDirectory(messagePointer); break;
+		case FSCommands::CreateExtSaveData: createExtSaveData(messagePointer); break;
 		case FSCommands::CreateFile: createFile(messagePointer); break;
 		case FSCommands::ControlArchive: controlArchive(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
+		case FSCommands::DeleteExtSaveData: deleteExtSaveData(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
 		case FSCommands::FormatThisUserSaveData: formatThisUserSaveData(messagePointer); break;
@@ -455,6 +459,40 @@ void FSService::formatSaveData(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void FSService::deleteExtSaveData(u32 messagePointer) {
+	Helpers::warn("Stubbed call to FS::DeleteExtSaveData!");
+	// First 4 words of parameters are the ExtSaveData info
+	// https://www.3dbrew.org/wiki/Filesystem_services#ExtSaveDataInfo
+	const u8 mediaType = mem.read8(messagePointer + 4);
+	const u64 saveID = mem.read64(messagePointer + 8);
+	log("FS::DeleteExtSaveData (media type = %d, saveID = %llx) (stubbed)\n", mediaType, saveID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0852, 1, 0));
+	// TODO: We can't properly implement this yet until we properly support title/save IDs. We will stub this and insert a warning for now. Required for Planet Robobot
+	// When we properly implement it, it will just be a recursive directory deletion
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FSService::createExtSaveData(u32 messagePointer) {
+	Helpers::warn("Stubbed call to FS::CreateExtSaveData!");
+	// First 4 words of parameters are the ExtSaveData info
+	// https://www.3dbrew.org/wiki/Filesystem_services#ExtSaveDataInfo
+	// This creates the ExtSaveData with the specified saveid in the specified media type. It stores the SMDH as "icon" in the root of the created directory. 
+	const u8 mediaType = mem.read8(messagePointer + 4);
+	const u64 saveID = mem.read64(messagePointer + 8);
+	const u32 numOfDirectories = mem.read32(messagePointer + 20);
+	const u32 numOfFiles = mem.read32(messagePointer + 24);
+	const u64 sizeLimit = mem.read64(messagePointer + 28);
+	const u32 smdhSize = mem.read32(messagePointer + 36);
+	const u32 smdhPointer = mem.read32(messagePointer + 44);
+
+	log("FS::CreateExtSaveData (stubbed)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0851, 1, 0));
+	// TODO: Similar to DeleteExtSaveData, we need to refactor how our ExtSaveData stuff works before properly implementing this
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 void FSService::formatThisUserSaveData(u32 messagePointer) {
 	log("FS::FormatThisUserSaveData\n");
 
@@ -499,6 +537,12 @@ void FSService::controlArchive(u32 messagePointer) {
 		case 0: // Commit save data changes. Shouldn't need us to do anything
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
+
+		case 1: // Retrieves a file's last-modified timestamp. Seen in DDLC, stubbed for the moment
+			Helpers::warn("FS::ControlArchive: Tried to retrieve a file's last-modified timestamp");
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
+
 		default:
 			Helpers::panic("Unimplemented action for ControlArchive (action = %X)\n", action);
 			break;

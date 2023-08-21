@@ -19,6 +19,8 @@ class FRDService {
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, frdLogger)
 
+	bool loggedIn = false;
+
 	// Service commands
 	void attachToEventNotification(u32 messagePointer);
 	void getFriendKeyList(u32 messagePointer);
@@ -27,8 +29,11 @@ class FRDService {
 	void getMyPresence(u32 messagePointer);
 	void getMyProfile(u32 messagePointer);
 	void getMyScreenName(u32 messsagePointer);
+	void hasLoggedIn(u32 messagePointer);
+	void logout(u32 messagePointer);
 	void setClientSDKVersion(u32 messagePointer);
 	void setNotificationMask(u32 messagePointer);
+	void updateGameModeDescription(u32 messagePointer);
 
 public:
 	FRDService(Memory& mem) : mem(mem) {}

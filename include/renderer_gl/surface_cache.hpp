@@ -76,6 +76,16 @@ public:
 
 		size++;
 
+		// Find an existing surface we completely invalidate and overwrite it with the new surface
+		for (auto& e : buffer) {
+			if (e.valid && e.range.lower() >= surface.range.lower() && e.range.upper() <= surface.range.upper()) {
+				e.free();
+				e = surface;
+				e.allocate();
+				return e;
+			}
+		}
+
 		// Find an invalid entry in the cache and overwrite it with the new surface
 		for (auto& e : buffer) {
 			if (!e.valid) {

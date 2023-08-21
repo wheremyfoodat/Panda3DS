@@ -143,7 +143,9 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 			break;
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
-		case ShaderOpcodes::DPH: recDPH(shaderUnit, instruction); break;
+		case ShaderOpcodes::DPH:
+		case ShaderOpcodes::DPHI:
+			recDPH(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
 		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
@@ -531,15 +533,17 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 }
 
 void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
+	const bool isDPHI = (instruction >> 26) == ShaderOpcodes::DPHI;
+
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
-	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
+	const u32 src1 = isDPHI ? getBits<14, 5>(instruction) : getBits<12, 7>(instruction);
+	const u32 src2 = isDPHI ? getBits<7, 7>(instruction) : getBits<7, 5>(instruction);
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
-	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
+	loadRegister<1>(src1_xmm, shader, src1, isDPHI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2_xmm, shader, src2, isDPHI ? idx : 0, operandDescriptor);
 
 	// Attach 1.0 to the w component of src1
 	if (haveSSE4_1) {

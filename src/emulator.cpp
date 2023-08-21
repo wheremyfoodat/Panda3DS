@@ -12,8 +12,8 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu), cpu(memory, kernel), gpu(memory, config),
-	  memory(cpu.getTicksRef()), cheats(memory, kernel.getServiceManager().getHID()), running(false), programRunning(false)
+	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu, config), cpu(memory, kernel), gpu(memory, config),
+	  memory(cpu.getTicksRef(), config), cheats(memory, kernel.getServiceManager().getHID()), running(false), programRunning(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  , httpServer(this)
 #endif
@@ -316,19 +316,36 @@ void Emulator::run() {
 
 				// Detect mouse motion events for gyroscope emulation
 				case SDL_MOUSEMOTION: {
+					if (romType == ROMType::None) break;
+
+					// Handle "dragging" across the touchscreen
+					if (hid.isTouchScreenPressed()) {
+						const s32 x = event.motion.x;
+						const s32 y = event.motion.y;
+
+						// Check if touch falls in the touch screen area and register the new touch screen position
+						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
+							// Convert to 3DS coordinates
+							u16 x_converted = static_cast<u16>(x) - 40;
+							u16 y_converted = static_cast<u16>(y) - 240;
+
+							hid.setTouchScreenPress(x_converted, y_converted);
+						}
+					}
+
 					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope rotation
-					if (romType == ROMType::None || !holdingRightClick) break;
+					if (holdingRightClick) {
+						// Relative motion since last mouse motion event
+						const s32 motionX = event.motion.xrel;
+						const s32 motionY = event.motion.yrel;
 
-					// Relative motion since last mouse motion event
-					const s32 motionX = event.motion.xrel;
-					const s32 motionY = event.motion.yrel;
-
-					// The gyroscope involves lots of weird math I don't want to bother with atm
-					// So up until then, we will set the gyroscope euler angles to fixed values based on the direction of the relative motion
-					const s32 roll = motionX > 0 ? 0x7f : -0x7f;
-					const s32 pitch = motionY > 0 ? 0x7f : -0x7f;
-					hid.setRoll(roll);
-					hid.setPitch(pitch);
+						// The gyroscope involves lots of weird math I don't want to bother with atm
+						// So up until then, we will set the gyroscope euler angles to fixed values based on the direction of the relative motion
+						const s32 roll = motionX > 0 ? 0x7f : -0x7f;
+						const s32 pitch = motionY > 0 ? 0x7f : -0x7f;
+						hid.setRoll(roll);
+						hid.setPitch(pitch);
+					}
 					break;
 				}
 

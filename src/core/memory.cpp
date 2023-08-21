@@ -2,14 +2,18 @@
 
 #include <cassert>
 #include <chrono>  // For time since epoch
+#include <cmrc/cmrc.hpp>
 #include <ctime>
 
 #include "config_mem.hpp"
 #include "resource_limits.hpp"
+#include "services/ptm.hpp"
+
+CMRC_DECLARE(ConsoleFonts);
 
 using namespace KernelMemoryTypes;
 
-Memory::Memory(u64& cpuTicks) : cpuTicks(cpuTicks) {
+Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks), config(config) {
 	fcram = new uint8_t[FCRAM_SIZE]();
 	dspRam = new uint8_t[DSP_RAM_SIZE]();
 
@@ -45,6 +49,12 @@ void Memory::reset() {
 
 	// Initialize shared memory blocks and reserve memory for them
 	for (auto& e : sharedMemBlocks) {
+		if (e.handle == KernelHandles::FontSharedMemHandle) {
+			// Read font size from the cmrc filesystem the font is stored in
+			auto fonts = cmrc::ConsoleFonts::get_filesystem();
+			e.size = fonts.open("CitraSharedFontUSRelocated.bin").size();
+		}
+
 		e.mapped = false;
 		e.paddr = allocateSysMemory(e.size);
 	}
@@ -59,6 +69,9 @@ void Memory::reset() {
 		readTable[i + initialPage] = pointer;
 		writeTable[i + initialPage] = pointer;
 	}
+
+	// Later adjusted based on ROM header when possible
+	region = Regions::USA;
 }
 
 bool Memory::allocateMainThreadStack(u32 size) {
@@ -82,7 +95,18 @@ u8 Memory::read8(u32 vaddr) {
 		return *(u8*)(pointer + offset);
 	} else {
 		switch (vaddr) {
-			case ConfigMem::BatteryState: return getBatteryState(true, true, BatteryLevel::FourBars);
+			case ConfigMem::BatteryState: {
+				// Set by the PTM module
+				// Charger plugged: Shows whether the charger is plugged
+				// Charging: Shows whether the charger is plugged and the console is actually charging, ie the battery is not full
+				// BatteryLevel: A battery level calculated via PTM::GetBatteryLevel
+				// These are all assembled into a bitfield and returned via config memory
+				const bool chargerPlugged = config.chargerPlugged;
+				const bool charging = config.chargerPlugged && (config.batteryPercentage < 100);
+				const auto batteryLevel = static_cast<BatteryLevel>(PTMService::batteryPercentToLevel(config.batteryPercentage));
+
+				return getBatteryState(chargerPlugged, charging, batteryLevel);
+			}
 			case ConfigMem::EnvInfo: return envInfo;
 			case ConfigMem::HardwareType: return ConfigMem::HardwareCodes::Product;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
@@ -91,6 +115,12 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::NetworkState: return 2;  // Report that we've got an internet connection
 			case ConfigMem::HeadphonesConnectedMaybe: return 0;
 			case ConfigMem::Unknown1086: return 1;  // It's unknown what this is but some games want it to be 1
+
+			case ConfigMem::FirmUnknown: return firm.unk;
+			case ConfigMem::FirmRevision: return firm.revision;
+			case ConfigMem::FirmVersionMinor: return firm.minor;
+			case ConfigMem::FirmVersionMajor: return firm.major;
+
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -138,11 +168,19 @@ u32 Memory::read32(u32 vaddr) {
 
 			// 3D slider. Float in range 0.0 = off, 1.0 = max.
 			case ConfigMem::SliderState3D: return Helpers::bit_cast<u32, float>(0.0f);
+			case ConfigMem::FirmUnknown:
+				return u32(read8(vaddr)) | (u32(read8(vaddr + 1)) << 8) | (u32(read8(vaddr + 2)) << 16) | (u32(read8(vaddr + 3)) << 24);
 
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
-					Helpers::warn("VRAM read!\n");
-					return 0;
+					static int shutUpCounter = 0;
+					if (shutUpCounter < 5) { // Stop spamming about VRAM reads after the first 5
+						shutUpCounter++;
+						Helpers::warn("VRAM read!\n");
+					}
+
+					// TODO: Properly handle framebuffer readbacks and the like
+					return *(u32*)&vram[vaddr - VirtualAddrs::VramStart];
 				}
 
 				Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
@@ -463,4 +501,16 @@ u64 Memory::timeSince3DSEpoch() {
 	constexpr u64 offset = 2208988800ull;
 	milliseconds ms = duration_cast<milliseconds>(seconds(rawTime + timezoneDifference + offset));
 	return ms.count();
+}
+
+Regions Memory::getConsoleRegion() {
+	// TODO: Let the user force the console region as they want
+	// For now we pick one based on the ROM header
+	return region;
+}
+
+void Memory::copySharedFont(u8* pointer) {
+	auto fonts = cmrc::ConsoleFonts::get_filesystem();
+	auto font = fonts.open("CitraSharedFontUSRelocated.bin");
+	std::memcpy(pointer, font.begin(), font.size());
 }

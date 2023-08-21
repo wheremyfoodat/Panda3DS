@@ -9,6 +9,13 @@ namespace ConfigMem {
 		SyscoreVer = 0x1FF80010,
 		EnvInfo = 0x1FF80014,
 		AppMemAlloc = 0x1FF80040,
+		FirmUnknown = 0x1FF80060,
+		FirmRevision = 0x1FF80061,
+		FirmVersionMinor = 0x1FF80062,
+		FirmVersionMajor = 0x1FF80063,
+		FirmSyscoreVer = 0x1FF80064,
+		FirmSdkVer = 0x1FF80068,
+
 		HardwareType = 0x1FF81004,
 		Datetime0 = 0x1FF81020,
 		WifiMac = 0x1FF81060,

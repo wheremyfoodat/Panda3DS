@@ -34,6 +34,8 @@ struct GLStateManager {
 	bool redMask, greenMask, blueMask, alphaMask;
 	bool depthMask;
 
+	float clearRed, clearBlue, clearGreen, clearAlpha;
+	
 	GLuint stencilMask;
 	GLuint boundVAO;
 	GLuint boundVBO;
@@ -44,6 +46,7 @@ struct GLStateManager {
 
 	void reset();
 	void resetBlend();
+	void resetClearing();
 	void resetClipping();
 	void resetColourMask();
 	void resetDepth();
@@ -206,6 +209,17 @@ struct GLStateManager {
 		if (depthFunc != func) {
 			depthFunc = func;
 			glDepthFunc(func);
+		}
+	}
+
+	void setClearColour(float r, float g, float b, float a) {
+		if (clearRed != r || clearGreen != g || clearBlue != b || clearAlpha != a) {
+			clearRed = r;
+			clearGreen = g;
+			clearBlue = b;
+			clearAlpha = a;
+
+			OpenGL::setClearColor(r, g, b, a);
 		}
 	}
 

@@ -2,6 +2,8 @@
 #include "ipc.hpp"
 #include "kernel.hpp"
 
+#include <vector>
+
 namespace APTCommands {
 	enum : u32 {
 		GetLockHandle = 0x00010040,
@@ -114,10 +116,24 @@ void APTService::appletUtility(u32 messagePointer) {
 	u32 outputSize = mem.read32(messagePointer + 12);
 	u32 inputPointer = mem.read32(messagePointer + 20);
 
-	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X) (Stubbed)\n", utility, inputSize,
-		outputSize, inputPointer);
+	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X) (Stubbed)\n", utility, inputSize, outputSize,
+		inputPointer);
+
+	std::vector<u8> out(outputSize);
+	const u32 outputBuffer = mem.read32(messagePointer + 0x104);
+
+	if (outputSize >= 1 && utility == 6) {
+		// TryLockTransition expects a bool indicating success in the output buffer. Set it to true to avoid games panicking (Thanks to Citra)
+		out[0] = true;
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x4B, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, Result::Success);
+
+	for (u32 i = 0; i < outputSize; i++) {
+		mem.write8(outputBuffer + i, out[i]);
+	}
 }
 
 void APTService::getAppletInfo(u32 messagePointer) {
