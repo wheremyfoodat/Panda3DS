@@ -5,6 +5,7 @@
 namespace NFCCommands {
 	enum : u32 {
 		Initialize = 0x00010040,
+		StartCommunication = 0x00030000,
 		StopCommunication = 0x00040000,
 		GetTagInRangeEvent = 0x000B0000,
 		GetTagOutOfRangeEvent = 0x000C0000,
@@ -29,6 +30,7 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 		case NFCCommands::GetTagInRangeEvent: getTagInRangeEvent(messagePointer); break;
 		case NFCCommands::GetTagOutOfRangeEvent: getTagOutOfRangeEvent(messagePointer); break;
 		case NFCCommands::GetTagState: getTagState(messagePointer); break;
+		case NFCCommands::StartCommunication: startCommunication(messagePointer); break;
 		case NFCCommands::StopCommunication: stopCommunication(messagePointer); break;
 		default: Helpers::panic("NFC service requested. Command: %08X\n", command);
 	}
@@ -98,6 +100,14 @@ void NFCService::communicationGetStatus(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0xF, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, static_cast<u32>(adapterStatus));
+}
+
+void NFCService::startCommunication(u32 messagePointer) {
+	log("NFC::StartCommunication\n");
+	// TODO: Actually start communication when we emulate amiibo
+
+	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NFCService::stopCommunication(u32 messagePointer) {
