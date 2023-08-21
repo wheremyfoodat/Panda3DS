@@ -242,6 +242,7 @@ if(ENABLE_VULKAN)
 		include/renderer_vk/vk_api.hpp include/renderer_vk/vk_debug.hpp
 		include/renderer_vk/vk_descriptor_heap.hpp
 		include/renderer_vk/vk_descriptor_update_batch.hpp
+		include/renderer_vk/vk_sampler_cache.hpp
 		include/renderer_vk/vk_memory.hpp include/renderer_vk/vk_pica.hpp
 	)
 
@@ -249,6 +250,7 @@ if(ENABLE_VULKAN)
 		src/core/renderer_vk/vk_api.cpp src/core/renderer_vk/vk_debug.cpp
 		src/core/renderer_vk/vk_descriptor_heap.cpp
 		src/core/renderer_vk/vk_descriptor_update_batch.cpp
+		src/core/renderer_vk/vk_sampler_cache.cpp
 		src/core/renderer_vk/vk_memory.cpp src/core/renderer_vk/vk_pica.cpp
 	)
 
