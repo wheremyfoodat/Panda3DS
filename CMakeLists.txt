@@ -241,12 +241,14 @@ if(ENABLE_VULKAN)
 	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
 		include/renderer_vk/vk_api.hpp include/renderer_vk/vk_debug.hpp
 		include/renderer_vk/vk_descriptor_heap.hpp
+		include/renderer_vk/vk_descriptor_update_batch.hpp
 		include/renderer_vk/vk_memory.hpp include/renderer_vk/vk_pica.hpp
 	)
 
 	set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
 		src/core/renderer_vk/vk_api.cpp src/core/renderer_vk/vk_debug.cpp
 		src/core/renderer_vk/vk_descriptor_heap.cpp
+		src/core/renderer_vk/vk_descriptor_update_batch.cpp
 		src/core/renderer_vk/vk_memory.cpp src/core/renderer_vk/vk_pica.cpp
 	)
 
