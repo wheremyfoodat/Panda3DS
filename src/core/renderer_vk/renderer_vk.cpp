@@ -682,7 +682,7 @@ void RendererVK::display() {
 		}
 
 		// Render bottom screen
-		if (Texture* bottomScreen = findColorRenderTexture(bottomScreenAddr); bottomScreenAddr) {
+		if (Texture* bottomScreen = findColorRenderTexture(bottomScreenAddr); bottomScreen) {
 			descriptorUpdateBatch->addImageSampler(
 				bottomDisplayPipelineDescriptorSet[frameBufferingIndex], 0, bottomScreen->imageView.get(), samplerCache->getSampler(sampler2D())
 			);
