@@ -13,6 +13,31 @@
 
 CMRC_DECLARE(RendererVK);
 
+static vk::SamplerCreateInfo sampler2D(bool filtered = true, bool clamp = false) {
+	vk::SamplerCreateInfo samplerInfo = {};
+	samplerInfo.magFilter = filtered ? vk::Filter::eLinear : vk::Filter::eNearest;
+	samplerInfo.minFilter = filtered ? vk::Filter::eLinear : vk::Filter::eNearest;
+
+	samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+
+	samplerInfo.addressModeU = clamp ? vk::SamplerAddressMode::eClampToEdge : vk::SamplerAddressMode::eRepeat;
+	samplerInfo.addressModeV = clamp ? vk::SamplerAddressMode::eClampToEdge : vk::SamplerAddressMode::eRepeat;
+	samplerInfo.addressModeW = clamp ? vk::SamplerAddressMode::eClampToEdge : vk::SamplerAddressMode::eRepeat;
+
+	samplerInfo.mipLodBias = 0.0f;
+	samplerInfo.anisotropyEnable = VK_FALSE;
+	samplerInfo.maxAnisotropy = 16.0f;
+
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = vk::CompareOp::eAlways;
+
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+	samplerInfo.borderColor = vk::BorderColor::eFloatTransparentBlack;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	return samplerInfo;
+}
+
 static vk::UniqueShaderModule createShaderModule(vk::Device device, std::span<const std::byte> shaderCode) {
 	vk::ShaderModuleCreateInfo shaderModuleInfo = {};
 	shaderModuleInfo.pCode = reinterpret_cast<const u32*>(shaderCode.data());
@@ -200,14 +225,37 @@ static u32 rotl32(u32 x, u32 n) { return (x << n) | (x >> (32 - n)); }
 static u32 ror32(u32 x, u32 n) { return (x >> n) | (x << (32 - n)); }
 
 u32 RendererVK::colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format) {
-	return rotl32(loc, 17) ^ ror32(size, 23) ^ (static_cast<u64>(format) << 60);
+	return loc | (static_cast<u64>(ror32(size, 23) ^ (static_cast<u32>(format))) << 32);
 }
 u32 RendererVK::depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format) {
-	return rotl32(loc, 17) ^ ror32(size, 29) ^ (static_cast<u64>(format) << 60);
+	return loc | (static_cast<u64>(ror32(size, 29) ^ (static_cast<u32>(format))) << 32);
+}
+
+RendererVK::Texture* RendererVK::findColorRenderTexture(u32 addr) {
+	const auto lower = textureCache.lower_bound(addr);
+
+	if (lower == textureCache.end()) {
+		// Not found
+		return nullptr;
+	}
+
+	if (lower == textureCache.begin()) {
+		return &lower->second;
+	}
+
+	Texture* texture = &lower->second;
+
+	const usize sizeInBytes = texture->size[0] * texture->size[1] * texture->sizePerPixel;
+
+	if ((addr - lower->second.loc) <= sizeInBytes) {
+		return texture;
+	}
+
+	return nullptr;
 }
 
 RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt format, u32 width, u32 height) {
-	const u32 renderTextureHash = colorBufferHash(addr, width * height * PICA::sizePerPixel(format), format);
+	const u64 renderTextureHash = colorBufferHash(addr, width * height * PICA::sizePerPixel(format), format);
 
 	// Cache hit
 	if (textureCache.contains(renderTextureHash)) {
@@ -265,7 +313,7 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 }
 
 RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt format, u32 width, u32 height) {
-	const u32 renderTextureHash = depthBufferHash(addr, width * height * PICA::sizePerPixel(format), format);
+	const u64 renderTextureHash = depthBufferHash(addr, width * height * PICA::sizePerPixel(format), format);
 
 	// Cache hit
 	if (textureCache.contains(renderTextureHash)) {
@@ -620,7 +668,10 @@ void RendererVK::display() {
 		getCurrentCommandBuffer().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
 		// Render top screen
-		if (topActiveFb) {
+		if (Texture* topScreen = findColorRenderTexture(topScreenAddr); topScreen) {
+			descriptorUpdateBatch->addImageSampler(
+				topDisplayPipelineDescriptorSet[frameBufferingIndex], 0, topScreen->imageView.get(), samplerCache->getSampler(sampler2D())
+			);
 			getCurrentCommandBuffer().bindDescriptorSets(
 				vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {topDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
 			);
@@ -631,7 +682,10 @@ void RendererVK::display() {
 		}
 
 		// Render bottom screen
-		if (bottomActiveFb) {
+		if (Texture* bottomScreen = findColorRenderTexture(bottomScreenAddr); bottomScreenAddr) {
+			descriptorUpdateBatch->addImageSampler(
+				bottomDisplayPipelineDescriptorSet[frameBufferingIndex], 0, bottomScreen->imageView.get(), samplerCache->getSampler(sampler2D())
+			);
 			getCurrentCommandBuffer().bindDescriptorSets(
 				vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {bottomDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
 			);
@@ -697,6 +751,9 @@ void RendererVK::display() {
 	if (const vk::Result endResult = getCurrentCommandBuffer().end(); endResult != vk::Result::eSuccess) {
 		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
 	}
+
+	// Flush all descriptor writes
+	descriptorUpdateBatch->flush();
 
 	vk::SubmitInfo submitInfo = {};
 	// Wait for any previous uses of the image image to finish presenting
@@ -1162,6 +1219,12 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		descriptorUpdateBatch = std::make_unique<Vulkan::DescriptorUpdateBatch>(std::move(createResult.value()));
 	} else {
 		Helpers::panic("Error creating descriptor update batch\n");
+	}
+
+	if (auto createResult = Vulkan::SamplerCache::create(device.get()); createResult.has_value()) {
+		samplerCache = std::make_unique<Vulkan::SamplerCache>(std::move(createResult.value()));
+	} else {
+		Helpers::panic("Error creating sampler cache\n");
 	}
 
 	if (auto createResult = Vulkan::DescriptorHeap::create(device.get(), displayShaderLayout); createResult.has_value()) {

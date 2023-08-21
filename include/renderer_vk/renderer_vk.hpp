@@ -6,6 +6,7 @@
 #include "vk_api.hpp"
 #include "vk_descriptor_heap.hpp"
 #include "vk_descriptor_update_batch.hpp"
+#include "vk_sampler_cache.hpp"
 
 class GPU;
 
@@ -78,6 +79,7 @@ class RendererVK final : public Renderer {
 	static u32 colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format);
 	static u32 depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format);
 
+	Texture* findColorRenderTexture(u32 addr);
 	Texture& getColorRenderTexture(u32 addr, PICA::ColorFmt format, u32 width, u32 height);
 	Texture& getDepthRenderTexture(u32 addr, PICA::DepthFmt format, u32 width, u32 height);
 
@@ -93,6 +95,7 @@ class RendererVK final : public Renderer {
 	vk::RenderPass getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat);
 
 	std::unique_ptr<Vulkan::DescriptorUpdateBatch> descriptorUpdateBatch;
+	std::unique_ptr<Vulkan::SamplerCache> samplerCache;
 
 	// Display pipeline data
 	std::unique_ptr<Vulkan::DescriptorHeap> displayDescriptorHeap;
