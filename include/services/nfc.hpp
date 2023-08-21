@@ -35,13 +35,16 @@ class NFCService {
 
 	Old3DSAdapterStatus adapterStatus;
 	TagStatus tagStatus;
+	bool initialized = false;
 
 	// Service commands
+	void communicationGetResult(u32 messagePointer);
 	void communicationGetStatus(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void getTagInRangeEvent(u32 messagePointer);
 	void getTagOutOfRangeEvent(u32 messagePointer);
 	void getTagState(u32 messagePointer);
+	void startCommunication(u32 messagePointer);
 	void stopCommunication(u32 messagePointer);
 
 public:

@@ -133,11 +133,11 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/ndm.cpp src/core/services/dsp.cpp src/core/services/cfg.cpp
                          src/core/services/ptm.cpp src/core/services/mic.cpp src/core/services/cecd.cpp
                          src/core/services/ac.cpp src/core/services/am.cpp src/core/services/boss.cpp
-                         src/core/services/frd.cpp src/core/services/nim.cpp src/core/services/shared_font.cpp
+                         src/core/services/frd.cpp src/core/services/nim.cpp src/core/services/mcu/mcu_hwc.cpp
                          src/core/services/y2r.cpp src/core/services/cam.cpp src/core/services/ldr_ro.cpp
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
                          src/core/services/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
-                         src/core/services/ssl.cpp src/core/services/mcu/mcu_hwc.cpp
+                         src/core/services/ssl.cpp src/core/services/news_u.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
@@ -166,8 +166,8 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
                  include/services/mic.hpp include/services/cecd.hpp include/services/ac.hpp
                  include/services/am.hpp include/services/boss.hpp include/services/frd.hpp include/services/nim.hpp
-                 include/fs/archive_ext_save_data.hpp include/services/shared_font.hpp include/fs/archive_ncch.hpp
-                 include/colour.hpp include/services/y2r.hpp include/services/cam.hpp
+                 include/fs/archive_ext_save_data.hpp include/fs/archive_ncch.hpp include/services/mcu/mcu_hwc.hpp
+                 include/colour.hpp include/services/y2r.hpp include/services/cam.hpp include/services/ssl.hpp 
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
                  include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
                  include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp include/PICA/dynapica/shader_rec.hpp
@@ -178,7 +178,14 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
-                 include/math_util.hpp include/services/soc.hpp include/services/ssl.hpp include/services/mcu/mcu_hwc.hpp
+                 include/math_util.hpp include/services/soc.hpp include/services/news_u.hpp
+)
+
+cmrc_add_resource_library(
+	resources_console_fonts
+	NAMESPACE ConsoleFonts
+	WHENCE "src/core/services/fonts/"
+	"src/core/services/fonts/CitraSharedFontUSRelocated.bin"
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -276,7 +283,7 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad)
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad resources_console_fonts)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
