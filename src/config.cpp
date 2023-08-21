@@ -1,5 +1,6 @@
 #include "config.hpp"
 
+#include <cmath>
 #include <fstream>
 #include <string>
 
@@ -57,6 +58,29 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", true);
 		}
 	}
+
+	if (data.contains("Battery")) {
+		auto batteryResult = toml::expect<toml::value>(data.at("Battery"));
+		if (batteryResult.is_ok()) {
+			auto battery = batteryResult.unwrap();
+
+			chargerPlugged = toml::find_or<toml::boolean>(battery, "ChargerPlugged", true);
+			batteryPercentage = toml::find_or<toml::integer>(battery, "BatteryPercentage", 3);
+
+			// Clamp battery % to [0, 100] to make sure it's a valid value
+			batteryPercentage = std::clamp(batteryPercentage, 0, 100);
+		}
+	}
+
+	if (data.contains("SD")) {
+		auto sdResult = toml::expect<toml::value>(data.at("SD"));
+		if (sdResult.is_ok()) {
+			auto sd = sdResult.unwrap();
+
+			sdCardInserted = toml::find_or<toml::boolean>(sd, "UseVirtualSD", true);
+			sdWriteProtected = toml::find_or<toml::boolean>(sd, "WriteProtectVirtualSD", false);
+		}
+	}
 }
 
 void EmulatorConfig::save(const std::filesystem::path& path) {
@@ -80,6 +104,12 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
+
+	data["Battery"]["ChargerPlugged"] = chargerPlugged;
+	data["Battery"]["BatteryPercentage"] = batteryPercentage;
+
+	data["SD"]["UseVirtualSD"] = sdCardInserted;
+	data["SD"]["WriteProtectVirtualSD"] = sdWriteProtected;
 
 	std::ofstream file(path, std::ios::out);
 	file << data;

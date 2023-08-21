@@ -34,6 +34,16 @@ enum class ArbitrationType {
     DecrementAndWaitIfLessTimeout = 4
 };
 
+enum class ProcessorID : s32 {
+    AllCPUs = -1,
+    Default = -2,
+    
+    AppCore = 0,
+    Syscore = 1,
+    New3DSExtra1 = 2,
+    New3DSExtra2 = 3
+};
+
 struct AddressArbiter {};
 
 struct ResourceLimits {
@@ -95,7 +105,7 @@ struct Thread {
     u32 entrypoint; // Initial r15 value
     u32 priority;
     u32 arg;
-    s32 processorID;
+    ProcessorID processorID;
     ThreadStatus status;
     Handle handle;  // OS handle for this thread
     int index; // Index of the thread. 0 for the first thread, 1 for the second, and so on

@@ -23,6 +23,7 @@ namespace Y2RCommands {
 		StartConversion = 0x00260000,
 		StopConversion = 0x00270000,
 		IsBusyConversion = 0x00280000,
+		SetPackageParameter = 0x002901C0,
 		PingProcess = 0x002A0000,
 		DriverInitialize = 0x002B0000,
 		DriverFinalize = 0x002C0000
@@ -60,6 +61,7 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::SetInputLineWidth: setInputLineWidth(messagePointer); break;
 		case Y2RCommands::SetInputLines: setInputLines(messagePointer); break;
 		case Y2RCommands::SetOutputFormat: setOutputFormat(messagePointer); break;
+		case Y2RCommands::SetPackageParameter: setPackageParameter(messagePointer); break;
 		case Y2RCommands::SetReceiving: setReceiving(messagePointer); break;
 		case Y2RCommands::SetRotation: setRotation(messagePointer); break;
 		case Y2RCommands::SetSendingY: setSendingY(messagePointer); break;
@@ -173,6 +175,17 @@ void Y2RService::setOutputFormat(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::setPackageParameter(u32 messagePointer) {
+	// Package parameter is 3 words
+	const u32 word1 = mem.read32(messagePointer + 4);
+	const u32 word2 = mem.read32(messagePointer + 8);
+	const u32 word3 = mem.read32(messagePointer + 12);
+	Helpers::warn("Y2R::SetPackageParameter\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x29, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

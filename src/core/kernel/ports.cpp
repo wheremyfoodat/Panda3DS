@@ -109,7 +109,7 @@ void Kernel::sendSyncRequest() {
 	// If we're actually communicating with a port
 	const auto session = getObject(handle, KernelObjectType::Session);
 	if (session == nullptr) [[unlikely]] {
-		Helpers::panic("SendSyncRequest: Invalid handle");
+		Helpers::warn("SendSyncRequest: Invalid handle");
 		regs[0] = Result::Kernel::InvalidHandle;
 		return;
 	}

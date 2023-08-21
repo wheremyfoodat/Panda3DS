@@ -1,23 +1,28 @@
-#include <string>
 #include "services/frd.hpp"
-#include "services/region_codes.hpp"
+
+#include <string>
+
 #include "ipc.hpp"
+#include "services/region_codes.hpp"
 
 namespace FRDCommands {
 	enum : u32 {
+		HasLoggedIn = 0x00010000,
 		AttachToEventNotification = 0x00200002,
 		SetNotificationMask = 0x00210040,
 		SetClientSdkVersion = 0x00320042,
+		Logout = 0x00040000,
 		GetMyFriendKey = 0x00050000,
 		GetMyProfile = 0x00070000,
 		GetMyPresence = 0x00080000,
 		GetMyScreenName = 0x00090000,
 		GetMyMii = 0x000A0000,
-		GetFriendKeyList = 0x00110080
+		GetFriendKeyList = 0x00110080,
+		UpdateGameModeDescription = 0x001D0002,
 	};
 }
 
-void FRDService::reset() {}
+void FRDService::reset() { loggedIn = false; }
 
 void FRDService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
@@ -29,14 +34,25 @@ void FRDService::handleSyncRequest(u32 messagePointer) {
 		case FRDCommands::GetMyPresence: getMyPresence(messagePointer); break;
 		case FRDCommands::GetMyProfile: getMyProfile(messagePointer); break;
 		case FRDCommands::GetMyScreenName: getMyScreenName(messagePointer); break;
+		case FRDCommands::HasLoggedIn: hasLoggedIn(messagePointer); break;
+		case FRDCommands::Logout: logout(messagePointer); break;
 		case FRDCommands::SetClientSdkVersion: setClientSDKVersion(messagePointer); break;
 		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
+		case FRDCommands::UpdateGameModeDescription: updateGameModeDescription(messagePointer); break;
 		default: Helpers::panic("FRD service requested. Command: %08X\n", command);
 	}
 }
 
 void FRDService::attachToEventNotification(u32 messagePointer) {
 	log("FRD::AttachToEventNotification (Undocumented)\n");
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// This is supposed to post stuff on your user profile so uhh can't really emulate it
+void FRDService::updateGameModeDescription(u32 messagePointer) {
+	log("FRD::UpdateGameModeDescription\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1D, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -133,5 +149,21 @@ void FRDService::getMyMii(u32 messagePointer) {
 
 	// TODO: How is the mii data even returned?
 	mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::hasLoggedIn(u32 messagePointer) {
+	log("FRD::HasLoggedIn\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, loggedIn ? 1 : 0);
+}
+
+void FRDService::logout(u32 messagePointer) {
+	log("FRD::Logout\n");
+	loggedIn = false;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

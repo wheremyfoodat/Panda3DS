@@ -5,7 +5,8 @@
 namespace PathType {
 	enum : u32 {
 		RomFS = 0,
-		ExeFS = 2
+		ExeFS = 2,
+		UpdateRomFS = 5,
 	};
 };
 
@@ -33,8 +34,8 @@ FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& pe
 	// Where to read the file from. (https://www.3dbrew.org/wiki/Filesystem_services#SelfNCCH_File_Path_Data_Format)
 	// We currently only know how to read from an NCCH's RomFS, ie type = 0
 	const u32 type = *(u32*)&path.binary[0]; // TODO: Get rid of UB here
-	if (type != PathType::RomFS && type != PathType::ExeFS) {
-		Helpers::panic("Read from NCCH's non-RomFS & non-exeFS section!");
+	if (type != PathType::RomFS && type != PathType::ExeFS && type != PathType::UpdateRomFS) {
+		Helpers::panic("Read from NCCH's non-RomFS & non-exeFS section! Path type: %d", type);
 	}
 
 	return NoFile; // No file descriptor needed for RomFS
@@ -50,8 +51,8 @@ Rust::Result<ArchiveBase*, HorizonResult> SelfNCCHArchive::openArchive(const FSP
 }
 
 std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {
-	const FSPath& path = file->path; // Path of the file
-	const u32 type = *(u32*)&path.binary[0]; // Type of the path
+	const FSPath& path = file->path;          // Path of the file
+	const u32 type = *(u32*)&path.binary[0];  // Type of the path
 
 	if (type == PathType::RomFS && !hasRomFS()) {
 		Helpers::panic("Tried to read file from non-existent RomFS");
@@ -98,8 +99,23 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 			break;
 		}
 
-		default:
-			Helpers::panic("Unimplemented file path type for SelfNCCH archive");
+		// Normally, the update RomFS should overlay the cartridge RomFS when reading from this and an update is installed.
+		// So to support updates, we need to perform this overlaying. For now, read from the cartridge RomFS.
+		case PathType::UpdateRomFS: {
+			Helpers::warn("Reading from update RomFS but updates are currently not supported! Reading from regular RomFS instead\n");
+
+			const u64 romFSSize = cxi->romFS.size;
+			const u64 romFSOffset = cxi->romFS.offset;
+			if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+				Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+			}
+
+			fsInfo = cxi->romFS;
+			offset += 0x1000;
+			break;
+		}
+
+		default: Helpers::panic("Unimplemented file path type for SelfNCCH archive");
 	}
 
 	std::unique_ptr<u8[]> data(new u8[size]);

@@ -5,12 +5,13 @@
 #include <fstream>
 #include <optional>
 #include <vector>
+
+#include "config.hpp"
 #include "crypto/aes_engine.hpp"
-#include "helpers.hpp"
 #include "handles.hpp"
+#include "helpers.hpp"
 #include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
-#include "services/shared_font.hpp"
 
 namespace PhysicalAddrs {
 	enum : u32 {
@@ -111,7 +112,7 @@ class Memory {
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
 	std::array<SharedMemoryBlock, 3> sharedMemBlocks = {
-		SharedMemoryBlock(0, u32(_shared_font_len), KernelHandles::FontSharedMemHandle), // Shared memory for the system font
+		SharedMemoryBlock(0, 0, KernelHandles::FontSharedMemHandle), // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
 		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
 		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
  	};
@@ -154,13 +155,14 @@ private:
 	static constexpr FirmwareInfo firm{.unk = 0, .revision = 0, .minor = 0x34, .major = 2, .syscoreVer = 2, .sdkVer = 0x0000F297};
 	// Adjusted upon loading a ROM based on the ROM header. Used by CFG::SecureInfoGetArea to get past region locks
 	Regions region = Regions::USA;
+	const EmulatorConfig& config;
 
 public:
 	u16 kernelVersion = 0;
 	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
 	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
 
-	Memory(u64& cpuTicks);
+	Memory(u64& cpuTicks, const EmulatorConfig& config);
 	void reset();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
@@ -265,4 +267,5 @@ public:
 	void setVRAM(u8* pointer) { vram = pointer; }
 	bool allocateMainThreadStack(u32 size);
 	Regions getConsoleRegion();
+	void copySharedFont(u8* ptr);
 };

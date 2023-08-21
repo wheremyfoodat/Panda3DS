@@ -106,7 +106,7 @@ void Kernel::rescheduleThreads() {
 }
 
 // Internal OS function to spawn a thread
-Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, s32 id, u32 arg, ThreadStatus status) {
+Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status) {
 	int index; // Index of the created thread in the  threads array
 
 	if (threadCount < appResourceLimits.maxThreads) [[likely]] { // If we have not yet created over too many threads
@@ -397,8 +397,12 @@ void Kernel::createThread() {
 		return;
 	}
 
+	if (id < -2 || id > 3) {
+		Helpers::panic("Invalid processor ID in CreateThread");
+	}
+
 	regs[0] = Result::Success;
-	regs[1] = makeThread(entrypoint, initialSP, priority, id, arg, ThreadStatus::Ready);
+	regs[1] = makeThread(entrypoint, initialSP, priority, static_cast<ProcessorID>(id), arg, ThreadStatus::Ready);
 	requireReschedule();
 }
 
@@ -449,6 +453,15 @@ void Kernel::getThreadPriority() {
 	}
 }
 
+void Kernel::getThreadIdealProcessor() {
+	const Handle handle = regs[1];  // Thread handle
+	logSVC("GetThreadIdealProcessor (handle = %X)\n", handle);
+
+	// TODO: Not documented what this is or what it does. Citra doesn't implement it at all. Return AppCore as the ideal processor for now
+	regs[0] = Result::Success;
+	regs[1] = static_cast<u32>(ProcessorID::AppCore);
+}
+
 void Kernel::setThreadPriority() {
 	const Handle handle = regs[0];
 	const u32 priority = regs[1];
@@ -474,6 +487,33 @@ void Kernel::setThreadPriority() {
 	}
 	sortThreads();
 	requireReschedule();
+}
+
+void Kernel::getCurrentProcessorNumber() {
+	logSVC("GetCurrentProcessorNumber()\n");
+	const ProcessorID id = threads[currentThreadIndex].processorID;
+	s32 ret;
+
+	// Until we properly implement per-core schedulers, return whatever processor ID passed to svcCreateThread
+	switch (id) {
+		// TODO: This is picked from exheader
+		case ProcessorID::Default:
+			ret = static_cast<s32>(ProcessorID::AppCore);
+			break;
+
+		case ProcessorID::AllCPUs:
+			ret = static_cast<s32>(ProcessorID::AppCore);
+			Helpers::warn("GetCurrentProcessorNumber on thread created to run on all CPUs...?\n");
+			break;
+
+		default: ret = static_cast<s32>(id); break;
+	}
+
+	if (ret != static_cast<s32>(ProcessorID::AppCore)) {
+		Helpers::warn("GetCurrentProcessorNumber: Thread not running on appcore\n");
+	}
+
+	regs[0] = static_cast<u32>(ret);
 }
 
 void Kernel::exitThread() {

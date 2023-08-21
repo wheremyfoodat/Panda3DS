@@ -24,8 +24,10 @@
 #include "services/http.hpp"
 #include "services/ir_user.hpp"
 #include "services/ldr_ro.hpp"
+#include "services/mcu/mcu_hwc.hpp"
 #include "services/mic.hpp"
 #include "services/ndm.hpp"
+#include "services/news_u.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
 #include "services/ptm.hpp"
@@ -33,6 +35,7 @@
 #include "services/ssl.hpp"
 #include "services/y2r.hpp"
 
+struct EmulatorConfig;
 // More circular dependencies!!
 class Kernel;
 
@@ -64,13 +67,16 @@ class ServiceManager {
 	LCDService gsp_lcd;
 	LDRService ldr;
 	MICService mic;
+	NDMService ndm;
+	NewsUService news_u;
 	NFCService nfc;
     NIMService nim;
-	NDMService ndm;
 	PTMService ptm;
 	SOCService soc;
 	SSLService ssl;
 	Y2RService y2r;
+
+	MCU::HWCService mcu_hwc;
 
 	// "srv:" commands
 	void enableNotification(u32 messagePointer);
@@ -80,7 +86,7 @@ class ServiceManager {
 	void subscribe(u32 messagePointer);
 
   public:
-	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel);
+	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config);
 	void reset();
 	void initializeFS() { fs.initializeFilesystem(); }
 	void handleSyncRequest(u32 messagePointer);

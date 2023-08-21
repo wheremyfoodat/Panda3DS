@@ -27,20 +27,18 @@ void PTMService::handleSyncRequest(u32 messagePointer) {
 
 void PTMService::getAdapterState(u32 messagePointer) {
 	log("PTM::GetAdapterState\n");
-	constexpr bool adapterConnected = true; // Pretend the 3DS is charging cause why not
 
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, adapterConnected ? 1 : 0);
+	mem.write8(messagePointer + 8, config.chargerPlugged ? 1 : 0);
 }
 
 void PTMService::getBatteryLevel(u32 messagePointer) {
 	log("PTM::GetBatteryLevel");
-	constexpr u8 batteryPercent = 3; // 3% battery so users can suffer
 
 	mem.write32(messagePointer, IPC::responseHeader(0x7, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, batteryPercentToLevel(batteryPercent));
+	mem.write8(messagePointer + 8, batteryPercentToLevel(config.batteryPercentage));
 }
 
 void PTMService::getStepHistory(u32 messagePointer) {
