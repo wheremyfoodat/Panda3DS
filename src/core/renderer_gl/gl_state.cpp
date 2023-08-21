@@ -10,6 +10,15 @@ void GLStateManager::resetBlend() {
 	OpenGL::setLogicOp(GL_COPY);
 }
 
+void GLStateManager::resetClearing() {
+	clearRed = 0.f;
+	clearBlue = 0.f;
+	clearGreen = 0.f;
+	clearAlpha = 1.f;
+
+	OpenGL::setClearColor(clearRed, clearBlue, clearGreen, clearAlpha);
+}
+
 void GLStateManager::resetClipping() {
 	// Disable all (supported) clip planes
 	enabledClipPlanes = 0;
@@ -64,6 +73,7 @@ void GLStateManager::resetProgram() {
 
 void GLStateManager::reset() {
 	resetBlend();
+	resetClearing();
 	resetClipping();
 	resetColourMask();
 	resetDepth();

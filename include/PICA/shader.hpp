@@ -159,6 +159,7 @@ class PICAShader {
 	void mul(u32 instruction);
 	void rcp(u32 instruction);
 	void rsq(u32 instruction);
+	void sge(u32 instruction);
 	void sgei(u32 instruction);
 	void slt(u32 instruction);
 	void slti(u32 instruction);

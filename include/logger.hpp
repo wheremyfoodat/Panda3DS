@@ -48,12 +48,15 @@ namespace Log {
 	static Logger<false> gspGPULogger;
 	static Logger<false> gspLCDLogger;
 	static Logger<false> ldrLogger;
+	static Logger<false> mcuLogger;
 	static Logger<false> micLogger;
+	static Logger<false> newsLogger;
 	static Logger<false> nfcLogger;
 	static Logger<false> nimLogger;
 	static Logger<false> ndmLogger;
 	static Logger<false> ptmLogger;
 	static Logger<false> socLogger;
+	static Logger<false> sslLogger;
 	static Logger<false> y2rLogger;
 	static Logger<false> srvLogger;
 

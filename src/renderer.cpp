@@ -3,7 +3,8 @@
 #include <algorithm>
 #include <unordered_map>
 
-Renderer::Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs) : gpu(gpu), regs(internalRegs) {}
+Renderer::Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+	: gpu(gpu), regs(internalRegs), externalRegs(externalRegs) {}
 Renderer::~Renderer() {}
 
 std::optional<RendererType> Renderer::typeFromString(std::string inString) {

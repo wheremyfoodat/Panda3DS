@@ -37,8 +37,8 @@ class RendererGL final : public Renderer {
 	float oldDepthOffset = 0.0;
 	bool oldDepthmapEnable = false;
 
-	SurfaceCache<DepthBuffer, 10, true> depthBufferCache;
-	SurfaceCache<ColourBuffer, 10, true> colourBufferCache;
+	SurfaceCache<DepthBuffer, 16, true> depthBufferCache;
+	SurfaceCache<ColourBuffer, 16, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
 
 	// Dummy VAO/VBO for blitting the final output
@@ -48,6 +48,7 @@ class RendererGL final : public Renderer {
 	OpenGL::Texture screenTexture;
 	GLuint lightLUTTextureArray;
 	OpenGL::Framebuffer screenFramebuffer;
+	OpenGL::Texture blankTexture;
 
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
@@ -60,7 +61,8 @@ class RendererGL final : public Renderer {
 	void updateLightingLUT();
 
   public:
-	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs) : Renderer(gpu, internalRegs) {}
+	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+		: Renderer(gpu, internalRegs, externalRegs) {}
 	~RendererGL() override;
 
 	void reset() override;
@@ -68,7 +70,10 @@ class RendererGL final : public Renderer {
 	void initGraphicsContext(SDL_Window* window) override;                                // Initialize graphics context
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
+	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
+
+	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Take a screenshot of the screen and store it in a file
 	void screenshot(const std::string& name) override;

@@ -19,23 +19,26 @@ namespace KernelHandles {
 		CECD, // More Streetpass stuff?
 		CFG_U,  // CFG service (Console & region info)
 		CFG_I,
-		DLP_SRVR, // Download Play: Server. Used for network play.
-		DSP,  // DSP service (Used for audio decoding and output)
-		HID,  // HID service (Handles input-related things including gyro. Does NOT handle New3DS controls or CirclePadPro)
-		HTTP, // HTTP service (Handles HTTP requests)
-		IR_USER, // One of 3 infrared communication services
-        FRD,  // Friend service (Miiverse friend service)
-		FS,   // Filesystem service
-		GPU,  // GPU service
-		LCD,  // LCD service (Used for configuring the displays)
-		LDR_RO, // Loader service. Used for loading CROs.
-		MIC,  // MIC service (Controls the microphone)
-		NFC,  // NFC (Duh), used for Amiibo
-		NIM,  // Updates, DLC, etc
-		NDM,  // ?????
-		PTM,  // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
-		SOC,  // Socket service
-		Y2R,  // Also does camera stuff
+		DLP_SRVR,  // Download Play: Server. Used for network play.
+		DSP,       // DSP service (Used for audio decoding and output)
+		HID,       // HID service (Handles input-related things including gyro. Does NOT handle New3DS controls or CirclePadPro)
+		HTTP,      // HTTP service (Handles HTTP requests)
+		IR_USER,   // One of 3 infrared communication services
+		FRD,       // Friend service (Miiverse friend service)
+		FS,        // Filesystem service
+		GPU,       // GPU service
+		LCD,       // LCD service (Used for configuring the displays)
+		LDR_RO,    // Loader service. Used for loading CROs.
+		MCU_HWC,   // Used for various MCU hardware-related things like battery control
+		MIC,       // MIC service (Controls the microphone)
+		NFC,       // NFC (Duh), used for Amiibo
+		NIM,       // Updates, DLC, etc
+		NDM,       // ?????
+		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
+		PTM,       // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
+		SOC,       // Socket service
+		SSL,       // SSL service (Totally didn't expect that)
+		Y2R,       // Also does camera stuff
 
 		MinServiceHandle = AC,
 		MaxServiceHandle = Y2R,
@@ -80,12 +83,15 @@ namespace KernelHandles {
 			case GPU: return "GSP::GPU";
 			case LCD: return "GSP::LCD";
 			case LDR_RO: return "LDR:RO";
+			case MCU_HWC: return "MCU::HWC";
 			case MIC: return "MIC";
 			case NDM: return "NDM";
+			case NEWS_U: return "NEWS_U";
 			case NFC: return "NFC";
 			case NIM: return "NIM";
 			case PTM: return "PTM";
 			case SOC: return "SOC";
+			case SSL: return "SSL";
 			case Y2R: return "Y2R";
 			default: return "Unknown";
 		}

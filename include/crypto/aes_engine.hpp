@@ -105,6 +105,7 @@ namespace Crypto {
 		AESEngine() {}
 		void loadKeys(const std::filesystem::path& path);
 		bool haveKeys() { return keysLoaded; }
+		bool haveGenerator() { return m_generator.has_value(); }
 
 		constexpr bool hasKeyX(std::size_t slotId) {
 			if (slotId >= AesKeySlotCount) {

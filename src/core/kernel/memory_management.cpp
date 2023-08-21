@@ -1,5 +1,4 @@
 #include "kernel.hpp"
-#include "services/shared_font.hpp"
 
 namespace Operation {
 	enum : u32 {
@@ -137,7 +136,7 @@ void Kernel::mapMemoryBlock() {
 				break;
 
 			case KernelHandles::FontSharedMemHandle:
-				std::memcpy(ptr, _shared_font_bin, _shared_font_len);
+				mem.copySharedFont(ptr);
 				break;
 
 			default: Helpers::panic("Mapping unknown shared memory block: %X", block);

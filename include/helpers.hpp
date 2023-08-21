@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "termcolor.hpp"
 
@@ -30,6 +31,17 @@ using s32 = std::int32_t;
 using s64 = std::int64_t;
 
 namespace Helpers {
+	template <class... Args>
+	std::string format(const std::string& fmt, Args&&... args) {
+		const int size = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1;
+		if (size <= 0) {
+			return {};
+		}
+		const auto buf = std::make_unique<char[]>(size);
+		std::snprintf(buf.get(), size, fmt.c_str(), args ...);
+		return std::string(buf.get(), buf.get() + size - 1);
+	}
+
 	// Unconditional panic, unlike panicDev which does not panic on user builds
 	template <class... Args>
 	[[noreturn]] static void panic(const char* fmt, Args&&... args) {

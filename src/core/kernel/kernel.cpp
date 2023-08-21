@@ -3,8 +3,8 @@
 #include "kernel_types.hpp"
 #include "cpu.hpp"
 
-Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu)
-	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this) {
+Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config)
+	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
 	mutexHandles.reserve(8);
 	portHandles.reserve(32);
@@ -35,6 +35,8 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x0A: svcSleepThread(); break;
 		case 0x0B: getThreadPriority(); break;
 		case 0x0C: setThreadPriority(); break;
+		case 0x0F: getThreadIdealProcessor(); break;
+		case 0x11: getCurrentProcessorNumber(); break;
 		case 0x13: svcCreateMutex(); break;
 		case 0x14: svcReleaseMutex(); break;
 		case 0x15: svcCreateSemaphore(); break;
@@ -42,6 +44,10 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x17: svcCreateEvent(); break;
 		case 0x18: svcSignalEvent(); break;
 		case 0x19: svcClearEvent(); break;
+		case 0x1A: svcCreateTimer(); break;
+		case 0x1B: svcSetTimer(); break;
+		case 0x1C: svcCancelTimer(); break;
+		case 0x1D: svcClearTimer(); break;
 		case 0x1E: createMemoryBlock(); break;
 		case 0x1F: mapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
@@ -154,7 +160,7 @@ void Kernel::reset() {
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30. TODO: This creates a dummy context for thread 0,
 	// which is thankfully not used. Maybe we should prevent this
-	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, -2, 0, ThreadStatus::Running);
+	mainThread = makeThread(0, VirtualAddrs::StackTop, 0x30, ProcessorID::Default, 0, ThreadStatus::Running);
 	currentThreadIndex = 0;
 	setupIdleThread();
 

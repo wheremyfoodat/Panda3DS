@@ -63,5 +63,7 @@ std::optional<u32> Memory::loadELF(std::ifstream& file) {
         allocateMemory(vaddr, fcramAddr, memorySize, true, r, w, x);
     }
 
+    // ELF can't specify a region, make it default to USA
+    region = Regions::USA;
     return static_cast<u32>(reader.get_entry());
 }

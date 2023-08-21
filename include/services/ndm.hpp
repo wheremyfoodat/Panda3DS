@@ -11,6 +11,7 @@ class NDMService {
 	MAKE_LOG_FUNCTION(log, ndmLogger)
 
 	// Service commands
+	void clearHalfAwakeMacFilter(u32 messagePointer);
 	void overrideDefaultDaemons(u32 messagePointer);
 	void resumeDaemons(u32 messagePointer);
 	void resumeScheduler(u32 messagePointer);

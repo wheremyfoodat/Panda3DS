@@ -33,4 +33,4 @@
 	url = https://github.com/g-truc/glm
 [submodule "third_party/discord-rpc"]
 	path = third_party/discord-rpc
-	url = https://github.com/discord/discord-rpc
+	url = https://github.com/Panda3DS-emu/discord-rpc

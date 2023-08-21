@@ -19,14 +19,17 @@ HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 
 		// If the size is 0, leave the file empty and return success
 		if (size == 0) {
+			file.close();
 			return Result::Success;
 		}
 
 		// If it is not empty, seek to size - 1 and write a 0 to create a file of size "size"
 		else if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
+			file.close();
 			return Result::Success;
 		}
 
+		file.close();
 		return Result::FS::FileTooLarge;
 	}
 
