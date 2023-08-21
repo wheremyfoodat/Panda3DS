@@ -106,7 +106,7 @@ void NFCService::startCommunication(u32 messagePointer) {
 	log("NFC::StartCommunication\n");
 	// TODO: Actually start communication when we emulate amiibo
 
-	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 0));
+	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
