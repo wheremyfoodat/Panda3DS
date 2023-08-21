@@ -184,8 +184,8 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
 cmrc_add_resource_library(
 	resources_console_fonts
 	NAMESPACE ConsoleFonts
-	WHENCE "src/core/services/"
-	"src/core/services/CitraSharedFontUSRelocated.bin"
+	WHENCE "src/core/services/fonts/"
+	"src/core/services/fonts/CitraSharedFontUSRelocated.bin"
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
