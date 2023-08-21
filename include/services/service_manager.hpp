@@ -27,6 +27,7 @@
 #include "services/mcu/mcu_hwc.hpp"
 #include "services/mic.hpp"
 #include "services/ndm.hpp"
+#include "services/news_u.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
 #include "services/ptm.hpp"
@@ -66,9 +67,10 @@ class ServiceManager {
 	LCDService gsp_lcd;
 	LDRService ldr;
 	MICService mic;
+	NDMService ndm;
+	NewsUService news_u;
 	NFCService nfc;
     NIMService nim;
-	NDMService ndm;
 	PTMService ptm;
 	SOCService soc;
 	SSLService ssl;

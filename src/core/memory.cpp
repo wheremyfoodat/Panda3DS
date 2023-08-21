@@ -2,11 +2,14 @@
 
 #include <cassert>
 #include <chrono>  // For time since epoch
+#include <cmrc/cmrc.hpp>
 #include <ctime>
 
 #include "config_mem.hpp"
 #include "resource_limits.hpp"
 #include "services/ptm.hpp"
+
+CMRC_DECLARE(ConsoleFonts);
 
 using namespace KernelMemoryTypes;
 
@@ -46,6 +49,12 @@ void Memory::reset() {
 
 	// Initialize shared memory blocks and reserve memory for them
 	for (auto& e : sharedMemBlocks) {
+		if (e.handle == KernelHandles::FontSharedMemHandle) {
+			// Read font size from the cmrc filesystem the font is stored in
+			auto fonts = cmrc::ConsoleFonts::get_filesystem();
+			e.size = fonts.open("CitraSharedFontUSRelocated.bin").size();
+		}
+
 		e.mapped = false;
 		e.paddr = allocateSysMemory(e.size);
 	}
@@ -498,4 +507,10 @@ Regions Memory::getConsoleRegion() {
 	// TODO: Let the user force the console region as they want
 	// For now we pick one based on the ROM header
 	return region;
+}
+
+void Memory::copySharedFont(u8* pointer) {
+	auto fonts = cmrc::ConsoleFonts::get_filesystem();
+	auto font = fonts.open("CitraSharedFontUSRelocated.bin");
+	std::memcpy(pointer, font.begin(), font.size());
 }
