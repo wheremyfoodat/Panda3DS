@@ -4,6 +4,7 @@
 #include "math_util.hpp"
 #include "renderer.hpp"
 #include "vk_api.hpp"
+#include "vk_descriptor_heap.hpp"
 
 class GPU;
 
@@ -88,6 +89,7 @@ class RendererVK final : public Renderer {
 	vk::RenderPass getRenderPass(vk::Format colorFormat, std::optional<vk::Format> depthFormat);
 	vk::RenderPass getRenderPass(PICA::ColorFmt colorFormat, std::optional<PICA::DepthFmt> depthFormat);
 
+	std::unique_ptr<Vulkan::DescriptorHeap> displayDescriptorHeap;
 	vk::UniquePipeline displayPipeline;
 	vk::UniquePipelineLayout displayPipelineLayout;
 

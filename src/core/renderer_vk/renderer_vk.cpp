@@ -1093,6 +1093,17 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		}
 	}
 
+	static vk::DescriptorSetLayoutBinding displayShaderLayout[] = {
+		{// Just a singular texture slot
+		 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment},
+	};
+
+	if (auto createResult = Vulkan::DescriptorHeap::create(device.get(), displayShaderLayout); createResult.has_value()) {
+		displayDescriptorHeap = std::make_unique<Vulkan::DescriptorHeap>(std::move(createResult.value()));
+	} else {
+		Helpers::panic("Error creating descriptor heap\n");
+	}
+
 	auto vk_resources = cmrc::RendererVK::get_filesystem();
 	auto displayVertexShader = vk_resources.open("vulkan_display.vert.spv");
 	auto displayFragmentShader = vk_resources.open("vulkan_display.frag.spv");
@@ -1103,7 +1114,8 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	vk::RenderPass screenTextureRenderPass = getRenderPass(screenTextureInfo.format, {});
 
 	std::tie(displayPipeline, displayPipelineLayout) = createGraphicsPipeline(
-		device.get(), {}, {}, displayVertexShaderModule.get(), displayFragmentShaderModule.get(), {}, {}, screenTextureRenderPass
+		device.get(), {}, {{displayDescriptorHeap.get()->getDescriptorSetLayout()}}, displayVertexShaderModule.get(),
+		displayFragmentShaderModule.get(), {}, {}, screenTextureRenderPass
 	);
 }
 
