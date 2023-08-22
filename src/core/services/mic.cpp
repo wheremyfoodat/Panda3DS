@@ -1,11 +1,15 @@
 #include "services/mic.hpp"
 #include "ipc.hpp"
+#include "kernel/kernel.hpp"
 
 namespace MICCommands {
 	enum : u32 {
 		MapSharedMem = 0x00010042,
+		UnmapSharedMem = 0x00020000,
 		StartSampling = 0x00030140,
 		StopSampling = 0x00050000,
+		IsSampling = 0x00060000,
+		GetEventHandle = 0x00070000,
 		SetGain = 0x00080040,
 		GetGain = 0x00090000,
 		SetPower = 0x000A0040,
@@ -18,14 +22,18 @@ namespace MICCommands {
 void MICService::reset() {
 	micEnabled = false;
 	shouldClamp = false;
-	isSampling = false;
+	currentlySampling = false;
 	gain = 0;
+
+	eventHandle = std::nullopt;
 }
 
 void MICService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case MICCommands::GetEventHandle: getEventHandle(messagePointer); break;
 		case MICCommands::GetGain: getGain(messagePointer); break;
+		case MICCommands::IsSampling: isSampling(messagePointer); break;
 		case MICCommands::MapSharedMem: mapSharedMem(messagePointer); break;
 		case MICCommands::SetClamp: setClamp(messagePointer); break;
 		case MICCommands::SetGain: setGain(messagePointer); break;
@@ -33,6 +41,7 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 		case MICCommands::SetPower: setPower(messagePointer); break;
 		case MICCommands::StartSampling: startSampling(messagePointer); break;
 		case MICCommands::StopSampling: stopSampling(messagePointer); break;
+		case MICCommands::UnmapSharedMem: unmapSharedMem(messagePointer); break;
 		case MICCommands::CaptainToadFunction: theCaptainToadFunction(messagePointer); break;
 		default: Helpers::panic("MIC service requested. Command: %08X\n", command);
 	}
@@ -45,6 +54,27 @@ void MICService::mapSharedMem(u32 messagePointer) {
 	log("MIC::MapSharedMem (size = %08X, handle = %X) (stubbed)\n", size, handle);
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::unmapSharedMem(u32 messagePointer) {
+	log("MIC::UnmapSharedMem (stubbed)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::getEventHandle(u32 messagePointer) {
+	log("MIC::GetEventHandle\n");
+	Helpers::warn("Acquire MIC event handle");
+
+	if (!eventHandle.has_value()) {
+		eventHandle = kernel.makeEvent(ResetType::OneShot);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x7, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	// TODO: Translation descriptor
+	mem.write32(messagePointer + 12, eventHandle.value());
 }
 
 void MICService::getGain(u32 messagePointer) {
@@ -91,17 +121,25 @@ void MICService::startSampling(u32 messagePointer) {
 		encoding, sampleRate, offset, dataSize, loop ? "yes" : "no"
 	);
 
-	isSampling = true;
+	currentlySampling = true;
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void MICService::stopSampling(u32 messagePointer) {
 	log("MIC::StopSampling\n");
-	isSampling = false;
+	currentlySampling = false;
 	
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::isSampling(u32 messagePointer) {
+	log("MIC::IsSampling");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x6, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, currentlySampling ? 1 : 0);
 }
 
 void MICService::setIirFilter(u32 messagePointer) {
