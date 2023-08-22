@@ -436,7 +436,7 @@ void GPUService::processCommandList(u32* cmd) {
 	[[maybe_unused]] const bool flushBuffer = cmd[7] == 1; // Flush buffer (0 = don't flush, 1 = flush)
 
 	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
-	gpu.startCommandList(address, size);
+	gpu.startCommandList(VaddrToPaddr(address), size);
 	requestInterrupt(GPUInterrupt::P3D); // Send an IRQ when command list processing is over
 }
 
