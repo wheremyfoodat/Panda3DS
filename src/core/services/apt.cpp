@@ -76,6 +76,9 @@ Applets::AppletBase* APTService::getApplet(u32 id) {
 		case AppletIDs::MiiSelector:
 		case AppletIDs::MiiSelector2: return &miiSelector;
 
+		case AppletIDs::SoftwareKeyboard:
+		case AppletIDs::SoftwareKeyboard2: return &swkbd;
+
 		default: return nullptr;
 	}
 }
@@ -256,6 +259,17 @@ void APTService::sendParameter(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+
+	if (sourceAppID != Applets::AppletIDs::Application) {
+		Helpers::warn("APT::SendParameter: Unimplemented source applet ID");
+	}
+
+	Applets::AppletBase* destApplet = getApplet(destAppID);
+	if (destApplet == nullptr) {
+		Helpers::warn("APT::SendParameter: Unimplemented dest applet ID");
+	} else {
+		auto result = destApplet->receiveParameter();
+	}
 
 	kernel.signalEvent(resumeEvent.value());
 }

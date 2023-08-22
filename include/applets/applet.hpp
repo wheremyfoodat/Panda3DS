@@ -47,8 +47,12 @@ namespace Applets {
 		Memory& mem;
 
 	  public:
+		virtual const char* name() = 0;
+
 		// Called by APT::StartLibraryApplet and similar
 		virtual Result::HorizonResult start() = 0;
+		// Transfer parameters from application -> applet
+		virtual Result::HorizonResult receiveParameter() = 0;
 		virtual void reset() = 0;
 
 		AppletBase(Memory& mem) : mem(mem) {}

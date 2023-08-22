@@ -7,6 +7,7 @@
 #include "result/result.hpp"
 
 #include "applets/mii_selector.hpp"
+#include "applets/software_keyboard.hpp"
 
 // Yay, more circular dependencies
 class Kernel;
@@ -28,6 +29,7 @@ class APTService {
 
 	// Applets here
 	Applets::MiiSelectorApplet miiSelector;
+	Applets::SoftwareKeyboardApplet swkbd;
 	Applets::AppletBase* getApplet(u32 id);
 
 	MAKE_LOG_FUNCTION(log, aptLogger)
@@ -78,7 +80,7 @@ class APTService {
 	u32 screencapPostPermission;
 
 public:
-	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel), miiSelector(mem) {}
+	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel), miiSelector(mem), swkbd(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };
