@@ -707,27 +707,29 @@ void RendererVK::display() {
 		getCurrentCommandBuffer().pipelineBarrier(
 			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
 			{
+				// swapchainImage: Undefined -> TransferDst
 				vk::ImageMemoryBarrier(
 					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
 					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
 					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
+				// screenTexture: ColorAttachmentOptimal -> TransferSrc
 				vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eTransferDstOptimal,
+					vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eColorAttachmentOptimal,
 					vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
 					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
 			}
 		);
 
+		// Clear swapchain image with black
 		static const std::array<float, 4> clearColor = {{0.0f, 0.0f, 0.0f, 1.0f}};
 		getCurrentCommandBuffer().clearColorImage(
 			swapchainImages[swapchainImageIndex], vk::ImageLayout::eTransferDstOptimal, clearColor,
 			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 		);
 
-		// Blit top/bottom screen into swapchain image
-
+		// Blit screentexture into swapchain image
 		static const vk::ImageBlit screenBlit(
 			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240 * 2, 1}},
 			vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), {vk::Offset3D{}, vk::Offset3D{400, 240 * 2, 1}}
@@ -738,13 +740,23 @@ void RendererVK::display() {
 		);
 
 		// Prepare swapchain image for present
+		// Transfer screenTexture back into ColorAttachmentOptimal
 		getCurrentCommandBuffer().pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
-			{vk::ImageMemoryBarrier(
-				vk::AccessFlagBits::eNone, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
-				vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
-				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-			)}
+			{
+				// swapchainImage: TransferDst -> Preset (wait for all writes)
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
+					vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+				// screenTexture: TransferSrc -> ColorAttachmentOptimal (wait for all reads)
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eTransferRead, vk::AccessFlagBits::eColorAttachmentRead, vk::ImageLayout::eTransferSrcOptimal,
+					vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					screenTexture[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+			}
 		);
 	}
 
