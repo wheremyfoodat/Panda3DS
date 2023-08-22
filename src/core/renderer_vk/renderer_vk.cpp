@@ -309,6 +309,16 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 		Helpers::panic("Error creating color render-texture: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
+	// Initial layout transition
+	getCurrentCommandBuffer().pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags{}, {}, {},
+		{vk::ImageMemoryBarrier(
+			vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eColorAttachmentRead, vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, newTexture.image.get(),
+			viewInfo.subresourceRange
+		)}
+	);
+
 	return newTexture;
 }
 
@@ -352,8 +362,12 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	viewInfo.viewType = vk::ImageViewType::e2D;
 	viewInfo.format = textureInfo.format;
 	viewInfo.components = vk::ComponentMapping();
-	//viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
+	// viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
 	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1);
+
+	if (PICA::hasStencil(format)) {
+		viewInfo.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+	}
 
 	if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, {&newTexture.image.get(), 1});
 		result == vk::Result::eSuccess) {
@@ -367,6 +381,16 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	} else {
 		Helpers::panic("Error creating depth render-texture: %s\n", vk::to_string(createResult.result).c_str());
 	}
+
+	// Initial layout transition
+	getCurrentCommandBuffer().pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags{}, {}, {},
+		{vk::ImageMemoryBarrier(
+			vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eDepthStencilAttachmentRead, vk::ImageLayout::eUndefined,
+			vk::ImageLayout::eDepthStencilAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, newTexture.image.get(),
+			viewInfo.subresourceRange
+		)}
+	);
 
 	return newTexture;
 }
