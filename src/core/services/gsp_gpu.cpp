@@ -464,7 +464,7 @@ void GPUService::triggerTextureCopy(u32* cmd) {
 // Used when transitioning from the app to an OS applet, such as software keyboard, mii maker, mii selector, etc
 // Stubbed until we decide to support LLE applets
 void GPUService::saveVramSysArea(u32 messagePointer) {
-	Helpers::warn("GSP::GPU::SaveVramSysArea (stubbed)\n");
+	Helpers::warn("GSP::GPU::SaveVramSysArea (stubbed)");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x19, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -472,7 +472,7 @@ void GPUService::saveVramSysArea(u32 messagePointer) {
 
 // Used in similar fashion to the SaveVramSysArea function
 void GPUService::importDisplayCaptureInfo(u32 messagePointer) {
-	Helpers::warn("GSP::GPU::ImportDisplayCaptureInfo (stubbed)\n");
+	Helpers::warn("GSP::GPU::ImportDisplayCaptureInfo (stubbed)");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x18, 9, 0));
 	mem.write32(messagePointer + 4, Result::Success);

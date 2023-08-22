@@ -48,12 +48,12 @@ class APTService {
 	void isRegistered(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);
 	void preloadLibraryApplet(u32 messagePointer);
+	void prepareToStartLibraryApplet(u32 messagePointer);
 	void receiveParameter(u32 messagePointer);
 	void replySleepQuery(u32 messagePointer);
 	void setApplicationCpuTimeLimit(u32 messagePointer);
 	void setScreencapPostPermission(u32 messagePointer);
 	void sendParameter(u32 messagePointer);
-	void prepareToStartLibraryApplet(u32 messagePointer);
 	void startLibraryApplet(u32 messagePointer);
 	void theSmashBrosFunction(u32 messagePointer);
 

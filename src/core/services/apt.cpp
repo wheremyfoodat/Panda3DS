@@ -16,6 +16,7 @@ namespace APTCommands {
 		ReceiveParameter = 0x000D0080,
 		GlanceParameter = 0x000E0080,
 		PreloadLibraryApplet = 0x00160040,
+		PrepareToStartLibraryApplet = 0x00180040,
 		StartLibraryApplet = 0x001E0084,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
@@ -97,6 +98,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::GlanceParameter: glanceParameter(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::PreloadLibraryApplet: preloadLibraryApplet(messagePointer); break;
+		case APTCommands::PrepareToStartLibraryApplet: prepareToStartLibraryApplet(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
@@ -150,7 +152,7 @@ void APTService::getAppletInfo(u32 messagePointer) {
 
 void APTService::isRegistered(u32 messagePointer) {
 	const u32 appID = mem.read32(messagePointer + 4);
-	Helpers::warn("APT::IsRegistered (appID = %X)\n", appID);
+	Helpers::warn("APT::IsRegistered (appID = %X)", appID);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x09, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -160,6 +162,14 @@ void APTService::isRegistered(u32 messagePointer) {
 void APTService::preloadLibraryApplet(u32 messagePointer) {
 	const u32 appID = mem.read32(messagePointer + 4);
 	log("APT::PreloadLibraryApplet (app ID = %X) (stubbed)\n", appID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::prepareToStartLibraryApplet(u32 messagePointer) {
+	const u32 appID = mem.read32(messagePointer + 4);
+	log("APT::PrepareToStartLibraryApplet (app ID = %X) (stubbed)\n", appID);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -247,7 +257,7 @@ void APTService::sendParameter(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 
-	kernel.signalEvent(notificationEvent.value());
+	kernel.signalEvent(resumeEvent.value());
 }
 
 void APTService::receiveParameter(u32 messagePointer) {
