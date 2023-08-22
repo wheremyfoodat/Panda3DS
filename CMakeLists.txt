@@ -35,7 +35,7 @@ option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
-option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
+option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
