@@ -278,7 +278,7 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 	textureInfo.setTiling(vk::ImageTiling::eOptimal);
 	textureInfo.setUsage(
 		vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
-		vk::ImageUsageFlagBits::eTransferDst
+		vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled
 	);
 	textureInfo.setSharingMode(vk::SharingMode::eExclusive);
 	textureInfo.setInitialLayout(vk::ImageLayout::eUndefined);
@@ -352,7 +352,8 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	viewInfo.viewType = vk::ImageViewType::e2D;
 	viewInfo.format = textureInfo.format;
 	viewInfo.components = vk::ComponentMapping();
-	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
+	//viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
+	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1);
 
 	if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, {&newTexture.image.get(), 1});
 		result == vk::Result::eSuccess) {
