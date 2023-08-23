@@ -6,6 +6,8 @@
 #include "memory.hpp"
 #include "result/result.hpp"
 
+#include "applets/applet_manager.hpp"
+
 // Yay, more circular dependencies
 class Kernel;
 
@@ -23,6 +25,7 @@ class APTService {
 	std::optional<Handle> resumeEvent = std::nullopt;
 
 	ConsoleModel model = ConsoleModel::Old3DS;
+	Applets::AppletManager appletManager;
 
 	MAKE_LOG_FUNCTION(log, aptLogger)
 
@@ -33,17 +36,22 @@ class APTService {
 	void checkNew3DS(u32 messagePointer);
 	void checkNew3DSApp(u32 messagePointer);
 	void enable(u32 messagePointer);
+	void getAppletInfo(u32 messagePointer);
 	void getSharedFont(u32 messagePointer);
 	void getWirelessRebootInfo(u32 messagePointer);
 	void glanceParameter(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void inquireNotification(u32 messagePointer);
+	void isRegistered(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);
 	void preloadLibraryApplet(u32 messagePointer);
+	void prepareToStartLibraryApplet(u32 messagePointer);
 	void receiveParameter(u32 messagePointer);
 	void replySleepQuery(u32 messagePointer);
 	void setApplicationCpuTimeLimit(u32 messagePointer);
 	void setScreencapPostPermission(u32 messagePointer);
+	void sendParameter(u32 messagePointer);
+	void startLibraryApplet(u32 messagePointer);
 	void theSmashBrosFunction(u32 messagePointer);
 
 	// Percentage of the syscore available to the application, between 5% and 89%
@@ -67,7 +75,7 @@ class APTService {
 	u32 screencapPostPermission;
 
 public:
-	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
+	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel), appletManager(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };

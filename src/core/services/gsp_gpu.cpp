@@ -15,6 +15,8 @@ namespace ServiceCommands {
 		FlushDataCache = 0x00080082,
 		SetLCDForceBlack = 0x000B0040,
 		TriggerCmdReqQueue = 0x000C0000,
+		ImportDisplayCaptureInfo = 0x00180000,
+		SaveVramSysArea = 0x00190000,
 		SetInternalPriorities = 0x001E0080,
 		StoreDataCache = 0x001F0082
 	};
@@ -42,15 +44,17 @@ void GPUService::reset() {
 void GPUService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case ServiceCommands::TriggerCmdReqQueue: [[likely]] triggerCmdReqQueue(messagePointer); break;
 		case ServiceCommands::AcquireRight: acquireRight(messagePointer); break;
 		case ServiceCommands::FlushDataCache: flushDataCache(messagePointer); break;
+		case ServiceCommands::ImportDisplayCaptureInfo: importDisplayCaptureInfo(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
+		case ServiceCommands::SaveVramSysArea: saveVramSysArea(messagePointer); break;
 		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
 		case ServiceCommands::SetBufferSwap: setBufferSwap(messagePointer); break;
 		case ServiceCommands::SetInternalPriorities: setInternalPriorities(messagePointer); break;
 		case ServiceCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
 		case ServiceCommands::StoreDataCache: storeDataCache(messagePointer); break;
-		case ServiceCommands::TriggerCmdReqQueue: [[likely]] triggerCmdReqQueue(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
 		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
@@ -455,4 +459,21 @@ void GPUService::triggerTextureCopy(u32* cmd) {
 	// This uses the transfer engine and thus needs to fire a PPF interrupt.
 	// NSMB2 relies on this
 	requestInterrupt(GPUInterrupt::PPF);
+}
+
+// Used when transitioning from the app to an OS applet, such as software keyboard, mii maker, mii selector, etc
+// Stubbed until we decide to support LLE applets
+void GPUService::saveVramSysArea(u32 messagePointer) {
+	Helpers::warn("GSP::GPU::SaveVramSysArea (stubbed)");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x19, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// Used in similar fashion to the SaveVramSysArea function
+void GPUService::importDisplayCaptureInfo(u32 messagePointer) {
+	Helpers::warn("GSP::GPU::ImportDisplayCaptureInfo (stubbed)");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x18, 9, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }

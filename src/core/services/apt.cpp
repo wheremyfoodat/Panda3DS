@@ -9,10 +9,15 @@ namespace APTCommands {
 		GetLockHandle = 0x00010040,
 		Initialize = 0x00020080,
 		Enable = 0x00030040,
+		GetAppletInfo = 0x00060040,
+		IsRegistered = 0x00090040,
 		InquireNotification = 0x000B0040,
+		SendParameter = 0x000C0104,
 		ReceiveParameter = 0x000D0080,
 		GlanceParameter = 0x000E0080,
 		PreloadLibraryApplet = 0x00160040,
+		PrepareToStartLibraryApplet = 0x00180040,
+		StartLibraryApplet = 0x001E0084,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		GetSharedFont = 0x00440000,
@@ -60,6 +65,8 @@ void APTService::reset() {
 	lockHandle = std::nullopt;
 	notificationEvent = std::nullopt;
 	resumeEvent = std::nullopt;
+
+	appletManager.reset();
 }
 
 void APTService::handleSyncRequest(u32 messagePointer) {
@@ -69,22 +76,26 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::CheckNew3DS: checkNew3DS(messagePointer); break;
 		case APTCommands::CheckNew3DSApp: checkNew3DSApp(messagePointer); break;
 		case APTCommands::Enable: enable(messagePointer); break;
+		case APTCommands::GetAppletInfo: getAppletInfo(messagePointer); break;
 		case APTCommands::GetSharedFont: getSharedFont(messagePointer); break;
 		case APTCommands::Initialize: initialize(messagePointer); break;
 		case APTCommands::InquireNotification: [[likely]] inquireNotification(messagePointer); break;
+		case APTCommands::IsRegistered: isRegistered(messagePointer); break;
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::GetWirelessRebootInfo: getWirelessRebootInfo(messagePointer); break;
 		case APTCommands::GlanceParameter: glanceParameter(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::PreloadLibraryApplet: preloadLibraryApplet(messagePointer); break;
+		case APTCommands::PrepareToStartLibraryApplet: prepareToStartLibraryApplet(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
+		case APTCommands::SendParameter: sendParameter(messagePointer); break;
 		case APTCommands::SetScreencapPostPermission: setScreencapPostPermission(messagePointer); break;
 		case APTCommands::TheSmashBrosFunction: theSmashBrosFunction(messagePointer); break;
 		default:
-			Helpers::panicDev("APT service requested. Command: %08X\n", command);
+			Helpers::panic("APT service requested. Command: %08X\n", command);
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 	}
@@ -116,9 +127,38 @@ void APTService::appletUtility(u32 messagePointer) {
 	}
 }
 
+void APTService::getAppletInfo(u32 messagePointer) {
+	const u32 appID = mem.read32(messagePointer + 4);
+	Helpers::warn("APT::GetAppletInfo (appID = %X)\n", appID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x06, 7, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	mem.write8(messagePointer + 20, 1); // 1 = registered
+	mem.write8(messagePointer + 24, 1); // 1 = loaded
+	// TODO: The rest of this
+}
+
+void APTService::isRegistered(u32 messagePointer) {
+	const u32 appID = mem.read32(messagePointer + 4);
+	Helpers::warn("APT::IsRegistered (appID = %X)", appID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x09, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 1); // Return that the app is always registered. This might break with home menu?
+}
+
 void APTService::preloadLibraryApplet(u32 messagePointer) {
 	const u32 appID = mem.read32(messagePointer + 4);
-	log("APT::PreloadLibraryApplet (app ID = %d) (stubbed)\n", appID);
+	log("APT::PreloadLibraryApplet (app ID = %X) (stubbed)\n", appID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::prepareToStartLibraryApplet(u32 messagePointer) {
+	const u32 appID = mem.read32(messagePointer + 4);
+	log("APT::PrepareToStartLibraryApplet (app ID = %X) (stubbed)\n", appID);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -191,6 +231,35 @@ void APTService::notifyToWait(u32 messagePointer) {
 	log("APT::NotifyToWait\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x43, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::sendParameter(u32 messagePointer) {
+	const u32 sourceAppID = mem.read32(messagePointer + 4);
+	const u32 destAppID = mem.read32(messagePointer + 8);
+	const u32 cmd = mem.read32(messagePointer + 12);
+	const u32 paramSize = mem.read32(messagePointer + 16);
+
+	const u32 parameterHandle = mem.read32(messagePointer + 24); // What dis?
+	const u32 parameterPointer = mem.read32(messagePointer + 32);
+	log("APT::SendParameter (source app = %X, dest app = %X, cmd = %X, size = %X) (Stubbed)", sourceAppID, destAppID, cmd, paramSize);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	if (sourceAppID != Applets::AppletIDs::Application) {
+		Helpers::warn("APT::SendParameter: Unimplemented source applet ID");
+	}
+
+	Applets::AppletBase* destApplet = appletManager.getApplet(destAppID);
+	if (destApplet == nullptr) {
+		Helpers::warn("APT::SendParameter: Unimplemented dest applet ID");
+	} else {
+		auto result = destApplet->receiveParameter();
+	}
+
+	if (resumeEvent.has_value()) {
+		kernel.signalEvent(resumeEvent.value());
+	}
 }
 
 void APTService::receiveParameter(u32 messagePointer) {
