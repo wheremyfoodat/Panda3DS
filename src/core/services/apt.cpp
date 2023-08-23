@@ -257,7 +257,9 @@ void APTService::sendParameter(u32 messagePointer) {
 		auto result = destApplet->receiveParameter();
 	}
 
-	kernel.signalEvent(resumeEvent.value());
+	if (resumeEvent.has_value()) {
+		kernel.signalEvent(resumeEvent.value());
+	}
 }
 
 void APTService::receiveParameter(u32 messagePointer) {
