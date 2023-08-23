@@ -6,6 +6,6 @@ void MiiSelectorApplet::reset() {}
 Result::HorizonResult MiiSelectorApplet::start() { return Result::Success; }
 
 Result::HorizonResult MiiSelectorApplet::receiveParameter() {
-	Helpers::panic("Mii Selector received parameter");
+	Helpers::warn("Mii Selector: Unimplemented ReceiveParameter");
 	return Result::Success;
 }

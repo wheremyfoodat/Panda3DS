@@ -6,6 +6,6 @@ void SoftwareKeyboardApplet::reset() {}
 Result::HorizonResult SoftwareKeyboardApplet::start() { return Result::Success; }
 
 Result::HorizonResult SoftwareKeyboardApplet::receiveParameter() {
-	Helpers::panic("Software keyboard received parameter");
+	Helpers::warn("Software keyboard: Unimplemented ReceiveParameter");
 	return Result::Success;
 }
