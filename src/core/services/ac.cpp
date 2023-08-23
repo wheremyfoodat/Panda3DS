@@ -75,7 +75,7 @@ void ACService::isConnected(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x3E, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, connected ? 1 : 0);  // Hopefully this means no error?
+	mem.write8(messagePointer + 8, connected ? 1 : 0);
 }
 
 void ACService::setClientVersion(u32 messagePointer) {
