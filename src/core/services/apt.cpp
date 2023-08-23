@@ -66,21 +66,7 @@ void APTService::reset() {
 	notificationEvent = std::nullopt;
 	resumeEvent = std::nullopt;
 
-	miiSelector.reset();
-}
-
-Applets::AppletBase* APTService::getApplet(u32 id) {
-	using namespace Applets;
-
-	switch (id) {
-		case AppletIDs::MiiSelector:
-		case AppletIDs::MiiSelector2: return &miiSelector;
-
-		case AppletIDs::SoftwareKeyboard:
-		case AppletIDs::SoftwareKeyboard2: return &swkbd;
-
-		default: return nullptr;
-	}
+	appletManager.reset();
 }
 
 void APTService::handleSyncRequest(u32 messagePointer) {
@@ -264,7 +250,7 @@ void APTService::sendParameter(u32 messagePointer) {
 		Helpers::warn("APT::SendParameter: Unimplemented source applet ID");
 	}
 
-	Applets::AppletBase* destApplet = getApplet(destAppID);
+	Applets::AppletBase* destApplet = appletManager.getApplet(destAppID);
 	if (destApplet == nullptr) {
 		Helpers::warn("APT::SendParameter: Unimplemented dest applet ID");
 	} else {
