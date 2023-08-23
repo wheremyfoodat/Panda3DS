@@ -43,6 +43,34 @@ namespace Applets {
 		};
 	}
 
+	enum class APTSignal : u32 {
+		None = 0x0,
+		Wakeup = 0x1,
+		Request = 0x2,
+		Response = 0x3,
+		Exit = 0x4,
+		Message = 0x5,
+		HomeButtonSingle = 0x6,
+		HomeButtonDouble = 0x7,
+		DspSleep = 0x8,
+		DspWakeup = 0x9,
+		WakeupByExit = 0xA,
+		WakeupByPause = 0xB,
+		WakeupByCancel = 0xC,
+		WakeupByCancelAll = 0xD,
+		WakeupByPowerButtonClick = 0xE,
+		WakeupToJumpHome = 0xF,
+		RequestForSysApplet = 0x10,
+		WakeupToLaunchApplication = 0x11,
+	};
+
+	struct Parameter {
+		u32 senderID;
+		u32 destID;
+		APTSignal signal;
+		std::vector<u8> data;
+	};
+
 	class AppletBase {
 		Memory& mem;
 
