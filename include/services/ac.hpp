@@ -1,4 +1,6 @@
 #pragma once
+#include <optional>
+
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -15,10 +17,14 @@ class ACService {
 	void closeAsync(u32 messagePointer);
 	void createDefaultConfig(u32 messagePointer);
 	void getLastErrorCode(u32 messagePointer);
+	void isConnected(u32 messagePointer);
 	void registerDisconnectEvent(u32 messagePointer);
 	void setClientVersion(u32 messagePointer);
 
-public:
+	bool connected = false;
+	std::optional<Handle> disconnectEvent = std::nullopt;
+
+  public:
 	ACService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
