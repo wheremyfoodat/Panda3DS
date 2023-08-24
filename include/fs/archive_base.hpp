@@ -25,17 +25,22 @@ namespace PathType {
 }
 
 namespace ArchiveID {
-    enum : u32 {
-        SelfNCCH = 3,
-        SaveData = 4,
-        ExtSaveData = 6,
-        SharedExtSaveData = 7,
-        SystemSaveData = 8,
-        SDMC = 9,
-        SDMCWriteOnly = 0xA,
+	enum : u32 {
+		SelfNCCH = 3,
+		SaveData = 4,
+		ExtSaveData = 6,
+		SharedExtSaveData = 7,
+		SystemSaveData = 8,
+		SDMC = 9,
+		SDMCWriteOnly = 0xA,
 
-        SavedataAndNcch = 0x2345678A
-    };
+		SavedataAndNcch = 0x2345678A,
+		// 3DBrew: This is the same as the regular SaveData archive, except with this the savedata ID and mediatype is loaded from the input archive
+		// lowpath.
+		UserSaveData1 = 0x567890B2,
+		// 3DBrew: Similar to 0x567890B2 but can only access Accessible Save specified in exheader?
+		UserSaveData2 = 0x567890B4,
+	};
 
     static std::string toString(u32 id) {
         switch (id) {
