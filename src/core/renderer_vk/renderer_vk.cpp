@@ -140,8 +140,8 @@ std::tuple<vk::UniquePipeline, vk::UniquePipelineLayout> createGraphicsPipeline(
 
 	vk::PipelineDepthStencilStateCreateInfo depthStencilState = {};
 
-	depthStencilState.depthTestEnable = true;
-	depthStencilState.depthWriteEnable = true;
+	depthStencilState.depthTestEnable = false;
+	depthStencilState.depthWriteEnable = false;
 	depthStencilState.depthCompareOp = vk::CompareOp::eLessOrEqual;
 	depthStencilState.depthBoundsTestEnable = false;
 	depthStencilState.stencilTestEnable = false;
@@ -715,8 +715,8 @@ void RendererVK::display() {
 				vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {bottomDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
 			);
 			getCurrentCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics, displayPipeline.get());
-			getCurrentCommandBuffer().setViewport(0, vk::Viewport(40, 0, 320, 240));
-			getCurrentCommandBuffer().setScissor(0, vk::Rect2D({40, 0}, {320, 240}));
+			getCurrentCommandBuffer().setViewport(0, vk::Viewport(40, 240, 320, 240));
+			getCurrentCommandBuffer().setScissor(0, vk::Rect2D({40, 240}, {320, 240}));
 			getCurrentCommandBuffer().draw(3, 1, 0, 0);
 		}
 
