@@ -686,38 +686,51 @@ void RendererVK::display() {
 
 		getCurrentCommandBuffer().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-		// Render top screen
-		if (const Texture* topScreen = findRenderTexture(topScreenAddr); topScreen) {
-			static const std::array<float, 4> scopeColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
-			Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), scopeColor, "Top Screen: %08x", topScreenAddr);
+		const Texture* topScreen = findRenderTexture(topScreenAddr);
+		const Texture* bottomScreen = findRenderTexture(bottomScreenAddr);
 
-			descriptorUpdateBatch->addImageSampler(
-				topDisplayPipelineDescriptorSet[frameBufferingIndex], 0, topScreen->imageView.get(), samplerCache->getSampler(sampler2D())
-			);
-			getCurrentCommandBuffer().bindDescriptorSets(
-				vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {topDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
-			);
+		if (topScreen || bottomScreen) {
 			getCurrentCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics, displayPipeline.get());
-			getCurrentCommandBuffer().setViewport(0, vk::Viewport(0, 0, 400, 240));
-			getCurrentCommandBuffer().setScissor(0, vk::Rect2D({0, 0}, {400, 240}));
-			getCurrentCommandBuffer().draw(3, 1, 0, 0);
-		}
 
-		// Render bottom screen
-		if (const Texture* bottomScreen = findRenderTexture(bottomScreenAddr); bottomScreen) {
-			static const std::array<float, 4> scopeColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
-			Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), scopeColor, "Bottom Screen: %08x", bottomScreenAddr);
+			// Update descriptors before binding to the command buffer
+			if (topScreen) {
+				descriptorUpdateBatch->addImageSampler(
+					topDisplayPipelineDescriptorSet[frameBufferingIndex], 0, topScreen->imageView.get(), samplerCache->getSampler(sampler2D())
+				);
+			}
 
-			descriptorUpdateBatch->addImageSampler(
-				bottomDisplayPipelineDescriptorSet[frameBufferingIndex], 0, bottomScreen->imageView.get(), samplerCache->getSampler(sampler2D())
-			);
-			getCurrentCommandBuffer().bindDescriptorSets(
-				vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {bottomDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
-			);
-			getCurrentCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics, displayPipeline.get());
-			getCurrentCommandBuffer().setViewport(0, vk::Viewport(40, 240, 320, 240));
-			getCurrentCommandBuffer().setScissor(0, vk::Rect2D({40, 240}, {320, 240}));
-			getCurrentCommandBuffer().draw(3, 1, 0, 0);
+			if (bottomScreen) {
+				descriptorUpdateBatch->addImageSampler(
+					bottomDisplayPipelineDescriptorSet[frameBufferingIndex], 0, bottomScreen->imageView.get(), samplerCache->getSampler(sampler2D())
+				);
+			}
+			descriptorUpdateBatch->flush();
+
+			// Render top screen
+			if (topScreen) {
+				static const std::array<float, 4> scopeColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
+				Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), scopeColor, "Top Screen: %08x", topScreenAddr);
+
+				getCurrentCommandBuffer().bindDescriptorSets(
+					vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {topDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
+				);
+				getCurrentCommandBuffer().setViewport(0, vk::Viewport(0, 0, 400, 240));
+				getCurrentCommandBuffer().setScissor(0, vk::Rect2D({0, 0}, {400, 240}));
+				getCurrentCommandBuffer().draw(3, 1, 0, 0);
+			}
+
+			// Render bottom screen
+			if (bottomScreen) {
+				static const std::array<float, 4> scopeColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
+				Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), scopeColor, "Bottom Screen: %08x", bottomScreenAddr);
+				getCurrentCommandBuffer().bindDescriptorSets(
+					vk::PipelineBindPoint::eGraphics, displayPipelineLayout.get(), 0, {bottomDisplayPipelineDescriptorSet[frameBufferingIndex]}, {}
+				);
+				getCurrentCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics, displayPipeline.get());
+				getCurrentCommandBuffer().setViewport(0, vk::Viewport(40, 240, 320, 240));
+				getCurrentCommandBuffer().setScissor(0, vk::Rect2D({40, 240}, {320, 240}));
+				getCurrentCommandBuffer().draw(3, 1, 0, 0);
+			}
 		}
 
 		getCurrentCommandBuffer().endRenderPass();
@@ -788,9 +801,6 @@ void RendererVK::display() {
 	if (const vk::Result endResult = getCurrentCommandBuffer().end(); endResult != vk::Result::eSuccess) {
 		Helpers::panic("Error ending command buffer recording: %s\n", vk::to_string(endResult).c_str());
 	}
-
-	// Flush all descriptor writes
-	descriptorUpdateBatch->flush();
 
 	vk::SubmitInfo submitInfo = {};
 	// Wait for any previous uses of the image image to finish presenting
