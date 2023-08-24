@@ -19,6 +19,7 @@ namespace FRDCommands {
 		GetMyMii = 0x000A0000,
 		GetFriendKeyList = 0x00110080,
 		GetFriendPresence = 0x00120042,
+		GetFriendProfile = 0x00150042,
 		GetFriendAttributeFlags = 0x00170042,
 		UpdateGameModeDescription = 0x001D0002,
 	};
@@ -33,6 +34,7 @@ void FRDService::handleSyncRequest(u32 messagePointer) {
 		case FRDCommands::GetFriendAttributeFlags: getFriendAttributeFlags(messagePointer); break;
 		case FRDCommands::GetFriendKeyList: getFriendKeyList(messagePointer); break;
 		case FRDCommands::GetFriendPresence: getFriendPresence(messagePointer); break;
+		case FRDCommands::GetFriendProfile: getFriendProfile(messagePointer); break;
 		case FRDCommands::GetMyFriendKey: getMyFriendKey(messagePointer); break;
 		case FRDCommands::GetMyMii: getMyMii(messagePointer); break;
 		case FRDCommands::GetMyPresence: getMyPresence(messagePointer); break;
@@ -87,6 +89,41 @@ void FRDService::getFriendKeyList(u32 messagePointer) {
 	}
 }
 
+void FRDService::getFriendProfile(u32 messagePointer) {
+	log("FRD::GetFriendProfile\n");
+
+	const u32 count = mem.read32(messagePointer + 4);
+	const u32 friendKeyList = mem.read32(messagePointer + 12);  // Pointer to list of friend keys
+	const u32 profile = mem.read32(messagePointer + 0x104);     // Pointer to friend profile where we'll write info to
+
+	mem.write32(messagePointer, IPC::responseHeader(0x15, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	// Clear all profiles
+	for (u32 i = 0; i < count; i++) {
+		const u32 pointer = profile + (i * sizeof(Profile));
+		for (u32 j = 0; j < sizeof(Profile); j++) {
+			mem.write8(pointer + j, 0);
+		}
+	}
+}
+
+void FRDService::getFriendAttributeFlags(u32 messagePointer) {
+	log("FRD::GetFriendAttributeFlags\n");
+
+	const u32 count = mem.read32(messagePointer + 4);
+	const u32 friendKeyList = mem.read32(messagePointer + 12);  // Pointer to list of friend keys
+	const u32 profile = mem.read32(messagePointer + 0x104);     // Pointer to friend profile where we'll write info to
+
+	mem.write32(messagePointer, IPC::responseHeader(0x17, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	// Clear flags
+	for (u32 i = 0; i < count; i++) {
+		mem.write8(profile + i, 0);
+	}
+}
+
 void FRDService::getMyPresence(u32 messagePointer) {
 	static constexpr u32 presenceSize = 0x12C; // A presence seems to be 12C bytes of data, not sure what it contains
 	log("FRD::GetMyPresence\n");
@@ -98,21 +135,6 @@ void FRDService::getMyPresence(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-}
-
-void FRDService::getFriendAttributeFlags(u32 messagePointer) {
-	log("FRD::GetFriendAttributeFlags\n");
-	const u32 count = mem.read32(messagePointer + 4);
-	const u32 buffer = mem.read32(messagePointer + 0x104);  // Buffer to write flag info to.
-
-
-	// Clear all flags. Assume one flag == 1 byte (u8) for now.
-	for (u32 i = 0; i < count; i++) {
-		const u32 pointer = buffer + (i * sizeof(u8));
-		for (u32 j = 0; j < sizeof(u8); j++) {
-			mem.write8(pointer + j, 0);
-		}
-	}
 }
 
 void FRDService::getFriendPresence(u32 messagePointer) {
