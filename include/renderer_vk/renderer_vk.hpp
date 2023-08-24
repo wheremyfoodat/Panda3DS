@@ -76,9 +76,6 @@ class RendererVK final : public Renderer {
 	// Hash(loc, size, format) -> Texture
 	std::map<u64, Texture> textureCache;
 
-	static u32 colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format);
-	static u32 depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format);
-
 	Texture* findColorRenderTexture(u32 addr);
 	Texture& getColorRenderTexture(u32 addr, PICA::ColorFmt format, u32 width, u32 height);
 	Texture& getDepthRenderTexture(u32 addr, PICA::DepthFmt format, u32 width, u32 height);

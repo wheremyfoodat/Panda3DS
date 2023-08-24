@@ -224,30 +224,29 @@ static s32 findQueueFamily(
 static u32 rotl32(u32 x, u32 n) { return (x << n) | (x >> (32 - n)); }
 static u32 ror32(u32 x, u32 n) { return (x >> n) | (x << (32 - n)); }
 
-u32 RendererVK::colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format) {
-	return loc | (static_cast<u64>(ror32(size, 23) ^ (static_cast<u32>(format))) << 32);
+// Lower 32 bits is the format + size, upper 32-bits is the address
+static u64 colorBufferHash(u32 loc, u32 size, PICA::ColorFmt format) {
+	return (static_cast<u64>(loc) << 32) | (ror32(size, 23) ^ static_cast<u32>(format));
 }
-u32 RendererVK::depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format) {
-	return loc | (static_cast<u64>(ror32(size, 29) ^ (static_cast<u32>(format))) << 32);
+static u64 depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format) {
+	return (static_cast<u64>(loc) << 32) | (ror32(size, 29) ^ static_cast<u32>(format));
 }
 
 RendererVK::Texture* RendererVK::findColorRenderTexture(u32 addr) {
-	const auto lower = textureCache.lower_bound(addr);
+	// Find first render-texture hash that is >= to addr
+	auto match = textureCache.lower_bound(static_cast<u64>(addr) << 32);
 
-	if (lower == textureCache.end()) {
+	if (match == textureCache.end()) {
 		// Not found
 		return nullptr;
 	}
 
-	if (lower == textureCache.begin()) {
-		return &lower->second;
-	}
-
-	Texture* texture = &lower->second;
+	Texture* texture = &match->second;
 
 	const usize sizeInBytes = texture->size[0] * texture->size[1] * texture->sizePerPixel;
 
-	if ((addr - lower->second.loc) <= sizeInBytes) {
+	// Ensure this address is within the span of the texture
+	if ((addr - match->second.loc) <= sizeInBytes) {
 		return texture;
 	}
 
@@ -672,7 +671,7 @@ void RendererVK::display() {
 	const u32 bottomScreenAddr =
 		externalRegs[bottomActiveFb ? PICA::ExternalRegs::Framebuffer1AFirstAddr : PICA::ExternalRegs::Framebuffer1ASecondAddr];
 
-	//// Render Frame(Simulated - just clear the images to different colors for now)
+	//// Render Display
 	{
 		static const std::array<float, 4> renderScreenScopeColor = {{1.0f, 0.0f, 1.0f, 1.0f}};
 
@@ -688,7 +687,7 @@ void RendererVK::display() {
 		getCurrentCommandBuffer().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
 		// Render top screen
-		if (Texture* topScreen = findColorRenderTexture(topScreenAddr); topScreen) {
+		if (const Texture* topScreen = findColorRenderTexture(topScreenAddr); topScreen) {
 			descriptorUpdateBatch->addImageSampler(
 				topDisplayPipelineDescriptorSet[frameBufferingIndex], 0, topScreen->imageView.get(), samplerCache->getSampler(sampler2D())
 			);
@@ -702,7 +701,7 @@ void RendererVK::display() {
 		}
 
 		// Render bottom screen
-		if (Texture* bottomScreen = findColorRenderTexture(bottomScreenAddr); bottomScreen) {
+		if (const Texture* bottomScreen = findColorRenderTexture(bottomScreenAddr); bottomScreen) {
 			descriptorUpdateBatch->addImageSampler(
 				bottomDisplayPipelineDescriptorSet[frameBufferingIndex], 0, bottomScreen->imageView.get(), samplerCache->getSampler(sampler2D())
 			);
