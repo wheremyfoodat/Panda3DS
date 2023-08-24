@@ -232,7 +232,7 @@ static u64 depthBufferHash(u32 loc, u32 size, PICA::DepthFmt format) {
 	return (static_cast<u64>(loc) << 32) | (ror32(size, 29) ^ static_cast<u32>(format));
 }
 
-RendererVK::Texture* RendererVK::findColorRenderTexture(u32 addr) {
+RendererVK::Texture* RendererVK::findRenderTexture(u32 addr) {
 	// Find first render-texture hash that is >= to addr
 	auto match = textureCache.lower_bound(static_cast<u64>(addr) << 32);
 
@@ -687,7 +687,10 @@ void RendererVK::display() {
 		getCurrentCommandBuffer().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
 		// Render top screen
-		if (const Texture* topScreen = findColorRenderTexture(topScreenAddr); topScreen) {
+		if (const Texture* topScreen = findRenderTexture(topScreenAddr); topScreen) {
+			static const std::array<float, 4> scopeColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
+			Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), scopeColor, "Top Screen: %08x", topScreenAddr);
+
 			descriptorUpdateBatch->addImageSampler(
 				topDisplayPipelineDescriptorSet[frameBufferingIndex], 0, topScreen->imageView.get(), samplerCache->getSampler(sampler2D())
 			);
@@ -701,7 +704,10 @@ void RendererVK::display() {
 		}
 
 		// Render bottom screen
-		if (const Texture* bottomScreen = findColorRenderTexture(bottomScreenAddr); bottomScreen) {
+		if (const Texture* bottomScreen = findRenderTexture(bottomScreenAddr); bottomScreen) {
+			static const std::array<float, 4> scopeColor = {{0.0f, 1.0f, 0.0f, 1.0f}};
+			Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), scopeColor, "Bottom Screen: %08x", bottomScreenAddr);
+
 			descriptorUpdateBatch->addImageSampler(
 				bottomDisplayPipelineDescriptorSet[frameBufferingIndex], 0, bottomScreen->imageView.get(), samplerCache->getSampler(sampler2D())
 			);
@@ -719,7 +725,7 @@ void RendererVK::display() {
 
 	//// Present
 	if (swapchainImageIndex != swapchainImageInvalid) {
-		static const std::array<float, 4> presentScopeColor = {{1.0f, 1.0f, 0.0f, 1.0f}};
+		static const std::array<float, 4> presentScopeColor = {{1.0f, 1.0f, 1.0f, 1.0f}};
 		Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), presentScopeColor, "Present");
 
 		// Prepare swapchain image for color-clear/blit-dst, prepare top/bottom screen for blit-src
@@ -1304,7 +1310,59 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	);
 }
 
-void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {}
+void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
+	const Texture* renderTexture = findRenderTexture(startAddress);
+
+	if (!renderTexture) {
+		// not found
+		return;
+	}
+
+	// Color-Clear
+	{
+		vk::ClearColorValue clearColor = {};
+
+		clearColor.float32[0] = Helpers::getBits<24, 8>(value) / 255.0f;  // r
+		clearColor.float32[1] = Helpers::getBits<16, 8>(value) / 255.0f;  // g
+		clearColor.float32[2] = Helpers::getBits<8, 8>(value) / 255.0f;   // b
+		clearColor.float32[3] = Helpers::getBits<0, 8>(value) / 255.0f;   // a
+
+		Vulkan::DebugLabelScope scope(
+			getCurrentCommandBuffer(), clearColor.float32, "ClearBuffer start:%08X end:%08X value:%08X control:%08X\n", startAddress, endAddress,
+			value, control
+		);
+
+		getCurrentCommandBuffer().pipelineBarrier(
+			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+			{
+				// renderTexture: ShaderReadOnlyOptimal -> TransferDst
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eShaderReadOnlyOptimal,
+					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, renderTexture->image.get(),
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+			}
+		);
+
+		// Clear RenderTarget
+		getCurrentCommandBuffer().clearColorImage(
+			renderTexture->image.get(), vk::ImageLayout::eTransferDstOptimal, clearColor,
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+		);
+
+		getCurrentCommandBuffer().pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {},
+			{
+				// renderTexture: TransferDst -> eShaderReadOnlyOptimal
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal,
+					vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, renderTexture->image.get(),
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+			}
+		);
+	}
+}
 
 // NOTE: The GPU format has RGB5551 and RGB655 swapped compared to internal regs format
 static PICA::ColorFmt ToColorFmt(u32 format) {
@@ -1457,7 +1515,10 @@ void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Ver
 
 	const vk::CommandBuffer& commandBuffer = getCurrentCommandBuffer();
 
+	// Todo: Rather than starting a new renderpass for each draw, do some state-tracking to re-use render-passes
 	commandBuffer.beginRenderPass(renderBeginInfo, vk::SubpassContents::eInline);
+	static const std::array<float, 4> labelColor = {{1.0f, 0.0f, 0.0f, 1.0f}};
+	Vulkan::insertDebugLabel(commandBuffer, labelColor, "DrawVertices: %u vertices", vertices.size());
 	commandBuffer.endRenderPass();
 }
 
