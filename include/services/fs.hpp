@@ -4,6 +4,7 @@
 #include "fs/archive_save_data.hpp"
 #include "fs/archive_sdmc.hpp"
 #include "fs/archive_self_ncch.hpp"
+#include "fs/archive_user_save_data.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -25,6 +26,10 @@ class FSService {
 	SaveDataArchive saveData;
 	SDMCArchive sdmc;
 	NCCHArchive ncch;
+
+	// UserSaveData archives
+	UserSaveDataArchive userSaveData1;
+	UserSaveDataArchive userSaveData2;
 
 	ExtSaveDataArchive extSaveData_sdmc;
 	ExtSaveDataArchive sharedExtSaveData_nand;
@@ -62,10 +67,9 @@ class FSService {
 	u32 priority;
 
 public:
-	FSService(Memory& mem, Kernel& kernel) : mem(mem), saveData(mem),
-		sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"),
-		sdmc(mem), selfNcch(mem), ncch(mem), kernel(kernel)
-	{}
+	FSService(Memory& mem, Kernel& kernel)
+		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem), selfNcch(mem),
+		  ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1), userSaveData2(mem, ArchiveID::UserSaveData2), kernel(kernel) {}
 
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

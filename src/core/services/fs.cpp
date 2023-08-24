@@ -70,6 +70,8 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 	switch (id) {
 		case ArchiveID::SelfNCCH: return &selfNcch;
 		case ArchiveID::SaveData: return &saveData;
+		case ArchiveID::UserSaveData2: return &userSaveData2;
+
 		case ArchiveID::ExtSaveData:
 			return &extSaveData_sdmc;
 
