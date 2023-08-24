@@ -95,7 +95,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::SetScreencapPostPermission: setScreencapPostPermission(messagePointer); break;
 		case APTCommands::TheSmashBrosFunction: theSmashBrosFunction(messagePointer); break;
 		default:
-			Helpers::panic("APT service requested. Command: %08X\n", command);
+			Helpers::panicDev("APT service requested. Command: %08X\n", command);
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 	}
