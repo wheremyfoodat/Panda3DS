@@ -289,6 +289,10 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 		Helpers::panic("Error creating color render-texture image: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
+	Vulkan::setObjectName(
+		device.get(), newTexture.image.get(), "TextureCache:%08x %ux%u %s", addr, width, height, vk::to_string(textureInfo.format).c_str()
+	);
+
 	vk::ImageViewCreateInfo viewInfo = {};
 	viewInfo.image = newTexture.image.get();
 	viewInfo.viewType = vk::ImageViewType::e2D;
@@ -313,9 +317,8 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 	getCurrentCommandBuffer().pipelineBarrier(
 		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags{}, {}, {},
 		{vk::ImageMemoryBarrier(
-			vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eColorAttachmentRead, vk::ImageLayout::eUndefined,
-			vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, newTexture.image.get(),
-			viewInfo.subresourceRange
+			vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eShaderReadOnlyOptimal,
+			VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, newTexture.image.get(), viewInfo.subresourceRange
 		)}
 	);
 
@@ -357,6 +360,10 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 		Helpers::panic("Error creating depth render-texture image: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
+	Vulkan::setObjectName(
+		device.get(), newTexture.image.get(), "TextureCache:%08x %ux%u %s", addr, width, height, vk::to_string(textureInfo.format).c_str()
+	);
+
 	vk::ImageViewCreateInfo viewInfo = {};
 	viewInfo.image = newTexture.image.get();
 	viewInfo.viewType = vk::ImageViewType::e2D;
@@ -386,9 +393,8 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	getCurrentCommandBuffer().pipelineBarrier(
 		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags{}, {}, {},
 		{vk::ImageMemoryBarrier(
-			vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eDepthStencilAttachmentRead, vk::ImageLayout::eUndefined,
-			vk::ImageLayout::eDepthStencilAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, newTexture.image.get(),
-			viewInfo.subresourceRange
+			vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eUndefined, vk::ImageLayout::eShaderReadOnlyOptimal,
+			VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, newTexture.image.get(), viewInfo.subresourceRange
 		)}
 	);
 
@@ -420,8 +426,8 @@ vk::RenderPass RendererVK::getRenderPass(vk::Format colorFormat, std::optional<v
 	colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
 	colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eLoad;
 	colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eStore;
-	colorAttachment.initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
-	colorAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+	colorAttachment.initialLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+	colorAttachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 	renderPassAttachments.emplace_back(colorAttachment);
 
 	if (depthFormat.has_value()) {
@@ -432,8 +438,8 @@ vk::RenderPass RendererVK::getRenderPass(vk::Format colorFormat, std::optional<v
 		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
 		depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eLoad;
 		depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eStore;
-		depthAttachment.initialLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-		depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+		depthAttachment.initialLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		depthAttachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		renderPassAttachments.emplace_back(depthAttachment);
 	}
 
@@ -671,17 +677,6 @@ void RendererVK::display() {
 		static const std::array<float, 4> renderScreenScopeColor = {{1.0f, 0.0f, 1.0f, 1.0f}};
 
 		Vulkan::DebugLabelScope debugScope(getCurrentCommandBuffer(), renderScreenScopeColor, "Render Screen");
-		// Prepare screen texture for rendering into
-		getCurrentCommandBuffer().pipelineBarrier(
-			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
-			{
-				vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					screenTexture[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
-				),
-			}
-		);
 
 		vk::RenderPassBeginInfo renderPassBeginInfo = {};
 		renderPassBeginInfo.renderPass = getRenderPass(vk::Format::eR8G8B8A8Unorm, {});
@@ -738,9 +733,9 @@ void RendererVK::display() {
 					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
 					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
-				// screenTexture: ColorAttachmentOptimal -> TransferSrc
+				// screenTexture: ShaderReadOnlyOptimal -> TransferSrc
 				vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eColorAttachmentOptimal,
+					vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eShaderReadOnlyOptimal,
 					vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[frameBufferingIndex].get(),
 					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
@@ -767,7 +762,7 @@ void RendererVK::display() {
 		// Prepare swapchain image for present
 		// Transfer screenTexture back into ColorAttachmentOptimal
 		getCurrentCommandBuffer().pipelineBarrier(
-			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
+			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {},
 			{
 				// swapchainImage: TransferDst -> Preset (wait for all writes)
 				vk::ImageMemoryBarrier(
@@ -775,10 +770,10 @@ void RendererVK::display() {
 					vk::ImageLayout::ePresentSrcKHR, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, swapchainImages[swapchainImageIndex],
 					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
-				// screenTexture: TransferSrc -> ColorAttachmentOptimal (wait for all reads)
+				// screenTexture: TransferSrc -> eShaderReadOnlyOptimal (wait for all reads)
 				vk::ImageMemoryBarrier(
-					vk::AccessFlagBits::eTransferRead, vk::AccessFlagBits::eColorAttachmentRead, vk::ImageLayout::eTransferSrcOptimal,
-					vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					vk::AccessFlagBits::eTransferRead, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferSrcOptimal,
+					vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 					screenTexture[frameBufferingIndex].get(), vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 				),
 			}
@@ -1197,6 +1192,8 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 		if (auto createResult = device->createImageUnique(screenTextureInfo); createResult.result == vk::Result::eSuccess) {
 			screenTexture[i] = std::move(createResult.value);
+
+			Vulkan::setObjectName(device.get(), screenTexture[i].get(), "screenTexture#%zu", i);
 		} else {
 			Helpers::panic("Error creating top-screen image: %s\n", vk::to_string(createResult.result).c_str());
 		}
@@ -1215,7 +1212,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		}
 	}
 
-	// Memory is bounded, create views and framebuffer for screentexture
+	// Memory is bounded, create views, framebuffer, and layout transitions for screentexture
 	vk::ImageViewCreateInfo screenTextureViewCreateInfo = {};
 	screenTextureViewCreateInfo.viewType = vk::ImageViewType::e2D;
 	screenTextureViewCreateInfo.format = vk::Format::eR8G8B8A8Unorm;
@@ -1233,6 +1230,16 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		} else {
 			Helpers::panic("Error creating screen texture view: %s\n", vk::to_string(createResult.result).c_str());
 		}
+
+		// Initial layout transition
+		getCurrentCommandBuffer().pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags{}, {}, {},
+			{vk::ImageMemoryBarrier(
+				vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eUndefined,
+				vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, screenTexture[i].get(),
+				screenTextureViewCreateInfo.subresourceRange
+			)}
+		);
 
 		vk::FramebufferCreateInfo framebufferInfo = {};
 		framebufferInfo.setRenderPass(getRenderPass(vk::Format::eR8G8B8A8Unorm, {}));
@@ -1363,12 +1370,12 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 		vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
 		{
 			vk::ImageMemoryBarrier(
-				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eColorAttachmentOptimal,
+				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::eShaderReadOnlyOptimal,
 				vk::ImageLayout::eTransferSrcOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, srcFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
 			vk::ImageMemoryBarrier(
-				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eColorAttachmentOptimal,
+				vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eShaderReadOnlyOptimal,
 				vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, destFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
@@ -1381,16 +1388,16 @@ void RendererVK::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	);
 
 	blitCommandBuffer.pipelineBarrier(
-		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {},
+		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {},
 		{
 			vk::ImageMemoryBarrier(
 				vk::AccessFlagBits::eTransferRead, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferSrcOptimal,
-				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, srcFramebuffer.image.get(),
+				vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, srcFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
 			vk::ImageMemoryBarrier(
 				vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eColorAttachmentWrite, vk::ImageLayout::eTransferDstOptimal,
-				vk::ImageLayout::eColorAttachmentOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, destFramebuffer.image.get(),
+				vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, destFramebuffer.image.get(),
 				vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
 			),
 		}
