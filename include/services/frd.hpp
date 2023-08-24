@@ -25,6 +25,7 @@ class FRDService {
 	void attachToEventNotification(u32 messagePointer);
 	void getFriendAttributeFlags(u32 messagePointer);
 	void getFriendKeyList(u32 messagePointer);
+	void getFriendPresence(u32 messagePointer);
 	void getFriendProfile(u32 messagePointer);
 	void getMyFriendKey(u32 messagePointer);
 	void getMyMii(u32 messagePointer);

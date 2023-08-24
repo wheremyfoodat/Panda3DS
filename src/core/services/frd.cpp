@@ -18,6 +18,7 @@ namespace FRDCommands {
 		GetMyScreenName = 0x00090000,
 		GetMyMii = 0x000A0000,
 		GetFriendKeyList = 0x00110080,
+		GetFriendPresence = 0x00120042,
 		GetFriendProfile = 0x00150042,
 		GetFriendAttributeFlags = 0x00170042,
 		UpdateGameModeDescription = 0x001D0002,
@@ -32,6 +33,7 @@ void FRDService::handleSyncRequest(u32 messagePointer) {
 		case FRDCommands::AttachToEventNotification: attachToEventNotification(messagePointer); break;
 		case FRDCommands::GetFriendAttributeFlags: getFriendAttributeFlags(messagePointer); break;
 		case FRDCommands::GetFriendKeyList: getFriendKeyList(messagePointer); break;
+		case FRDCommands::GetFriendPresence: getFriendPresence(messagePointer); break;
 		case FRDCommands::GetFriendProfile: getFriendProfile(messagePointer); break;
 		case FRDCommands::GetMyFriendKey: getMyFriendKey(messagePointer); break;
 		case FRDCommands::GetMyMii: getMyMii(messagePointer); break;
@@ -132,6 +134,14 @@ void FRDService::getMyPresence(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::getFriendPresence(u32 messagePointer) {
+	Helpers::warn("FRD::GetFriendPresence (stubbed)");
+
+	// TODO: Implement and document this,
+	mem.write32(messagePointer, IPC::responseHeader(0x12, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
