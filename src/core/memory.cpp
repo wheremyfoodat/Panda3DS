@@ -34,17 +34,10 @@ void Memory::reset() {
 		writeTable[i] = 0;
 	}
 
-	// Map (32 * 4) KB of FCRAM before the stack for the TLS of each thread
-	std::optional<u32> tlsBaseOpt = findPaddr(32 * 4_KB);
-	if (!tlsBaseOpt.has_value()) {  // Should be unreachable but still good to have
-		Helpers::panic("Failed to allocate memory for thread-local storage");
-	}
-
-	u32 basePaddrForTLS = tlsBaseOpt.value();
 	for (u32 i = 0; i < appResourceLimits.maxThreads; i++) {
+		u32 index = allocateSysMemory(4_KB);
 		u32 vaddr = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
-		allocateMemory(vaddr, basePaddrForTLS, VirtualAddrs::TLSSize, true);
-		basePaddrForTLS += VirtualAddrs::TLSSize;
+		allocateMemory(vaddr, index, VirtualAddrs::TLSSize, true, true, true, false, false, true);
 	}
 
 	// Initialize shared memory blocks and reserve memory for them
@@ -399,7 +392,7 @@ u32 Memory::allocateSysMemory(u32 size) {
 		Helpers::panic("Memory::allocateSysMemory: Overflowed OS FCRAM");
 	}
 
-	const u32 pageCount = size / pageSize;                                     // Number of pages that will be used up
+	const u32 pageCount = size / pageSize;                        // Number of pages that will be used up
 	const u32 startIndex = FCRAM_SIZE - usedSystemMemory - size;  // Starting FCRAM index
 	const u32 startingPage = startIndex / pageSize;
 
