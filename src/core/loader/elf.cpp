@@ -21,6 +21,9 @@ std::optional<u32> Memory::loadELF(std::ifstream& file) {
 		return std::nullopt;
 	}
 
+    // Use 64MB of application FCRAM for ELFs by default
+    setApplicationRamSize(64_MB);
+
     auto segNum = reader.segments.size();
     printf("Number of segments: %d\n", segNum);
     printf(" #  Perms       Vaddr           File Size       Mem Size\n");

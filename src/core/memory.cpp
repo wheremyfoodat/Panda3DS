@@ -289,12 +289,12 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 	// Additionally assert we don't OoM and that we don't try to allocate physical FCRAM past what's available to userland
 	// If we're mapping there's no fear of OoM, because we're not really allocating memory, just binding vaddrs to specific paddrs
 	assert(isAligned(vaddr) && isAligned(paddr) && isAligned(size));
-	assert(size <= FCRAM_APPLICATION_SIZE || isMap);
-	assert(usedUserMemory + size <= FCRAM_APPLICATION_SIZE || isMap);
-	assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
+	assert(size <= fcramApplicationSize || isMap);
+	assert(usedUserMemory + size <= fcramApplicationSize || isMap);
+	assert(paddr + size <= fcramApplicationSize || isMap);
 
 	// Amount of available user FCRAM pages and FCRAM pages to allocate respectively
-	const u32 availablePageCount = (FCRAM_APPLICATION_SIZE - usedUserMemory) / pageSize;
+	const u32 availablePageCount = (fcramApplicationSize - usedUserMemory) / pageSize;
 	const u32 neededPageCount = size / pageSize;
 
 	assert(availablePageCount >= neededPageCount || isMap);
@@ -367,7 +367,7 @@ std::optional<u32> Memory::findPaddr(u32 size) {
 	// If this ends up >= than neededPages then the paddr is good (ie we can use the candidate page as a base address)
 	u32 counter = 0;
 
-	for (u32 i = 0; i < FCRAM_APPLICATION_PAGE_COUNT; i++) {
+	for (u32 i = 0; i < fcramApplicationPageCount; i++) {
 		if (usedFCRAMPages[i]) {  // Page is occupied already, go to new candidate
 			candidatePage = i + 1;
 			counter = 0;
@@ -392,19 +392,22 @@ u32 Memory::allocateSysMemory(u32 size) {
 	}
 
 	// We use a pretty dumb allocator for OS memory since this is not really accessible to the app and is only used internally
-	// It works by just allocating memory linearly, starting from index 0 of OS memory and going up
+	// It works by just allocating memory linearly, starting from the end of system memory and going back
+	// This happens in order to allow changing the size of application FCRAM when loading a ROM, and not risking messing up our data
 	// This should also be unreachable in practice and exists as a sanity check
 	if (size > remainingSysFCRAM()) {
 		Helpers::panic("Memory::allocateSysMemory: Overflowed OS FCRAM");
 	}
 
-	const u32 pageCount = size / pageSize;                      // Number of pages that will be used up
-	const u32 startIndex = sysFCRAMIndex() + usedSystemMemory;  // Starting FCRAM index
+	const u32 pageCount = size / pageSize;                                     // Number of pages that will be used up
+	const u32 startIndex = FCRAM_SIZE - usedSystemMemory - size;  // Starting FCRAM index
 	const u32 startingPage = startIndex / pageSize;
 
 	for (u32 i = 0; i < pageCount; i++) {
-		if (usedFCRAMPages[startingPage + i])  // Also a theoretically unreachable panic for safety
+		if (usedFCRAMPages[startingPage + i]) {  // Also a theoretically unreachable panic for safety
 			Helpers::panic("Memory::reserveMemory: Trying to reserve already reserved memory");
+		}
+
 		usedFCRAMPages[startingPage + i] = true;
 	}
 

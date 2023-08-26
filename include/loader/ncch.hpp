@@ -47,6 +47,9 @@ struct NCCH {
 	bool seedCrypto = false;
 	u8 secondaryKeySlot = 0;
 
+	// Contains info such as the ideal processor for threads, affinity mask, and how much memory should be reserved for the application
+	u8 flag0 = 0;
+
 	static constexpr u64 mediaUnit = 0x200;
 	u64 size = 0;  // Size of NCCH converted to bytes
 	u32 stackSize = 0;
