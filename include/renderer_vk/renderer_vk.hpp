@@ -61,6 +61,7 @@ class RendererVK final : public Renderer {
 		u32 sizePerPixel = 0;
 		std::array<u32, 2> size = {};
 
+		vk::Format format;
 		vk::UniqueImage image;
 		vk::UniqueDeviceMemory imageMemory;
 		vk::UniqueImageView imageView;

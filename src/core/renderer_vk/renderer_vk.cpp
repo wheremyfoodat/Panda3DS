@@ -267,9 +267,11 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 	newTexture.sizePerPixel = PICA::sizePerPixel(format);
 	newTexture.size = fbSize;
 
+	newTexture.format = Vulkan::colorFormatToVulkan(format);
+
 	vk::ImageCreateInfo textureInfo = {};
 	textureInfo.setImageType(vk::ImageType::e2D);
-	textureInfo.setFormat(Vulkan::colorFormatToVulkan(format));
+	textureInfo.setFormat(newTexture.format);
 	textureInfo.setExtent(vk::Extent3D(width, height, 1));
 	textureInfo.setMipLevels(1);
 	textureInfo.setArrayLayers(1);
@@ -295,7 +297,7 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 	vk::ImageViewCreateInfo viewInfo = {};
 	viewInfo.image = newTexture.image.get();
 	viewInfo.viewType = vk::ImageViewType::e2D;
-	viewInfo.format = textureInfo.format;
+	viewInfo.format = newTexture.format;
 	viewInfo.components = vk::ComponentMapping();
 	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 
@@ -338,9 +340,11 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	newTexture.sizePerPixel = PICA::sizePerPixel(format);
 	newTexture.size = fbSize;
 
+	newTexture.format = Vulkan::depthFormatToVulkan(format);
+
 	vk::ImageCreateInfo textureInfo = {};
 	textureInfo.setImageType(vk::ImageType::e2D);
-	textureInfo.setFormat(Vulkan::depthFormatToVulkan(format));
+	textureInfo.setFormat(newTexture.format);
 	textureInfo.setExtent(vk::Extent3D(width, height, 1));
 	textureInfo.setMipLevels(1);
 	textureInfo.setArrayLayers(1);
@@ -366,7 +370,7 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	vk::ImageViewCreateInfo viewInfo = {};
 	viewInfo.image = newTexture.image.get();
 	viewInfo.viewType = vk::ImageViewType::e2D;
-	viewInfo.format = textureInfo.format;
+	viewInfo.format = newTexture.format;
 	viewInfo.components = vk::ComponentMapping();
 	// viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
 	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1);
@@ -1328,8 +1332,8 @@ void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		return;
 	}
 
-	// Color-Clear
-	{
+	if (*vk::componentName(renderTexture->format, 0) != 'D') {
+		// Color-Clear
 		vk::ClearColorValue clearColor = {};
 
 		clearColor.float32[0] = Helpers::getBits<24, 8>(value) / 255.0f;  // r
@@ -1368,6 +1372,57 @@ void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal,
 					vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, renderTexture->image.get(),
 					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1)
+				),
+			}
+		);
+	} else {
+		// Depth-Clear
+		vk::ClearDepthStencilValue clearDepthStencil = {};
+
+		if (vk::componentBits(renderTexture->format, 0) == 16) {
+			clearDepthStencil.depth = (value & 0xffff) / 65535.0f;
+		} else {
+			clearDepthStencil.depth = (value & 0xffffff) / 16777215.0f;
+		}
+
+		clearDepthStencil.stencil = (value >> 24);  // Stencil
+
+		const std::array<float, 4> scopeColor = {{clearDepthStencil.depth, clearDepthStencil.depth, clearDepthStencil.depth, 1.0f}};
+		Vulkan::DebugLabelScope scope(
+			getCurrentCommandBuffer(), scopeColor, "ClearBuffer start:%08X end:%08X value:%08X control:%08X\n", startAddress, endAddress, value,
+			control
+		);
+
+		getCurrentCommandBuffer().pipelineBarrier(
+			vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {},
+			{
+				// renderTexture: ShaderReadOnlyOptimal -> TransferDst
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eShaderReadOnlyOptimal,
+					vk::ImageLayout::eTransferDstOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, renderTexture->image.get(),
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1)
+				),
+			}
+		);
+
+		static vk::ImageSubresourceRange depthStencilRanges[2] = {
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1),
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1)};
+
+		// Clear RenderTarget
+		getCurrentCommandBuffer().clearDepthStencilImage(
+			renderTexture->image.get(), vk::ImageLayout::eTransferDstOptimal, &clearDepthStencil, vk::componentCount(renderTexture->format),
+			depthStencilRanges
+		);
+
+		getCurrentCommandBuffer().pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {},
+			{
+				// renderTexture: TransferDst -> eShaderReadOnlyOptimal
+				vk::ImageMemoryBarrier(
+					vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal,
+					vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, renderTexture->image.get(),
+					vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1)
 				),
 			}
 		);
