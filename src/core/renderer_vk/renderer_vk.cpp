@@ -352,7 +352,7 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	textureInfo.setTiling(vk::ImageTiling::eOptimal);
 	textureInfo.setUsage(
 		vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransferSrc |
-		vk::ImageUsageFlagBits::eTransferDst
+		vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled
 	);
 	textureInfo.setSharingMode(vk::SharingMode::eExclusive);
 	textureInfo.setInitialLayout(vk::ImageLayout::eUndefined);
@@ -375,10 +375,6 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	// viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1);
 	viewInfo.subresourceRange = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1);
 
-	if (PICA::hasStencil(format)) {
-		viewInfo.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
-	}
-
 	if (auto [result, imageMemory] = Vulkan::commitImageHeap(device.get(), physicalDevice, {&newTexture.image.get(), 1});
 		result == vk::Result::eSuccess) {
 		newTexture.imageMemory = std::move(imageMemory);
@@ -392,7 +388,10 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 		Helpers::panic("Error creating depth render-texture: %s\n", vk::to_string(createResult.result).c_str());
 	}
 
-	// Initial layout transition
+	// Initial layout transition (depth and/or stencil)
+	if (vk::componentCount(newTexture.format) == 2) {
+		viewInfo.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+	}
 	getCurrentCommandBuffer().pipelineBarrier(
 		vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags{}, {}, {},
 		{vk::ImageMemoryBarrier(
