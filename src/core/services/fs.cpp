@@ -31,7 +31,9 @@ namespace FSCommands {
 		DeleteExtSaveData = 0x08520100,
 		InitializeWithSdkVersion = 0x08610042,
 		SetPriority = 0x08620040,
-		GetPriority = 0x08630000
+		GetPriority = 0x08630000,
+		GetThisSaveDataSecureValue = 0x086F0040,
+		TheGameboyVCFunction = 0x08750180,
 	};
 }
 
@@ -159,6 +161,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::GetFreeBytes: getFreeBytes(messagePointer); break;
 		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
+		case FSCommands::GetThisSaveDataSecureValue: getThisSaveDataSecureValue(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
 		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
 		case FSCommands::IsSdmcDetected: isSdmcDetected(messagePointer); break;
@@ -168,6 +171,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::OpenFile: [[likely]] openFile(messagePointer); break;
 		case FSCommands::OpenFileDirectly: [[likely]] openFileDirectly(messagePointer); break;
 		case FSCommands::SetPriority: setPriority(messagePointer); break;
+		case FSCommands::TheGameboyVCFunction: theGameboyVCFunction(messagePointer); break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
 }
@@ -584,6 +588,19 @@ void FSService::setPriority(u32 messagePointer) {
 	priority = value;
 }
 
+void FSService::getThisSaveDataSecureValue(u32 messagePointer) {
+	Helpers::warn("Unimplemented FS::GetThisSaveDataSecureValue");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x86F, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FSService::theGameboyVCFunction(u32 messagePointer) {
+	Helpers::warn("Unimplemented FS: function: 0x08750180");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x875, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
 
 // Shows whether an SD card is inserted. At the moment stubbed to no
 constexpr bool sdInserted = false;
