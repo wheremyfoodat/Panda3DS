@@ -25,10 +25,13 @@ namespace FSCommands {
 		GetFreeBytes = 0x08120080,
 		IsSdmcDetected = 0x08170000,
 		IsSdmcWritable = 0x08180000,
+		AbnegateAccessRight = 0x08400040,
 		GetFormatInfo = 0x084500C2,
+		GetArchiveResource = 0x08490040,
 		FormatSaveData = 0x084C0242,
 		CreateExtSaveData = 0x08510242,
 		DeleteExtSaveData = 0x08520100,
+		SetArchivePriority = 0x085A00C0,
 		InitializeWithSdkVersion = 0x08610042,
 		SetPriority = 0x08620040,
 		GetPriority = 0x08630000,
@@ -158,6 +161,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
 		case FSCommands::FormatThisUserSaveData: formatThisUserSaveData(messagePointer); break;
+		case FSCommands::GetArchiveResource: getArchiveResource(messagePointer); break;
 		case FSCommands::GetFreeBytes: getFreeBytes(messagePointer); break;
 		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
@@ -170,7 +174,9 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::OpenDirectory: openDirectory(messagePointer); break;
 		case FSCommands::OpenFile: [[likely]] openFile(messagePointer); break;
 		case FSCommands::OpenFileDirectly: [[likely]] openFileDirectly(messagePointer); break;
+		case FSCommands::SetArchivePriority: setArchivePriority(messagePointer); break;
 		case FSCommands::SetPriority: setPriority(messagePointer); break;
+		case FSCommands::AbnegateAccessRight: abnegateAccessRight(messagePointer); break;
 		case FSCommands::TheGameboyVCFunction: theGameboyVCFunction(messagePointer); break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
@@ -579,6 +585,36 @@ void FSService::getPriority(u32 messagePointer) {
 	mem.write32(messagePointer + 8, priority);
 }
 
+void FSService::getArchiveResource(u32 messagePointer) {
+	const u32 mediaType = mem.read32(messagePointer + 4);
+	log("FS::GetArchiveResource (media type = %d) (stubbed)\n");
+
+	// For the time being, return the same stubbed archive resource for every media type
+	static constexpr ArchiveResource resource = {
+		.sectorSize = 512,
+		.clusterSize = 16_KB,
+		.partitionCapacityInClusters = 0x80000,  // 0x80000 * 16 KB = 8GB
+		.freeSpaceInClusters = 0x80000,          // Same here
+	};
+
+	mem.write32(messagePointer, IPC::responseHeader(0x849, 5, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	mem.write32(messagePointer + 8, resource.sectorSize);
+	mem.write32(messagePointer + 12, resource.clusterSize);
+	mem.write32(messagePointer + 16, resource.partitionCapacityInClusters);
+	mem.write32(messagePointer + 20, resource.freeSpaceInClusters);
+}
+
+void FSService::setArchivePriority(u32 messagePointer) {
+	Handle archive = mem.read64(messagePointer + 4);
+	const u32 value = mem.read32(messagePointer + 12);
+	log("FS::SetArchivePriority (priority = %d, archive handle = %X)\n", value, handle);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x85A, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 void FSService::setPriority(u32 messagePointer) {
 	const u32 value = mem.read32(messagePointer + 4);
 	log("FS::SetPriority (priority = %d)\n", value);
@@ -586,6 +622,18 @@ void FSService::setPriority(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x862, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	priority = value;
+}
+
+void FSService::abnegateAccessRight(u32 messagePointer) {
+	const u32 right = mem.read32(messagePointer + 4);
+	log("FS::AbnegateAccessRight (right = %d)\n", right);
+
+	if (right >= 0x38) {
+		Helpers::warn("FS::AbnegateAccessRight: Invalid access right");
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x840, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void FSService::getThisSaveDataSecureValue(u32 messagePointer) {
