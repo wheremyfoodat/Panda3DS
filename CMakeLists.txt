@@ -249,20 +249,48 @@ if(ENABLE_VULKAN)
 	)
 
 	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
-		include/renderer_vk/vulkan_api.hpp include/renderer_vk/vk_debug.hpp
+		include/renderer_vk/vk_api.hpp include/renderer_vk/vk_debug.hpp
+		include/renderer_vk/vk_descriptor_heap.hpp
+		include/renderer_vk/vk_descriptor_update_batch.hpp
+		include/renderer_vk/vk_sampler_cache.hpp
+		include/renderer_vk/vk_memory.hpp include/renderer_vk/vk_pica.hpp
 	)
 
 	set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
-		src/core/renderer_vk/vulkan_api.cpp src/core/renderer_vk/vk_debug.cpp
+		src/core/renderer_vk/vk_api.cpp src/core/renderer_vk/vk_debug.cpp
+		src/core/renderer_vk/vk_descriptor_heap.cpp
+		src/core/renderer_vk/vk_descriptor_update_batch.cpp
+		src/core/renderer_vk/vk_sampler_cache.cpp
+		src/core/renderer_vk/vk_memory.cpp src/core/renderer_vk/vk_pica.cpp
 	)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_VK_INCLUDE_FILES})
     source_group("Source Files\\Core\\Vulkan Renderer" FILES ${RENDERER_VK_SOURCE_FILES})
 
+
+	set(RENDERER_VK_HOST_SHADERS_SOURCE
+		"src/host_shaders/vulkan_display.frag"
+		"src/host_shaders/vulkan_display.vert"
+	)
+
+foreach( HOST_SHADER_SOURCE ${RENDERER_VK_HOST_SHADERS_SOURCE} )
+	get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
+	set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
+	add_custom_command(
+		OUTPUT ${HOST_SHADER_SPIRV}
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
+		COMMAND Vulkan::glslangValidator -t --target-env vulkan1.1 -g -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
+		#COMMAND ${SPIRV_OPT} -O ${HOST_SHADER_SPIRV} -o ${HOST_SHADER_SPIRV}
+		DEPENDS ${HOST_SHADER_SOURCE}
+	)
+	list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
+endforeach()
+
 	cmrc_add_resource_library(
 		resources_renderer_vk
 		NAMESPACE RendererVK
-		WHENCE "src/host_shaders/"
+		WHENCE "${PROJECT_BINARY_DIR}/host_shaders/"
+		${RENDERER_VK_HOST_SHADERS_SPIRV}
 	)
 endif()
 
