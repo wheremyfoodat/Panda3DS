@@ -13,6 +13,7 @@ class LDRService {
 	// Service commands
 	void initialize(u32 messagePointer);
 	void loadCRR(u32 messagePointer);
+	void loadCRONew(u32 messagePointer);
 
 public:
 	LDRService(Memory& mem) : mem(mem) {}
