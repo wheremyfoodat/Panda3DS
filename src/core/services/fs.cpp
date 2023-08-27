@@ -35,6 +35,7 @@ namespace FSCommands {
 		InitializeWithSdkVersion = 0x08610042,
 		SetPriority = 0x08620040,
 		GetPriority = 0x08630000,
+		SetThisSaveDataSecureValue = 0x086E00C0,
 		GetThisSaveDataSecureValue = 0x086F0040,
 		TheGameboyVCFunction = 0x08750180,
 	};
@@ -176,6 +177,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::OpenFileDirectly: [[likely]] openFileDirectly(messagePointer); break;
 		case FSCommands::SetArchivePriority: setArchivePriority(messagePointer); break;
 		case FSCommands::SetPriority: setPriority(messagePointer); break;
+		case FSCommands::SetThisSaveDataSecureValue: setThisSaveDataSecureValue(messagePointer); break;
 		case FSCommands::AbnegateAccessRight: abnegateAccessRight(messagePointer); break;
 		case FSCommands::TheGameboyVCFunction: theGameboyVCFunction(messagePointer); break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
@@ -640,6 +642,19 @@ void FSService::getThisSaveDataSecureValue(u32 messagePointer) {
 	Helpers::warn("Unimplemented FS::GetThisSaveDataSecureValue");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x86F, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FSService::setThisSaveDataSecureValue(u32 messagePointer) {
+	const u64 value = mem.read32(messagePointer + 4);
+	const u32 slot = mem.read32(messagePointer + 12);
+	const u32 id = mem.read32(messagePointer + 16);
+	const u8 variation = mem.read8(messagePointer + 20);
+
+	// TODO: Actually do something with this.
+	Helpers::warn("Unimplemented FS::SetThisSaveDataSecureValue");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x86E, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

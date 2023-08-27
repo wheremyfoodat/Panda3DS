@@ -67,6 +67,7 @@ class FSService {
 	void openFileDirectly(u32 messagePointer);
 	void setArchivePriority(u32 messagePointer);
 	void setPriority(u32 messagePointer);
+	void setThisSaveDataSecureValue(u32 messagePointer);
 
 	// Used for set/get priority: Not sure what sort of priority this is referring to
 	u32 priority;
