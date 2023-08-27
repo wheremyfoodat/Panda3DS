@@ -265,7 +265,7 @@ RendererVK::Texture& RendererVK::getColorRenderTexture(u32 addr, PICA::ColorFmt 
 	Texture& newTexture = textureCache[renderTextureHash];
 	newTexture.loc = addr;
 	newTexture.sizePerPixel = PICA::sizePerPixel(format);
-	newTexture.size = fbSize;
+	newTexture.size = {width, height};
 
 	newTexture.format = Vulkan::colorFormatToVulkan(format);
 
@@ -338,7 +338,7 @@ RendererVK::Texture& RendererVK::getDepthRenderTexture(u32 addr, PICA::DepthFmt 
 	Texture& newTexture = textureCache[renderTextureHash];
 	newTexture.loc = addr;
 	newTexture.sizePerPixel = PICA::sizePerPixel(format);
-	newTexture.size = fbSize;
+	newTexture.size = {width, height};
 
 	newTexture.format = Vulkan::depthFormatToVulkan(format);
 
