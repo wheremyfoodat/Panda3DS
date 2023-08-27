@@ -817,12 +817,6 @@ void RendererVK::display() {
 			waitSemaphoreStages.emplace_back(waitStageMask);
 		}
 
-		// Ensure a proper semaphore wait on render-finished
-		// We already wait on the fence, but this must be done to be compliant
-		// to validation layers
-		waitSemaphores.emplace_back(renderFinishedSemaphore[frameBufferingIndex].get());
-		waitSemaphoreStages.emplace_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-
 		submitInfo.setWaitSemaphores(waitSemaphores);
 		submitInfo.setWaitDstStageMask(waitSemaphoreStages);
 	}
