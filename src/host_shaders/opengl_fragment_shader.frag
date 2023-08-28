@@ -345,7 +345,7 @@ void main() {
 	if ((textureConfig & 2u) != 0u) tevSources[4] = texture(u_tex1, v_texcoord1);
 	if ((textureConfig & 4u) != 0u) tevSources[5] = texture(u_tex2, tex2UV);
 	tevSources[13] = vec4(0.0);  // Previous buffer
-	tevSources[15] = vec4(0.0);  // Previous combiner
+	tevSources[15] = v_colour;   // Previous combiner
 
 	tevNextPreviousBuffer = v_textureEnvBufferColor;
 	uint textureEnvUpdateBuffer = readPicaReg(0xE0);
