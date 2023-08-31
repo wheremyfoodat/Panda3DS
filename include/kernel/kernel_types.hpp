@@ -173,6 +173,19 @@ struct Semaphore {
     Semaphore(s32 initialCount, s32 maximumCount) : availableCount(initialCount), maximumCount(maximumCount), waitlist(0) {}
 };
 
+struct Timer {
+	u64 waitlist;  // Refer to the getWaitlist function below for documentation
+	ResetType resetType = ResetType::OneShot;
+
+	u64 startTick;     // CPU tick the timer started
+	u64 currentDelay;  // Number of ns until the timer fires next time
+	u64 interval;      // Number of ns until the timer fires for the second and future times
+	bool fired;        // Has this timer been signalled?
+	bool running;      // Is this timer running or stopped?
+
+	Timer(ResetType type) : resetType(type), startTick(0), currentDelay(0), interval(0), waitlist(0), fired(false), running(false) {}
+};
+
 struct MemoryBlock {
     u32 addr = 0;
     u32 size = 0;
@@ -206,21 +219,23 @@ struct KernelObject {
     }
 
     // Retrieves a reference to the waitlist for a specified object
-    // We return a reference because this function is only called in the kernel threading internals
-    // We want the kernel to be able to easily manage waitlists, by reading/parsing them or setting/clearing bits.
-    // As we mention in the definition of the "Event" struct, the format for wailists is very simple and made to be efficient.
-    // Each bit corresponds to a thread index and denotes whether the corresponding thread is waiting on this object
-    // For example if bit 0 of the wait list is set, then the thread with index 0 is waiting on our object
-    u64& getWaitlist() {
-        // This code is actually kinda trash but eh good enough
-        switch (type) {
-            case KernelObjectType::Event: return getData<Event>()->waitlist;
-            case KernelObjectType::Mutex: return getData<Mutex>()->waitlist;
-            case KernelObjectType::Semaphore: return getData<Mutex>()->waitlist;
-            case KernelObjectType::Thread: return getData<Thread>()->threadsWaitingForTermination;
-            // This should be unreachable once we fully implement sync objects
-            default: [[unlikely]]
+	// We return a reference because this function is only called in the kernel threading internals
+	// We want the kernel to be able to easily manage waitlists, by reading/parsing them or setting/clearing bits.
+	// As we mention in the definition of the "Event" struct, the format for wailists is very simple and made to be efficient.
+	// Each bit corresponds to a thread index and denotes whether the corresponding thread is waiting on this object
+	// For example if bit 0 of the wait list is set, then the thread with index 0 is waiting on our object
+	u64& getWaitlist() {
+		// This code is actually kinda trash but eh good enough
+		switch (type) {
+			case KernelObjectType::Event: return getData<Event>()->waitlist;
+			case KernelObjectType::Mutex: return getData<Mutex>()->waitlist;
+			case KernelObjectType::Semaphore: return getData<Mutex>()->waitlist;
+			case KernelObjectType::Thread: return getData<Thread>()->threadsWaitingForTermination;
+			case KernelObjectType::Timer: return getData<Timer>()->waitlist;
+
+			// This should be unreachable once we fully implement sync objects
+			default: [[unlikely]]
                 Helpers::panic("Called GetWaitList on kernel object without a waitlist (Type: %s)", getTypeName());
-        }
-    }
+		}
+	}
 };

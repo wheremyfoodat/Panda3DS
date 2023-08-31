@@ -252,6 +252,14 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 		case KernelObjectType::Thread:
 			break;
 
+		case KernelObjectType::Timer: {
+			Timer* timer = object->getData<Timer>();
+			if (timer->resetType == ResetType::OneShot) {  // One-shot timers automatically get cleared after waking up a thread
+				timer->fired = false;
+			}
+			break;
+		}
+
 		default: Helpers::panic("Acquiring unimplemented sync object %s", object->getTypeName());
 	}
 }
@@ -651,6 +659,9 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 
 		case KernelObjectType::Thread: // Waiting on a thread waits until it's dead. If it's dead then no need to wait
 			return object->getData<Thread>()->status != ThreadStatus::Dead;
+
+		case KernelObjectType::Timer: // We should wait on a timer only if it has not been signalled
+			return !object->getData<Timer>()->fired;
 
 		case KernelObjectType::Semaphore: // Wait if the semaphore count <= 0
 			return object->getData<Semaphore>()->availableCount <= 0;

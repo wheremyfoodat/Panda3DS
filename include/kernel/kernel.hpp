@@ -83,6 +83,9 @@ private:
 	bool canThreadRun(const Thread& t);
 	bool shouldWaitOnObject(KernelObject* object);
 	void releaseMutex(Mutex* moo);
+	void cancelTimer(Timer* timer);
+	void signalTimer(Handle timerHandle, Timer* timer);
+	void updateTimer(Handle timerHandle, Timer* timer);
 
 	// Wake up the thread with the highest priority out of all threads in the waitlist
 	// Returns the index of the woken up thread
