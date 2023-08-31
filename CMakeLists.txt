@@ -273,18 +273,28 @@ if(ENABLE_VULKAN)
 		"src/host_shaders/vulkan_display.vert"
 	)
 
-foreach( HOST_SHADER_SOURCE ${RENDERER_VK_HOST_SHADERS_SOURCE} )
-	get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
-	set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
-	add_custom_command(
-		OUTPUT ${HOST_SHADER_SPIRV}
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
-		COMMAND Vulkan::glslangValidator -t --target-env vulkan1.1 -g -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
-		#COMMAND ${SPIRV_OPT} -O ${HOST_SHADER_SPIRV} -o ${HOST_SHADER_SPIRV}
-		DEPENDS ${HOST_SHADER_SOURCE}
-	)
-	list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
-endforeach()
+
+    set( RENDERER_VK_HOST_SHADERS_FLAGS -e main --target-env vulkan1.1)
+
+    if(GPU_DEBUG_INFO)
+        # generate nonsemantic shader debug information with source
+        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -gVS)
+    else()
+        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -g0)
+    endif()
+
+    # Compile each vulkan shader into an .spv file
+    foreach( HOST_SHADER_SOURCE ${RENDERER_VK_HOST_SHADERS_SOURCE} )
+		get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
+		set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
+	    add_custom_command(
+		    OUTPUT ${HOST_SHADER_SPIRV}
+		    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
+		    COMMAND Vulkan::glslangValidator ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
+		    DEPENDS ${HOST_SHADER_SOURCE}
+	    )
+	    list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
+    endforeach()
 
 	cmrc_add_resource_library(
 		resources_renderer_vk
