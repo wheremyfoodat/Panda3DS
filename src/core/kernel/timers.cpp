@@ -60,7 +60,7 @@ void Kernel::svcCreateTimer() {
 	}
 
 	// Have a warning here until our timers don't suck
-	Helpers::warn("Called Kernel::CreateTimer");
+	Helpers::warn("Called Kernel::CreateTimer. Timers are currently not updated nor triggered properly!");
 
 	logSVC("CreateTimer (resetType = %s)\n", resetTypeToString(resetType));
 	regs[0] = Result::Success;
