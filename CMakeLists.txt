@@ -1,6 +1,6 @@
 # We need to be able to use enable_language(OBJC) on Mac, so we need CMake 3.16 vs the 3.10 we use otherwise. Blame Apple.
 if (APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
     cmake_minimum_required(VERSION 3.16)
 else()
     cmake_minimum_required(VERSION 3.10)
@@ -147,9 +147,10 @@ set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/lz77.cpp)
 set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
                     src/core/fs/archive_ext_save_data.cpp src/core/fs/archive_ncch.cpp src/core/fs/romfs.cpp
-                    src/core/fs/ivfc.cpp
+                    src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp
 )
 
+set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
@@ -178,7 +179,8 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
-                 include/math_util.hpp include/services/soc.hpp include/services/news_u.hpp
+                 include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
+                 include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
 )
 
 cmrc_add_resource_library(
@@ -203,6 +205,7 @@ source_group("Source Files\\Core\\Filesystem" FILES ${FS_SOURCE_FILES})
 source_group("Source Files\\Core\\Kernel" FILES ${KERNEL_SOURCE_FILES})
 source_group("Source Files\\Core\\Loader" FILES ${LOADER_SOURCE_FILES})
 source_group("Source Files\\Core\\Services" FILES ${SERVICE_SOURCE_FILES})
+source_group("Source Files\\Core\\Applets" FILES ${APPLET_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
 source_group("Source Files\\Core\\Software Renderer" FILES ${RENDERER_SW_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
@@ -246,26 +249,54 @@ if(ENABLE_VULKAN)
 	)
 
 	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
-		include/renderer_vk/vulkan_api.hpp include/renderer_vk/vk_debug.hpp
+		include/renderer_vk/vk_api.hpp include/renderer_vk/vk_debug.hpp
+		include/renderer_vk/vk_descriptor_heap.hpp
+		include/renderer_vk/vk_descriptor_update_batch.hpp
+		include/renderer_vk/vk_sampler_cache.hpp
+		include/renderer_vk/vk_memory.hpp include/renderer_vk/vk_pica.hpp
 	)
 
 	set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
-		src/core/renderer_vk/vulkan_api.cpp src/core/renderer_vk/vk_debug.cpp
+		src/core/renderer_vk/vk_api.cpp src/core/renderer_vk/vk_debug.cpp
+		src/core/renderer_vk/vk_descriptor_heap.cpp
+		src/core/renderer_vk/vk_descriptor_update_batch.cpp
+		src/core/renderer_vk/vk_sampler_cache.cpp
+		src/core/renderer_vk/vk_memory.cpp src/core/renderer_vk/vk_pica.cpp
 	)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_VK_INCLUDE_FILES})
     source_group("Source Files\\Core\\Vulkan Renderer" FILES ${RENDERER_VK_SOURCE_FILES})
 
+
+	set(RENDERER_VK_HOST_SHADERS_SOURCE
+		"src/host_shaders/vulkan_display.frag"
+		"src/host_shaders/vulkan_display.vert"
+	)
+
+foreach( HOST_SHADER_SOURCE ${RENDERER_VK_HOST_SHADERS_SOURCE} )
+	get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
+	set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
+	add_custom_command(
+		OUTPUT ${HOST_SHADER_SPIRV}
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
+		COMMAND Vulkan::glslangValidator -t --target-env vulkan1.1 -g -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
+		#COMMAND ${SPIRV_OPT} -O ${HOST_SHADER_SPIRV} -o ${HOST_SHADER_SPIRV}
+		DEPENDS ${HOST_SHADER_SOURCE}
+	)
+	list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
+endforeach()
+
 	cmrc_add_resource_library(
 		resources_renderer_vk
 		NAMESPACE RendererVK
-		WHENCE "src/host_shaders/"
+		WHENCE "${PROJECT_BINARY_DIR}/host_shaders/"
+		${RENDERER_VK_HOST_SHADERS_SPIRV}
 	)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
-	${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+	${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 
 if(ENABLE_OPENGL)
     # Add the OpenGL source files to ALL_SOURCES

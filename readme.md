@@ -1,5 +1,5 @@
 # Panda3DS
-[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml) [![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml) [![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)
+[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml) [![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml) [![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml) [![AUR Package](https://img.shields.io/aur/version/panda3ds-git)](https://aur.archlinux.org/packages/panda3ds-git)
 
 Panda3DS is an HLE, red-panda-themed Nintendo 3DS emulator written in C++ which started out as a fun project out of curiosity, but evolved into something that can sort of play games!
 
@@ -39,7 +39,7 @@ The 3DS emulation scene is already pretty mature, with offerings such as [Citra]
 Keep in mind, these are all long-term plans. Until then, the main focus is just improving compatibility
 
 # How to build
-Panda3DS compiles on Windows, Linux and MacOS, with only 1 system dependency, the Vulkan SDK. However, if you don't want to install the Vulkan SDK you can always build the emulator with only OpenGL support, by adding `-DENABLE_VULKAN=OFF` to the `cmake` command
+Panda3DS compiles on Windows, Linux and MacOS, with only 1 (optional) system dependency, the Vulkan SDK. If you don't want to install the Vulkan SDK you can always build the emulator with only OpenGL support, by adding `-DENABLE_VULKAN=OFF` to the `cmake` command
 
 All you need is CMake and a generator of your choice (Make, Visual Studio, Ninja, etc). Simply clone the repo recursively and build it like your average CMake project.
 

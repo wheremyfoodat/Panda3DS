@@ -23,7 +23,10 @@ class FRDService {
 
 	// Service commands
 	void attachToEventNotification(u32 messagePointer);
+	void getFriendAttributeFlags(u32 messagePointer);
 	void getFriendKeyList(u32 messagePointer);
+	void getFriendPresence(u32 messagePointer);
+	void getFriendProfile(u32 messagePointer);
 	void getMyFriendKey(u32 messagePointer);
 	void getMyMii(u32 messagePointer);
 	void getMyPresence(u32 messagePointer);
@@ -34,6 +37,15 @@ class FRDService {
 	void setClientSDKVersion(u32 messagePointer);
 	void setNotificationMask(u32 messagePointer);
 	void updateGameModeDescription(u32 messagePointer);
+
+	struct Profile {
+		u8 region;
+		u8 country;
+		u8 area;
+		u8 language;
+		u32 unknown;
+	};
+	static_assert(sizeof(Profile) == 8);
 
 public:
 	FRDService(Memory& mem) : mem(mem) {}

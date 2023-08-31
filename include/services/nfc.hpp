@@ -44,7 +44,9 @@ class NFCService {
 	void getTagInRangeEvent(u32 messagePointer);
 	void getTagOutOfRangeEvent(u32 messagePointer);
 	void getTagState(u32 messagePointer);
+	void shutdown(u32 messagePointer);
 	void startCommunication(u32 messagePointer);
+	void startTagScanning(u32 messagePointer);
 	void stopCommunication(u32 messagePointer);
 
 public:
