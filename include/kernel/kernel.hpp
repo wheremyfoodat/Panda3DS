@@ -36,7 +36,6 @@ class Kernel {
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 	std::vector<Handle> mutexHandles;
-	std::vector<Handle> timerHandles;
 
 	// Thread indices, sorted by priority
 	std::vector<int> threadIndices;
@@ -187,14 +186,6 @@ public:
 	void requireReschedule() { needReschedule = true; }
 
 	void evalReschedule() {
-		for (auto handle : timerHandles) {
-			const auto object = getObject(handle, KernelObjectType::Timer);
-			if (object != nullptr) {
-				Timer* timer = object->getData<Timer>();
-				updateTimer(handle, timer);
-			}
-		}
-
 		if (needReschedule) {
 			needReschedule = false;
 			rescheduleThreads();
