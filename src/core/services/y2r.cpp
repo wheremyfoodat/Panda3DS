@@ -57,6 +57,10 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case Y2RCommands::DriverInitialize: driverInitialize(messagePointer); break;
 		case Y2RCommands::DriverFinalize: driverFinalize(messagePointer); break;
+		case Y2RCommands::GetBlockAlignment: getBlockAlignment(messagePointer); break;
+		case Y2RCommands::GetInputLines: getInputLines(messagePointer); break;
+		case Y2RCommands::GetInputLineWidth: getInputLineWidth(messagePointer); break;
+		case Y2RCommands::GetOutputFormat: getOutputFormat(messagePointer); break;
 		case Y2RCommands::GetTransferEndEvent: getTransferEndEvent(messagePointer); break;
 		case Y2RCommands::IsBusyConversion: isBusyConversion(messagePointer); break;
 		case Y2RCommands::PingProcess: pingProcess(messagePointer); break;
@@ -78,10 +82,6 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::SetTransferEndInterrupt: setTransferEndInterrupt(messagePointer); break;
 		case Y2RCommands::StartConversion: [[likely]] startConversion(messagePointer); break;
 		case Y2RCommands::StopConversion: stopConversion(messagePointer); break;
-		case Y2RCommands::GetBlockAlignment: getBlockAlignment(messagePointer); break;
-		case Y2RCommands::GetInputLines: getInputLines(messagePointer); break;
-		case Y2RCommands::GetInputLineWidth: getInputLineWidth(messagePointer); break;
-		case Y2RCommands::GetOutputFormat: getOutputFormat(messagePointer); break;
 		default: Helpers::panic("Y2R service requested. Command: %08X\n", command);
 	}
 }
