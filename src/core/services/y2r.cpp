@@ -7,8 +7,10 @@ namespace Y2RCommands {
 	enum : u32 {
 		SetInputFormat = 0x00010040,
 		SetOutputFormat = 0x00030040,
+		GetOutputFormat = 0x00040000,
 		SetRotation = 0x00050040,
 		SetBlockAlignment = 0x00070040,
+		GetBlockAlignment = 0x00080000,
 		SetSpacialDithering = 0x00090040,
 		SetTemporalDithering = 0x000B0040,
 		SetTransferEndInterrupt = 0x000D0040,
@@ -18,7 +20,9 @@ namespace Y2RCommands {
 		SetSendingV = 0x00120102,
 		SetReceiving = 0x00180102,
 		SetInputLineWidth = 0x001A0040,
+		GetInputLineWidth = 0x001B0000,
 		SetInputLines = 0x001C0040,
+		GetInputLines = 0x001D0000,
 		SetStandardCoeff = 0x00200040,
 		SetAlpha = 0x00220040,
 		StartConversion = 0x00260000,
@@ -28,10 +32,6 @@ namespace Y2RCommands {
 		PingProcess = 0x002A0000,
 		DriverInitialize = 0x002B0000,
 		DriverFinalize = 0x002C0000,
-		GetBlockAlignment = 0x00080000,
-		GetInputLines = 0x001D0000,
-		GetInputLineWidth = 0x001B0000,
-		GetOutputFormat = 0x00040000
 	};
 }
 
