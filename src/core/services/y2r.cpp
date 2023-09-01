@@ -107,7 +107,9 @@ void Y2RService::driverFinalize(u32 messagePointer) {
 
 void Y2RService::getTransferEndEvent(u32 messagePointer) {
 	log("Y2R::GetTransferEndEvent\n");
-	if (!transferEndEvent.has_value()) transferEndEvent = kernel.makeEvent(ResetType::OneShot);
+	if (!transferEndEvent.has_value()) {
+		transferEndEvent = kernel.makeEvent(ResetType::OneShot);
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0xF, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -284,7 +286,9 @@ void Y2RService::setInputLines(u32 messagePointer) {
 		Helpers::panic("Y2R: Invalid input line count");
 	} else {
 		// According to Citra, the Y2R module seems to accidentally skip setting the line # if it's 1024
-		if (lines != 1024) inputLines = lines;
+		if (lines != 1024) {
+			inputLines = lines;
+		}
 		mem.write32(messagePointer + 4, Result::Success);
 	}
 }
