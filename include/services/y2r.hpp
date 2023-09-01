@@ -68,6 +68,10 @@ class Y2RService {
 	void pingProcess(u32 messagePointer);
 	void setTransferEndInterrupt(u32 messagePointer);
 	void getTransferEndEvent(u32 messagePointer);
+	void getBlockAlignment(u32 messagePointer);
+	void getInputLines(u32 messagePointer);
+	void getInputLineWidth(u32 messagePointer);
+	void getOutputFormat(u32 messagePointer);
 
 	void setAlpha(u32 messagePointer);
 	void setBlockAlignment(u32 messagePointer);

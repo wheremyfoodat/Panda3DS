@@ -1,4 +1,5 @@
 #include "services/y2r.hpp"
+
 #include "ipc.hpp"
 #include "kernel.hpp"
 
@@ -26,7 +27,11 @@ namespace Y2RCommands {
 		SetPackageParameter = 0x002901C0,
 		PingProcess = 0x002A0000,
 		DriverInitialize = 0x002B0000,
-		DriverFinalize = 0x002C0000
+		DriverFinalize = 0x002C0000,
+		GetBlockAlignment = 0x00080000,
+		GetInputLines = 0x001D0000,
+		GetInputLineWidth = 0x001B0000,
+		GetOutputFormat = 0x00040000
 	};
 }
 
@@ -73,6 +78,10 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::SetTransferEndInterrupt: setTransferEndInterrupt(messagePointer); break;
 		case Y2RCommands::StartConversion: [[likely]] startConversion(messagePointer); break;
 		case Y2RCommands::StopConversion: stopConversion(messagePointer); break;
+		case Y2RCommands::GetBlockAlignment: getBlockAlignment(messagePointer); break;
+		case Y2RCommands::GetInputLines: getInputLines(messagePointer); break;
+		case Y2RCommands::GetInputLineWidth: getInputLineWidth(messagePointer); break;
+		case Y2RCommands::GetOutputFormat: getOutputFormat(messagePointer); break;
 		default: Helpers::panic("Y2R service requested. Command: %08X\n", command);
 	}
 }
@@ -81,7 +90,7 @@ void Y2RService::pingProcess(u32 messagePointer) {
 	log("Y2R::PingProcess\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x2A, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Connected number
+	mem.write32(messagePointer + 8, 0);  // Connected number
 }
 
 void Y2RService::driverInitialize(u32 messagePointer) {
@@ -98,8 +107,7 @@ void Y2RService::driverFinalize(u32 messagePointer) {
 
 void Y2RService::getTransferEndEvent(u32 messagePointer) {
 	log("Y2R::GetTransferEndEvent\n");
-	if (!transferEndEvent.has_value())
-		transferEndEvent = kernel.makeEvent(ResetType::OneShot);
+	if (!transferEndEvent.has_value()) transferEndEvent = kernel.makeEvent(ResetType::OneShot);
 
 	mem.write32(messagePointer, IPC::responseHeader(0xF, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -150,6 +158,14 @@ void Y2RService::setBlockAlignment(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void Y2RService::getBlockAlignment(u32 messagePointer) {
+	log("Y2R::GetBlockAlignment\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, static_cast<u32>(alignment));
+}
+
 void Y2RService::setInputFormat(u32 messagePointer) {
 	const u32 format = mem.read32(messagePointer + 4);
 	log("Y2R::SetInputFormat (format = %d)\n", format);
@@ -176,6 +192,14 @@ void Y2RService::setOutputFormat(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::getOutputFormat(u32 messagePointer) {
+	log("Y2R::GetOutputFormat\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x4, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, static_cast<u32>(outputFmt));
 }
 
 void Y2RService::setPackageParameter(u32 messagePointer) {
@@ -243,6 +267,13 @@ void Y2RService::setInputLineWidth(u32 messagePointer) {
 	}
 }
 
+void Y2RService::getInputLineWidth(u32 messagePointer) {
+	log("Y2R::GetInputLineWidth\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1B, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, inputLineWidth);
+}
 void Y2RService::setInputLines(u32 messagePointer) {
 	const u16 lines = mem.read16(messagePointer + 4);
 	log("Y2R::SetInputLines (lines = %d)\n", lines);
@@ -253,10 +284,17 @@ void Y2RService::setInputLines(u32 messagePointer) {
 		Helpers::panic("Y2R: Invalid input line count");
 	} else {
 		// According to Citra, the Y2R module seems to accidentally skip setting the line # if it's 1024
-		if (lines != 1024)
-			inputLines = lines;
+		if (lines != 1024) inputLines = lines;
 		mem.write32(messagePointer + 4, Result::Success);
 	}
+}
+
+void Y2RService::getInputLines(u32 messagePointer) {
+	log("Y2R::GetInputLines\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1D, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, inputLines);
 }
 
 void Y2RService::setStandardCoeff(u32 messagePointer) {
@@ -264,8 +302,10 @@ void Y2RService::setStandardCoeff(u32 messagePointer) {
 	log("Y2R::SetStandardCoeff (coefficient = %d)\n", coeff);
 	mem.write32(messagePointer, IPC::responseHeader(0x20, 1, 0));
 
-	if (coeff > 3)
-		Helpers::panic("Y2R: Invalid standard coefficient");
+	if (coeff > 3) {
+		Helpers::panic("Y2R: Invalid standard coefficient (coefficient = %d)\n", coeff);
+	}
+
 	else {
 		Helpers::warn("Unimplemented: Y2R standard coefficient");
 		mem.write32(messagePointer + 4, Result::Success);
