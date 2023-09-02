@@ -453,6 +453,8 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		success = loadNCSD(path, ROMType::NCSD);
 	else if (extension == ".cxi" || extension == ".app")
 		success = loadNCSD(path, ROMType::CXI);
+	else if (extension == ".3dsx")
+		success = load3DSX(path);
 	else {
 		printf("Unknown file type\n");
 		success = false;
@@ -488,6 +490,19 @@ bool Emulator::loadNCSD(const std::filesystem::path& path, ROMType type) {
 	if (loadedNCSD.entrypoint & 1) {
 		Helpers::panic("Misaligned NCSD entrypoint; should this start the CPU in Thumb mode?");
 	}
+
+	return true;
+}
+
+bool Emulator::load3DSX(const std::filesystem::path& path) {
+	std::optional<u32> entrypoint = memory.load3DSX(path);
+	romType = ROMType::HB_3DSX;
+
+	if (!entrypoint.has_value()) {
+		return false;
+	}
+
+	cpu.setReg(15, entrypoint.value());  // Set initial PC
 
 	return true;
 }

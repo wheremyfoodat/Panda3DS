@@ -144,7 +144,7 @@ set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
 )
 
-set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/lz77.cpp)
+set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
 set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
                     src/core/fs/archive_ext_save_data.cpp src/core/fs/archive_ncch.cpp src/core/fs/romfs.cpp
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp
@@ -161,7 +161,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp include/renderer_null/renderer_null.hpp
                  include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
                  include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
-                 include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/io_file.hpp
+                 include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/loader/3dsx.hpp include/io_file.hpp
                  include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_self_ncch.hpp
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
