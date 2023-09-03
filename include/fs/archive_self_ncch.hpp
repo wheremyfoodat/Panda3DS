@@ -19,7 +19,7 @@ public:
 	bool hasRomFS() {
 		auto cxi = mem.getCXI();
 		auto hb3dsx = mem.get3DSX();
-		return (cxi != nullptr && cxi->hasRomFS()) | (hb3dsx != nullptr && hb3dsx->hasRomFs());
+		return (cxi != nullptr && cxi->hasRomFS()) || (hb3dsx != nullptr && hb3dsx->hasRomFs());
 	}
 
 	// Returns whether the cart has an ExeFS (All executable carts should have an ExeFS. This is just here to be safe)

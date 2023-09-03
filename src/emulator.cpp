@@ -426,6 +426,10 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		reset(ReloadOption::NoReload);
 	}
 
+	// Reset whatever state needs to be reset before loading a new ROM
+	memory.loadedCXI = std::nullopt;
+	memory.loaded3DSX = std::nullopt;
+
 	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
 	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
 	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart

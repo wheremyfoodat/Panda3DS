@@ -125,6 +125,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 		data.resize(size);
 		std::tie(success, bytesRead) = cxi->readFromFile(ioFile, fsInfo, &data[0], offset, size);
 	}
+
 	else if (auto hb3dsx = mem.get3DSX(); hb3dsx != nullptr) {
 		switch (type) {
 			case PathType::RomFS: {
