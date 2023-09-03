@@ -14,12 +14,14 @@ struct LoadInfo {
 	u32 dataSegSizeAligned;
 };
 
-static inline u32 TranslateAddr(const u32 off, const u32* addrs, const u32* offsets)
-{
-    if (off < offsets[1])
-        return addrs[0] + off;
-    if (off < offsets[2])
-        return addrs[1] + off - offsets[1];
+static inline u32 translateAddr(const u32 off, const u32* addrs, const u32* offsets) {
+	if (off < offsets[1]) {
+		return addrs[0] + off;
+	}
+	
+	if (off < offsets[2]) {
+		return addrs[1] + off - offsets[1];
+	}
     return addrs[2] + off - offsets[2];
 }
 
@@ -27,12 +29,12 @@ static inline u32 TranslateAddr(const u32 off, const u32* addrs, const u32* offs
 
 bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 	const LoadInfo hbInfo = {
-		(header.codeSegSize+0xFFF) &~ 0xFFF,
-		(header.rodataSegSize+0xFFF) &~ 0xFFF,
-		(header.dataSegSize+0xFFF) &~ 0xFFF,
+		.codeSegSizeAligned = (header.codeSegSize+0xFFF) &~ 0xFFF,
+		.rodataSegSizeAligned = (header.rodataSegSize+0xFFF) &~ 0xFFF,
+		.dataSegSizeAligned = (header.dataSegSize+0xFFF) &~ 0xFFF,
 	};
 
-	const u32 textSegAddr = HB3DSX::ENTRYPOINT;
+	const u32 textSegAddr = HB3DSX::entrypoint;
 	const u32 rodataSegAddr = textSegAddr + hbInfo.codeSegSizeAligned;
 	const u32 dataSegAddr = rodataSegAddr + hbInfo.rodataSegSizeAligned;
 	const u32 extraPageAddr = dataSegAddr + hbInfo.dataSegSizeAligned;
@@ -42,7 +44,7 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 	printf("Data address = %08X, size = %08X\n", dataSegAddr, hbInfo.dataSegSizeAligned);
 
 	// Allocate stack, 3dsx/libctru don't require anymore than this
-	if (!allocateMainThreadStack(0x1000)) {
+	if (!allocateMainThreadStack(4_KB)) {
 		// Should be unreachable
 		printf("Failed to allocate stack for 3DSX.\n");
 		return false;
@@ -51,7 +53,7 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 	// Map code file to memory
 	// Total memory to allocate for loading
 	// suum of aligned values is always aligned, have an extra RW page for libctru
-	const u32 totalSize = hbInfo.codeSegSizeAligned + hbInfo.rodataSegSizeAligned + hbInfo.dataSegSizeAligned + 0x1000;
+	const u32 totalSize = hbInfo.codeSegSizeAligned + hbInfo.rodataSegSizeAligned + hbInfo.dataSegSizeAligned + 4_KB;
 
 	const auto opt = findPaddr(totalSize);
 	if (!opt.has_value()) {
@@ -65,9 +67,9 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 	const u32 dataOffset = rodataOffset + hbInfo.rodataSegSizeAligned;
 	const u32 extraPageOffset = dataOffset + hbInfo.dataSegSizeAligned;
 
-	std::array<HB3DSX::RelocHdr, 3> relocHdrs;
-	auto [success, count] = hb3dsx.file.read(&relocHdrs[0], relocHdrs.size(), sizeof(HB3DSX::RelocHdr));
-	if (!success || count != relocHdrs.size()) {
+	std::array<HB3DSX::RelocHeader, 3> relocHeaders;
+	auto [success, count] = hb3dsx.file.read(&relocHeaders[0], relocHeaders.size(), sizeof(HB3DSX::RelocHeader));
+	if (!success || count != relocHeaders.size()) {
 		Helpers::panic("Failed to read 3DSX relocation headers");
 		return false;
 	}
@@ -94,18 +96,21 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 	}
 
 	std::vector<HB3DSX::Reloc> currentRelocs;
+	
 	const u32 segAddrs[] = {
 		textSegAddr,
 		rodataSegAddr,
 		dataSegAddr,
 		extraPageAddr,
 	};
+
 	const u32 segOffs[] = {
 		textOffset,
 		rodataOffset,
 		dataOffset,
 		extraPageOffset,
 	};
+	
 	const u32 segSizes[] = {
 		header.codeSegSize,
 		header.rodataSegSize,
@@ -113,8 +118,8 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 		0x1000,
 	};
 
-	for (const auto& relocHdr : relocHdrs) {
-		currentRelocs.resize(relocHdr.cAbsolute + relocHdr.cRelative);
+	for (const auto& relocHeader : relocHeaders) {
+		currentRelocs.resize(relocHeader.absoluteCount + relocHeader.relativeCount);
 		std::tie(success, count) = hb3dsx.file.read(&currentRelocs[0], currentRelocs.size(), sizeof(HB3DSX::Reloc));
 		if (!success || count !=  currentRelocs.size()) {
 			Helpers::panic("Failed to read 3DSX relocations");
@@ -122,15 +127,15 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 		}
 
 		const auto allRelocs = std::span(currentRelocs);
-		const auto absoluteRelocs = allRelocs.subspan(0, relocHdr.cAbsolute);
-		const auto relativeRelocs = allRelocs.subspan(relocHdr.cAbsolute, relocHdr.cRelative);
+		const auto absoluteRelocs = allRelocs.subspan(0, relocHeader.absoluteCount);
+		const auto relativeRelocs = allRelocs.subspan(relocHeader.absoluteCount, relocHeader.relativeCount);
 
-		const auto currentSeg = &relocHdr - &relocHdrs[0];
+		const auto currentSeg = &relocHeader - &relocHeaders[0];
 		const auto sectionDataStartAs = std::span(code).subspan(segOffs[currentSeg], segSizes[currentSeg]);
-
 		auto sectionData = sectionDataStartAs;
-		const auto RelocationAction = [&](const HB3DSX::Reloc& reloc, const HB3DSX::RelocKind relocKind) -> bool {
-			if(reloc.skip) {
+
+		const auto RelocationAction = [&](const HB3DSX::Reloc& reloc, const HB3DSX::RelocType relocType) -> bool {
+			if (reloc.skip) {
 				sectionData = sectionData.subspan(reloc.skip * sizeof(u32)); // advance by `skip` words (32-bit values)
 			}
 
@@ -139,10 +144,10 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 				u32 origData = 0;
 				std::memcpy(&origData, &sectionData[0], sizeof(u32));
 				const u32 subType = origData >> (32-4);
-				const u32 addr = TranslateAddr(origData &~ 0xF0000000, segAddrs, segOffs);
+				const u32 addr = translateAddr(origData &~ 0xF0000000, segAddrs, segOffs);
 
-				switch (relocKind) {
-					case HB3DSX::RelocKind::Absolute: {
+				switch (relocType) {
+					case HB3DSX::RelocType::Absolute: {
 						if (subType != 0) {
 							Helpers::panic("Unsupported absolute reloc subtype");
 							return false;
@@ -150,7 +155,8 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 						std::memcpy(&sectionData[0], &addr, sizeof(u32));
 						break;
 					}
-					case HB3DSX::RelocKind::Relative: {
+
+					case HB3DSX::RelocType::Relative: {
 						u32 data = addr - inAddr;
 						switch (subType) {
 							case 1: // 31-bit signed offset
@@ -165,6 +171,7 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 						break;
 					}
 				}
+
 				sectionData = sectionData.subspan(sizeof(u32));
 			}
 
@@ -172,14 +179,14 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 		};
 
 		for (const auto& reloc : absoluteRelocs) {
-			if(!RelocationAction(reloc, HB3DSX::RelocKind::Absolute)) {
+			if (!RelocationAction(reloc, HB3DSX::RelocType::Absolute)) {
 				return false;
 			}
 		}
 
 		sectionData = sectionDataStartAs; // restart from the beginning for the next part
 		for (const auto& reloc : relativeRelocs) {
-			if(!RelocationAction(reloc, HB3DSX::RelocKind::Relative)) {
+			if (!RelocationAction(reloc, HB3DSX::RelocType::Relative)) {
 				return false;
 			}
 		}
@@ -208,11 +215,11 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 		bool isN3DS = svcGetSystemInfo(&dummy, 0x10001, 0) == 0;
 		if (isN3DS)
 		{
-			pst->heapSize = 48*1024*1024;
-			pst->linearHeapSize = 64*1024*1024;
+			pst->heapSize = u32(48_MB);
+			pst->linearHeapSize = u32(64_MB);
 		} else */ {
-			pst.heapSize = 24*1024*1024;
-			pst.linearHeapSize = 32*1024*1024;
+			pst.heapSize = u32(24_MB);
+			pst.linearHeapSize = u32(32_MB);
 		}
 
 		std::memcpy(&code[4], &pst, sizeof(pst));
@@ -230,7 +237,9 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 
 std::optional<u32> Memory::load3DSX(const std::filesystem::path& path) {
 	HB3DSX hb3dsx;
-	if (!hb3dsx.file.open(path, "rb")) return std::nullopt;
+	if (!hb3dsx.file.open(path, "rb")) {
+		return std::nullopt;
+	}
 
 	u8 magic[4];  // Must be "3DSX"
 	auto [success, bytes] = hb3dsx.file.readBytes(magic, 4);
@@ -261,6 +270,7 @@ std::optional<u32> Memory::load3DSX(const std::filesystem::path& path) {
 				printf("Failed to read 3DSX romFS offset\n");
 				return std::nullopt;
 			}
+
 			const auto fileSize = hb3dsx.file.size();
 			if (!fileSize) {
 				printf("Failed to get 3DSX size\n");
@@ -280,7 +290,7 @@ std::optional<u32> Memory::load3DSX(const std::filesystem::path& path) {
 	}
 
 	loaded3DSX = std::move(hb3dsx);
-	return HB3DSX::ENTRYPOINT;
+	return HB3DSX::entrypoint;
 }
 
 bool HB3DSX::hasRomFs() const {

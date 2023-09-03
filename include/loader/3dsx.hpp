@@ -28,7 +28,7 @@ struct HB3DSX {
     struct Header {
         // minus char magic[4]
         u16 headerSize;
-        u16 relocHdrSize;
+        u16 relocHeaderSize;
         u32 formatVer;
         u32 flags;
 
@@ -38,16 +38,17 @@ struct HB3DSX {
     };
 
     // Relocation header: all fields (even extra unknown fields) are guaranteed to be relocation counts.
-    struct RelocHdr {
-        u32 cAbsolute; // # of absolute relocations (that is, fix address to post-relocation memory layout)
-        u32 cRelative; // # of cross-segment relative relocations (that is, 32bit signed offsets that need to be patched)
+    struct RelocHeader {
+        u32 absoluteCount; // # of absolute relocations (that is, fix address to post-relocation memory layout)
+        u32 relativeCount; // # of cross-segment relative relocations (that is, 32bit signed offsets that need to be patched)
         // more?
 
         // Relocations are written in this order:
         // - Absolute relocs
         // - Relative relocs
     };
-    enum class RelocKind {
+
+    enum class RelocType {
         Absolute,
         Relative,
     };
@@ -70,7 +71,7 @@ struct HB3DSX {
 
     IOFile file;
 
-    static constexpr u32 ENTRYPOINT = 0x00100000; // Initial ARM11 PC
+    static constexpr u32 entrypoint = 0x00100000; // Initial ARM11 PC
     u32 romFSSize = 0;
     u32 romFSOffset = 0;
 
