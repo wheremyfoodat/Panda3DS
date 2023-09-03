@@ -426,6 +426,10 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		reset(ReloadOption::NoReload);
 	}
 
+	// Reset whatever state needs to be reset before loading a new ROM
+	memory.loadedCXI = std::nullopt;
+	memory.loaded3DSX = std::nullopt;
+
 	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
 	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
 	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart
@@ -453,6 +457,8 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		success = loadNCSD(path, ROMType::NCSD);
 	else if (extension == ".cxi" || extension == ".app")
 		success = loadNCSD(path, ROMType::CXI);
+	else if (extension == ".3dsx")
+		success = load3DSX(path);
 	else {
 		printf("Unknown file type\n");
 		success = false;
@@ -488,6 +494,19 @@ bool Emulator::loadNCSD(const std::filesystem::path& path, ROMType type) {
 	if (loadedNCSD.entrypoint & 1) {
 		Helpers::panic("Misaligned NCSD entrypoint; should this start the CPU in Thumb mode?");
 	}
+
+	return true;
+}
+
+bool Emulator::load3DSX(const std::filesystem::path& path) {
+	std::optional<u32> entrypoint = memory.load3DSX(path);
+	romType = ROMType::HB_3DSX;
+
+	if (!entrypoint.has_value()) {
+		return false;
+	}
+
+	cpu.setReg(15, entrypoint.value());  // Set initial PC
 
 	return true;
 }

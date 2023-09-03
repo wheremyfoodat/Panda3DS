@@ -11,6 +11,7 @@
 #include "handles.hpp"
 #include "helpers.hpp"
 #include "loader/ncsd.hpp"
+#include "loader/3dsx.hpp"
 #include "services/region_codes.hpp"
 
 namespace PhysicalAddrs {
@@ -167,10 +168,12 @@ public:
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
 	std::optional<u32> loadELF(std::ifstream& file);
+	std::optional<u32> load3DSX(const std::filesystem::path& path);
 	std::optional<NCSD> loadNCSD(Crypto::AESEngine& aesEngine, const std::filesystem::path& path);
 	std::optional<NCSD> loadCXI(Crypto::AESEngine& aesEngine, const std::filesystem::path& path);
 
 	bool mapCXI(NCSD& ncsd, NCCH& cxi);
+	bool map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header);
 
 	u8 read8(u32 vaddr);
 	u16 read16(u32 vaddr);
@@ -221,6 +224,14 @@ public:
 		}
 	}
 
+	HB3DSX* get3DSX() {
+		if (loaded3DSX.has_value()) {
+			return &loaded3DSX.value();
+		} else {
+			return nullptr;
+		}
+	}
+
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
 	static constexpr bool isAligned(u32 addr) {
 		return (addr & pageMask) == 0;
@@ -256,6 +267,7 @@ public:
 
 	// Backup of the game's CXI partition info, if any
 	std::optional<NCCH> loadedCXI = std::nullopt;
+	std::optional<HB3DSX> loaded3DSX = std::nullopt;
 	// File handle for reading the loaded ncch
 	IOFile CXIFile;
 

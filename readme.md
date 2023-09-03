@@ -61,6 +61,7 @@ Panda3DS can load ROMs in the following formats:
 - .3ds/.cci
 - .cxi/.app
 - .elf/.axf
+- .3dsx
 
 Both decrypted and encrypted dumps are supported. However for encrypted dumps you must provide your AES keys file by adding a `sysdata` folder to the emulator's app data directory with a file called `aes_keys.txt` including your keys. Currently .cia files are not supported yet (support is planned for the future), however if you want you can usually use Citra to extract the .app/.cxi file out of your .cia and run that.
 

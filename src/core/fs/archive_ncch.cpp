@@ -131,20 +131,20 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 	}
 
 	auto cxi = mem.getCXI();
-	IOFile& ioFile = mem.CXIFile;
+	auto hb3dsx = mem.get3DSX();
 
-	NCCH::FSInfo fsInfo;
+	// If isCXI is true then we've loaded a CXI/3DS file, else it's 3DSX
+	bool isCXI = cxi != nullptr;
 
 	// Seek to file offset depending on if we're reading from RomFS, ExeFS, etc
 	switch (type) {
 		case PathType::RomFS: {
-			const u64 romFSSize = cxi->romFS.size;
-			const u64 romFSOffset = cxi->romFS.offset;
+			const u64 romFSSize = isCXI ? cxi->romFS.size : hb3dsx->romFSSize;
+			const u64 romFSOffset = isCXI ? cxi->romFS.offset : hb3dsx->romFSOffset;
 			if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
 				Helpers::panic("Tried to read from NCCH with too big of an offset");
 			}
 
-			fsInfo = cxi->romFS;
 			offset += 0x1000;
 			break;
 		}
@@ -154,7 +154,8 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 	}
 
 	std::unique_ptr<u8[]> data(new u8[size]);
-	auto [success, bytesRead] = cxi->readFromFile(ioFile, fsInfo, &data[0], offset, size);
+	auto [success, bytesRead] =
+		isCXI ? cxi->readFromFile(mem.CXIFile, cxi->romFS, &data[0], offset, size) : hb3dsx->readRomFSBytes(&data[0], offset, size);
 
 	if (!success) {
 		Helpers::panic("Failed to read from NCCH archive");
