@@ -1,0 +1,66 @@
+name: Linux AppImage Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Fetch submodules
+      run: git submodule update --init --recursive
+
+    - name: Install misc packages
+      run: sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2
+
+    - name: Install newer Clang
+      run: |
+       wget https://apt.llvm.org/llvm.sh
+       chmod +x ./llvm.sh
+       sudo ./llvm.sh 16
+
+    - name: Install newer CMake
+      run: |
+       sudo curl -s https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA
+       sudo add-apt-repository -y 'deb https://apt.kitware.com/ubuntu/ focal main'
+       sudo apt-get update
+       sudo apt-get install cmake
+       
+    - name: Setup Vulkan SDK
+      run: |
+       wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+       sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-focal.list http://packages.lunarg.com/vulkan/lunarg-vulkan-focal.list
+       sudo apt update
+       sudo apt install vulkan-sdk
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DENABLE_USER_BUILD=ON
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Run AppImage packaging script
+      run:  ./.github/linux-appimage.sh
+
+    - name: Upload executable
+      uses: actions/upload-artifact@v2
+      with:
+        name: Linux executable
+        path: './Alber-x86_64.AppImage' 
