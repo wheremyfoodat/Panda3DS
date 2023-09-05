@@ -1,7 +1,7 @@
 # Panda3DS
 [![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml) [![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml) [![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml) [![AUR Package](https://img.shields.io/aur/version/panda3ds-git)](https://aur.archlinux.org/packages/panda3ds-git)
 
-Panda3DS is an HLE, red-panda-themed Nintendo 3DS emulator written in C++ which started out as a fun project out of curiosity, but evolved into something that can sort of play games!
+Panda3DS is an HLE, red-panda-themed Nintendo 3DS emulator written in C++ which started out as a fun project out of curiosity, but evolved into something that can play games!
 
 # Discussion
 Join our Discord server by pressing on the banner below!
@@ -24,7 +24,6 @@ Panda3DS is still in the early stages of development. Many games boot, many don'
 
 In addition, some games don't quiiite work with the upstream code. A lot of them might need some panics in the source code to be commented out before they work, etc. However, just the fact things can work as well as they do now is promising in itself.
 
-Check out [this Google spreadsheet](https://docs.google.com/spreadsheets/d/1nWZTzfaMPkZdyhqHEawMRBaP0qSMmQdxrVfAbgapYrM/edit?usp=sharing) for an unofficial compatibility list.
 # Why?
 The 3DS emulation scene is already pretty mature, with offerings such as [Citra](https://github.com/citra-emu/citra) which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
 
@@ -111,7 +110,7 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 # Support
 If you find this project exciting and want to support the founder, check out [his Patreon page](https://www.patreon.com/wheremyfoodat)
 <br>
-Keep in mind, funding is only aimed to cover various life costs and support development. Panda3DS is a free product and on no occasion will official builds ever be made private or limited to sponsors! Any donation is much appreciated!
+Keep in mind that funding is only aimed to cover various life costs and support development. Panda3DS is a free product and on no occasion will official builds ever be made private or limited to sponsors! Any donation is much appreciated!
 
 Nintendo 3DS is a registered trademark of Nintendo Co., Ltd.
 
