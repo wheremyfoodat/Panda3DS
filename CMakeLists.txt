@@ -123,7 +123,7 @@ set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp
+                 src/discord_rpc.cpp src/achievements.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -186,6 +186,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
+                 include/achievements.hpp
 )
 
 cmrc_add_resource_library(
@@ -395,4 +396,8 @@ endif()
 
 if(ENABLE_HTTP_SERVER)
     target_compile_definitions(Alber PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
+endif()
+
+if(ENABLE_RETROACHIEVEMENTS)
+    target_compile_definitions(Alber PRIVATE PANDA3DS_ENABLE_RETROACHIEVEMENTS=1)
 endif()
