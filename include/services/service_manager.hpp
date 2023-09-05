@@ -84,6 +84,7 @@ class ServiceManager {
 	void receiveNotification(u32 messagePointer);
 	void registerClient(u32 messagePointer);
 	void subscribe(u32 messagePointer);
+	void unsubscribe(u32 messagePointer);
 
   public:
 	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config);

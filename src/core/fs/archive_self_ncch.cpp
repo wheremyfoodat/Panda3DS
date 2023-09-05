@@ -71,7 +71,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 
 	bool success = false;
 	std::size_t bytesRead = 0;
-	std::vector<u8> data;
+	std::unique_ptr<u8[]> data(new u8[size]);
 
 	if (auto cxi = mem.getCXI(); cxi != nullptr) {
 		IOFile& ioFile = mem.CXIFile;
@@ -122,7 +122,6 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 			default: Helpers::panic("Unimplemented file path type for SelfNCCH archive");
 		}
 
-		data.resize(size);
 		std::tie(success, bytesRead) = cxi->readFromFile(ioFile, fsInfo, &data[0], offset, size);
 	}
 
@@ -139,7 +138,6 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 			default: Helpers::panic("Unimplemented file path type for 3DSX SelfNCCH archive");
 		}
 
-		data.resize(size);
 		std::tie(success, bytesRead) = hb3dsx->readRomFSBytes(&data[0], offset, size);
 	}
 

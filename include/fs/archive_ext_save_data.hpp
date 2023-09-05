@@ -9,6 +9,7 @@ public:
 	u64 getFreeBytes() override { Helpers::panic("ExtSaveData::GetFreeBytes unimplemented"); return 0;  }
 	std::string name() override { return "ExtSaveData::" + backingFolder; }
 
+	HorizonResult createDirectory(const FSPath& path) override;
 	HorizonResult createFile(const FSPath& path, u64 size) override;
 	HorizonResult deleteFile(const FSPath& path) override;
 

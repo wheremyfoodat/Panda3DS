@@ -79,6 +79,7 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 		case Commands::RegisterClient: registerClient(messagePointer); break;
 		case Commands::GetServiceHandle: getServiceHandle(messagePointer); break;
 		case Commands::Subscribe: subscribe(messagePointer); break;
+		case Commands::Unsubscribe: unsubscribe(messagePointer); break;
 		default: Helpers::panic("Unknown \"srv:\" command: %08X", header);
 	}
 }
@@ -175,6 +176,14 @@ void ServiceManager::subscribe(u32 messagePointer) {
 	log("srv::Subscribe (id = %d) (stubbed)\n", id);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void ServiceManager::unsubscribe(u32 messagePointer) {
+	u32 id = mem.read32(messagePointer + 4);
+	log("srv::Unsubscribe (id = %d) (stubbed)\n", id);
+
+	mem.write32(messagePointer, IPC::responseHeader(0xA, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
