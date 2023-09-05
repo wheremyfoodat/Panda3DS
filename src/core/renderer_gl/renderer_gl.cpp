@@ -695,6 +695,7 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	if (inputGap != 0 || outputGap != 0) {
 		// Helpers::warn("Strided texture copy\n");
 	}
+
 	if (inputWidth != outputWidth) {
 		Helpers::warn("Input width does not match output width, cannot accelerate texture copy!");
 		return;
@@ -716,7 +717,12 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	// inputHeight/outputHeight are typically set to zero so they cannot be used to get the height of the copy region
 	// in contrast to display transfer. Compute height manually by dividing the copy size with the copy width. The result
 	// is the number of vertical tiles so multiply that by eight to get the actual copy height.
-	const u32 copyHeight = (copySize / inputWidth) * 8;
+	u32 copyHeight;
+	if (inputWidth != 0) [[likely]] {
+		copyHeight = (copySize / inputWidth) * 8;
+	} else {
+		copyHeight = 0;
+	}
 
 	// Find the source surface.
 	auto srcFramebuffer = getColourBuffer(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
