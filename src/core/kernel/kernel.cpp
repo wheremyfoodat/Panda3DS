@@ -263,6 +263,8 @@ void Kernel::duplicateHandle() {
 	}
 }
 
+void Kernel::clearInstructionCache() { cpu.clearCache(); }
+
 namespace SystemInfoType {
 	enum : u32 {
 		MemoryInformation = 0,
