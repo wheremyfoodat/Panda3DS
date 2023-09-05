@@ -1,9 +1,9 @@
-name: Linux Build
+name: Linux AppImage Build
 
 on:
   push:
     branches:
-      - Test
+      - master
   pull_request:
 
 env:
