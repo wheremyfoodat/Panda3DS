@@ -124,6 +124,7 @@ void Kernel::deleteObjectData(KernelObject& object) {
 		case KernelObjectType::Session: delete object.getData<Session>(); return;
 		case KernelObjectType::Mutex: delete object.getData<Mutex>(); return;
 		case KernelObjectType::Semaphore: delete object.getData<Semaphore>(); return;
+		case KernelObjectType::Timer: delete object.getData<Timer>(); return;
 		case KernelObjectType::Thread: return;
 		case KernelObjectType::Dummy: return;
 		default: [[unlikely]] Helpers::warn("unknown object type"); return;
@@ -261,6 +262,8 @@ void Kernel::duplicateHandle() {
 		Helpers::panic("DuplicateHandle: unimplemented handle type");
 	}
 }
+
+void Kernel::clearInstructionCache() { cpu.clearCache(); }
 
 namespace SystemInfoType {
 	enum : u32 {

@@ -5,8 +5,10 @@
 namespace NFCCommands {
 	enum : u32 {
 		Initialize = 0x00010040,
+		Shutdown = 0x00020040,
 		StartCommunication = 0x00030000,
 		StopCommunication = 0x00040000,
+		StartTagScanning = 0x00050040,
 		GetTagInRangeEvent = 0x000B0000,
 		GetTagOutOfRangeEvent = 0x000C0000,
 		GetTagState = 0x000D0000,
@@ -32,7 +34,9 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 		case NFCCommands::GetTagInRangeEvent: getTagInRangeEvent(messagePointer); break;
 		case NFCCommands::GetTagOutOfRangeEvent: getTagOutOfRangeEvent(messagePointer); break;
 		case NFCCommands::GetTagState: getTagState(messagePointer); break;
+		case NFCCommands::Shutdown: shutdown(messagePointer); break;
 		case NFCCommands::StartCommunication: startCommunication(messagePointer); break;
+		case NFCCommands::StartTagScanning: startTagScanning(messagePointer); break;
 		case NFCCommands::StopCommunication: stopCommunication(messagePointer); break;
 		default: Helpers::panic("NFC service requested. Command: %08X\n", command);
 	}
@@ -47,6 +51,16 @@ void NFCService::initialize(u32 messagePointer) {
 	initialized = true;
 	// TODO: This should error if already initialized. Also sanitize type.
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NFCService::shutdown(u32 messagePointer) {
+	log("MFC::Shutdown");
+	const u8 mode = mem.read8(messagePointer + 4);
+
+	Helpers::warn("NFC::Shutdown: Unimplemented mode: %d", mode);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -111,6 +125,14 @@ void NFCService::startCommunication(u32 messagePointer) {
 	// TODO: Actually start communication when we emulate amiibo
 
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NFCService::startTagScanning(u32 messagePointer) {
+	log("NFC::StartTagScanning\n");
+	tagStatus = TagStatus::Scanning;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

@@ -12,7 +12,9 @@ class HTTPService {
 	bool initialized = false;
 
 	// Service commands
+	void createRootCertChain(u32 messagePointer);
 	void initialize(u32 messagePointer);
+	void rootCertChainAddDefaultCert(u32 messagePointer);
 
   public:
 	HTTPService(Memory& mem) : mem(mem) {}

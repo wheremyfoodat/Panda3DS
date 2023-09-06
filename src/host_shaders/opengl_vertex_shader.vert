@@ -64,7 +64,8 @@ float decodeFP(uint hex, uint E, uint M) {
 
 void main() {
 	gl_Position = a_coords;
-	v_colour = a_vertexColour;
+        vec4 colourAbs = abs(a_vertexColour);
+        v_colour = min(colourAbs, vec4(1.f));
 
 	// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
 	v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);

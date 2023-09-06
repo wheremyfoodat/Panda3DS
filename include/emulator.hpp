@@ -24,6 +24,7 @@ enum class ROMType {
 	ELF,
 	NCSD,
 	CXI,
+	HB_3DSX,
 };
 
 class Emulator {
@@ -99,6 +100,7 @@ class Emulator {
 
 	bool loadROM(const std::filesystem::path& path);
 	bool loadNCSD(const std::filesystem::path& path, ROMType type);
+	bool load3DSX(const std::filesystem::path& path);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 	void initGraphicsContext();

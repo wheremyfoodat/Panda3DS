@@ -143,6 +143,7 @@ u32 Memory::read32(u32 vaddr) {
 		return *(u32*)(pointer + offset);
 	} else {
 		switch (vaddr) {
+			case 0x1FF80000: return u32(kernelVersion) << 16;
 			case ConfigMem::Datetime0: return u32(timeSince3DSEpoch());  // ms elapsed since Jan 1 1900, bottom 32 bits
 			case ConfigMem::Datetime0 + 4:
 				return u32(timeSince3DSEpoch() >> 32);  // top 32 bits
