@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdio>
 #include "kernel.hpp"
 #include "kernel_types.hpp"
 #include "cpu.hpp"
@@ -177,7 +178,29 @@ u32 Kernel::getTLSPointer() {
 
 // Result CloseHandle(Handle handle)
 void Kernel::svcCloseHandle() {
+	Handle handle = regs[0];
 	logSVC("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
+
+	KernelObject* object = getObject(handle);
+
+	if (object == nullptr) {
+		Helpers::warn("svcCloseHandle with invalid object");
+	} else {
+		switch (object->type) {
+			case KernelObjectType::File: {
+				FileSession* session = object->getData<FileSession>();
+				session->isOpen = false;
+
+				if (session->fd) {
+					fclose(session->fd);
+				}
+				break;
+			}
+
+			default: break; // Unimplemented atm
+		}
+	}
+
 	regs[0] = Result::Success;
 }
 
