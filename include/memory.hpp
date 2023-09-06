@@ -224,6 +224,8 @@ public:
 		return fcramApplicationSize;
 	}
 
+	u32 getTotalAppFcramSize() { return fcramApplicationSize; }
+
 	enum class BatteryLevel {
 		Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
 	};
