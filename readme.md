@@ -24,6 +24,7 @@ Panda3DS is still in the early stages of development. Many games boot, many don'
 
 In addition, some games don't quiiite work with the upstream code. A lot of them might need some panics in the source code to be commented out before they work, etc. However, just the fact things can work as well as they do now is promising in itself.
 
+For documenting game compatibility, make sure to visit the [games list repository](https://github.com/Panda3DS-emu/Panda3DS-Games-List). For miscellaneous issues or more technical issues, feel free to use this repo's issues tab.
 # Why?
 The 3DS emulation scene is already pretty mature, with offerings such as [Citra](https://github.com/citra-emu/citra) which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
 
