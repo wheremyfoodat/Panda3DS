@@ -17,8 +17,8 @@ class LDRService {
 
 	// Service commands
 	void initialize(u32 messagePointer);
+	void loadCRO(u32 messagePointer, bool isNew);
 	void loadCRR(u32 messagePointer);
-	void loadCRONew(u32 messagePointer);
 	void unloadCRO(u32 messagePointer);
 
 public:

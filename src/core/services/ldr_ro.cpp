@@ -9,6 +9,7 @@ namespace LDRCommands {
 	enum : u32 {
 		Initialize = 0x000100C2,
 		LoadCRR = 0x00020082,
+		LoadCRO = 0x000402C2,
 		UnloadCRO = 0x000500C2,
 		LoadCRONew = 0x000902C2,
 	};
@@ -577,7 +578,7 @@ public:
 	}
 
 	// Links CROs. Heavily based on Citra's CRO linker
-	bool link(u32 loadedCRS) {
+	bool link(u32 loadedCRS, bool isNew) {
 		if (loadedCRS == 0) {
 			Helpers::panic("CRS not loaded");
 		}
@@ -587,11 +588,13 @@ public:
 		// Fix data segment offset (LoadCRO_New)
 		// Note: the old LoadCRO does *not* fix .data
 		u32 dataVaddr;
-		if (segmentTable.size > 1) {
-			// Note: ldr:ro assumes that segment index 2 is .data
-			dataVaddr = mem.read32(segmentTable.offset + 24 + SegmentTable::Offset);
+		if (isNew) {
+			if (segmentTable.size > 1) {
+				// Note: ldr:ro assumes that segment index 2 is .data
+				dataVaddr = mem.read32(segmentTable.offset + 24 + SegmentTable::Offset);
 
-			mem.write32(segmentTable.offset + 24 + SegmentTable::Offset, mem.read32(croPointer + CROHeader::DataOffset));
+				mem.write32(segmentTable.offset + 24 + SegmentTable::Offset, mem.read32(croPointer + CROHeader::DataOffset));
+			}
 		}
 
 		importNamedSymbols(loadedCRS);
@@ -600,8 +603,10 @@ public:
 		// TODO: export symbols to other CROs
 
 		// Restore .data segment offset (LoadCRO_New)
-		if (segmentTable.size > 1) {
-			mem.write32(segmentTable.offset + 24 + SegmentTable::Offset, dataVaddr);
+		if (isNew) {
+			if (segmentTable.size > 1) {
+				mem.write32(segmentTable.offset + 24 + SegmentTable::Offset, dataVaddr);
+			}
 		}
 
 		return true;
@@ -656,8 +661,9 @@ void LDRService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case LDRCommands::Initialize: initialize(messagePointer); break;
 		case LDRCommands::LoadCRR: loadCRR(messagePointer); break;
+		case LDRCommands::LoadCRO: loadCRO(messagePointer, false); break;
 		case LDRCommands::UnloadCRO: unloadCRO(messagePointer); break;
-		case LDRCommands::LoadCRONew: loadCRONew(messagePointer); break;
+		case LDRCommands::LoadCRONew: loadCRO(messagePointer, true); break;
 		default: Helpers::panic("LDR::RO service requested. Command: %08X\n", command);
 	}
 }
@@ -722,7 +728,7 @@ void LDRService::loadCRR(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-void LDRService::loadCRONew(u32 messagePointer) {
+void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 	const u32 croPointer = mem.read32(messagePointer + 4);
 	const u32 mapVaddr = mem.read32(messagePointer + 8);
 	const u32 size = mem.read32(messagePointer + 12);
@@ -734,7 +740,7 @@ void LDRService::loadCRONew(u32 messagePointer) {
 	const u32 fixLevel = mem.read32(messagePointer + 40);
 	const Handle process = mem.read32(messagePointer + 52);
 
-	log("LDR_RO::LoadCRONew (buffer = %08X, vaddr = %08X, size = %08X, .data vaddr = %08X, .data size = %08X, .bss vaddr = %08X, .bss size = %08X, auto link = %d, fix level = %X, process = %X)\n", croPointer, mapVaddr, size, dataVaddr, dataSize, bssVaddr, bssSize, autoLink, fixLevel, process);
+	log("LDR_RO::LoadCRO (isNew = %d, buffer = %08X, vaddr = %08X, size = %08X, .data vaddr = %08X, .data size = %08X, .bss vaddr = %08X, .bss size = %08X, auto link = %d, fix level = %X, process = %X)\n", isNew, croPointer, mapVaddr, size, dataVaddr, dataSize, bssVaddr, bssSize, autoLink, fixLevel, process);
 
 	// Sanity checks
 	if (size < CRO_HEADER_SIZE) {
@@ -766,7 +772,7 @@ void LDRService::loadCRONew(u32 messagePointer) {
 		Helpers::panic("Failed to rebase CRO");
 	}
 
-	if (!cro.link(loadedCRS)) {
+	if (!cro.link(loadedCRS, isNew)) {
 		Helpers::panic("Failed to link CRO");
 	}
 
@@ -776,7 +782,12 @@ void LDRService::loadCRONew(u32 messagePointer) {
 
 	//kernel.clearInstructionCache();
 
-	mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 0));
+	if (isNew) {
+		mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 0));
+	} else {
+		mem.write32(messagePointer, IPC::responseHeader(0x4, 2, 0));
+	}
+
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, size);
 }
