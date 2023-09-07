@@ -10,6 +10,8 @@ class LDRService {
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, ldrLogger)
 
+	u32 loadedCRS;
+
 	// Service commands
 	void initialize(u32 messagePointer);
 	void loadCRR(u32 messagePointer);
