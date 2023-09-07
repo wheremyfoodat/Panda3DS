@@ -1,5 +1,6 @@
 #include "services/ldr_ro.hpp"
 #include "ipc.hpp"
+#include "kernel.hpp"
 
 #include <cstdio>
 #include <string>
@@ -8,6 +9,7 @@ namespace LDRCommands {
 	enum : u32 {
 		Initialize = 0x000100C2,
 		LoadCRR = 0x00020082,
+		UnloadCRO = 0x000500C2,
 		LoadCRONew = 0x000902C2,
 	};
 }
@@ -654,6 +656,7 @@ void LDRService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case LDRCommands::Initialize: initialize(messagePointer); break;
 		case LDRCommands::LoadCRR: loadCRR(messagePointer); break;
+		case LDRCommands::UnloadCRO: unloadCRO(messagePointer); break;
 		case LDRCommands::LoadCRONew: loadCRONew(messagePointer); break;
 		default: Helpers::panic("LDR::RO service requested. Command: %08X\n", command);
 	}
@@ -700,6 +703,8 @@ void LDRService::initialize(u32 messagePointer) {
 	if (!crs.rebase(0, mapVaddr, 0, 0)) {
 		Helpers::panic("Failed to rebase CRS");
 	}
+
+	//kernel.clearInstructionCache();
 
 	loadedCRS = crsPointer;
 
@@ -769,7 +774,20 @@ void LDRService::loadCRONew(u32 messagePointer) {
 
 	// TODO: add fixing
 
+	//kernel.clearInstructionCache();
+
 	mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, size);
+}
+
+void LDRService::unloadCRO(u32 messagePointer) {
+	const u32 mapVaddr = mem.read32(messagePointer + 4);
+	const u32 croPointer = mem.read32(messagePointer + 12);
+	const Handle process = mem.read32(messagePointer + 20);
+
+	Helpers::warn("LDR_RO::UnloadCRO (vaddr = %08X, buffer = %08X, process = %X)\n", mapVaddr, croPointer, process);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }

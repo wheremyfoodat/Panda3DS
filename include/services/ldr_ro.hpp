@@ -5,9 +5,12 @@
 #include "memory.hpp"
 #include "result/result.hpp"
 
+class Kernel;
+
 class LDRService {
 	Handle handle = KernelHandles::LDR_RO;
 	Memory& mem;
+	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, ldrLogger)
 
 	u32 loadedCRS;
@@ -16,9 +19,10 @@ class LDRService {
 	void initialize(u32 messagePointer);
 	void loadCRR(u32 messagePointer);
 	void loadCRONew(u32 messagePointer);
+	void unloadCRO(u32 messagePointer);
 
 public:
-	LDRService(Memory& mem) : mem(mem) {}
+	LDRService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 };
