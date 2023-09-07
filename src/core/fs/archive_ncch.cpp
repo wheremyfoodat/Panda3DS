@@ -131,9 +131,6 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 	}
 
 	auto cxi = mem.getCXI();
-	IOFile& ioFile = mem.CXIFile;
-
-	NCCH::FSInfo fsInfo;
 
 	// Seek to file offset depending on if we're reading from RomFS, ExeFS, etc
 	switch (type) {
@@ -144,7 +141,6 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 				Helpers::panic("Tried to read from NCCH with too big of an offset");
 			}
 
-			fsInfo = cxi->romFS;
 			offset += 0x1000;
 			break;
 		}
@@ -154,7 +150,7 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 	}
 
 	std::unique_ptr<u8[]> data(new u8[size]);
-	auto [success, bytesRead] = cxi->readFromFile(ioFile, fsInfo, &data[0], offset, size);
+	auto [success, bytesRead] = cxi->readFromFile(mem.CXIFile, cxi->romFS, &data[0], offset, size);
 
 	if (!success) {
 		Helpers::panic("Failed to read from NCCH archive");

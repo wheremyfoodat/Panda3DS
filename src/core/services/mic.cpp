@@ -13,6 +13,7 @@ namespace MICCommands {
 		SetGain = 0x00080040,
 		GetGain = 0x00090000,
 		SetPower = 0x000A0040,
+		GetPower = 0x000B0000,
 		SetIirFilter = 0x000C0042,
 		SetClamp = 0x000D0040,
 		CaptainToadFunction = 0x00100040,
@@ -33,6 +34,7 @@ void MICService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case MICCommands::GetEventHandle: getEventHandle(messagePointer); break;
 		case MICCommands::GetGain: getGain(messagePointer); break;
+		case MICCommands::GetPower: getPower(messagePointer); break;
 		case MICCommands::IsSampling: isSampling(messagePointer); break;
 		case MICCommands::MapSharedMem: mapSharedMem(messagePointer); break;
 		case MICCommands::SetClamp: setClamp(messagePointer); break;
@@ -99,6 +101,14 @@ void MICService::setPower(u32 messagePointer) {
 	micEnabled = val != 0;
 	mem.write32(messagePointer, IPC::responseHeader(0xA, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void MICService::getPower(u32 messagePointer) {
+	log("MIC::GetPower\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, micEnabled ? 1 : 0);
 }
 
 void MICService::setClamp(u32 messagePointer) {

@@ -25,6 +25,9 @@ class CAMService {
 	void driverInitialize(u32 messagePointer);
 	void getMaxLines(u32 messagePointer);
 	void getBufferErrorInterruptEvent(u32 messagePointer);
+	void setContrast(u32 messagePointer);
+	void setFrameRate(u32 messagePointer);
+	void setTransferLines(u32 messagePointer);
 
   public:
 	CAMService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}

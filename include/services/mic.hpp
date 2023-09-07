@@ -17,6 +17,7 @@ class MICService {
 	// Service commands
 	void getEventHandle(u32 messagePointer);
 	void getGain(u32 messagePointer);
+	void getPower(u32 messagePointer);
 	void isSampling(u32 messagePointer);
 	void mapSharedMem(u32 messagePointer);
 	void setClamp(u32 messagePointer);

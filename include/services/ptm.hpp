@@ -16,6 +16,7 @@ class PTMService {
 	// Service commands
 	void configureNew3DSCPU(u32 messagePointer);
 	void getAdapterState(u32 messagePointer);
+	void getBatteryChargeState(u32 messagePointer);
 	void getBatteryLevel(u32 messagePointer);
 	void getStepHistory(u32 messagePointer);
 	void getTotalStepCount(u32 messagePointer);

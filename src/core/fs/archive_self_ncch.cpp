@@ -69,57 +69,77 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 		return std::nullopt;
 	}
 
-	auto cxi = mem.getCXI();
-	IOFile& ioFile = mem.CXIFile;
+	bool success = false;
+	std::size_t bytesRead = 0;
+	std::unique_ptr<u8[]> data(new u8[size]);
 
-	NCCH::FSInfo fsInfo;
+	if (auto cxi = mem.getCXI(); cxi != nullptr) {
+		IOFile& ioFile = mem.CXIFile;
 
-	// Seek to file offset depending on if we're reading from RomFS, ExeFS, etc
-	switch (type) {
-		case PathType::RomFS: {
-			const u64 romFSSize = cxi->romFS.size;
-			const u64 romFSOffset = cxi->romFS.offset;
-			if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
-				Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+		NCCH::FSInfo fsInfo;
+
+		// Seek to file offset depending on if we're reading from RomFS, ExeFS, etc
+		switch (type) {
+			case PathType::RomFS: {
+				const u64 romFSSize = cxi->romFS.size;
+				const u64 romFSOffset = cxi->romFS.offset;
+				if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+				}
+
+				fsInfo = cxi->romFS;
+				offset += 0x1000;
+				break;
 			}
 
-			fsInfo = cxi->romFS;
-			offset += 0x1000;
-			break;
-		}
+			case PathType::ExeFS: {
+				const u64 exeFSSize = cxi->exeFS.size;
+				const u64 exeFSOffset = cxi->exeFS.offset;
+				if ((offset >> 32) || (offset >= exeFSSize) || (offset + size >= exeFSSize)) {
+					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+				}
 
-		case PathType::ExeFS: {
-			const u64 exeFSSize = cxi->exeFS.size;
-			const u64 exeFSOffset = cxi->exeFS.offset;
-			if ((offset >> 32) || (offset >= exeFSSize) || (offset + size >= exeFSSize)) {
-				Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+				fsInfo = cxi->exeFS;
+				break;
 			}
 
-			fsInfo = cxi->exeFS;
-			break;
-		}
+			// Normally, the update RomFS should overlay the cartridge RomFS when reading from this and an update is installed.
+			// So to support updates, we need to perform this overlaying. For now, read from the cartridge RomFS.
+			case PathType::UpdateRomFS: {
+				Helpers::warn("Reading from update RomFS but updates are currently not supported! Reading from regular RomFS instead\n");
 
-		// Normally, the update RomFS should overlay the cartridge RomFS when reading from this and an update is installed.
-		// So to support updates, we need to perform this overlaying. For now, read from the cartridge RomFS.
-		case PathType::UpdateRomFS: {
-			Helpers::warn("Reading from update RomFS but updates are currently not supported! Reading from regular RomFS instead\n");
+				const u64 romFSSize = cxi->romFS.size;
+				const u64 romFSOffset = cxi->romFS.offset;
+				if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+				}
 
-			const u64 romFSSize = cxi->romFS.size;
-			const u64 romFSOffset = cxi->romFS.offset;
-			if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
-				Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+				fsInfo = cxi->romFS;
+				offset += 0x1000;
+				break;
 			}
 
-			fsInfo = cxi->romFS;
-			offset += 0x1000;
-			break;
+			default: Helpers::panic("Unimplemented file path type for SelfNCCH archive");
 		}
 
-		default: Helpers::panic("Unimplemented file path type for SelfNCCH archive");
+		std::tie(success, bytesRead) = cxi->readFromFile(ioFile, fsInfo, &data[0], offset, size);
 	}
 
-	std::unique_ptr<u8[]> data(new u8[size]);
-	auto [success, bytesRead] = cxi->readFromFile(ioFile, fsInfo, &data[0], offset, size);
+	else if (auto hb3dsx = mem.get3DSX(); hb3dsx != nullptr) {
+		switch (type) {
+			case PathType::RomFS: {
+				const u64 romFSSize = hb3dsx->romFSSize;
+				if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
+				}
+				break;
+			}
+
+			default: Helpers::panic("Unimplemented file path type for 3DSX SelfNCCH archive");
+		}
+
+		std::tie(success, bytesRead) = hb3dsx->readRomFSBytes(&data[0], offset, size);
+	}
 
 	if (!success) {
 		Helpers::panic("Failed to read from SelfNCCH archive");

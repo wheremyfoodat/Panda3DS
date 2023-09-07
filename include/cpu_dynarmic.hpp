@@ -170,6 +170,8 @@ public:
         return env.totalTicks;
     }
 
+    void clearCache() { jit->ClearCache(); }
+
     void runFrame() {
         env.ticksLeft = ticksPerSec / 60;
 

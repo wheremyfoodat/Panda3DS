@@ -144,7 +144,7 @@ set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
 )
 
-set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/lz77.cpp)
+set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
 set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
                     src/core/fs/archive_ext_save_data.cpp src/core/fs/archive_ncch.cpp src/core/fs/romfs.cpp
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp
@@ -161,7 +161,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp include/renderer_null/renderer_null.hpp
                  include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
                  include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
-                 include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/io_file.hpp
+                 include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/loader/3dsx.hpp include/io_file.hpp
                  include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_self_ncch.hpp
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
                  include/fs/archive_save_data.hpp include/fs/archive_sdmc.hpp include/services/ptm.hpp
@@ -273,18 +273,28 @@ if(ENABLE_VULKAN)
 		"src/host_shaders/vulkan_display.vert"
 	)
 
-foreach( HOST_SHADER_SOURCE ${RENDERER_VK_HOST_SHADERS_SOURCE} )
-	get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
-	set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
-	add_custom_command(
-		OUTPUT ${HOST_SHADER_SPIRV}
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
-		COMMAND Vulkan::glslangValidator -t --target-env vulkan1.1 -g -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
-		#COMMAND ${SPIRV_OPT} -O ${HOST_SHADER_SPIRV} -o ${HOST_SHADER_SPIRV}
-		DEPENDS ${HOST_SHADER_SOURCE}
-	)
-	list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
-endforeach()
+
+    set( RENDERER_VK_HOST_SHADERS_FLAGS -e main --target-env vulkan1.1)
+
+    if(GPU_DEBUG_INFO)
+        # generate nonsemantic shader debug information with source
+        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -gVS)
+    else()
+        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -g0)
+    endif()
+
+    # Compile each vulkan shader into an .spv file
+    foreach( HOST_SHADER_SOURCE ${RENDERER_VK_HOST_SHADERS_SOURCE} )
+		get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
+		set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
+	    add_custom_command(
+		    OUTPUT ${HOST_SHADER_SPIRV}
+		    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
+		    COMMAND Vulkan::glslangValidator ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
+		    DEPENDS ${HOST_SHADER_SOURCE}
+	    )
+	    list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
+    endforeach()
 
 	cmrc_add_resource_library(
 		resources_renderer_vk

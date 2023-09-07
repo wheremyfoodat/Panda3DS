@@ -137,7 +137,7 @@ namespace Helpers {
 		return getBits<offset, bits, ValueT, ValueT>(value);
 	}
 
-#if defined(HELPERS_APPLE_CLANG) || defined(__ANDROID__)
+#if defined(HELPERS_APPLE_CLANG) || defined(__ANDROID__) || !defined(__cpp_lib_bit_cast)
 	template <class To, class From>
 	constexpr To bit_cast(const From& from) noexcept {
 		return *reinterpret_cast<const To*>(&from);

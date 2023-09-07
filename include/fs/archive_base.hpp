@@ -252,3 +252,10 @@ public:
 
     ArchiveBase(Memory& mem) : mem(mem) {}
 };
+
+struct ArchiveResource {
+	u32 sectorSize;   // Size of a sector in bytes
+	u32 clusterSize;  // Size of a cluster in bytes
+	u32 partitionCapacityInClusters;
+	u32 freeSpaceInClusters;
+};
