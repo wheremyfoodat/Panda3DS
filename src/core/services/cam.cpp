@@ -68,7 +68,6 @@ void CAMService::setFrameRate(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-
 // Algorithm taken from Citra
 // https://github.com/citra-emu/citra/blob/master/src/core/hle/service/cam/cam.cpp#L465
 void CAMService::getMaxLines(u32 messagePointer) {
