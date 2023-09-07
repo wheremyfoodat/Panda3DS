@@ -347,12 +347,9 @@ public:
 		for (u32 namedExport = 0; namedExport < namedExportTable.size; namedExport++) {
 			u32 nameOffset = mem.read32(namedExportTable.offset + 8 * namedExport);
 
-			// Note: I don't know if this can happen, better add this safeguard
-			if (nameOffset == 0) {
-				Helpers::panic("Named export name offset is NULL");
+			if (nameOffset != 0) {
+				mem.write32(namedExportTable.offset + 8 * namedExport, nameOffset + mapVaddr);
 			}
-
-			mem.write32(namedExportTable.offset + 8 * namedExport, nameOffset + mapVaddr);
 		}
 
 		return true;
@@ -364,27 +361,21 @@ public:
 		for (u32 importModule = 0; importModule < importModuleTable.size; importModule++) {
 			u32 nameOffset = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::NameOffset);
 
-			if (nameOffset == 0) {
-				Helpers::panic("Import module name offset is NULL");
+			if (nameOffset != 0) {
+				mem.write32(importModuleTable.offset + 20 * importModule + ImportModuleTable::NameOffset, nameOffset + mapVaddr);
 			}
-
-			mem.write32(importModuleTable.offset + 20 * importModule + ImportModuleTable::NameOffset, nameOffset + mapVaddr);
 
 			u32 indexedOffset = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::IndexedOffset);
 
-			if (indexedOffset == 0) {
-				Helpers::panic("Import module indexed offset is NULL");
+			if (indexedOffset != 0) {
+				mem.write32(importModuleTable.offset + 20 * importModule + ImportModuleTable::IndexedOffset, indexedOffset + mapVaddr);
 			}
-
-			mem.write32(importModuleTable.offset + 20 * importModule + ImportModuleTable::IndexedOffset, indexedOffset + mapVaddr);
 
 			u32 anonymousOffset = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::AnonymousOffset);
 
-			if (anonymousOffset == 0) {
-				Helpers::panic("Import module anonymous offset is NULL");
+			if (anonymousOffset != 0) {
+				mem.write32(importModuleTable.offset + 20 * importModule + ImportModuleTable::AnonymousOffset, anonymousOffset + mapVaddr);
 			}
-
-			mem.write32(importModuleTable.offset + 20 * importModule + ImportModuleTable::AnonymousOffset, anonymousOffset + mapVaddr);
 		}
 
 		return true;
@@ -396,19 +387,15 @@ public:
 		for (u32 namedImport = 0; namedImport < namedImportTable.size; namedImport++) {
 			u32 nameOffset = mem.read32(namedImportTable.offset + 8 * namedImport + NamedImportTable::NameOffset);
 
-			if (nameOffset == 0) {
-				Helpers::panic("Named import name offset is NULL");
+			if (nameOffset != 0) {
+				mem.write32(namedImportTable.offset + 8 * namedImport + NamedImportTable::NameOffset, nameOffset + mapVaddr);
 			}
-
-			mem.write32(namedImportTable.offset + 8 * namedImport + NamedImportTable::NameOffset, nameOffset + mapVaddr);
 
 			u32 relocationOffset = mem.read32(namedImportTable.offset + 8 * namedImport + NamedImportTable::RelocationOffset);
 
-			if (relocationOffset == 0) {
-				Helpers::panic("Named import relocation offset is NULL");
+			if (relocationOffset != 0) {
+				mem.write32(namedImportTable.offset + 8 * namedImport + NamedImportTable::RelocationOffset, relocationOffset + mapVaddr);
 			}
-
-			mem.write32(namedImportTable.offset + 8 * namedImport + NamedImportTable::RelocationOffset, relocationOffset + mapVaddr);
 		}
 
 		return true;
@@ -420,11 +407,9 @@ public:
 		for (u32 indexedImport = 0; indexedImport < indexedImportTable.size; indexedImport++) {
 			u32 relocationOffset = mem.read32(indexedImportTable.offset + 8 * indexedImport + IndexedImportTable::RelocationOffset);
 
-			if (relocationOffset == 0) {
-				Helpers::panic("Indexed import relocation offset is NULL");
+			if (relocationOffset != 0) {
+				mem.write32(indexedImportTable.offset + 8 * indexedImport + IndexedImportTable::RelocationOffset, relocationOffset + mapVaddr);
 			}
-
-			mem.write32(indexedImportTable.offset + 8 * indexedImport + IndexedImportTable::RelocationOffset, relocationOffset + mapVaddr);
 		}
 
 		return true;
@@ -436,11 +421,9 @@ public:
 		for (u32 anonymousImport = 0; anonymousImport < anonymousImportTable.size; anonymousImport++) {
 			u32 relocationOffset = mem.read32(anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset);
 
-			if (relocationOffset == 0) {
-				Helpers::panic("Anonymous import relocation offset is NULL");
+			if (relocationOffset != 0) {
+				mem.write32(anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset, relocationOffset + mapVaddr);
 			}
-
-			mem.write32(anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset, relocationOffset + mapVaddr);
 		}
 
 		return true;
