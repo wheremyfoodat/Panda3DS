@@ -29,6 +29,7 @@ void NFCService::reset() {
 void NFCService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case NFCCommands::CommunicationGetResult: communicationGetResult(messagePointer); break;
 		case NFCCommands::CommunicationGetStatus: communicationGetStatus(messagePointer); break;
 		case NFCCommands::Initialize: initialize(messagePointer); break;
 		case NFCCommands::GetTagInRangeEvent: getTagInRangeEvent(messagePointer); break;
@@ -117,6 +118,21 @@ void NFCService::communicationGetStatus(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0xF, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, static_cast<u32>(adapterStatus));
+}
+
+
+void NFCService::communicationGetResult(u32 messagePointer) {
+	log("NFC::CommunicationGetResult");
+
+	if (!initialized) {
+		Helpers::warn("NFC::CommunicationGetResult: Old 3DS NFC Adapter not initialized\n");
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x12, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	// On N3DS: This always writes 0 here
+	// On O3DS with the NFC adapter: Returns a result code for NFC communication
+	mem.write32(messagePointer + 8, 0);
 }
 
 void NFCService::startCommunication(u32 messagePointer) {
