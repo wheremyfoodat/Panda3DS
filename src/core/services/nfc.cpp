@@ -48,6 +48,13 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 bool NFCService::loadAmiibo(const std::filesystem::path& path) {
 	IOFile file(path, "rb");
 
+	if (!initialized || tagStatus != TagStatus::Scanning) {
+		Helpers::warn("It's not the correct time to load an amiibo! Make sure to load amiibi when the game is searching for one!");
+		file.close();
+		
+		return false;
+	}
+
 	if (!file.isOpen()) {
 		printf("Failed to open Amiibo file");
 		file.close();
