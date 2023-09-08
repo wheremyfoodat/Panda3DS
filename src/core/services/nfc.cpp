@@ -70,6 +70,14 @@ bool NFCService::loadAmiibo(const std::filesystem::path& path) {
 		return false;
 	}
 
+	if (tagOutOfRangeEvent.has_value()) {
+		kernel.clearEvent(tagOutOfRangeEvent.value());
+	}
+
+	if (tagInRangeEvent.has_value()) {
+		kernel.signalEvent(tagInRangeEvent.value());
+	}
+
 	file.close();
 	return true;
 }
