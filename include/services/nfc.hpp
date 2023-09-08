@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 
+#include "amiibo_device.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -35,6 +36,7 @@ class NFCService {
 	// Kernel events signaled when an NFC tag goes in and out of range respectively
 	std::optional<Handle> tagInRangeEvent, tagOutOfRangeEvent;
 
+	AmiiboDevice device;
 	Old3DSAdapterStatus adapterStatus;
 	TagStatus tagStatus;
 	bool initialized = false;

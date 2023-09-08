@@ -1,4 +1,5 @@
 #include "services/nfc.hpp"
+#include "io_file.hpp"
 #include "ipc.hpp"
 #include "kernel.hpp"
 
@@ -18,6 +19,7 @@ namespace NFCCommands {
 }
 
 void NFCService::reset() {
+	device.reset();
 	tagInRangeEvent = std::nullopt;
 	tagOutOfRangeEvent = std::nullopt;
 
@@ -43,7 +45,27 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 	}
 }
 
-bool NFCService::loadAmiibo(const std::filesystem::path& path) { return true; }
+bool NFCService::loadAmiibo(const std::filesystem::path& path) {
+	IOFile file(path, "rb");
+
+	if (!file.isOpen()) {
+		printf("Failed to open Amiibo file");
+		file.close();
+
+		return false;
+	}
+
+	auto [success, bytesRead] = file.readBytes(&device.raw, AmiiboDevice::tagSize);
+	if (!success || bytesRead != AmiiboDevice::tagSize) {
+		printf("Failed to read entire tag from Amiibo file: File might not be a proper amiibo file\n");
+		file.close();
+
+		return false;
+	}
+
+	file.close();
+	return true;
+}
 
 void NFCService::initialize(u32 messagePointer) {
 	const u8 type = mem.read8(messagePointer + 4);
