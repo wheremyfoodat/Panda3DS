@@ -36,6 +36,7 @@ option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
+option(ENABLE_RETROACHIEVEMENTS "Compile with RetroAchievements support" ON)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -51,6 +52,10 @@ include_directories(third_party/xxhash/include)
 include_directories(third_party/httplib)
 include_directories(third_party/stb)
 include_directories(third_party/opengl)
+
+if(ENABLE_RETROACHIEVEMENTS)
+    include_directories(third_party/rcheevos/include)
+endif()
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
@@ -118,7 +123,7 @@ set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp
+                 src/discord_rpc.cpp src/achievements.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -181,6 +186,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
+                 include/achievements.hpp
 )
 
 cmrc_add_resource_library(
@@ -199,6 +205,41 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
 )
+
+if(ENABLE_RETROACHIEVEMENTS)
+    add_definitions(-DRC_DISABLE_LUA)
+    
+    set(RCHEEVOS_SOURCE_FILES
+        third_party/rcheevos/src/rapi/rc_api_common.c
+        third_party/rcheevos/src/rapi/rc_api_editor.c
+        third_party/rcheevos/src/rapi/rc_api_info.c
+        third_party/rcheevos/src/rapi/rc_api_runtime.c
+        third_party/rcheevos/src/rapi/rc_api_user.c
+        third_party/rcheevos/src/rcheevos/alloc.c
+        third_party/rcheevos/src/rcheevos/compat.c
+        third_party/rcheevos/src/rcheevos/condition.c
+        third_party/rcheevos/src/rcheevos/condset.c
+        third_party/rcheevos/src/rcheevos/consoleinfo.c
+        third_party/rcheevos/src/rcheevos/format.c
+        third_party/rcheevos/src/rcheevos/lboard.c
+        third_party/rcheevos/src/rcheevos/memref.c
+        third_party/rcheevos/src/rcheevos/operand.c
+        third_party/rcheevos/src/rcheevos/rc_client.c
+        third_party/rcheevos/src/rcheevos/rc_validate.c
+        third_party/rcheevos/src/rcheevos/richpresence.c
+        third_party/rcheevos/src/rcheevos/runtime.c
+        third_party/rcheevos/src/rcheevos/runtime_progress.c
+        third_party/rcheevos/src/rcheevos/trigger.c
+        third_party/rcheevos/src/rcheevos/value.c
+        third_party/rcheevos/src/rhash/cdreader.c
+        third_party/rcheevos/src/rhash/hash.c
+        third_party/rcheevos/src/rhash/md5.c
+        third_party/rcheevos/src/rurl/url.c
+    )
+
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} ${RCHEEVOS_SOURCE_FILES})
+endif()
+
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
 source_group("Source Files\\Core\\Crypto" FILES ${CRYPTO_SOURCE_FILES})
 source_group("Source Files\\Core\\Filesystem" FILES ${FS_SOURCE_FILES})
@@ -355,4 +396,8 @@ endif()
 
 if(ENABLE_HTTP_SERVER)
     target_compile_definitions(Alber PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
+endif()
+
+if(ENABLE_RETROACHIEVEMENTS)
+    target_compile_definitions(Alber PRIVATE PANDA3DS_ENABLE_RETROACHIEVEMENTS=1)
 endif()

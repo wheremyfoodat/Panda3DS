@@ -34,3 +34,6 @@
 [submodule "third_party/discord-rpc"]
 	path = third_party/discord-rpc
 	url = https://github.com/Panda3DS-emu/discord-rpc
+[submodule "third_party/rcheevos"]
+	path = third_party/rcheevos
+	url = https://github.com/RetroAchievements/rcheevos/
