@@ -98,6 +98,7 @@ class Emulator {
 	void pause();   // Pause the emulator
 	void togglePause();
 
+	bool loadAmiibo(const std::filesystem::path& path);
 	bool loadROM(const std::filesystem::path& path);
 	bool loadNCSD(const std::filesystem::path& path, ROMType type);
 	bool load3DSX(const std::filesystem::path& path);

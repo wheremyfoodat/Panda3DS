@@ -353,7 +353,14 @@ void Emulator::run() {
 					char* droppedDir = event.drop.file;
 
 					if (droppedDir) {
-						loadROM(droppedDir);
+						const std::filesystem::path path(droppedDir);
+
+						if (path.extension() == ".amiibo") {
+							loadAmiibo(path);
+						} else {
+							loadROM(path);
+						}
+
 						SDL_free(droppedDir);
 					}
 					break;
@@ -476,6 +483,11 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	resume();  // Start the emulator
 	return success;
+}
+
+bool Emulator::loadAmiibo(const std::filesystem::path& path) {
+	NFCService& nfc = kernel.getServiceManager().getNFC();
+	return nfc.loadAmiibo(path);
 }
 
 // Used for loading both CXI and NCSD files since they are both so similar and use the same interface

@@ -43,6 +43,8 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 	}
 }
 
+bool NFCService::loadAmiibo(const std::filesystem::path& path) { return true; }
+
 void NFCService::initialize(u32 messagePointer) {
 	const u8 type = mem.read8(messagePointer + 4);
 	log("NFC::Initialize (type = %d)\n", type);

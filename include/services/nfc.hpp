@@ -1,4 +1,6 @@
 #pragma once
+#include <filesystem>
+
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -49,8 +51,10 @@ class NFCService {
 	void startTagScanning(u32 messagePointer);
 	void stopCommunication(u32 messagePointer);
 
-public:
+  public:
 	NFCService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
+
+	bool loadAmiibo(const std::filesystem::path& path);
 };
