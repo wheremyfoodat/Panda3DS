@@ -104,4 +104,5 @@ class ServiceManager {
 
 	// Input function wrappers
 	HIDService& getHID() { return hid; }
+	NFCService& getNFC() { return nfc; }
 };

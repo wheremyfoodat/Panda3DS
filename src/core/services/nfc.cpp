@@ -1,4 +1,5 @@
 #include "services/nfc.hpp"
+#include "io_file.hpp"
 #include "ipc.hpp"
 #include "kernel.hpp"
 
@@ -18,6 +19,7 @@ namespace NFCCommands {
 }
 
 void NFCService::reset() {
+	device.reset();
 	tagInRangeEvent = std::nullopt;
 	tagOutOfRangeEvent = std::nullopt;
 
@@ -41,6 +43,43 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 		case NFCCommands::StopCommunication: stopCommunication(messagePointer); break;
 		default: Helpers::panic("NFC service requested. Command: %08X\n", command);
 	}
+}
+
+bool NFCService::loadAmiibo(const std::filesystem::path& path) {
+	IOFile file(path, "rb");
+
+	if (!initialized || tagStatus != TagStatus::Scanning) {
+		Helpers::warn("It's not the correct time to load an amiibo! Make sure to load amiibi when the game is searching for one!");
+		file.close();
+		
+		return false;
+	}
+
+	if (!file.isOpen()) {
+		printf("Failed to open Amiibo file");
+		file.close();
+
+		return false;
+	}
+
+	auto [success, bytesRead] = file.readBytes(&device.raw, AmiiboDevice::tagSize);
+	if (!success || bytesRead != AmiiboDevice::tagSize) {
+		printf("Failed to read entire tag from Amiibo file: File might not be a proper amiibo file\n");
+		file.close();
+
+		return false;
+	}
+
+	if (tagOutOfRangeEvent.has_value()) {
+		kernel.clearEvent(tagOutOfRangeEvent.value());
+	}
+
+	if (tagInRangeEvent.has_value()) {
+		kernel.signalEvent(tagInRangeEvent.value());
+	}
+
+	file.close();
+	return true;
 }
 
 void NFCService::initialize(u32 messagePointer) {

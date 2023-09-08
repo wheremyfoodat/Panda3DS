@@ -18,6 +18,11 @@ public:
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
 
+	Rust::Result<FormatInfo, HorizonResult> getFormatInfo(const FSPath& path) override {
+		Helpers::warn("Stubbed ExtSaveData::GetFormatInfo");
+		return Ok(FormatInfo{.size = 1_GB, .numOfDirectories = 255, .numOfFiles = 255, .duplicateData = false});
+	}
+
 	// Takes in a binary ExtSaveData path, outputs a combination of the backing folder with the low and high save entries of the path
 	// Used for identifying the archive format info files
 	std::string getExtSaveDataPathFromBinary(const FSPath& path);

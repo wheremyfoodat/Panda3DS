@@ -72,7 +72,15 @@ public:
 
 	// Signals an event, returns true on success or false if the event does not exist
 	bool signalEvent(Handle e);
-private:
+	
+	void clearEvent(Handle e) {
+		KernelObject* object = getObject(e, KernelObjectType::Event);
+		if (object != nullptr) {
+			object->getData<Event>()->fired = false;
+		}
+	}
+
+  private:
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThread(s64 ns);
 	void sleepThreadOnArbiter(u32 waitingAddress);
