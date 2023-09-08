@@ -802,25 +802,17 @@ public:
 
 			const std::string importModuleName = mem.readString(nameOffset, importStringSize);
 
-			std::printf("Importing module \"%s\"\n", importModuleName.c_str());
-
 			// Find import module
 			u32 currentCROPointer = loadedCRS;
 			while (currentCROPointer != 0) {
 				CRO cro(mem, currentCROPointer, true);
 
-				std::printf("Exporting module name \"%s\"\n", cro.getModuleName().c_str());
-
 				if (importModuleName.compare(cro.getModuleName()) == 0) {
-					std::printf("Found module \"%s\"\n", importModuleName.c_str());
-
 					// Import indexed symbols
 					const CROHeaderEntry indexedExportTable = cro.getHeaderEntry(CROHeader::IndexedExportTableOffset);
 
 					const u32 indexedOffset = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::IndexedOffset);
 					const u32 indexedNum = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::IndexedNum);
-
-					std::printf("Importing indexed symbols (num = %u, offset = %X)\n", indexedNum, indexedOffset);
 
 					for (u32 indexedImport = 0; indexedImport < indexedNum; indexedImport++) {
 						if (indexedOffset == 0) {
@@ -832,16 +824,12 @@ public:
 						const u32 segmentOffset = mem.read32(indexedExportTable.offset + 4 * importIndex + IndexedExportTable::SegmentOffset);
 						const u32 relocationOffset = mem.read32(indexedOffset + 8 * indexedImport + IndexedImportTable::RelocationOffset);
 
-						std::printf("Indexed import %u, index = %u, segment offset = %X, relocation offset = %X\n", indexedImport, importIndex, segmentOffset, relocationOffset);
-
 						patchBatch(relocationOffset, cro.getSegmentAddr(segmentOffset));
 					}
 
 					// Import anonymous symbols
 					const u32 anonymousOffset = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::AnonymousOffset);
 					const u32 anonymousNum = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::AnonymousNum);
-
-					std::printf("Importing anonymous symbols (num = %u, offset = %X)\n", anonymousNum, anonymousOffset);
 
 					for (u32 anonymousImport = 0; anonymousImport < anonymousNum; anonymousImport++) {
 						if (anonymousOffset == 0) {
@@ -850,8 +838,6 @@ public:
 
 						const u32 segmentOffset = mem.read32(anonymousOffset + 8 * anonymousImport + AnonymousImportTable::SegmentOffset);
 						const u32 relocationOffset = mem.read32(anonymousOffset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset);
-
-						std::printf("Anonymous import %u, segment offset = %X, relocation offset = %X\n", anonymousImport, segmentOffset, relocationOffset);
 
 						patchBatch(relocationOffset, cro.getSegmentAddr(segmentOffset));
 					}
@@ -938,8 +924,6 @@ public:
 						continue;
 					}
 
-					std::printf("Found symbol \"%s\" @ %X, relocation offset = %X\n", symbolName.c_str(), exportSymbolAddr, relocationOffset);
-
 					cro.patchBatch(relocationOffset, exportSymbolAddr);
 				}
 			}
@@ -956,8 +940,6 @@ public:
 				if (moduleName.compare(getModuleName()) != 0) {
 					continue;
 				}
-
-				std::printf("Exporting module \"%s\"\n", moduleName.c_str());
 
 				// Export indexed symbols
 				const u32 indexedOffset = mem.read32(importModuleTable.offset + 20 * importModule + ImportModuleTable::IndexedOffset);
@@ -978,8 +960,6 @@ public:
 
 					const u32 segmentOffset = mem.read32(anonymousOffset + 8 * anonymousImport + AnonymousImportTable::SegmentOffset);
 					const u32 relocationOffset = mem.read32(anonymousOffset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset);
-
-					std::printf("Anonymous import %u, segment offset = %X, relocation offset = %X\n", anonymousImport, segmentOffset, relocationOffset);
 
 					cro.patchBatch(relocationOffset, getSegmentAddr(segmentOffset));
 				}
@@ -1022,8 +1002,6 @@ public:
 					if (exportSymbolAddr == 0) {
 						continue;
 					}
-
-					std::printf("Clearing symbol \"%s\"\n", symbolName.c_str());
 
 					cro.patchBatch(relocationOffset, onUnresolvedAddr, true);
 				}
@@ -1230,7 +1208,7 @@ void LDRService::initialize(u32 messagePointer) {
 	const u32 mapVaddr = mem.read32(messagePointer + 12);
 	const Handle process = mem.read32(messagePointer + 20);
 
-	std::printf("LDR_RO::Initialize (buffer = %08X, size = %08X, vaddr = %08X, process = %X)\n", crsPointer, size, mapVaddr, process);
+	log("LDR_RO::Initialize (buffer = %08X, size = %08X, vaddr = %08X, process = %X)\n", crsPointer, size, mapVaddr, process);
 
 	// Sanity checks
 	if (loadedCRS != 0) {
@@ -1278,7 +1256,7 @@ void LDRService::linkCRO(u32 messagePointer) {
 	const u32 mapVaddr = mem.read32(messagePointer + 4);
 	const Handle process = mem.read32(messagePointer + 12);
 
-	std::printf("LDR_RO::LinkCRO (vaddr = %X, process = %X)\n", mapVaddr, process);
+	log("LDR_RO::LinkCRO (vaddr = %X, process = %X)\n", mapVaddr, process);
 
 	if (loadedCRS == 0) {
 		Helpers::panic("CRS not loaded");
@@ -1324,7 +1302,7 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 	const u32 fixLevel = mem.read32(messagePointer + 40);
 	const Handle process = mem.read32(messagePointer + 52);
 
-	std::printf("LDR_RO::LoadCRO (isNew = %d, buffer = %08X, vaddr = %08X, size = %08X, .data vaddr = %08X, .data size = %08X, .bss vaddr = %08X, .bss size = %08X, auto link = %d, fix level = %X, process = %X)\n", isNew, croPointer, mapVaddr, size, dataVaddr, dataSize, bssVaddr, bssSize, autoLink, fixLevel, process);
+	log("LDR_RO::LoadCRO (isNew = %d, buffer = %08X, vaddr = %08X, size = %08X, .data vaddr = %08X, .data size = %08X, .bss vaddr = %08X, .bss size = %08X, auto link = %d, fix level = %X, process = %X)\n", isNew, croPointer, mapVaddr, size, dataVaddr, dataSize, bssVaddr, bssSize, autoLink, fixLevel, process);
 
 	// Sanity checks
 	if (size < CRO_HEADER_SIZE) {
@@ -1365,8 +1343,6 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 	// TODO: add fixing
 	cro.fix(fixLevel);
 
-	std::puts("Done :)");
-
 	kernel.clearInstructionCache();
 
 	if (isNew) {
@@ -1384,7 +1360,7 @@ void LDRService::unloadCRO(u32 messagePointer) {
 	const u32 croPointer = mem.read32(messagePointer + 12);
 	const Handle process = mem.read32(messagePointer + 20);
 
-	std::printf("LDR_RO::UnloadCRO (vaddr = %08X, buffer = %08X, process = %X)\n", mapVaddr, croPointer, process);
+	log("LDR_RO::UnloadCRO (vaddr = %08X, buffer = %08X, process = %X)\n", mapVaddr, croPointer, process);
 
 	// TODO: is CRO loaded?
 
@@ -1407,8 +1383,6 @@ void LDRService::unloadCRO(u32 messagePointer) {
 	if (!cro.unrebase()) {
 		Helpers::panic("Failed to unrebase CRO");
 	}
-
-	std::puts("Done :)");
 
 	kernel.clearInstructionCache();
 
