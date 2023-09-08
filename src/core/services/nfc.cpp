@@ -101,7 +101,7 @@ void NFCService::getTagOutOfRangeEvent(u32 messagePointer) {
 }
 
 void NFCService::getTagState(u32 messagePointer) {
-	log("NFC::GetTagState");
+	log("NFC::GetTagState\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -109,7 +109,7 @@ void NFCService::getTagState(u32 messagePointer) {
 }
 
 void NFCService::communicationGetStatus(u32 messagePointer) {
-	log("NFC::CommunicationGetStatus");
+	log("NFC::CommunicationGetStatus\n");
 
 	if (!initialized) {
 		Helpers::warn("NFC::CommunicationGetStatus: Old 3DS NFC Adapter not initialized\n");
@@ -122,7 +122,7 @@ void NFCService::communicationGetStatus(u32 messagePointer) {
 
 
 void NFCService::communicationGetResult(u32 messagePointer) {
-	log("NFC::CommunicationGetResult");
+	log("NFC::CommunicationGetResult\n");
 
 	if (!initialized) {
 		Helpers::warn("NFC::CommunicationGetResult: Old 3DS NFC Adapter not initialized\n");
