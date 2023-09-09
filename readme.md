@@ -91,6 +91,7 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [3DBrew](https://www.3dbrew.org/wiki/Main_Page), a wiki full of 3DS information and the main source of documentation used.
 - [GBATek](https://www.problemkaputt.de/gbatek.htm#3dsreference), a GBA, DS and 3DS reference which provided insights on some pieces of hardware as well as neatly documenting things like certain file formats used in games.
 - [Libctru](https://github.com/devkitPro/libctru), the most well-known 3DS homebrew SDK. Used for developing test ROMs, as well as a source of documentation thanks to its doxygen wiki.
+- [ctru-rs](https://github.com/rust3ds/ctru-rs), a wrapper around libctru for writing 3DS homebrew in Rust.
 
 - [Citra](https://github.com/citra-emu/citra), an HLE 3DS emulator. Very useful as a reference, with some code snippets inspired or adapted from it.
 - [3dmoo](https://github.com/plutooo/3dmoo), an HLE 3DS emulator which helped similarly to Citra
