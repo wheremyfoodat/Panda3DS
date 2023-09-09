@@ -5,6 +5,7 @@
 #pragma once
 
 #include <array>
+#include <type_traits>
 
 #include "helpers.hpp"
 #include "swap.hpp"
