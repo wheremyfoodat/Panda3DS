@@ -45,13 +45,17 @@ class NFCService {
 	void communicationGetResult(u32 messagePointer);
 	void communicationGetStatus(u32 messagePointer);
 	void initialize(u32 messagePointer);
+	void getModelInfo(u32 messagePointer);
+	void getTagInfo(u32 messagePointer);
 	void getTagInRangeEvent(u32 messagePointer);
 	void getTagOutOfRangeEvent(u32 messagePointer);
 	void getTagState(u32 messagePointer);
+	void loadAmiiboPartially(u32 messagePointer);
 	void shutdown(u32 messagePointer);
 	void startCommunication(u32 messagePointer);
 	void startTagScanning(u32 messagePointer);
 	void stopCommunication(u32 messagePointer);
+	void stopTagScanning(u32 messagePointer);
 
   public:
 	NFCService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}

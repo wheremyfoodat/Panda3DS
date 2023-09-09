@@ -10,11 +10,15 @@ namespace NFCCommands {
 		StartCommunication = 0x00030000,
 		StopCommunication = 0x00040000,
 		StartTagScanning = 0x00050040,
+		StopTagScanning = 0x00060000,
 		GetTagInRangeEvent = 0x000B0000,
 		GetTagOutOfRangeEvent = 0x000C0000,
 		GetTagState = 0x000D0000,
 		CommunicationGetStatus = 0x000F0000,
+		GetTagInfo = 0x00110000,
 		CommunicationGetResult = 0x00120000,
+		LoadAmiiboPartially = 0x001A0000,
+		GetModelInfo = 0x001B0000,
 	};
 }
 
@@ -34,27 +38,28 @@ void NFCService::handleSyncRequest(u32 messagePointer) {
 		case NFCCommands::CommunicationGetResult: communicationGetResult(messagePointer); break;
 		case NFCCommands::CommunicationGetStatus: communicationGetStatus(messagePointer); break;
 		case NFCCommands::Initialize: initialize(messagePointer); break;
+		case NFCCommands::GetModelInfo: getModelInfo(messagePointer); break;
+		case NFCCommands::GetTagInfo: getTagInfo(messagePointer); break;
 		case NFCCommands::GetTagInRangeEvent: getTagInRangeEvent(messagePointer); break;
 		case NFCCommands::GetTagOutOfRangeEvent: getTagOutOfRangeEvent(messagePointer); break;
 		case NFCCommands::GetTagState: getTagState(messagePointer); break;
+		case NFCCommands::LoadAmiiboPartially: loadAmiiboPartially(messagePointer); break;
 		case NFCCommands::Shutdown: shutdown(messagePointer); break;
 		case NFCCommands::StartCommunication: startCommunication(messagePointer); break;
 		case NFCCommands::StartTagScanning: startTagScanning(messagePointer); break;
 		case NFCCommands::StopCommunication: stopCommunication(messagePointer); break;
+		case NFCCommands::StopTagScanning: stopTagScanning(messagePointer); break;
 		default: Helpers::panic("NFC service requested. Command: %08X\n", command);
 	}
 }
 
 bool NFCService::loadAmiibo(const std::filesystem::path& path) {
-	IOFile file(path, "rb");
-
 	if (!initialized || tagStatus != TagStatus::Scanning) {
 		Helpers::warn("It's not the correct time to load an amiibo! Make sure to load amiibi when the game is searching for one!");
-		file.close();
-		
 		return false;
 	}
 
+	IOFile file(path, "rb");
 	if (!file.isOpen()) {
 		printf("Failed to open Amiibo file");
 		file.close();
@@ -69,6 +74,8 @@ bool NFCService::loadAmiibo(const std::filesystem::path& path) {
 
 		return false;
 	}
+
+	device.loadFromRaw();
 
 	if (tagOutOfRangeEvent.has_value()) {
 		kernel.clearEvent(tagOutOfRangeEvent.value());
@@ -185,9 +192,25 @@ void NFCService::startCommunication(u32 messagePointer) {
 
 void NFCService::startTagScanning(u32 messagePointer) {
 	log("NFC::StartTagScanning\n");
+	if (!initialized) {
+		Helpers::warn("Scanning for NFC tags before NFC service is initialized");
+	}
+
 	tagStatus = TagStatus::Scanning;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NFCService::stopTagScanning(u32 messagePointer) {
+	log("NFC::StopTagScanning\n");
+	if (!initialized) {
+		Helpers::warn("Stopping scanning for NFC tags before NFC service is initialized");
+	}
+
+	tagStatus = TagStatus::Initialized;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -197,5 +220,29 @@ void NFCService::stopCommunication(u32 messagePointer) {
 	// TODO: Actually stop communication when we emulate amiibo
 
 	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NFCService::getTagInfo(u32 messagePointer) {
+	log("NFC::GetTagInfo\n");
+	Helpers::warn("Unimplemented NFC::GetTagInfo");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x11, 12, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NFCService::loadAmiiboPartially(u32 messagePointer) {
+	log("NFC::LoadAmiiboPartially\n");
+	Helpers::warn("Unimplemented NFC::LoadAmiiboPartially");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1A, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NFCService::getModelInfo(u32 messagePointer) {
+	log("NFC::GetModelInfo\n");
+	Helpers::warn("Unimplemented NFC::GetModelInfo");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1B, 14, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
