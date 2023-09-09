@@ -75,6 +75,8 @@ bool NFCService::loadAmiibo(const std::filesystem::path& path) {
 		return false;
 	}
 
+	device.loadFromRaw();
+
 	if (tagOutOfRangeEvent.has_value()) {
 		kernel.clearEvent(tagOutOfRangeEvent.value());
 	}
