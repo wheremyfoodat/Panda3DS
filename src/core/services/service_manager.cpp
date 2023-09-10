@@ -7,7 +7,7 @@
 
 ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel), cfg(mem),
-	  dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel, config),
+	  csnd(mem), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel, config),
 	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mcu_hwc(mem, config), mic(mem, kernel), nfc(mem, kernel), nim(mem), ndm(mem),
 	  news_u(mem), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
 
@@ -23,6 +23,7 @@ void ServiceManager::reset() {
 	cam.reset();
 	cecd.reset();
 	cfg.reset();
+	csnd.reset();
 	dlp_srvr.reset();
 	dsp.reset();
 	hid.reset();
@@ -104,6 +105,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "cecd:u", KernelHandles::CECD },
 	{ "cfg:u", KernelHandles::CFG_U },
 	{ "cfg:i", KernelHandles::CFG_I },
+	{ "csnd:SND", KernelHandles::CSND },
 	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
 	{ "hid:USER", KernelHandles::HID },
@@ -202,6 +204,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::CAM: cam.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CFG_U: cfg.handleSyncRequest(messagePointer); break;
+		case KernelHandles::CSND: csnd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HTTP: http.handleSyncRequest(messagePointer); break;
