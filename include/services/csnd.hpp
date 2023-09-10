@@ -15,15 +15,22 @@ class CSNDService {
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, csndLogger)
 
-	bool initialized = false;
+	u8* sharedMemory = nullptr;
 	std::optional<Handle> csndMutex = std::nullopt;
+	size_t sharedMemSize = 0;
+	bool initialized = false;
 
 	// Service functions
 	void acquireSoundChannels(u32 messagePointer);
+	void executeCommands(u32 messagePointer);
 	void initialize(u32 messagePointer);
 
   public:
 	CSNDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
+
+	void setSharedMemory(u8* ptr) {
+		sharedMemory = ptr;
+	}
 };

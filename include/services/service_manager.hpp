@@ -103,6 +103,7 @@ class ServiceManager {
 	void sendGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }
 	void setGSPSharedMem(u8* ptr) { gsp_gpu.setSharedMem(ptr); }
 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
+	void setCSNDSharedMem(u8* ptr) { csnd.setSharedMemory(ptr); }
 
 	void signalDSPEvents() { dsp.signalEvents(); }
 

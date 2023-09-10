@@ -53,6 +53,7 @@ namespace Log {
 	static Logger<false> micLogger;
 	static Logger<false> newsLogger;
 	static Logger<false> nfcLogger;
+	static Logger<false> nwmUdsLogger;
 	static Logger<false> nimLogger;
 	static Logger<false> ndmLogger;
 	static Logger<false> ptmLogger;

@@ -7,6 +7,7 @@
 namespace CSNDCommands {
 	enum : u32 {
 		Initialize = 0x00010140,
+		ExecuteCommands = 0x00030040,
 		AcquireSoundChannels = 0x00050000,
 	};
 }
@@ -14,6 +15,8 @@ namespace CSNDCommands {
 void CSNDService::reset() {
 	csndMutex = std::nullopt;
 	initialized = false;
+	sharedMemory = nullptr;
+	sharedMemSize = 0;
 }
 
 void CSNDService::handleSyncRequest(u32 messagePointer) {
@@ -21,6 +24,7 @@ void CSNDService::handleSyncRequest(u32 messagePointer) {
 
 	switch (command) {
 		case CSNDCommands::AcquireSoundChannels: acquireSoundChannels(messagePointer); break;
+		case CSNDCommands::ExecuteCommands: executeCommands(messagePointer); break;
 		case CSNDCommands::Initialize: initialize(messagePointer); break;
 
 		default:
@@ -65,10 +69,36 @@ void CSNDService::initialize(u32 messagePointer) {
 	}
 
 	initialized = true;
+	sharedMemSize = blockSize;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 3));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0x4000000);
 	mem.write32(messagePointer + 12, csndMutex.value());
 	mem.write32(messagePointer + 16, KernelHandles::CSNDSharedMemHandle);
+}
+
+void CSNDService::executeCommands(u32 messagePointer) {
+	const u32 offset = mem.read32(messagePointer + 4);
+	log("CSND::ExecuteCommands (command offset = %X)\n", offset);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 2, 0));
+
+	if (!sharedMemory) {
+		Helpers::warn("CSND::Execute commands without shared memory");
+		mem.write32(messagePointer + 4, Result::FailurePlaceholder);
+		return;
+	}
+
+	mem.write32(messagePointer + 4, Result::Success);
+
+	// This is initially zero when this command data is written by the user process, once the CSND module finishes processing the command this is set
+	// to 0x1. This flag is only set to value 1 for the first command(once processing for the entire command chain is finished) at the offset
+	// specified in the service command, not all type0 commands in the chain.
+	constexpr u32 commandListDoneOffset = 0x4;
+
+	// Make sure to not access OoB of the shared memory block when marking command list processing as finished
+	if (offset + commandListDoneOffset < sharedMemSize) {
+		sharedMemory[offset + commandListDoneOffset] = 1;
+	}
 }
