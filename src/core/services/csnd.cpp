@@ -7,6 +7,7 @@
 namespace CSNDCommands {
 	enum : u32 {
 		Initialize = 0x00010140,
+		AcquireSoundChannels = 0x00050000,
 	};
 }
 
@@ -19,6 +20,7 @@ void CSNDService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 
 	switch (command) {
+		case CSNDCommands::AcquireSoundChannels: acquireSoundChannels(messagePointer); break;
 		case CSNDCommands::Initialize: initialize(messagePointer); break;
 
 		default:
@@ -26,6 +28,17 @@ void CSNDService::handleSyncRequest(u32 messagePointer) {
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 	}
+}
+
+void CSNDService::acquireSoundChannels(u32 messagePointer) {
+	log("CSND::AcquireSoundChannels\n");
+	// The CSND service talks to the DSP using the DSP FIFO to negotiate what CSND channels are allocated to the DSP, and this seems to be channels 0-7 (usually). The rest are dedicated to CSND services.
+	// https://www.3dbrew.org/wiki/CSND_Services
+	constexpr u32 csndChannelMask = 0xFFFFFF00;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, csndChannelMask);
 }
 
 void CSNDService::initialize(u32 messagePointer) {

@@ -19,6 +19,7 @@ class CSNDService {
 	std::optional<Handle> csndMutex = std::nullopt;
 
 	// Service functions
+	void acquireSoundChannels(u32 messagePointer);
 	void initialize(u32 messagePointer);
 
   public:
