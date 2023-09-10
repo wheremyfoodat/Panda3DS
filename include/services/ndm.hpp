@@ -12,6 +12,8 @@ class NDMService {
 
 	// Service commands
 	void clearHalfAwakeMacFilter(u32 messagePointer);
+	void enterExclusiveState(u32 messagePointer);
+	void exitExclusiveState(u32 messagePointer);
 	void overrideDefaultDaemons(u32 messagePointer);
 	void resumeDaemons(u32 messagePointer);
 	void resumeScheduler(u32 messagePointer);

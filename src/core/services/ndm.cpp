@@ -3,6 +3,8 @@
 
 namespace NDMCommands {
 	enum : u32 {
+		EnterExclusiveState = 0x00010042,
+		ExitExclusiveState = 0x00020002,	
 		OverrideDefaultDaemons = 0x00140040,
 		SuspendDaemons = 0x00060040,
 		ResumeDaemons = 0x00070040,
@@ -17,6 +19,8 @@ void NDMService::reset() {}
 void NDMService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case NDMCommands::EnterExclusiveState: enterExclusiveState(messagePointer); break;
+		case NDMCommands::ExitExclusiveState: exitExclusiveState(messagePointer); break;
 		case NDMCommands::ClearHalfAwakeMacFilter: clearHalfAwakeMacFilter(messagePointer); break;
 		case NDMCommands::OverrideDefaultDaemons: overrideDefaultDaemons(messagePointer); break;
 		case NDMCommands::ResumeDaemons: resumeDaemons(messagePointer); break;
@@ -25,6 +29,18 @@ void NDMService::handleSyncRequest(u32 messagePointer) {
 		case NDMCommands::SuspendScheduler: suspendScheduler(messagePointer); break;
 		default: Helpers::panic("NDM service requested. Command: %08X\n", command);
 	}
+}
+
+void NDMService::enterExclusiveState(u32 messagePointer) {
+	log("NDM::EnterExclusiveState (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NDMService::exitExclusiveState(u32 messagePointer) {
+	log("NDM::ExitExclusiveState (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NDMService::overrideDefaultDaemons(u32 messagePointer) {
