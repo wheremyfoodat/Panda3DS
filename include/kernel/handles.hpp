@@ -46,6 +46,7 @@ namespace KernelHandles {
 
 		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
 		FontSharedMemHandle,
+		CSNDSharedMemHandle,
 		HIDSharedMemHandle,
 
 		MinSharedMemHandle = GSPSharedMemHandle,

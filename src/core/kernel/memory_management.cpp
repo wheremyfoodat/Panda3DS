@@ -139,6 +139,8 @@ void Kernel::mapMemoryBlock() {
 				mem.copySharedFont(ptr);
 				break;
 
+			case KernelHandles::CSNDSharedMemHandle: printf("Mapping CSND memory block\n"); break;
+
 			default: Helpers::panic("Mapping unknown shared memory block: %X", block);
 		}
 	} else {
