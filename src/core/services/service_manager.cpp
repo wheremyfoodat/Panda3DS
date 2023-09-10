@@ -203,7 +203,8 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::BOSS: boss.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CAM: cam.handleSyncRequest(messagePointer); break;
 		case KernelHandles::CECD: cecd.handleSyncRequest(messagePointer); break;
-		case KernelHandles::CFG_U: cfg.handleSyncRequest(messagePointer); break;
+		case KernelHandles::CFG_U: cfg.handleSyncRequest(messagePointer, CFGService::Type::U); break;
+		case KernelHandles::CFG_I: cfg.handleSyncRequest(messagePointer, CFGService::Type::I); break;
 		case KernelHandles::CSND: csnd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;

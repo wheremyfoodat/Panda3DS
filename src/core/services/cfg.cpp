@@ -21,7 +21,7 @@ namespace CFGCommands {
 
 void CFGService::reset() {}
 
-void CFGService::handleSyncRequest(u32 messagePointer) {
+void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;

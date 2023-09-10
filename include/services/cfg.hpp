@@ -22,7 +22,14 @@ class CFGService {
 	void secureInfoGetRegion(u32 messagePointer);
 
 public:
+	enum class Type {
+		U, // cfg:u
+		I, // cfg:i
+		S, // cfg:s
+		NOR, // cfg:nor
+	};
+
 	CFGService(Memory& mem) : mem(mem) {}
 	void reset();
-	void handleSyncRequest(u32 messagePointer);
+	void handleSyncRequest(u32 messagePointer, Type type);
 };
