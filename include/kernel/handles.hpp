@@ -19,6 +19,7 @@ namespace KernelHandles {
 		CECD, // More Streetpass stuff?
 		CFG_U,  // CFG service (Console & region info)
 		CFG_I,
+		CSND,      // Plays audio directly from PCM samples
 		DLP_SRVR,  // Download Play: Server. Used for network play.
 		DSP,       // DSP service (Used for audio decoding and output)
 		HID,       // HID service (Handles input-related things including gyro. Does NOT handle New3DS controls or CirclePadPro)
@@ -73,6 +74,7 @@ namespace KernelHandles {
 			case CECD: return "CECD";
 			case CFG_U: return "CFG:U";
 			case CFG_I: return "CFG:I";
+			case CSND: return "CSND";
 			case DSP: return "DSP";
 			case DLP_SRVR: return "DLP::SRVR";
 			case HID: return "HID";
