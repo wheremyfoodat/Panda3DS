@@ -173,11 +173,18 @@ public:
     void clearCache() { jit->ClearCache(); }
 
     void runFrame() {
-        env.ticksLeft = ticksPerSec / 60;
+		env.ticksLeft = ticksPerSec / 60;
+	execute:
+		const auto exitReason = jit->Run();
 
-        const auto exitReason = jit->Run();
-        if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
-            Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
-        }
-    }
+		if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
+			// Cache invalidation needs to exit the JIT so it returns a CacheInvalidation HaltReason. In our case, we just go back to executing
+            // The goto might be terrible but it does guarantee that this does not recursively call run and crash, instead getting optimized to a jump
+			if (Dynarmic::Has(exitReason, Dynarmic::HaltReason::CacheInvalidation)) {
+				goto execute;
+			} else {
+				Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
+			}
+		}
+	}
 };
