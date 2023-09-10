@@ -38,6 +38,7 @@ namespace Log {
 	static Logger<false> camLogger;
 	static Logger<false> cecdLogger;
 	static Logger<false> cfgLogger;
+	static Logger<false> csndLogger;
 	static Logger<false> dspServiceLogger;
 	static Logger<false> dlpSrvrLogger;
 	static Logger<false> frdLogger;
@@ -52,6 +53,7 @@ namespace Log {
 	static Logger<false> micLogger;
 	static Logger<false> newsLogger;
 	static Logger<false> nfcLogger;
+	static Logger<false> nwmUdsLogger;
 	static Logger<false> nimLogger;
 	static Logger<false> ndmLogger;
 	static Logger<false> ptmLogger;

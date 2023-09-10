@@ -112,10 +112,11 @@ class Memory {
 	// This tracks our OS' memory allocations
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
-	std::array<SharedMemoryBlock, 3> sharedMemBlocks = {
+	std::array<SharedMemoryBlock, 4> sharedMemBlocks = {
 		SharedMemoryBlock(0, 0, KernelHandles::FontSharedMemHandle), // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
 		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
-		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle)  // HID shared memory
+		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle),  // HID shared memory
+		SharedMemoryBlock(0, 0x3000, KernelHandles::CSNDSharedMemHandle), // CSND shared memory
  	};
 
 public:

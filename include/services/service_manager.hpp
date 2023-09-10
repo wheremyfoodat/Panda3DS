@@ -14,6 +14,7 @@
 #include "services/cam.hpp"
 #include "services/cecd.hpp"
 #include "services/cfg.hpp"
+#include "services/csnd.hpp"
 #include "services/dlp_srvr.hpp"
 #include "services/dsp.hpp"
 #include "services/frd.hpp"
@@ -27,6 +28,7 @@
 #include "services/mcu/mcu_hwc.hpp"
 #include "services/mic.hpp"
 #include "services/ndm.hpp"
+#include "services/nwm_uds.hpp"
 #include "services/news_u.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
@@ -56,6 +58,7 @@ class ServiceManager {
 	CAMService cam;
 	CECDService cecd;
 	CFGService cfg;
+	CSNDService csnd;
 	DlpSrvrService dlp_srvr;
 	DSPService dsp;
 	HIDService hid;
@@ -70,6 +73,7 @@ class ServiceManager {
 	NDMService ndm;
 	NewsUService news_u;
 	NFCService nfc;
+	NwmUdsService nwm_uds;
     NIMService nim;
 	PTMService ptm;
 	SOCService soc;
@@ -99,9 +103,11 @@ class ServiceManager {
 	void sendGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }
 	void setGSPSharedMem(u8* ptr) { gsp_gpu.setSharedMem(ptr); }
 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
+	void setCSNDSharedMem(u8* ptr) { csnd.setSharedMemory(ptr); }
 
 	void signalDSPEvents() { dsp.signalEvents(); }
 
 	// Input function wrappers
 	HIDService& getHID() { return hid; }
+	NFCService& getNFC() { return nfc; }
 };

@@ -19,6 +19,7 @@ namespace KernelHandles {
 		CECD, // More Streetpass stuff?
 		CFG_U,  // CFG service (Console & region info)
 		CFG_I,
+		CSND,      // Plays audio directly from PCM samples
 		DLP_SRVR,  // Download Play: Server. Used for network play.
 		DSP,       // DSP service (Used for audio decoding and output)
 		HID,       // HID service (Handles input-related things including gyro. Does NOT handle New3DS controls or CirclePadPro)
@@ -34,6 +35,7 @@ namespace KernelHandles {
 		NFC,       // NFC (Duh), used for Amiibo
 		NIM,       // Updates, DLC, etc
 		NDM,       // ?????
+		NWM_UDS,   // Local multiplayer
 		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
 		PTM,       // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 		SOC,       // Socket service
@@ -45,6 +47,7 @@ namespace KernelHandles {
 
 		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
 		FontSharedMemHandle,
+		CSNDSharedMemHandle,
 		HIDSharedMemHandle,
 
 		MinSharedMemHandle = GSPSharedMemHandle,
@@ -73,6 +76,7 @@ namespace KernelHandles {
 			case CECD: return "CECD";
 			case CFG_U: return "CFG:U";
 			case CFG_I: return "CFG:I";
+			case CSND: return "CSND";
 			case DSP: return "DSP";
 			case DLP_SRVR: return "DLP::SRVR";
 			case HID: return "HID";
@@ -87,6 +91,7 @@ namespace KernelHandles {
 			case MIC: return "MIC";
 			case NDM: return "NDM";
 			case NEWS_U: return "NEWS_U";
+			case NWM_UDS: return "nwm::UDS";
 			case NFC: return "NFC";
 			case NIM: return "NIM";
 			case PTM: return "PTM";
