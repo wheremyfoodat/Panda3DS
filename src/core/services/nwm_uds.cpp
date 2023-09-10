@@ -19,7 +19,7 @@ void NwmUdsService::handleSyncRequest(u32 messagePointer) {
 
 	switch (command) {
 		case NWMCommands::InitializeWithVersion: initializeWithVersion(messagePointer); break;
-		default: Helpers::panic("LCD service requested. Command: %08X\n", command);
+		default: Helpers::panic("NWM::UDS service requested. Command: %08X\n", command);
 	}
 }
 
