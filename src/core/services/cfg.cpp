@@ -121,6 +121,8 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 		}
 	} else if (size == 4 && blockID == 0x170000) {  // Miiverse access key
 		mem.write32(output, 0);
+	} else if (size == 8 && blockID == 0x00090000) {
+		mem.write64(output, 0); // Some sort of key used with nwm::UDS::InitializeWithVersion
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}

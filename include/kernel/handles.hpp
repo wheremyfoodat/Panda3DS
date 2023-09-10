@@ -35,6 +35,7 @@ namespace KernelHandles {
 		NFC,       // NFC (Duh), used for Amiibo
 		NIM,       // Updates, DLC, etc
 		NDM,       // ?????
+		NWM_UDS,   // Local multiplayer
 		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
 		PTM,       // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 		SOC,       // Socket service
@@ -90,6 +91,7 @@ namespace KernelHandles {
 			case MIC: return "MIC";
 			case NDM: return "NDM";
 			case NEWS_U: return "NEWS_U";
+			case NWM_UDS: return "nwm::UDS";
 			case NFC: return "NFC";
 			case NIM: return "NIM";
 			case PTM: return "PTM";

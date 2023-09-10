@@ -9,7 +9,7 @@ ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel), cfg(mem),
 	  csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel, config),
 	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem), mcu_hwc(mem, config), mic(mem, kernel), nfc(mem, kernel), nim(mem), ndm(mem),
-	  news_u(mem), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
+	  news_u(mem), nwm_uds(mem, kernel), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -121,12 +121,13 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "ndm:u", KernelHandles::NDM },
 	{ "news:u", KernelHandles::NEWS_U },
 	{ "nfc:u", KernelHandles::NFC },
+	{ "nwm::UDS", KernelHandles::NWM_UDS },
 	{ "nim:aoc", KernelHandles::NIM },
 	{ "ptm:u", KernelHandles::PTM }, // TODO: ptm:u and ptm:sysm have very different command sets
 	{ "ptm:sysm", KernelHandles::PTM },
 	{ "soc:U", KernelHandles::SOC },
 	{ "ssl:C", KernelHandles::SSL },
-	{ "y2r:u", KernelHandles::Y2R }
+	{ "y2r:u", KernelHandles::Y2R },
 };
 // clang-format on
 
@@ -219,6 +220,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NEWS_U: news_u.handleSyncRequest(messagePointer); break;
+		case KernelHandles::NWM_UDS: nwm_uds.handleSyncRequest(messagePointer); break;
 		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::SOC: soc.handleSyncRequest(messagePointer); break;
 		case KernelHandles::SSL: ssl.handleSyncRequest(messagePointer); break;
