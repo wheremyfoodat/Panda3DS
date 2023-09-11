@@ -32,3 +32,6 @@ jobs:
       - name: Compile Tests
         run: |
           make -C tests/SimplerTri
+          make -C tests/ImmediateModeTriangles
+          make -C tests/HelloWorldSVC
+          make -C tests/DetectEmulator
