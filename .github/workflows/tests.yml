@@ -29,7 +29,7 @@ jobs:
           python3 --version
           python3 -m pip install --upgrade pip setuptools
           
-      - name: Compile Tests
+      - name: Compile tests
         run: |
           make -C tests/SimplerTri
           make -C tests/ImmediateModeTriangles
