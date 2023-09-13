@@ -85,6 +85,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::SharedExtSaveData:
 			return &sharedExtSaveData_nand;
 
+		case ArchiveID::SystemSaveData: return &systemSaveData;
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
 		default:
