@@ -141,7 +141,7 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 
 	// Clear the texture and then delete FBO
 	OpenGL::setViewport(8, 8);
-	gl.setClearColour(0.0, 0.0, 0.0, 1.0);
+	gl.setClearColour(0.0, 0.0, 0.0, 0.0);
 	OpenGL::clearColor();
 	dummyFBO.free();
 
