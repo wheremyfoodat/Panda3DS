@@ -27,7 +27,7 @@ namespace FRDCommands {
 
 void FRDService::reset() { loggedIn = false; }
 
-void FRDService::handleSyncRequest(u32 messagePointer) {
+void FRDService::handleSyncRequest(u32 messagePointer, FRDService::Type type) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case FRDCommands::AttachToEventNotification: attachToEventNotification(messagePointer); break;

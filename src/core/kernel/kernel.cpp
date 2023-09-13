@@ -228,6 +228,13 @@ void Kernel::getProcessInfo() {
 	}
 
 	switch (type) {
+		// Returns the amount of <related unused field> + total supervisor-mode stack size + page-rounded size of the external handle table
+		case 1:
+			Helpers::warn("GetProcessInfo: Unimplemented type 1");
+			regs[1] = 0;
+			regs[2] = 0;
+			break;
+
 		// According to 3DBrew: Amount of private (code, data, heap) memory used by the process + total supervisor-mode
 		// stack size + page-rounded size of the external handle table
 		case 2:

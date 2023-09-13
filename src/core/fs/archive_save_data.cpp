@@ -12,8 +12,9 @@ HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
 
-		if (fs::exists(p))
+		if (fs::exists(p)) {
 			return Result::FS::AlreadyExists;
+		}
 
 		IOFile file(p.string().c_str(), "wb");
 
@@ -33,7 +34,7 @@ HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 		return Result::FS::FileTooLarge;
 	}
 
-	Helpers::panic("SaveDataArchive::OpenFile: Failed");
+	Helpers::panic("SaveDataArchive::CreateFile: Failed");
 	return Result::Success;
 }
 

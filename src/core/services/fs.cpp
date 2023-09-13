@@ -53,6 +53,7 @@ void FSService::initializeFilesystem() {
 
 	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
 	const auto formatPath = IOFile::getAppData() / "FormatInfo"; // Create folder for storing archive formatting info
+	const auto systemSaveDataPath = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
 	namespace fs = std::filesystem;
 
 
@@ -71,6 +72,10 @@ void FSService::initializeFilesystem() {
 	if (!fs::is_directory(formatPath)) {
 		fs::create_directories(formatPath);
 	}
+
+	if (!fs::is_directory(systemSaveDataPath)) {
+		fs::create_directories(systemSaveDataPath);
+	}
 }
 
 ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
@@ -85,6 +90,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::SharedExtSaveData:
 			return &sharedExtSaveData_nand;
 
+		case ArchiveID::SystemSaveData: return &systemSaveData;
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
 		default:

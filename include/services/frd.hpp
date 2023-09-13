@@ -15,7 +15,6 @@ struct FriendKey {
 static_assert(sizeof(FriendKey) == 16);
 
 class FRDService {
-	Handle handle = KernelHandles::FRD;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, frdLogger)
 
@@ -48,7 +47,13 @@ class FRDService {
 	static_assert(sizeof(Profile) == 8);
 
 public:
+	enum class Type {
+		A,    // frd:a
+		N,    // frd:n
+		U,    // frd:u
+	};
+
 	FRDService(Memory& mem) : mem(mem) {}
 	void reset();
-	void handleSyncRequest(u32 messagePointer);
+	void handleSyncRequest(u32 messagePointer, Type type);
 };
