@@ -53,6 +53,7 @@ void FSService::initializeFilesystem() {
 
 	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
 	const auto formatPath = IOFile::getAppData() / "FormatInfo"; // Create folder for storing archive formatting info
+	const auto systemSaveDataPath = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
 	namespace fs = std::filesystem;
 
 
@@ -70,6 +71,10 @@ void FSService::initializeFilesystem() {
 
 	if (!fs::is_directory(formatPath)) {
 		fs::create_directories(formatPath);
+	}
+
+	if (!fs::is_directory(systemSaveDataPath)) {
+		fs::create_directories(systemSaveDataPath);
 	}
 }
 

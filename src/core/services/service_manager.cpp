@@ -111,7 +111,8 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "hid:USER", KernelHandles::HID },
 	{ "http:C", KernelHandles::HTTP },
 	{ "ir:USER", KernelHandles::IR_USER },
-	{ "frd:u", KernelHandles::FRD },
+	{ "frd:a", KernelHandles::FRD_A },
+	{ "frd:u", KernelHandles::FRD_U },
 	{ "fs:USER", KernelHandles::FS },
 	{ "gsp::Gpu", KernelHandles::GPU },
 	{ "gsp::Lcd", KernelHandles::LCD },
@@ -211,7 +212,8 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HTTP: http.handleSyncRequest(messagePointer); break;
 		case KernelHandles::IR_USER: ir_user.handleSyncRequest(messagePointer); break;
-		case KernelHandles::FRD: frd.handleSyncRequest(messagePointer); break;
+		case KernelHandles::FRD_A: frd.handleSyncRequest(messagePointer, FRDService::Type::A); break;
+		case KernelHandles::FRD_U: frd.handleSyncRequest(messagePointer, FRDService::Type::U); break;
 		case KernelHandles::LCD: gsp_lcd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::LDR_RO: ldr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::MCU_HWC: mcu_hwc.handleSyncRequest(messagePointer); break;

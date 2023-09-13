@@ -25,7 +25,8 @@ namespace KernelHandles {
 		HID,       // HID service (Handles input-related things including gyro. Does NOT handle New3DS controls or CirclePadPro)
 		HTTP,      // HTTP service (Handles HTTP requests)
 		IR_USER,   // One of 3 infrared communication services
-		FRD,       // Friend service (Miiverse friend service)
+		FRD_A,     // Friend service (Miiverse friend service)
+		FRD_U,
 		FS,        // Filesystem service
 		GPU,       // GPU service
 		LCD,       // LCD service (Used for configuring the displays)
@@ -82,7 +83,8 @@ namespace KernelHandles {
 			case HID: return "HID";
 			case HTTP: return "HTTP";
 			case IR_USER: return "IR:USER";
-			case FRD: return "FRD";
+			case FRD_A: return "FRD:A";
+			case FRD_U: return "FRD:U";
 			case FS: return "FS";
 			case GPU: return "GSP::GPU";
 			case LCD: return "GSP::LCD";

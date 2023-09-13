@@ -26,10 +26,7 @@ class SystemSaveDataArchive : public ArchiveBase {
 	Rust::Result<ArchiveBase*, HorizonResult> openArchive(const FSPath& path) override;
 	//Rust::Result<DirectorySession, HorizonResult> openDirectory(const FSPath& path) override;
 
-	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override {
-		Helpers::panic("Unimplemented OpenFile for SystemSaveData archive");
-		return {};
-	}
+	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override {
 		Helpers::panic("Unimplemented ReadFile for SystemSaveData archive");
