@@ -13,10 +13,7 @@ class SystemSaveDataArchive : public ArchiveBase {
 	std::string name() override { return "SystemSaveData"; }
 
 	//HorizonResult createDirectory(const FSPath& path) override;
-	HorizonResult createFile(const FSPath& path, u64 size) override {
-		Helpers::panic("Unimplemented CreateFile for SystemSaveData archive");
-		return Result::Success;
-	};
+	HorizonResult createFile(const FSPath& path, u64 size) override;
 
 	HorizonResult deleteFile(const FSPath& path) override {
 		Helpers::panic("Unimplemented DeleteFile for SystemSaveData archive");
