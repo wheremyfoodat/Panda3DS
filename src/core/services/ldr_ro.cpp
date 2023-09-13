@@ -853,7 +853,7 @@ public:
 			}
 
 			if (currentCROPointer == 0) {
-				Helpers::warn("Unable to find import module %s\n", importModuleName.c_str());
+				Helpers::warn("Unable to find import module \"%s\"", importModuleName.c_str());
 			}
 		}
 
