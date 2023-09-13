@@ -22,9 +22,9 @@ namespace CROHeader {
 		NameOffset = 0x084,
 		NextCRO = 0x088,
 		PrevCRO = 0x08C,
+		OnUnresolved = 0x0AC,
 		CodeOffset = 0x0B0,
 		DataOffset = 0x0B8,
-		OnUnresolved = 0x0AC,
 		ModuleNameOffset = 0x0C0,
 		SegmentTableOffset = 0x0C8,
 		SegmentTableSize = 0x0CC,
@@ -136,6 +136,10 @@ struct CROHeaderEntry {
 };
 
 static constexpr u32 CRO_HEADER_SIZE = 0x138;
+
+static const std::string CRO_MAGIC("CRO0");
+static const std::string CRO_MAGIC_FIXED("FIXD");
+static const std::string CRR_MAGIC("CRR0");
 
 class CRO {
 	Memory &mem;
@@ -293,7 +297,7 @@ public:
 
 		// Verify CRO magic
 		const std::string magic = mem.readString(croPointer + CROHeader::ID, 4);
-		if (magic.compare(std::string("CRO0")) != 0) {
+		if (magic.compare(CRO_MAGIC) != 0) {
 			return false;
 		}
 
