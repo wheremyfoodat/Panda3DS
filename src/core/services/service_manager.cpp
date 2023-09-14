@@ -124,8 +124,9 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "nfc:u", KernelHandles::NFC },
 	{ "nwm::UDS", KernelHandles::NWM_UDS },
 	{ "nim:aoc", KernelHandles::NIM },
-	{ "ptm:u", KernelHandles::PTM }, // TODO: ptm:u and ptm:sysm have very different command sets
-	{ "ptm:sysm", KernelHandles::PTM },
+	{ "ptm:u", KernelHandles::PTM_U }, // TODO: ptm:u and ptm:sysm have very different command sets
+	{ "ptm:sysm", KernelHandles::PTM_SYSM },
+	{ "ptm:play", KernelHandles::PTM_PLAY },
 	{ "soc:U", KernelHandles::SOC },
 	{ "ssl:C", KernelHandles::SSL },
 	{ "y2r:u", KernelHandles::Y2R },
@@ -223,7 +224,9 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NEWS_U: news_u.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NWM_UDS: nwm_uds.handleSyncRequest(messagePointer); break;
-		case KernelHandles::PTM: ptm.handleSyncRequest(messagePointer); break;
+		case KernelHandles::PTM_PLAY: ptm.handleSyncRequest(messagePointer, PTMService::Type::PLAY); break;
+		case KernelHandles::PTM_SYSM: ptm.handleSyncRequest(messagePointer, PTMService::Type::SYSM); break;
+		case KernelHandles::PTM_U: ptm.handleSyncRequest(messagePointer, PTMService::Type::U); break;
 		case KernelHandles::SOC: soc.handleSyncRequest(messagePointer); break;
 		case KernelHandles::SSL: ssl.handleSyncRequest(messagePointer); break;
 		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;
