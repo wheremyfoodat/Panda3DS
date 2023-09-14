@@ -36,6 +36,7 @@ namespace KernelHandles {
 		NFC,       // NFC (Duh), used for Amiibo
 		NIM,       // Updates, DLC, etc
 		NDM,       // ?????
+		NS_S,      // Nintendo Shell service
 		NWM_UDS,   // Local multiplayer
 		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
 		PTM_U,     // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)

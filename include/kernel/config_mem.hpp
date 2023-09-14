@@ -19,6 +19,7 @@ namespace ConfigMem {
 		HardwareType = 0x1FF81004,
 		Datetime0 = 0x1FF81020,
 		WifiMac = 0x1FF81060,
+		WifiLevel = 0x1FF81066,
 		NetworkState = 0x1FF81067,
 		SliderState3D = 0x1FF81080,
 		LedState3D = 0x1FF81084,
