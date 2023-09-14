@@ -38,7 +38,9 @@ namespace KernelHandles {
 		NDM,       // ?????
 		NWM_UDS,   // Local multiplayer
 		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
-		PTM,       // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
+		PTM_U,     // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
+		PTM_SYSM,  // PTM system service
+		PTM_PLAY,  // PTM Play service, ues for retrieving play history
 		SOC,       // Socket service
 		SSL,       // SSL service (Totally didn't expect that)
 		Y2R,       // Also does camera stuff
@@ -96,7 +98,9 @@ namespace KernelHandles {
 			case NWM_UDS: return "nwm::UDS";
 			case NFC: return "NFC";
 			case NIM: return "NIM";
-			case PTM: return "PTM";
+			case PTM_U: return "PTM:U";
+			case PTM_SYSM: return "PTM:SYSM";
+			case PTM_PLAY: return "PTM:PLAY";
 			case SOC: return "SOC";
 			case SSL: return "SSL";
 			case Y2R: return "Y2R";

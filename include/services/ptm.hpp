@@ -7,7 +7,6 @@
 #include "result/result.hpp"
 
 class PTMService {
-	Handle handle = KernelHandles::PTM;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, ptmLogger)
 
@@ -19,12 +18,19 @@ class PTMService {
 	void getBatteryChargeState(u32 messagePointer);
 	void getBatteryLevel(u32 messagePointer);
 	void getStepHistory(u32 messagePointer);
+	void getStepHistoryAll(u32 messagePointer);
 	void getTotalStepCount(u32 messagePointer);
 
 public:
+	enum class Type {
+		U,     // ptm:u
+		SYSM,  // ptm:sysm
+		PLAY,  // ptm:play
+	};
+
 	PTMService(Memory& mem, const EmulatorConfig& config) : mem(mem), config(config) {}
 	void reset();
-	void handleSyncRequest(u32 messagePointer);
+	void handleSyncRequest(u32 messagePointer, Type type);
 
 	// 0% -> 0 (shutting down)
 	// 1-5% -> 1
