@@ -7,6 +7,7 @@ namespace BOSSCommands {
 		UnregisterStorage = 0x00030000,
 		GetTaskStorageInfo = 0x00040000,
 		RegisterNewArrivalEvent = 0x00080002,
+		SetOptoutFlag = 0x00090040,
 		GetOptoutFlag = 0x000A0000,
 		RegisterTask = 0x000B00C2,
 		UnregisterTask = 0x000C0082,
@@ -53,6 +54,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
 		case BOSSCommands::RegisterTask: registerTask(messagePointer); break;
 		case BOSSCommands::SendProperty: sendProperty(messagePointer); break;
+		case BOSSCommands::SetOptoutFlag: setOptoutFlag(messagePointer); break;
 		case BOSSCommands::StartTask: startTask(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
 		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
@@ -63,6 +65,15 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 void BOSSService::initializeSession(u32 messagePointer) {
 	log("BOSS::InitializeSession (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void BOSSService::setOptoutFlag(u32 messagePointer) {
+	const s8 flag = static_cast<s8>(mem.read8(messagePointer + 4));
+	log("BOSS::SetOptoutFlag (flag = %d)\n", flag);
+	optoutFlag = flag;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
