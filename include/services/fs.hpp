@@ -46,11 +46,13 @@ class FSService {
 
 	// Service commands
 	void abnegateAccessRight(u32 messagePointer);
+	void cardSlotIsInserted(u32 messagePointer);
 	void createDirectory(u32 messagePointer);
 	void createExtSaveData(u32 messagePointer);
 	void createFile(u32 messagePointer);
 	void closeArchive(u32 messagePointer);
 	void controlArchive(u32 messagePointer);
+	void deleteDirectory(u32 messagePointer);
 	void deleteExtSaveData(u32 messagePointer);
 	void deleteFile(u32 messagePointer);
 	void formatSaveData(u32 messagePointer);

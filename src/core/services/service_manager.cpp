@@ -95,6 +95,7 @@ void ServiceManager::registerClient(u32 messagePointer) {
 // clang-format off
 static std::map<std::string, Handle> serviceMap = {
 	{ "ac:u", KernelHandles::AC },
+	{ "act:a", KernelHandles::ACT },
 	{ "act:u", KernelHandles::ACT },
 	{ "am:app", KernelHandles::AM },
 	{ "APT:S", KernelHandles::APT }, // TODO: APT:A, APT:S and APT:U are slightly different

@@ -4,7 +4,37 @@
 namespace fs = std::filesystem;
 
 HorizonResult SDMCArchive::createFile(const FSPath& path, u64 size) {
-	Helpers::panic("[SDMC] CreateFile not yet supported");
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in SDMC::CreateFile");
+		}
+
+		fs::path p = IOFile::getAppData() / "SDMC";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::exists(p)) {
+			return Result::FS::AlreadyExists;
+		}
+
+		IOFile file(p.string().c_str(), "wb");
+
+		// If the size is 0, leave the file empty and return success
+		if (size == 0) {
+			file.close();
+			return Result::Success;
+		}
+
+		// If it is not empty, seek to size - 1 and write a 0 to create a file of size "size"
+		else if (file.seek(size - 1, SEEK_SET) && file.writeBytes("", 1).second == 1) {
+			file.close();
+			return Result::Success;
+		}
+
+		file.close();
+		return Result::FS::FileTooLarge;
+	}
+
+	Helpers::panic("SDMC::CreateFile: Failed");
 	return Result::Success;
 }
 
