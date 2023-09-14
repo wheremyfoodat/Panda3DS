@@ -28,6 +28,7 @@ class BOSSService {
 	void registerStorageEntry(u32 messagePointer);
 	void registerTask(u32 messagePointer);
 	void sendProperty(u32 messagePointer);
+	void setOptoutFlag(u32 messagePointer);
 	void startTask(u32 messagePointer);
 	void unregisterStorage(u32 messagePointer);
 	void unregisterTask(u32 messagePointer);

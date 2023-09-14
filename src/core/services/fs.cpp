@@ -16,6 +16,8 @@ namespace FSCommands {
 		OpenFile = 0x080201C2,
 		OpenFileDirectly = 0x08030204,
 		DeleteFile = 0x08040142,
+		DeleteDirectory = 0x08060142,
+		DeleteDirectoryRecursively = 0x08070142,
 		CreateFile = 0x08080202,
 		CreateDirectory = 0x08090182,
 		OpenDirectory = 0x080B0102,
@@ -26,6 +28,7 @@ namespace FSCommands {
 		GetFreeBytes = 0x08120080,
 		IsSdmcDetected = 0x08170000,
 		IsSdmcWritable = 0x08180000,
+		CardSlotIsInserted = 0x08210000,
 		AbnegateAccessRight = 0x08400040,
 		GetFormatInfo = 0x084500C2,
 		GetArchiveResource = 0x08490040,
@@ -160,11 +163,13 @@ FSPath FSService::readPath(u32 type, u32 pointer, u32 size) {
 void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case FSCommands::CardSlotIsInserted: cardSlotIsInserted(messagePointer); break;
 		case FSCommands::CreateDirectory: createDirectory(messagePointer); break;
 		case FSCommands::CreateExtSaveData: createExtSaveData(messagePointer); break;
 		case FSCommands::CreateFile: createFile(messagePointer); break;
 		case FSCommands::ControlArchive: controlArchive(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
+		case FSCommands::DeleteDirectory: deleteDirectory(messagePointer); break;
 		case FSCommands::DeleteExtSaveData: deleteExtSaveData(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
@@ -412,6 +417,18 @@ void FSService::deleteFile(u32 messagePointer) {
 	Result::HorizonResult res = archive->deleteFile(filePath);
 	mem.write32(messagePointer, IPC::responseHeader(0x804, 1, 0));
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
+}
+
+void FSService::deleteDirectory(u32 messagePointer) {
+	const Handle archiveHandle = Handle(mem.read64(messagePointer + 8));
+	const u32 filePathType = mem.read32(messagePointer + 16);
+	const u32 filePathSize = mem.read32(messagePointer + 20);
+	const u32 filePathPointer = mem.read32(messagePointer + 28);
+	log("FS::DeleteDirectory\n");
+
+	Helpers::warn("Stubbed FS::DeleteDirectory call!");
+	mem.write32(messagePointer, IPC::responseHeader(0x806, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void FSService::getFormatInfo(u32 messagePointer) {
@@ -690,4 +707,13 @@ void FSService::isSdmcWritable(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x818, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, writeProtected ? 0 : 1);
+}
+
+void FSService::cardSlotIsInserted(u32 messagePointer) {
+	log("FS::CardSlotIsInserted\n");
+	constexpr bool cardInserted = false;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x821, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, cardInserted ? 1 : 0);
 }

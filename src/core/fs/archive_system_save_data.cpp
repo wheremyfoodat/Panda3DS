@@ -83,3 +83,62 @@ HorizonResult SystemSaveDataArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("SystemSaveData::CreateFile: Failed");
 	return Result::Success;
 }
+
+
+HorizonResult SystemSaveDataArchive::deleteFile(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in SystemSaveData::DeleteFile");
+		}
+
+		fs::path p = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_directory(p)) {
+			Helpers::panic("SystemSaveData::DeleteFile: Tried to delete directory");
+		}
+
+		if (!fs::is_regular_file(p)) {
+			return Result::FS::FileNotFoundAlt;
+		}
+
+		std::error_code ec;
+		bool success = fs::remove(p, ec);
+
+		// It might still be possible for fs::remove to fail, if there's eg an open handle to a file being deleted
+		// In this case, print a warning, but still return success for now
+		if (!success) {
+			Helpers::warn("SystemSaveData::DeleteFile: fs::remove failed\n");
+		}
+
+		return Result::Success;
+	}
+
+	Helpers::panic("SystemSaveData::DeleteFile: Unknown path type");
+	return Result::Success;
+}
+
+Rust::Result<DirectorySession, HorizonResult> SystemSaveDataArchive::openDirectory(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in SystemSaveData::OpenDirectory");
+		}
+
+		fs::path p = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_regular_file(p)) {
+			printf("SystemSaveData: OpenDirectory used with a file path");
+			return Err(Result::FS::UnexpectedFileOrDir);
+		}
+
+		if (fs::is_directory(p)) {
+			return Ok(DirectorySession(this, p));
+		} else {
+			return Err(Result::FS::FileNotFoundAlt);
+		}
+	}
+
+	Helpers::panic("SystemSaveData::OpenDirectory: Unimplemented path type");
+	return Err(Result::Success);
+}

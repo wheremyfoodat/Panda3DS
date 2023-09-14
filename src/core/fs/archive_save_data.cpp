@@ -64,8 +64,9 @@ HorizonResult SaveDataArchive::createDirectory(const FSPath& path) {
 
 HorizonResult SaveDataArchive::deleteFile(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
+		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::DeleteFile");
+		}
 
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
