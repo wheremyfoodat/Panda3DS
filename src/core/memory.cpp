@@ -120,6 +120,7 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::FirmRevision: return firm.revision;
 			case ConfigMem::FirmVersionMinor: return firm.minor;
 			case ConfigMem::FirmVersionMajor: return firm.major;
+			case ConfigMem::WifiLevel: return 0; // No wifi :(
 
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
