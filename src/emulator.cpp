@@ -439,9 +439,19 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
 	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
-	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart
-	char* appData = SDL_GetPrefPath(nullptr, "Alber");
-	const std::filesystem::path appDataPath = std::filesystem::path(appData);
+	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
+	// If the portable build setting is enabled, then those saves go in the executable directory instead
+	char* appData;
+	std::filesystem::path appDataPath;
+
+	if (!config.usePortableBuild) {
+		appData = SDL_GetPrefPath(nullptr, "Alber");
+		appDataPath = std::filesystem::path(appData);
+	} else {
+		appData = SDL_GetBasePath();
+		appDataPath = std::filesystem::path(appData) / "Emulator Files";
+	}
+
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
 	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
 	IOFile::setAppDataDir(dataPath);

@@ -36,6 +36,7 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 			auto general = generalResult.unwrap();
 
 			discordRpcEnabled = toml::find_or<toml::boolean>(general, "EnableDiscordRPC", false);
+			usePortableBuild = toml::find_or<toml::boolean>(general, "UsePortableBuild", false);
 		}
 	}
 
@@ -102,6 +103,7 @@ void EmulatorConfig::save(const std::filesystem::path& path) {
 	}
 
 	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
+	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 
