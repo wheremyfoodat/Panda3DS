@@ -11,6 +11,7 @@ struct EmulatorConfig {
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
+	bool usePortableBuild = false;
 
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer
