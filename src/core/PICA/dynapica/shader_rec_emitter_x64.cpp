@@ -172,6 +172,9 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 			emitPrintLog(shaderUnit);
 			break;
 
+		case ShaderOpcodes::BREAK:
+		case ShaderOpcodes::BREAKC: Helpers::warn("[Shader JIT] Unimplemented BREAK(C) instruction!"); break;
+
 		// We consider both MAD and MADI to be the same instruction and decode which one we actually have in recMAD
 		case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
 		case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
