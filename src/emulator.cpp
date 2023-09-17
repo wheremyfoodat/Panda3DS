@@ -82,7 +82,6 @@ Emulator::Emulator()
 		}
 	}
 
-	lua.initialize();
 	reset(ReloadOption::NoReload);
 }
 

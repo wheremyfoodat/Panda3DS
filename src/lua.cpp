@@ -27,6 +27,19 @@ void LuaManager::close() {
 }
 
 void LuaManager::loadFile(const char* path) {
+	// Initialize Lua if it has not been initialized
+	if (!initialized) {
+		initialize();
+	}
+	
+	// If init failed, don't execute
+	if (!initialized) {
+		printf("Lua initialization failed, file won't run\n");
+		haveScript = false;
+
+		return;
+	}
+
 	int status = luaL_loadfile(L, path);  // load Lua script
 	int ret = lua_pcall(L, 0, 0, 0);      // tell Lua to run the script
 
