@@ -62,15 +62,20 @@ MAKE_MEMORY_FUNCTIONS(32)
 MAKE_MEMORY_FUNCTIONS(64)
 #undef MAKE_MEMORY_FUNCTIONS
 
-void LuaManager::initializeThunks() {
-	lua_register(L, "read8", read8Thunk);
-	lua_register(L, "read16", read16Thunk);
-	lua_register(L, "read32", read32Thunk);
-	lua_register(L, "read64", read64Thunk);
-	lua_register(L, "write8", write8Thunk);
-	lua_register(L, "write16", write16Thunk);
-	lua_register(L, "write32", write32Thunk);
-	lua_register(L, "write64", write64Thunk);
-}
+// clang-format off
+static constexpr luaL_Reg functions[] = {
+	{ "read8", read8Thunk },
+	{ "read16", read16Thunk },
+	{ "read32", read32Thunk },
+	{ "read64", read64Thunk },
+	{ "write8", write8Thunk} ,
+	{ "write16", write16Thunk },
+	{ "write32", write32Thunk },
+	{ "write64", write64Thunk },
+	{ nullptr, nullptr },
+};
+// clang-format on
+
+void LuaManager::initializeThunks() { luaL_register(L, "pand", functions); }
 
 #endif
