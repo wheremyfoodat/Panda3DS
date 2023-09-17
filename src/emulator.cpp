@@ -82,11 +82,13 @@ Emulator::Emulator()
 		}
 	}
 
+	lua.initialize();
 	reset(ReloadOption::NoReload);
 }
 
 Emulator::~Emulator() {
 	config.save(std::filesystem::current_path() / "config.toml");
+	lua.close();
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	discordRpc.stop();
@@ -357,6 +359,8 @@ void Emulator::run() {
 
 						if (path.extension() == ".amiibo") {
 							loadAmiibo(path);
+						} else if (path.extension() == ".lua") {
+							lua.loadFile(droppedDir);
 						} else {
 							loadROM(path);
 						}
