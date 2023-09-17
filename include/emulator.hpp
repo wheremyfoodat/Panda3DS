@@ -13,6 +13,7 @@
 #include "crypto/aes_engine.hpp"
 #include "discord_rpc.hpp"
 #include "io_file.hpp"
+#include "lua.hpp"
 #include "memory.hpp"
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
@@ -77,6 +78,7 @@ class Emulator {
 	NCSD loadedNCSD;
 
 	std::optional<std::filesystem::path> romPath = std::nullopt;
+	LuaManager lua;
 
   public:
 	// Decides whether to reload or not reload the ROM when resetting. We use enum class over a plain bool for clarity.

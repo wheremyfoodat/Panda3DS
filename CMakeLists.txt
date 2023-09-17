@@ -36,6 +36,7 @@ option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
+option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -85,6 +86,18 @@ set(CRYPTOPP_BUILD_TESTING OFF)
 add_subdirectory(third_party/cryptopp)
 add_subdirectory(third_party/glad)
 
+if(ENABLE_LUAJIT)
+    add_subdirectory(third_party/LuaJIT luajit)
+    include_directories(third_party/LuaJIT/src ${CMAKE_BINARY_DIR}/luajit)
+    set_target_properties(luajit PROPERTIES EXCLUDE_FROM_ALL 1)
+
+    if(MSVC)
+      target_compile_definitions(libluajit PRIVATE _CRT_SECURE_NO_WARNINGS)
+      target_compile_definitions(minilua PRIVATE _CRT_SECURE_NO_WARNINGS)
+      target_compile_definitions(buildvm PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+endif()
+
 # Check for x64
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
@@ -118,7 +131,7 @@ set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp
+                 src/discord_rpc.cpp src/lua.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -183,7 +196,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
-                 include/fs/archive_system_save_data.hpp
+                 include/fs/archive_system_save_data.hpp include/lua.hpp
 )
 
 cmrc_add_resource_library(
@@ -332,6 +345,11 @@ target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad resources
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
     target_link_libraries(Alber PRIVATE discord-rpc)
+endif()
+
+if(ENABLE_LUAJIT)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_LUA=1")
+    target_link_libraries(Alber PRIVATE libluajit)
 endif()
 
 if(ENABLE_OPENGL)
