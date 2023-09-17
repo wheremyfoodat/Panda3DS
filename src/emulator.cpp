@@ -82,7 +82,6 @@ Emulator::Emulator()
 		}
 	}
 
-	lua.initialize();
 	reset(ReloadOption::NoReload);
 }
 
@@ -414,6 +413,7 @@ void Emulator::runFrame() {
 	if (running) {
 		cpu.runFrame(); // Run 1 frame of instructions
 		gpu.display();  // Display graphics
+		lua.signalEvent(LuaEvent::Frame);
 
 		// Send VBlank interrupts
 		ServiceManager& srv = kernel.getServiceManager();
