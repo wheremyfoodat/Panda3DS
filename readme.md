@@ -110,7 +110,7 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [Hydra](https://github.com/hydra-emu/hydra): Cross-platform GameBoy, NES, N64 and Chip-8 emulator
 
 # Support
-If you find this project exciting and want to support the founder, check out [his Patreon page](https://www.patreon.com/wheremyfoodat)
+If you find this project exciting and want to support the founder, check out [his Patreon](https://www.patreon.com/wheremyfoodat) or [Ko-fi](https://ko-fi.com/wheremyfoodat)
 <br>
 Keep in mind that funding is only aimed to cover various life costs and support development. Panda3DS is a free product and on no occasion will official builds ever be made private or limited to sponsors! Any donation is much appreciated!
 
