@@ -84,6 +84,30 @@ HorizonResult SystemSaveDataArchive::createFile(const FSPath& path, u64 size) {
 	return Result::Success;
 }
 
+HorizonResult SystemSaveDataArchive::createDirectory(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in SystemSaveData::OpenFile");
+		}
+
+		fs::path p = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_directory(p)) {
+			return Result::FS::AlreadyExists;
+		}
+
+		if (fs::is_regular_file(p)) {
+			Helpers::panic("File path passed to SystemSaveData::CreateDirectory");
+		}
+
+		bool success = fs::create_directory(p);
+		return success ? Result::Success : Result::FS::UnexpectedFileOrDir;
+	} else {
+		Helpers::panic("Unimplemented SystemSaveData::CreateDirectory");
+	}
+}
+
 
 HorizonResult SystemSaveDataArchive::deleteFile(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
