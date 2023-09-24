@@ -34,7 +34,21 @@ void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 		case CFGCommands::GetSystemModel: getSystemModel(messagePointer); break;
 		case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
 		case CFGCommands::SecureInfoGetRegion: secureInfoGetRegion(messagePointer); break;
-		default: Helpers::panic("CFG service requested. Command: %08X\n", command);
+
+		default: 
+			if (type == Type::S) {
+				// cfg:s-only functions
+				switch (command) {
+					case CFGCommands::GetConfigInfoBlk8: getConfigInfoBlk8(messagePointer); break;
+					case CFGCommands::GetLocalFriendCodeSeed: getLocalFriendCodeSeed(messagePointer); break;
+					case CFGCommands::SecureInfoGetByte101: secureInfoGetByte101(messagePointer); break;
+					default: Helpers::panic("CFG:S service requested. Command: %08X\n", command);
+				}
+			} else {
+				Helpers::panic("CFG service requested. Command: %08X\n", command);
+			}
+
+			break;
 	}
 }
 

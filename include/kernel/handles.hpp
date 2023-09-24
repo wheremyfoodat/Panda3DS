@@ -19,6 +19,7 @@ namespace KernelHandles {
 		CECD, // More Streetpass stuff?
 		CFG_U,  // CFG service (Console & region info)
 		CFG_I,
+		CFG_S,     // Used by most system apps in lieu of cfg:u
 		CSND,      // Plays audio directly from PCM samples
 		DLP_SRVR,  // Download Play: Server. Used for network play.
 		DSP,       // DSP service (Used for audio decoding and output)
