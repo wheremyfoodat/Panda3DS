@@ -4,7 +4,8 @@
 namespace NDMCommands {
 	enum : u32 {
 		EnterExclusiveState = 0x00010042,
-		ExitExclusiveState = 0x00020002,	
+		ExitExclusiveState = 0x00020002,
+		QueryExclusiveMode = 0x00030000,
 		OverrideDefaultDaemons = 0x00140040,
 		SuspendDaemons = 0x00060040,
 		ResumeDaemons = 0x00070040,
@@ -14,7 +15,7 @@ namespace NDMCommands {
 	};
 }
 
-void NDMService::reset() {}
+void NDMService::reset() { exclusiveState = ExclusiveState::None; }
 
 void NDMService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
@@ -23,6 +24,7 @@ void NDMService::handleSyncRequest(u32 messagePointer) {
 		case NDMCommands::ExitExclusiveState: exitExclusiveState(messagePointer); break;
 		case NDMCommands::ClearHalfAwakeMacFilter: clearHalfAwakeMacFilter(messagePointer); break;
 		case NDMCommands::OverrideDefaultDaemons: overrideDefaultDaemons(messagePointer); break;
+		case NDMCommands::QueryExclusiveMode: queryExclusiveState(messagePointer); break;
 		case NDMCommands::ResumeDaemons: resumeDaemons(messagePointer); break;
 		case NDMCommands::ResumeScheduler: resumeScheduler(messagePointer); break;
 		case NDMCommands::SuspendDaemons: suspendDaemons(messagePointer); break;
@@ -33,14 +35,33 @@ void NDMService::handleSyncRequest(u32 messagePointer) {
 
 void NDMService::enterExclusiveState(u32 messagePointer) {
 	log("NDM::EnterExclusiveState (stubbed)\n");
+	const u32 state = mem.read32(messagePointer + 4);
+
+	// Check that the exclusive state config is valid
+	if (state > 4) {
+		Helpers::warn("NDM::EnterExclusiveState: Invalid state %d", state);
+	} else {
+		exclusiveState = static_cast<ExclusiveState>(state);
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void NDMService::exitExclusiveState(u32 messagePointer) {
 	log("NDM::ExitExclusiveState (stubbed)\n");
+	exclusiveState = ExclusiveState::None;
+
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void NDMService::queryExclusiveState(u32 messagePointer) {
+	log("NDM::QueryExclusiveState\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, static_cast<u32>(exclusiveState));
 }
 
 void NDMService::overrideDefaultDaemons(u32 messagePointer) {
