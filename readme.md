@@ -6,7 +6,7 @@ Panda3DS is an HLE, red-panda-themed Nintendo 3DS emulator written in C++ which 
 Experimenting with new methods in emulation and unique features such as Lua scripting, we're here to make a difference!
 
 # Discussion
-Join our Discord server by pressing on the banner below!
+Join our Discord server by pressing on the banner below, or find us on other platforms via [our website](https://panda3ds.com/)!
 
 [![Discord Banner 2](https://discord.com/api/guilds/1118695732958994532/widget.png?style=banner2)](https://discord.gg/ZYbugsEmsw)
 
