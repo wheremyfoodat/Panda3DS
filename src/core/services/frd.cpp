@@ -8,6 +8,7 @@
 namespace FRDCommands {
 	enum : u32 {
 		HasLoggedIn = 0x00010000,
+		IsOnline = 0x00020000,
 		AttachToEventNotification = 0x00200002,
 		SetNotificationMask = 0x00210040,
 		SetClientSdkVersion = 0x00320042,
@@ -41,6 +42,7 @@ void FRDService::handleSyncRequest(u32 messagePointer, FRDService::Type type) {
 		case FRDCommands::GetMyProfile: getMyProfile(messagePointer); break;
 		case FRDCommands::GetMyScreenName: getMyScreenName(messagePointer); break;
 		case FRDCommands::HasLoggedIn: hasLoggedIn(messagePointer); break;
+		case FRDCommands::IsOnline: isOnline(messagePointer); break;
 		case FRDCommands::Logout: logout(messagePointer); break;
 		case FRDCommands::SetClientSdkVersion: setClientSDKVersion(messagePointer); break;
 		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
@@ -207,6 +209,15 @@ void FRDService::hasLoggedIn(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, loggedIn ? 1 : 0);
+}
+
+void FRDService::isOnline(u32 messagePointer) {
+	log("FRD::IsOnline\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	// TODO: When is this 0?
+	mem.write8(messagePointer + 8, 1);
 }
 
 void FRDService::logout(u32 messagePointer) {

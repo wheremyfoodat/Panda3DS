@@ -32,6 +32,7 @@ class FRDService {
 	void getMyProfile(u32 messagePointer);
 	void getMyScreenName(u32 messsagePointer);
 	void hasLoggedIn(u32 messagePointer);
+	void isOnline(u32 messagePointer);
 	void logout(u32 messagePointer);
 	void setClientSDKVersion(u32 messagePointer);
 	void setNotificationMask(u32 messagePointer);
