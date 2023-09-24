@@ -12,7 +12,7 @@ class SystemSaveDataArchive : public ArchiveBase {
 
 	std::string name() override { return "SystemSaveData"; }
 
-	//HorizonResult createDirectory(const FSPath& path) override;
+	HorizonResult createDirectory(const FSPath& path) override;
 	HorizonResult createFile(const FSPath& path, u64 size) override;
 	HorizonResult deleteFile(const FSPath& path) override;
 
