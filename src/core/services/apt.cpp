@@ -183,6 +183,11 @@ void APTService::enable(u32 messagePointer) {
 	log("APT::Enable\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+
+	// Some apps like Home Menu and Game Notes seem to rely on resume event being triggered here. Doesn't seem to break anything, so
+	if (resumeEvent.has_value()) {
+		kernel.signalEvent(resumeEvent.value());
+	}
 }
 
 void APTService::initialize(u32 messagePointer) {
