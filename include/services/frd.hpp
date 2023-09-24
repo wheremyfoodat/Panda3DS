@@ -26,16 +26,20 @@ class FRDService {
 	void getFriendKeyList(u32 messagePointer);
 	void getFriendPresence(u32 messagePointer);
 	void getFriendProfile(u32 messagePointer);
+	void getMyComment(u32 messagePointer);
+	void getMyFavoriteGame(u32 messagePointer);
 	void getMyFriendKey(u32 messagePointer);
 	void getMyMii(u32 messagePointer);
 	void getMyPresence(u32 messagePointer);
 	void getMyProfile(u32 messagePointer);
 	void getMyScreenName(u32 messsagePointer);
 	void hasLoggedIn(u32 messagePointer);
+	void isOnline(u32 messagePointer);
 	void logout(u32 messagePointer);
 	void setClientSDKVersion(u32 messagePointer);
 	void setNotificationMask(u32 messagePointer);
 	void updateGameModeDescription(u32 messagePointer);
+	void updateMii(u32 messagePointer);
 
 	struct Profile {
 		u8 region;

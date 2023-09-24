@@ -8,6 +8,7 @@
 namespace FRDCommands {
 	enum : u32 {
 		HasLoggedIn = 0x00010000,
+		IsOnline = 0x00020000,
 		AttachToEventNotification = 0x00200002,
 		SetNotificationMask = 0x00210040,
 		SetClientSdkVersion = 0x00320042,
@@ -17,11 +18,15 @@ namespace FRDCommands {
 		GetMyPresence = 0x00080000,
 		GetMyScreenName = 0x00090000,
 		GetMyMii = 0x000A0000,
+		GetMyFavoriteGame = 0x000D0000,
+		GetMyComment = 0x000F0000,
 		GetFriendKeyList = 0x00110080,
 		GetFriendPresence = 0x00120042,
 		GetFriendProfile = 0x00150042,
 		GetFriendAttributeFlags = 0x00170042,
 		UpdateGameModeDescription = 0x001D0002,
+
+		UpdateMii = 0x040C0800,
 	};
 }
 
@@ -35,17 +40,32 @@ void FRDService::handleSyncRequest(u32 messagePointer, FRDService::Type type) {
 		case FRDCommands::GetFriendKeyList: getFriendKeyList(messagePointer); break;
 		case FRDCommands::GetFriendPresence: getFriendPresence(messagePointer); break;
 		case FRDCommands::GetFriendProfile: getFriendProfile(messagePointer); break;
+		case FRDCommands::GetMyComment: getMyComment(messagePointer); break;
 		case FRDCommands::GetMyFriendKey: getMyFriendKey(messagePointer); break;
 		case FRDCommands::GetMyMii: getMyMii(messagePointer); break;
+		case FRDCommands::GetMyFavoriteGame: getMyFavoriteGame(messagePointer); break;
 		case FRDCommands::GetMyPresence: getMyPresence(messagePointer); break;
 		case FRDCommands::GetMyProfile: getMyProfile(messagePointer); break;
 		case FRDCommands::GetMyScreenName: getMyScreenName(messagePointer); break;
 		case FRDCommands::HasLoggedIn: hasLoggedIn(messagePointer); break;
+		case FRDCommands::IsOnline: isOnline(messagePointer); break;
 		case FRDCommands::Logout: logout(messagePointer); break;
 		case FRDCommands::SetClientSdkVersion: setClientSDKVersion(messagePointer); break;
 		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
 		case FRDCommands::UpdateGameModeDescription: updateGameModeDescription(messagePointer); break;
-		default: Helpers::panic("FRD service requested. Command: %08X\n", command);
+
+		default: 
+			// FRD:A functions
+			if (type == Type::A) {
+				switch (command) {
+					case FRDCommands::UpdateMii: updateMii(messagePointer); break;
+					default: Helpers::panic("FRD:A service requested. Command: %08X\n", command); break;
+				}
+			} else {
+				Helpers::panic("FRD service requested. Command: %08X\n", command);
+			}
+
+			break;
 	}
 }
 
@@ -201,6 +221,23 @@ void FRDService::getMyMii(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void FRDService::getMyFavoriteGame(u32 messagePointer) {
+	log("FRD::GetMyFavoriteGame (stubbed)\n");
+	constexpr u64 titleID = 0;
+	
+	mem.write32(messagePointer, IPC::responseHeader(0xD, 3, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write64(messagePointer + 8, titleID);
+}
+
+void FRDService::getMyComment(u32 messagePointer) {
+	log("FRD::GetMyComment");
+
+	mem.write32(messagePointer, IPC::responseHeader(0xF, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0);
+}
+
 void FRDService::hasLoggedIn(u32 messagePointer) {
 	log("FRD::HasLoggedIn\n");
 
@@ -209,10 +246,26 @@ void FRDService::hasLoggedIn(u32 messagePointer) {
 	mem.write8(messagePointer + 8, loggedIn ? 1 : 0);
 }
 
+void FRDService::isOnline(u32 messagePointer) {
+	log("FRD::IsOnline\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	// TODO: When is this 0?
+	mem.write8(messagePointer + 8, 1);
+}
+
 void FRDService::logout(u32 messagePointer) {
 	log("FRD::Logout\n");
 	loggedIn = false;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::updateMii(u32 messagePointer) {
+	log("FRD::UpdateMii (stubbed)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x40C, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
