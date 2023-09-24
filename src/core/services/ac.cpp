@@ -7,6 +7,8 @@ namespace ACCommands {
 		CancelConnectAsync = 0x00070002,
 		CloseAsync = 0x00080004,
 		GetLastErrorCode = 0x000A0000,
+		GetStatus = 0x000C0000,
+		GetConnectingInfraPriority = 0x000F0000,
 		RegisterDisconnectEvent = 0x00300004,
 		IsConnected = 0x003E0042,
 		SetClientVersion = 0x00400042,
@@ -24,7 +26,9 @@ void ACService::handleSyncRequest(u32 messagePointer) {
 		case ACCommands::CancelConnectAsync: cancelConnectAsync(messagePointer); break;
 		case ACCommands::CloseAsync: closeAsync(messagePointer); break;
 		case ACCommands::CreateDefaultConfig: createDefaultConfig(messagePointer); break;
+		case ACCommands::GetConnectingInfraPriority: getConnectingInfraPriority(messagePointer); break;
 		case ACCommands::GetLastErrorCode: getLastErrorCode(messagePointer); break;
+		case ACCommands::GetStatus: getStatus(messagePointer); break;
 		case ACCommands::IsConnected: isConnected(messagePointer); break;
 		case ACCommands::RegisterDisconnectEvent: registerDisconnectEvent(messagePointer); break;
 		case ACCommands::SetClientVersion: setClientVersion(messagePointer); break;
@@ -68,6 +72,25 @@ void ACService::getLastErrorCode(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Hopefully this means no error?
 }
+
+void ACService::getConnectingInfraPriority(u32 messagePointer) {
+	log("AC::GetConnectingInfraPriority (stubbed)\n");
+
+	// TODO: Find out what this is
+	mem.write32(messagePointer, IPC::responseHeader(0x0F, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0);
+}
+
+void ACService::getStatus(u32 messagePointer) {
+	log("AC::GetStatus (stubbed)\n");
+
+	// TODO: Find out what this is
+	mem.write32(messagePointer, IPC::responseHeader(0x0C, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0);
+}
+
 
 void ACService::isConnected(u32 messagePointer) {
 	log("AC::IsConnected\n");
