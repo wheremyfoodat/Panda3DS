@@ -16,6 +16,9 @@ namespace CFGCommands {
 		GetRegionCanadaUSA = 0x00040000,
 		GetSystemModel = 0x00050000,
 		GetCountryCodeID = 0x000A0040,
+
+		GetLocalFriendCodeSeed = 0x04050000,
+		SecureInfoGetByte101 = 0x04070000,
 	};
 }
 
@@ -208,4 +211,20 @@ void CFGService::getCountryCodeID(u32 messagePointer) {
 		mem.write32(messagePointer + 4, Result::CFG::NotFound);
 		mem.write16(messagePointer + 8, 0xFF);
 	}
+}
+
+void CFGService::secureInfoGetByte101(u32 messagePointer) {
+	log("CFG::SecureInfoGetByte101\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x407, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0); // Secure info byte 0x101 is usually 0 according to 3DBrew
+}
+
+void CFGService::getLocalFriendCodeSeed(u32 messagePointer) {
+	log("CFG::GetLocalFriendCodeSeed\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x405, 3, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write64(messagePointer + 8, 0);
 }
