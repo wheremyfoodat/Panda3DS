@@ -18,6 +18,8 @@ namespace APTCommands {
 		PreloadLibraryApplet = 0x00160040,
 		PrepareToStartLibraryApplet = 0x00180040,
 		StartLibraryApplet = 0x001E0084,
+		ReceiveDeliverArg = 0x00350080,
+		LoadSysMenuArg = 0x00360040,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		GetSharedFont = 0x00440000,
@@ -85,9 +87,11 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::GetWirelessRebootInfo: getWirelessRebootInfo(messagePointer); break;
 		case APTCommands::GlanceParameter: glanceParameter(messagePointer); break;
+		case APTCommands::LoadSysMenuArg: loadSysMenuArg(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::PreloadLibraryApplet: preloadLibraryApplet(messagePointer); break;
 		case APTCommands::PrepareToStartLibraryApplet: prepareToStartLibraryApplet(messagePointer); break;
+		case APTCommands::ReceiveDeliverArg: receiveDeliverArg(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
@@ -372,4 +376,34 @@ void APTService::getWirelessRebootInfo(u32 messagePointer) {
 	for (u32 i = 0; i < size; i++) {
 		mem.write8(messagePointer + 0x104 + i, 0); // Temporarily stub this until we add SetWirelessRebootInfo
 	}
+}
+
+void APTService::receiveDeliverArg(u32 messagePointer) {
+	const u32 parameterSize = mem.read32(messagePointer + 4);
+	const u32 hmacSize = mem.read32(messagePointer + 8);
+	log("APT::ReceiveDeliverArg (parameter size = %X, HMAC size = %X) (stubbed)\n", parameterSize, hmacSize);
+
+	const u32 parameterPointer = mem.read32(messagePointer + 0x104);
+	const u32 hmacPointer = mem.read32(messagePointer + 0x10C);
+
+	log("Parameter* = %X, HMAC* = %X\n", parameterPointer, hmacPointer);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0); // Program ID
+	mem.write8(messagePointer + 16, 1); // Is valid response
+	mem.write32(messagePointer + 20, IPC::pointerHeader(0, sizeof(u32) * parameterSize));
+	mem.write32(messagePointer + 24, 0xDEADBEEF); // TODO: look into how this works if program reads from this address
+	mem.write32(messagePointer + 28, IPC::pointerHeader(1, sizeof(u32) * hmacSize));
+	mem.write32(messagePointer + 32, 0xDEADBEEF);
+}
+
+void APTService::loadSysMenuArg(u32 messagePointer) {
+	const u32 outputSize = mem.read32(messagePointer + 4);
+	log("APT::LoadSysMenuArg (output size = %X) (stubbed)\n", outputSize);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * outputSize));
+	mem.write32(messagePointer + 12, 0xDEADBEEF);
 }

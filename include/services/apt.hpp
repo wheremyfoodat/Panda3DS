@@ -43,9 +43,11 @@ class APTService {
 	void initialize(u32 messagePointer);
 	void inquireNotification(u32 messagePointer);
 	void isRegistered(u32 messagePointer);
+	void loadSysMenuArg(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);
 	void preloadLibraryApplet(u32 messagePointer);
 	void prepareToStartLibraryApplet(u32 messagePointer);
+	void receiveDeliverArg(u32 messagePointer);
 	void receiveParameter(u32 messagePointer);
 	void replySleepQuery(u32 messagePointer);
 	void setApplicationCpuTimeLimit(u32 messagePointer);
