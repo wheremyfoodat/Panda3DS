@@ -381,20 +381,17 @@ void APTService::getWirelessRebootInfo(u32 messagePointer) {
 void APTService::receiveDeliverArg(u32 messagePointer) {
 	const u32 parameterSize = mem.read32(messagePointer + 4);
 	const u32 hmacSize = mem.read32(messagePointer + 8);
-	log("APT::ReceiveDeliverArg (parameter size = %X, HMAC size = %X) (stubbed)\n", parameterSize, hmacSize);
-
-	const u32 parameterPointer = mem.read32(messagePointer + 0x104);
-	const u32 hmacPointer = mem.read32(messagePointer + 0x10C);
-
-	log("Parameter* = %X, HMAC* = %X\n", parameterPointer, hmacPointer);
+	const u32 parameter = mem.read32(messagePointer + 0x104);
+	const u32 hmac = mem.read32(messagePointer + 0x10C);
+	log("APT::ReceiveDeliverArg (parameter size = %X, HMAC size = %X, parameter pointer = %X, HMAC pointer = %X) (stubbed)\n", parameterSize, hmacSize, parameter, hmac);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Program ID
 	mem.write8(messagePointer + 16, 1); // Is valid response
-	mem.write32(messagePointer + 20, IPC::pointerHeader(0, sizeof(u32) * parameterSize));
+	mem.write32(messagePointer + 20, IPC::pointerHeader(0, sizeof(u32) * parameterSize, IPC::BufferType::Send));
 	mem.write32(messagePointer + 24, 0xDEADBEEF); // TODO: look into how this works if program reads from this address
-	mem.write32(messagePointer + 28, IPC::pointerHeader(1, sizeof(u32) * hmacSize));
+	mem.write32(messagePointer + 28, IPC::pointerHeader(1, sizeof(u32) * hmacSize, IPC::BufferType::Send));
 	mem.write32(messagePointer + 32, 0xDEADBEEF);
 }
 
@@ -404,6 +401,6 @@ void APTService::loadSysMenuArg(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * outputSize));
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * outputSize, IPC::BufferType::Send));
 	mem.write32(messagePointer + 12, 0xDEADBEEF);
 }
