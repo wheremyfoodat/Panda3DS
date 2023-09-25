@@ -158,6 +158,18 @@ void CFGService::getConfigInfo(u32 output, u32 blockID, u32 size, u32 permission
 		mem.write32(output, 0);
 	} else if (size == 8 && blockID == 0x00090000) {
 		mem.write64(output, 0);  // Some sort of key used with nwm::UDS::InitializeWithVersion
+	} else if (size == 4 && blockID == 0x110000) {
+		mem.write32(output, 0); // According to 3Dbrew, 0 means system setup is required
+	} else if (size == 2 && blockID == 0x50001) {
+		// Backlight controls. Values taken from Citra
+		mem.write8(output, 0);
+		mem.write8(output + 1, 2);
+	} else if (size == 8 && blockID == 0x50009) {
+		// N3DS Backlight controls?
+		mem.write64(output, 0);
+	} else if (size == 4 && blockID == 0x180000) {
+		// Infrared LED related?
+		mem.write32(output, 0);
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}
