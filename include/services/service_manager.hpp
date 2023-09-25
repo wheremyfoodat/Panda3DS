@@ -32,6 +32,7 @@
 #include "services/news_u.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
+#include "services/ns.hpp"
 #include "services/ptm.hpp"
 #include "services/soc.hpp"
 #include "services/ssl.hpp"
@@ -75,6 +76,7 @@ class ServiceManager {
 	NFCService nfc;
 	NwmUdsService nwm_uds;
     NIMService nim;
+    NSService ns;
 	PTMService ptm;
 	SOCService soc;
 	SSLService ssl;

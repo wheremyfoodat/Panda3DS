@@ -56,6 +56,7 @@ namespace Log {
 	static Logger<false> nwmUdsLogger;
 	static Logger<false> nimLogger;
 	static Logger<false> ndmLogger;
+	static Logger<false> nsLogger;
 	static Logger<false> ptmLogger;
 	static Logger<false> socLogger;
 	static Logger<false> sslLogger;
