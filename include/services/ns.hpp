@@ -10,6 +10,7 @@ class NSService {
 	MAKE_LOG_FUNCTION(log, nsLogger)
 
     // Service commands
+    void launchTitle(u32 messagePointer);
 
 public:
     enum class Type {
