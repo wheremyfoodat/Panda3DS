@@ -43,6 +43,7 @@ namespace KernelHandles {
 		PTM_U,     // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 		PTM_SYSM,  // PTM system service
 		PTM_PLAY,  // PTM Play service, used for retrieving play history
+		PTM_GETS,  // PTM RTC service (GetSystemTime)
 		SOC,       // Socket service
 		SSL,       // SSL service (Totally didn't expect that)
 		Y2R,       // Also does camera stuff
