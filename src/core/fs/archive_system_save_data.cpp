@@ -145,7 +145,8 @@ HorizonResult SystemSaveDataArchive::deleteFile(const FSPath& path) {
 Rust::Result<DirectorySession, HorizonResult> SystemSaveDataArchive::openDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
-			Helpers::panic("Unsafe path in SystemSaveData::OpenDirectory");
+			Helpers::warn("Unsafe path in SystemSaveData::OpenDirectory");
+			return Err(Result::FS::FileNotFoundAlt);
 		}
 
 		fs::path p = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
