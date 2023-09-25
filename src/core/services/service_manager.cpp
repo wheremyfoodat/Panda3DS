@@ -98,6 +98,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "act:a", KernelHandles::ACT },
 	{ "act:u", KernelHandles::ACT },
 	{ "am:app", KernelHandles::AM },
+	{ "am:sys", KernelHandles::AM },
 	{ "APT:S", KernelHandles::APT }, // TODO: APT:A, APT:S and APT:U are slightly different
 	{ "APT:A", KernelHandles::APT },
 	{ "APT:U", KernelHandles::APT },
