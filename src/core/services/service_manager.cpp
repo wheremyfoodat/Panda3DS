@@ -112,6 +112,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
 	{ "hid:USER", KernelHandles::HID },
+	{ "hid:SPVR", KernelHandles::HID },
 	{ "http:C", KernelHandles::HTTP },
 	{ "ir:USER", KernelHandles::IR_USER },
 	{ "frd:a", KernelHandles::FRD_A },
