@@ -18,6 +18,8 @@ namespace CFGCommands {
 		GetSystemModel = 0x00050000,
 		GetCountryCodeID = 0x000A0040,
 
+		SetConfigInfoBlk4 = 0x04020082,
+		UpdateConfigNANDSavegame = 0x04030000,
 		GetLocalFriendCodeSeed = 0x04050000,
 		SecureInfoGetByte101 = 0x04070000,
 	};
@@ -42,6 +44,8 @@ void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 					case CFGCommands::GetConfigInfoBlk8: getConfigInfoBlk8(messagePointer); break;
 					case CFGCommands::GetLocalFriendCodeSeed: getLocalFriendCodeSeed(messagePointer); break;
 					case CFGCommands::SecureInfoGetByte101: secureInfoGetByte101(messagePointer); break;
+					case CFGCommands::SetConfigInfoBlk4: setConfigInfoBlk4(messagePointer); break;
+					case CFGCommands::UpdateConfigNANDSavegame: updateConfigNANDSavegame(messagePointer); break;
 					default: Helpers::panic("CFG:S service requested. Command: %08X\n", command);
 				}
 			} else {
@@ -74,7 +78,7 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 	u32 size = mem.read32(messagePointer + 4);
 	u32 blockID = mem.read32(messagePointer + 8);
 	u32 output = mem.read32(messagePointer + 16); // Pointer to write the output data to
-	log("CFG::GetConfigInfoBlk2 (size = %X, block ID = %X, output pointer = %08X\n", size, blockID, output);
+	log("CFG::GetConfigInfoBlk2 (size = %X, block ID = %X, output pointer = %08X)\n", size, blockID, output);
 
 
 	getConfigInfo(output, blockID, size, 0x2);
@@ -86,7 +90,7 @@ void CFGService::getConfigInfoBlk8(u32 messagePointer) {
 	u32 size = mem.read32(messagePointer + 4);
 	u32 blockID = mem.read32(messagePointer + 8);
 	u32 output = mem.read32(messagePointer + 16);  // Pointer to write the output data to
-	log("CFG::GetConfigInfoBlk8 (size = %X, block ID = %X, output pointer = %08X\n", size, blockID, output);
+	log("CFG::GetConfigInfoBlk8 (size = %X, block ID = %X, output pointer = %08X)\n", size, blockID, output);
 
 	getConfigInfo(output, blockID, size, 0x8);
 	mem.write32(messagePointer, IPC::responseHeader(0x401, 1, 2));
@@ -268,4 +272,23 @@ void CFGService::getLocalFriendCodeSeed(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x405, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write64(messagePointer + 8, 0);
+}
+
+void CFGService::setConfigInfoBlk4(u32 messagePointer) {
+	u32 blockID = mem.read32(messagePointer + 4);
+	u32 size = mem.read32(messagePointer + 8);
+	u32 input = mem.read32(messagePointer + 16);
+	log("CFG::SetConfigInfoBlk4 (block ID = %X, size = %X, input pointer = %08X)\n", blockID, size, input);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x401, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, size, IPC::BufferType::Receive));
+	mem.write32(messagePointer + 12, 0xCAFE0000); // Nonsensical pointer to see if anything uses this
+}
+
+void CFGService::updateConfigNANDSavegame(u32 messagePointer) {
+	log("CFG::UpdateConfigNANDSavegame\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x403, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
