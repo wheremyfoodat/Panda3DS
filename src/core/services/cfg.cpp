@@ -163,7 +163,7 @@ void CFGService::getConfigInfo(u32 output, u32 blockID, u32 size, u32 permission
 	} else if (size == 8 && blockID == 0x00090000) {
 		mem.write64(output, 0);  // Some sort of key used with nwm::UDS::InitializeWithVersion
 	} else if (size == 4 && blockID == 0x110000) {
-		mem.write32(output, 0); // According to 3Dbrew, 0 means system setup is required
+		mem.write32(output, 1); // According to 3Dbrew, 0 means system setup is required
 	} else if (size == 2 && blockID == 0x50001) {
 		// Backlight controls. Values taken from Citra
 		mem.write8(output, 0);
