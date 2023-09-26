@@ -236,6 +236,15 @@ void FSService::openArchive(u32 messagePointer) {
 	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
 	log("FS::OpenArchive(archive ID = %d, archive path type = %d)\n", archiveID, archivePathType);
 
+	// Needed for HOME Menu
+	if ((archiveID == 7) && (archivePathType == 2)) {
+		log("FS::OpenArchive: Failed to open archive\n");
+		mem.write32(messagePointer + 4, 0xC8804478);
+		mem.write64(messagePointer + 8, 0);
+
+		return;
+	}
+
 	Rust::Result<Handle, Result::HorizonResult> res = openArchiveHandle(archiveID, archivePath);
 	mem.write32(messagePointer, IPC::responseHeader(0x80C, 3, 0));
 	if (res.isOk()) {
