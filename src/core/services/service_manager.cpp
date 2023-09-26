@@ -37,9 +37,11 @@ void ServiceManager::reset() {
 	mcu_hwc.reset();
 	mic.reset();
 	ndm.reset();
+	news_s.reset();
 	news_u.reset();
 	nfc.reset();
 	nim.reset();
+	ns.reset();
 	ptm.reset();
 	soc.reset();
 	ssl.reset();
@@ -125,6 +127,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "mcu::HWC", KernelHandles::MCU_HWC },
 	{ "mic:u", KernelHandles::MIC },
 	{ "ndm:u", KernelHandles::NDM },
+	{ "news:s", KernelHandles::NEWS_S },
 	{ "news:u", KernelHandles::NEWS_U },
 	{ "nfc:u", KernelHandles::NFC },
 	{ "ns:s", KernelHandles::NS_S },

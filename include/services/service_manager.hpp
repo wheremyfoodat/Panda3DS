@@ -29,6 +29,7 @@
 #include "services/mic.hpp"
 #include "services/ndm.hpp"
 #include "services/nwm_uds.hpp"
+#include "services/news_s.hpp"
 #include "services/news_u.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
@@ -72,6 +73,7 @@ class ServiceManager {
 	LDRService ldr;
 	MICService mic;
 	NDMService ndm;
+	NewsSService news_s;
 	NewsUService news_u;
 	NFCService nfc;
 	NwmUdsService nwm_uds;
