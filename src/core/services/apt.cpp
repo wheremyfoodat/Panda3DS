@@ -387,23 +387,36 @@ void APTService::receiveDeliverArg(u32 messagePointer) {
 	const u32 hmac = mem.read32(messagePointer + 0x10C);
 	log("APT::ReceiveDeliverArg (parameter size = %X, HMAC size = %X, parameter pointer = %X, HMAC pointer = %X) (stubbed)\n", parameterSize, hmacSize, parameter, hmac);
 
+	for (u32 i = 0; i < parameterSize; i += 4) {
+		mem.write32(parameter + i, 0xDEADC0DE); // Does anything use this
+	}
+
+	for (u32 i = 0; i < hmacSize; i += 4) {
+		mem.write32(hmac + i, 0);
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0); // Program ID
 	mem.write8(messagePointer + 16, 1); // Is valid response
-	mem.write32(messagePointer + 20, IPC::pointerHeader(0, sizeof(u32) * parameterSize, IPC::BufferType::Send));
+	mem.write32(messagePointer + 20, IPC::pointerHeader(0, parameterSize, IPC::BufferType::Send));
 	mem.write32(messagePointer + 24, parameter);
-	mem.write32(messagePointer + 28, IPC::pointerHeader(1, sizeof(u32) * hmacSize, IPC::BufferType::Send));
+	mem.write32(messagePointer + 28, IPC::pointerHeader(1, hmacSize, IPC::BufferType::Send));
 	mem.write32(messagePointer + 32, hmac);
 }
 
 void APTService::loadSysMenuArg(u32 messagePointer) {
 	const u32 outputSize = mem.read32(messagePointer + 4);
-	log("APT::LoadSysMenuArg (output size = %X) (stubbed)\n", outputSize);
+	const u32 output = mem.read32(messagePointer + 0x104);
+	log("APT::LoadSysMenuArg (output size = %X, output = %X) (stubbed)\n", outputSize, output);
+
+	for (u32 i = 0; i < outputSize; i += 4) {
+		mem.write32(output + i, 0);
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * outputSize, IPC::BufferType::Send));
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, outputSize, IPC::BufferType::Send));
 	mem.write32(messagePointer + 12, outputSize);
 }
 
@@ -412,8 +425,17 @@ void APTService::getCaptureInfo(u32 messagePointer) {
 	const u32 captureBufferInfo = mem.read32(messagePointer + 0x104);
 	log("APT::GetCaptureInfo (size = %X, capture buffer info pointer = %X) (Stubbed)\n", size, captureBufferInfo);
 
+	mem.write32(captureBufferInfo, 0);       // Size (of structure?)
+	mem.write8(captureBufferInfo + 4, 0);    // 1 = is 3D
+	mem.write32(captureBufferInfo + 8, 0);   // Main screen left offset
+	mem.write32(captureBufferInfo + 12, 0);  // Main screen right offset
+	mem.write32(captureBufferInfo + 16, 0);  // Main screen display buffer mode
+	mem.write32(captureBufferInfo + 20, 0);  // Sub screen left offset
+	mem.write32(captureBufferInfo + 24, 0);  // Sub screen right offset
+	mem.write32(captureBufferInfo + 28, 0);  // Sub screen display buffer mode
+
 	mem.write32(messagePointer, IPC::responseHeader(0x4A, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * size, IPC::BufferType::Send));
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, size, IPC::BufferType::Send));
 	mem.write32(messagePointer + 12, captureBufferInfo);
 }
