@@ -133,7 +133,8 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "nfc:u", KernelHandles::NFC },
 	{ "ns:s", KernelHandles::NS_S },
 	{ "nwm::UDS", KernelHandles::NWM_UDS },
-	{ "nim:aoc", KernelHandles::NIM },
+	{ "nim:aoc", KernelHandles::NIM_AOC },
+	{ "nim:u", KernelHandles::NIM_U },
 	{ "ptm:u", KernelHandles::PTM_U }, // TODO: ptm:u and ptm:sysm have very different command sets
 	{ "ptm:sysm", KernelHandles::PTM_SYSM },
 	{ "ptm:play", KernelHandles::PTM_PLAY },
@@ -232,7 +233,8 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::MCU_HWC: mcu_hwc.handleSyncRequest(messagePointer); break;
 		case KernelHandles::MIC: mic.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NFC: nfc.handleSyncRequest(messagePointer); break;
-		case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
+		case KernelHandles::NIM_AOC: nim.handleSyncRequest(messagePointer, NIMService::Type::AOC); break;
+		case KernelHandles::NIM_U: nim.handleSyncRequest(messagePointer, NIMService::Type::U); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NEWS_U: news_u.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NS_S: ns.handleSyncRequest(messagePointer, NSService::Type::S); break;
