@@ -16,6 +16,7 @@ namespace FSCommands {
 		OpenFile = 0x080201C2,
 		OpenFileDirectly = 0x08030204,
 		DeleteFile = 0x08040142,
+		RenameFile = 0x08050244,
 		DeleteDirectory = 0x08060142,
 		DeleteDirectoryRecursively = 0x08070142,
 		CreateFile = 0x08080202,
@@ -187,6 +188,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::OpenDirectory: openDirectory(messagePointer); break;
 		case FSCommands::OpenFile: [[likely]] openFile(messagePointer); break;
 		case FSCommands::OpenFileDirectly: [[likely]] openFileDirectly(messagePointer); break;
+		case FSCommands::RenameFile: renameFile(messagePointer); break;
 		case FSCommands::SetArchivePriority: setArchivePriority(messagePointer); break;
 		case FSCommands::SetPriority: setPriority(messagePointer); break;
 		case FSCommands::SetThisSaveDataSecureValue: setThisSaveDataSecureValue(messagePointer); break;
@@ -716,4 +718,46 @@ void FSService::cardSlotIsInserted(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x821, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, cardInserted ? 1 : 0);
+}
+
+void FSService::renameFile(u32 messagePointer) {
+	log("FS::RenameFile\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x805, 1, 0));
+
+	const Handle sourceArchiveHandle = mem.read64(messagePointer + 8);
+	const Handle destArchiveHandle = mem.read64(messagePointer + 24);
+
+	// Read path info
+	const u32 sourcePathType = mem.read32(messagePointer + 16);
+	const u32 sourcePathSize = mem.read32(messagePointer + 20);
+	const u32 sourcePathPointer = mem.read32(messagePointer + 44);
+	const FSPath sourcePath = readPath(sourcePathType, sourcePathPointer, sourcePathSize);
+
+	const u32 destPathType = mem.read32(messagePointer + 32);
+	const u32 destPathSize = mem.read32(messagePointer + 36);
+	const u32 destPathPointer = mem.read32(messagePointer + 52);
+	const FSPath destPath = readPath(destPathType, destPathPointer, destPathSize);
+
+	const auto sourceArchiveObject = kernel.getObject(sourceArchiveHandle, KernelObjectType::Archive);
+	const auto destArchiveObject = kernel.getObject(destArchiveHandle, KernelObjectType::Archive);
+
+	if (sourceArchiveObject == nullptr || destArchiveObject == nullptr) {
+		Helpers::panic("FS::RenameFile: One of the archive handles is invalid");
+	}
+
+	const auto sourceArchive = sourceArchiveObject->getData<ArchiveSession>();
+	const auto destArchive = destArchiveObject->getData<ArchiveSession>();
+	if (!sourceArchive->isOpen || !destArchive->isOpen) {
+		Helpers::warn("FS::RenameFile: Not both archive sessions are open");
+	}
+
+	// This returns error 0xE0C046F8 according to 3DBrew
+	if (sourceArchive->archive->name() != destArchive->archive->name()) {
+		Helpers::panic("FS::RenameFile: Both archive handles should belong to the same archive");
+	}
+
+	// Everything is OK, let's do the rename. Both archives should match so we don't need the dest anymore
+	const HorizonResult res = sourceArchive->archive->renameFile(sourcePath, destPath);
+	mem.write32(messagePointer + 4, static_cast<u32>(res));
 }
