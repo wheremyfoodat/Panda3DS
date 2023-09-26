@@ -11,6 +11,7 @@ class LCDService {
 	MAKE_LOG_FUNCTION(log, gspLCDLogger)
 
 	// Service commands
+	void setLedForceOff(u32 messagePointer);
 
 public:
 	LCDService(Memory& mem) : mem(mem) {}
