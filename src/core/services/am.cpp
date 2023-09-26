@@ -7,6 +7,7 @@ namespace AMCommands {
 		GetProgramInfos = 0x00030084,
 		GetTicketList = 0x00090082,
 		NeedsCleanup = 0x00130040,
+		CheckContentRights = 0x002500C0,
 		GetDLCTitleInfo = 0x10050084,
 		ListTitleInfo = 0x10070102,
 		GetPatchTitleInfo = 0x100D0084,
@@ -18,6 +19,7 @@ void AMService::reset() {}
 void AMService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
+		case AMCommands::CheckContentRights: checkContentRights(messagePointer); break;
 		case AMCommands::GetPatchTitleInfo: getPatchTitleInfo(messagePointer); break;
 		case AMCommands::GetDLCTitleInfo: getDLCTitleInfo(messagePointer); break;
 		case AMCommands::GetProgramInfos: getProgramInfos(messagePointer); break;
@@ -124,4 +126,14 @@ void AMService::getTicketList(u32 messagePointer) {
 	mem.write32(messagePointer + 8, 0); // No tickets read?
 	mem.write32(messagePointer + 12, IPC::pointerHeader(0, sizeof(u64) * 0, IPC::BufferType::Receive));
 	mem.write32(messagePointer + 16, titleIDs);
+}
+
+void AMService::checkContentRights(u32 messagePointer) {
+	const u64 titleID = mem.read64(messagePointer + 4);
+	const u16 contentIndex = mem.read16(messagePointer + 12);
+	log("AM::CheckContentRights (title ID = %llX, content index = %X) (stubbed)\n", titleID, contentIndex);
+	
+	mem.write32(messagePointer, IPC::responseHeader(0x25, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 1); // Has content rights
 }

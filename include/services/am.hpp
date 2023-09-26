@@ -11,6 +11,7 @@ class AMService {
 	MAKE_LOG_FUNCTION(log, amLogger)
 
 	// Service commands
+	void checkContentRights(u32 messagePointer);
 	void getDLCTitleInfo(u32 messagePointer);
 	void getPatchTitleInfo(u32 messagePointer);
 	void getProgramInfos(u32 messagePointer);
