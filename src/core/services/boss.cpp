@@ -75,6 +75,12 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::StartTask: startTask(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
 		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
+		case 0x04500102: // Home Menu uses this command, what is this?
+			Helpers::warn("BOSS command 0x04500102");
+
+			mem.write32(messagePointer, IPC::responseHeader(0x450, 1, 0));
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
 		default: Helpers::panic("BOSS service requested. Command: %08X\n", command);
 	}
 }
