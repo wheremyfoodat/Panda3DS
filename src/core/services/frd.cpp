@@ -23,6 +23,7 @@ namespace FRDCommands {
 		GetFriendKeyList = 0x00110080,
 		GetFriendPresence = 0x00120042,
 		GetFriendProfile = 0x00150042,
+		GetFriendRelationship = 0x00160042,
 		GetFriendAttributeFlags = 0x00170042,
 		UpdateGameModeDescription = 0x001D0002,
 
@@ -40,6 +41,7 @@ void FRDService::handleSyncRequest(u32 messagePointer, FRDService::Type type) {
 		case FRDCommands::GetFriendKeyList: getFriendKeyList(messagePointer); break;
 		case FRDCommands::GetFriendPresence: getFriendPresence(messagePointer); break;
 		case FRDCommands::GetFriendProfile: getFriendProfile(messagePointer); break;
+		case FRDCommands::GetFriendRelationship: getFriendRelationship(messagePointer); break;
 		case FRDCommands::GetMyComment: getMyComment(messagePointer); break;
 		case FRDCommands::GetMyFriendKey: getMyFriendKey(messagePointer); break;
 		case FRDCommands::GetMyMii: getMyMii(messagePointer); break;
@@ -267,5 +269,13 @@ void FRDService::updateMii(u32 messagePointer) {
 	log("FRD::UpdateMii (stubbed)\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x40C, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::getFriendRelationship(u32 messagePointer) {
+	log("FRD::GetFriendRelationship (stubbed)\n");
+
+	// TODO: What does this return?
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
