@@ -35,7 +35,8 @@ namespace KernelHandles {
 		MCU_HWC,   // Used for various MCU hardware-related things like battery control
 		MIC,       // MIC service (Controls the microphone)
 		NFC,       // NFC (Duh), used for Amiibo
-		NIM,       // Updates, DLC, etc
+		NIM_AOC,   // Updates, DLC, etc
+		NIM_U,
 		NDM,       // ?????
 		NS_S,      // Nintendo Shell service
 		NWM_UDS,   // Local multiplayer
@@ -102,7 +103,8 @@ namespace KernelHandles {
 			case NEWS_U: return "NEWS_U";
 			case NWM_UDS: return "nwm::UDS";
 			case NFC: return "NFC";
-			case NIM: return "NIM";
+			case NIM_AOC: return "NIM:AOC";
+			case NIM_U: return "NIM:U";
 			case PTM_U: return "PTM:U";
 			case PTM_SYSM: return "PTM:SYSM";
 			case PTM_PLAY: return "PTM:PLAY";
