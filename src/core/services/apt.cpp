@@ -24,6 +24,7 @@ namespace APTCommands {
 		NotifyToWait = 0x00430040,
 		GetSharedFont = 0x00440000,
 		GetWirelessRebootInfo = 0x00450040,
+		GetCaptureInfo = 0x004A0040,
 		AppletUtility = 0x004B00C2,
 		SetApplicationCpuTimeLimit = 0x004F0080,
 		GetApplicationCpuTimeLimit = 0x00500040,
@@ -84,6 +85,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::InquireNotification: [[likely]] inquireNotification(messagePointer); break;
 		case APTCommands::IsRegistered: isRegistered(messagePointer); break;
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
+		case APTCommands::GetCaptureInfo: getCaptureInfo(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::GetWirelessRebootInfo: getWirelessRebootInfo(messagePointer); break;
 		case APTCommands::GlanceParameter: glanceParameter(messagePointer); break;
@@ -403,4 +405,15 @@ void APTService::loadSysMenuArg(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * outputSize, IPC::BufferType::Send));
 	mem.write32(messagePointer + 12, 0xDEADBEEF);
+}
+
+void APTService::getCaptureInfo(u32 messagePointer) {
+	const u32 size = mem.read32(messagePointer + 4);
+	const u32 captureBufferInfo = mem.read32(messagePointer + 0x104);
+	log("APT::GetCaptureInfo (size = %X, capture buffer info pointer = %X) (Stubbed)\n", size, captureBufferInfo);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x4A, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * size, IPC::BufferType::Send));
+	mem.write32(messagePointer + 12, 0xDEADDEAD);
 }

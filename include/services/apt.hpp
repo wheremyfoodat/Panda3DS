@@ -37,6 +37,7 @@ class APTService {
 	void checkNew3DSApp(u32 messagePointer);
 	void enable(u32 messagePointer);
 	void getAppletInfo(u32 messagePointer);
+	void getCaptureInfo(u32 messagePointer);
 	void getSharedFont(u32 messagePointer);
 	void getWirelessRebootInfo(u32 messagePointer);
 	void glanceParameter(u32 messagePointer);
