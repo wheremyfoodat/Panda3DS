@@ -8,6 +8,7 @@ namespace ConfigMem {
 		KernelVersionMajor = 0x1FF80003,
 		SyscoreVer = 0x1FF80010,
 		EnvInfo = 0x1FF80014,
+		PrevFirm = 0x1FF80016,
 		AppMemAlloc = 0x1FF80040,
 		FirmUnknown = 0x1FF80060,
 		FirmRevision = 0x1FF80061,
