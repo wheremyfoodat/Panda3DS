@@ -103,6 +103,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "APT:A", KernelHandles::APT },
 	{ "APT:U", KernelHandles::APT },
 	{ "boss:U", KernelHandles::BOSS },
+	{ "boss:P", KernelHandles::BOSS },
 	{ "cam:u", KernelHandles::CAM },
 	{ "cecd:u", KernelHandles::CECD },
 	{ "cfg:u", KernelHandles::CFG_U },
