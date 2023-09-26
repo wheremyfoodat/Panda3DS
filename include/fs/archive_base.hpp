@@ -246,6 +246,11 @@ public:
         Helpers::panic("Unimplemented Format for %s archive", name().c_str());
     }
 
+    virtual HorizonResult renameFile(const FSPath& oldPath, const FSPath& newPath) {
+		Helpers::panic("Unimplemented RenameFile for %s archive", name().c_str());
+		return Result::Success;
+    }
+
     // Read size bytes from a file starting at offset "offset" into a certain buffer in memory
     // Returns the number of bytes read, or nullopt if the read failed
     virtual std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) = 0;

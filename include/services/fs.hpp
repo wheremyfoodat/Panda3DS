@@ -71,6 +71,7 @@ class FSService {
 	void openDirectory(u32 messagePointer);
 	void openFile(u32 messagePointer);
 	void openFileDirectly(u32 messagePointer);
+	void renameFile(u32 messagePointer);
 	void setArchivePriority(u32 messagePointer);
 	void setPriority(u32 messagePointer);
 	void setThisSaveDataSecureValue(u32 messagePointer);
