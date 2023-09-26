@@ -9,7 +9,7 @@ ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel), cfg(mem),
 	  csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel, config),
 	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem, kernel), mcu_hwc(mem, config), mic(mem, kernel), nfc(mem, kernel), nim(mem), ndm(mem),
-	  news_u(mem), nwm_uds(mem, kernel), ns(mem), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
+	  news_s(mem), news_u(mem), nwm_uds(mem, kernel), ns(mem), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -37,9 +37,11 @@ void ServiceManager::reset() {
 	mcu_hwc.reset();
 	mic.reset();
 	ndm.reset();
+	news_s.reset();
 	news_u.reset();
 	nfc.reset();
 	nim.reset();
+	ns.reset();
 	ptm.reset();
 	soc.reset();
 	ssl.reset();
@@ -125,6 +127,7 @@ static std::map<std::string, Handle> serviceMap = {
 	{ "mcu::HWC", KernelHandles::MCU_HWC },
 	{ "mic:u", KernelHandles::MIC },
 	{ "ndm:u", KernelHandles::NDM },
+	{ "news:s", KernelHandles::NEWS_S },
 	{ "news:u", KernelHandles::NEWS_U },
 	{ "nfc:u", KernelHandles::NFC },
 	{ "ns:s", KernelHandles::NS_S },
