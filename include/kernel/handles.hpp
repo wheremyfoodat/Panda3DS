@@ -39,6 +39,7 @@ namespace KernelHandles {
 		NDM,       // ?????
 		NS_S,      // Nintendo Shell service
 		NWM_UDS,   // Local multiplayer
+		NEWS_S,    // news:u on steroids
 		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
 		PTM_U,     // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 		PTM_SYSM,  // PTM system service
@@ -97,6 +98,7 @@ namespace KernelHandles {
 			case MCU_HWC: return "MCU::HWC";
 			case MIC: return "MIC";
 			case NDM: return "NDM";
+			case NEWS_S: return "NEWS_S";
 			case NEWS_U: return "NEWS_U";
 			case NWM_UDS: return "nwm::UDS";
 			case NFC: return "NFC";
