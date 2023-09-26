@@ -108,7 +108,7 @@ u8 Memory::read8(u32 vaddr) {
 				return getBatteryState(chargerPlugged, charging, batteryLevel);
 			}
 			case ConfigMem::EnvInfo: return envInfo;
-			case ConfigMem::PrevFirm: return 0;
+			case ConfigMem::PrevFirm: return 1;
 			case ConfigMem::HardwareType: return ConfigMem::HardwareCodes::Product;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
 			case ConfigMem::KernelVersionMajor: return u8(kernelVersion >> 8);
