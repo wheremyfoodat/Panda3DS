@@ -3,7 +3,9 @@
 
 namespace AMCommands {
 	enum : u32 {
+		GetProgramList = 0x00020082,
 		GetProgramInfos = 0x00030084,
+		GetTicketList = 0x00090082,
 		NeedsCleanup = 0x00130040,
 		GetDLCTitleInfo = 0x10050084,
 		ListTitleInfo = 0x10070102,
@@ -19,6 +21,8 @@ void AMService::handleSyncRequest(u32 messagePointer) {
 		case AMCommands::GetPatchTitleInfo: getPatchTitleInfo(messagePointer); break;
 		case AMCommands::GetDLCTitleInfo: getDLCTitleInfo(messagePointer); break;
 		case AMCommands::GetProgramInfos: getProgramInfos(messagePointer); break;
+		case AMCommands::GetProgramList: getProgramList(messagePointer); break;
+		case AMCommands::GetTicketList: getTicketList(messagePointer); break;
 		case AMCommands::ListTitleInfo: listTitleInfo(messagePointer); break;
 		case AMCommands::NeedsCleanup: needsCleanup(messagePointer); break;
 		default: Helpers::panic("AM service requested. Command: %08X\n", command);
@@ -94,4 +98,30 @@ void AMService::getProgramInfos(u32 messagePointer) {
 	mem.write32(messagePointer + 12, titleIDs);
 	mem.write32(messagePointer + 16, IPC::pointerHeader(1, sizeof(u32) * titleCount, IPC::BufferType::Receive));
 	mem.write32(messagePointer + 20, titleInfos);
+}
+
+void AMService::getProgramList(u32 messagePointer) {
+	const u32 titleCount = mem.read32(messagePointer + 4);
+	const u8 mediaType = mem.read8(messagePointer + 8);
+	const u32 titleIDs = mem.read32(messagePointer + 16);
+	log("AM::GetProgramList (title count = %X, media type = %X, title ID pointer = %X) (stubbed)\n", titleCount, mediaType, titleIDs);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 2, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0); // No title IDs read?
+	mem.write32(messagePointer + 12, IPC::pointerHeader(0, sizeof(u64) * 0, IPC::BufferType::Receive));
+	mem.write32(messagePointer + 16, titleIDs);
+}
+
+void AMService::getTicketList(u32 messagePointer) {
+	const u32 ticketCount = mem.read32(messagePointer + 4);
+	const u32 numSkips = mem.read32(messagePointer + 8);
+	const u32 titleIDs = mem.read32(messagePointer + 16);
+	log("AM::GetTicketList (ticket count = %X, skipped tickets = %X, title ID pointer = %X) (stubbed)\n", ticketCount, numSkips, titleIDs);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0); // No tickets read?
+	mem.write32(messagePointer + 12, IPC::pointerHeader(0, sizeof(u64) * 0, IPC::BufferType::Receive));
+	mem.write32(messagePointer + 16, titleIDs);
 }
