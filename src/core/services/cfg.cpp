@@ -283,7 +283,7 @@ void CFGService::setConfigInfoBlk4(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x401, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, IPC::pointerHeader(0, size, IPC::BufferType::Receive));
-	mem.write32(messagePointer + 12, 0xCAFE0000); // Nonsensical pointer to see if anything uses this
+	mem.write32(messagePointer + 12, input);
 }
 
 void CFGService::updateConfigNANDSavegame(u32 messagePointer) {

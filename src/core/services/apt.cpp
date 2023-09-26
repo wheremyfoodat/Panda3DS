@@ -392,9 +392,9 @@ void APTService::receiveDeliverArg(u32 messagePointer) {
 	mem.write32(messagePointer + 8, 0); // Program ID
 	mem.write8(messagePointer + 16, 1); // Is valid response
 	mem.write32(messagePointer + 20, IPC::pointerHeader(0, sizeof(u32) * parameterSize, IPC::BufferType::Send));
-	mem.write32(messagePointer + 24, 0xDEADBEEF); // TODO: look into how this works if program reads from this address
+	mem.write32(messagePointer + 24, parameter);
 	mem.write32(messagePointer + 28, IPC::pointerHeader(1, sizeof(u32) * hmacSize, IPC::BufferType::Send));
-	mem.write32(messagePointer + 32, 0xDEADBEEF);
+	mem.write32(messagePointer + 32, hmac);
 }
 
 void APTService::loadSysMenuArg(u32 messagePointer) {
@@ -404,7 +404,7 @@ void APTService::loadSysMenuArg(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * outputSize, IPC::BufferType::Send));
-	mem.write32(messagePointer + 12, 0xDEADBEEF);
+	mem.write32(messagePointer + 12, outputSize);
 }
 
 void APTService::getCaptureInfo(u32 messagePointer) {
@@ -415,5 +415,5 @@ void APTService::getCaptureInfo(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x4A, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u32) * size, IPC::BufferType::Send));
-	mem.write32(messagePointer + 12, 0xDEADDEAD);
+	mem.write32(messagePointer + 12, captureBufferInfo);
 }

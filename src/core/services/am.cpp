@@ -78,10 +78,20 @@ void AMService::getProgramInfos(u32 messagePointer) {
 	const u32 titleInfos = mem.read32(messagePointer + 24);
 	log("AM::GetProgramInfos (media type = %X, title count = %X, title IDs pointer = %X, title infos pointer = %X) (Stubbed)\n", mediaType, titleCount, titleIDs, titleInfos);
 
+	for (u32 title = 0; title < titleCount; title++) {
+		const u64 id = mem.read64(titleIDs + sizeof(u64) * title);
+
+		mem.write64(titleInfos + 0x18 * title, id);      // Title ID
+		mem.write64(titleInfos + 0x18 * title + 8, 0);   // Size
+		mem.write16(titleInfos + 0x18 * title + 16, 0);  // Version
+		mem.write16(titleInfos + 0x18 * title + 18, 0);  // Padding
+		mem.write32(titleInfos + 0x18 * title + 20, 0);  // Type
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 4));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u64) * titleCount, IPC::BufferType::Send));
-	mem.write32(messagePointer + 12, 0xC0DEC0DE);
+	mem.write32(messagePointer + 12, titleIDs);
 	mem.write32(messagePointer + 16, IPC::pointerHeader(1, sizeof(u32) * titleCount, IPC::BufferType::Receive));
-	mem.write32(messagePointer + 20, 0xC0DEC0DE);
+	mem.write32(messagePointer + 20, titleInfos);
 }
