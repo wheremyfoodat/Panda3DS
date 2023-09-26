@@ -12,14 +12,16 @@ void NIMService::reset() {}
 void NIMService::handleSyncRequest(u32 messagePointer, Type type) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
-		if (type == Type::AOC) {
-			switch (command) {
-				case NIMCommands::Initialize: initialize(messagePointer); break;
+		default:
+			if (type == Type::AOC) {
+				switch (command) {
+					case NIMCommands::Initialize: initialize(messagePointer); break;
 
-				default: Helpers::panic("NIM AOC service requested. Command: %08X\n", command);
+					default: Helpers::panic("NIM AOC service requested. Command: %08X\n", command);
+				}
+			} else {
+				Helpers::panic("NIM service requested. Command: %08X\n", command);
 			}
-		}
-		default: Helpers::panic("NIM service requested. Command: %08X\n", command);
 	}
 }
 
