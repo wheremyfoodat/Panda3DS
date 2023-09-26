@@ -3,6 +3,7 @@
 
 namespace AMCommands {
 	enum : u32 {
+		GetProgramInfos = 0x00030084,
 		NeedsCleanup = 0x00130040,
 		GetDLCTitleInfo = 0x10050084,
 		ListTitleInfo = 0x10070102,
@@ -17,6 +18,7 @@ void AMService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case AMCommands::GetPatchTitleInfo: getPatchTitleInfo(messagePointer); break;
 		case AMCommands::GetDLCTitleInfo: getDLCTitleInfo(messagePointer); break;
+		case AMCommands::GetProgramInfos: getProgramInfos(messagePointer); break;
 		case AMCommands::ListTitleInfo: listTitleInfo(messagePointer); break;
 		case AMCommands::NeedsCleanup: needsCleanup(messagePointer); break;
 		default: Helpers::panic("AM service requested. Command: %08X\n", command);
@@ -67,4 +69,19 @@ void AMService::needsCleanup(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x13, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, 0); // Doesn't need cleanup
+}
+
+void AMService::getProgramInfos(u32 messagePointer) {
+	const u8 mediaType = mem.read8(messagePointer + 4);
+	const u32 titleCount = mem.read32(messagePointer + 8);
+	const u32 titleIDs = mem.read32(messagePointer + 16);
+	const u32 titleInfos = mem.read32(messagePointer + 24);
+	log("AM::GetProgramInfos (media type = %X, title count = %X, title IDs pointer = %X, title infos pointer = %X) (Stubbed)\n", mediaType, titleCount, titleIDs, titleInfos);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 4));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, sizeof(u64) * titleCount, IPC::BufferType::Send));
+	mem.write32(messagePointer + 12, 0xC0DEC0DE);
+	mem.write32(messagePointer + 16, IPC::pointerHeader(1, sizeof(u32) * titleCount, IPC::BufferType::Receive));
+	mem.write32(messagePointer + 20, 0xC0DEC0DE);
 }

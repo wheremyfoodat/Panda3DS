@@ -13,6 +13,7 @@ class AMService {
 	// Service commands
 	void getDLCTitleInfo(u32 messagePointer);
 	void getPatchTitleInfo(u32 messagePointer);
+	void getProgramInfos(u32 messagePointer);
 	void listTitleInfo(u32 messagePointer);
 	void needsCleanup(u32 messagePointer);
 
