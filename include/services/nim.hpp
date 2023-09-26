@@ -6,7 +6,6 @@
 #include "result/result.hpp"
 
 class NIMService {
-	Handle handle = KernelHandles::NIM;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, nimLogger)
 
@@ -14,7 +13,12 @@ class NIMService {
 	void initialize(u32 messagePointer);
 
 public:
+	enum class Type {
+		AOC,  // nim:aoc
+		U,    // nim:u
+	};
+
 	NIMService(Memory& mem) : mem(mem) {}
 	void reset();
-	void handleSyncRequest(u32 messagePointer);
+	void handleSyncRequest(u32 messagePointer, Type type);
 };
