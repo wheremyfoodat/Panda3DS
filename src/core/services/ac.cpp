@@ -9,6 +9,7 @@ namespace ACCommands {
 		GetLastErrorCode = 0x000A0000,
 		GetStatus = 0x000C0000,
 		GetConnectingInfraPriority = 0x000F0000,
+		GetNZoneBeaconNotFoundEvent = 0x002F0004,
 		RegisterDisconnectEvent = 0x00300004,
 		IsConnected = 0x003E0042,
 		SetClientVersion = 0x00400042,
@@ -28,6 +29,7 @@ void ACService::handleSyncRequest(u32 messagePointer) {
 		case ACCommands::CreateDefaultConfig: createDefaultConfig(messagePointer); break;
 		case ACCommands::GetConnectingInfraPriority: getConnectingInfraPriority(messagePointer); break;
 		case ACCommands::GetLastErrorCode: getLastErrorCode(messagePointer); break;
+		case ACCommands::GetNZoneBeaconNotFoundEvent: getNZoneBeaconNotFoundEvent(messagePointer); break;
 		case ACCommands::GetStatus: getStatus(messagePointer); break;
 		case ACCommands::IsConnected: isConnected(messagePointer); break;
 		case ACCommands::RegisterDisconnectEvent: registerDisconnectEvent(messagePointer); break;
@@ -119,5 +121,14 @@ void ACService::registerDisconnectEvent(u32 messagePointer) {
 	disconnectEvent = eventHandle;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x30, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void ACService::getNZoneBeaconNotFoundEvent(u32 messagePointer) {
+	const u32 processID = mem.read32(messagePointer + 8);
+	const Handle event = mem.read32(messagePointer + 16);
+	log("AC::GetNZoneBeaconNotFoundEvent (process ID = %X, event = %X) (stubbed)\n", processID, event);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
