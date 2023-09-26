@@ -35,8 +35,8 @@ namespace KernelHandles {
 		MCU_HWC,   // Used for various MCU hardware-related things like battery control
 		MIC,       // MIC service (Controls the microphone)
 		NFC,       // NFC (Duh), used for Amiibo
-		NIM_AOC,   // Updates, DLC, etc
-		NIM_U,
+		NIM_AOC,   // DLC, etc
+		NIM_U,     // Updates
 		NDM,       // ?????
 		NS_S,      // Nintendo Shell service
 		NWM_UDS,   // Local multiplayer
