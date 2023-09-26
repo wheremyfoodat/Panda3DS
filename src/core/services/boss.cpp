@@ -33,7 +33,8 @@ void BOSSService::reset() {
 }
 
 void BOSSService::handleSyncRequest(u32 messagePointer) {
-	const u32 command = mem.read32(messagePointer);
+	// Note: Clearing this bit maps boss:P commands onto their boss:U counterparts
+	const u32 command = mem.read32(messagePointer) & ~0x4000000;
 	switch (command) {
 		case BOSSCommands::CancelTask: cancelTask(messagePointer); break;
 		case BOSSCommands::GetErrorCode: getErrorCode(messagePointer); break;
