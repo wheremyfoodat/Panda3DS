@@ -3,6 +3,7 @@
 
 namespace AMCommands {
 	enum : u32 {
+		NeedsCleanup = 0x00130040,
 		GetDLCTitleInfo = 0x10050084,
 		ListTitleInfo = 0x10070102,
 		GetPatchTitleInfo = 0x100D0084,
@@ -17,6 +18,7 @@ void AMService::handleSyncRequest(u32 messagePointer) {
 		case AMCommands::GetPatchTitleInfo: getPatchTitleInfo(messagePointer); break;
 		case AMCommands::GetDLCTitleInfo: getDLCTitleInfo(messagePointer); break;
 		case AMCommands::ListTitleInfo: listTitleInfo(messagePointer); break;
+		case AMCommands::NeedsCleanup: needsCleanup(messagePointer); break;
 		default: Helpers::panic("AM service requested. Command: %08X\n", command);
 	}
 }
@@ -56,4 +58,13 @@ void AMService::getPatchTitleInfo(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x100D, 1, 4));
 	mem.write32(messagePointer + 4, Result::FailurePlaceholder);
+}
+
+void AMService::needsCleanup(u32 messagePointer) {
+	const u32 mediaType = mem.read32(messagePointer + 4);
+	log("AM::NeedsCleanup (media type = %X)\n", mediaType);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x13, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0); // Doesn't need cleanup
 }
