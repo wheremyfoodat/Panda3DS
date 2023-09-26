@@ -338,7 +338,7 @@ void BOSSService::deleteNsData(u32 messagePointer) {
 
 // Judging by the inputs and command number, this could very well be a "SetAppNewFlag"
 void BOSSService::setAppNewFlag(u32 messagePointer) {
-	const u64 appID = mem.read64(messagePointer + 4);
+	const u64 appID = mem.read64(messagePointer + 4); // Home Menu uses the same app ID in "GetAppNewFlag"
 	const u8 flag = mem.read32(messagePointer + 12);
 	log("BOSS::SetAppNewFlag (app ID = %llX, flag = %X)\n", appID, flag);
 
