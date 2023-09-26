@@ -26,6 +26,7 @@ class FRDService {
 	void getFriendKeyList(u32 messagePointer);
 	void getFriendPresence(u32 messagePointer);
 	void getFriendProfile(u32 messagePointer);
+	void getFriendRelationship(u32 messagePointer);
 	void getMyComment(u32 messagePointer);
 	void getMyFavoriteGame(u32 messagePointer);
 	void getMyFriendKey(u32 messagePointer);
