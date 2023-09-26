@@ -522,9 +522,11 @@ void RendererGL::display() {
 		OpenGL::draw(OpenGL::TriangleStrip, 4);
 	}
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
-	glBlitFramebuffer(0, 0, 400, 480, 0, 0, outputWindowWidth, outputWindowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	if constexpr (!Helpers::isHydraCore()) {
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		screenFramebuffer.bind(OpenGL::ReadFramebuffer);
+		glBlitFramebuffer(0, 0, 400, 480, 0, 0, outputWindowWidth, outputWindowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	}
 }
 
 void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {

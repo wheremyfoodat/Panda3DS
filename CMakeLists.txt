@@ -38,6 +38,7 @@ option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
+option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -58,6 +59,10 @@ include_directories(third_party/mio/single_include)
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
+
+if(BUILD_HYDRA_CORE)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
@@ -373,7 +378,13 @@ if(ENABLE_VULKAN)
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
 endif()
 
-add_executable(Alber ${ALL_SOURCES})
+if(BUILD_HYDRA_CORE)
+    include_directories(third_party/hydra_core/include)
+    add_library(Alber SHARED ${ALL_SOURCES} src/hydra_core.cpp)
+    target_compile_definitions(Alber PRIVATE PANDA3DS_HYDRA_CORE=1)
+else()
+    add_executable(Alber ${ALL_SOURCES})
+endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
