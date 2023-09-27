@@ -38,11 +38,17 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
+    - name: Deploy
+      run: |
+        mkdir upload
+        move build/Release/Alber.exe upload
+        windeployqt --dir upload upload/Alber.exe
+
     - name: Upload executable
       uses: actions/upload-artifact@v2
       with:
         name: Windows executable
-        path: './build/Release/Alber.exe'
+        path: upload
 
   MacOS:
     runs-on: macos-latest
