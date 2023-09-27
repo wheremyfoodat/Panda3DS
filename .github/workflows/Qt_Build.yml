@@ -1,4 +1,4 @@
-name: Windows Build (Qt)
+name: Qt Build
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  windows-qt:
     # The CMake configure and build commands are platform agnostic and should work equally
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
@@ -45,20 +45,7 @@ jobs:
         name: Windows executable
         path: './build/Release/Alber.exe'
 
-name: MacOS Build (Qt)
-
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-
-jobs:
-  build:
+  macos-qt:
     # The CMake configure and build commands are platform agnostic and should work equally
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
