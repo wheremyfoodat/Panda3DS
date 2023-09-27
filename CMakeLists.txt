@@ -381,7 +381,7 @@ if(ENABLE_VULKAN)
     target_link_libraries(Alber PRIVATE Vulkan::Vulkan resources_renderer_vk)
 endif()
 
-if(ENABLE_VULKAN)
+if(ENABLE_QT_GUI)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_QT=1")
     target_link_libraries(Alber PRIVATE Qt6::Widgets)
 endif()
