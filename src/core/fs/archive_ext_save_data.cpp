@@ -87,6 +87,43 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 	return FileError;
 }
 
+HorizonResult ExtSaveDataArchive::renameFile(const FSPath& oldPath, const FSPath& newPath) {
+	if (oldPath.type != PathType::UTF16 || newPath.type != PathType::UTF16) {
+		Helpers::panic("Invalid path type for ExtSaveData::RenameFile");
+	}
+
+	if (!isPathSafe<PathType::UTF16>(oldPath) || !isPathSafe<PathType::UTF16>(newPath)) {
+		Helpers::panic("Unsafe path in ExtSaveData::RenameFile");
+	}
+
+	// Construct host filesystem paths
+	fs::path sourcePath = IOFile::getAppData() / backingFolder;
+	fs::path destPath = sourcePath;
+
+	sourcePath += fs::path(oldPath.utf16_string).make_preferred();
+	destPath += fs::path(newPath.utf16_string).make_preferred();
+
+	if (!fs::is_regular_file(sourcePath) || fs::is_directory(sourcePath)) {
+		Helpers::warn("ExtSaveData::RenameFile: Source path is not a file or is directory");
+		return Result::FS::RenameNonexistentFileOrDir;
+	}
+
+	if (fs::is_regular_file(destPath) || fs::is_directory(destPath)) {
+		Helpers::warn("ExtSaveData::RenameFile: Dest path already exists");
+		return Result::FS::RenameFileDestExists;
+	}
+
+	std::error_code ec;
+	fs::rename(sourcePath, destPath, ec);
+
+	if (ec) {
+		Helpers::warn("Error in ExtSaveData::RenameFile");
+		return Result::FS::RenameNonexistentFileOrDir;
+	}
+
+	return Result::Success;
+}
+
 HorizonResult ExtSaveDataArchive::createDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
