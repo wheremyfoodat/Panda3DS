@@ -1,5 +1,4 @@
 #include "emulator.hpp"
-#include <QApplication>
 
 int main(int argc, char *argv[]) {
 	Emulator emu;
