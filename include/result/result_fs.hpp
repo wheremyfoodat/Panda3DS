@@ -15,4 +15,10 @@ namespace Result::FS {
     // Trying to access an archive that needs formatting and has not been formatted
     DEFINE_HORIZON_RESULT(NotFormatted, 340, InvalidState, Status);
     DEFINE_HORIZON_RESULT(UnexpectedFileOrDir, 770, NotSupported, Usage);
+
+    // Trying to rename a file that doesn't exist or is a directory
+	DEFINE_HORIZON_RESULT(RenameNonexistentFileOrDir, 120, NotFound, Status);
+
+    // Trying to rename a file but the destination already exists
+	DEFINE_HORIZON_RESULT(RenameFileDestExists, 190, NothingHappened, Status);
 };
