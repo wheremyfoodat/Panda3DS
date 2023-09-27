@@ -13,7 +13,7 @@
 #include "crypto/aes_engine.hpp"
 #include "discord_rpc.hpp"
 #include "io_file.hpp"
-#include "lua.hpp"
+#include "lua_manager.hpp"
 #include "memory.hpp"
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
