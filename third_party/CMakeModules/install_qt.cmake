@@ -4,6 +4,22 @@
 # Params:
 #   target: Qt dependency to install. Specify a version number to download Qt, or "tools_(name)" for a specific build tool.
 function(download_qt target)
+    # Detect architecture to find which Qt version to fetch
+    if (CMAKE_OSX_ARCHITECTURES)
+        set(ARCHITECTURE "${CMAKE_OSX_ARCHITECTURES}")
+    elseif (MSVC)
+        detect_architecture("_M_AMD64" x86_64)
+        detect_architecture("_M_IX86" x86)
+        detect_architecture("_M_ARM" arm)
+        detect_architecture("_M_ARM64" arm64)
+    else()
+        detect_architecture("__x86_64__" x86_64)
+        detect_architecture("__i386__" x86)
+        detect_architecture("__arm__" arm)
+        detect_architecture("__aarch64__" arm64)
+    endif()
+    message(STATUS "Qt Downloader: Detected target architecture: ${ARCHITECTURE}")
+
     if (target MATCHES "tools_.*")
         set(DOWNLOAD_QT_TOOL ON)
     else()
@@ -101,4 +117,19 @@ endfunction()
 
 function(get_external_prefix lib_name prefix_var)
     set(${prefix_var} "${CMAKE_BINARY_DIR}/externals/${lib_name}" PARENT_SCOPE)
+endfunction()
+
+function(detect_architecture symbol arch)
+    include(CheckSymbolExists)
+    if (NOT DEFINED ARCHITECTURE)
+        set(CMAKE_REQUIRED_QUIET 1)
+        check_symbol_exists("${symbol}" "" ARCHITECTURE_${arch})
+        unset(CMAKE_REQUIRED_QUIET)
+
+        # The output variable needs to be unique across invocations otherwise
+        # CMake's crazy scope rules will keep it defined
+        if (ARCHITECTURE_${arch})
+            set(ARCHITECTURE "${arch}" PARENT_SCOPE)
+        endif()
+    endif()
 endfunction()

@@ -65,8 +65,6 @@ if(ENABLE_DISCORD_RPC AND NOT ANDROID)
 endif()
 
 if (ENABLE_QT_GUI)
-    set(ARCHITECTURE "x86_64")
-
     if (NOT USE_SYSTEM_QT)
         # Shout-out to whoever made this
         include(third_party/CMakeModules/install_qt.cmake)
