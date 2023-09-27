@@ -66,7 +66,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Install bundle dependencies
-      run: brew install dylibbundler imagemagick
+      run: brew install dylibbundler imagemagick qt
 
     - name: Run bundle script
       run: ./.github/mac-bundle.sh
