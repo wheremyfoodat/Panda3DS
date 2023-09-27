@@ -37,6 +37,8 @@ option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various as
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
+option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
+option(USE_SYSTEM_QT "Use your own version of Qt instead of automatically downloading one" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -60,6 +62,23 @@ add_compile_definitions(SDL_MAIN_HANDLED)
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
+endif()
+
+if (ENABLE_QT_GUI)
+    set(ARCHITECTURE "x86_64")
+
+    if (NOT USE_SYSTEM_QT)
+        # Shout-out to whoever made this
+        include(third_party/CMakeModules/install_qt.cmake)
+        download_qt(6.2.0)
+    endif()
+
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
+    # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
 endif()
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -360,6 +379,11 @@ endif()
 if(ENABLE_VULKAN)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
     target_link_libraries(Alber PRIVATE Vulkan::Vulkan resources_renderer_vk)
+endif()
+
+if(ENABLE_VULKAN)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_QT=1")
+    target_link_libraries(Alber PRIVATE Qt6::Widgets)
 endif()
 
 if(GPU_DEBUG_INFO)
