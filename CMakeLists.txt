@@ -38,7 +38,6 @@ option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
-option(USE_SYSTEM_QT "Use your own version of Qt instead of automatically downloading one" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -65,12 +64,6 @@ if(ENABLE_DISCORD_RPC AND NOT ANDROID)
 endif()
 
 if (ENABLE_QT_GUI)
-    if (NOT USE_SYSTEM_QT)
-        # Shout-out to whoever made this
-        include(third_party/CMakeModules/install_qt.cmake)
-        download_qt(6.2.0)
-    endif()
-
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
     # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
@@ -380,8 +373,10 @@ if(ENABLE_VULKAN)
 endif()
 
 if(ENABLE_QT_GUI)
-    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_QT=1")
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_QT=1")
     target_link_libraries(Alber PRIVATE Qt6::Widgets)
+else()
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
 if(GPU_DEBUG_INFO)

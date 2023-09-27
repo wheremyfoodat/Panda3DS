@@ -1,7 +1,14 @@
 #include "emulator.hpp"
+#ifdef PANDA3DS_FRONTEND_QT
+#include <QApplication>
+#endif
 
 int main(int argc, char *argv[]) {
 	Emulator emu;
+#ifdef PANDA3DS_FRONTEND_QT
+	QApplication app(argc, argv);
+	return app.exec();
+#endif
 
 	emu.initGraphicsContext();
 
@@ -16,4 +23,4 @@ int main(int argc, char *argv[]) {
 	}
 
 	emu.run();
-}	
+}

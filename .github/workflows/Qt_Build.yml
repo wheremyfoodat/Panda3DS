@@ -19,6 +19,12 @@ jobs:
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
+    - name: Setup Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        arch: win64_msvc2019_64
+        version: 6.2.0
+
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@v1.2.0
       with:
