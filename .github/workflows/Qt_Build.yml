@@ -80,7 +80,7 @@ jobs:
     - name: Run bundle script
       run: |
         ./.github/mac-bundle.sh
-        macdeployqt Alber.app
+        ./usr/local/bin/macdeployqt Alber.app
 
     - name: Sign the App
       run: codesign --force -s - -vvvv Alber.app
