@@ -47,7 +47,7 @@ PlistBuddy Alber.app/Contents/Info.plist -c "add LSMinimumSystemVersion string 1
 
 # Bundle dylibs
 macdeployqt Alber.app
-dylibbundler -od -b -x Alber.app/Contents/MacOS/Alber -d Alber.app/Contents/Frameworks/ -p @rpath -s /Users/runner/work/Panda3DS/Panda3DS/VULKAN_SDK/lib
+dylibbundler -od -b -x --frameworks Alber.app/Contents/MacOS/Alber -d Alber.app/Contents/Frameworks/ -p @rpath -s /Users/runner/work/Panda3DS/Panda3DS/VULKAN_SDK/lib
 
 # relative rpath
 install_name_tool -add_rpath @loader_path/../Frameworks Alber.app/Contents/MacOS/Alber
