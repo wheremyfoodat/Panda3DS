@@ -78,7 +78,9 @@ jobs:
       run: brew install dylibbundler imagemagick
 
     - name: Run bundle script
-      run: ./.github/mac-bundle.sh
+      run: |
+        ./.github/mac-bundle.sh
+        macosdeployqt Alber.app
 
     - name: Sign the App
       run: codesign --force -s - -vvvv Alber.app
