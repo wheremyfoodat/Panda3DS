@@ -65,6 +65,14 @@ jobs:
         vulkan-use-cache: true
         vulkan-components: Vulkan-Headers, Vulkan-Loader, Glslang
 
+    - name: Install bundle dependencies
+      run: |
+        brew install imagemagick
+        git clone https://github.com/Panda3DS-emu/macdylibbundler-qt
+        cd macdylibbundler-qt
+        make install
+        cd ..
+
     - name: Install qt
       run: brew install qt && which macdeployqt
 
@@ -73,14 +81,6 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-
-    - name: Install bundle dependencies
-      run: |
-        brew install imagemagick
-        git clone https://github.com/Panda3DS-emu/macdylibbundler-qt
-        cd macdylibbundler-qt
-        make install
-        cd ..
 
     - name: Run bundle script
       run: |
