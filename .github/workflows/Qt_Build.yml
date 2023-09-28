@@ -79,10 +79,7 @@ jobs:
 
     - name: Run bundle script
       run: |
-        ./.github/mac-bundle.sh
-        sudo mv Alber.app /usr/local/bin/Alber.app
-        cd /usr/local/bin
-        ./macdeployqt Alber.app
+        ./.github/mac-bundle-qt.sh
 
     - name: Sign the App
       run: codesign --force -s - -vvvv Alber.app
