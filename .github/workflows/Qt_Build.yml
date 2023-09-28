@@ -79,6 +79,7 @@ jobs:
 
     - name: Run bundle script
       run: |
+        chmod +x .github/mac-bundle-qt.sh
         ./.github/mac-bundle-qt.sh
 
     - name: Sign the App
