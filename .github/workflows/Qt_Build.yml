@@ -103,7 +103,11 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Install misc packages
-      run: sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2
+      run: |
+       sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2
+       sudo add-apt-repository ppa:okirby/qt6-backports
+       sudo apt update
+       sudo apt install qt6-base-dev
 
     - name: Install newer Clang
       run: |
