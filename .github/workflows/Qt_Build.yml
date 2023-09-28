@@ -66,7 +66,7 @@ jobs:
         vulkan-components: Vulkan-Headers, Vulkan-Loader, Glslang
 
     - name: Install qt
-      run: which macdeployqt
+      run: brew install qt && which macdeployqt
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
