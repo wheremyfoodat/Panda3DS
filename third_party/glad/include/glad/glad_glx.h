@@ -89,7 +89,7 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include "glad.h"
+#include <glad/gl.h>
 
 #ifndef __glad_glxext_h_
 
