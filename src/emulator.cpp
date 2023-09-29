@@ -58,7 +58,7 @@ Emulator::Emulator()
 			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
 		}
 
-		if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress))) {
+		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
 			Helpers::panic("OpenGL init failed: %s", SDL_GetError());
 		}
 	}

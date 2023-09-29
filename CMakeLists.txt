@@ -234,6 +234,22 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
 )
+
+
+if(ENABLE_QT_GUI)
+    include_directories(third_party/duckstation)
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
+
+    if(APPLE)
+        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
+    elseif(WIN32)
+        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
+    else()
+        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_wayland.cpp
+        third_party/duckstation/gl/context_egl_x11.cpp third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+    endif()
+endif()
+
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
 source_group("Source Files\\Frontend" FILES ${FRONTEND_SOURCE_FILES})
 source_group("Source Files\\Core\\Crypto" FILES ${CRYPTO_SOURCE_FILES})
@@ -314,9 +330,9 @@ if(ENABLE_VULKAN)
 
     if(GPU_DEBUG_INFO)
         # generate nonsemantic shader debug information with source
-        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -gVS)
+        set(RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -gVS)
     else()
-        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -g0)
+        set(RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -g0)
     endif()
 
     # Compile each vulkan shader into an .spv file
