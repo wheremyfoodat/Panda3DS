@@ -37,6 +37,7 @@ option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various as
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
+option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -60,6 +61,15 @@ add_compile_definitions(SDL_MAIN_HANDLED)
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
+endif()
+
+if (ENABLE_QT_GUI)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
+    # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
 endif()
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -196,7 +206,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
-                 include/fs/archive_system_save_data.hpp include/lua.hpp
+                 include/fs/archive_system_save_data.hpp include/lua_manager.hpp
 )
 
 cmrc_add_resource_library(
@@ -360,6 +370,13 @@ endif()
 if(ENABLE_VULKAN)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
     target_link_libraries(Alber PRIVATE Vulkan::Vulkan resources_renderer_vk)
+endif()
+
+if(ENABLE_QT_GUI)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_QT=1")
+    target_link_libraries(Alber PRIVATE Qt6::Widgets)
+else()
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
 if(GPU_DEBUG_INFO)
