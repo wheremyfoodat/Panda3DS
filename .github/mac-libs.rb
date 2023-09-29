@@ -169,7 +169,7 @@ unless File.exist? $build_dir
 end
 
 
-$bundle = File.join($build_dir, "#{$app_name}.app")
+$bundle = "#{$app_name}.app"
 
 unless File.exist? $bundle and File.exist? File.join($build_dir, "CMakeCache.txt")
   puts "#{$build_dir} doesn't look like a valid build directory"
