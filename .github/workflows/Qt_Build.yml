@@ -67,11 +67,7 @@ jobs:
 
     - name: Install bundle dependencies
       run: |
-        brew install imagemagick
-        git clone https://github.com/Panda3DS-emu/macdylibbundler-qt
-        cd macdylibbundler-qt
-        make install
-        cd ..
+        brew install dylibbundlee imagemagick
 
     - name: Install qt
       run: brew install qt && which macdeployqt
