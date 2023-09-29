@@ -211,6 +211,7 @@ GLAPI int gladLoadEGLLoader(GLADloadproc);
 
 #include <KHR/khrplatform.h>
 #include <glad/eglplatform.h>
+
 struct AHardwareBuffer;
 struct wl_buffer;
 struct wl_display;
