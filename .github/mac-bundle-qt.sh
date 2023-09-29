@@ -46,7 +46,7 @@ PlistBuddy Alber.app/Contents/Info.plist -c "add NSHumanReadableCopyright string
 PlistBuddy Alber.app/Contents/Info.plist -c "add LSMinimumSystemVersion string 10.15"
 
 # Bundle dylibs
-ruby .github/mac-libs.rb
+ruby .github/mac-libs.rb ./build/
 
 # relative rpath
 install_name_tool -add_rpath @loader_path/../Frameworks Alber.app/Contents/MacOS/Alber
