@@ -52,11 +52,11 @@ namespace Vulkan {
 
 	static void debugMessageCallback(
 		vk::DebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, vk::DebugUtilsMessageTypeFlagsEXT MessageType,
-		const vk::DebugUtilsMessengerCallbackDataEXT& CallbackData
+		const VkDebugUtilsMessengerCallbackDataEXT* CallbackData
 	) {
-		Helpers::debug_printf(
-			"\033[%um[vk][%s]: \033[%um%s\033[0m\n", severityColor(MessageSeverity), CallbackData.pMessageIdName, messageTypeColor(MessageType),
-			CallbackData.pMessage
+		Helpers::warn(
+			"\033[%um[vk][%s]: \033[%um%s\033[0m\n", severityColor(MessageSeverity), CallbackData->pMessageIdName, messageTypeColor(MessageType),
+			CallbackData->pMessage
 		);
 	}
 
@@ -65,8 +65,8 @@ namespace Vulkan {
 		const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData
 	) {
 		debugMessageCallback(
-			vk::DebugUtilsMessageSeverityFlagBitsEXT(messageSeverity), vk::DebugUtilsMessageTypeFlagsEXT(messageType), *callbackData
-		);
+			vk::DebugUtilsMessageSeverityFlagBitsEXT(messageSeverity), vk::DebugUtilsMessageTypeFlagsEXT(messageType), callbackData
+        );
 		return VK_FALSE;
 	}
 

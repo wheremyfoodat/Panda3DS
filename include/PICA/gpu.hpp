@@ -12,6 +12,8 @@
 #include "memory.hpp"
 #include "renderer.hpp"
 
+class Window;
+
 class GPU {
 	static constexpr u32 regNum = 0x300;
 	static constexpr u32 extRegNum = 0x1000;
@@ -85,16 +87,10 @@ class GPU {
 	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
 	bool lightingLUTDirty = false;
 
-	GPU(Memory& mem, EmulatorConfig& config);
+    GPU(Memory& mem, EmulatorConfig& config, const Window& window);
 	void display() { renderer->display(); }
 	void screenshot(const std::string& name) { renderer->screenshot(name); }
 	void deinitGraphicsContext() { renderer->deinitGraphicsContext(); }
-
-#if defined(PANDA3DS_FRONTEND_SDL)
-	void initGraphicsContext(SDL_Window* window) { renderer->initGraphicsContext(window); }
-#elif defined(PANDA3DS_FRONTEND_QT)
-	void initGraphicsContext(GL::Context* context) { renderer->initGraphicsContext(context); }
-#endif
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();

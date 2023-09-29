@@ -23,9 +23,4 @@ namespace Vulkan {
 		}
 	}
 
-	std::optional<SamplerCache> SamplerCache::create(vk::Device device) {
-		SamplerCache newSamplerCache(device);
-
-		return {std::move(newSamplerCache)};
-	}
 }  // namespace Vulkan

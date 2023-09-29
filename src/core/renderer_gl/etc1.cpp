@@ -1,7 +1,9 @@
 #include <algorithm>
 #include "colour.hpp"
 #include "renderer_gl/renderer_gl.hpp"
-#include "renderer_gl/textures.hpp"
+#include "PICA/texture.hpp"
+
+namespace PICA {
 
 using namespace Helpers;
 
@@ -118,3 +120,5 @@ u32 Texture::decodeETC(u32 alpha, u32 u, u32 v, u64 colourData) {
 
     return (alpha << 24) | (u32(b) << 16) | (u32(g) << 8) | u32(r);
 }
+
+} // namespace PICA

@@ -59,6 +59,7 @@ void EmulatorConfig::load() {
 			}
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
+            physicalDevice = toml::find_or<u32>(gpu, "PhysicalDevice", 0);
 		}
 	}
 

@@ -17,19 +17,23 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
-	  cheats(memory, kernel.getServiceManager().getHID()), lua(memory), running(false), programRunning(false)
+	: config(getConfigPath()), window(config, width, height), cpu(memory, kernel, *this),
+	  gpu(memory, config, window), memory(cpu.getTicksRef(), config),
+	  kernel(cpu, memory, gpu, config), cheats(memory, kernel.getServiceManager().getHID()),
+	  running(false), programRunning(false), lua(memory)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
 #endif
 {
+
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
-	if (config.discordRpcEnabled) {
-		discordRpc.init();
-		updateDiscord();
-	}
+    if (config.discordRpcEnabled) {
+        discordRpc.init();
+        updateDiscord();
+    }
 #endif
+
 	reset(ReloadOption::NoReload);
 }
 

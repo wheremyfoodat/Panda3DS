@@ -10,12 +10,35 @@ namespace Vulkan {
 			// TODO: Detect this!
 			// case PICA::ColorFmt::RGB8: return vk::Format::eR8G8B8Unorm;
 			case PICA::ColorFmt::RGB8: return vk::Format::eR8G8B8A8Unorm;
-			case PICA::ColorFmt::RGBA5551: return vk::Format::eR5G5B5A1UnormPack16;
-			case PICA::ColorFmt::RGB565: return vk::Format::eR5G6B5UnormPack16;
-			case PICA::ColorFmt::RGBA4: return vk::Format::eR4G4B4A4UnormPack16;
+			case PICA::ColorFmt::RGBA5551: return vk::Format::eR8G8B8A8Unorm;
+			case PICA::ColorFmt::RGB565: return vk::Format::eR8G8B8A8Unorm;
+			case PICA::ColorFmt::RGBA4: return vk::Format::eR8G8B8A8Unorm;
+            default: return vk::Format::eUndefined;
 		}
-		return vk::Format::eUndefined;
 	}
+    vk::Format textureFormatToVulkan(PICA::TextureFmt textureFormat) {
+        switch (textureFormat) {
+            case PICA::TextureFmt::RGBA8: return vk::Format::eR8G8B8A8Unorm;
+            // VK_FORMAT_R8G8B8A8_UNORM is mandated by the vulkan specification
+            // VK_FORMAT_R8G8B8_UNORM may not be supported
+            // TODO: Detect this!
+            // case PICA::TextureFmt::RGB8: return vk::Format::eR8G8B8Unorm;
+            case PICA::TextureFmt::RGB8: return vk::Format::eR8G8B8A8Unorm;
+            case PICA::TextureFmt::RGBA5551: return vk::Format::eR8G8B8A8Unorm;
+            case PICA::TextureFmt::RGB565: return vk::Format::eR8G8B8A8Unorm;
+            case PICA::TextureFmt::RGBA4: return vk::Format::eR8G8B8A8Unorm;
+            case PICA::TextureFmt::IA8:
+            case PICA::TextureFmt::RG8:
+            case PICA::TextureFmt::I8:
+            case PICA::TextureFmt::A8:
+            case PICA::TextureFmt::IA4:
+            case PICA::TextureFmt::I4:
+            case PICA::TextureFmt::A4:
+            case PICA::TextureFmt::ETC1:
+            case PICA::TextureFmt::ETC1A4: return vk::Format::eR8G8B8A8Unorm;
+            default: return vk::Format::eUndefined;
+        }
+    }
 	vk::Format depthFormatToVulkan(PICA::DepthFmt depthFormat) {
 		switch (depthFormat) {
 			// VK_FORMAT_D16_UNORM is mandated by the vulkan specification
@@ -32,8 +55,17 @@ namespace Vulkan {
 			// case PICA::DepthFmt::Depth24Stencil8: return vk::Format::eD24UnormS8Uint;
 			case PICA::DepthFmt::Depth24: return vk::Format::eD32Sfloat;
 			case PICA::DepthFmt::Depth24Stencil8: return vk::Format::eD32SfloatS8Uint;
+            default: return vk::Format::eUndefined;
 		}
-		return vk::Format::eUndefined;
 	}
+    vk::ImageAspectFlags formatAspect(vk::Format format) {
+        switch (format) {
+            case vk::Format::eD16Unorm:
+            case vk::Format::eD32Sfloat: return vk::ImageAspectFlagBits::eDepth;
+            case vk::Format::eD32SfloatS8Uint: return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+            default: return vk::ImageAspectFlagBits::eColor;
+        }
+    }
+
 
 }  // namespace Vulkan

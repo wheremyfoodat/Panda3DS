@@ -180,6 +180,7 @@ set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp
+                      src/core/PICA/texture.cpp src/core/PICA/pica_uniforms.cpp
 )
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
@@ -216,14 +217,14 @@ if(NOT ANDROID)
     endif()
 endif()
 
-set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
+set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp include/window.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/renderer.hpp include/kernel/kernel.hpp
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
                  include/kernel/config_mem.hpp include/services/service_manager.hpp include/services/apt.hpp
                  include/kernel/handles.hpp include/services/hid.hpp include/services/fs.hpp
                  include/services/gsp_gpu.hpp include/services/gsp_lcd.hpp include/arm_defs.hpp include/renderer_null/renderer_null.hpp
-                 include/PICA/gpu.hpp include/PICA/regs.hpp include/services/ndm.hpp
-                 include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp
+                 include/PICA/gpu.hpp include/PICA/regs.hpp include/PICA/texture.hpp include/services/ndm.hpp
+                 include/PICA/shader.hpp include/PICA/shader_unit.hpp include/PICA/float_types.hpp include/PICA/pica_uniforms.hpp
                  include/logger.hpp include/loader/ncch.hpp include/loader/ncsd.hpp include/loader/3dsx.hpp include/io_file.hpp
                  include/loader/lz77.hpp include/fs/archive_base.hpp include/fs/archive_self_ncch.hpp
                  include/services/dsp.hpp include/services/cfg.hpp include/services/region_codes.hpp
@@ -242,7 +243,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
-                 include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
+                 include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
@@ -330,20 +331,39 @@ if(ENABLE_VULKAN)
 		COMPONENTS glslangValidator
 	)
 
+        if (NOT TARGET GPUOpen::VulkanMemoryAllocator)
+            add_subdirectory(third_party/vma)
+        endif()
+
 	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
 		include/renderer_vk/vk_api.hpp include/renderer_vk/vk_debug.hpp
 		include/renderer_vk/vk_descriptor_heap.hpp
 		include/renderer_vk/vk_descriptor_update_batch.hpp
+                include/renderer_vk/vk_instance.hpp
+                include/renderer_vk/vk_render_manager.hpp
 		include/renderer_vk/vk_sampler_cache.hpp
-		include/renderer_vk/vk_memory.hpp include/renderer_vk/vk_pica.hpp
+                include/renderer_vk/vk_swapchain.hpp
+                include/renderer_vk/vk_pica.hpp
+                include/renderer_vk/vk_stream_buffer.hpp
+                include/renderer_vk/vk_pipeline.hpp
+                include/renderer_vk/vk_pipeline_manager.hpp
+                include/renderer_vk/vk_surfaces.hpp
+                include/renderer_vk/vk_scheduler.hpp
 	)
 
 	set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
 		src/core/renderer_vk/vk_api.cpp src/core/renderer_vk/vk_debug.cpp
 		src/core/renderer_vk/vk_descriptor_heap.cpp
 		src/core/renderer_vk/vk_descriptor_update_batch.cpp
+                src/core/renderer_vk/vk_instance.cpp
+                src/core/renderer_vk/vk_render_manager.cpp
 		src/core/renderer_vk/vk_sampler_cache.cpp
-		src/core/renderer_vk/vk_memory.cpp src/core/renderer_vk/vk_pica.cpp
+                src/core/renderer_vk/vk_swapchain.cpp
+                src/core/renderer_vk/vk_pica.cpp
+                src/core/renderer_vk/vk_pipeline.cpp
+                src/core/renderer_vk/vk_pipeline_manager.cpp
+                src/core/renderer_vk/vk_surfaces.cpp
+                src/core/renderer_vk/vk_scheduler.cpp
 	)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_VK_INCLUDE_FILES})
@@ -352,6 +372,8 @@ if(ENABLE_VULKAN)
 	set(RENDERER_VK_HOST_SHADERS_SOURCE
 		"src/host_shaders/vulkan_display.frag"
 		"src/host_shaders/vulkan_display.vert"
+                "src/host_shaders/vulkan_vertex_shader.vert"
+                "src/host_shaders/vulkan_fragment_shader.frag"
 	)
 
     set(RENDERER_VK_HOST_SHADERS_FLAGS -e main --target-env vulkan1.1)
@@ -442,7 +464,7 @@ endif()
 
 if(ENABLE_VULKAN)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
-    target_link_libraries(Alber PRIVATE Vulkan::Vulkan resources_renderer_vk)
+    target_link_libraries(Alber PRIVATE Vulkan::Vulkan GPUOpen::VulkanMemoryAllocator resources_renderer_vk)
 endif()
 
 if(ENABLE_QT_GUI)

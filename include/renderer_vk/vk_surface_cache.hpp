@@ -1,8 +1,8 @@
 #pragma once
-
 #include <functional>
 #include <optional>
-#include "helpers.hpp"
+#include "surfaces.hpp"
+#include "textures.hpp"
 
 // Surface cache class that can fit "capacity" instances of the "SurfaceType" class of surfaces
 // SurfaceType *must* have all of the following.
@@ -19,6 +19,8 @@ template <typename SurfaceType, size_t capacity, bool evictOnOverflow = false>
 class SurfaceCache {
     // Vanilla std::optional can't hold actual references
     using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
+    static_assert(std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>()  ||
+        std::is_same<SurfaceType, Texture>(), "Invalid surface type");
 
     size_t size;
     size_t evictionIndex;
@@ -52,17 +54,20 @@ public:
     }
 
     // Adds a surface object to the cache and returns it
-    template <typename... Args>
-    SurfaceType& add(const SurfaceType& surface, Args&&... args) {
+	SurfaceType& add(const SurfaceType& surface) {
 		if (size >= capacity) {
 			if constexpr (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
+				if constexpr (std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>()) {
+					Helpers::panicDev("Colour/Depth buffer cache overflowed, currently stubbed to do a ring-buffer. This might snap in half");
+				}
+
 				auto& e = buffer[evictionIndex];
 				evictionIndex = (evictionIndex + 1) % capacity;
 
 				e.valid = false;
 				e.free();
 				e = surface;
-                e.allocate(args...);
+				e.allocate();
 				return e;
 			} else {
 				Helpers::panic("Surface cache full! Add emptying!");
@@ -76,7 +81,7 @@ public:
 			if (e.valid && e.range.lower() >= surface.range.lower() && e.range.upper() <= surface.range.upper()) {
 				e.free();
 				e = surface;
-                e.allocate(args...);
+				e.allocate();
 				return e;
 			}
 		}
@@ -85,7 +90,7 @@ public:
 		for (auto& e : buffer) {
 			if (!e.valid) {
 				e = surface;
-                e.allocate(args...);
+				e.allocate();
 				return e;
 			}
 		}
