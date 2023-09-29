@@ -137,7 +137,7 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
+set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
@@ -176,6 +176,15 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
 
 set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
+
+# Frontend files
+if(ENABLE_QT_GUI)
+    # Qt frontend files
+    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp)
+else()
+    # SDL frontend files
+    set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp)
+endif()
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/renderer.hpp include/kernel/kernel.hpp
@@ -226,6 +235,7 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/xxhash/xxhash.c
 )
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
+source_group("Source Files\\Frontend" FILES ${FRONTEND_SOURCE_FILES})
 source_group("Source Files\\Core\\Crypto" FILES ${CRYPTO_SOURCE_FILES})
 source_group("Source Files\\Core\\Filesystem" FILES ${FS_SOURCE_FILES})
 source_group("Source Files\\Core\\Kernel" FILES ${KERNEL_SOURCE_FILES})
@@ -331,7 +341,7 @@ if(ENABLE_VULKAN)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
-set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
+set(ALL_SOURCES ${SOURCE_FILES} ${FRONTEND_SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
 	${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
 
 if(ENABLE_OPENGL)
