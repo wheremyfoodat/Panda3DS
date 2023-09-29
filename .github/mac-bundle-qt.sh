@@ -46,7 +46,6 @@ PlistBuddy Alber.app/Contents/Info.plist -c "add NSHumanReadableCopyright string
 PlistBuddy Alber.app/Contents/Info.plist -c "add LSMinimumSystemVersion string 10.15"
 
 # Bundle dylibs
-macdeployqt Alber.app
 dylibbundler -od -b -x --frameworks Alber.app/Contents/MacOS/Alber -d Alber.app/Contents/Frameworks/ -p @rpath -s /Users/runner/work/Panda3DS/Panda3DS/VULKAN_SDK/lib
 
 # relative rpath
