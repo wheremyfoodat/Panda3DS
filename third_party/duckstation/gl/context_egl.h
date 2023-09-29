@@ -1,7 +1,7 @@
 #pragma once
 #include "context.h"
 #include <glad/gl.h>
-#include <glad/gl_egl.h>
+#include <glad/glad_egl.h>
 
 namespace GL {
 
