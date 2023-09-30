@@ -5,7 +5,9 @@
 #include <QMenuBar>
 #include <QPalette>
 #include <QtWidgets>
+#include <thread>
 
+#include "emulator.hpp"
 #include "panda_qt/screen.hpp"
 
 class MainWindow : public QMainWindow {
@@ -17,6 +19,10 @@ class MainWindow : public QMainWindow {
 		Light = 1,
 		Dark = 2,
 	};
+
+	// This would normally be an std::unique_ptr but it's shared between threads so definitely not
+	Emulator* emu = nullptr;
+	std::thread emuThread;
 
 	QComboBox* themeSelect = nullptr;
 	QMenuBar* menuBar = nullptr;

@@ -46,7 +46,7 @@ void RendererGL::reset() {
 	}
 }
 
-void RendererGL::initGraphicsContext(SDL_Window* window) {
+void RendererGL::initGraphicsContextInternal() {
 	gl.reset();
 
 	auto gl_resources = cmrc::RendererGL::get_filesystem();
@@ -167,6 +167,10 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 
 	reset();
 }
+
+// The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
+// So we just call initGraphicsContextInternal for both
+void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { initGraphicsContextInternal(); }
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {

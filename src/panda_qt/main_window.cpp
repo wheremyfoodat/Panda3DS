@@ -4,7 +4,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
-	resize(320, 240);
+	resize(400, 240 * 2);
 	screen.show();
 
 	// Set our menu bar up
@@ -25,9 +25,42 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	themeSelect->setGeometry(40, 40, 100, 50);
 	themeSelect->show();
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setTheme(static_cast<Theme>(index)); });
+
+	emu = new Emulator();
+
+	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work 
+	emuThread = std::thread([&]() {
+		const RendererType rendererType = emu->getConfig().rendererType;
+
+		if (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null) {
+			// Make GL context current for this thread, enable VSync
+			GL::Context* glContext = screen.getGLContext();
+			glContext->MakeCurrent();
+			glContext->SetSwapInterval(1);
+
+			emu->initGraphicsContext(glContext);
+		} else {
+			Helpers::panic("Unsupported renderer type for the Qt backend! Vulkan on Qt is currently WIP, try the SDL frontend instead!");
+		}
+
+		bool success = emu->loadROM("OoT.3ds");
+		if (!success) {
+			Helpers::panic("Failed to load ROM");
+		}
+
+		while (true) {
+			emu->runFrame();
+			screen.getGLContext()->SwapBuffers();
+		}
+	});
 }
 
-MainWindow::~MainWindow() { delete menuBar; }
+// Cleanup when the main window closes
+MainWindow::~MainWindow() {
+	delete emu;
+	delete menuBar;
+	delete themeSelect;
+}
 
 void MainWindow::setTheme(Theme theme) {
 	currentTheme = theme;

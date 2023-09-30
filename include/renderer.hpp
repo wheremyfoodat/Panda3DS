@@ -7,6 +7,10 @@
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
 
+#ifdef PANDA3DS_FRONTEND_QT
+#include "gl/context.h"
+#endif
+
 enum class RendererType : s8 {
 	// Todo: Auto = -1,
 	Null = 0,
@@ -50,9 +54,14 @@ class Renderer {
 	virtual void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) = 0;  // Clear a GPU buffer in VRAM
 	virtual void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) = 0;  // Perform display transfer
 	virtual void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) = 0;
-	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;             // Draw the given vertices
+	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;  // Draw the given vertices
 
 	virtual void screenshot(const std::string& name) = 0;
+
+	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
+#ifdef PANDA3DS_FRONTEND_QT
+	virtual void initGraphicsContext(GL::Context* context) { Helpers::panic("Tried to initialize incompatible renderer with GL context"); }
+#endif
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize[0] = width;
