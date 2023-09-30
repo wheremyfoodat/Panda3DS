@@ -32,14 +32,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	emuThread = std::thread([&]() {
 		const RendererType rendererType = emu->getConfig().rendererType;
 
-		if (rendererType == RendererType::OpenGL || rendererType == RendererType::Software) {
+		if (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null) {
 			// Make GL context current for this thread, enable VSync
 			GL::Context* glContext = screen.getGLContext();
 			glContext->MakeCurrent();
 			glContext->SetSwapInterval(1);
 
 			emu->initGraphicsContext(glContext);
-		} else if (rendererType != RendererType::Null) {
+		} else {
 			Helpers::panic("Unsupported renderer type for the Qt backend! Vulkan on Qt is currently WIP, try the SDL frontend instead!");
 		}
 
