@@ -13,7 +13,9 @@ class MainWindow : public QMainWindow {
 
   private:
 	enum class Theme : int {
-		System = 0, Light = 1, Dark = 2,
+		System = 0,
+		Light = 1,
+		Dark = 2,
 	};
 
 	QComboBox* themeSelect = nullptr;

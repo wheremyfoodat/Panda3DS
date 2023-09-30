@@ -10,7 +10,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Set our menu bar up
 	menuBar = new QMenuBar(this);
 	setMenuBar(menuBar);
-	
+
 	auto pandaMenu = menuBar->addMenu(tr("PANDA"));
 	auto pandaAction = pandaMenu->addAction(tr("panda..."));
 
@@ -78,7 +78,7 @@ void MainWindow::setTheme(Theme theme) {
 		}
 
 		case Theme::System: {
-		    qApp->setPalette(this->style()->standardPalette());
+			qApp->setPalette(this->style()->standardPalette());
 			qApp->setStyle(QStyleFactory::create("WindowsVista"));
 			qApp->setStyleSheet("");
 			break;
