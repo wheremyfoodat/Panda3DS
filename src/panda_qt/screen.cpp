@@ -1,0 +1,86 @@
+#include "panda_qt/screen.hpp"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <optional>
+#include <QGuiApplication>
+#include <QScreen>
+#include <QWindow>
+
+// OpenGL screen widget, based on https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
+
+#ifdef PANDA3DS_ENABLE_OPENGL
+bool ScreenWidget::createGLContext() {
+	// List of GL context versions we will try. Anything 4.1+ is good
+	static constexpr std::array<GL::Context::Version, 6> versionsToTry = {
+		GL::Context::Version{GL::Context::Profile::Core, 4, 6}, GL::Context::Version{GL::Context::Profile::Core, 4, 5},
+		GL::Context::Version{GL::Context::Profile::Core, 4, 4}, GL::Context::Version{GL::Context::Profile::Core, 4, 3},
+		GL::Context::Version{GL::Context::Profile::Core, 4, 2}, GL::Context::Version{GL::Context::Profile::Core, 4, 1},
+	};
+
+	std::optional<WindowInfo> windowInfo = getWindowInfo();
+	if (windowInfo.has_value()) {
+		glContext = GL::Context::Create(*getWindowInfo(), versionsToTry);
+		glContext->DoneCurrent();
+	}
+
+	return glContext != nullptr;
+}
+
+qreal ScreenWidget::devicePixelRatioFromScreen() const {
+	const QScreen* screenForRatio = window()->windowHandle()->screen();
+	if (!screenForRatio) {
+		screenForRatio = QGuiApplication::primaryScreen();
+	}
+
+	return screenForRatio ? screenForRatio->devicePixelRatio() : static_cast<qreal>(1);
+}
+
+int ScreenWidget::scaledWindowWidth() const {
+	return std::max(static_cast<int>(std::ceil(static_cast<qreal>(width()) * devicePixelRatioFromScreen())), 1);
+}
+
+int ScreenWidget::scaledWindowHeight() const {
+	return std::max(static_cast<int>(std::ceil(static_cast<qreal>(height()) * devicePixelRatioFromScreen())), 1);
+}
+
+std::optional<WindowInfo> ScreenWidget::getWindowInfo() {
+	WindowInfo wi;
+
+// Windows and Apple are easy here since there's no display connection.
+#if defined(_WIN32)
+	wi.type = WindowInfo::Type::Win32;
+	wi.window_handle = reinterpret_cast<void*>(winId());
+#elif defined(__APPLE__)
+	wi.type = WindowInfo::Type::MacOS;
+	wi.window_handle = reinterpret_cast<void*>(winId());
+#else
+	QPlatformNativeInterface* pni = QGuiApplication::platformNativeInterface();
+	const QString platform_name = QGuiApplication::platformName();
+	if (platform_name == QStringLiteral("xcb")) {
+		wi.type = WindowInfo::Type::X11;
+		wi.display_connection = pni->nativeResourceForWindow("display", windowHandle());
+		wi.window_handle = reinterpret_cast<void*>(winId());
+	} else if (platform_name == QStringLiteral("wayland")) {
+		wi.type = WindowInfo::Type::Wayland;
+		QWindow* handle = windowHandle();
+		if (handle == nullptr) {
+			return std::nullopt;
+		}
+
+		wi.display_connection = pni->nativeResourceForWindow("display", handle);
+		wi.window_handle = pni->nativeResourceForWindow("surface", handle);
+	} else {
+		qCritical() << "Unknown PNI platform " << platform_name;
+		return std::nullopt;
+	}
+#endif
+
+	wi.surface_width = static_cast<u32>(scaledWindowWidth());
+	wi.surface_height = static_cast<u32>(scaledWindowHeight());
+	wi.surface_scale = static_cast<float>(devicePixelRatioFromScreen());
+
+	return wi;
+}
+#endif
