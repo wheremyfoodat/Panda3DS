@@ -11,6 +11,7 @@ class ScreenWidget : public QWidget {
 
   public:
 	ScreenWidget(QWidget* parent = nullptr);
+	GL::Context* getGLContext() { return glContext.get(); }
 
   private:
 	std::unique_ptr<GL::Context> glContext = nullptr;

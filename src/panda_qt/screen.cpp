@@ -20,7 +20,7 @@
 #ifdef PANDA3DS_ENABLE_OPENGL
 ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
 	// Create a native window for use with our graphics API of choice
-	resize(320, 240);
+	resize(400, 240 * 2);
 	
 	setAutoFillBackground(false);
 	setAttribute(Qt::WA_NativeWindow, true);
@@ -33,18 +33,6 @@ ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
 	if (!createGLContext()) {
 		Helpers::panic("Failed to create GL context for display");
 	}
-
-	// Make our context current to use it
-	glContext->MakeCurrent();
-	// Enable VSync for now
-	glContext->SetSwapInterval(1);
-
-	OpenGL::setViewport(320, 240);
-	OpenGL::setClearColor(1.0, 0.0, 0.0, 1.0);
-	OpenGL::clearColor();
-
-	// Swap buffers to display our red as a test
-	glContext->SwapBuffers();
 }
 
 bool ScreenWidget::createGLContext() {

@@ -67,6 +67,7 @@ class RendererGL final : public Renderer {
 	void setupTextureEnvState();
 	void bindTexturesToSlots();
 	void updateLightingLUT();
+	void initGraphicsContextInternal();
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
@@ -82,6 +83,10 @@ class RendererGL final : public Renderer {
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
 
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
+
+#ifdef PANDA3DS_FRONTEND_QT
+	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override { initGraphicsContextInternal(); }
+#endif
 
 	// Take a screenshot of the screen and store it in a file
 	void screenshot(const std::string& name) override;

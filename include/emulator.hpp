@@ -20,6 +20,10 @@
 #include "http_server.hpp"
 #endif
 
+#ifdef PANDA3DS_FRONTEND_QT
+#include "gl/context.h"
+#endif
+
 enum class ROMType {
 	None,
 	ELF,
@@ -37,10 +41,12 @@ class Emulator {
 	Crypto::AESEngine aesEngine;
 	Cheats cheats;
 
+#ifdef PANDA3DS_FRONTEND_SDL
 	SDL_Window* window;
 
 #ifdef PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
+#endif
 #endif
 
 	SDL_GameController* gameController = nullptr;
@@ -106,5 +112,13 @@ class Emulator {
 	bool load3DSX(const std::filesystem::path& path);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
-	void initGraphicsContext();
+
+#ifdef PANDA3DS_FRONTEND_QT
+	// For passing the GL context from Qt to the renderer
+	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
+#else
+	void initGraphicsContext() { gpu.initGraphicsContext(window); }
+#endif
+
+	EmulatorConfig& getConfig() { return config; }
 };

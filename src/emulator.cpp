@@ -41,6 +41,8 @@ Emulator::Emulator()
 	}
 #endif
 
+	// Only create SDL Window for SDL frontend
+#ifdef PANDA3DS_FRONTEND_SDL
 	if (needOpenGL) {
 		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
 		// MacOS gets mad if we don't explicitly demand a core profile
@@ -71,6 +73,7 @@ Emulator::Emulator()
 			Helpers::warn("Window creation failed: %s", SDL_GetError());
 		}
 	}
+#endif
 #endif
 
 	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
@@ -126,6 +129,8 @@ void Emulator::reset(ReloadOption reload) {
 void Emulator::step() {}
 void Emulator::render() {}
 
+// Main loop for the SDL frontend. TODO: Move it to a dedicated file
+#ifdef PANDA3DS_FRONTEND_SDL
 void Emulator::run() {
 	programRunning = true;
 
@@ -403,6 +408,7 @@ void Emulator::run() {
 		SDL_GL_SwapWindow(window);
 	}
 }
+#endif
 
 // Only resume if a ROM is properly loaded
 void Emulator::resume() { running = (romType != ROMType::None); }
@@ -561,9 +567,6 @@ bool Emulator::loadELF(std::ifstream& file) {
 
 	return true;
 }
-
-// Reset our graphics context and initialize the GPU's graphics context
-void Emulator::initGraphicsContext() { gpu.initGraphicsContext(window); }
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 void Emulator::updateDiscord() {

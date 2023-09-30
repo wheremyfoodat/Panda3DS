@@ -86,9 +86,14 @@ class GPU {
 	bool lightingLUTDirty = false;
 
 	GPU(Memory& mem, EmulatorConfig& config);
-	void initGraphicsContext(SDL_Window* window) { renderer->initGraphicsContext(window); }
 	void display() { renderer->display(); }
 	void screenshot(const std::string& name) { renderer->screenshot(name); }
+
+#if defined(PANDA3DS_FRONTEND_SDL)
+	void initGraphicsContext(SDL_Window* window) { renderer->initGraphicsContext(window); }
+#elif defined(PANDA3DS_FRONTEND_QT)
+	void initGraphicsContext(GL::Context* context) { renderer->initGraphicsContext(context); }
+#endif
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();
