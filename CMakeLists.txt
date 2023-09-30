@@ -63,7 +63,7 @@ if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     include_directories(third_party/discord-rpc/include)
 endif()
 
-if (ENABLE_QT_GUI)
+if(ENABLE_QT_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
     # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
@@ -179,9 +179,15 @@ set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
 if(ENABLE_QT_GUI)
-    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp)
+    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp)
+    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp)
+    
+    source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
+    source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
+    include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
 else()
     set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp)
+    set(FRONTEND_HEADER_FILES "")
 endif()
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
@@ -353,7 +359,8 @@ endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 set(ALL_SOURCES ${SOURCE_FILES} ${FRONTEND_SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
-    ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+    ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
+    ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 
 if(ENABLE_OPENGL)
     # Add the OpenGL source files to ALL_SOURCES
@@ -400,6 +407,11 @@ if(ENABLE_QT_GUI)
     if(LINUX OR FREEBSD)
         find_package(X11 REQUIRED)
         target_link_libraries(Alber PRIVATE ${X11_LIBRARIES})
+
+        if(ENABLE_OPENGL)
+            find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
+            target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
+        endif()
     endif()
 else()
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")
