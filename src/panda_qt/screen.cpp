@@ -1,16 +1,45 @@
-#include "panda_qt/screen.hpp"
-
+#include "opengl.hpp"
+// opengl.hpp must be included at the very top. This comment exists to make clang-format not reorder it :p
+#include <QGuiApplication>
+#include <QScreen>
+#include <QWindow>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <optional>
-#include <QGuiApplication>
-#include <QScreen>
-#include <QWindow>
+
+#include "panda_qt/screen.hpp"
 
 // OpenGL screen widget, based on https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
 
 #ifdef PANDA3DS_ENABLE_OPENGL
+ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
+	// Create a native window for use with our graphics API of choice
+	setAutoFillBackground(false);
+	setAttribute(Qt::WA_NativeWindow, true);
+	setAttribute(Qt::WA_NoSystemBackground, true);
+	setAttribute(Qt::WA_PaintOnScreen, true);
+	setAttribute(Qt::WA_KeyCompression, false);
+	setFocusPolicy(Qt::StrongFocus);
+	setMouseTracking(true);
+
+	if (!createGLContext()) {
+		Helpers::panic("Failed to create GL context for display");
+	}
+
+	// Make our context current to use it
+	glContext->MakeCurrent();
+	// Enable VSync for now
+	glContext->SetSwapInterval(1);
+
+	OpenGL::setViewport(320, 240);
+	OpenGL::setClearColor(1.0, 0.0, 0.0, 1.0);
+	OpenGL::clearColor();
+
+	// Swap buffers to display our red as a test
+	glContext->SwapBuffers();
+}
+
 bool ScreenWidget::createGLContext() {
 	// List of GL context versions we will try. Anything 4.1+ is good
 	static constexpr std::array<GL::Context::Version, 6> versionsToTry = {

@@ -10,20 +10,7 @@ class ScreenWidget : public QWidget {
 	Q_OBJECT
 
   public:
-	ScreenWidget(QWidget* parent = nullptr) : QWidget(parent) {
-		// Create a native window for use with our graphics API of choice
-		setAutoFillBackground(false);
-		setAttribute(Qt::WA_NativeWindow, true);
-		setAttribute(Qt::WA_NoSystemBackground, true);
-		setAttribute(Qt::WA_PaintOnScreen, true);
-		setAttribute(Qt::WA_KeyCompression, false);
-		setFocusPolicy(Qt::StrongFocus);
-		setMouseTracking(true);
-
-		if (!createGLContext()) {
-			Helpers::panic("Failed to create GL context for display");
-		}
-	}
+	ScreenWidget(QWidget* parent = nullptr);
 
   private:
 	std::unique_ptr<GL::Context> glContext = nullptr;

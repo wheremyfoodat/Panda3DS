@@ -12,6 +12,7 @@ int main(int argc, char *argv[]) {
 	window.setWindowTitle("Alber");
 	ScreenWidget screen(&window);
 	screen.show();
+	screen.resize(320, 240);
 
 	return app.exec();
 }
