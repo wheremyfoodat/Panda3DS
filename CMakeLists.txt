@@ -137,7 +137,7 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
+set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
