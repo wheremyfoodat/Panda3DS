@@ -1,18 +1,12 @@
 #include <QApplication>
-#include <QtWidgets>
 
+#include "panda_qt/main_window.hpp"
 #include "panda_qt/screen.hpp"
 
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);
-	QWidget window;
+	MainWindow window(&app);
 
-	window.resize(320, 240);
 	window.show();
-	window.setWindowTitle("Alber");
-	ScreenWidget screen(&window);
-	screen.show();
-	screen.resize(320, 240);
-
 	return app.exec();
 }
