@@ -8,9 +8,14 @@
 #include <cmath>
 #include <optional>
 
+#if !defined(_WIN32) && !defined(APPLE)
+#include <qpa/qplatformnativeinterface.h>
+#endif
+
 #include "panda_qt/screen.hpp"
 
-// OpenGL screen widget, based on https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
+// OpenGL screen widget, based on https://github.com/stenzek/duckstation/blob/master/src/duckstation-qt/displaywidget.cpp
+// and https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
 
 #ifdef PANDA3DS_ENABLE_OPENGL
 ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {

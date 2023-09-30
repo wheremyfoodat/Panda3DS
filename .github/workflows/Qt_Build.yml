@@ -108,7 +108,7 @@ jobs:
        sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2
        sudo add-apt-repository -y ppa:savoury1/qt-6-2
        sudo apt update
-       sudo apt install qt6-base-dev
+       sudo apt install qt6-base-dev qt6-base-private-dev
 
     - name: Install newer Clang
       run: |

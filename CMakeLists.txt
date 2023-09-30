@@ -184,6 +184,7 @@ if(ENABLE_QT_GUI)
     
     source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
     source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
+    include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
 else()
     set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp)
     set(FRONTEND_HEADER_FILES "")
