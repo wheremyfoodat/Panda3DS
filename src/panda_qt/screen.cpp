@@ -20,6 +20,8 @@
 #ifdef PANDA3DS_ENABLE_OPENGL
 ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
 	// Create a native window for use with our graphics API of choice
+	resize(320, 240);
+	
 	setAutoFillBackground(false);
 	setAttribute(Qt::WA_NativeWindow, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
