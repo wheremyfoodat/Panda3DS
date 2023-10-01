@@ -120,5 +120,7 @@ class Emulator {
 	void initGraphicsContext() { gpu.initGraphicsContext(window); }
 #endif
 
+	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+
 	EmulatorConfig& getConfig() { return config; }
 };

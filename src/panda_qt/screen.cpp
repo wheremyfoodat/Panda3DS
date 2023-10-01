@@ -105,6 +105,9 @@ std::optional<WindowInfo> ScreenWidget::getWindowInfo() {
 	wi.surface_height = static_cast<u32>(scaledWindowHeight());
 	wi.surface_scale = static_cast<float>(devicePixelRatioFromScreen());
 
+	surfaceWidth = wi.surface_width;
+	surfaceHeight = wi.surface_height;
+
 	return wi;
 }
 #endif

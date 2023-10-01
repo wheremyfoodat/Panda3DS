@@ -113,6 +113,9 @@ class GPU {
 	u32 readInternalReg(u32 index);
 	void writeInternalReg(u32 index, u32 value, u32 mask);
 
+	// Used for setting the size of the window we'll be outputting graphics to
+	void setOutputSize(u32 width, u32 height) { renderer->setOutputSize(width, height); }
+
 	// TODO: Emulate the transfer engine & its registers
 	// Then this can be emulated by just writing the appropriate values there
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) { renderer->clearBuffer(startAddress, endAddress, value, control); }

@@ -40,6 +40,11 @@ class Renderer {
 	u32 depthBufferLoc;
 	PICA::DepthFmt depthBufferFormat;
 
+	// Width and height of the window we're outputting to, needed for properly scaling the final image
+	// We initialize it to the 3DS resolution by default and the frontend can notify us if it changes via the setOutputSize function
+	u32 outputWindowWidth = 400;
+	u32 outputWindowHeight = 240 * 2;
+
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	virtual ~Renderer();
@@ -78,4 +83,9 @@ class Renderer {
 
 	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
+
+	void setOutputSize(u32 width, u32 height) {
+		outputWindowWidth = width;
+		outputWindowHeight = height;
+	}
 };

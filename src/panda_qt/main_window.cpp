@@ -17,9 +17,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Set up theme selection
 	setTheme(Theme::Dark);
 	themeSelect = new QComboBox(this);
-	themeSelect->addItem("System");
-	themeSelect->addItem("Light");
-	themeSelect->addItem("Dark");
+	themeSelect->addItem(tr("System"));
+	themeSelect->addItem(tr("Light"));
+	themeSelect->addItem(tr("Dark"));
 	themeSelect->setCurrentIndex(static_cast<int>(currentTheme));
 
 	themeSelect->setGeometry(40, 40, 100, 50);
@@ -27,20 +27,25 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setTheme(static_cast<Theme>(index)); });
 
 	emu = new Emulator();
+	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work 
 	emuThread = std::thread([&]() {
 		const RendererType rendererType = emu->getConfig().rendererType;
+		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
+		usingVk = (rendererType == RendererType::Vulkan);
 
-		if (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null) {
+		if (usingGL) {
 			// Make GL context current for this thread, enable VSync
 			GL::Context* glContext = screen.getGLContext();
 			glContext->MakeCurrent();
 			glContext->SetSwapInterval(1);
 
 			emu->initGraphicsContext(glContext);
+		} else if (usingVk) {
+			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
 		} else {
-			Helpers::panic("Unsupported renderer type for the Qt backend! Vulkan on Qt is currently WIP, try the SDL frontend instead!");
+			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
 
 		bool success = emu->loadROM("OoT.3ds");
@@ -50,9 +55,17 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 		while (true) {
 			emu->runFrame();
-			screen.getGLContext()->SwapBuffers();
+			swapEmuBuffer();
 		}
 	});
+}
+
+void MainWindow::swapEmuBuffer() {
+	if (usingGL) {
+		screen.getGLContext()->SwapBuffers();
+	} else {
+		Helpers::panic("[Qt] Don't know how to swap buffers for the current rendering backend :(");
+	}
 }
 
 // Cleanup when the main window closes
