@@ -17,9 +17,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Set up theme selection
 	setTheme(Theme::Dark);
 	themeSelect = new QComboBox(this);
-	themeSelect->addItem("System");
-	themeSelect->addItem("Light");
-	themeSelect->addItem("Dark");
+	themeSelect->addItem(tr("System"));
+	themeSelect->addItem(tr("Light"));
+	themeSelect->addItem(tr("Dark"));
 	themeSelect->setCurrentIndex(static_cast<int>(currentTheme));
 
 	themeSelect->setGeometry(40, 40, 100, 50);
