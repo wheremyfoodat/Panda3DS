@@ -4,15 +4,21 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
-	resize(400, 240 * 2);
+	resize(800, 240 * 4);
 	screen.show();
+
+	appRunning = true;
 
 	// Set our menu bar up
 	menuBar = new QMenuBar(this);
 	setMenuBar(menuBar);
 
-	auto pandaMenu = menuBar->addMenu(tr("PANDA"));
-	auto pandaAction = pandaMenu->addAction(tr("panda..."));
+	auto fileMenu = menuBar->addMenu(tr("File"));
+	auto pandaAction = fileMenu->addAction(tr("panda..."));
+
+	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
+	auto helpMenu = menuBar->addMenu(tr("Help"));
+	auto aboutMenu = menuBar->addMenu(tr("About"));
 
 	// Set up theme selection
 	setTheme(Theme::Dark);
@@ -53,7 +59,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			Helpers::panic("Failed to load ROM");
 		}
 
-		while (true) {
+		while (appRunning) {
 			emu->runFrame();
 			swapEmuBuffer();
 		}
@@ -70,6 +76,9 @@ void MainWindow::swapEmuBuffer() {
 
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
+	appRunning = false; // Set our running atomic to false in order to make the emulator thread stop, and join it
+	emuThread.join();
+
 	delete emu;
 	delete menuBar;
 	delete themeSelect;

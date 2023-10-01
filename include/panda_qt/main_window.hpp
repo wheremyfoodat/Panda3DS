@@ -5,6 +5,7 @@
 #include <QMenuBar>
 #include <QPalette>
 #include <QtWidgets>
+#include <atomic>
 #include <thread>
 
 #include "emulator.hpp"
@@ -24,9 +25,11 @@ class MainWindow : public QMainWindow {
 	Emulator* emu = nullptr;
 	std::thread emuThread;
 
+	std::atomic<bool> appRunning = true; // Is the application itself running?
+
+	ScreenWidget screen;
 	QComboBox* themeSelect = nullptr;
 	QMenuBar* menuBar = nullptr;
-	ScreenWidget screen;
 
 	Theme currentTheme;
 	void setTheme(Theme theme);
