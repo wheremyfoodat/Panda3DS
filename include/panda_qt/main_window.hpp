@@ -30,6 +30,11 @@ class MainWindow : public QMainWindow {
 
 	Theme currentTheme;
 	void setTheme(Theme theme);
+	void swapEmuBuffer();
+
+	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
+	bool usingGL = false;
+	bool usingVk = false;
 
   public:
 	MainWindow(QApplication* app, QWidget* parent = nullptr);
