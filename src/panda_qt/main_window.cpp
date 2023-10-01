@@ -40,7 +40,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work 
-	emuThread = std::thread([&]() {
+	emuThread = std::thread([this]() {
 		const RendererType rendererType = emu->getConfig().rendererType;
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
 		usingVk = (rendererType == RendererType::Vulkan);
@@ -58,12 +58,10 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
 
-		// Enter our emulator main loop
 		emuThreadMainLoop();
 	});
 }
 
-// This is the main loop that the emulator thread runs after being initialized
 void MainWindow::emuThreadMainLoop() {
 	while (appRunning) {
 		if (needToLoadROM.load()) {
@@ -79,7 +77,10 @@ void MainWindow::emuThreadMainLoop() {
 		swapEmuBuffer();
 	}
 
-	printf("Emulator thread returned");
+	// Unbind GL context if we're using GL, otherwise some setups seem to be unable to join this thread
+	if (usingGL) {
+		screen.getGLContext()->DoneCurrent();
+	}
 }
 
 void MainWindow::swapEmuBuffer() {
@@ -108,13 +109,11 @@ void MainWindow::selectROM() {
 
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
-	printf("Destroying window class\n");
 	appRunning = false; // Set our running atomic to false in order to make the emulator thread stop, and join it
 	
 	if (emuThread.joinable()) {
 		emuThread.join();
 	}
-	printf("Emu thread joined!\n");
 
 	delete emu;
 	delete menuBar;
