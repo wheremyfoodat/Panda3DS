@@ -28,17 +28,17 @@ Emulator::Emulator()
 		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
 	}
 
-	// We need OpenGL for software rendering or for OpenGL if it's enabled
-	bool needOpenGL = config.rendererType == RendererType::Software;
-#ifdef PANDA3DS_ENABLE_OPENGL
-	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
-#endif
-
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
 		updateDiscord();
 	}
+#endif
+
+	// We need OpenGL for software rendering or for OpenGL if it's enabled
+	bool needOpenGL = config.rendererType == RendererType::Software;
+#ifdef PANDA3DS_ENABLE_OPENGL
+	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
 #endif
 
 	// Only create SDL Window for SDL frontend

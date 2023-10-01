@@ -13,6 +13,10 @@ class ScreenWidget : public QWidget {
 	ScreenWidget(QWidget* parent = nullptr);
 	GL::Context* getGLContext() { return glContext.get(); }
 
+	// Dimensions of our output surface
+	u32 surfaceWidth = 0;
+	u32 surfaceHeight = 0;
+
   private:
 	std::unique_ptr<GL::Context> glContext = nullptr;
 	bool createGLContext();

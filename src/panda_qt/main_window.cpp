@@ -27,6 +27,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setTheme(static_cast<Theme>(index)); });
 
 	emu = new Emulator();
+	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work 
 	emuThread = std::thread([&]() {
