@@ -7,6 +7,7 @@
 #include <QtWidgets>
 #include <atomic>
 #include <thread>
+#include <filesystem>
 
 #include "emulator.hpp"
 #include "panda_qt/screen.hpp"
@@ -26,6 +27,8 @@ class MainWindow : public QMainWindow {
 	std::thread emuThread;
 
 	std::atomic<bool> appRunning = true; // Is the application itself running?
+	std::atomic<bool> needToLoadROM = false;
+	std::filesystem::path romToLoad = "";
 
 	ScreenWidget screen;
 	QComboBox* themeSelect = nullptr;
@@ -34,6 +37,8 @@ class MainWindow : public QMainWindow {
 	Theme currentTheme;
 	void setTheme(Theme theme);
 	void swapEmuBuffer();
+	void emuThreadMainLoop();
+	void selectROM();
 
 	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
 	bool usingGL = false;

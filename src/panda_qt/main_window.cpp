@@ -1,5 +1,8 @@
 #include "panda_qt/main_window.hpp"
 
+#include <QFileDialog>
+#include <cstdio>
+
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
@@ -15,6 +18,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	auto fileMenu = menuBar->addMenu(tr("File"));
 	auto pandaAction = fileMenu->addAction(tr("panda..."));
+	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
 
 	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
 	auto helpMenu = menuBar->addMenu(tr("Help"));
@@ -54,16 +58,28 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
 
-		bool success = emu->loadROM("OoT.3ds");
-		if (!success) {
-			Helpers::panic("Failed to load ROM");
+		// Enter our emulator main loop
+		emuThreadMainLoop();
+	});
+}
+
+// This is the main loop that the emulator thread runs after being initialized
+void MainWindow::emuThreadMainLoop() {
+	while (appRunning) {
+		if (needToLoadROM.load()) {
+			bool success = emu->loadROM(romToLoad);
+			if (!success) {
+				printf("Failed to load ROM");
+			}
+
+			needToLoadROM.store(false, std::memory_order::seq_cst);
 		}
 
-		while (appRunning) {
-			emu->runFrame();
-			swapEmuBuffer();
-		}
-	});
+		emu->runFrame();
+		swapEmuBuffer();
+	}
+
+	printf("Emulator thread returned");
 }
 
 void MainWindow::swapEmuBuffer() {
@@ -74,10 +90,31 @@ void MainWindow::swapEmuBuffer() {
 	}
 }
 
+void MainWindow::selectROM() {
+	// Are we already waiting for a ROM to be loaded? Then complain about it!
+	if (needToLoadROM.load()) {
+		QMessageBox::warning(this, tr("Already loading ROM"), tr("Panda3DS is already busy loading a ROM, please wait"));
+		return;
+	}
+
+	auto path =
+		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), "", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
+
+	if (!path.isEmpty()) {
+		romToLoad = path.toStdU16String();
+		needToLoadROM.store(true, std::memory_order_seq_cst);
+	}
+}
+
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
+	printf("Destroying window class\n");
 	appRunning = false; // Set our running atomic to false in order to make the emulator thread stop, and join it
-	emuThread.join();
+	
+	if (emuThread.joinable()) {
+		emuThread.join();
+	}
+	printf("Emu thread joined!\n");
 
 	delete emu;
 	delete menuBar;
