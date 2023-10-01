@@ -1,18 +1,28 @@
 #include "panda_qt/main_window.hpp"
 
+#include <QFileDialog>
+#include <cstdio>
+
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
-	resize(400, 240 * 2);
+	resize(800, 240 * 4);
 	screen.show();
+
+	appRunning = true;
 
 	// Set our menu bar up
 	menuBar = new QMenuBar(this);
 	setMenuBar(menuBar);
 
-	auto pandaMenu = menuBar->addMenu(tr("PANDA"));
-	auto pandaAction = pandaMenu->addAction(tr("panda..."));
+	auto fileMenu = menuBar->addMenu(tr("File"));
+	auto pandaAction = fileMenu->addAction(tr("panda..."));
+	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
+
+	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
+	auto helpMenu = menuBar->addMenu(tr("Help"));
+	auto aboutMenu = menuBar->addMenu(tr("About"));
 
 	// Set up theme selection
 	setTheme(Theme::Dark);
@@ -30,7 +40,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work 
-	emuThread = std::thread([&]() {
+	emuThread = std::thread([this]() {
 		const RendererType rendererType = emu->getConfig().rendererType;
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
 		usingVk = (rendererType == RendererType::Vulkan);
@@ -48,16 +58,29 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
 
-		bool success = emu->loadROM("OoT.3ds");
-		if (!success) {
-			Helpers::panic("Failed to load ROM");
+		emuThreadMainLoop();
+	});
+}
+
+void MainWindow::emuThreadMainLoop() {
+	while (appRunning) {
+		if (needToLoadROM.load()) {
+			bool success = emu->loadROM(romToLoad);
+			if (!success) {
+				printf("Failed to load ROM");
+			}
+
+			needToLoadROM.store(false, std::memory_order::seq_cst);
 		}
 
-		while (true) {
-			emu->runFrame();
-			swapEmuBuffer();
-		}
-	});
+		emu->runFrame();
+		swapEmuBuffer();
+	}
+
+	// Unbind GL context if we're using GL, otherwise some setups seem to be unable to join this thread
+	if (usingGL) {
+		screen.getGLContext()->DoneCurrent();
+	}
 }
 
 void MainWindow::swapEmuBuffer() {
@@ -68,8 +91,30 @@ void MainWindow::swapEmuBuffer() {
 	}
 }
 
+void MainWindow::selectROM() {
+	// Are we already waiting for a ROM to be loaded? Then complain about it!
+	if (needToLoadROM.load()) {
+		QMessageBox::warning(this, tr("Already loading ROM"), tr("Panda3DS is already busy loading a ROM, please wait"));
+		return;
+	}
+
+	auto path =
+		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), "", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
+
+	if (!path.isEmpty()) {
+		romToLoad = path.toStdU16String();
+		needToLoadROM.store(true, std::memory_order_seq_cst);
+	}
+}
+
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
+	appRunning = false; // Set our running atomic to false in order to make the emulator thread stop, and join it
+	
+	if (emuThread.joinable()) {
+		emuThread.join();
+	}
+
 	delete emu;
 	delete menuBar;
 	delete themeSelect;
