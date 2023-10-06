@@ -153,6 +153,14 @@ void Kernel::waitSynchronizationN() {
 	if (handleCount <= 0)
 		Helpers::panic("WaitSyncN: Invalid handle count");
 
+	// Temporary hack: Until we implement service sessions properly, don't bother sleeping when WaitSyncN targets a service handle
+	// This is necessary because a lot of games use WaitSyncN with eg the CECD service
+	if (handleCount == 1 && KernelHandles::isServiceHandle(mem.read32(handles))) {
+		regs[0] = Result::Success;
+		regs[1] = 0;
+		return;
+	}
+
 	using WaitObject = std::pair<Handle, KernelObject*>;
 	std::vector<WaitObject> waitObjects(handleCount);
 
