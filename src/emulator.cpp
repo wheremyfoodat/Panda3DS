@@ -582,3 +582,62 @@ void Emulator::updateDiscord() {
 #else
 void Emulator::updateDiscord() {}
 #endif
+
+static void printNode(const RomFS::RomFSNode& node, int indentation) {
+	for (int i = 0; i < indentation; i++) {
+		printf("  ");
+	}
+	printf("%s/\n", std::string(node.name.begin(), node.name.end()).c_str());
+
+	for (auto& file : node.files) {
+		for (int i = 0; i <= indentation; i++) {
+			printf("  ");
+		}
+		printf("%s\n", std::string(file->name.begin(), file->name.end()).c_str());
+	}
+
+	indentation++;
+	for (auto& directory : node.directories) {
+		printNode(*directory, indentation);
+	}
+	indentation--;
+}
+
+RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
+	using namespace RomFS;
+
+	if (romType != ROMType::NCSD && romType != ROMType::CXI && romType != ROMType::HB_3DSX) {
+		return DumpingResult::InvalidFormat;
+	}
+
+	// Contents of RomFS as raw bytes
+	std::vector<u8> romFS;
+	u64 size;
+
+	if (romType == ROMType::HB_3DSX) {
+		auto hb3dsx = memory.get3DSX();
+		if (!hb3dsx->hasRomFs()) {
+			return DumpingResult::NoRomFS;
+		}
+		size = hb3dsx->romFSSize;
+
+		romFS.resize(size);
+		hb3dsx->readRomFSBytes(&romFS[0], 0, size);
+	} else {
+		auto cxi = memory.getCXI();
+		if (!cxi->hasRomFS()) {
+			return DumpingResult::NoRomFS;
+		}
+
+		const u64 offset = cxi->romFS.offset;
+		size = cxi->romFS.size;
+
+		romFS.resize(size);
+		cxi->readFromFile(memory.CXIFile, cxi->partitionInfo, &romFS[0], offset - cxi->fileOffset, size);
+	}
+
+	std::unique_ptr<RomFSNode> node = parseRomFSTree((uintptr_t)&romFS[0], size);
+	printNode(*node, 0);
+
+	return DumpingResult::Success;
+}

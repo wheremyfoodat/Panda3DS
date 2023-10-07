@@ -53,6 +53,7 @@ include_directories(third_party/xxhash/include)
 include_directories(third_party/httplib)
 include_directories(third_party/stb)
 include_directories(third_party/opengl)
+include_directories(third_party/mio/single_include)
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
@@ -141,7 +142,7 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -219,7 +220,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
-                 include/fs/archive_system_save_data.hpp include/lua_manager.hpp
+                 include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp
 )
 
 cmrc_add_resource_library(

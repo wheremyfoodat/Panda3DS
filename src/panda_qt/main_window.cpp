@@ -16,13 +16,19 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	menuBar = new QMenuBar(this);
 	setMenuBar(menuBar);
 
+	// Create menu bar menus
 	auto fileMenu = menuBar->addMenu(tr("File"));
+	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
+	auto toolsMenu = menuBar->addMenu(tr("Tools"));
+	auto helpMenu = menuBar->addMenu(tr("Help"));
+	auto aboutMenu = menuBar->addMenu(tr("About"));
+
+	// Create and bind actions for them
 	auto pandaAction = fileMenu->addAction(tr("panda..."));
 	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
 
-	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
-	auto helpMenu = menuBar->addMenu(tr("Help"));
-	auto aboutMenu = menuBar->addMenu(tr("About"));
+	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
+	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 
 	// Set up theme selection
 	setTheme(Theme::Dark);
@@ -71,6 +77,7 @@ void MainWindow::emuThreadMainLoop() {
 			}
 
 			needToLoadROM.store(false, std::memory_order::seq_cst);
+			emu->dumpRomFS("");
 		}
 
 		emu->runFrame();
@@ -98,8 +105,8 @@ void MainWindow::selectROM() {
 		return;
 	}
 
-	auto path =
-		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), "", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
+	auto path = QFileDialog::getOpenFileName(
+		this, tr("Select 3DS ROM to load"), {}, tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"), {});
 
 	if (!path.isEmpty()) {
 		romToLoad = path.toStdU16String();
@@ -175,4 +182,18 @@ void MainWindow::setTheme(Theme theme) {
 			break;
 		}
 	}
+}
+
+void MainWindow::dumpRomFS() {
+	// TODO: LOCK FILE MUTEX HERE
+	auto folder = QFileDialog::getExistingDirectory(
+		this, tr("Select folder to dump RomFS files to"), "", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
+	);
+
+	if (folder.isEmpty()) {
+		return;
+	}
+
+	std::filesystem::path path(folder.toStdU16String());
+	//RomFS::DumpingResult res = emu->dumpRomFS(path);
 }

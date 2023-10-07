@@ -39,6 +39,7 @@ class MainWindow : public QMainWindow {
 	void swapEmuBuffer();
 	void emuThreadMainLoop();
 	void selectROM();
+	void dumpRomFS();
 
 	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
 	bool usingGL = false;

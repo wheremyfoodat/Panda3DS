@@ -26,6 +26,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 
 	codeFile.clear();
 	saveData.clear();
+	partitionInfo = info;
 
 	size = u64(*(u32*)&header[0x104]) * mediaUnit; // TODO: Maybe don't type pun because big endian will break
 	exheaderSize = *(u32*)&header[0x180];

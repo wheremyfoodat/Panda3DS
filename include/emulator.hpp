@@ -12,6 +12,7 @@
 #include "cpu.hpp"
 #include "crypto/aes_engine.hpp"
 #include "discord_rpc.hpp"
+#include "fs/romfs.hpp"
 #include "io_file.hpp"
 #include "lua_manager.hpp"
 #include "memory.hpp"
@@ -120,6 +121,7 @@ class Emulator {
 	void initGraphicsContext() { gpu.initGraphicsContext(window); }
 #endif
 
+	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
 
 	EmulatorConfig& getConfig() { return config; }
