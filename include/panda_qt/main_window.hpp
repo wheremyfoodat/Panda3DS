@@ -6,8 +6,9 @@
 #include <QPalette>
 #include <QtWidgets>
 #include <atomic>
-#include <thread>
 #include <filesystem>
+#include <thread>
+#include <mutex>
 
 #include "emulator.hpp"
 #include "panda_qt/screen.hpp"
@@ -27,8 +28,10 @@ class MainWindow : public QMainWindow {
 	std::thread emuThread;
 
 	std::atomic<bool> appRunning = true; // Is the application itself running?
-	std::atomic<bool> needToLoadROM = false;
+	std::mutex messageQueueMutex; // Used for synchronizing messages between the emulator and UI
 	std::filesystem::path romToLoad = "";
+
+	bool needToLoadROM = false;
 
 	ScreenWidget screen;
 	QComboBox* themeSelect = nullptr;
