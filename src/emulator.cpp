@@ -1,5 +1,7 @@
 #include "emulator.hpp"
+
 #include <glad/gl.h>
+#include <fstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -583,7 +585,7 @@ void Emulator::updateDiscord() {
 void Emulator::updateDiscord() {}
 #endif
 
-static void printNode(const RomFS::RomFSNode& node, const char* romFSBase, const std::filesystem::path& path) {
+static void dumpRomFSNode(const RomFS::RomFSNode& node, const char* romFSBase, const std::filesystem::path& path) {
 	for (auto& file : node.files) {
 		const auto p = path / file->name;
 		std::ofstream outFile(p);
@@ -599,7 +601,7 @@ static void printNode(const RomFS::RomFSNode& node, const char* romFSBase, const
 		std::filesystem::create_directories(newPath, ec);
 
 		if (!ec) {
-			printNode(*directory, romFSBase, newPath);
+			dumpRomFSNode(*directory, romFSBase, newPath);
 		}
 	}
 }
@@ -638,7 +640,7 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 	}
 
 	std::unique_ptr<RomFSNode> node = parseRomFSTree((uintptr_t)&romFS[0], size);
-	printNode(*node, (const char*) &romFS[0], path);
+	dumpRomFSNode(*node, (const char*)&romFS[0], path);
 
 	return DumpingResult::Success;
 }

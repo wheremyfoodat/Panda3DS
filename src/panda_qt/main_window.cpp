@@ -209,11 +209,17 @@ void MainWindow::dumpRomFS() {
 
 	switch (res) {
 		case RomFS::DumpingResult::Success: break; // Yay!
-		case RomFS::DumpingResult::InvalidFormat:
-			QMessageBox::warning(
-				this, tr("Invalid format for RomFS dumping"), tr("The currently loaded app is not in a format that supports RomFS!")
+		case RomFS::DumpingResult::InvalidFormat: {
+			QMessageBox messageBox(
+				QMessageBox::Icon::Warning, tr("Invalid format for RomFS dumping"),
+				tr("The currently loaded app is not in a format that supports RomFS")
 			);
+
+			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
+			button->setIcon(QIcon(":/docs/img/rsob_icon.png"));
+			messageBox.exec();
 			break;
+		}
 
 		case RomFS::DumpingResult::NoRomFS:
 			QMessageBox::warning(this, tr("No RomFS found"), tr("No RomFS partition was found in the loaded app"));
