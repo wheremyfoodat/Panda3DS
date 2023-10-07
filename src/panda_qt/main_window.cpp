@@ -77,7 +77,6 @@ void MainWindow::emuThreadMainLoop() {
 			}
 
 			needToLoadROM.store(false, std::memory_order::seq_cst);
-			emu->dumpRomFS("");
 		}
 
 		emu->runFrame();
@@ -105,8 +104,8 @@ void MainWindow::selectROM() {
 		return;
 	}
 
-	auto path = QFileDialog::getOpenFileName(
-		this, tr("Select 3DS ROM to load"), {}, tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"), {});
+	auto path =
+		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), "", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
 
 	if (!path.isEmpty()) {
 		romToLoad = path.toStdU16String();
@@ -195,5 +194,5 @@ void MainWindow::dumpRomFS() {
 	}
 
 	std::filesystem::path path(folder.toStdU16String());
-	//RomFS::DumpingResult res = emu->dumpRomFS(path);
+	RomFS::DumpingResult res = emu->dumpRomFS(path);
 }

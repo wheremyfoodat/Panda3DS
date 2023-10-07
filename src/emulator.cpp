@@ -583,24 +583,25 @@ void Emulator::updateDiscord() {
 void Emulator::updateDiscord() {}
 #endif
 
-static void printNode(const RomFS::RomFSNode& node, int indentation) {
-	for (int i = 0; i < indentation; i++) {
-		printf("  ");
-	}
-	printf("%s/\n", std::string(node.name.begin(), node.name.end()).c_str());
-
+static void printNode(const RomFS::RomFSNode& node, const char* romFSBase, const std::filesystem::path& path) {
 	for (auto& file : node.files) {
-		for (int i = 0; i <= indentation; i++) {
-			printf("  ");
-		}
-		printf("%s\n", std::string(file->name.begin(), file->name.end()).c_str());
+		const auto p = path / file->name;
+		std::ofstream outFile(p);
+
+		outFile.write(romFSBase + file->dataOffset, file->dataSize);
 	}
 
-	indentation++;
 	for (auto& directory : node.directories) {
-		printNode(*directory, indentation);
+		const auto newPath = path / directory->name;
+		
+		// Create the directory for the new folder
+		std::error_code ec;
+		std::filesystem::create_directories(newPath, ec);
+
+		if (!ec) {
+			printNode(*directory, romFSBase, newPath);
+		}
 	}
-	indentation--;
 }
 
 RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
@@ -637,7 +638,7 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 	}
 
 	std::unique_ptr<RomFSNode> node = parseRomFSTree((uintptr_t)&romFS[0], size);
-	printNode(*node, 0);
+	printNode(*node, (const char*) &romFS[0], path);
 
 	return DumpingResult::Success;
 }
