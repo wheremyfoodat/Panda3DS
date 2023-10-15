@@ -16,13 +16,19 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	menuBar = new QMenuBar(this);
 	setMenuBar(menuBar);
 
+	// Create menu bar menus
 	auto fileMenu = menuBar->addMenu(tr("File"));
+	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
+	auto toolsMenu = menuBar->addMenu(tr("Tools"));
+	auto helpMenu = menuBar->addMenu(tr("Help"));
+	auto aboutMenu = menuBar->addMenu(tr("About"));
+
+	// Create and bind actions for them
 	auto pandaAction = fileMenu->addAction(tr("panda..."));
 	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
 
-	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
-	auto helpMenu = menuBar->addMenu(tr("Help"));
-	auto aboutMenu = menuBar->addMenu(tr("About"));
+	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
+	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 
 	// Set up theme selection
 	setTheme(Theme::Dark);
@@ -64,13 +70,17 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 void MainWindow::emuThreadMainLoop() {
 	while (appRunning) {
-		if (needToLoadROM.load()) {
-			bool success = emu->loadROM(romToLoad);
-			if (!success) {
-				printf("Failed to load ROM");
-			}
+		{
+			std::unique_lock lock(messageQueueMutex);
 
-			needToLoadROM.store(false, std::memory_order::seq_cst);
+			if (needToLoadROM) {
+				needToLoadROM = false;
+
+				bool success = emu->loadROM(romToLoad);
+				if (!success) {
+					printf("Failed to load ROM");
+				}
+			}
 		}
 
 		emu->runFrame();
@@ -93,17 +103,22 @@ void MainWindow::swapEmuBuffer() {
 
 void MainWindow::selectROM() {
 	// Are we already waiting for a ROM to be loaded? Then complain about it!
-	if (needToLoadROM.load()) {
-		QMessageBox::warning(this, tr("Already loading ROM"), tr("Panda3DS is already busy loading a ROM, please wait"));
-		return;
+	{
+		std::unique_lock lock(messageQueueMutex);
+		if (needToLoadROM) {
+			QMessageBox::warning(this, tr("Already loading ROM"), tr("Panda3DS is already busy loading a ROM, please wait"));
+			return;
+		}
 	}
 
 	auto path =
 		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), "", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
 
 	if (!path.isEmpty()) {
+		std::unique_lock lock(messageQueueMutex);
+
 		romToLoad = path.toStdU16String();
-		needToLoadROM.store(true, std::memory_order_seq_cst);
+		needToLoadROM = true;
 	}
 }
 
@@ -174,5 +189,40 @@ void MainWindow::setTheme(Theme theme) {
 			qApp->setStyleSheet("");
 			break;
 		}
+	}
+}
+
+void MainWindow::dumpRomFS() {
+	auto folder = QFileDialog::getExistingDirectory(
+		this, tr("Select folder to dump RomFS files to"), "", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
+	);
+
+	if (folder.isEmpty()) {
+		return;
+	}
+	std::filesystem::path path(folder.toStdU16String());
+	
+	// TODO: This might break if the game accesses RomFS while we're dumping, we should move it to the emulator thread when we've got a message queue going
+	messageQueueMutex.lock();
+	RomFS::DumpingResult res = emu->dumpRomFS(path);
+	messageQueueMutex.unlock();
+
+	switch (res) {
+		case RomFS::DumpingResult::Success: break; // Yay!
+		case RomFS::DumpingResult::InvalidFormat: {
+			QMessageBox messageBox(
+				QMessageBox::Icon::Warning, tr("Invalid format for RomFS dumping"),
+				tr("The currently loaded app is not in a format that supports RomFS")
+			);
+
+			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
+			button->setIcon(QIcon(":/docs/img/rsob_icon.png"));
+			messageBox.exec();
+			break;
+		}
+
+		case RomFS::DumpingResult::NoRomFS:
+			QMessageBox::warning(this, tr("No RomFS found"), tr("No RomFS partition was found in the loaded app"));
+			break;
 	}
 }

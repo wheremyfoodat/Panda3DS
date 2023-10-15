@@ -1,5 +1,7 @@
 #include "emulator.hpp"
+
 #include <glad/gl.h>
+#include <fstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -582,3 +584,63 @@ void Emulator::updateDiscord() {
 #else
 void Emulator::updateDiscord() {}
 #endif
+
+static void dumpRomFSNode(const RomFS::RomFSNode& node, const char* romFSBase, const std::filesystem::path& path) {
+	for (auto& file : node.files) {
+		const auto p = path / file->name;
+		std::ofstream outFile(p);
+
+		outFile.write(romFSBase + file->dataOffset, file->dataSize);
+	}
+
+	for (auto& directory : node.directories) {
+		const auto newPath = path / directory->name;
+		
+		// Create the directory for the new folder
+		std::error_code ec;
+		std::filesystem::create_directories(newPath, ec);
+
+		if (!ec) {
+			dumpRomFSNode(*directory, romFSBase, newPath);
+		}
+	}
+}
+
+RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
+	using namespace RomFS;
+
+	if (romType != ROMType::NCSD && romType != ROMType::CXI && romType != ROMType::HB_3DSX) {
+		return DumpingResult::InvalidFormat;
+	}
+
+	// Contents of RomFS as raw bytes
+	std::vector<u8> romFS;
+	u64 size;
+
+	if (romType == ROMType::HB_3DSX) {
+		auto hb3dsx = memory.get3DSX();
+		if (!hb3dsx->hasRomFs()) {
+			return DumpingResult::NoRomFS;
+		}
+		size = hb3dsx->romFSSize;
+
+		romFS.resize(size);
+		hb3dsx->readRomFSBytes(&romFS[0], 0, size);
+	} else {
+		auto cxi = memory.getCXI();
+		if (!cxi->hasRomFS()) {
+			return DumpingResult::NoRomFS;
+		}
+
+		const u64 offset = cxi->romFS.offset;
+		size = cxi->romFS.size;
+
+		romFS.resize(size);
+		cxi->readFromFile(memory.CXIFile, cxi->partitionInfo, &romFS[0], offset - cxi->fileOffset, size);
+	}
+
+	std::unique_ptr<RomFSNode> node = parseRomFSTree((uintptr_t)&romFS[0], size);
+	dumpRomFSNode(*node, (const char*)&romFS[0], path);
+
+	return DumpingResult::Success;
+}
