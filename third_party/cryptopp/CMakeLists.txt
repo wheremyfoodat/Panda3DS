@@ -13,7 +13,7 @@
 # # error "The CMAKE_C_COMPILER is set to a C++ compiler"
 
 if(NOT DEFINED cryptopp_DISPLAY_CMAKE_SUPPORT_WARNING)
-  set(cryptopp_DISPLAY_CMAKE_SUPPORT_WARNING 1)
+  set(cryptopp_DISPLAY_CMAKE_SUPPORT_WARNING 0)
 endif()
 if(cryptopp_DISPLAY_CMAKE_SUPPORT_WARNING)
   message( STATUS
