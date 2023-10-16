@@ -379,7 +379,7 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad resources_console_fonts)
+target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp-static glad resources_console_fonts)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
