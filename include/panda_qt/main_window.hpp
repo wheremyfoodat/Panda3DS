@@ -7,8 +7,8 @@
 #include <QtWidgets>
 #include <atomic>
 #include <filesystem>
-#include <thread>
 #include <mutex>
+#include <thread>
 
 #include "emulator.hpp"
 #include "panda_qt/screen.hpp"

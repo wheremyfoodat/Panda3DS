@@ -159,7 +159,9 @@ private:
 	Regions region = Regions::USA;
 	const EmulatorConfig& config;
 
-public:
+	static constexpr std::array<u8, 6> MACAddress = {0x40, 0xF4, 0x07, 0xFF, 0xFF, 0xEE};
+
+  public:
 	u16 kernelVersion = 0;
 	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
 	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
