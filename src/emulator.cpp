@@ -449,13 +449,20 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	memory.loadedCXI = std::nullopt;
 	memory.loaded3DSX = std::nullopt;
 
-	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplcationName on Linux, etc)
+	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
 	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
 	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
 	// If the portable build setting is enabled, then those saves go in the executable directory instead
-	char* appData;
 	std::filesystem::path appDataPath;
 
+	#ifdef __ANDROID__
+	// SDL_GetPrefPath fails to get the path due to no JNI environment
+	std::ifstream cmdline("/proc/self/cmdline");
+	std::string applicationName;
+	std::getline(cmdline, applicationName, '\0');
+	appDataPath = std::filesystem::path("/data") / "data" / applicationName / "files";
+	#else
+	char* appData;
 	if (!config.usePortableBuild) {
 		appData = SDL_GetPrefPath(nullptr, "Alber");
 		appDataPath = std::filesystem::path(appData);
@@ -463,11 +470,12 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		appData = SDL_GetBasePath();
 		appDataPath = std::filesystem::path(appData) / "Emulator Files";
 	}
+	SDL_free(appData);
+	#endif
 
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
 	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
 	IOFile::setAppDataDir(dataPath);
-	SDL_free(appData);
 
 	// Open the text file containing our AES keys if it exists. We use the std::filesystem::exists overload that takes an error code param to
 	// avoid the call throwing exceptions
