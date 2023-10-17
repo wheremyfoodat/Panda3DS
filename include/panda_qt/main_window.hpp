@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SDL.h>
+
 #include <QApplication>
 #include <QComboBox>
 #include <QMenuBar>
@@ -36,6 +38,9 @@ class MainWindow : public QMainWindow {
 	ScreenWidget screen;
 	QComboBox* themeSelect = nullptr;
 	QMenuBar* menuBar = nullptr;
+
+	SDL_GameController* gameController = nullptr;
+	int gameControllerID;
 
 	Theme currentTheme;
 	void setTheme(Theme theme);
