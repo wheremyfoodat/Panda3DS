@@ -27,7 +27,7 @@ uniform uint u_textureEnvColor[6];
 uniform uint u_picaRegs[0x200 - 0x48];
 
 // Helper so that the implementation of u_pica_regs can be changed later
-uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48]; }
+uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48u]; }
 
 vec4 abgr8888ToVec4(uint abgr) {
 	const float scale = 1.0 / 255.0;
