@@ -2,18 +2,6 @@
 
 #include <glad/gl.h>
 
-void loadGlFunctions(void* (*loadproc)(const char*)) {
-#ifdef __ANDROID__
-	if (!gladLoadGLES2Loader(loadproc)) {
-		Helpers::panic("OpenGL ES init failed");
-	}
-#else
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(loadproc))) {
-		Helpers::panic("OpenGL init failed");
-	}
-#endif
-}
-
 FrontendSDL::FrontendSDL() {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
@@ -58,7 +46,9 @@ FrontendSDL::FrontendSDL() {
 			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
 		}
 
-		loadGlFunctions(SDL_GL_GetProcAddress);
+		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+			Helpers::panic("OpenGL init failed");
+		}
 	}
 
 #ifdef PANDA3DS_ENABLE_VULKAN
