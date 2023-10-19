@@ -1,7 +1,5 @@
 #pragma once
 
-#include <SDL.h>
-
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -25,6 +23,8 @@
 #include "gl/context.h"
 #endif
 
+class SDL_Window;
+
 enum class ROMType {
 	None,
 	ELF,
@@ -41,17 +41,6 @@ class Emulator {
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
 	Cheats cheats;
-
-#ifdef PANDA3DS_FRONTEND_SDL
-	SDL_Window* window;
-
-#ifdef PANDA3DS_ENABLE_OPENGL
-	SDL_GLContext glContext;
-#endif
-#endif
-
-	SDL_GameController* gameController = nullptr;
-	int gameControllerID;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
@@ -100,7 +89,7 @@ class Emulator {
 	void step();
 	void render();
 	void reset(ReloadOption reload);
-	void run();
+	void run(void* frontend = nullptr);
 	void runFrame();
 
 	void resume();  // Resume the emulator
@@ -118,7 +107,7 @@ class Emulator {
 	// For passing the GL context from Qt to the renderer
 	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
 #else
-	void initGraphicsContext() { gpu.initGraphicsContext(window); }
+	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
 #endif
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
