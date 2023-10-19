@@ -2,6 +2,8 @@
 
 #include <SDL.h>
 
+#include <filesystem>
+
 #include "emulator.hpp"
 
 class FrontendSDL {
