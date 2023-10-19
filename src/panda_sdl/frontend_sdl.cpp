@@ -75,7 +75,6 @@ FrontendSDL::FrontendSDL() {
 }
 
 bool FrontendSDL::loadROM(const std::filesystem::path& path) { return emu.loadROM(path); }
-
 void FrontendSDL::run() { emu.run(this); }
 
 void Emulator::run(void* frontend) {
@@ -352,7 +351,6 @@ void Emulator::run(void* frontend) {
 		// TODO: Should this be uncommented?
 		// kernel.evalReschedule();
 
-		// Update inputs in the HID module
 		SDL_GL_SwapWindow(frontendSDL->window);
 	}
 }
