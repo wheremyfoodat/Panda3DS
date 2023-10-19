@@ -1,5 +1,6 @@
 #include "panda_sdl/frontend_sdl.hpp"
 
+#include <filesystem>
 #include <glad/gl.h>
 
 FrontendSDL::FrontendSDL() {
