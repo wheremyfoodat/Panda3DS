@@ -51,24 +51,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
 		usingVk = (rendererType == RendererType::Vulkan);
 
-		if (SDL_Init(SDL_INIT_EVENTS) < 0) {
-			Helpers::panic("Failed to initialize SDL2");
-		}
-
-		// Make SDL use consistent positional button mapping
-		SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
-		if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
-			Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
-		}
-
-		if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
-			gameController = SDL_GameControllerOpen(0);
-
-			if (gameController != nullptr) {
-				SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
-				gameControllerID = SDL_JoystickInstanceID(stick);
-			}
-		}
 		if (usingGL) {
 			// Make GL context current for this thread, enable VSync
 			GL::Context* glContext = screen.getGLContext();
