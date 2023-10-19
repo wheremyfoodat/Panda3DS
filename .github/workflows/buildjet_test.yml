@@ -1,4 +1,4 @@
-name: Linux AppImage Build
+name: Linux AppImage Build (BuildJet)
 
 on:
   push:
