@@ -114,6 +114,7 @@ class Emulator {
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
 
 	EmulatorConfig& getConfig() { return config; }
+	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
 };
