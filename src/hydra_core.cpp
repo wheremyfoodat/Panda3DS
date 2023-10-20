@@ -2,6 +2,8 @@
 #include <hydra/core.hxx>
 #include <renderer_gl/renderer_gl.hpp>
 
+#include <stdexcept>
+
 class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRendered, public hydra::IFrontendDriven, public hydra::IInput {
 	HYDRA_CLASS
   public:
@@ -74,7 +76,6 @@ void HydraCore::runFrame() {
 }
 
 void HydraCore::reset() { emulator->reset(Emulator::ReloadOption::Reload); }
-
 hydra::Size HydraCore::getNativeSize() { return {400, 480}; }
 
 // Size doesn't matter as the glBlitFramebuffer call is commented out for the core
@@ -95,15 +96,12 @@ void HydraCore::setGetProcAddress(void* function) {
 }
 
 void HydraCore::setContext(void*) {}
-
 void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
 
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
-
 void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
 
 HC_API hydra::IBase* createEmulator() { return new HydraCore; }
-
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }
 
 HC_API const char* getInfo(hydra::InfoType type) {
