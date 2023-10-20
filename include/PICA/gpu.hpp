@@ -160,6 +160,7 @@ class GPU {
 		}
 	}
 
+	Renderer* getRenderer() { return renderer.get(); }
   private:
 	// GPU external registers
 	// We have them in the end of the struct for cache locality reasons. Tl;dr we want the more commonly used things to be packed in the start
