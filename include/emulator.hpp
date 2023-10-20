@@ -60,7 +60,6 @@ class Emulator {
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	HttpServer httpServer;
-	friend struct HttpServer;
 #endif
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC

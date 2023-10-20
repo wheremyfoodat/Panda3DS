@@ -228,7 +228,7 @@ void HttpServer::startHttpServer() {
 }
 
 std::string HttpServer::status() {
-	HIDService& hid = emulator->kernel.getServiceManager().getHID();
+	HIDService& hid = emulator->getServiceManager().getHID();
 	std::stringstream stringStream;
 
 	stringStream << "Panda3DS\n";
@@ -271,7 +271,7 @@ void HttpServer::processActions() {
 		return;
 	}
 
-	HIDService& hid = emulator->kernel.getServiceManager().getHID();
+	HIDService& hid = emulator->getServiceManager().getHID();
 
 	while (!actionQueue.empty()) {
 		std::unique_ptr<HttpAction> action = std::move(actionQueue.front());
