@@ -21,6 +21,7 @@ class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRend
 
 	// IFrontendDriven
 	void runFrame() override;
+	uint16_t getFps() override;
 
 	// IInput
 	void setPollInputCallback(void (*callback)()) override;
@@ -69,9 +70,12 @@ void HydraCore::runFrame() {
 	int y = !!checkButtonCallback(0, hydra::ButtonType::Analog1Up) - !!checkButtonCallback(0, hydra::ButtonType::Analog1Down);
 	hid.setCirclepadX(x * 0x9C);
 	hid.setCirclepadY(y * 0x9C);
+	hid.updateInputs(emulator->getTicks());
 
 	emulator->runFrame();
 }
+
+uint16_t HydraCore::getFps() { return 60; }
 
 void HydraCore::reset() { emulator->reset(Emulator::ReloadOption::Reload); }
 
