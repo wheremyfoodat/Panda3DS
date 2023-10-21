@@ -1,10 +1,15 @@
 #include <emulator.hpp>
 #include <hydra/core.hxx>
 #include <renderer_gl/renderer_gl.hpp>
-
 #include <stdexcept>
 
-class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRendered, public hydra::IFrontendDriven, public hydra::IInput {
+#include "hydra_icon.hpp"
+
+class HC_GLOBAL HydraCore final : public hydra::IBase,
+								  public hydra::IOpenGlRendered,
+								  public hydra::IFrontendDriven,
+								  public hydra::IInput,
+								  public hydra::IIcon {
 	HYDRA_CLASS
   public:
 	HydraCore();
@@ -28,6 +33,10 @@ class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRend
 	// IInput
 	void setPollInputCallback(void (*callback)()) override;
 	void setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) override;
+
+	// IICon
+	hydra::Size getIconSize() override;
+	const u8* getIconData() override;
 
 	std::unique_ptr<Emulator> emulator;
 	RendererGL* renderer;
@@ -122,3 +131,6 @@ HC_API const char* getInfo(hydra::InfoType type) {
 		default: return nullptr;
 	}
 }
+
+HC_API hydra::Size getIconSize() { return {HYDRA_ICON_WIDTH, HYDRA_ICON_HEIGHT}; }
+HC_API const u8* getIconData() { return &HYDRA_ICON_DATA[0]; }
