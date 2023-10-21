@@ -28,7 +28,7 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
 endif() 
 
-option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
+option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
