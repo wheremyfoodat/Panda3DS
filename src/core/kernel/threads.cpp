@@ -641,9 +641,8 @@ void Kernel::svcReleaseSemaphore() {
 // can simply compile to a fast sub+cmp+set despite looking slow
 bool Kernel::isWaitable(const KernelObject* object) {
 	auto type = object->type;
-	using enum KernelObjectType;
-
-	return type == Event || type == Mutex || type == Port || type == Semaphore || type == Timer || type == Thread;
+	return type == KernelObjectType::Event || type == KernelObjectType::Mutex || type == KernelObjectType::Port ||
+		   type == KernelObjectType::Semaphore || type == KernelObjectType::Timer || type == KernelObjectType::Thread;
 }
 
 // Returns whether we should wait on a sync object or not
