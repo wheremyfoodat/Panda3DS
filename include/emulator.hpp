@@ -117,4 +117,5 @@ class Emulator {
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
+	u64 getTicks() { return cpu.getTicks(); }
 };
