@@ -114,6 +114,9 @@ void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
 void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
 
+hydra::Size HydraCore::getIconSize() { return {HYDRA_ICON_WIDTH, HYDRA_ICON_HEIGHT}; }
+const u8* HydraCore::getIconData() { return &HYDRA_ICON_DATA[0]; }
+
 HC_API hydra::IBase* createEmulator() { return new HydraCore; }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }
 
@@ -131,6 +134,3 @@ HC_API const char* getInfo(hydra::InfoType type) {
 		default: return nullptr;
 	}
 }
-
-HC_API hydra::Size getIconSize() { return {HYDRA_ICON_WIDTH, HYDRA_ICON_HEIGHT}; }
-HC_API const u8* getIconData() { return &HYDRA_ICON_DATA[0]; }
