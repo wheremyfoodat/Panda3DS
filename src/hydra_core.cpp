@@ -1,7 +1,6 @@
 #include <emulator.hpp>
 #include <hydra/core.hxx>
 #include <renderer_gl/renderer_gl.hpp>
-
 #include <stdexcept>
 
 class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRendered, public hydra::IFrontendDriven, public hydra::IInput {
@@ -72,6 +71,20 @@ void HydraCore::runFrame() {
 	int y = !!checkButtonCallback(0, hydra::ButtonType::Analog1Up) - !!checkButtonCallback(0, hydra::ButtonType::Analog1Down);
 	hid.setCirclepadX(x * 0x9C);
 	hid.setCirclepadY(y * 0x9C);
+
+	u32 touch = checkButtonCallback(0, hydra::ButtonType::Touch);
+	if (touch != hydra::TOUCH_RELEASED) {
+		u16 x = touch >> 16;
+		u16 y = touch;
+		if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
+			hid.setTouchScreenPress(x - 40, y - 240);
+		} else {
+			hid.releaseTouchScreen();
+		}
+	} else {
+		hid.releaseTouchScreen();
+	}
+
 	hid.updateInputs(emulator->getTicks());
 
 	emulator->runFrame();
