@@ -31,6 +31,13 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    
+    - name: Upload core
+      uses: actions/upload-artifact@v2
+      with:
+        name: Windows core
+        path: '${{github.workspace}}/build/Release/Alber.dll'
+
 
   MacOS:
     runs-on: macos-latest
@@ -52,6 +59,12 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    
+    - name: Upload core
+      uses: actions/upload-artifact@v2
+      with:
+        name: MacOS core
+        path: '${{github.workspace}}/build/libAlber.dylib'
 
   Linux:
     runs-on: ubuntu-latest
@@ -77,6 +90,12 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    
+    - name: Upload core
+      uses: actions/upload-artifact@v2
+      with:
+        name: Linux core
+        path: '${{github.workspace}}/build/libAlber.so'
 
   Android-x64:
     runs-on: ubuntu-latest
@@ -102,3 +121,9 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    
+    - name: Upload core
+      uses: actions/upload-artifact@v2
+      with:
+        name: Android core
+        path: '${{github.workspace}}/build/libAlber.so'
