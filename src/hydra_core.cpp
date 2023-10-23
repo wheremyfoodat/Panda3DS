@@ -3,6 +3,8 @@
 #include <renderer_gl/renderer_gl.hpp>
 #include <stdexcept>
 
+#include "hydra_icon.hpp"
+
 class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRendered, public hydra::IFrontendDriven, public hydra::IInput {
 	HYDRA_CLASS
   public:
@@ -132,6 +134,10 @@ HC_API const char* getInfo(hydra::InfoType type) {
 		case hydra::InfoType::Website: return "https://panda3ds.com/";
 		case hydra::InfoType::Extensions: return "3ds,cci,cxi,app,3dsx,elf,axf";
 		case hydra::InfoType::Firmware: return "";
+		case hydra::InfoType::IconWidth: return HYDRA_ICON_WIDTH;
+		case hydra::InfoType::IconHeight: return HYDRA_ICON_HEIGHT;
+		case hydra::InfoType::IconData: return (const char*)&HYDRA_ICON_DATA[0];
+
 		default: return nullptr;
 	}
 }
