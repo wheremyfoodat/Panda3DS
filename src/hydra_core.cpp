@@ -5,11 +5,7 @@
 
 #include "hydra_icon.hpp"
 
-class HC_GLOBAL HydraCore final : public hydra::IBase,
-								  public hydra::IOpenGlRendered,
-								  public hydra::IFrontendDriven,
-								  public hydra::IInput,
-								  public hydra::IIcon {
+class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRendered, public hydra::IFrontendDriven, public hydra::IInput {
 	HYDRA_CLASS
   public:
 	HydraCore();
@@ -33,10 +29,6 @@ class HC_GLOBAL HydraCore final : public hydra::IBase,
 	// IInput
 	void setPollInputCallback(void (*callback)()) override;
 	void setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) override;
-
-	// IICon
-	hydra::Size getIconSize() override;
-	const u8* getIconData() override;
 
 	std::unique_ptr<Emulator> emulator;
 	RendererGL* renderer;
@@ -114,9 +106,6 @@ void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
 void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
 
-hydra::Size HydraCore::getIconSize() { return {HYDRA_ICON_WIDTH, HYDRA_ICON_HEIGHT}; }
-const u8* HydraCore::getIconData() { return &HYDRA_ICON_DATA[0]; }
-
 HC_API hydra::IBase* createEmulator() { return new HydraCore; }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }
 
@@ -131,6 +120,10 @@ HC_API const char* getInfo(hydra::InfoType type) {
 		case hydra::InfoType::Website: return "https://panda3ds.com/";
 		case hydra::InfoType::Extensions: return "3ds,cci,cxi,app,3dsx,elf,axf";
 		case hydra::InfoType::Firmware: return "";
+		case hydra::InfoType::IconWidth: return HYDRA_ICON_WIDTH;
+		case hydra::InfoType::IconHeight: return HYDRA_ICON_HEIGHT;
+		case hydra::InfoType::IconData: return (const char*)&HYDRA_ICON_DATA[0];
+
 		default: return nullptr;
 	}
 }
