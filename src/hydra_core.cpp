@@ -18,8 +18,8 @@ class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRend
 	void setOutputSize(hydra::Size size) override;
 
 	// IOpenGlRendered
+	void resetContext() override;
 	void setFbo(unsigned handle) override;
-	void setContext(void* context) override;
 	void setGetProcAddress(void* function) override;
 
 	// IFrontendDriven
@@ -34,6 +34,7 @@ class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRend
 	RendererGL* renderer;
 	void (*pollInputCallback)() = nullptr;
 	int32_t (*checkButtonCallback)(uint32_t player, hydra::ButtonType button) = nullptr;
+	void* getProcAddress = nullptr;
 };
 
 HydraCore::HydraCore() : emulator(new Emulator) {
@@ -100,13 +101,13 @@ hydra::Size HydraCore::getNativeSize() { return {400, 480}; }
 // Size doesn't matter as the glBlitFramebuffer call is commented out for the core
 void HydraCore::setOutputSize(hydra::Size size) {}
 
-void HydraCore::setGetProcAddress(void* function) {
+void HydraCore::resetContext() {
 #ifdef __ANDROID__
-	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(function))) {
+	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL ES init failed");
 	}
 #else
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(function))) {
+	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL init failed");
 	}
 #endif
@@ -114,8 +115,9 @@ void HydraCore::setGetProcAddress(void* function) {
 	emulator->initGraphicsContext(nullptr);
 }
 
-void HydraCore::setContext(void*) {}
 void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
+
+void HydraCore::setGetProcAddress(void* function) { getProcAddress = function; }
 
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
 void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
