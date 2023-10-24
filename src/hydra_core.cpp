@@ -19,6 +19,7 @@ class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRend
 
 	// IOpenGlRendered
 	void resetContext() override;
+	void destroyContext() override;
 	void setFbo(unsigned handle) override;
 	void setGetProcAddress(void* function) override;
 
@@ -114,6 +115,8 @@ void HydraCore::resetContext() {
 	// SDL_Window is not used, so we pass nullptr
 	emulator->initGraphicsContext(nullptr);
 }
+
+void HydraCore::destroyContext() {}
 
 void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
 
