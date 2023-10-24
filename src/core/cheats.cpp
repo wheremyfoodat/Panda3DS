@@ -25,8 +25,8 @@ u32 Cheats::addCheat(const Cheat& cheat) {
 
 void Cheats::removeCheat(u32 id) {
 	if (id >= cheats.size()) {
-        return;
-    }
+		return;
+	}
 
 	// Not using std::erase because we don't want to invalidate cheat IDs
 	cheats[id].type = CheatType::None;
@@ -42,14 +42,14 @@ void Cheats::removeCheat(u32 id) {
 
 void Cheats::enableCheat(u32 id) {
 	if (id < cheats.size()) {
-	    cheats[id].enabled = true;
-    }
+		cheats[id].enabled = true;
+	}
 }
 
 void Cheats::disableCheat(u32 id) {
 	if (id < cheats.size()) {
-	    cheats[id].enabled = false;
-    }
+		cheats[id].enabled = false;
+	}
 }
 
 void Cheats::clear() {
@@ -67,7 +67,7 @@ void Cheats::run() {
 				break;
 			}
 
-            case CheatType::None: break;
+			case CheatType::None: break;
 			default: Helpers::panic("Unknown cheat device!");
 		}
 	}

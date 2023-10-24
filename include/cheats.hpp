@@ -12,9 +12,8 @@ class Memory;
 class Cheats {
   public:
 	enum class CheatType {
-		None,
+		None,          // Cheat has been removed by the frontend or is invalid
 		ActionReplay,  // CTRPF cheats
-		// TODO: Other cheat devices and standards?
 	};
 
 	struct Cheat {

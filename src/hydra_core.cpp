@@ -135,20 +135,18 @@ void HydraCore::setCheckButtonCallback(s32 (*callback)(u32 player, hydra::Button
 
 u32 HydraCore::addCheat(const u8* data, u32 size) {
 	// Every 3DS cheat is a multiple of 64 bits == 8 bytes
-    if ((size % 8) != 0) {
-        return hydra::BAD_CHEAT;
-    }
+	if ((size % 8) != 0) {
+		return hydra::BAD_CHEAT;
+	}
 
 	Cheats::Cheat cheat;
 	cheat.enabled = true;
 	cheat.type = Cheats::CheatType::ActionReplay;
 
 	for (u32 i = 0; i < size; i += 8) {
-        auto read32 = [](const u8* ptr) {
-            return (u32(ptr[3]) << 24) | (u32(ptr[2]) << 16) | (u32(ptr[1]) << 8) | u32(ptr[0]);
-        };
+		auto read32 = [](const u8* ptr) { return (u32(ptr[3]) << 24) | (u32(ptr[2]) << 16) | (u32(ptr[1]) << 8) | u32(ptr[0]); };
 
-        // Data is passed to us in big endian so we bswap
+		// Data is passed to us in big endian so we bswap
 		u32 firstWord = Common::swap32(read32(data + i));
 		u32 secondWord = Common::swap32(read32(data + i + 4));
 		cheat.instructions.insert(cheat.instructions.end(), {firstWord, secondWord});
