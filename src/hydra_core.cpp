@@ -4,8 +4,13 @@
 #include <stdexcept>
 
 #include "hydra_icon.hpp"
+#include "swap.hpp"
 
-class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRendered, public hydra::IFrontendDriven, public hydra::IInput {
+class HC_GLOBAL HydraCore final : public hydra::IBase,
+								  public hydra::IOpenGlRendered,
+								  public hydra::IFrontendDriven,
+								  public hydra::IInput,
+								  public hydra::ICheat {
 	HYDRA_CLASS
   public:
 	HydraCore();
@@ -30,6 +35,12 @@ class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRend
 	// IInput
 	void setPollInputCallback(void (*callback)()) override;
 	void setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) override;
+
+	// ICheat
+	uint32_t addCheat(const uint8_t* data, uint32_t size) override;
+	void removeCheat(uint32_t id) override;
+	void enableCheat(uint32_t id) override;
+	void disableCheat(uint32_t id) override;
 
 	std::unique_ptr<Emulator> emulator;
 	RendererGL* renderer;
@@ -122,7 +133,29 @@ void HydraCore::setGetProcAddress(void* function) { getProcAddress = function; }
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
 void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
 
-HC_API hydra::IBase* createEmulator() { return new HydraCore(); }
+uint32_t HydraCore::addCheat(const uint8_t* data, uint32_t size) {
+	if ((size % 8) != 0) return hydra::BAD_CHEAT;
+
+	Cheats::Cheat cheat;
+	cheat.enabled = true;
+	cheat.type = Cheats::CheatType::ActionReplay;
+
+	for (uint32_t i = 0; i < size; i += 8) {
+		uint32_t first_word = Common::swap32(*reinterpret_cast<const uint32_t*>(data + i));
+		uint32_t second_word = Common::swap32(*reinterpret_cast<const uint32_t*>(data + i + 4));
+		cheat.instructions.insert(cheat.instructions.end(), {first_word, second_word});
+	}
+
+	return emulator->getCheats().addCheat(cheat);
+};
+
+void HydraCore::removeCheat(uint32_t id) { emulator->getCheats().removeCheat(id); }
+
+void HydraCore::enableCheat(uint32_t id) { emulator->getCheats().enableCheat(id); }
+
+void HydraCore::disableCheat(uint32_t id) { emulator->getCheats().disableCheat(id); }
+
+HC_API hydra::IBase* createEmulator() { return new HydraCore; }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }
 
 HC_API const char* getInfo(hydra::InfoType type) {
