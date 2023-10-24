@@ -24,10 +24,10 @@ class Cheats {
 	};
 
 	Cheats(Memory& mem, HIDService& hid);
-	uint32_t addCheat(const Cheat& cheat);
-	void removeCheat(uint32_t id);
-	void enableCheat(uint32_t id);
-	void disableCheat(uint32_t id);
+	u32 addCheat(const Cheat& cheat);
+	void removeCheat(u32 id);
+	void enableCheat(u32 id);
+	void disableCheat(u32 id);
 	void reset();
 	void run();
 

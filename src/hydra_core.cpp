@@ -30,17 +30,17 @@ class HC_GLOBAL HydraCore final : public hydra::IBase,
 
 	// IFrontendDriven
 	void runFrame() override;
-	uint16_t getFps() override;
+	u16 getFps() override;
 
 	// IInput
 	void setPollInputCallback(void (*callback)()) override;
-	void setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) override;
+	void setCheckButtonCallback(s32 (*callback)(u32 player, hydra::ButtonType button)) override;
 
 	// ICheat
-	uint32_t addCheat(const uint8_t* data, uint32_t size) override;
-	void removeCheat(uint32_t id) override;
-	void enableCheat(uint32_t id) override;
-	void disableCheat(uint32_t id) override;
+	u32 addCheat(const u8* data, u32 size) override;
+	void removeCheat(u32 id) override;
+	void enableCheat(u32 id) override;
+	void disableCheat(u32 id) override;
 
 	std::unique_ptr<Emulator> emulator;
 	RendererGL* renderer;
@@ -104,7 +104,7 @@ void HydraCore::runFrame() {
 	emulator->runFrame();
 }
 
-uint16_t HydraCore::getFps() { return 60; }
+u16 HydraCore::getFps() { return 60; }
 
 void HydraCore::reset() { emulator->reset(Emulator::ReloadOption::Reload); }
 hydra::Size HydraCore::getNativeSize() { return {400, 480}; }
@@ -131,29 +131,35 @@ void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
 void HydraCore::setGetProcAddress(void* function) { getProcAddress = function; }
 
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
-void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
+void HydraCore::setCheckButtonCallback(s32 (*callback)(u32 player, hydra::ButtonType button)) { checkButtonCallback = callback; }
 
-uint32_t HydraCore::addCheat(const uint8_t* data, uint32_t size) {
-	if ((size % 8) != 0) return hydra::BAD_CHEAT;
+u32 HydraCore::addCheat(const u8* data, u32 size) {
+	// Every 3DS cheat is a multiple of 64 bits == 8 bytes
+    if ((size % 8) != 0) {
+        return hydra::BAD_CHEAT;
+    }
 
 	Cheats::Cheat cheat;
 	cheat.enabled = true;
 	cheat.type = Cheats::CheatType::ActionReplay;
 
-	for (uint32_t i = 0; i < size; i += 8) {
-		uint32_t first_word = Common::swap32(*reinterpret_cast<const uint32_t*>(data + i));
-		uint32_t second_word = Common::swap32(*reinterpret_cast<const uint32_t*>(data + i + 4));
-		cheat.instructions.insert(cheat.instructions.end(), {first_word, second_word});
+	for (u32 i = 0; i < size; i += 8) {
+        auto read32 = [](const u8* ptr) {
+            return (u32(ptr[3]) << 24) | (u32(ptr[2]) << 16) | (u32(ptr[1]) << 8) | u32(ptr[0]);
+        };
+
+        // Data is passed to us in big endian so we bswap
+		u32 firstWord = Common::swap32(read32(data + i));
+		u32 secondWord = Common::swap32(read32(data + i + 4));
+		cheat.instructions.insert(cheat.instructions.end(), {firstWord, secondWord});
 	}
 
 	return emulator->getCheats().addCheat(cheat);
 };
 
-void HydraCore::removeCheat(uint32_t id) { emulator->getCheats().removeCheat(id); }
-
-void HydraCore::enableCheat(uint32_t id) { emulator->getCheats().enableCheat(id); }
-
-void HydraCore::disableCheat(uint32_t id) { emulator->getCheats().disableCheat(id); }
+void HydraCore::removeCheat(u32 id) { emulator->getCheats().removeCheat(id); }
+void HydraCore::enableCheat(u32 id) { emulator->getCheats().enableCheat(id); }
+void HydraCore::disableCheat(u32 id) { emulator->getCheats().disableCheat(id); }
 
 HC_API hydra::IBase* createEmulator() { return new HydraCore; }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }

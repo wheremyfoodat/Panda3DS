@@ -7,7 +7,7 @@ void Cheats::reset() {
 	ar.reset();  // Reset ActionReplay
 }
 
-uint32_t Cheats::addCheat(const Cheat& cheat) {
+u32 Cheats::addCheat(const Cheat& cheat) {
 	cheatsLoaded = true;
 
 	// Find an empty slot if a cheat was previously removed
@@ -23,8 +23,10 @@ uint32_t Cheats::addCheat(const Cheat& cheat) {
 	return cheats.size() - 1;
 }
 
-void Cheats::removeCheat(uint32_t id) {
-	if (id >= cheats.size()) return;
+void Cheats::removeCheat(u32 id) {
+	if (id >= cheats.size()) {
+        return;
+    }
 
 	// Not using std::erase because we don't want to invalidate cheat IDs
 	cheats[id].type = CheatType::None;
@@ -38,14 +40,16 @@ void Cheats::removeCheat(uint32_t id) {
 	cheatsLoaded = false;
 }
 
-void Cheats::enableCheat(uint32_t id) {
-	if (id >= cheats.size()) return;
-	cheats[id].enabled = true;
+void Cheats::enableCheat(u32 id) {
+	if (id < cheats.size()) {
+	    cheats[id].enabled = true;
+    }
 }
 
-void Cheats::disableCheat(uint32_t id) {
-	if (id >= cheats.size()) return;
-	cheats[id].enabled = false;
+void Cheats::disableCheat(u32 id) {
+	if (id < cheats.size()) {
+	    cheats[id].enabled = false;
+    }
 }
 
 void Cheats::clear() {
@@ -63,6 +67,7 @@ void Cheats::run() {
 				break;
 			}
 
+            case CheatType::None: break;
 			default: Helpers::panic("Unknown cheat device!");
 		}
 	}
