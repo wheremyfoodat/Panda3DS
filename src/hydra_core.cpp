@@ -115,7 +115,7 @@ void HydraCore::resetContext() {
 	emulator->initGraphicsContext(nullptr);
 }
 
-void HydraCore::destroyContext() { emulator.deinitGraphicsContext(); }
+void HydraCore::destroyContext() { emulator->deinitGraphicsContext(); }
 void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
 void HydraCore::setGetProcAddress(void* function) { getProcAddress = function; }
 
