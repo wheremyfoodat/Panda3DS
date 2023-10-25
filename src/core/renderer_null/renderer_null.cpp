@@ -12,3 +12,4 @@ void RendererNull::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize,
 void RendererNull::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {}
 void RendererNull::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {}
 void RendererNull::screenshot(const std::string& name) {}
+void RendererNull::deinitGraphicsContext() {}

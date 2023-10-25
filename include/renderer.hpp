@@ -62,6 +62,9 @@ class Renderer {
 	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;  // Draw the given vertices
 
 	virtual void screenshot(const std::string& name) = 0;
+	// Some frontends and platforms may require that we delete our GL or misc context and obtain a new one for things like exclusive fullscreen
+	// This function does things like write back or cache necessary state before we delete our context
+	virtual void deinitGraphicsContext() = 0;
 
 	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
 #ifdef PANDA3DS_FRONTEND_QT

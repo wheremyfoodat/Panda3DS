@@ -112,6 +112,7 @@ class Emulator {
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
 	EmulatorConfig& getConfig() { return config; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }

@@ -802,3 +802,14 @@ void RendererGL::screenshot(const std::string& name) {
 
 	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
 }
+
+void RendererGL::deinitGraphicsContext() {
+	// Invalidate all surface caches since they'll no longer be valid
+	textureCache.reset();
+	depthBufferCache.reset();
+	colourBufferCache.reset();
+
+	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
+	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
+	printf("RendererGL::DeinitGraphicsContext called\n");
+}

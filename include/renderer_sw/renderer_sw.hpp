@@ -15,6 +15,7 @@ class RendererSw final : public Renderer {
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;
 	void screenshot(const std::string& name) override;
+	void deinitGraphicsContext() override;
 
 #ifdef PANDA3DS_FRONTEND_QT
 	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override {}
