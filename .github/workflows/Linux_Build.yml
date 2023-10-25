@@ -31,7 +31,7 @@ jobs:
       with:
         vulkan-query-version: latest
         vulkan-use-cache: true
-        vulkan-components: Vulkan-Headers, Vulkan-Loader, Glslang
+        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
