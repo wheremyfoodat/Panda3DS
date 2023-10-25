@@ -88,6 +88,7 @@ class GPU {
 	GPU(Memory& mem, EmulatorConfig& config);
 	void display() { renderer->display(); }
 	void screenshot(const std::string& name) { renderer->screenshot(name); }
+	void deinitGraphicsContext() { renderer->deinitGraphicsContext(); }
 
 #if defined(PANDA3DS_FRONTEND_SDL)
 	void initGraphicsContext(SDL_Window* window) { renderer->initGraphicsContext(window); }

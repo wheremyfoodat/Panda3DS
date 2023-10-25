@@ -23,3 +23,4 @@ void RendererSw::drawVertices(PICA::PrimType primType, std::span<const PICA::Ver
 }
 
 void RendererSw::screenshot(const std::string& name) { printf("RendererSW: Unimplemented screenshot call\n"); }
+void RendererSw::deinitGraphicsContext() { printf("RendererSW: Unimplemented DeinitGraphicsContext call\n"); }
