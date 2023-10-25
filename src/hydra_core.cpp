@@ -90,7 +90,6 @@ void HydraCore::runFrame() {
 	}
 
 	hid.updateInputs(emulator->getTicks());
-
 	emulator->runFrame();
 }
 
@@ -116,16 +115,14 @@ void HydraCore::resetContext() {
 	emulator->initGraphicsContext(nullptr);
 }
 
-void HydraCore::destroyContext() {}
-
+void HydraCore::destroyContext() { emulator.deinitGraphicsContext(); }
 void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
-
 void HydraCore::setGetProcAddress(void* function) { getProcAddress = function; }
 
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
 void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
 
-HC_API hydra::IBase* createEmulator() { return new HydraCore; }
+HC_API hydra::IBase* createEmulator() { return new HydraCore(); }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }
 
 HC_API const char* getInfo(hydra::InfoType type) {
