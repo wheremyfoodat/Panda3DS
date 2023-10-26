@@ -17,8 +17,8 @@ class Cheats {
 	};
 
 	struct Cheat {
-		bool enabled;
-		CheatType type;
+		bool enabled = true;
+		CheatType type = CheatType::ActionReplay;
 		std::vector<u32> instructions;
 	};
 
