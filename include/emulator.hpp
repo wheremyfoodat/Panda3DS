@@ -23,7 +23,7 @@
 #include "gl/context.h"
 #endif
 
-class SDL_Window;
+struct SDL_Window;
 
 enum class ROMType {
 	None,
