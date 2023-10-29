@@ -159,7 +159,7 @@ void HydraCore::removeCheat(u32 id) { emulator->getCheats().removeCheat(id); }
 void HydraCore::enableCheat(u32 id) { emulator->getCheats().enableCheat(id); }
 void HydraCore::disableCheat(u32 id) { emulator->getCheats().disableCheat(id); }
 
-HC_API hydra::IBase* createEmulator() { return new HydraCore; }
+HC_API hydra::IBase* createEmulator() { return new HydraCore(); }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }
 
 HC_API const char* getInfo(hydra::InfoType type) {
