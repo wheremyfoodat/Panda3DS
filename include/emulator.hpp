@@ -115,6 +115,7 @@ class Emulator {
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
 	EmulatorConfig& getConfig() { return config; }
+	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
