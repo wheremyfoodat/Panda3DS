@@ -241,3 +241,59 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 		case MessageType::ReleaseKey: emu->getServiceManager().getHID().releaseKey(message.key.key); break;
 	}
 }
+
+void MainWindow::keyPressEvent(QKeyEvent* event) {
+	auto pressKey = [this](u32 key) {
+		EmulatorMessage message{.type = MessageType::PressKey};
+		message.key.key = key;
+
+		sendMessage(message);
+	};
+
+	switch (event->key()) {
+		case Qt::Key_L: pressKey(HID::Keys::A); break;
+		case Qt::Key_K: pressKey(HID::Keys::B); break;
+		case Qt::Key_O: pressKey(HID::Keys::X); break;
+		case Qt::Key_I: pressKey(HID::Keys::Y); break;
+
+		case Qt::Key_Q: pressKey(HID::Keys::L); break;
+		case Qt::Key_P: pressKey(HID::Keys::R); break;
+
+		case Qt::Key_Right: pressKey(HID::Keys::Right); break;
+		case Qt::Key_Left: pressKey(HID::Keys::Left); break;
+		case Qt::Key_Up: pressKey(HID::Keys::Up); break;
+		case Qt::Key_Down: pressKey(HID::Keys::Down); break;
+
+		case Qt::Key_Return: pressKey(HID::Keys::Start); break;
+		case Qt::Key_Backspace: pressKey(HID::Keys::Select); break;
+		case Qt::Key_F4: sendMessage(EmulatorMessage{.type = MessageType::TogglePause}); break;
+		case Qt::Key_F5: sendMessage(EmulatorMessage{.type = MessageType::Reset}); break;
+	}
+}
+
+void MainWindow::keyReleaseEvent(QKeyEvent* event) {
+	auto releaseKey = [this](u32 key) {
+		EmulatorMessage message{.type = MessageType::ReleaseKey};
+		message.key.key = key;
+
+		sendMessage(message);
+	};
+
+	switch (event->key()) {
+		case Qt::Key_L: releaseKey(HID::Keys::A); break;
+		case Qt::Key_K: releaseKey(HID::Keys::B); break;
+		case Qt::Key_O: releaseKey(HID::Keys::X); break;
+		case Qt::Key_I: releaseKey(HID::Keys::Y); break;
+
+		case Qt::Key_Q: releaseKey(HID::Keys::L); break;
+		case Qt::Key_P: releaseKey(HID::Keys::R); break;
+
+		case Qt::Key_Right: releaseKey(HID::Keys::Right); break;
+		case Qt::Key_Left: releaseKey(HID::Keys::Left); break;
+		case Qt::Key_Up: releaseKey(HID::Keys::Up); break;
+		case Qt::Key_Down: releaseKey(HID::Keys::Down); break;
+
+		case Qt::Key_Return: releaseKey(HID::Keys::Start); break;
+		case Qt::Key_Backspace: releaseKey(HID::Keys::Select); break;
+	}
+}

@@ -74,4 +74,7 @@ class MainWindow : public QMainWindow {
   public:
 	MainWindow(QApplication* app, QWidget* parent = nullptr);
 	~MainWindow();
+
+	void keyPressEvent(QKeyEvent* event) override;
+	void keyReleaseEvent(QKeyEvent* event) override;
 };
