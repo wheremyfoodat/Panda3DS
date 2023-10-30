@@ -413,7 +413,7 @@ endif()
 
 if(ENABLE_LUAJIT)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_LUA=1")
-    target_link_libraries(Alber PRIVATE libluajit uv)
+    target_link_libraries(Alber PRIVATE libluajit uv_a)
 endif()
 
 if(ENABLE_OPENGL)
