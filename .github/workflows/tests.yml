@@ -13,7 +13,7 @@ jobs:
     container: devkitpro/devkitarm
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: Fix apt sources
         run: |
