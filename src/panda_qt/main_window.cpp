@@ -73,13 +73,13 @@ void MainWindow::emuThreadMainLoop() {
 		{
 			std::unique_lock lock(messageQueueMutex);
 
-			if (needToLoadROM) {
-				needToLoadROM = false;
-
-				bool success = emu->loadROM(romToLoad);
-				if (!success) {
-					printf("Failed to load ROM");
+			// Dispatch all messages in the message queue
+			if (!messageQueue.empty()) {
+				for (const auto& msg : messageQueue) {
+					dispatchMessage(msg);
 				}
+
+				messageQueue.clear();
 			}
 		}
 
@@ -102,23 +102,15 @@ void MainWindow::swapEmuBuffer() {
 }
 
 void MainWindow::selectROM() {
-	// Are we already waiting for a ROM to be loaded? Then complain about it!
-	{
-		std::unique_lock lock(messageQueueMutex);
-		if (needToLoadROM) {
-			QMessageBox::warning(this, tr("Already loading ROM"), tr("Panda3DS is already busy loading a ROM, please wait"));
-			return;
-		}
-	}
-
 	auto path =
 		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), "", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
 
 	if (!path.isEmpty()) {
-		std::unique_lock lock(messageQueueMutex);
+		std::filesystem::path* p = new std::filesystem::path(path.toStdU16String());
 
-		romToLoad = path.toStdU16String();
-		needToLoadROM = true;
+		EmulatorMessage message{.type = MessageType::LoadROM};
+		message.path.p = p;
+		sendMessage(message);
 	}
 }
 
@@ -133,6 +125,12 @@ MainWindow::~MainWindow() {
 	delete emu;
 	delete menuBar;
 	delete themeSelect;
+}
+
+// Send a message to the emulator thread. Lock the mutex and just push back to the vector.
+void MainWindow::sendMessage(const EmulatorMessage& message) {
+	std::unique_lock lock(messageQueueMutex);
+	messageQueue.push_back(message);
 }
 
 void MainWindow::setTheme(Theme theme) {
@@ -224,5 +222,22 @@ void MainWindow::dumpRomFS() {
 		case RomFS::DumpingResult::NoRomFS:
 			QMessageBox::warning(this, tr("No RomFS found"), tr("No RomFS partition was found in the loaded app"));
 			break;
+	}
+}
+
+void MainWindow::dispatchMessage(const EmulatorMessage& message) {
+	switch (message.type) {
+		case MessageType::LoadROM:
+			emu->loadROM(*message.path.p);
+			// Clean up the allocated path
+			delete message.path.p;
+			break;
+
+		case MessageType::Pause: emu->pause(); break;
+		case MessageType::Resume: emu->resume(); break;
+		case MessageType::TogglePause: emu->togglePause(); break;
+		case MessageType::Reset: emu->reset(Emulator::ReloadOption::Reload); break;
+		case MessageType::PressKey: emu->getServiceManager().getHID().pressKey(message.key.key); break;
+		case MessageType::ReleaseKey: emu->getServiceManager().getHID().releaseKey(message.key.key); break;
 	}
 }
