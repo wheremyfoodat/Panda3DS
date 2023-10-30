@@ -245,6 +245,15 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/xxhash/xxhash.c
 )
 
+if(ENABLE_LUAJIT)
+    # Build luv and libuv for TCP Lua server usage
+    include_directories(third_party/luv/src)
+    include_directories(third_party/luv/deps/lua-compat-5.3/c-api)
+    include_directories(third_party/libuv/include)
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/luv/src/luv.c)
+
+    add_subdirectory(third_party/libuv)
+endif()
 
 if(ENABLE_QT_GUI)
     include_directories(third_party/duckstation)
@@ -399,7 +408,7 @@ endif()
 
 if(ENABLE_LUAJIT)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_LUA=1")
-    target_link_libraries(Alber PRIVATE libluajit)
+    target_link_libraries(Alber PRIVATE libluajit uv)
 endif()
 
 if(ENABLE_OPENGL)
