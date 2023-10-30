@@ -91,6 +91,10 @@ void MainWindow::emuThreadMainLoop() {
 		}
 
 		emu->runFrame();
+		if (emu->romType != ROMType::None) {
+			emu->getServiceManager().getHID().updateInputs(emu->getTicks());
+		}
+
 		swapEmuBuffer();
 	}
 
