@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "emulator.hpp"
+#include "panda_qt/about_window.hpp"
 #include "panda_qt/screen.hpp"
 #include "services/hid.hpp"
 
@@ -56,6 +57,7 @@ class MainWindow : public QMainWindow {
 	std::vector<EmulatorMessage> messageQueue;
 
 	ScreenWidget screen;
+	AboutWindow* aboutWindow;
 	QComboBox* themeSelect = nullptr;
 	QMenuBar* menuBar = nullptr;
 
@@ -65,6 +67,7 @@ class MainWindow : public QMainWindow {
 	void emuThreadMainLoop();
 	void selectROM();
 	void dumpRomFS();
+	void showAboutMenu();
 	void sendMessage(const EmulatorMessage& message);
 	void dispatchMessage(const EmulatorMessage& message);
 

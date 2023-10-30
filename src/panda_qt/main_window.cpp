@@ -20,7 +20,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto fileMenu = menuBar->addMenu(tr("File"));
 	auto emulationMenu = menuBar->addMenu(tr("Emulation"));
 	auto toolsMenu = menuBar->addMenu(tr("Tools"));
-	auto helpMenu = menuBar->addMenu(tr("Help"));
 	auto aboutMenu = menuBar->addMenu(tr("About"));
 
 	// Create and bind actions for them
@@ -37,6 +36,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 
+	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
+	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
+
 	// Set up theme selection
 	setTheme(Theme::Dark);
 	themeSelect = new QComboBox(this);
@@ -49,6 +51,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	themeSelect->setGeometry(40, 40, 100, 50);
 	themeSelect->show();
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setTheme(static_cast<Theme>(index)); });
+
+	// Set up misc objects
+	aboutWindow = new AboutWindow(nullptr);
 
 	emu = new Emulator();
 	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
@@ -136,6 +141,7 @@ MainWindow::~MainWindow() {
 
 	delete emu;
 	delete menuBar;
+	delete aboutWindow;
 	delete themeSelect;
 }
 
@@ -215,7 +221,6 @@ void MainWindow::setTheme(Theme theme) {
 			break;
 		}
 
-
 		case Theme::System: {
 			qApp->setPalette(this->style()->standardPalette());
 			qApp->setStyle(QStyleFactory::create("WindowsVista"));
@@ -258,6 +263,11 @@ void MainWindow::dumpRomFS() {
 			QMessageBox::warning(this, tr("No RomFS found"), tr("No RomFS partition was found in the loaded app"));
 			break;
 	}
+}
+
+void MainWindow::showAboutMenu() {
+	AboutWindow about(this);
+	about.exec();
 }
 
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {

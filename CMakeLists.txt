@@ -185,8 +185,8 @@ set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
 if(ENABLE_QT_GUI)
-    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp)
-    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp)
+    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp)
+    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp)
 
     source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
     source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
@@ -429,7 +429,7 @@ if(ENABLE_QT_GUI)
     qt_add_resources(Alber "app_images"
         PREFIX "/"
         FILES
-            docs/img/rsob_icon.png
+            docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
     )
 else()
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")
