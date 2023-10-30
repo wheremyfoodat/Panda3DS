@@ -27,6 +27,13 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto pandaAction = fileMenu->addAction(tr("panda..."));
 	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
 
+	auto pauseAction = emulationMenu->addAction(tr("Pause"));
+	auto resumeAction = emulationMenu->addAction(tr("Resume"));
+	auto resetAction = emulationMenu->addAction(tr("Reset"));
+	connect(pauseAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Pause}); });
+	connect(resumeAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Resume}); });
+	connect(resetAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Reset}); });
+
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 
