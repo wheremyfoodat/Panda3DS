@@ -23,6 +23,7 @@ class MainWindow : public QMainWindow {
 		System = 0,
 		Light = 1,
 		Dark = 2,
+		GreetingsCat = 3,
 	};
 
 	// Types of messages we might send from the GUI thread to the emulator thread

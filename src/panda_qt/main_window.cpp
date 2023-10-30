@@ -43,6 +43,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	themeSelect->addItem(tr("System"));
 	themeSelect->addItem(tr("Light"));
 	themeSelect->addItem(tr("Dark"));
+	themeSelect->addItem(tr("Greetings Cat"));
 	themeSelect->setCurrentIndex(static_cast<int>(currentTheme));
 
 	themeSelect->setGeometry(40, 40, 100, 50);
@@ -191,6 +192,29 @@ void MainWindow::setTheme(Theme theme) {
 			qApp->setPalette(p);
 			break;
 		}
+
+		case Theme::GreetingsCat: {
+			QApplication::setStyle(QStyleFactory::create("Fusion"));
+
+			QPalette p;
+			p.setColor(QPalette::Window, QColor(250, 207, 228));
+			p.setColor(QPalette::WindowText, QColor(225, 22, 137));
+			p.setColor(QPalette::Base, QColor(250, 207, 228));
+			p.setColor(QPalette::AlternateBase, QColor(250, 207, 228));
+			p.setColor(QPalette::ToolTipBase, QColor(225, 22, 137));
+			p.setColor(QPalette::ToolTipText, QColor(225, 22, 137));
+			p.setColor(QPalette::Text, QColor(225, 22, 137));
+			p.setColor(QPalette::Button, QColor(250, 207, 228));
+			p.setColor(QPalette::ButtonText, QColor(225, 22, 137));
+			p.setColor(QPalette::BrightText, Qt::black);
+			p.setColor(QPalette::Link, QColor(42, 130, 218));
+
+			p.setColor(QPalette::Highlight, QColor(42, 130, 218));
+			p.setColor(QPalette::HighlightedText, Qt::black);
+			qApp->setPalette(p);
+			break;
+		}
+
 
 		case Theme::System: {
 			qApp->setPalette(this->style()->standardPalette());
