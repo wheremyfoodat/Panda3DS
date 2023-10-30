@@ -40,6 +40,11 @@ option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 
+if(ENABLE_LUAJIT AND ANDROID)
+    message(STATUS "Enabled LuaJIT on Android build. Automatically disabling it until it works properly")
+    set(ENABLE_LUAJIT OFF)
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${FMT_INCLUDE_DIR})
