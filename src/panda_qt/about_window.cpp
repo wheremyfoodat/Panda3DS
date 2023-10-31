@@ -39,7 +39,8 @@ AboutWindow::AboutWindow(QWidget* parent) : QDialog(parent) {
 												"- marysaka<br>"
 												"- Sky<br>"
 												"- merryhime<br>"
-												"- TGP17<br>")
+												"- TGP17<br>"
+												"- Shadow<br>")
 			);
 
 	QLabel* textLabel = new QLabel(text);
