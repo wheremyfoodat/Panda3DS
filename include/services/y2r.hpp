@@ -87,6 +87,7 @@ class Y2RService {
 
 	void setAlpha(u32 messagePointer);
 	void setBlockAlignment(u32 messagePointer);
+	void setCoefficientParams(u32 messagePointer);
 	void setInputFormat(u32 messagePointer);
 	void setInputLineWidth(u32 messagePointer);
 	void setInputLines(u32 messagePointer);
