@@ -288,6 +288,7 @@ void Y2RService::getInputLineWidth(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, inputLineWidth);
 }
+
 void Y2RService::setInputLines(u32 messagePointer) {
 	const u16 lines = mem.read16(messagePointer + 4);
 	log("Y2R::SetInputLines (lines = %d)\n", lines);
@@ -349,15 +350,16 @@ void Y2RService::getStandardCoefficientParams(u32 messagePointer) {
 
 void Y2RService::setCoefficientParams(u32 messagePointer) {
 	log("Y2R::SetCoefficientParams\n");
-	mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
-	mem.write32(messagePointer + 4, Result::Success);
 	auto& coeff = conversionCoefficients;
 
 	// Write coefficient parameters to output buffer
 	for (int i = 0; i < 8; i++) {
-		const u32 pointer = messagePointer + 8 + i * sizeof(u16);  // Pointer to write parameter to
+		const u32 pointer = messagePointer + 4 + i * sizeof(u16);  // Pointer to write parameter to
 		coeff[i] = mem.read16(pointer);
 	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 void Y2RService::getCoefficientParams(u32 messagePointer) {
