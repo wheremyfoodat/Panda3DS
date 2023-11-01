@@ -60,6 +60,8 @@ class Y2RService {
 		{{0x12A, 0x1CA, 0x88, 0x36, 0x21C, -0x1F04, 0x99C, -0x2421}},   // ITU_Rec709_Scaling
 	}};
 
+	CoefficientSet conversionCoefficients; // Current conversion coefficients
+
 	InputFormat inputFmt;
 	OutputFormat outputFmt;
 	Rotation rotation;
@@ -98,6 +100,7 @@ class Y2RService {
 	void setSpacialDithering(u32 messagePointer);
 	void setStandardCoeff(u32 messagePointer);
 	void setTemporalDithering(u32 messagePointer);
+	void getCoefficientParams(u32 messagePointer);
 	void getStandardCoefficientParams(u32 messagePointer);
 
 	void startConversion(u32 messagePointer);
