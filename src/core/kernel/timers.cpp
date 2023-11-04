@@ -9,7 +9,7 @@ Handle Kernel::makeTimer(ResetType type) {
 		Helpers::panic("Created pulse timer");
 	}
 
-	// timerHandles.push_back(ret);
+	timerHandles.push_back(ret);
 	return ret;
 }
 
