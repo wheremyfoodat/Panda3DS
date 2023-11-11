@@ -4,7 +4,7 @@
 
 using namespace Applets;
 
-AppletManager::AppletManager(Memory& mem) : miiSelector(mem), swkbd(mem) {}
+AppletManager::AppletManager(Memory& mem) : miiSelector(mem, nextParameter), swkbd(mem, nextParameter) {}
 
 void AppletManager::reset() {
 	miiSelector.reset();

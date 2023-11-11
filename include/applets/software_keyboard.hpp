@@ -8,6 +8,6 @@ namespace Applets {
 		virtual Result::HorizonResult receiveParameter() override;
 		virtual void reset() override;
 
-		SoftwareKeyboardApplet(Memory& memory) : AppletBase(memory) {}
+		SoftwareKeyboardApplet(Memory& memory, std::optional<Parameter>& nextParam) : AppletBase(memory, nextParam) {}
 	};
 }  // namespace Applets

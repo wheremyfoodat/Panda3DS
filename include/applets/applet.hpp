@@ -72,7 +72,9 @@ namespace Applets {
 	};
 
 	class AppletBase {
+	  protected:
 		Memory& mem;
+		std::optional<Parameter>& nextParameter;
 
 	  public:
 		virtual const char* name() = 0;
@@ -83,6 +85,6 @@ namespace Applets {
 		virtual Result::HorizonResult receiveParameter() = 0;
 		virtual void reset() = 0;
 
-		AppletBase(Memory& mem) : mem(mem) {}
+		AppletBase(Memory& mem, std::optional<Parameter>& nextParam) : mem(mem), nextParameter(nextParam) {}
 	};
 }  // namespace Applets
