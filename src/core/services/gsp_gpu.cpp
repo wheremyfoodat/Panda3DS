@@ -15,6 +15,7 @@ namespace ServiceCommands {
 		FlushDataCache = 0x00080082,
 		SetLCDForceBlack = 0x000B0040,
 		TriggerCmdReqQueue = 0x000C0000,
+		ReleaseRight = 0x00170000,
 		ImportDisplayCaptureInfo = 0x00180000,
 		SaveVramSysArea = 0x00190000,
 		SetInternalPriorities = 0x001E0080,
@@ -49,6 +50,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case ServiceCommands::ImportDisplayCaptureInfo: importDisplayCaptureInfo(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
+		case ServiceCommands::ReleaseRight: releaseRight(messagePointer); break;
 		case ServiceCommands::SaveVramSysArea: saveVramSysArea(messagePointer); break;
 		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
 		case ServiceCommands::SetBufferSwap: setBufferSwap(messagePointer); break;
@@ -77,6 +79,16 @@ void GPUService::acquireRight(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void GPUService::releaseRight(u32 messagePointer) {
+	log("GSP::GPU::ReleaseRight\n");
+	if (privilegedProcess == currentPID) {
+		privilegedProcess = 0xFFFFFFFF;
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x17, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

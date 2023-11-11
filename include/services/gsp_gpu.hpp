@@ -65,6 +65,7 @@ class GPUService {
 	void flushDataCache(u32 messagePointer);
 	void importDisplayCaptureInfo(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
+	void releaseRight(u32 messagePointer);
 	void saveVramSysArea(u32 messagePointer);
 	void setAxiConfigQoSMode(u32 messagePointer);
 	void setBufferSwap(u32 messagePointer);
