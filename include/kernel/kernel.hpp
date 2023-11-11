@@ -36,6 +36,7 @@ class Kernel {
 	std::vector<KernelObject> objects;
 	std::vector<Handle> portHandles;
 	std::vector<Handle> mutexHandles;
+	std::vector<Handle> timerHandles;
 
 	// Thread indices, sorted by priority
 	std::vector<int> threadIndices;

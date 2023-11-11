@@ -148,6 +148,7 @@ void Kernel::reset() {
 	}
 	objects.clear();
 	mutexHandles.clear();
+	timerHandles.clear();
 	portHandles.clear();
 	threadIndices.clear();
 	serviceManager.reset();
