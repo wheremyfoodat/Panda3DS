@@ -32,31 +32,6 @@ namespace APTCommands {
 	};
 }
 
-// https://www.3dbrew.org/wiki/NS_and_APT_Services#Command
-namespace APTTransitions {
-	enum : u32 {
-		None = 0,
-		Wakeup = 1,
-		Request = 2,
-		Response = 3,
-		Exit = 4,
-		Message = 5,
-		HomeButtonSingle = 6,
-		HomeButtonDouble = 7,
-		DSPSleep = 8,
-		DSPWakeup = 9,
-		WakeupByExit = 10,
-		WakuepByPause = 11,
-		WakeupByCancel = 12,
-		WakeupByCancelAll = 13,
-		WakeupByPowerButton = 14,
-		WakeupToJumpHome = 15,
-		RequestForApplet = 16,
-		WakeupToLaunchApp = 17,
-		ProcessDed = 0x41
-	};
-}
-
 void APTService::reset() {
 	// Set the default CPU time limit to 30%. Seems safe, as this is what Metroid 2 uses by default
 	cpuTimeLimit = 30;
@@ -273,13 +248,16 @@ void APTService::receiveParameter(u32 messagePointer) {
 	log("APT::ReceiveParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
 
 	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
+	auto parameter = appletManager.receiveParameter();
 
-	// TODO: Properly implement this. We currently stub somewhat like 3dmoo
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Sender App ID
-	mem.write32(messagePointer + 12, APTTransitions::Wakeup); // Command
-	mem.write32(messagePointer + 16, 0);
+	// Sender App ID
+	mem.write32(messagePointer + 8, parameter.senderID);
+	// Command
+	mem.write32(messagePointer + 12, static_cast<u32>(parameter.signal));
+	// Size of parameter data
+	mem.write32(messagePointer + 16, parameter.data.size());
 	mem.write32(messagePointer + 20, 0x10);
 	mem.write32(messagePointer + 24, 0);
 	mem.write32(messagePointer + 28, 0);
@@ -291,13 +269,17 @@ void APTService::glanceParameter(u32 messagePointer) {
 	log("APT::GlanceParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
 
 	if (size > 0x1000) Helpers::panic("APT::GlanceParameter with size > 0x1000");
+	auto parameter = appletManager.glanceParameter();
 
 	// TODO: Properly implement this. We currently stub it similar
 	mem.write32(messagePointer, IPC::responseHeader(0xE, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Sender App ID
-	mem.write32(messagePointer + 12, APTTransitions::Wakeup); // Command
-	mem.write32(messagePointer + 16, 0);
+	// Sender App ID
+	mem.write32(messagePointer + 8, parameter.senderID);
+	// Command
+	mem.write32(messagePointer + 12, static_cast<u32>(parameter.signal));
+	// Size of parameter data
+	mem.write32(messagePointer + 16, parameter.data.size());
 	mem.write32(messagePointer + 20, 0);
 	mem.write32(messagePointer + 24, 0);
 	mem.write32(messagePointer + 28, 0);

@@ -1,4 +1,7 @@
 #include "applets/applet_manager.hpp"
+
+#include "services/apt.hpp"
+
 using namespace Applets;
 
 AppletManager::AppletManager(Memory& mem) : miiSelector(mem), swkbd(mem) {}
@@ -18,4 +21,30 @@ AppletBase* AppletManager::getApplet(u32 id) {
 
 		default: return nullptr;
 	}
+}
+
+Applets::Parameter AppletManager::glanceParameter() {
+	if (nextParameter) {
+		// Copy parameter
+		Applets::Parameter param = nextParameter.value();
+		// APT module clears next parameter even for GlanceParameter for these 2 signals
+		if (param.signal == APTSignal::DspWakeup || param.signal == APTSignal::DspSleep) {
+			nextParameter = std::nullopt;
+		}
+
+		return param;
+	}
+
+	// Default return value. This is legacy code from before applets were implemented. TODO: Update it
+	else {
+		return Applets::Parameter{.senderID = 0, .destID = Applets::AppletIDs::Application, .signal = APTSignal::Wakeup, .data = {}};
+	}
+}
+
+Applets::Parameter AppletManager::receiveParameter() {
+	Applets::Parameter param = glanceParameter();
+	// ReceiveParameter always clears nextParameter whereas glanceParameter does not
+	nextParameter = std::nullopt;
+
+	return param;
 }
