@@ -269,7 +269,7 @@ void APTService::receiveParameter(u32 messagePointer) {
 	// Sender App ID
 	mem.write32(messagePointer + 8, parameter.senderID);
 	// Command
-	mem.write32(messagePointer + 12, static_cast<u32>(parameter.signal));
+	mem.write32(messagePointer + 12, parameter.signal);
 	// Size of parameter data
 	mem.write32(messagePointer + 16, parameter.data.size());
 	mem.write32(messagePointer + 20, 0x10);
