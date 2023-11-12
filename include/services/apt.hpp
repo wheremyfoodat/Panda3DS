@@ -15,6 +15,31 @@ enum class ConsoleModel : u32 {
 	Old3DS, New3DS
 };
 
+// https://www.3dbrew.org/wiki/NS_and_APT_Services#Command
+namespace APT::Transitions {
+	enum : u32 {
+		None = 0,
+		Wakeup = 1,
+		Request = 2,
+		Response = 3,
+		Exit = 4,
+		Message = 5,
+		HomeButtonSingle = 6,
+		HomeButtonDouble = 7,
+		DSPSleep = 8,
+		DSPWakeup = 9,
+		WakeupByExit = 10,
+		WakuepByPause = 11,
+		WakeupByCancel = 12,
+		WakeupByCancelAll = 13,
+		WakeupByPowerButton = 14,
+		WakeupToJumpHome = 15,
+		RequestForApplet = 16,
+		WakeupToLaunchApp = 17,
+		ProcessDed = 0x41
+	};
+}
+
 class APTService {
 	Handle handle = KernelHandles::APT;
 	Memory& mem;
