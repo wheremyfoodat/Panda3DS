@@ -67,7 +67,7 @@ namespace Applets {
 	struct Parameter {
 		u32 senderID;
 		u32 destID;
-		APTSignal signal;
+		u32 signal;
 		std::vector<u8> data;
 	};
 
@@ -82,7 +82,7 @@ namespace Applets {
 		// Called by APT::StartLibraryApplet and similar
 		virtual Result::HorizonResult start() = 0;
 		// Transfer parameters from application -> applet
-		virtual Result::HorizonResult receiveParameter() = 0;
+		virtual Result::HorizonResult receiveParameter(const Parameter& parameter) = 0;
 		virtual void reset() = 0;
 
 		AppletBase(Memory& mem, std::optional<Parameter>& nextParam) : mem(mem), nextParameter(nextParam) {}

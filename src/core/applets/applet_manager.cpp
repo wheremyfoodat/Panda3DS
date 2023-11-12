@@ -28,7 +28,7 @@ Applets::Parameter AppletManager::glanceParameter() {
 		// Copy parameter
 		Applets::Parameter param = nextParameter.value();
 		// APT module clears next parameter even for GlanceParameter for these 2 signals
-		if (param.signal == APTSignal::DspWakeup || param.signal == APTSignal::DspSleep) {
+		if (param.signal == static_cast<u32>(APTSignal::DspWakeup) || param.signal == static_cast<u32>(APTSignal::DspSleep)) {
 			nextParameter = std::nullopt;
 		}
 
@@ -37,7 +37,12 @@ Applets::Parameter AppletManager::glanceParameter() {
 
 	// Default return value. This is legacy code from before applets were implemented. TODO: Update it
 	else {
-		return Applets::Parameter{.senderID = 0, .destID = Applets::AppletIDs::Application, .signal = APTSignal::Wakeup, .data = {}};
+		return Applets::Parameter{
+			.senderID = 0,
+			.destID = Applets::AppletIDs::Application,
+			.signal = static_cast<u32>(APTSignal::Wakeup),
+			.data = {},
+		};
 	}
 }
 

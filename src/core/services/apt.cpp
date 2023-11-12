@@ -234,7 +234,21 @@ void APTService::sendParameter(u32 messagePointer) {
 	if (destApplet == nullptr) {
 		Helpers::warn("APT::SendParameter: Unimplemented dest applet ID");
 	} else {
-		auto result = destApplet->receiveParameter();
+		// Construct parameter, send it to applet
+		Applets::Parameter param;
+		param.senderID = sourceAppID;
+		param.destID = destAppID;
+		param.signal = cmd;
+
+		// Fetch parameter data buffer
+		param.data.reserve(paramSize);
+		u32 pointer = parameterPointer;
+
+		for (u32 i = 0; i < paramSize; i++) {
+			param.data.push_back(mem.read8(pointer++));
+		}
+
+		auto result = destApplet->receiveParameter(param);
 	}
 
 	if (resumeEvent.has_value()) {
