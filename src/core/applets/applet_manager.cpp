@@ -7,6 +7,8 @@ using namespace Applets;
 AppletManager::AppletManager(Memory& mem) : miiSelector(mem, nextParameter), swkbd(mem, nextParameter) {}
 
 void AppletManager::reset() {
+	nextParameter = std::nullopt;
+
 	miiSelector.reset();
 	swkbd.reset();
 }
