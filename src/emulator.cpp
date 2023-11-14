@@ -1,6 +1,8 @@
 #include "emulator.hpp"
 
+#ifndef __ANDROID__
 #include <SDL_filesystem.h>
+#endif
 
 #include <fstream>
 
