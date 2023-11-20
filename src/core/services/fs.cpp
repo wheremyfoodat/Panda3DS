@@ -670,6 +670,9 @@ void FSService::getThisSaveDataSecureValue(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x86F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0); // Secure value does not exist
+	mem.write8(messagePointer + 12, 1); // TODO: What is this?
+	mem.write64(messagePointer + 16, 0); // Secure value
 }
 
 void FSService::setThisSaveDataSecureValue(u32 messagePointer) {
