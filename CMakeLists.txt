@@ -393,7 +393,7 @@ else()
 endif()
 
 if(ANDROID)
-    target_link_libraries(Alber PRIVATE log)
+    target_link_libraries(Alber PRIVATE EGL log)
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
