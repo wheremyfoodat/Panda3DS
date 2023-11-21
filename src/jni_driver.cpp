@@ -7,6 +7,7 @@
 
 std::unique_ptr<Emulator> emulator = nullptr;
 RendererGL* renderer = nullptr;
+bool romLoaded = false;
 
 extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_Initialize(JNIEnv* env, jobject obj) {
     emulator = std::make_unique<Emulator>();
@@ -20,8 +21,6 @@ extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_Initial
 	}
     __android_log_print(ANDROID_LOG_INFO, "AlberDriver", "OpenGL ES %d.%d", GLVersion.major, GLVersion.minor);
 	emulator->initGraphicsContext(nullptr);
-    // girlboss it for now :3
-    emulator->loadROM("/data/data/com.panda3ds.pandroid/files/rom.3ds");
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_RunFrame(JNIEnv* env, jobject obj, jint fbo) {
@@ -33,4 +32,15 @@ extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_RunFram
 extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_Finalize(JNIEnv* env, jobject obj) {
     emulator = nullptr;
     renderer = nullptr;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_com_panda3ds_pandroid_AlberDriver_HasRomLoaded(JNIEnv* env, jobject obj) {
+    return romLoaded;
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_LoadRom(JNIEnv* env, jobject obj, jstring path) {
+    const char* pathStr = env->GetStringUTFChars(path, nullptr);
+    __android_log_print(ANDROID_LOG_INFO, "AlberDriver", "Loading ROM %s", pathStr);
+    romLoaded = emulator->loadROM(pathStr);
+    env->ReleaseStringUTFChars(path, pathStr);
 }
