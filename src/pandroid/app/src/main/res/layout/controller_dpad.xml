@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="96dp"
+    android:layout_height="96dp">
+
+    <com.panda3ds.pandroid.view.controller.nodes.Button
+        android:id="@+id/button_up"
+        style="@style/ControllerSimpleButton"
+        android:layout_marginLeft="30dp"/>
+
+    <com.panda3ds.pandroid.view.controller.nodes.Button
+        android:id="@+id/button_left"
+        style="@style/ControllerSimpleButton"
+        android:layout_marginTop="30dp"/>
+
+    <com.panda3ds.pandroid.view.controller.nodes.Button
+        android:id="@+id/button_down"
+        style="@style/ControllerSimpleButton"
+        android:layout_marginTop="60dp"
+        android:layout_marginLeft="30dp"/>
+
+    <com.panda3ds.pandroid.view.controller.nodes.Button
+        android:id="@+id/button_right"
+        style="@style/ControllerSimpleButton"
+        android:layout_marginTop="30dp"
+        android:layout_marginLeft="60dp"/>
+
+</RelativeLayout>
