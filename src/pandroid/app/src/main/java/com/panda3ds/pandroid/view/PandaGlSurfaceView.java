@@ -1,11 +1,7 @@
-package com.panda3ds.pandroid;
+package com.panda3ds.pandroid.view;
 
-import android.app.Activity;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
-import android.util.DisplayMetrics;
-
-import com.panda3ds.pandroid.PandaGlRenderer;
 
 public class PandaGlSurfaceView extends GLSurfaceView {
     final PandaGlRenderer renderer;
@@ -15,5 +11,9 @@ public class PandaGlSurfaceView extends GLSurfaceView {
         setEGLContextClientVersion(3);
         renderer = new PandaGlRenderer();
         setRenderer(renderer);
+    }
+
+    public PandaGlRenderer getRenderer() {
+        return renderer;
     }
 }

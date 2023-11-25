@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid;
+package com.panda3ds.pandroid.utils;
 
 import android.content.ContentUris;
 import android.content.Context;

@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid;
+package com.panda3ds.pandroid.view;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -10,11 +10,16 @@ import android.opengl.GLSurfaceView;
 import android.util.DisplayMetrics;
 import android.util.Log;
 
+import com.panda3ds.pandroid.AlberDriver;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 
 public class PandaGlRenderer implements GLSurfaceView.Renderer {
+
+    private final ArrayList<Runnable> events = new ArrayList<>();
     int screenWidth, screenHeight;
     int screenTexture;
     public int screenFbo;
@@ -22,6 +27,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
     PandaGlRenderer() {
         super();
     }
+
 
     @Override
     protected void finalize() throws Throwable {
@@ -33,7 +39,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
         }
         super.finalize();
     }
-    
+
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
         Log.i("pandroid", glGetString(GL_EXTENSIONS));
         Log.w("pandroid", glGetString(GL_VERSION));
@@ -61,12 +67,23 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
         AlberDriver.Initialize();
     }
 
+    public void postDrawEvent(Runnable callback){
+        events.add(callback);
+    }
+
     public void onDrawFrame(GL10 unused) {
         if (AlberDriver.HasRomLoaded()) {
             AlberDriver.RunFrame(screenFbo);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
             glBlitFramebuffer(0, 0, 400, 480, 0, 0, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        }
+
+        int count = events.size();
+        while (count > 0){
+            events.get(0).run();
+            events.remove(0);
+            count--;
         }
     }
 
