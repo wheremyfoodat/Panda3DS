@@ -10,7 +10,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.panda3ds.pandroid.C;
+import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.utils.PathUtils;
 
@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
                 String path = PathUtils.getPath(getApplicationContext(), data.getData());
                 Toast.makeText(getApplicationContext(), "pandroid opening " + path, Toast.LENGTH_LONG).show();
                 startActivity(new Intent(this, GameActivity.class)
-                        .putExtra(C.EXTRA_PATH, path));
+                        .putExtra(Constants.EXTRA_PATH, path));
             }
             super.onActivityResult(requestCode, resultCode, data);
         }

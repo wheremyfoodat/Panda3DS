@@ -7,25 +7,22 @@ import static android.opengl.GLES32.*;
 
 import android.content.res.Resources;
 import android.opengl.GLSurfaceView;
-import android.util.DisplayMetrics;
 import android.util.Log;
 
 import com.panda3ds.pandroid.AlberDriver;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
 public class PandaGlRenderer implements GLSurfaceView.Renderer {
 
-    private final ArrayList<Runnable> events = new ArrayList<>();
+    private final String romPath;
     int screenWidth, screenHeight;
     int screenTexture;
     public int screenFbo;
 
-    PandaGlRenderer() {
+    PandaGlRenderer(String romPath) {
         super();
+        this.romPath = romPath;
     }
 
 
@@ -65,10 +62,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         AlberDriver.Initialize();
-    }
-
-    public void postDrawEvent(Runnable callback){
-        events.add(callback);
+        AlberDriver.LoadRom(romPath);
     }
 
     public void onDrawFrame(GL10 unused) {
@@ -77,13 +71,6 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
             glBlitFramebuffer(0, 0, 400, 480, 0, 0, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-        }
-
-        int count = events.size();
-        while (count > 0){
-            events.get(0).run();
-            events.remove(0);
-            count--;
         }
     }
 

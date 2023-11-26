@@ -6,10 +6,11 @@ import android.opengl.GLSurfaceView;
 public class PandaGlSurfaceView extends GLSurfaceView {
     final PandaGlRenderer renderer;
 
-    public PandaGlSurfaceView(Context context) {
+    public PandaGlSurfaceView(Context context, String romPath) {
         super(context);
         setEGLContextClientVersion(3);
-        renderer = new PandaGlRenderer();
+        setDebugFlags(DEBUG_LOG_GL_CALLS);
+        renderer = new PandaGlRenderer(romPath);
         setRenderer(renderer);
     }
 
