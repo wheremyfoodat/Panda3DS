@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid;
+package com.panda3ds.pandroid.view;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -7,21 +7,24 @@ import static android.opengl.GLES32.*;
 
 import android.content.res.Resources;
 import android.opengl.GLSurfaceView;
-import android.util.DisplayMetrics;
 import android.util.Log;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
+import com.panda3ds.pandroid.AlberDriver;
+
+import java.util.ArrayList;
 
 public class PandaGlRenderer implements GLSurfaceView.Renderer {
+
+    private final String romPath;
     int screenWidth, screenHeight;
     int screenTexture;
     public int screenFbo;
 
-    PandaGlRenderer() {
+    PandaGlRenderer(String romPath) {
         super();
+        this.romPath = romPath;
     }
+
 
     @Override
     protected void finalize() throws Throwable {
@@ -33,7 +36,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
         }
         super.finalize();
     }
-    
+
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
         Log.i("pandroid", glGetString(GL_EXTENSIONS));
         Log.w("pandroid", glGetString(GL_VERSION));
@@ -59,6 +62,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         AlberDriver.Initialize();
+        AlberDriver.LoadRom(romPath);
     }
 
     public void onDrawFrame(GL10 unused) {
