@@ -10,6 +10,7 @@ import android.opengl.GLSurfaceView;
 import android.util.Log;
 
 import com.panda3ds.pandroid.AlberDriver;
+import com.panda3ds.pandroid.utils.Constants;
 
 import java.util.ArrayList;
 
@@ -69,43 +70,41 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
             AlberDriver.RunFrame(screenFbo);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
+
             if (screenWidth > screenHeight) {
-                int topDisplayWidth = (int) ((screenHeight / 240.0) * 400);
+                int topDisplayWidth = (int)((screenHeight / (float)Constants.N3DS_HEIGHT) * Constants.N3DS_WIDTH);
                 int topDisplayHeight = screenHeight;
 
-                if (topDisplayWidth > (screenWidth*0.7)){
-                    topDisplayWidth = (int) (screenWidth * 0.7);
-                    topDisplayHeight = (int) ((topDisplayWidth/400.0)*240);
+                if (topDisplayWidth > screenWidth * 0.7){
+                    topDisplayWidth = (int)(screenWidth * 0.7);
+                    topDisplayHeight = (int)((topDisplayWidth / (float)Constants.N3DS_WIDTH) * Constants.N3DS_HEIGHT);
                 }
 
-                int bottomDisplayHeight = (int) (((screenWidth-topDisplayWidth)/320)*240);
+                int bottomDisplayHeight = (int)(((screenWidth - topDisplayWidth) / 320) * Constants.N3DS_HEIGHT);
+                int topDisplayY = screenHeight - topDisplayHeight;
+                int bottomDisplayY = screenHeight - bottomDisplayHeight;
 
-                int topDisplayY = screenHeight-topDisplayHeight;
-                int bottomDisplayY = screenHeight-bottomDisplayHeight;
-
-                glBlitFramebuffer(0, 240,
-                        400, 480,
+                glBlitFramebuffer(0, Constants.N3DS_HEIGHT,
+                        Constants.N3DS_WIDTH, Constants.N3DS_HEIGHT * 2,
                         0, topDisplayY,
                         topDisplayWidth,topDisplayY+topDisplayHeight,
                         GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
                 glBlitFramebuffer(
                         40, 0,
-                        360, 240,
+                        360, Constants.N3DS_HEIGHT,
                         topDisplayWidth, bottomDisplayY,
                         screenWidth,bottomDisplayY+bottomDisplayHeight,
                         GL_COLOR_BUFFER_BIT, GL_LINEAR);
             } else {
-                int h = (int) ((screenWidth / 400.0) * 480);
-                glBlitFramebuffer(0, 0, 400, 480, 0, screenHeight - h, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+                int h = (int)((screenWidth / (float)Constants.N3DS_WIDTH) * Constants.N3DS_HEIGHT * 2);
+                glBlitFramebuffer(0, 0, Constants.N3DS_WIDTH, Constants.N3DS_HEIGHT * 2, 0, screenHeight - h, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
             }
         }
     }
 
     public void onSurfaceChanged(GL10 unused, int width, int height) {
-        glViewport(0, 0, width, height);
         screenWidth = width;
         screenHeight = height;
-        glDisable(GL_SCISSOR_TEST);
     }
 }

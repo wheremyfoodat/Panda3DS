@@ -13,8 +13,4 @@ public class PandaGlSurfaceView extends GLSurfaceView {
         renderer = new PandaGlRenderer(romPath);
         setRenderer(renderer);
     }
-
-    public PandaGlRenderer getRenderer() {
-        return renderer;
-    }
 }

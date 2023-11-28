@@ -33,7 +33,7 @@ public class GameActivity extends BaseActivity {
         if(!intent.hasExtra(Constants.EXTRA_PATH)){
 
             setContentView(new FrameLayout(this));
-            Toast.makeText(this, "INVALID ROM PATH", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Invalid rom path!", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
