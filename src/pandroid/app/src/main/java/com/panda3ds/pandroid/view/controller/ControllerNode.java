@@ -18,6 +18,10 @@ public interface ControllerNode {
         return new Vector2(position[0], position[1]);
     }
 
+    default boolean isVisible(){
+        return ((View)this).isShown();
+    }
+
     @NonNull Vector2 getSize();
 
     void onTouch(TouchEvent event);

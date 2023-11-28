@@ -2,14 +2,18 @@ package com.panda3ds.pandroid.view.controller;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 
 import com.panda3ds.pandroid.math.Vector2;
+import com.panda3ds.pandroid.utils.Constants;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 
 public class ControllerLayout extends RelativeLayout {
@@ -34,8 +38,14 @@ public class ControllerLayout extends RelativeLayout {
     }
 
     public void refreshChildren(){
+        ArrayList<ControllerNode> nodes = new ArrayList<>();
+        populateNodesArray(this, nodes);
+
+        //Need Reverse: First view is in back and last view is in front for respect android View hierarchy
+        Collections.reverse(nodes);
+
         controllerNodes.clear();
-        populateNodesArray(this, controllerNodes);
+        controllerNodes.addAll(nodes);
     }
 
     private void populateNodesArray(ViewGroup group, ArrayList<ControllerNode> list){
@@ -89,7 +99,7 @@ public class ControllerLayout extends RelativeLayout {
 
                 float cx = (pos.x - globalPosition[0]);
                 float cy = (pos.y - globalPosition[1]);
-                if( x > cx && x < cx+size.x && y > cy && y < cy+size.y){
+                if(item.isVisible() && x > cx && x < cx+size.x && y > cy && y < cy+size.y){
                     node = item;
                     break;
                 }

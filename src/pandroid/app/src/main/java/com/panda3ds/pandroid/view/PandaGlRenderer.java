@@ -6,17 +6,19 @@ import javax.microedition.khronos.opengles.GL10;
 import static android.opengl.GLES32.*;
 
 import android.content.res.Resources;
+import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
 
 import com.panda3ds.pandroid.AlberDriver;
-import com.panda3ds.pandroid.utils.Constants;
+import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
+import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
+import com.panda3ds.pandroid.view.renderer.layout.DefaultScreenLayout;
 
-import java.util.ArrayList;
-
-public class PandaGlRenderer implements GLSurfaceView.Renderer {
+public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer {
 
     private final String romPath;
+    private ConsoleLayout displayLayout;
     private int screenWidth, screenHeight;
     private int screenTexture;
     public int screenFbo;
@@ -24,6 +26,10 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
     PandaGlRenderer(String romPath) {
         super();
         this.romPath = romPath;
+
+        screenWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
+        screenHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
+        setLayout(new DefaultScreenLayout());
     }
 
     @Override
@@ -40,8 +46,6 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
         Log.i("pandroid", glGetString(GL_EXTENSIONS));
         Log.w("pandroid", glGetString(GL_VERSION));
-        screenWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
-        screenHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -71,40 +75,48 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
 
-            if (screenWidth > screenHeight) {
-                int topDisplayWidth = (int)((screenHeight / (float)Constants.N3DS_HEIGHT) * Constants.N3DS_WIDTH);
-                int topDisplayHeight = screenHeight;
+            Rect topScreen = displayLayout.getTopDisplayBounds();
+            Rect bottomScreen = displayLayout.getBottomDisplayBounds();
 
-                if (topDisplayWidth > screenWidth * 0.7){
-                    topDisplayWidth = (int)(screenWidth * 0.7);
-                    topDisplayHeight = (int)((topDisplayWidth / (float)Constants.N3DS_WIDTH) * Constants.N3DS_HEIGHT);
-                }
+            glBlitFramebuffer(
+                    0, 480,
+                    400, 240,
+                    topScreen.left, screenHeight - topScreen.top,
+                    topScreen.right, screenHeight - topScreen.bottom,
+                    GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
-                int bottomDisplayHeight = (int)(((screenWidth - topDisplayWidth) / 320) * Constants.N3DS_HEIGHT);
-                int topDisplayY = screenHeight - topDisplayHeight;
-                int bottomDisplayY = screenHeight - bottomDisplayHeight;
-
-                glBlitFramebuffer(0, Constants.N3DS_HEIGHT,
-                        Constants.N3DS_WIDTH, Constants.N3DS_HEIGHT * 2,
-                        0, topDisplayY,
-                        topDisplayWidth,topDisplayY+topDisplayHeight,
-                        GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-                glBlitFramebuffer(
-                        40, 0,
-                        360, Constants.N3DS_HEIGHT,
-                        topDisplayWidth, bottomDisplayY,
-                        screenWidth,bottomDisplayY+bottomDisplayHeight,
-                        GL_COLOR_BUFFER_BIT, GL_LINEAR);
-            } else {
-                int h = (int)((screenWidth / (float)Constants.N3DS_WIDTH) * Constants.N3DS_HEIGHT * 2);
-                glBlitFramebuffer(0, 0, Constants.N3DS_WIDTH, Constants.N3DS_HEIGHT * 2, 0, screenHeight - h, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-            }
+            glBlitFramebuffer(
+                    40, 240,
+                    360, 0,
+                    bottomScreen.left, screenHeight - bottomScreen.top,
+                    bottomScreen.right, screenHeight - bottomScreen.bottom,
+                    GL_COLOR_BUFFER_BIT, GL_LINEAR);
         }
     }
 
     public void onSurfaceChanged(GL10 unused, int width, int height) {
         screenWidth = width;
         screenHeight = height;
+        glDisable(GL_SCISSOR_TEST);
+
+        displayLayout.update(screenWidth, screenHeight);
+    }
+
+    @Override
+    public void setLayout(ConsoleLayout layout) {
+        displayLayout = layout;
+        displayLayout.setTopDisplaySourceSize(400, 240);
+        displayLayout.setBottomDisplaySourceSize(320, 240);
+        displayLayout.update(screenWidth, screenHeight);
+    }
+
+    @Override
+    public ConsoleLayout getLayout() {
+        return displayLayout;
+    }
+
+    @Override
+    public String getBackendName() {
+        return "OpenGL";
     }
 }

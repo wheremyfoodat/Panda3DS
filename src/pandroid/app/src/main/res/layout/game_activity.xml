@@ -4,105 +4,110 @@
     android:layout_height="match_parent"
     android:background="#000">
 
-    <FrameLayout
-        android:id="@+id/panda_gl_frame"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
 
     <com.panda3ds.pandroid.view.PandaLayoutController
         android:id="@+id/controller_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-
-        <LinearLayout
+        <FrameLayout
+            android:id="@+id/panda_gl_frame"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="bottom"
-            android:padding="20dp">
+            android:layout_height="match_parent"/>
 
-            <FrameLayout
+        <FrameLayout
+            android:id="@+id/overlay_controller"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="match_parent"
+                android:gravity="bottom"
+                android:padding="20dp">
 
-
-                <com.panda3ds.pandroid.view.controller.nodes.Button
-                    android:id="@+id/button_l"
-                    android:layout_width="100dp"
-                    android:layout_height="25dp"
-                    android:layout_gravity="left"
-                    style="@style/ControllerSimpleButton"
-                    android:background="@drawable/simple_card_button_left"
-                    android:text="L"/>
-
-                <com.panda3ds.pandroid.view.controller.nodes.Button
-                    android:id="@+id/button_r"
-                    android:layout_width="100dp"
-                    android:layout_height="25dp"
-                    android:layout_gravity="right"
-                    style="@style/ControllerSimpleButton"
-                    android:background="@drawable/simple_card_button_right"
-                    android:text="R"/>
-
-                <LinearLayout
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingTop="60dp">
+                    android:layout_height="wrap_content">
 
-                    <include layout="@layout/controller_dpad"/>
-
-                    <com.panda3ds.pandroid.view.controller.nodes.Joystick
-                        android:id="@+id/left_analog"
+                    <com.panda3ds.pandroid.view.controller.nodes.Button
+                        android:id="@+id/button_l"
                         android:layout_width="100dp"
-                        android:layout_height="100dp"
-                        android:layout_marginTop="20dp"
-                        android:background="@drawable/simple_analog_background"
-                        android:foreground="@drawable/simple_circle_button"
-                        android:padding="40dp"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="end|bottom"
-                    android:orientation="vertical"
-                    android:layout_gravity="center">
-
-                    <include layout="@layout/controller_gamepad"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|center">
+                        android:layout_height="25dp"
+                        android:layout_gravity="left"
+                        style="@style/ControllerSimpleButton"
+                        android:background="@drawable/simple_card_button_left"
+                        android:text="L"/>
 
                     <com.panda3ds.pandroid.view.controller.nodes.Button
-                        android:id="@+id/button_start"
+                        android:id="@+id/button_r"
+                        android:layout_width="100dp"
+                        android:layout_height="25dp"
+                        android:layout_gravity="right"
+                        style="@style/ControllerSimpleButton"
+                        android:background="@drawable/simple_card_button_right"
+                        android:text="R"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingTop="60dp">
+
+                        <include layout="@layout/controller_dpad"/>
+
+                        <com.panda3ds.pandroid.view.controller.nodes.Joystick
+                            android:id="@+id/left_analog"
+                            android:layout_width="100dp"
+                            android:layout_height="100dp"
+                            android:layout_marginTop="20dp"
+                            android:background="@drawable/simple_analog_background"
+                            android:foreground="@drawable/simple_circle_button"
+                            android:padding="40dp"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="end|bottom"
+                        android:orientation="vertical"
+                        android:layout_gravity="center">
+
+                        <include layout="@layout/controller_gamepad"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/simple_card_button"
-                        style="@style/ControllerSimpleButton"
-                        android:paddingHorizontal="10dp"
-                        android:text="START"/>
+                        android:layout_gravity="bottom|center">
 
-                    <com.panda3ds.pandroid.view.controller.nodes.Button
-                        android:id="@+id/button_select"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/simple_card_button"
-                        style="@style/ControllerSimpleButton"
-                        android:paddingHorizontal="10dp"
-                        android:layout_marginLeft="10dp"
-                        android:text="SELECT"/>
+                        <com.panda3ds.pandroid.view.controller.nodes.Button
+                            android:id="@+id/button_start"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/simple_card_button"
+                            style="@style/ControllerSimpleButton"
+                            android:paddingHorizontal="10dp"
+                            android:text="START"/>
 
-                </LinearLayout>
+                        <com.panda3ds.pandroid.view.controller.nodes.Button
+                            android:id="@+id/button_select"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/simple_card_button"
+                            style="@style/ControllerSimpleButton"
+                            android:paddingHorizontal="10dp"
+                            android:layout_marginLeft="10dp"
+                            android:text="SELECT"/>
 
-            </FrameLayout>
+                    </LinearLayout>
 
-        </LinearLayout>
+                </FrameLayout>
+
+            </LinearLayout>
+        </FrameLayout>
 
     </com.panda3ds.pandroid.view.PandaLayoutController>
 

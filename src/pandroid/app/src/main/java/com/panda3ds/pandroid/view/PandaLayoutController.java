@@ -58,5 +58,7 @@ public class PandaLayoutController extends ControllerLayout {
                 .setJoystickListener((joystick, axisX, axisY) -> {
                     AlberDriver.SetCirclepadAxis((int)(axisX*0x9C), (int)(axisY*0x9C)*-1);
                 });
+
+        refreshChildren();
     }
 }
