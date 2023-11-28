@@ -38,7 +38,7 @@ public class GameActivity extends BaseActivity {
             return;
         }
 
-        pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.EXTRA_PATH));;
+        pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.EXTRA_PATH));
 
         setContentView(R.layout.game_activity);
 
