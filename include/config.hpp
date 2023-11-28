@@ -17,7 +17,9 @@ struct EmulatorConfig {
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;
 
+	std::filesystem::path filePath;
+
 	EmulatorConfig(const std::filesystem::path& path);
-	void load(const std::filesystem::path& path);
-	void save(const std::filesystem::path& path);
+	void load();
+	void save();
 };
