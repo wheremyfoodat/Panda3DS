@@ -1,122 +1,116 @@
 package com.panda3ds.pandroid.view;
 
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
-
 import static android.opengl.GLES32.*;
 
 import android.content.res.Resources;
 import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
-
 import com.panda3ds.pandroid.AlberDriver;
-import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
+import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
+import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
 import com.panda3ds.pandroid.view.renderer.layout.DefaultScreenLayout;
+import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.opengles.GL10;
 
 public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer {
+	private final String romPath;
+	private ConsoleLayout displayLayout;
+	private int screenWidth, screenHeight;
+	private int screenTexture;
+	public int screenFbo;
 
-    private final String romPath;
-    private ConsoleLayout displayLayout;
-    private int screenWidth, screenHeight;
-    private int screenTexture;
-    public int screenFbo;
+	PandaGlRenderer(String romPath) {
+		super();
+		this.romPath = romPath;
 
-    PandaGlRenderer(String romPath) {
-        super();
-        this.romPath = romPath;
+		screenWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
+		screenHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
+		setLayout(new DefaultScreenLayout());
+	}
 
-        screenWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
-        screenHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
-        setLayout(new DefaultScreenLayout());
-    }
+	@Override
+	protected void finalize() throws Throwable {
+		if (screenTexture != 0) {
+			glDeleteTextures(1, new int[] {screenTexture}, 0);
+		}
+		if (screenFbo != 0) {
+			glDeleteFramebuffers(1, new int[] {screenFbo}, 0);
+		}
+		super.finalize();
+	}
 
-    @Override
-    protected void finalize() throws Throwable {
-        if (screenTexture != 0) {
-            glDeleteTextures(1, new int[]{screenTexture}, 0);
-        }
-        if (screenFbo != 0) {
-            glDeleteFramebuffers(1, new int[]{screenFbo}, 0);
-        }
-        super.finalize();
-    }
+	public void onSurfaceCreated(GL10 unused, EGLConfig config) {
+		Log.i("pandroid", glGetString(GL_EXTENSIONS));
+		Log.w("pandroid", glGetString(GL_VERSION));
 
-    public void onSurfaceCreated(GL10 unused, EGLConfig config) {
-        Log.i("pandroid", glGetString(GL_EXTENSIONS));
-        Log.w("pandroid", glGetString(GL_VERSION));
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+		int[] generateBuffer = new int[1];
+		glGenTextures(1, generateBuffer, 0);
+		screenTexture = generateBuffer[0];
+		glBindTexture(GL_TEXTURE_2D, screenTexture);
+		glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, screenWidth, screenHeight);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-        int[] generateBuffer = new int[1];
-        glGenTextures(1, generateBuffer, 0);
-        screenTexture = generateBuffer[0];
-        glBindTexture(GL_TEXTURE_2D, screenTexture);
-        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, screenWidth, screenHeight);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
+		glGenFramebuffers(1, generateBuffer, 0);
+		screenFbo = generateBuffer[0];
+		glBindFramebuffer(GL_FRAMEBUFFER, screenFbo);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        glGenFramebuffers(1, generateBuffer, 0);
-        screenFbo = generateBuffer[0];
-        glBindFramebuffer(GL_FRAMEBUFFER, screenFbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		AlberDriver.Initialize();
+		AlberDriver.LoadRom(romPath);
+	}
 
-        AlberDriver.Initialize();
-        AlberDriver.LoadRom(romPath);
-    }
+	public void onDrawFrame(GL10 unused) {
+		if (AlberDriver.HasRomLoaded()) {
+			AlberDriver.RunFrame(screenFbo);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
 
-    public void onDrawFrame(GL10 unused) {
-        if (AlberDriver.HasRomLoaded()) {
-            AlberDriver.RunFrame(screenFbo);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
+			Rect topScreen = displayLayout.getTopDisplayBounds();
+			Rect bottomScreen = displayLayout.getBottomDisplayBounds();
 
-            Rect topScreen = displayLayout.getTopDisplayBounds();
-            Rect bottomScreen = displayLayout.getBottomDisplayBounds();
+			glBlitFramebuffer(
+				0, Constants.N3DS_FULL_HEIGHT, Constants.N3DS_WIDTH, Constants.N3DS_HALF_HEIGHT, topScreen.left, screenHeight - topScreen.top,
+				topScreen.right, screenHeight - topScreen.bottom, GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
 
-            glBlitFramebuffer(
-                    0, Constants.N3DS_FULL_HEIGHT,
-                    Constants.N3DS_WIDTH, Constants.N3DS_HALF_HEIGHT,
-                    topScreen.left, screenHeight - topScreen.top,
-                    topScreen.right, screenHeight - topScreen.bottom,
-                    GL_COLOR_BUFFER_BIT, GL_LINEAR);
+			// Remove the black bars on the bottom screen
+			glBlitFramebuffer(
+				40, Constants.N3DS_HALF_HEIGHT, Constants.N3DS_WIDTH - 40, 0, bottomScreen.left, screenHeight - bottomScreen.top, bottomScreen.right,
+				screenHeight - bottomScreen.bottom, GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+		}
+	}
 
-            // Remove the black bars on the bottom screen
-            glBlitFramebuffer(
-                    40, Constants.N3DS_HALF_HEIGHT,
-                    Constants.N3DS_WIDTH - 40, 0,
-                    bottomScreen.left, screenHeight - bottomScreen.top,
-                    bottomScreen.right, screenHeight - bottomScreen.bottom,
-                    GL_COLOR_BUFFER_BIT, GL_LINEAR);
-        }
-    }
+	public void onSurfaceChanged(GL10 unused, int width, int height) {
+		screenWidth = width;
+		screenHeight = height;
 
-    public void onSurfaceChanged(GL10 unused, int width, int height) {
-        screenWidth = width;
-        screenHeight = height;
+		displayLayout.update(screenWidth, screenHeight);
+	}
 
-        displayLayout.update(screenWidth, screenHeight);
-    }
+	@Override
+	public void setLayout(ConsoleLayout layout) {
+		displayLayout = layout;
+		displayLayout.setTopDisplaySourceSize(Constants.N3DS_WIDTH, Constants.N3DS_HALF_HEIGHT);
+		displayLayout.setBottomDisplaySourceSize(Constants.N3DS_WIDTH - 40 - 40, Constants.N3DS_HALF_HEIGHT);
+		displayLayout.update(screenWidth, screenHeight);
+	}
 
-    @Override
-    public void setLayout(ConsoleLayout layout) {
-        displayLayout = layout;
-        displayLayout.setTopDisplaySourceSize(Constants.N3DS_WIDTH, Constants.N3DS_HALF_HEIGHT);
-        displayLayout.setBottomDisplaySourceSize(Constants.N3DS_WIDTH - 40 - 40, Constants.N3DS_HALF_HEIGHT);
-        displayLayout.update(screenWidth, screenHeight);
-    }
+	@Override
+	public ConsoleLayout getLayout() {
+		return displayLayout;
+	}
 
-    @Override
-    public ConsoleLayout getLayout() {
-        return displayLayout;
-    }
-
-    @Override
-    public String getBackendName() {
-        return "OpenGL";
-    }
+	@Override
+	public String getBackendName() {
+		return "OpenGL";
+	}
 }
