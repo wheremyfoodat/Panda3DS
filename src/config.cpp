@@ -11,13 +11,15 @@
 // We are legally allowed, as per the author's wish, to use the above code without any licensing restrictions
 // However we still want to follow the license as closely as possible and offer the proper attributions.
 
-EmulatorConfig::EmulatorConfig(const std::filesystem::path& path) { load(path); }
+EmulatorConfig::EmulatorConfig(const std::filesystem::path& path) : filePath(path) { load(); }
 
-void EmulatorConfig::load(const std::filesystem::path& path) {
+void EmulatorConfig::load() {
+	const std::filesystem::path& path = filePath;
+
 	// If the configuration file does not exist, create it and return
 	std::error_code error;
 	if (!std::filesystem::exists(path, error)) {
-		save(path);
+		save();
 		return;
 	}
 
@@ -84,8 +86,9 @@ void EmulatorConfig::load(const std::filesystem::path& path) {
 	}
 }
 
-void EmulatorConfig::save(const std::filesystem::path& path) {
+void EmulatorConfig::save() {
 	toml::basic_value<toml::preserve_comments> data;
+	const std::filesystem::path& path = filePath;
 
 	std::error_code error;
 	if (std::filesystem::exists(path, error)) {

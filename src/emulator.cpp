@@ -15,7 +15,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(std::filesystem::current_path() / "config.toml"), kernel(cpu, memory, gpu, config), cpu(memory, kernel), gpu(memory, config),
+	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel), gpu(memory, config),
 	  memory(cpu.getTicksRef(), config), cheats(memory, kernel.getServiceManager().getHID()), lua(memory), running(false), programRunning(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  , httpServer(this)
@@ -31,7 +31,7 @@ Emulator::Emulator()
 }
 
 Emulator::~Emulator() {
-	config.save(std::filesystem::current_path() / "config.toml");
+	config.save();
 	lua.close();
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
@@ -65,6 +65,23 @@ void Emulator::reset(ReloadOption reload) {
 
 			Helpers::panic("Failed to reload ROM. This should pause the emulator in the future GUI");
 		}
+	}
+}
+
+std::filesystem::path Emulator::getAndroidAppPath() {
+	// SDL_GetPrefPath fails to get the path due to no JNI environment
+	std::ifstream cmdline("/proc/self/cmdline");
+	std::string applicationName;
+	std::getline(cmdline, applicationName, '\0');
+
+	return std::filesystem::path("/data") / "data" / applicationName / "files";
+}
+
+std::filesystem::path Emulator::getConfigPath() {
+	if constexpr (Helpers::isAndroid()) {
+		return getAndroidAppPath() / "config.toml";
+	} else {
+		return std::filesystem::current_path() / "config.toml";
 	}
 }
 
@@ -115,11 +132,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	std::filesystem::path appDataPath;
 
 	#ifdef __ANDROID__
-	// SDL_GetPrefPath fails to get the path due to no JNI environment
-	std::ifstream cmdline("/proc/self/cmdline");
-	std::string applicationName;
-	std::getline(cmdline, applicationName, '\0');
-	appDataPath = std::filesystem::path("/data") / "data" / applicationName / "files";
+	appDataPath = getAndroidAppPath();
 	#else
 	char* appData;
 	if (!config.usePortableBuild) {
