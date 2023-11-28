@@ -19,7 +19,6 @@ import com.panda3ds.pandroid.view.controller.listeners.JoystickListener;
 public class Joystick extends BasicControllerNode implements ControllerNode {
     private float stick_x = 0;
     private float stick_y = 0;
-    private float density = 0;
 
     private int size_width = 0;
     private int size_height= 0;
@@ -43,7 +42,6 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 
     private final Paint paint = new Paint();
 
-
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -53,8 +51,6 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
     public void onDrawForeground(Canvas canvas) {
         size_width = getWidth();
         size_height = getHeight();
-
-        density = getResources().getDisplayMetrics().density;
 
         int analogIconSize = size_width-getPaddingLeft();
 
@@ -110,17 +106,17 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
     @Override
     public void onTouch(TouchEvent event) {
 
-        float v = density * 75;
+        float middle = size_width/2.0F;
 
         float x = event.getX();
         float y = event.getY();
 
-        x = Math.max(0, Math.min(v*2, x));
-        y = Math.max(0, Math.min(v*2, y));
+        x = Math.max(0, Math.min(middle*2, x));
+        y = Math.max(0, Math.min(middle*2, y));
 
-        stick_x = ((x-v)/v);
+        stick_x = ((x-middle)/middle);
 
-        stick_y = ((y-v)/v);
+        stick_y = ((y-middle)/middle);
 
         if (event.getAction() == TouchEvent.ACTION_UP){
             stick_x = 0;
@@ -130,6 +126,7 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
         if (joystickListener != null){
             joystickListener.onJoystickAxisChange(this, stick_x, stick_y);
         }
+
         invalidate();
     }
 }

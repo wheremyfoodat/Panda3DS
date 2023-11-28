@@ -2,13 +2,11 @@ package com.panda3ds.pandroid.view;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.util.Log;
 
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.view.controller.ControllerLayout;
-import com.panda3ds.pandroid.view.controller.listeners.JoystickListener;
 import com.panda3ds.pandroid.view.controller.nodes.Button;
 import com.panda3ds.pandroid.view.controller.nodes.Joystick;
 

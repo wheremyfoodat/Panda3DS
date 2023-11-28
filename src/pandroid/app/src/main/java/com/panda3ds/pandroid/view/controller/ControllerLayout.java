@@ -82,7 +82,7 @@ public class ControllerLayout extends RelativeLayout {
 
         if ((!activeTouchEvents.containsKey(index))){
             if (up)return;
-            ControllerNode touch = null;
+            ControllerNode node = null;
             for (ControllerNode item: controllerNodes){
                 Vector2 pos = item.getPosition();
                 Vector2 size= item.getSize();
@@ -90,12 +90,12 @@ public class ControllerLayout extends RelativeLayout {
                 float cx = (pos.x - globalPosition[0]);
                 float cy = (pos.y - globalPosition[1]);
                 if( x > cx && x < cx+size.x && y > cy && y < cy+size.y){
-                    touch = item;
+                    node = item;
                     break;
                 }
             }
-            if (touch != null){
-                activeTouchEvents.put(index, touch);
+            if (node != null){
+                activeTouchEvents.put(index, node);
                 action = TouchEvent.ACTION_DOWN;
             } else {
                 return;
@@ -104,15 +104,15 @@ public class ControllerLayout extends RelativeLayout {
 
         if (up) action = TouchEvent.ACTION_UP;
 
-        ControllerNode touch = activeTouchEvents.get(index);
-        Vector2 pos = touch.getPosition();
+        ControllerNode node = activeTouchEvents.get(index);
+        Vector2 pos = node.getPosition();
         pos.x -= globalPosition[0];
         pos.y -= globalPosition[1];
 
         x -= pos.x;
         y -= pos.y;
 
-        touch.onTouch(new TouchEvent(x,y,action));
+        node.onTouch(new TouchEvent(x,y,action));
 
         if(up){
             activeTouchEvents.remove(index);

@@ -16,15 +16,14 @@ import java.util.ArrayList;
 public class PandaGlRenderer implements GLSurfaceView.Renderer {
 
     private final String romPath;
-    int screenWidth, screenHeight;
-    int screenTexture;
+    private int screenWidth, screenHeight;
+    private int screenTexture;
     public int screenFbo;
 
     PandaGlRenderer(String romPath) {
         super();
         this.romPath = romPath;
     }
-
 
     @Override
     protected void finalize() throws Throwable {
@@ -68,10 +67,38 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 unused) {
         if (AlberDriver.HasRomLoaded()) {
             AlberDriver.RunFrame(screenFbo);
-            int h = (int) ((screenWidth/400.0)*480);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
-            glBlitFramebuffer(0, 0, 400, 480, 0, screenHeight-h, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            if (screenWidth > screenHeight) {
+                int topDisplayWidth = (int) ((screenHeight / 240.0) * 400);
+                int topDisplayHeight = screenHeight;
+
+                if (topDisplayWidth > (screenWidth*0.7)){
+                    topDisplayWidth = (int) (screenWidth * 0.7);
+                    topDisplayHeight = (int) ((topDisplayWidth/400.0)*240);
+                }
+
+                int bottomDisplayHeight = (int) (((screenWidth-topDisplayWidth)/320)*240);
+
+                int topDisplayY = screenHeight-topDisplayHeight;
+                int bottomDisplayY = screenHeight-bottomDisplayHeight;
+
+                glBlitFramebuffer(0, 240,
+                        400, 480,
+                        0, topDisplayY,
+                        topDisplayWidth,topDisplayY+topDisplayHeight,
+                        GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+                glBlitFramebuffer(
+                        40, 0,
+                        360, 240,
+                        topDisplayWidth, bottomDisplayY,
+                        screenWidth,bottomDisplayY+bottomDisplayHeight,
+                        GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            } else {
+                int h = (int) ((screenWidth / 400.0) * 480);
+                glBlitFramebuffer(0, 0, 400, 480, 0, screenHeight - h, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            }
         }
     }
 
