@@ -19,7 +19,8 @@ public class Constants {
     public static final int INPUT_KEY_SELECT = 1 << 2;
 
     public static final int N3DS_WIDTH = 400;
-    public static final int N3DS_HEIGHT = 240;
+    public static final int N3DS_HALF_HEIGHT = 240;
+    public static final int N3DS_FULL_HEIGHT = 480;
 
     public static final String EXTRA_PATH = "path";
     public static final String LOG_TAG = "Alber";

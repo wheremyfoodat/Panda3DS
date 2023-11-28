@@ -79,15 +79,16 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
             Rect bottomScreen = displayLayout.getBottomDisplayBounds();
 
             glBlitFramebuffer(
-                    0, 480,
-                    400, 240,
+                    0, Constants.N3DS_FULL_HEIGHT,
+                    Constants.N3DS_WIDTH, Constants.N3DS_HALF_HEIGHT,
                     topScreen.left, screenHeight - topScreen.top,
                     topScreen.right, screenHeight - topScreen.bottom,
                     GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
+            // Remove the black bars on the bottom screen
             glBlitFramebuffer(
-                    40, 240,
-                    360, 0,
+                    40, Constants.N3DS_HALF_HEIGHT,
+                    Constants.N3DS_WIDTH - 40, 0,
                     bottomScreen.left, screenHeight - bottomScreen.top,
                     bottomScreen.right, screenHeight - bottomScreen.bottom,
                     GL_COLOR_BUFFER_BIT, GL_LINEAR);
@@ -97,7 +98,6 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
     public void onSurfaceChanged(GL10 unused, int width, int height) {
         screenWidth = width;
         screenHeight = height;
-        glDisable(GL_SCISSOR_TEST);
 
         displayLayout.update(screenWidth, screenHeight);
     }
@@ -105,8 +105,8 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
     @Override
     public void setLayout(ConsoleLayout layout) {
         displayLayout = layout;
-        displayLayout.setTopDisplaySourceSize(400, 240);
-        displayLayout.setBottomDisplaySourceSize(320, 240);
+        displayLayout.setTopDisplaySourceSize(Constants.N3DS_WIDTH, Constants.N3DS_HALF_HEIGHT);
+        displayLayout.setBottomDisplaySourceSize(Constants.N3DS_WIDTH - 40 - 40, Constants.N3DS_HALF_HEIGHT);
         displayLayout.update(screenWidth, screenHeight);
     }
 
