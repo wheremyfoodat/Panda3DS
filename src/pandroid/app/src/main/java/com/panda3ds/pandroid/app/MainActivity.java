@@ -10,12 +10,17 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import androidx.core.app.ActivityCompat;
+
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.utils.PathUtils;
 
 public class MainActivity extends BaseActivity {
     private static final int PICK_3DS_ROM = 2;
+    private static final int PERMISSION_REQUEST_CODE = 3;
 
     private void openFile() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -32,6 +37,9 @@ public class MainActivity extends BaseActivity {
                 Intent intent = new Intent(ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
                 startActivity(intent);
             }
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(this, new String[]{WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
         }
 
         setContentView(R.layout.activity_main);

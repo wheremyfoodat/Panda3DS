@@ -49,8 +49,8 @@ extern "C" JNIEXPORT jboolean JNICALL Java_com_panda3ds_pandroid_AlberDriver_Has
 
 extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_LoadRom(JNIEnv* env, jobject obj, jstring path) {
 	const char* pathStr = env->GetStringUTFChars(path, nullptr);
-	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "Loading ROM %s", pathStr);
 	romLoaded = emulator->loadROM(pathStr);
+	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "Loading ROM %s, result: %d", pathStr, (int)romLoaded);
 	env->ReleaseStringUTFChars(path, pathStr);
 }
 
