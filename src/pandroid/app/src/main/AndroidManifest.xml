@@ -6,7 +6,7 @@
 
     <uses-feature
         android:required="true"
-        android:glEsVersion="0x0030000"/>
+        android:glEsVersion="0x0030002"/>
 
     <application
         android:allowBackup="true"

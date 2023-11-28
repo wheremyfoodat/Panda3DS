@@ -68,9 +68,10 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 unused) {
         if (AlberDriver.HasRomLoaded()) {
             AlberDriver.RunFrame(screenFbo);
+            int h = (int) ((screenWidth/400.0)*480);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, screenFbo);
-            glBlitFramebuffer(0, 0, 400, 480, 0, 0, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            glBlitFramebuffer(0, 0, 400, 480, 0, screenHeight-h, screenWidth, screenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
         }
     }
 

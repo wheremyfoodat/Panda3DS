@@ -27,6 +27,8 @@ extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_RunFram
     renderer->setFBO(fbo);
     renderer->resetStateManager();
     emulator->runFrame();
+    
+    emulator->getServiceManager().getHID().updateInputs(emulator->getTicks());
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_Finalize(JNIEnv* env, jobject obj) {
@@ -44,3 +46,29 @@ extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_LoadRom
     romLoaded = emulator->loadROM(pathStr);
     env->ReleaseStringUTFChars(path, pathStr);
 }
+
+
+
+extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_TouchScreenDown(JNIEnv* env, jobject obj, jint x, jint y) {
+    emulator->getServiceManager().getHID().setTouchScreenPress((u16)x, (u16)y);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_TouchScreenUp(JNIEnv* env, jobject obj) {
+    emulator->getServiceManager().getHID().releaseTouchScreen();
+}
+
+
+extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_KeyUp(JNIEnv* env, jobject obj, jint keyCode) {
+    emulator->getServiceManager().getHID().releaseKey((u32)keyCode);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_KeyDown(JNIEnv* env, jobject obj, jint keyCode) {
+    emulator->getServiceManager().getHID().pressKey((u32)keyCode);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_panda3ds_pandroid_AlberDriver_SetCirclepadAxis(JNIEnv* env, jobject obj, jint x, jint y) {
+    emulator->getServiceManager().getHID().setCirclepadX((s16)x);
+    emulator->getServiceManager().getHID().setCirclepadY((s16)y);
+}
+
+

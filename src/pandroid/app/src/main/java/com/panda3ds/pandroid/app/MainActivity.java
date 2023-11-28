@@ -14,7 +14,7 @@ import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.utils.PathUtils;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
     private static final int PICK_3DS_ROM = 2;
 
     private void openFile() {
