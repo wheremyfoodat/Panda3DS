@@ -96,7 +96,7 @@ void Kernel::svcSignalEvent() {
 // Result WaitSynchronization1(Handle handle, s64 timeout_nanoseconds)
 void Kernel::waitSynchronization1() {
 	const Handle handle = regs[0];
-	const s64 ns = s64(u64(regs[1]) | (u64(regs[2]) << 32));
+	const s64 ns = s64(u64(regs[2]) | (u64(regs[3]) << 32));
 	logSVC("WaitSynchronization1(handle = %X, ns = %lld)\n", handle, ns);
 
 	const auto object = getObject(handle);
