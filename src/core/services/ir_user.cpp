@@ -120,9 +120,14 @@ void IRUserService::requireConnection(u32 messagePointer) {
 		u32 sharedMemAddress = sharedMemory.value().addr;
 
 		if (deviceID == u8(DeviceID::CirclePadPro)) {
-			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), 2); // Citra uses 2 here but only 1 works??
-			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionRole), 2);
-			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, isConnected), 1);
+			// Note: We temporarily pretend we don't have a CirclePad Pro. This code must change when we emulate it or N3DS C-stick
+			constexpr u8 status = 1; // Not connected. Any value other than 2 is considered not connected.
+			constexpr u8 role = 0;
+			constexpr u8 connected = 0;
+
+			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), status);
+			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionRole), role);
+			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, isConnected), connected);
 
 			connectedDevice = true;
 			if (connectionStatusEvent.has_value()) {
