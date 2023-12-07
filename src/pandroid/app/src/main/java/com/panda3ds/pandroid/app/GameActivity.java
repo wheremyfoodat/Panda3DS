@@ -2,22 +2,21 @@ package com.panda3ds.pandroid.app;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+
 import androidx.annotation.Nullable;
+
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.view.PandaGlSurfaceView;
 import com.panda3ds.pandroid.view.PandaLayoutController;
 
 public class GameActivity extends BaseActivity {
-	private PandaGlSurfaceView pandaSurface;
-	private PandaLayoutController controllerLayout;
 
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -31,20 +30,18 @@ public class GameActivity extends BaseActivity {
 			return;
 		}
 
-		pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.EXTRA_PATH));
+		PandaGlSurfaceView pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.EXTRA_PATH));
 
 		setContentView(R.layout.game_activity);
 
 		((FrameLayout) findViewById(R.id.panda_gl_frame))
 			.addView(pandaSurface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-		controllerLayout = findViewById(R.id.controller_layout);
+		PandaLayoutController controllerLayout = findViewById(R.id.controller_layout);
 
 		controllerLayout.initialize();
 
-		((CheckBox) findViewById(R.id.hide_screen_controller)).setOnCheckedChangeListener((buttonView, isChecked) -> {
-			findViewById(R.id.overlay_controller).setVisibility(isChecked ? View.VISIBLE : View.INVISIBLE);
-		});
+		((CheckBox) findViewById(R.id.hide_screen_controller)).setOnCheckedChangeListener((buttonView, isChecked) -> findViewById(R.id.overlay_controller).setVisibility(isChecked ? View.VISIBLE : View.INVISIBLE));
 	}
 
 	@Override

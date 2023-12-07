@@ -1,22 +1,20 @@
 package com.panda3ds.pandroid.view.controller.nodes;
 
 import android.graphics.Rect;
-import android.util.Log;
 import android.view.View;
+
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
-import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.view.controller.ControllerNode;
 import com.panda3ds.pandroid.view.controller.TouchEvent;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 
 public interface TouchScreenNodeImpl extends ControllerNode {
 	default void onTouchScreenPress(ConsoleRenderer renderer, TouchEvent event) {
-		View me = (View) this;
-		boolean hasDownEvent = me.getTag(R.id.TagEventHasDown) != null && (boolean) me.getTag(R.id.TagEventHasDown);
+		View view = (View) this;
+		boolean hasDownEvent = view.getTag(R.id.TagEventHasDown) != null && (boolean) view.getTag(R.id.TagEventHasDown);
 
 		Rect bounds = renderer.getLayout().getBottomDisplayBounds();
-		;
 
 		if (event.getX() >= bounds.left && event.getY() >= bounds.top && event.getX() <= bounds.right && event.getY() <= bounds.bottom) {
 			int x = (int) (event.getX() - bounds.left);
@@ -27,12 +25,12 @@ public interface TouchScreenNodeImpl extends ControllerNode {
 
 			AlberDriver.TouchScreenDown(x, y);
 
-			me.setTag(R.id.TagEventHasDown, true);
+			view.setTag(R.id.TagEventHasDown, true);
 		}
 
 		if (hasDownEvent && event.getAction() == TouchEvent.ACTION_UP) {
 			AlberDriver.TouchScreenUp();
-			me.setTag(R.id.TagEventHasDown, false);
+			view.setTag(R.id.TagEventHasDown, false);
 		}
 	}
 }

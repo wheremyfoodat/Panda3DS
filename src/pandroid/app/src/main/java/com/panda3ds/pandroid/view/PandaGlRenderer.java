@@ -42,8 +42,8 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 	}
 
 	public void onSurfaceCreated(GL10 unused, EGLConfig config) {
-		Log.i("pandroid", glGetString(GL_EXTENSIONS));
-		Log.w("pandroid", glGetString(GL_VERSION));
+		Log.i(Constants.LOG_TAG, glGetString(GL_EXTENSIONS));
+		Log.w(Constants.LOG_TAG, glGetString(GL_VERSION));
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);

@@ -1,7 +1,7 @@
 package com.panda3ds.pandroid.view.renderer.layout;
 
 import android.graphics.Rect;
-import android.util.Size;
+
 import com.panda3ds.pandroid.math.Vector2;
 
 public class DefaultScreenLayout implements ConsoleLayout {

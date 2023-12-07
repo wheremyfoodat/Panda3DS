@@ -7,18 +7,18 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.AppCompatTextView;
+
 import com.panda3ds.pandroid.math.Vector2;
 import com.panda3ds.pandroid.view.controller.ControllerNode;
 import com.panda3ds.pandroid.view.controller.TouchEvent;
 import com.panda3ds.pandroid.view.controller.listeners.JoystickListener;
 
 public class Joystick extends BasicControllerNode implements ControllerNode {
-	private float stick_x = 0;
-	private float stick_y = 0;
+	private float axisX = 0;
+	private float axisY = 0;
 
-	private int size_width = 0;
-	private int size_height = 0;
+	private int width = 0;
+	private int height = 0;
 
 	private JoystickListener joystickListener;
 
@@ -42,18 +42,18 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 
 	@Override
 	public void onDrawForeground(Canvas canvas) {
-		size_width = getWidth();
-		size_height = getHeight();
+		width = getWidth();
+		height = getHeight();
 
-		int analogIconSize = size_width - getPaddingLeft();
+		int analogIconSize = width - getPaddingLeft();
 
 		float middleIconSize = analogIconSize / 2.0F;
-		float middle = size_width / 2.0F;
+		float middle = width / 2.0F;
 
 		float maxDistance = (middle - middleIconSize) * 0.9F;
 
-		float tx = maxDistance * stick_x;
-		float ty = maxDistance * stick_y;
+		float tx = maxDistance * axisX;
+		float ty = maxDistance * axisY;
 
 		float radius = Vector2.distance(0.0F, 0.0F, Math.abs(tx), Math.abs(ty));
 		radius = Math.min(maxDistance, radius);
@@ -62,8 +62,8 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 		float rx = (float) (radius * Math.cos(Math.PI * 2 * deg / 360.0));
 		float ry = (float) (radius * Math.sin(Math.PI * 2 * deg / 360.0));
 
-		stick_x = Math.max(-1.0f, Math.min(1.0f, stick_x));
-		stick_y = Math.max(-1.0f, Math.min(1.0f, stick_y));
+		axisX = Math.max(-1.0f, Math.min(1.0f, axisX));
+		axisY = Math.max(-1.0f, Math.min(1.0f, axisY));
 
 		float x = middle - middleIconSize + rx;
 		float y = middle - middleIconSize + ry;
@@ -77,19 +77,19 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 		}
 	}
 
-	public Vector2 getAxis() { return new Vector2(Math.max(-1.0F, Math.min(1.0F, stick_x)), Math.max(-1.0F, Math.min(1.0F, stick_y))); }
+	public Vector2 getAxis() { return new Vector2(Math.max(-1.0F, Math.min(1.0F, axisX)), Math.max(-1.0F, Math.min(1.0F, axisY))); }
 
 	public void setJoystickListener(JoystickListener joystickListener) { this.joystickListener = joystickListener; }
 
 	@NonNull
 	@Override
 	public Vector2 getSize() {
-		return new Vector2(size_width, size_height);
+		return new Vector2(width, height);
 	}
 
 	@Override
 	public void onTouch(TouchEvent event) {
-		float middle = size_width / 2.0F;
+		float middle = width / 2.0F;
 
 		float x = event.getX();
 		float y = event.getY();
@@ -97,17 +97,17 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 		x = Math.max(0, Math.min(middle * 2, x));
 		y = Math.max(0, Math.min(middle * 2, y));
 
-		stick_x = ((x - middle) / middle);
+		axisX = ((x - middle) / middle);
 
-		stick_y = ((y - middle) / middle);
+		axisY = ((y - middle) / middle);
 
 		if (event.getAction() == TouchEvent.ACTION_UP) {
-			stick_x = 0;
-			stick_y = 0;
+			axisX = 0;
+			axisY = 0;
 		}
 
 		if (joystickListener != null) {
-			joystickListener.onJoystickAxisChange(this, stick_x, stick_y);
+			joystickListener.onJoystickAxisChange(this, axisX, axisY);
 		}
 
 		invalidate();

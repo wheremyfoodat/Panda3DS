@@ -6,7 +6,7 @@ public class Constants {
 	public static final int INPUT_KEY_LEFT = 1 << 5;
 	public static final int INPUT_KEY_RIGHT = 1 << 4;
 
-	public static final int INPUT_KEY_A = 1 << 0;
+	public static final int INPUT_KEY_A = 1;
 	public static final int INPUT_KEY_B = 1 << 1;
 	public static final int INPUT_KEY_X = 1 << 10;
 	public static final int INPUT_KEY_Y = 1 << 11;
@@ -22,5 +22,5 @@ public class Constants {
 	public static final int N3DS_FULL_HEIGHT = 480;
 
 	public static final String EXTRA_PATH = "path";
-	public static final String LOG_TAG = "Alber";
+	public static final String LOG_TAG = "pandroid";
 }

@@ -8,7 +8,7 @@
 
     <uses-feature
         android:required="true"
-        android:glEsVersion="0x0030002"/>
+        android:glEsVersion="0x0030001"/>
 
     <application
         android:requestLegacyExternalStorage="true"
