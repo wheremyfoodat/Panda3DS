@@ -23,14 +23,14 @@ public class GameActivity extends BaseActivity {
 		super.onCreate(savedInstanceState);
 
 		Intent intent = getIntent();
-		if (!intent.hasExtra(Constants.EXTRA_PATH)) {
+		if (!intent.hasExtra(Constants.ACTIVITY_PARAMETER_PATH)) {
 			setContentView(new FrameLayout(this));
 			Toast.makeText(this, "Invalid rom path!", Toast.LENGTH_LONG).show();
 			finish();
 			return;
 		}
 
-		PandaGlSurfaceView pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.EXTRA_PATH));
+		PandaGlSurfaceView pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.ACTIVITY_PARAMETER_PATH));
 
 		setContentView(R.layout.game_activity);
 

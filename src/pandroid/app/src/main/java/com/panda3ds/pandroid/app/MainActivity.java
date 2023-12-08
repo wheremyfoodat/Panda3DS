@@ -16,14 +16,14 @@ import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.PathUtils;
 
 public class MainActivity extends BaseActivity {
-	private static final int PICK_3DS_ROM = 2;
+	private static final int PICK_ROM = 2;
 	private static final int PERMISSION_REQUEST_CODE = 3;
 
 	private void openFile() {
 		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
 		intent.setType("*/*");
-		startActivityForResult(intent, PICK_3DS_ROM);
+		startActivityForResult(intent, PICK_ROM);
 	}
 
 	@Override
@@ -46,11 +46,11 @@ public class MainActivity extends BaseActivity {
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (requestCode == PICK_3DS_ROM) {
+		if (requestCode == PICK_ROM) {
 			if (resultCode == RESULT_OK) {
 				String path = PathUtils.getPath(getApplicationContext(), data.getData());
 				Toast.makeText(getApplicationContext(), "pandroid opening " + path, Toast.LENGTH_LONG).show();
-				startActivity(new Intent(this, GameActivity.class).putExtra(Constants.EXTRA_PATH, path));
+				startActivity(new Intent(this, GameActivity.class).putExtra(Constants.ACTIVITY_PARAMETER_PATH, path));
 			}
 			super.onActivityResult(requestCode, resultCode, data);
 		}

@@ -7,6 +7,7 @@ import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.view.controller.ControllerNode;
 import com.panda3ds.pandroid.view.controller.TouchEvent;
+import com.panda3ds.pandroid.view.controller.TouchType;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 
 public interface TouchScreenNodeImpl extends ControllerNode {
@@ -28,7 +29,7 @@ public interface TouchScreenNodeImpl extends ControllerNode {
 			view.setTag(R.id.TagEventHasDown, true);
 		}
 
-		if (hasDownEvent && event.getAction() == TouchEvent.ACTION_UP) {
+		if (hasDownEvent && event.getAction() == TouchType.ACTION_UP) {
 			AlberDriver.TouchScreenUp();
 			view.setTag(R.id.TagEventHasDown, false);
 		}

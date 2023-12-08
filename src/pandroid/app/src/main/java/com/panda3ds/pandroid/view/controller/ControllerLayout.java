@@ -79,8 +79,7 @@ public class ControllerLayout extends RelativeLayout {
 		int[] globalPosition = new int[2];
 		getLocationInWindow(globalPosition);
 
-		int action = TouchEvent.ACTION_MOVE;
-
+		TouchType action = TouchType.ACTION_MOVE;
 		if ((!activeTouchEvents.containsKey(index))) {
 			if (up) return;
 			ControllerNode node = null;
@@ -97,13 +96,13 @@ public class ControllerLayout extends RelativeLayout {
 			}
 			if (node != null) {
 				activeTouchEvents.put(index, node);
-				action = TouchEvent.ACTION_DOWN;
+				action = TouchType.ACTION_DOWN;
 			} else {
 				return;
 			}
 		}
 
-		if (up) action = TouchEvent.ACTION_UP;
+		if (up) action = TouchType.ACTION_UP;
 
 		ControllerNode node = activeTouchEvents.get(index);
 		Vector2 pos = node.getPosition();

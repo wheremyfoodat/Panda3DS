@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import com.panda3ds.pandroid.math.Vector2;
 import com.panda3ds.pandroid.view.controller.ControllerNode;
 import com.panda3ds.pandroid.view.controller.TouchEvent;
+import com.panda3ds.pandroid.view.controller.TouchType;
 import com.panda3ds.pandroid.view.controller.listeners.JoystickListener;
 
 public class Joystick extends BasicControllerNode implements ControllerNode {
@@ -47,20 +48,20 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 
 		int analogIconSize = width - getPaddingLeft();
 
-		float middleIconSize = analogIconSize / 2.0F;
-		float middle = width / 2.0F;
+		float middleIconSize = analogIconSize / 2.0f;
+		float middle = width / 2.0f;
 
-		float maxDistance = (middle - middleIconSize) * 0.9F;
+		float maxDistance = (middle - middleIconSize) * 0.9f;
 
 		float tx = maxDistance * axisX;
 		float ty = maxDistance * axisY;
 
-		float radius = Vector2.distance(0.0F, 0.0F, Math.abs(tx), Math.abs(ty));
+		float radius = Vector2.distance(0.0f, 0.0f, Math.abs(tx), Math.abs(ty));
 		radius = Math.min(maxDistance, radius);
 
 		double deg = Math.atan2(ty, tx) * (180.0 / Math.PI);
-		float rx = (float) (radius * Math.cos(Math.PI * 2 * deg / 360.0));
-		float ry = (float) (radius * Math.sin(Math.PI * 2 * deg / 360.0));
+		float rx = (float) (radius * Math.cos(2 * Math.PI * deg / 360.0));
+		float ry = (float) (radius * Math.sin(2 * Math.PI * deg / 360.0));
 
 		axisX = Math.max(-1.0f, Math.min(1.0f, axisX));
 		axisY = Math.max(-1.0f, Math.min(1.0f, axisY));
@@ -77,7 +78,7 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 		}
 	}
 
-	public Vector2 getAxis() { return new Vector2(Math.max(-1.0F, Math.min(1.0F, axisX)), Math.max(-1.0F, Math.min(1.0F, axisY))); }
+	public Vector2 getAxis() { return new Vector2(Math.max(-1.0f, Math.min(1.0f, axisX)), Math.max(-1.0f, Math.min(1.0f, axisY))); }
 
 	public void setJoystickListener(JoystickListener joystickListener) { this.joystickListener = joystickListener; }
 
@@ -89,7 +90,7 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 
 	@Override
 	public void onTouch(TouchEvent event) {
-		float middle = width / 2.0F;
+		float middle = width / 2.0f;
 
 		float x = event.getX();
 		float y = event.getY();
@@ -101,7 +102,7 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 
 		axisY = ((y - middle) / middle);
 
-		if (event.getAction() == TouchEvent.ACTION_UP) {
+		if (event.getAction() == TouchType.ACTION_UP) {
 			axisX = 0;
 			axisY = 0;
 		}

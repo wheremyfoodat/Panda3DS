@@ -45,6 +45,14 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		Log.i(Constants.LOG_TAG, glGetString(GL_EXTENSIONS));
 		Log.w(Constants.LOG_TAG, glGetString(GL_VERSION));
 
+		int[] version = new int[2];
+		glGetIntegerv(GL_MAJOR_VERSION, version, 0);
+		glGetIntegerv(GL_MINOR_VERSION, version, 1);
+
+		if (version[0] < 3 || (version[0] == 3 && version[1] < 1)) {
+			Log.e(Constants.LOG_TAG, "OpenGL 3.1 or higher is required");
+		}
+
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 

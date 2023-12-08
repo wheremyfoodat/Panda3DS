@@ -11,6 +11,7 @@ import androidx.appcompat.widget.AppCompatTextView;
 import com.panda3ds.pandroid.math.Vector2;
 import com.panda3ds.pandroid.view.controller.ControllerNode;
 import com.panda3ds.pandroid.view.controller.TouchEvent;
+import com.panda3ds.pandroid.view.controller.TouchType;
 import com.panda3ds.pandroid.view.controller.listeners.ButtonStateListener;
 
 public class Button extends BasicControllerNode {
@@ -58,8 +59,8 @@ public class Button extends BasicControllerNode {
 
 	@Override
 	public void onTouch(TouchEvent event) {
-		pressed = event.getAction() != TouchEvent.ACTION_UP;
-		setAlpha(pressed ? 0.2F : 1.0F);
+		pressed = event.getAction() != TouchType.ACTION_UP;
+		setAlpha(pressed ? 0.2f : 1.0f);
 		if (stateListener != null) {
 			stateListener.onButtonPressedChange(this, pressed);
 		}

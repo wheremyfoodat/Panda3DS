@@ -8,9 +8,9 @@ public class DefaultScreenLayout implements ConsoleLayout {
 	private final Rect topDisplay = new Rect();
 	private final Rect bottomDisplay = new Rect();
 
-	private final Vector2 screenSize = new Vector2(1.0F, 1.0F);
-	private final Vector2 topSourceSize = new Vector2(1.0F, 1.0F);
-	private final Vector2 bottomSourceSize = new Vector2(1.0F, 1.0F);
+	private final Vector2 screenSize = new Vector2(1.0f, 1.0f);
+	private final Vector2 topSourceSize = new Vector2(1.0f, 1.0f);
+	private final Vector2 bottomSourceSize = new Vector2(1.0f, 1.0f);
 
 	@Override
 	public void update(int screenWidth, int screenHeight) {
