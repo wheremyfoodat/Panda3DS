@@ -2,6 +2,7 @@ package com.panda3ds.pandroid.view;
 
 import android.content.Context;
 import android.opengl.GLSurfaceView;
+import android.os.Debug;
 
 import androidx.annotation.NonNull;
 import com.panda3ds.pandroid.math.Vector2;
@@ -17,7 +18,9 @@ public class PandaGlSurfaceView extends GLSurfaceView implements TouchScreenNode
 	public PandaGlSurfaceView(Context context, String romPath) {
 		super(context);
 		setEGLContextClientVersion(3);
-		setDebugFlags(DEBUG_LOG_GL_CALLS);
+		if (Debug.isDebuggerConnected()) {
+			setDebugFlags(DEBUG_LOG_GL_CALLS);
+		}
 		renderer = new PandaGlRenderer(romPath);
 		setRenderer(renderer);
 	}

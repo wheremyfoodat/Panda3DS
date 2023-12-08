@@ -15,19 +15,24 @@ bool romLoaded = false;
 
 #define AlberFunction(type, name) JNIEXPORT type JNICALL Java_com_panda3ds_pandroid_AlberDriver_##name
 
+void throwException(JNIEnv* env, const char* message) {
+	jclass exceptionClass = env->FindClass("java/lang/RuntimeException");
+	env->ThrowNew(exceptionClass, message);
+}
+
 extern "C" {
 AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	emulator = std::make_unique<Emulator>();
 
 	if (emulator->getRendererType() != RendererType::OpenGL) {
-		throw std::runtime_error("Renderer is not OpenGL");
+		return throwException(env, "Renderer type is not OpenGL");
 	}
 
 	renderer = static_cast<RendererGL*>(emulator->getRenderer());
 	hidService = &emulator->getServiceManager().getHID();
 
 	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(eglGetProcAddress))) {
-		throw std::runtime_error("OpenGL ES init failed");
+		return throwException(env, "Failed to load OpenGL ES 2.0");
 	}
 
 	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "OpenGL ES %d.%d", GLVersion.major, GLVersion.minor);
@@ -36,6 +41,7 @@ AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 
 AlberFunction(void, RunFrame)(JNIEnv* env, jobject obj, jint fbo) {
 	renderer->setFBO(fbo);
+	// TODO: don't reset entire state manager
 	renderer->resetStateManager();
 	emulator->runFrame();
 
@@ -53,7 +59,6 @@ AlberFunction(jboolean, HasRomLoaded)(JNIEnv* env, jobject obj) { return romLoad
 AlberFunction(void, LoadRom)(JNIEnv* env, jobject obj, jstring path) {
 	const char* pathStr = env->GetStringUTFChars(path, nullptr);
 	romLoaded = emulator->loadROM(pathStr);
-	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "Loading ROM %s, result: %d", pathStr, (int)romLoaded);
 	env->ReleaseStringUTFChars(path, pathStr);
 }
 

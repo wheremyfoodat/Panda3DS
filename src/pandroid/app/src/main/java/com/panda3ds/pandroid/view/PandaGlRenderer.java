@@ -69,6 +69,9 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		screenFbo = generateBuffer[0];
 		glBindFramebuffer(GL_FRAMEBUFFER, screenFbo);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			Log.e(Constants.LOG_TAG, "Framebuffer is not complete");
+		}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		AlberDriver.Initialize();
