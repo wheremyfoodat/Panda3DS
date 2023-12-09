@@ -157,7 +157,7 @@ namespace Result {
 		}
 
 	public:
-		constexpr HorizonResult() {}
+		constexpr HorizonResult() : m_value(0) {}
 		constexpr HorizonResult(uint32_t value) : m_value(value) {}
 		constexpr HorizonResult(uint32_t description, HorizonResultModule module, HorizonResultSummary summary, HorizonResultLevel level) : m_value(makeValue(description, static_cast<uint32_t>(module), static_cast<uint32_t>(summary), static_cast<uint32_t>(level))) {}
 		constexpr operator uint32_t() const { return m_value; }

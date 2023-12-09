@@ -57,6 +57,7 @@ struct NCCH {
 	FSInfo exeFS;
 	FSInfo romFS;
 	CodeSetInfo text, data, rodata;
+	FSInfo partitionInfo;
 
 	// Contents of the .code file in the ExeFS
 	std::vector<u8> codeFile;

@@ -46,7 +46,7 @@ void RendererGL::reset() {
 	}
 }
 
-void RendererGL::initGraphicsContext(SDL_Window* window) {
+void RendererGL::initGraphicsContextInternal() {
 	gl.reset();
 
 	auto gl_resources = cmrc::RendererGL::get_filesystem();
@@ -167,6 +167,10 @@ void RendererGL::initGraphicsContext(SDL_Window* window) {
 
 	reset();
 }
+
+// The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
+// So we just call initGraphicsContextInternal for both
+void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { initGraphicsContextInternal(); }
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
@@ -518,9 +522,11 @@ void RendererGL::display() {
 		OpenGL::draw(OpenGL::TriangleStrip, 4);
 	}
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
-	glBlitFramebuffer(0, 0, 400, 480, 0, 0, 400, 480, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	if constexpr (!Helpers::isHydraCore()) {
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		screenFramebuffer.bind(OpenGL::ReadFramebuffer);
+		glBlitFramebuffer(0, 0, 400, 480, 0, 0, outputWindowWidth, outputWindowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	}
 }
 
 void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -795,4 +801,15 @@ void RendererGL::screenshot(const std::string& name) {
 	}
 
 	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
+}
+
+void RendererGL::deinitGraphicsContext() {
+	// Invalidate all surface caches since they'll no longer be valid
+	textureCache.reset();
+	depthBufferCache.reset();
+	colourBufferCache.reset();
+
+	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
+	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
+	printf("RendererGL::DeinitGraphicsContext called\n");
 }

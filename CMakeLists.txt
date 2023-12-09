@@ -28,7 +28,7 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
 endif() 
 
-option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" OFF)
+option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
@@ -37,6 +37,8 @@ option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various as
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
+option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
+option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
@@ -52,14 +54,28 @@ include_directories(third_party/xxhash/include)
 include_directories(third_party/httplib)
 include_directories(third_party/stb)
 include_directories(third_party/opengl)
+include_directories(third_party/mio/single_include)
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
 
+if(BUILD_HYDRA_CORE)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
+endif()
+
+if(ENABLE_QT_GUI)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
+    # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+    set(CMAKE_AUTOUIC ON)
 endif()
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -127,11 +143,11 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-set(SOURCE_FILES src/main.cpp src/emulator.cpp src/io_file.cpp src/config.cpp
+set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -167,6 +183,19 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
 set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
+# Frontend source files
+if(ENABLE_QT_GUI)
+    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp)
+    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp)
+
+    source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
+    source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
+    include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
+else()
+    set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
+    set(FRONTEND_HEADER_FILES "")
+endif()
+
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/renderer.hpp include/kernel/kernel.hpp
                  include/dynarmic_cp15.hpp include/kernel/resource_limits.hpp include/kernel/kernel_types.hpp
@@ -196,7 +225,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
-                 include/fs/archive_system_save_data.hpp include/lua.hpp include/services/ns.hpp include/services/news_s.hpp
+                 include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp include/services/ns.hpp include/services/news_s.hpp
 )
 
 cmrc_add_resource_library(
@@ -215,6 +244,22 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
 )
+
+
+if(ENABLE_QT_GUI)
+    include_directories(third_party/duckstation)
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
+
+    if(APPLE)
+        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
+    elseif(WIN32)
+        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
+    else()
+        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_wayland.cpp
+        third_party/duckstation/gl/context_egl_x11.cpp third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+    endif()
+endif()
+
 source_group("Source Files\\Core" FILES ${SOURCE_FILES})
 source_group("Source Files\\Core\\Crypto" FILES ${CRYPTO_SOURCE_FILES})
 source_group("Source Files\\Core\\Filesystem" FILES ${FS_SOURCE_FILES})
@@ -283,20 +328,18 @@ if(ENABLE_VULKAN)
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_VK_INCLUDE_FILES})
     source_group("Source Files\\Core\\Vulkan Renderer" FILES ${RENDERER_VK_SOURCE_FILES})
 
-
 	set(RENDERER_VK_HOST_SHADERS_SOURCE
 		"src/host_shaders/vulkan_display.frag"
 		"src/host_shaders/vulkan_display.vert"
 	)
 
-
-    set( RENDERER_VK_HOST_SHADERS_FLAGS -e main --target-env vulkan1.1)
+    set(RENDERER_VK_HOST_SHADERS_FLAGS -e main --target-env vulkan1.1)
 
     if(GPU_DEBUG_INFO)
         # generate nonsemantic shader debug information with source
-        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -gVS)
+        set(RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -gVS)
     else()
-        set( RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -g0)
+        set(RENDERER_VK_HOST_SHADERS_FLAGS ${RENDERER_VK_HOST_SHADERS_FLAGS} -g0)
     endif()
 
     # Compile each vulkan shader into an .spv file
@@ -321,8 +364,9 @@ if(ENABLE_VULKAN)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
-set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES}
-	${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES} ${HEADER_FILES})
+set(ALL_SOURCES ${SOURCE_FILES} ${FRONTEND_SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
+    ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
+    ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 
 if(ENABLE_OPENGL)
     # Add the OpenGL source files to ALL_SOURCES
@@ -334,7 +378,13 @@ if(ENABLE_VULKAN)
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
 endif()
 
-add_executable(Alber ${ALL_SOURCES})
+if(BUILD_HYDRA_CORE)
+    include_directories(third_party/hydra_core/include)
+    add_library(Alber SHARED ${ALL_SOURCES} src/hydra_core.cpp)
+    target_compile_definitions(Alber PRIVATE PANDA3DS_HYDRA_CORE=1)
+else()
+    add_executable(Alber ${ALL_SOURCES})
+endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -360,6 +410,29 @@ endif()
 if(ENABLE_VULKAN)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
     target_link_libraries(Alber PRIVATE Vulkan::Vulkan resources_renderer_vk)
+endif()
+
+if(ENABLE_QT_GUI)
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_QT=1")
+    target_link_libraries(Alber PRIVATE Qt6::Widgets)
+
+    if(LINUX OR FREEBSD)
+        find_package(X11 REQUIRED)
+        target_link_libraries(Alber PRIVATE ${X11_LIBRARIES})
+
+        if(ENABLE_OPENGL)
+            find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
+            target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
+        endif()
+    endif()
+
+    qt_add_resources(Alber "app_images"
+        PREFIX "/"
+        FILES
+            docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
+    )
+else()
+    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
 if(GPU_DEBUG_INFO)

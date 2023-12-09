@@ -37,3 +37,9 @@
 [submodule "third_party/LuaJIT"]
 	path = third_party/LuaJIT
 	url = https://github.com/Panda3DS-emu/LuaJIT
+[submodule "third_party/mio"]
+	path = third_party/mio
+	url = https://github.com/vimpunk/mio
+[submodule "third_party/hydra_core"]
+	path = third_party/hydra_core
+	url = https://github.com/hydra-emu/core

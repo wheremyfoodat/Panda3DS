@@ -25,6 +25,7 @@ class CFGService {
 	void secureInfoGetRegion(u32 messagePointer);
 	void setConfigInfoBlk4(u32 messagePointer);
 	void updateConfigNANDSavegame(u32 messagePointer);
+	void translateCountryInfo(u32 messagePointer);
 
 	void getConfigInfo(u32 output, u32 blockID, u32 size, u32 permissionMask);
 

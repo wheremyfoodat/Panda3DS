@@ -74,12 +74,13 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 		const u32 lowProgramID = *(u32*)&archivePath[0];
 		const u32 highProgramID = *(u32*)&archivePath[4];
 
-		// High Title ID of the archive (from Citra). https://3dbrew.org/wiki/Title_list.
+		// High Title ID of the archive: https://3dbrew.org/wiki/Title_list.
 		constexpr u32 sharedDataArchive = 0x0004009B;
 		constexpr u32 systemDataArchive = 0x000400DB;
 
-		// Low ID (taken from Citra)
+		// Low IDs
 		constexpr u32 miiData = 0x00010202;
+		constexpr u32 tlsRootCertificates = 0x00010602;
 		constexpr u32 regionManifest = 0x00010402;
 		constexpr u32 badWordList = 0x00010302;
 		constexpr u32 sharedFont = 0x00014002;
@@ -88,6 +89,10 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 		if (highProgramID == sharedDataArchive) {
 			if (lowProgramID == miiData) fileData = std::vector<u8>(std::begin(MII_DATA), std::end(MII_DATA));
 			else if (lowProgramID == regionManifest) fileData = std::vector<u8>(std::begin(COUNTRY_LIST_DATA), std::end(COUNTRY_LIST_DATA));
+			else if (lowProgramID == tlsRootCertificates) {
+				Helpers::warn("Read from Shared Data archive 00010602");
+				return 0;
+			}
 			else Helpers::panic("[NCCH archive] Read unimplemented NAND file. ID: %08X", lowProgramID);
 		} else if (highProgramID == systemDataArchive && lowProgramID == badWordList) {
 			fileData = std::vector<u8>(std::begin(BAD_WORD_LIST_DATA), std::end(BAD_WORD_LIST_DATA));

@@ -16,6 +16,7 @@ namespace CFGCommands {
 		GenHashConsoleUnique = 0x00030040,
 		GetRegionCanadaUSA = 0x00040000,
 		GetSystemModel = 0x00050000,
+		TranslateCountryInfo = 0x00080080,
 		GetCountryCodeID = 0x000A0040,
 
 		SetConfigInfoBlk4 = 0x04020082,
@@ -36,6 +37,7 @@ void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 		case CFGCommands::GetSystemModel: getSystemModel(messagePointer); break;
 		case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
 		case CFGCommands::SecureInfoGetRegion: secureInfoGetRegion(messagePointer); break;
+		case CFGCommands::TranslateCountryInfo: translateCountryInfo(messagePointer); break;
 
 		default: 
 			if (type == Type::S) {
@@ -291,4 +293,38 @@ void CFGService::updateConfigNANDSavegame(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x403, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// https://www.3dbrew.org/wiki/Cfg:TranslateCountryInfo
+void CFGService::translateCountryInfo(u32 messagePointer) {
+	const u32 country = mem.read32(messagePointer + 4);
+	const u8 direction = mem.read8(messagePointer + 8);
+	log("CFG::TranslateCountryInfo (country = %d, direction = %d)\n", country, direction);
+
+	// By default the translated code is  the input
+	u32 result = country;
+
+	if (direction == 0) { // Translate from version B to version A
+		switch (country) {
+			case 0x6E040000: result = 0x6E030000; break;
+			case 0x6E050000: result = 0x6E040000; break;
+			case 0x6E060000: result = 0x6E050000; break;
+			case 0x6E070000: result = 0x6E060000; break;
+			case 0x6E030000: result = 0x6E070000; break;
+			default: break;
+		}
+	} else if (direction == 1) { // Translate from version A to version B
+		switch (country) {
+			case 0x6E030000: result = 0x6E040000; break;
+			case 0x6E040000: result = 0x6E050000; break;
+			case 0x6E050000: result = 0x6E060000; break;
+			case 0x6E060000: result = 0x6E070000; break;
+			case 0x6E070000: result = 0x6E030000; break;
+			default: break;
+		}
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x8, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, result);
 }

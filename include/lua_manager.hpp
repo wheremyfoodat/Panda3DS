@@ -44,7 +44,7 @@ class LuaManager {
 	}
 };
 
-#elif  // Lua not enabled, Lua manager does nothing
+#else  // Lua not enabled, Lua manager does nothing
 class LuaManager {
   public:
 	LuaManager(Memory& mem) {}

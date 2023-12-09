@@ -86,9 +86,15 @@ class GPU {
 	bool lightingLUTDirty = false;
 
 	GPU(Memory& mem, EmulatorConfig& config);
-	void initGraphicsContext(SDL_Window* window) { renderer->initGraphicsContext(window); }
 	void display() { renderer->display(); }
 	void screenshot(const std::string& name) { renderer->screenshot(name); }
+	void deinitGraphicsContext() { renderer->deinitGraphicsContext(); }
+
+#if defined(PANDA3DS_FRONTEND_SDL)
+	void initGraphicsContext(SDL_Window* window) { renderer->initGraphicsContext(window); }
+#elif defined(PANDA3DS_FRONTEND_QT)
+	void initGraphicsContext(GL::Context* context) { renderer->initGraphicsContext(context); }
+#endif
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();
@@ -107,6 +113,9 @@ class GPU {
 	// Used when processing GPU command lists
 	u32 readInternalReg(u32 index);
 	void writeInternalReg(u32 index, u32 value, u32 mask);
+
+	// Used for setting the size of the window we'll be outputting graphics to
+	void setOutputSize(u32 width, u32 height) { renderer->setOutputSize(width, height); }
 
 	// TODO: Emulate the transfer engine & its registers
 	// Then this can be emulated by just writing the appropriate values there
@@ -152,6 +161,7 @@ class GPU {
 		}
 	}
 
+	Renderer* getRenderer() { return renderer.get(); }
   private:
 	// GPU external registers
 	// We have them in the end of the struct for cache locality reasons. Tl;dr we want the more commonly used things to be packed in the start

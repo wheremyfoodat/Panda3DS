@@ -83,6 +83,20 @@ namespace Helpers {
 		return false;
 	}
 
+	static constexpr bool isHydraCore() {
+#ifdef PANDA3DS_HYDRA_CORE
+		return true;
+#endif
+		return false;
+	}
+
+	static constexpr bool isAndroid() {
+#ifdef __ANDROID__
+		return true;
+#endif
+		return false;
+	}
+
 	static void debug_printf(const char* fmt, ...) {
 		if constexpr (buildingInDebugMode()) {
 			std::va_list args;

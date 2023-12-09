@@ -12,17 +12,21 @@ class Memory;
 class Cheats {
   public:
 	enum class CheatType {
+		None,          // Cheat has been removed by the frontend or is invalid
 		ActionReplay,  // CTRPF cheats
-		// TODO: Other cheat devices and standards?
 	};
 
 	struct Cheat {
-		CheatType type;
+		bool enabled = true;
+		CheatType type = CheatType::ActionReplay;
 		std::vector<u32> instructions;
 	};
 
 	Cheats(Memory& mem, HIDService& hid);
-	void addCheat(const Cheat& cheat);
+	u32 addCheat(const Cheat& cheat);
+	void removeCheat(u32 id);
+	void enableCheat(u32 id);
+	void disableCheat(u32 id);
 	void reset();
 	void run();
 

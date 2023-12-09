@@ -27,7 +27,7 @@ uniform uint u_textureEnvColor[6];
 uniform uint u_picaRegs[0x200 - 0x48];
 
 // Helper so that the implementation of u_pica_regs can be changed later
-uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48]; }
+uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48u]; }
 
 vec4 abgr8888ToVec4(uint abgr) {
 	const float scale = 1.0 / 255.0;
@@ -49,7 +49,7 @@ float decodeFP(uint hex, uint E, uint M) {
 	uint mantissa = hex & ((1u << M) - 1u);
 	uint sign = (hex >> (E + M)) << 31u;
 
-	if ((hex & ((1u << (width - 1u)) - 1u)) != 0) {
+	if ((hex & ((1u << (width - 1u)) - 1u)) != 0u) {
 		if (exponent == (1u << E) - 1u)
 			exponent = 255u;
 		else
@@ -81,15 +81,15 @@ void main() {
 		v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
 	}
 
-	v_textureEnvBufferColor = abgr8888ToVec4(readPicaReg(0xFD));
+	v_textureEnvBufferColor = abgr8888ToVec4(readPicaReg(0xFDu));
 
 	// Parse clipping plane registers
 	// The plane registers describe a clipping plane in the form of Ax + By + Cz + D = 0
 	// With n = (A, B, C) being the normal vector and D being the origin point distance
 	// Therefore, for the second clipping plane, we can just pass the dot product of the clip vector and the input coordinates to gl_ClipDistance[1]
 	vec4 clipData = vec4(
-		decodeFP(readPicaReg(0x48) & 0xffffffu, 7, 16), decodeFP(readPicaReg(0x49) & 0xffffffu, 7, 16),
-		decodeFP(readPicaReg(0x4A) & 0xffffffu, 7, 16), decodeFP(readPicaReg(0x4B) & 0xffffffu, 7, 16)
+		decodeFP(readPicaReg(0x48u) & 0xffffffu, 7u, 16u), decodeFP(readPicaReg(0x49u) & 0xffffffu, 7u, 16u),
+		decodeFP(readPicaReg(0x4Au) & 0xffffffu, 7u, 16u), decodeFP(readPicaReg(0x4Bu) & 0xffffffu, 7u, 16u)
 	);
 
 	// There's also another, always-on clipping plane based on vertex z

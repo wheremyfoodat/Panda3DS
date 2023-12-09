@@ -123,6 +123,13 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::FirmVersionMajor: return firm.major;
 			case ConfigMem::WifiLevel: return 0; // No wifi :(
 
+			case ConfigMem::WifiMac:
+			case ConfigMem::WifiMac + 1:
+			case ConfigMem::WifiMac + 2:
+			case ConfigMem::WifiMac + 3:
+			case ConfigMem::WifiMac + 4:
+			case ConfigMem::WifiMac + 5: return MACAddress[vaddr - ConfigMem::WifiMac];
+
 			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -137,7 +144,7 @@ u16 Memory::read16(u32 vaddr) {
 		return *(u16*)(pointer + offset);
 	} else {
 		switch (vaddr) {
-			case ConfigMem::WifiMac + 4: return 0xEEFF;  // Wifi MAC: Last 2 bytes of MAC Address
+			case ConfigMem::WifiMac + 4: return (MACAddress[5] << 8) | MACAddress[4];  // Wifi MAC: Last 2 bytes of MAC Address
 			default: Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
 		}
 	}
@@ -167,7 +174,10 @@ u32 Memory::read32(u32 vaddr) {
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case ConfigMem::SyscoreVer: return 2;
 			case 0x1FF81000: return 0;                   // TODO: Figure out what this config mem address does
-			case ConfigMem::WifiMac: return 0xFF07F440;  // Wifi MAC: First 4 bytes of MAC Address
+			// Wifi MAC: First 4 bytes of MAC Address
+			case ConfigMem::WifiMac:
+				return (u32(MACAddress[3]) << 24) | (u32(MACAddress[2]) << 16) | (u32(MACAddress[1]) << 8) |
+					   MACAddress[0];
 
 			// 3D slider. Float in range 0.0 = off, 1.0 = max.
 			case ConfigMem::SliderState3D: return Helpers::bit_cast<u32, float>(0.0f);

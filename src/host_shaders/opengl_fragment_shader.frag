@@ -32,7 +32,7 @@ uniform sampler1DArray u_tex_lighting_lut;
 uniform uint u_picaRegs[0x200 - 0x48];
 
 // Helper so that the implementation of u_pica_regs can be changed later
-uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48]; }
+uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48u]; }
 
 vec4 tevSources[16];
 vec4 tevNextPreviousBuffer;
@@ -165,7 +165,7 @@ float decodeFP(uint hex, uint E, uint M) {
 	uint mantissa = hex & ((1u << M) - 1u);
 	uint sign = (hex >> (E + M)) << 31u;
 
-	if ((hex & ((1u << (width - 1u)) - 1u)) != 0) {
+	if ((hex & ((1u << (width - 1u)) - 1u)) != 0u) {
 		if (exponent == (1u << E) - 1u)
 			exponent = 255u;
 		else
@@ -188,50 +188,50 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	vec3 bitangent = normalize(v_bitangent);
 	vec3 view = normalize(v_view);
 
-	uint GPUREG_LIGHTING_ENABLE = readPicaReg(0x008F);
-	if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0) {
+	uint GPUREG_LIGHTING_ENABLE = readPicaReg(0x008Fu);
+	if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
 		primary_color = secondary_color = vec4(1.0);
 		return;
 	}
 
-	uint GPUREG_LIGHTING_AMBIENT = readPicaReg(0x01C0);
-	uint GPUREG_LIGHTING_NUM_LIGHTS = (readPicaReg(0x01C2) & 0x7u) + 1;
-	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = readPicaReg(0x01D9);
+	uint GPUREG_LIGHTING_AMBIENT = readPicaReg(0x01C0u);
+	uint GPUREG_LIGHTING_NUM_LIGHTS = (readPicaReg(0x01C2u) & 0x7u) + 1u;
+	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = readPicaReg(0x01D9u);
 
 	primary_color = vec4(vec3(0.0), 1.0);
 	secondary_color = vec4(vec3(0.0), 1.0);
 
 	primary_color.rgb += regToColor(GPUREG_LIGHTING_AMBIENT);
 
-	uint GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0);
-	uint GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1);
-	uint GPUREG_LIGHTING_CONFIG0 = readPicaReg(0x01C3);
-	uint GPUREG_LIGHTING_CONFIG1 = readPicaReg(0x01C4);
-	uint GPUREG_LIGHTING_LUTINPUT_SCALE = readPicaReg(0x01D2);
+	uint GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0u);
+	uint GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1u);
+	uint GPUREG_LIGHTING_CONFIG0 = readPicaReg(0x01C3u);
+	uint GPUREG_LIGHTING_CONFIG1 = readPicaReg(0x01C4u);
+	uint GPUREG_LIGHTING_LUTINPUT_SCALE = readPicaReg(0x01D2u);
 	float d[7];
 
 	bool error_unimpl = false;
 
-	for (uint i = 0; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
-		uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3), 3);
+	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
+		uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
 
-		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140 + 0x10 * light_id);
-		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141 + 0x10 * light_id);
-		uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142 + 0x10 * light_id);
-		uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143 + 0x10 * light_id);
-		uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144 + 0x10 * light_id);
-		uint GPUREG_LIGHTi_VECTOR_HIGH = readPicaReg(0x0145 + 0x10 * light_id);
-		uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149 + 0x10 * light_id);
+		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_VECTOR_HIGH = readPicaReg(0x0145u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149u + 0x10u * light_id);
 
 		vec3 light_vector = normalize(vec3(
-			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5, 10), decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5, 10),
-			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5, 10)
+			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5u, 10u), decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5u, 10u),
+			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
 		));
 
 		vec3 half_vector;
 
 		// Positional Light
-		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0) {
+		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
 			// error_unimpl = true;
 			half_vector = normalize(normalize(light_vector + v_view) + view);
 		}
@@ -242,7 +242,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 		}
 
 		for (int c = 0; c < 7; c++) {
-			if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0) {
+			if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0u) {
 				uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
 				float scale = float(1u << scale_id);
 				if (scale_id >= 6u) scale /= 256.0;
@@ -257,12 +257,12 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 				else if (input_id == 3u)
 					d[c] = dot(light_vector, normal);
 				else if (input_id == 4u) {
-					uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146 + 0x10 * light_id);
-					uint GPUREG_LIGHTi_SPOTDIR_HIGH = readPicaReg(0x0147 + 0x10 * light_id);
+					uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146u + 0x10u * light_id);
+					uint GPUREG_LIGHTi_SPOTDIR_HIGH = readPicaReg(0x0147u + 0x10u * light_id);
 					vec3 spot_light_vector = normalize(vec3(
-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1, 11),
-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1, 11),
-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1, 11)
+						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1u, 11u),
+						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1u, 11u),
+						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1u, 11u)
 					));
 					d[c] = dot(-light_vector, spot_light_vector);  // -L dot P (aka Spotlight aka SP);
 				} else if (input_id == 5u) {
@@ -272,7 +272,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 					d[c] = 1.0;
 				}
 
-				d[c] = lutLookup(c, light_id, d[c] * 0.5 + 0.5) * scale;
+				d[c] = lutLookup(uint(c), light_id, d[c] * 0.5 + 0.5) * scale;
 				if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) d[c] = abs(d[c]);
 			} else {
 				d[c] = 1.0;
@@ -280,26 +280,26 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 		}
 
 		uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG, 4, 4);
-		if (lookup_config == 0) {
+		if (lookup_config == 0u) {
 			d[D1_LUT] = 0.0;
 			d[FR_LUT] = 0.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookup_config == 1) {
+		} else if (lookup_config == 1u) {
 			d[D0_LUT] = 0.0;
 			d[D1_LUT] = 0.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookup_config == 2) {
+		} else if (lookup_config == 2u) {
 			d[FR_LUT] = 0.0;
 			d[SP_LUT] = 0.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookup_config == 3) {
+		} else if (lookup_config == 3u) {
 			d[SP_LUT] = 0.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT] = 1.0;
-		} else if (lookup_config == 4) {
+		} else if (lookup_config == 4u) {
 			d[FR_LUT] = 0.0;
-		} else if (lookup_config == 5) {
+		} else if (lookup_config == 5u) {
 			d[D1_LUT] = 0.0;
-		} else if (lookup_config == 6) {
+		} else if (lookup_config == 6u) {
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
 		}
 
@@ -310,7 +310,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 		float NdotL = dot(normal, light_vector);  // Li dot N
 
 		// Two sided diffuse
-		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0)
+		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
 			NdotL = max(0.0, NdotL);
 		else
 			NdotL = abs(NdotL);
@@ -338,7 +338,7 @@ void main() {
 	tevSources[0] = v_colour;  // Primary/vertex color
 	calcLighting(tevSources[1], tevSources[2]);
 
-	uint textureConfig = readPicaReg(0x80);
+	uint textureConfig = readPicaReg(0x80u);
 	vec2 tex2UV = (textureConfig & (1u << 13)) != 0u ? v_texcoord1 : v_texcoord2;
 
 	if ((textureConfig & 1u) != 0u) tevSources[3] = texture(u_tex0, v_texcoord0.xy);
@@ -348,7 +348,7 @@ void main() {
 	tevSources[15] = v_colour;   // Previous combiner
 
 	tevNextPreviousBuffer = v_textureEnvBufferColor;
-	uint textureEnvUpdateBuffer = readPicaReg(0xE0);
+	uint textureEnvUpdateBuffer = readPicaReg(0xE0u);
 
 	for (int i = 0; i < 6; i++) {
 		tevSources[14] = v_textureEnvColor[i];  // Constant color
@@ -385,31 +385,31 @@ void main() {
 	gl_FragDepth = depth;
 
 	// Perform alpha test
-	uint alphaControl = readPicaReg(0x104);
+	uint alphaControl = readPicaReg(0x104u);
 	if ((alphaControl & 1u) != 0u) {  // Check if alpha test is on
 		uint func = (alphaControl >> 4u) & 7u;
 		float reference = float((alphaControl >> 8u) & 0xffu) / 255.0;
 		float alpha = fragColour.a;
 
 		switch (func) {
-			case 0: discard;  // Never pass alpha test
-			case 1: break;    // Always pass alpha test
-			case 2:           // Pass if equal
+			case 0u: discard;  // Never pass alpha test
+			case 1u: break;    // Always pass alpha test
+			case 2u:           // Pass if equal
 				if (alpha != reference) discard;
 				break;
-			case 3:  // Pass if not equal
+			case 3u:  // Pass if not equal
 				if (alpha == reference) discard;
 				break;
-			case 4:  // Pass if less than
+			case 4u:  // Pass if less than
 				if (alpha >= reference) discard;
 				break;
-			case 5:  // Pass if less than or equal
+			case 5u:  // Pass if less than or equal
 				if (alpha > reference) discard;
 				break;
-			case 6:  // Pass if greater than
+			case 6u:  // Pass if greater than
 				if (alpha <= reference) discard;
 				break;
-			case 7:  // Pass if greater than or equal
+			case 7u:  // Pass if greater than or equal
 				if (alpha < reference) discard;
 				break;
 		}

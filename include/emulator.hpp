@@ -1,7 +1,5 @@
 #pragma once
 
-#include <SDL.h>
-
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -12,13 +10,20 @@
 #include "cpu.hpp"
 #include "crypto/aes_engine.hpp"
 #include "discord_rpc.hpp"
+#include "fs/romfs.hpp"
 #include "io_file.hpp"
-#include "lua.hpp"
+#include "lua_manager.hpp"
 #include "memory.hpp"
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "http_server.hpp"
 #endif
+
+#ifdef PANDA3DS_FRONTEND_QT
+#include "gl/context.h"
+#endif
+
+struct SDL_Window;
 
 enum class ROMType {
 	None,
@@ -37,15 +42,6 @@ class Emulator {
 	Crypto::AESEngine aesEngine;
 	Cheats cheats;
 
-	SDL_Window* window;
-
-#ifdef PANDA3DS_ENABLE_OPENGL
-	SDL_GLContext glContext;
-#endif
-
-	SDL_GameController* gameController = nullptr;
-	int gameControllerID;
-
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
 	// And so the user can still use the keyboard to control the analog
@@ -56,12 +52,14 @@ class Emulator {
 	// We bind gyro to right click + mouse movement
 	bool holdingRightClick = false;
 
+  public:
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
 	bool running = false;         // Is the emulator running a game?
 	bool programRunning = false;  // Is the emulator program itself running?
 
+  private:
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	HttpServer httpServer;
 	friend struct HttpServer;
@@ -93,7 +91,7 @@ class Emulator {
 	void step();
 	void render();
 	void reset(ReloadOption reload);
-	void run();
+	void run(void* frontend = nullptr);
 	void runFrame();
 
 	void resume();  // Resume the emulator
@@ -106,5 +104,25 @@ class Emulator {
 	bool load3DSX(const std::filesystem::path& path);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
-	void initGraphicsContext();
+
+#ifdef PANDA3DS_FRONTEND_QT
+	// For passing the GL context from Qt to the renderer
+	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
+#else
+	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
+#endif
+
+	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
+	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
+
+	EmulatorConfig& getConfig() { return config; }
+	Cheats& getCheats() { return cheats; }
+	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
+	RendererType getRendererType() const { return config.rendererType; }
+	Renderer* getRenderer() { return gpu.getRenderer(); }
+	u64 getTicks() { return cpu.getTicks(); }
+
+	std::filesystem::path getConfigPath();
+	std::filesystem::path getAndroidAppPath();
 };

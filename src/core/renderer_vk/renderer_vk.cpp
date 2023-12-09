@@ -1581,3 +1581,11 @@ void RendererVK::drawVertices(PICA::PrimType primType, std::span<const PICA::Ver
 }
 
 void RendererVK::screenshot(const std::string& name) {}
+
+void RendererVK::deinitGraphicsContext() {
+	// Invalidate the entire texture cache since they'll no longer be valid
+	textureCache.clear();
+
+	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
+	printf("RendererVK::DeinitGraphicsContext called\n");
+}

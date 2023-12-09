@@ -9,7 +9,7 @@ Handle Kernel::makeTimer(ResetType type) {
 		Helpers::panic("Created pulse timer");
 	}
 
-	// timerHandles.push_back(ret);
+	timerHandles.push_back(ret);
 	return ret;
 }
 
@@ -51,6 +51,10 @@ void Kernel::signalTimer(Handle timerHandle, Timer* timer) {
 			case ResetType::Pulse: Helpers::panic("Signalled pulsing timer"); break;
 		}
 	}
+
+	if (timer->interval == 0) {
+		cancelTimer(timer);
+	}
 }
 
 void Kernel::svcCreateTimer() {
@@ -70,8 +74,8 @@ void Kernel::svcCreateTimer() {
 void Kernel::svcSetTimer() {
 	Handle handle = regs[0];
 	// TODO: Is this actually s64 or u64? 3DBrew says s64, but u64 makes more sense
-	const s64 initial = s64(u64(regs[1]) | (u64(regs[2]) << 32));
-	const s64 interval = s64(u64(regs[3]) | (u64(regs[4]) << 32));
+	const s64 initial = s64(u64(regs[2]) | (u64(regs[3]) << 32));
+	const s64 interval = s64(u64(regs[1]) | (u64(regs[4]) << 32));
 	logSVC("SetTimer (handle = %X, initial delay = %llX, interval delay = %llX)\n", handle, initial, interval);
 
 	KernelObject* object = getObject(handle, KernelObjectType::Timer);

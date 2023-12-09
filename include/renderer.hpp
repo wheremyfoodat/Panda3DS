@@ -7,6 +7,10 @@
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
 
+#ifdef PANDA3DS_FRONTEND_QT
+#include "gl/context.h"
+#endif
+
 enum class RendererType : s8 {
 	// Todo: Auto = -1,
 	Null = 0,
@@ -36,6 +40,11 @@ class Renderer {
 	u32 depthBufferLoc;
 	PICA::DepthFmt depthBufferFormat;
 
+	// Width and height of the window we're outputting to, needed for properly scaling the final image
+	// We initialize it to the 3DS resolution by default and the frontend can notify us if it changes via the setOutputSize function
+	u32 outputWindowWidth = 400;
+	u32 outputWindowHeight = 240 * 2;
+
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	virtual ~Renderer();
@@ -50,9 +59,17 @@ class Renderer {
 	virtual void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) = 0;  // Clear a GPU buffer in VRAM
 	virtual void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) = 0;  // Perform display transfer
 	virtual void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) = 0;
-	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;             // Draw the given vertices
+	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;  // Draw the given vertices
 
 	virtual void screenshot(const std::string& name) = 0;
+	// Some frontends and platforms may require that we delete our GL or misc context and obtain a new one for things like exclusive fullscreen
+	// This function does things like write back or cache necessary state before we delete our context
+	virtual void deinitGraphicsContext() = 0;
+
+	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
+#ifdef PANDA3DS_FRONTEND_QT
+	virtual void initGraphicsContext(GL::Context* context) { Helpers::panic("Tried to initialize incompatible renderer with GL context"); }
+#endif
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize[0] = width;
@@ -69,4 +86,9 @@ class Renderer {
 
 	void setColourBufferLoc(u32 loc) { colourBufferLoc = loc; }
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
+
+	void setOutputSize(u32 width, u32 height) {
+		outputWindowWidth = width;
+		outputWindowHeight = height;
+	}
 };

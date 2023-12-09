@@ -1,5 +1,5 @@
 #ifdef PANDA3DS_ENABLE_LUA
-#include "lua.hpp"
+#include "lua_manager.hpp"
 
 void LuaManager::initialize() {
 	L = luaL_newstate();  // Open Lua
