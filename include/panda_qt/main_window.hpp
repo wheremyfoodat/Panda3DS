@@ -1,9 +1,7 @@
 #pragma once
 
 #include <QApplication>
-#include <QComboBox>
 #include <QMenuBar>
-#include <QPalette>
 #include <QtWidgets>
 #include <atomic>
 #include <filesystem>
@@ -13,6 +11,7 @@
 
 #include "emulator.hpp"
 #include "panda_qt/about_window.hpp"
+#include "panda_qt/config_window.hpp"
 #include "panda_qt/screen.hpp"
 #include "services/hid.hpp"
 
@@ -20,13 +19,6 @@ class MainWindow : public QMainWindow {
 	Q_OBJECT
 
   private:
-	enum class Theme : int {
-		System = 0,
-		Light = 1,
-		Dark = 2,
-		GreetingsCat = 3,
-	};
-
 	// Types of messages we might send from the GUI thread to the emulator thread
 	enum class MessageType {
 		LoadROM, Reset, Pause, Resume, TogglePause, DumpRomFS, PressKey, ReleaseKey
@@ -58,11 +50,9 @@ class MainWindow : public QMainWindow {
 
 	ScreenWidget screen;
 	AboutWindow* aboutWindow;
-	QComboBox* themeSelect = nullptr;
+	ConfigWindow* configWindow;
 	QMenuBar* menuBar = nullptr;
 
-	Theme currentTheme;
-	void setTheme(Theme theme);
 	void swapEmuBuffer();
 	void emuThreadMainLoop();
 	void selectROM();

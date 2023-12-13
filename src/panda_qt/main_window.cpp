@@ -29,9 +29,11 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto pauseAction = emulationMenu->addAction(tr("Pause"));
 	auto resumeAction = emulationMenu->addAction(tr("Resume"));
 	auto resetAction = emulationMenu->addAction(tr("Reset"));
+	auto configureAction = emulationMenu->addAction(tr("Configure"));
 	connect(pauseAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Pause}); });
 	connect(resumeAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Resume}); });
 	connect(resetAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Reset}); });
+	connect(configureAction, &QAction::triggered, this, [this]() { configWindow->show(); });
 
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
@@ -39,21 +41,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
-	// Set up theme selection
-	setTheme(Theme::Dark);
-	themeSelect = new QComboBox(this);
-	themeSelect->addItem(tr("System"));
-	themeSelect->addItem(tr("Light"));
-	themeSelect->addItem(tr("Dark"));
-	themeSelect->addItem(tr("Greetings Cat"));
-	themeSelect->setCurrentIndex(static_cast<int>(currentTheme));
-
-	themeSelect->setGeometry(40, 40, 100, 50);
-	themeSelect->show();
-	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setTheme(static_cast<Theme>(index)); });
-
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
+	configWindow = new ConfigWindow(this);
 
 	emu = new Emulator();
 	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
@@ -142,92 +132,13 @@ MainWindow::~MainWindow() {
 	delete emu;
 	delete menuBar;
 	delete aboutWindow;
-	delete themeSelect;
+	delete configWindow;
 }
 
 // Send a message to the emulator thread. Lock the mutex and just push back to the vector.
 void MainWindow::sendMessage(const EmulatorMessage& message) {
 	std::unique_lock lock(messageQueueMutex);
 	messageQueue.push_back(message);
-}
-
-void MainWindow::setTheme(Theme theme) {
-	currentTheme = theme;
-
-	switch (theme) {
-		case Theme::Dark: {
-			QApplication::setStyle(QStyleFactory::create("Fusion"));
-
-			QPalette p;
-			p.setColor(QPalette::Window, QColor(53, 53, 53));
-			p.setColor(QPalette::WindowText, Qt::white);
-			p.setColor(QPalette::Base, QColor(25, 25, 25));
-			p.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
-			p.setColor(QPalette::ToolTipBase, Qt::white);
-			p.setColor(QPalette::ToolTipText, Qt::white);
-			p.setColor(QPalette::Text, Qt::white);
-			p.setColor(QPalette::Button, QColor(53, 53, 53));
-			p.setColor(QPalette::ButtonText, Qt::white);
-			p.setColor(QPalette::BrightText, Qt::red);
-			p.setColor(QPalette::Link, QColor(42, 130, 218));
-
-			p.setColor(QPalette::Highlight, QColor(42, 130, 218));
-			p.setColor(QPalette::HighlightedText, Qt::black);
-			qApp->setPalette(p);
-			break;
-		}
-
-		case Theme::Light: {
-			QApplication::setStyle(QStyleFactory::create("Fusion"));
-
-			QPalette p;
-			p.setColor(QPalette::Window, Qt::white);
-			p.setColor(QPalette::WindowText, Qt::black);
-			p.setColor(QPalette::Base, QColor(243, 243, 243));
-			p.setColor(QPalette::AlternateBase, Qt::white);
-			p.setColor(QPalette::ToolTipBase, Qt::black);
-			p.setColor(QPalette::ToolTipText, Qt::black);
-			p.setColor(QPalette::Text, Qt::black);
-			p.setColor(QPalette::Button, Qt::white);
-			p.setColor(QPalette::ButtonText, Qt::black);
-			p.setColor(QPalette::BrightText, Qt::red);
-			p.setColor(QPalette::Link, QColor(42, 130, 218));
-
-			p.setColor(QPalette::Highlight, QColor(42, 130, 218));
-			p.setColor(QPalette::HighlightedText, Qt::white);
-			qApp->setPalette(p);
-			break;
-		}
-
-		case Theme::GreetingsCat: {
-			QApplication::setStyle(QStyleFactory::create("Fusion"));
-
-			QPalette p;
-			p.setColor(QPalette::Window, QColor(250, 207, 228));
-			p.setColor(QPalette::WindowText, QColor(225, 22, 137));
-			p.setColor(QPalette::Base, QColor(250, 207, 228));
-			p.setColor(QPalette::AlternateBase, QColor(250, 207, 228));
-			p.setColor(QPalette::ToolTipBase, QColor(225, 22, 137));
-			p.setColor(QPalette::ToolTipText, QColor(225, 22, 137));
-			p.setColor(QPalette::Text, QColor(225, 22, 137));
-			p.setColor(QPalette::Button, QColor(250, 207, 228));
-			p.setColor(QPalette::ButtonText, QColor(225, 22, 137));
-			p.setColor(QPalette::BrightText, Qt::black);
-			p.setColor(QPalette::Link, QColor(42, 130, 218));
-
-			p.setColor(QPalette::Highlight, QColor(42, 130, 218));
-			p.setColor(QPalette::HighlightedText, Qt::black);
-			qApp->setPalette(p);
-			break;
-		}
-
-		case Theme::System: {
-			qApp->setPalette(this->style()->standardPalette());
-			qApp->setStyle(QStyleFactory::create("WindowsVista"));
-			qApp->setStyleSheet("");
-			break;
-		}
-	}
 }
 
 void MainWindow::dumpRomFS() {
