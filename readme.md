@@ -25,9 +25,9 @@ SDL builds (No GUI):
 Qt builds:
 |Platform|Status|Download|
 |--------|------------|--------|
-|Windows build|[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Windows%20executable.zip)|
-|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
-|Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Linux%20executable.zip)|
+|Windows build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Windows%20executable.zip)|
+|MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|Linux build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Linux%20executable.zip)|
 
 
 # Compatibility
