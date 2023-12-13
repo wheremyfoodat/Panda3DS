@@ -1,0 +1,2 @@
+# Prebuilt Alber libraries will be placed in this directory, but we don't want to push them to the repo
+libAlber.so
