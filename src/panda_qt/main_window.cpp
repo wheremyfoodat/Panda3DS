@@ -23,7 +23,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto aboutMenu = menuBar->addMenu(tr("About"));
 
 	// Create and bind actions for them
-	auto pandaAction = fileMenu->addAction(tr("panda..."));
+	auto pandaAction = fileMenu->addAction(tr("Load game"));
 	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
 
 	auto pauseAction = emulationMenu->addAction(tr("Pause"));

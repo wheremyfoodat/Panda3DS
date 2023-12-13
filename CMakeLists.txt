@@ -184,16 +184,18 @@ set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selecto
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
-if(ENABLE_QT_GUI)
-    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp src/panda_qt/config_window.cpp)
-    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp include/panda_qt/config_window.hpp)
+if(NOT ANDROID)
+    if(ENABLE_QT_GUI)
+        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp src/panda_qt/config_window.cpp)
+        set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp include/panda_qt/config_window.hpp)
 
-    source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
-    source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
-    include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
-else()
-    set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
-    set(FRONTEND_HEADER_FILES "")
+        source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
+        source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
+        include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
+    else()
+        set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
+        set(FRONTEND_HEADER_FILES "")
+    endif()
 endif()
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
@@ -378,6 +380,10 @@ if(ENABLE_VULKAN)
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
 endif()
 
+if(ANDROID)
+    set(ALL_SOURCES ${ALL_SOURCES} src/jni_driver.cpp)
+endif()
+
 if(BUILD_HYDRA_CORE)
     include_directories(third_party/hydra_core/include)
     add_library(Alber SHARED ${ALL_SOURCES} src/hydra_core.cpp)
@@ -386,11 +392,19 @@ else()
     add_executable(Alber ${ALL_SOURCES})
 endif()
 
+if(ANDROID)
+    target_link_libraries(Alber PRIVATE EGL log)
+endif()
+
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad resources_console_fonts)
+target_link_libraries(Alber PRIVATE dynarmic cryptopp glad resources_console_fonts)
+
+if(NOT ANDROID)
+    target_link_libraries(Alber PRIVATE SDL2-static)
+endif()
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
