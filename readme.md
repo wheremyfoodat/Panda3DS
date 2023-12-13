@@ -13,13 +13,22 @@ Join our Discord server by pressing on the banner below, or find us on other pla
 ![screenshot1](docs/img/KirbyRobobot.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
 
 # Download
-You can download stable builds from the Releases tab, or you can download the latest build from the table below
+You can download stable builds from the Releases tab, or you can download the latest build from the tables below. Panda3DS comes in two flavours: A minimal SDL frontend, which does not have a GUI, and an experimental Qt frontend
 
+SDL builds (No GUI):
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Windows_Build/master/Windows%20executable.zip)|
 |MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
 |Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Linux_AppImage_Build/master/Linux%20executable.zip)|
+
+Qt builds:
+|Platform|Status|Download|
+|--------|------------|--------|
+|Windows build|[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Windows%20executable.zip)|
+|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Linux%20executable.zip)|
+
 
 # Compatibility
 Panda3DS is still in the early stages of development. Many games boot, many don't. Lots of games have at least some hilariously broken graphics, audio is not supported, and some QoL features (including a GUI) are missing. However, even more things are implemented, such as most of the 3DS core required to play games, and various neat features, such as Lua scripting, discord bot support, support for some system apps, cheats, controller support, WIP amiibo support and many more! The emulator is constantly evolving, so make sure to take a peek every now and then!
