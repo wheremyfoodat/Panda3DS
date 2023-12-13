@@ -13,7 +13,7 @@ Join our Discord server by pressing on the banner below, or find us on other pla
 ![screenshot1](docs/img/KirbyRobobot.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
 
 # Download
-You can download stable builds from the Releases tab, or you can download the latest build from the tables below. Panda3DS comes in two flavours: A minimal SDL frontend, which does not have a GUI, and an experimental Qt frontend
+You can download stable builds from the Releases tab, or you can download the latest build from the tables below. Panda3DS comes in two flavours: A minimal SDL frontend, which does not have a GUI, and an experimental Qt frontend.
 
 SDL builds (No GUI):
 |Platform|Status|Download|
