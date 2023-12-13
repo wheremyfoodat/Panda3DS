@@ -19,9 +19,7 @@ public class ControllerLayout extends RelativeLayout {
 	private final ArrayList<ControllerNode> controllerNodes = new ArrayList<>();
 
 	public ControllerLayout(Context context) { this(context, null); }
-
 	public ControllerLayout(Context context, AttributeSet attrs) { this(context, attrs, 0); }
-
 	public ControllerLayout(Context context, AttributeSet attrs, int defStyleAttr) { this(context, attrs, defStyleAttr, 0); }
 
 	public ControllerLayout(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
@@ -131,7 +129,7 @@ public class ControllerLayout extends RelativeLayout {
 		refreshChildren();
 	}
 
-	/*@TODO: Need replace that methods for prevent Android send events directly to children*/
+	// TODO: Need to replace these methods to prevent Android sending events directly to children
 
 	@Override
 	public ArrayList<View> getTouchables() {

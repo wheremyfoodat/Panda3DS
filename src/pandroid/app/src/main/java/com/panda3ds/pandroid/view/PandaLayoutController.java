@@ -11,9 +11,7 @@ import com.panda3ds.pandroid.view.controller.nodes.Joystick;
 
 public class PandaLayoutController extends ControllerLayout {
 	public PandaLayoutController(Context context) { super(context); }
-
 	public PandaLayoutController(Context context, AttributeSet attrs) { super(context, attrs); }
-
 	public PandaLayoutController(Context context, AttributeSet attrs, int defStyleAttr) { super(context, attrs, defStyleAttr); }
 
 	public PandaLayoutController(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {

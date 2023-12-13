@@ -20,11 +20,9 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 
 	private int width = 0;
 	private int height = 0;
-
 	private JoystickListener joystickListener;
 
 	public Joystick(Context context) { this(context, null); }
-
 	public Joystick(Context context, AttributeSet attrs) { this(context, attrs, 0); }
 
 	public Joystick(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -99,7 +97,6 @@ public class Joystick extends BasicControllerNode implements ControllerNode {
 		y = Math.max(0, Math.min(middle * 2, y));
 
 		axisX = ((x - middle) / middle);
-
 		axisY = ((y - middle) / middle);
 
 		if (event.getAction() == TouchType.ACTION_UP) {

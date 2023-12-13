@@ -17,6 +17,5 @@ public interface ControllerNode {
 	default boolean isVisible() { return ((View) this).isShown(); }
 
 	@NonNull Vector2 getSize();
-
 	void onTouch(TouchEvent event);
 }

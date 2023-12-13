@@ -40,7 +40,6 @@ public class MainActivity extends BaseActivity {
 		}
 
 		setContentView(R.layout.activity_main);
-
 		findViewById(R.id.load_rom).setOnClickListener(v -> { openFile(); });
 	}
 

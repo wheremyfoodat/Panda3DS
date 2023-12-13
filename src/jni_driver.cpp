@@ -63,11 +63,8 @@ AlberFunction(void, LoadRom)(JNIEnv* env, jobject obj, jstring path) {
 }
 
 AlberFunction(void, TouchScreenDown)(JNIEnv* env, jobject obj, jint x, jint y) { hidService->setTouchScreenPress((u16)x, (u16)y); }
-
 AlberFunction(void, TouchScreenUp)(JNIEnv* env, jobject obj) { hidService->releaseTouchScreen(); }
-
 AlberFunction(void, KeyUp)(JNIEnv* env, jobject obj, jint keyCode) { hidService->releaseKey((u32)keyCode); }
-
 AlberFunction(void, KeyDown)(JNIEnv* env, jobject obj, jint keyCode) { hidService->pressKey((u32)keyCode); }
 
 AlberFunction(void, SetCirclepadAxis)(JNIEnv* env, jobject obj, jint x, jint y) {

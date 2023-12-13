@@ -9,8 +9,6 @@ import com.panda3ds.pandroid.view.controller.ControllerNode;
 
 public abstract class BasicControllerNode extends AppCompatTextView implements ControllerNode {
 	public BasicControllerNode(@NonNull Context context) { super(context); }
-
 	public BasicControllerNode(@NonNull Context context, @Nullable AttributeSet attrs) { super(context, attrs); }
-
 	public BasicControllerNode(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) { super(context, attrs, defStyleAttr); }
 }

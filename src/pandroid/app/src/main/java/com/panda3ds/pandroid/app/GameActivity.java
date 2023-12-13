@@ -17,7 +17,6 @@ import com.panda3ds.pandroid.view.PandaGlSurfaceView;
 import com.panda3ds.pandroid.view.PandaLayoutController;
 
 public class GameActivity extends BaseActivity {
-
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -31,14 +30,12 @@ public class GameActivity extends BaseActivity {
 		}
 
 		PandaGlSurfaceView pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.ACTIVITY_PARAMETER_PATH));
-
 		setContentView(R.layout.game_activity);
 
 		((FrameLayout) findViewById(R.id.panda_gl_frame))
 			.addView(pandaSurface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
 		PandaLayoutController controllerLayout = findViewById(R.id.controller_layout);
-
 		controllerLayout.initialize();
 
 		((CheckBox) findViewById(R.id.hide_screen_controller)).setOnCheckedChangeListener((buttonView, isChecked) -> findViewById(R.id.overlay_controller).setVisibility(isChecked ? View.VISIBLE : View.INVISIBLE));
