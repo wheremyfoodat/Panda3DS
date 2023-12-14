@@ -5,7 +5,7 @@ import android.content.Context;
 
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 
-public class PandaApplication extends Application {
+public class PandroidApplication extends Application {
     private static Context appContext;
 
     @Override

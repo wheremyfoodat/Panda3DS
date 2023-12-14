@@ -3,7 +3,7 @@ package com.panda3ds.pandroid.data.config;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.panda3ds.pandroid.app.PandaApplication;
+import com.panda3ds.pandroid.app.PandroidApplication;
 import com.panda3ds.pandroid.utils.Constants;
 
 import java.io.Serializable;
@@ -12,7 +12,7 @@ public class GlobalConfig {
     private static SharedPreferences data;
 
     public static void initialize() {
-        data = PandaApplication.getAppContext()
+        data = PandroidApplication.getAppContext()
                 .getSharedPreferences(Constants.PREF_GLOBAL_CONFIG, Context.MODE_PRIVATE);
     }
 
