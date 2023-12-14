@@ -1,32 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="96dp"
-    android:layout_height="96dp">
+    android:layout_width="57pt"
+    android:layout_height="57pt"
+    android:layout_gravity="end|bottom"
+    android:layout_marginBottom="30pt">
 
     <com.panda3ds.pandroid.view.controller.nodes.Button
         android:id="@+id/button_x"
-        style="@style/ControllerSimpleButton"
-        android:layout_marginLeft="30dp"
-        android:text="X"/>
+        style="@style/ControllerStyle.SimpleButton"
+        android:layout_marginStart="19pt"
+        android:background="@drawable/button_x"/>
 
     <com.panda3ds.pandroid.view.controller.nodes.Button
         android:id="@+id/button_y"
-        style="@style/ControllerSimpleButton"
-        android:layout_marginTop="30dp"
-        android:text="Y"/>
+        style="@style/ControllerStyle.SimpleButton"
+        android:layout_marginTop="19pt"
+        android:background="@drawable/button_y"/>
 
     <com.panda3ds.pandroid.view.controller.nodes.Button
         android:id="@+id/button_b"
-        style="@style/ControllerSimpleButton"
-        android:layout_marginTop="60dp"
-        android:layout_marginLeft="30dp"
-        android:text="B"/>
+        style="@style/ControllerStyle.SimpleButton"
+        android:layout_marginTop="38pt"
+        android:layout_marginStart="19pt"
+        android:background="@drawable/button_b"/>
 
     <com.panda3ds.pandroid.view.controller.nodes.Button
         android:id="@+id/button_a"
-        style="@style/ControllerSimpleButton"
-        android:layout_marginTop="30dp"
-        android:layout_marginLeft="60dp"
-        android:text="A"/>
+        style="@style/ControllerStyle.SimpleButton"
+        android:layout_marginTop="19pt"
+        android:layout_marginStart="38pt"
+        android:background="@drawable/button_a"/>
 
 </RelativeLayout>

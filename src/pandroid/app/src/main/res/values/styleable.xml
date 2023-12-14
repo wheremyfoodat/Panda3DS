@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="ControllerSimpleButton">
-        <item name="android:layout_height">32dp</item>
-        <item name="android:layout_width">32dp</item>
+    <style name="ControllerStyle"/>
+    <style name="ControllerStyle.SimpleButton">
+        <item name="android:layout_height">19pt</item>
+        <item name="android:layout_width">19pt</item>
         <item name="android:textColor">#FFF</item>
         <item name="textAllCaps">true</item>
-        <item name="android:background">@drawable/simple_circle_button</item>
+        <item name="android:backgroundTintMode">multiply</item>
+        <item name="android:backgroundTint">#FFF</item>
     </style>
 </resources>
