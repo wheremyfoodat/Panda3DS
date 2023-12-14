@@ -20,4 +20,6 @@ public class Constants {
 
 	public static final String ACTIVITY_PARAMETER_PATH = "path";
 	public static final String LOG_TAG = "pandroid";
+
+	public static final String PREF_GLOBAL_CONFIG = "app.GlobalConfig";
 }
