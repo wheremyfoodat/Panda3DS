@@ -37,13 +37,13 @@ public class GlobalConfig {
         if (value instanceof String) {
             data.edit().putString(key.name, (String) value).apply();
         } else if (value instanceof Integer) {
-            data.edit().putInt(key.name, (Integer) value).apply();
+            data.edit().putInt(key.name, (int) value).apply();
         } else if (value instanceof Boolean) {
-            data.edit().putBoolean(key.name, (Boolean) value).apply();
+            data.edit().putBoolean(key.name, (boolean) value).apply();
         } else if (value instanceof Long) {
-            data.edit().putLong(key.name, (Long) value).apply();
+            data.edit().putLong(key.name, (long) value).apply();
         } else if (value instanceof Float) {
-            data.edit().putFloat(key.name, (Float) value).apply();
+            data.edit().putFloat(key.name, (float) value).apply();
         } else {
             throw new IllegalArgumentException("Invalid global config value instance");
         }
