@@ -16,24 +16,24 @@ public class GlobalConfig {
                 .getSharedPreferences(Constants.PREF_GLOBAL_CONFIG, Context.MODE_PRIVATE);
     }
 
-    private static <T extends Serializable> T get(Key<T> key) {
+    public static <T extends Serializable> T get(Key<T> key) {
         Serializable value;
-        if (key.defValue instanceof String) {
-            value = data.getString(key.name, (String) key.defValue);
-        } else if (key.defValue instanceof Integer) {
-            value = data.getInt(key.name, (int) key.defValue);
-        } else if (key.defValue instanceof Boolean) {
-            value = data.getBoolean(key.name, (Boolean) key.defValue);
-        } else if (key.defValue instanceof Long) {
-            value = data.getLong(key.name, (Long) key.defValue);
+        if (key.defaultValue instanceof String) {
+            value = data.getString(key.name, (String) key.defaultValue);
+        } else if (key.defaultValue instanceof Integer) {
+            value = data.getInt(key.name, (int) key.defaultValue);
+        } else if (key.defaultValue instanceof Boolean) {
+            value = data.getBoolean(key.name, (boolean) key.defaultValue);
+        } else if (key.defaultValue instanceof Long) {
+            value = data.getLong(key.name, (long) key.defaultValue);
         } else {
-            value = data.getFloat(key.name, ((Number) key.defValue).floatValue());
+            value = data.getFloat(key.name, (float) key.defaultValue);
         }
         return (T) value;
     }
 
     //Need synchronized why SharedPreferences don't support aysnc write
-    private static synchronized <T extends Serializable> void set(Key<T> key, T value) {
+    public static synchronized <T extends Serializable> void set(Key<T> key, T value) {
         if (value instanceof String) {
             data.edit().putString(key.name, (String) value).apply();
         } else if (value instanceof Integer) {
@@ -51,11 +51,11 @@ public class GlobalConfig {
 
     private static class Key<T extends Serializable> {
         private final String name;
-        private final T defValue;
+        private final T defaultValue;
 
-        private Key(String name, T defValue) {
+        private Key(String name, T defaultValue) {
             this.name = name;
-            this.defValue = defValue;
+            this.defaultValue = defaultValue;
         }
     }
 }
