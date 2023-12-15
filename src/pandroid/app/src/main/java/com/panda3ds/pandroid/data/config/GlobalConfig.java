@@ -32,7 +32,6 @@ public class GlobalConfig {
         return (T) value;
     }
 
-    //Need synchronized why SharedPreferences don't support aysnc write
     public static synchronized <T extends Serializable> void set(Key<T> key, T value) {
         if (value instanceof String) {
             data.edit().putString(key.name, (String) value).apply();
