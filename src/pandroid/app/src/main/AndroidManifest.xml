@@ -11,6 +11,7 @@
         android:glEsVersion="0x0030001"/>
 
     <application
+        android:name=".app.PandroidApplication"
         android:requestLegacyExternalStorage="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
