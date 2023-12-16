@@ -2,6 +2,7 @@
 #include "ipc.hpp"
 #include "kernel.hpp"
 
+#include <algorithm>
 #include <vector>
 
 namespace APTCommands {
@@ -311,12 +312,14 @@ void APTService::setApplicationCpuTimeLimit(u32 messagePointer) {
 	log("APT::SetApplicationCpuTimeLimit (percentage = %d%%)\n", percentage);
 
 	if (percentage < 5 || percentage > 89 || fixed != 1) {
-		Helpers::panic("Invalid parameters passed to APT::SetApplicationCpuTimeLimit");
-	} else {
-		mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
-		mem.write32(messagePointer + 4, Result::Success);
-		cpuTimeLimit = percentage;
+		Helpers::warn("Invalid parameter passed to APT::SetApplicationCpuTimeLimit: (percentage, fixed) = (%d, %d)\n", percentage, fixed);
+		// TODO: Does the clamp operation happen? Verify with getApplicationCpuTimeLimit on hardware
+		percentage = std::clamp<u32>(percentage, 5, 89);
 	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	cpuTimeLimit = percentage;
 }
 
 void APTService::getApplicationCpuTimeLimit(u32 messagePointer) {
