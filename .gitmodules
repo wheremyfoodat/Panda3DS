@@ -43,3 +43,6 @@
 [submodule "third_party/hydra_core"]
 	path = third_party/hydra_core
 	url = https://github.com/hydra-emu/core
+[submodule "third_party/zep"]
+	path = third_party/zep
+	url = https://github.com/Panda3DS-emu/zep

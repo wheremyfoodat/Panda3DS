@@ -36,7 +36,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(configureAction, &QAction::triggered, this, [this]() { configWindow->show(); });
 
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
+	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
+	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
@@ -44,6 +46,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
 	configWindow = new ConfigWindow(this);
+	luaEditor = new TextEditorWindow(this, "script.lua", "");
 
 	emu = new Emulator();
 	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
@@ -133,6 +136,7 @@ MainWindow::~MainWindow() {
 	delete menuBar;
 	delete aboutWindow;
 	delete configWindow;
+	delete luaEditor;
 }
 
 // Send a message to the emulator thread. Lock the mutex and just push back to the vector.
@@ -180,6 +184,8 @@ void MainWindow::showAboutMenu() {
 	AboutWindow about(this);
 	about.exec();
 }
+
+void MainWindow::openLuaEditor() { luaEditor->show(); }
 
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {
