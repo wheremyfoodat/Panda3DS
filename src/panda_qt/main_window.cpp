@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <cstdio>
+#include <fstream>
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
 	setWindowTitle("Alber");
@@ -23,8 +24,10 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto aboutMenu = menuBar->addMenu(tr("About"));
 
 	// Create and bind actions for them
-	auto pandaAction = fileMenu->addAction(tr("Load game"));
-	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
+	auto loadGameAction = fileMenu->addAction(tr("Load game"));
+	auto loadLuaAction = fileMenu->addAction(tr("Load Lua script"));
+	connect(loadGameAction, &QAction::triggered, this, &MainWindow::selectROM);
+	connect(loadLuaAction, &QAction::triggered, this, &MainWindow::selectLuaFile);
 
 	auto pauseAction = emulationMenu->addAction(tr("Pause"));
 	auto resumeAction = emulationMenu->addAction(tr("Resume"));
@@ -121,6 +124,34 @@ void MainWindow::selectROM() {
 		EmulatorMessage message{.type = MessageType::LoadROM};
 		message.path.p = p;
 		sendMessage(message);
+	}
+}
+
+void MainWindow::selectLuaFile() {
+	auto path = QFileDialog::getOpenFileName(this, tr("Select Lua script to load"), "", tr("Lua scripts (*.lua *.txt)"));
+
+	if (!path.isEmpty()) {
+		std::ifstream file(std::filesystem::path(path.toStdU16String()), std::ios::in);
+
+		if (file.fail()) {
+			printf("Failed to load selected lua file\n");
+			return;
+		}
+
+		// Read whole file into an std::string string
+		// Get file size, preallocate std::string to avoid furthermemory allocations
+		std::string code;
+		file.seekg(0, std::ios::end);
+		code.resize(file.tellg());
+
+		// Rewind and read the whole file
+		file.seekg(0, std::ios::beg);
+		file.read(&code[0], code.size());
+		file.close();
+
+		loadLuaScript(code);
+		// Copy the Lua script to the Lua editor
+		luaEditor->setText(code);
 	}
 }
 

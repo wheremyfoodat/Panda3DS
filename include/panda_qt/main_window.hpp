@@ -59,6 +59,7 @@ class MainWindow : public QMainWindow {
 
 	void swapEmuBuffer();
 	void emuThreadMainLoop();
+	void selectLuaFile();
 	void selectROM();
 	void dumpRomFS();
 	void openLuaEditor();

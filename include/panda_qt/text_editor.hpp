@@ -19,4 +19,5 @@ class TextEditorWindow : public QDialog {
 
   public:
 	TextEditorWindow(QWidget* parent, const std::string& filename, const std::string& initialText);
+	void setText(const std::string& text) { zepWidget.GetEditor().GetMRUBuffer()->SetText(text); }
 };

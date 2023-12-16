@@ -15,15 +15,18 @@ TextEditorWindow::TextEditorWindow(QWidget* parent, const std::string& filename,
 	ZepRegressExCommand::Register(zepWidget.GetEditor());
 	ZepReplExCommand::Register(zepWidget.GetEditor(), &replProvider);
 
+	// Default to standard mode instead of vim mode, initialize text box
 	zepWidget.GetEditor().SetGlobalMode(Zep::ZepMode_Standard::StaticName());
 	zepWidget.GetEditor().InitWithText(filename, initialText);
 
+	// Layout for widgets
 	QVBoxLayout* mainLayout = new QVBoxLayout();
 	setLayout(mainLayout);
 
 	QPushButton* button = new QPushButton(tr("Load script"), this);
 	button->setFixedSize(100, 20);
 
+	// When the Load Script button is pressed, send the current text to the MainWindow, which will upload it to the emulator's lua object
 	connect(button, &QPushButton::pressed, this, [this]() {
 		if (parentWidget()) {
 			auto buffer = zepWidget.GetEditor().GetMRUBuffer();
