@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <cstdio>
+#include <fstream>
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
 	setWindowTitle("Alber");
@@ -23,8 +24,10 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto aboutMenu = menuBar->addMenu(tr("About"));
 
 	// Create and bind actions for them
-	auto pandaAction = fileMenu->addAction(tr("Load game"));
-	connect(pandaAction, &QAction::triggered, this, &MainWindow::selectROM);
+	auto loadGameAction = fileMenu->addAction(tr("Load game"));
+	auto loadLuaAction = fileMenu->addAction(tr("Load Lua script"));
+	connect(loadGameAction, &QAction::triggered, this, &MainWindow::selectROM);
+	connect(loadLuaAction, &QAction::triggered, this, &MainWindow::selectLuaFile);
 
 	auto pauseAction = emulationMenu->addAction(tr("Pause"));
 	auto resumeAction = emulationMenu->addAction(tr("Resume"));
@@ -36,7 +39,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(configureAction, &QAction::triggered, this, [this]() { configWindow->show(); });
 
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
+	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
+	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
@@ -44,6 +49,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
 	configWindow = new ConfigWindow(this);
+	luaEditor = new TextEditorWindow(this, "script.lua", "");
 
 	emu = new Emulator();
 	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
@@ -121,6 +127,34 @@ void MainWindow::selectROM() {
 	}
 }
 
+void MainWindow::selectLuaFile() {
+	auto path = QFileDialog::getOpenFileName(this, tr("Select Lua script to load"), "", tr("Lua scripts (*.lua *.txt)"));
+
+	if (!path.isEmpty()) {
+		std::ifstream file(std::filesystem::path(path.toStdU16String()), std::ios::in);
+
+		if (file.fail()) {
+			printf("Failed to load selected lua file\n");
+			return;
+		}
+
+		// Read whole file into an std::string string
+		// Get file size, preallocate std::string to avoid furthermemory allocations
+		std::string code;
+		file.seekg(0, std::ios::end);
+		code.resize(file.tellg());
+
+		// Rewind and read the whole file
+		file.seekg(0, std::ios::beg);
+		file.read(&code[0], code.size());
+		file.close();
+
+		loadLuaScript(code);
+		// Copy the Lua script to the Lua editor
+		luaEditor->setText(code);
+	}
+}
+
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
 	appRunning = false; // Set our running atomic to false in order to make the emulator thread stop, and join it
@@ -133,6 +167,7 @@ MainWindow::~MainWindow() {
 	delete menuBar;
 	delete aboutWindow;
 	delete configWindow;
+	delete luaEditor;
 }
 
 // Send a message to the emulator thread. Lock the mutex and just push back to the vector.
@@ -181,12 +216,19 @@ void MainWindow::showAboutMenu() {
 	about.exec();
 }
 
+void MainWindow::openLuaEditor() { luaEditor->show(); }
+
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {
 		case MessageType::LoadROM:
 			emu->loadROM(*message.path.p);
 			// Clean up the allocated path
 			delete message.path.p;
+			break;
+
+		case MessageType::LoadLuaScript:
+			emu->getLua().loadString(*message.string.str);
+			delete message.string.str;
 			break;
 
 		case MessageType::Pause: emu->pause(); break;
@@ -252,4 +294,12 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 		case Qt::Key_Return: releaseKey(HID::Keys::Start); break;
 		case Qt::Key_Backspace: releaseKey(HID::Keys::Select); break;
 	}
+}
+
+void MainWindow::loadLuaScript(const std::string& code) {
+	EmulatorMessage message{.type = MessageType::LoadLuaScript};
+
+	// Make a copy of the code on the heap to send via the message queue
+	message.string.str = new std::string(code);
+	sendMessage(message);
 }
