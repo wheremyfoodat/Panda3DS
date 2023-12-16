@@ -195,6 +195,11 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			delete message.path.p;
 			break;
 
+		case MessageType::LoadLuaScript:
+			emu->getLua().loadString(*message.string.str);
+			delete message.string.str;
+			break;
+
 		case MessageType::Pause: emu->pause(); break;
 		case MessageType::Resume: emu->resume(); break;
 		case MessageType::TogglePause: emu->togglePause(); break;
@@ -258,4 +263,12 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 		case Qt::Key_Return: releaseKey(HID::Keys::Start); break;
 		case Qt::Key_Backspace: releaseKey(HID::Keys::Select); break;
 	}
+}
+
+void MainWindow::loadLuaScript(const std::string& code) {
+	EmulatorMessage message{.type = MessageType::LoadLuaScript};
+
+	// Make a copy of the code on the heap to send via the message queue
+	message.string.str = new std::string(code);
+	sendMessage(message);
 }

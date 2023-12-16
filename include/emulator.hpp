@@ -119,6 +119,8 @@ class Emulator {
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
+	LuaManager& getLua() { return lua; }
+
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
 	u64 getTicks() { return cpu.getTicks(); }
