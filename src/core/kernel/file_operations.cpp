@@ -148,6 +148,11 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 	IOFile f(file->fd);
 	auto [success, bytesWritten] = f.writeBytes(data.get(), size);
 
+	// TODO: Should this check only the byte?
+	if (writeOption) {
+		f.flush();
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x0803, 2, 2));
 	if (!success) {
 		Helpers::panic("Kernel::WriteFile failed");
