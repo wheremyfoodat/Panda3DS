@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+
 #include "helpers.hpp"
 #include "memory.hpp"
 
@@ -36,6 +38,8 @@ class LuaManager {
 	void initialize();
 	void initializeThunks();
 	void loadFile(const char* path);
+	void loadString(const std::string& code);
+
 	void reset();
 	void signalEvent(LuaEvent e) {
 		if (haveScript) [[unlikely]] {
@@ -52,6 +56,7 @@ class LuaManager {
 	void close() {}
 	void initialize() {}
 	void loadFile(const char* path) {}
+	void loadString(const std::string& code) {}
 	void reset() {}
 	void signalEvent(LuaEvent e) {}
 };

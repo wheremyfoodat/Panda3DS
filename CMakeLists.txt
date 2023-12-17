@@ -186,12 +186,20 @@ set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 # Frontend source files
 if(NOT ANDROID)
     if(ENABLE_QT_GUI)
-        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp src/panda_qt/config_window.cpp)
-        set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp include/panda_qt/config_window.hpp)
+        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
+            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp
+        )   
+        set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
+            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp
+        )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
         source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
         include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
+
+        include_directories(third_party/zep/include) # Include zep for text editor usage
+        configure_file(third_party/zep/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/zep_config/config_app.h)
+        include_directories(${CMAKE_BINARY_DIR}/zep_config)
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
         set(FRONTEND_HEADER_FILES "")
@@ -428,6 +436,9 @@ endif()
 
 if(ENABLE_QT_GUI)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_QT=1")
+    target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
+    target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
+
     target_link_libraries(Alber PRIVATE Qt6::Widgets)
 
     if(LINUX OR FREEBSD)
