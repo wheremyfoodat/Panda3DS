@@ -179,6 +179,30 @@ u32 Kernel::getTLSPointer() {
 // Result CloseHandle(Handle handle)
 void Kernel::svcCloseHandle() {
 	logSVC("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
+	const Handle handle = regs[0];
+
+	KernelObject* object = getObject(handle);
+	if (object != nullptr) {
+		switch (object->type) {
+			// Close file descriptor when closing a file to prevent leaks and properly flush file contents
+			case KernelObjectType::File: {
+				FileSession* file = object->getData<FileSession>();
+				if (file->isOpen) {
+					file->isOpen = false;
+
+					if (file->fd != nullptr) {
+						fclose(file->fd);
+						file->fd = nullptr;
+					}
+				}
+				break;
+			}
+
+			default: break;
+		}
+	}
+
+	// Stub to always succeed for now
 	regs[0] = Result::Success;
 }
 
