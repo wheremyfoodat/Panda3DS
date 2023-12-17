@@ -9,8 +9,11 @@ import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 
+import com.panda3ds.pandroid.app.PandroidApplication;
+
 public class PathUtils {
-	public static String getPath(final Context context, final Uri uri) {
+	public static String getPath(final Uri uri) {
+		final Context context = PandroidApplication.getAppContext();
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && DocumentsContract.isDocumentUri(context, uri)) {
 			if (isExternalStorageDocument(uri)) {
 				final String docId = DocumentsContract.getDocumentId(uri);

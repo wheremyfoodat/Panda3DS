@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <Preference
+        android:title="@string/app_name"
+        android:enabled="false"
+        android:summary="1.0"
+        android:layout="@layout/preference_simple_about"/>
+
+    <Preference
+        android:key="inputMap"
+        android:icon="@drawable/ic_key_a"
+        android:title="Controller Mapping"
+        android:summary="Map physics controller or keyboard"
+        android:layout="@layout/preference_start_item"/>
+
+</PreferenceScreen>

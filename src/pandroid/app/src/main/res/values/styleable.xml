@@ -9,4 +9,7 @@
         <item name="android:backgroundTintMode">multiply</item>
         <item name="android:backgroundTint">#FFF</item>
     </style>
+    <style name="HiddenTextAppearance">
+        <item name="android:textSize">0.1px</item>
+    </style>
 </resources>

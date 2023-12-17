@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <group>
+        <item
+            android:id="@+id/games"
+            android:icon="@drawable/ic_videogame"
+            android:title="@string/games"
+            android:checkable="true"/>
+        <item
+            android:id="@+id/search"
+            android:icon="@drawable/ic_search"
+            android:title="@string/search"
+            android:checkable="true"/>
+
+        <item
+            android:id="@+id/settings"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/settings"
+            android:checkable="true"/>
+    </group>
+
+</menu>

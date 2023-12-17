@@ -4,6 +4,8 @@ import android.app.Application;
 import android.content.Context;
 
 import com.panda3ds.pandroid.data.config.GlobalConfig;
+import com.panda3ds.pandroid.input.InputMap;
+import com.panda3ds.pandroid.utils.GameUtils;
 
 public class PandroidApplication extends Application {
     private static Context appContext;
@@ -13,6 +15,8 @@ public class PandroidApplication extends Application {
         super.onCreate();
         appContext = this;
         GlobalConfig.initialize();
+        GameUtils.initialize();
+        InputMap.initialize();
     }
 
     public static Context getAppContext() {
