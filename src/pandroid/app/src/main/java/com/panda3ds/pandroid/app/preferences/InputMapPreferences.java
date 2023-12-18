@@ -8,8 +8,10 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
+import androidx.preference.SeekBarPreference;
 
 import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.BaseActivity;
 import com.panda3ds.pandroid.app.base.BasePreferenceFragment;
 import com.panda3ds.pandroid.input.InputMap;
 import com.panda3ds.pandroid.input.KeyName;
@@ -19,14 +21,33 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
     private ActivityResultLauncher<String> requestKey;
     private String currentKey;
 
+    private SeekBarPreference deadZonePreference;
+
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
         setPreferencesFromResource(R.xml.input_map_preferences, rootKey);
+
+        ((BaseActivity) requireActivity()).getSupportActionBar().setTitle(R.string.controller_mapping);
+
         for (KeyName key : KeyName.values()) {
-            if (key == KeyName.NULL) return;
+            if (key == KeyName.NULL) continue;
             setItemClick(key.name(), this::onItemPressed);
         }
+
+        deadZonePreference = getPreferenceScreen().findPreference("dead_zone");
+
+        deadZonePreference.setOnPreferenceChangeListener((preference, value) -> {
+            InputMap.setDeadZone(((int)value/100.0f));
+            refreshList();
+            return false;
+        });
+
         refreshList();
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
     }
 
     @Override
@@ -56,6 +77,8 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
     }
 
     private void refreshList() {
+        deadZonePreference.setValue((int)(InputMap.getDeadZone()*100));
+        deadZonePreference.setSummary(deadZonePreference.getValue()+"%");
         for (KeyName key : KeyName.values()) {
             if (key == KeyName.NULL) continue;
             findPreference(key.name()).setSummary(InputMap.relative(key));

@@ -13,4 +13,15 @@
     <string name="others">Outros</string>
     <string name="press_any_key">Pressione qualquer tecla</string>
     <string name="axis">Eixos</string>
+    <string name="dead_zone">Zona Morta</string>
+    <string name="options">Opções</string>
+    <string name="pref_input_map_summary">Mapeie um controle ou teclado</string>
+    <string name="controller_mapping">Mapeamento de controle</string>
+    <string name="theme">Tema</string>
+    <string name="pref_appearance_summary">Defina a aparência do aplicativo</string>
+    <string name="appearance">Aparência</string>
+    <string name="theme_device">Mesmo do dispositivo</string>
+    <string name="light">Claro</string>
+    <string name="dark">Escuro</string>
+    <string name="black">Preto</string>
 </resources>

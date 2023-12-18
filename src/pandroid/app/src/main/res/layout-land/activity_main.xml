@@ -24,6 +24,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:menu="@menu/main_activity_navigation"
-        app:labelVisibilityMode="selected"/>
+        app:labelVisibilityMode="selected"
+        style="@style/ThemedNavigationBottom"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
