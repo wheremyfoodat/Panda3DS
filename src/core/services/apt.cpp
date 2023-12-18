@@ -34,8 +34,8 @@ namespace APTCommands {
 }
 
 void APTService::reset() {
-	// Set the default CPU time limit to 30%. Seems safe, as this is what Metroid 2 uses by default
-	cpuTimeLimit = 30;
+	// Set the default CPU time limit to 0%. Appears to be the default value on hardware
+	cpuTimeLimit = 0;
 
 	// Reset the handles for the various service objects
 	lockHandle = std::nullopt;
@@ -311,15 +311,16 @@ void APTService::setApplicationCpuTimeLimit(u32 messagePointer) {
 	u32 percentage = mem.read32(messagePointer + 8); // CPU time percentage between 5% and 89%
 	log("APT::SetApplicationCpuTimeLimit (percentage = %d%%)\n", percentage);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
+
+	// If called with invalid parameters, the current time limit is left unchanged, and OS::NotImplemented is returned
 	if (percentage < 5 || percentage > 89 || fixed != 1) {
 		Helpers::warn("Invalid parameter passed to APT::SetApplicationCpuTimeLimit: (percentage, fixed) = (%d, %d)\n", percentage, fixed);
-		// TODO: Does the clamp operation happen? Verify with getApplicationCpuTimeLimit on hardware
-		percentage = std::clamp<u32>(percentage, 5, 89);
+		mem.write32(messagePointer + 4, Result::OS::NotImplemented);
+	} else {
+		mem.write32(messagePointer + 4, Result::Success);
+		cpuTimeLimit = percentage;
 	}
-
-	mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
-	mem.write32(messagePointer + 4, Result::Success);
-	cpuTimeLimit = percentage;
 }
 
 void APTService::getApplicationCpuTimeLimit(u32 messagePointer) {
