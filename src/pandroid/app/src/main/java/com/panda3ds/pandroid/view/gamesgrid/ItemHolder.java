@@ -18,6 +18,8 @@ class ItemHolder extends RecyclerView.ViewHolder {
     public void apply(GameMetadata game) {
         ((AppCompatTextView) itemView.findViewById(R.id.title))
                 .setText(game.getTitle());
+        ((GameIconView) itemView.findViewById(R.id.icon))
+                .setImageBitmap(game.getIcon());
         ((AppCompatTextView) itemView.findViewById(R.id.description))
                 .setText(game.getPublisher());
 

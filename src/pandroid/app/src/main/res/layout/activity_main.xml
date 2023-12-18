@@ -23,6 +23,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/fragment_container"
         app:labelVisibilityMode="selected"
-        app:menu="@menu/main_activity_navigation"/>
+        app:menu="@menu/main_activity_navigation"
+        style="@style/ThemedNavigationBottom"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

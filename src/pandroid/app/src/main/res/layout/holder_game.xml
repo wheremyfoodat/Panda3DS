@@ -13,11 +13,11 @@
         app:cardCornerRadius="16dp">
 
         <com.panda3ds.pandroid.view.gamesgrid.GameIconView
-            android:id="@+id/cover"
+            android:id="@+id/icon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:scaleType="centerCrop"
-            android:src="@drawable/temp_thumb"/>
+            android:background="?colorSurfaceVariant"/>
 
     </androidx.cardview.widget.CardView>
 

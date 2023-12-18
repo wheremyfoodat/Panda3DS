@@ -36,7 +36,7 @@ public class InputMap {
     }
 
     public static void setDeadZone(float value) {
-        data.edit().putFloat(KEY_DEAD_ZONE, Math.max(0, Math.min(1.0F, value))).apply();
+        data.edit().putFloat(KEY_DEAD_ZONE, Math.max(0.0f, Math.min(1.0f, value))).apply();
     }
 
 }

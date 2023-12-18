@@ -1,5 +1,7 @@
 package com.panda3ds.pandroid.data.game;
 
+import android.graphics.Bitmap;
+
 import java.util.UUID;
 
 public class GameMetadata {
@@ -7,7 +9,7 @@ public class GameMetadata {
     private final String id;
     private final String romPath;
     private final String title;
-    private final int[] icon = new int[48 * 48];
+    private transient final Bitmap icon = Bitmap.createBitmap(48,48, Bitmap.Config.RGB_565);
     private final String publisher;
     private final GameRegion[] regions = new GameRegion[]{GameRegion.None};
 
@@ -34,7 +36,7 @@ public class GameMetadata {
         return publisher;
     }
 
-    public int[] getIcon() {
+    public Bitmap getIcon() {
         return icon;
     }
 
