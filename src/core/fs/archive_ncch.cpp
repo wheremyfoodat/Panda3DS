@@ -142,7 +142,7 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 		case PathType::RomFS: {
 			const u64 romFSSize = cxi->romFS.size;
 			const u64 romFSOffset = cxi->romFS.offset;
-			if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+			if ((offset >> 32) || (offset >= romFSSize) || (offset + size > romFSSize)) {
 				Helpers::panic("Tried to read from NCCH with too big of an offset");
 			}
 
