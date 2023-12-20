@@ -83,7 +83,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 			case PathType::RomFS: {
 				const u64 romFSSize = cxi->romFS.size;
 				const u64 romFSOffset = cxi->romFS.offset;
-				if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+				if ((offset >> 32) || (offset >= romFSSize) || (offset + size > romFSSize)) {
 					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
 				}
 
@@ -95,7 +95,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 			case PathType::ExeFS: {
 				const u64 exeFSSize = cxi->exeFS.size;
 				const u64 exeFSOffset = cxi->exeFS.offset;
-				if ((offset >> 32) || (offset >= exeFSSize) || (offset + size >= exeFSSize)) {
+				if ((offset >> 32) || (offset >= exeFSSize) || (offset + size > exeFSSize)) {
 					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
 				}
 
@@ -110,7 +110,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 
 				const u64 romFSSize = cxi->romFS.size;
 				const u64 romFSOffset = cxi->romFS.offset;
-				if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+				if ((offset >> 32) || (offset >= romFSSize) || (offset + size > romFSSize)) {
 					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
 				}
 
@@ -129,7 +129,7 @@ std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 
 		switch (type) {
 			case PathType::RomFS: {
 				const u64 romFSSize = hb3dsx->romFSSize;
-				if ((offset >> 32) || (offset >= romFSSize) || (offset + size >= romFSSize)) {
+				if ((offset >> 32) || (offset >= romFSSize) || (offset + size > romFSSize)) {
 					Helpers::panic("Tried to read from SelfNCCH with too big of an offset");
 				}
 				break;
