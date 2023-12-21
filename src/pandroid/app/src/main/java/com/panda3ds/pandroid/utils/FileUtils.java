@@ -9,6 +9,9 @@ import androidx.documentfile.provider.DocumentFile;
 import com.panda3ds.pandroid.app.PandroidApplication;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public class FileUtils {
     public static final String MODE_READ = "r";
@@ -28,18 +31,38 @@ public class FileUtils {
         return parseFile(path).getName();
     }
 
-    public static boolean createFolder(String path, String name){
-        DocumentFile folder = parseFile(path);
-
-        if (folder.findFile(name) != null){
-            return true;
+    public static String getPrivatePath(){
+        File file = getContext().getFilesDir();
+        if (!file.exists()){
+            file.mkdirs();
         }
+        return file.getAbsolutePath();
+    }
 
+    public static boolean exists(String path){
+        return parseFile(path).exists();
+    }
+
+    public static boolean createDir(String path, String name){
+        DocumentFile folder = parseFile(path);
+        if (folder.findFile(name) != null)
+            return true;
         return folder.createDirectory(name) != null;
     }
 
-    public static String getPrivatePath(){
-        return getContext().getFilesDir().getAbsolutePath();
+    public static boolean createFile(String path, String name){
+        DocumentFile folder = parseFile(path);
+        if (folder.findFile(name) != null)
+            return true;
+        return folder.createFile("application/octet-stream", name) != null;
+    }
+
+    public static InputStream getInputStream(String path) throws FileNotFoundException {
+        return getContext().getContentResolver().openInputStream(parseFile(path).getUri());
+    }
+
+    public static OutputStream getOutputStream(String path) throws FileNotFoundException {
+        return getContext().getContentResolver().openOutputStream(parseFile(path).getUri());
     }
 
     public static void makeUriPermanent(String uri, String mode) {

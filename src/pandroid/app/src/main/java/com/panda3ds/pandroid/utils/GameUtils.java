@@ -13,8 +13,8 @@ import com.panda3ds.pandroid.app.GameActivity;
 import com.panda3ds.pandroid.app.PandroidApplication;
 import com.panda3ds.pandroid.data.game.GameMetadata;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
@@ -81,11 +81,13 @@ public class GameUtils {
 
     public static void setGameIcon(String id, Bitmap icon) {
         try {
-            File file = new File(FileUtils.getPrivatePath()+"/cache_icons/", id+".png");
-            file.getParentFile().mkdirs();
-            FileOutputStream o = new FileOutputStream(file);
-            icon.compress(Bitmap.CompressFormat.PNG, 100, o);
-            o.close();
+            String appPath = FileUtils.getPrivatePath();
+            FileUtils.createDir(appPath, "cache_icons");
+            FileUtils.createFile(appPath+"/cache_icons/", id+".png");
+
+            OutputStream output = FileUtils.getOutputStream(appPath+"/cache_icons/"+id+".png");
+            icon.compress(Bitmap.CompressFormat.PNG, 100, output);
+            output.close();
         } catch (Exception e){
             Log.e(Constants.LOG_TAG, "Error on save game icon: ", e);
         }
@@ -93,9 +95,13 @@ public class GameUtils {
 
     public static Bitmap loadGameIcon(String id) {
         try {
-            File file = new File(FileUtils.getPrivatePath()+"/cache_icons/"+id+".png");
-            if (file.exists())
-                return BitmapFactory.decodeFile(file.getAbsolutePath());
+            String path = FileUtils.getPrivatePath()+"/cache_icons/"+id+".png";
+            if (FileUtils.exists(path)) {
+                InputStream stream = FileUtils.getInputStream(path);
+                Bitmap image = BitmapFactory.decodeStream(stream);
+                stream.close();
+                return image;
+            }
         } catch (Exception e){
             Log.e(Constants.LOG_TAG, "Error on load game icon: ", e);
         }
