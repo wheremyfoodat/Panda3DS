@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
+import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
 import com.panda3ds.pandroid.input.InputHandler;
@@ -79,5 +80,13 @@ public class GameActivity extends BaseActivity {
 			return true;
 
 		return super.dispatchGenericMotionEvent(ev);
+	}
+
+	@Override
+	protected void onDestroy() {
+		if(AlberDriver.HasRomLoaded()){
+			AlberDriver.Finalize();
+		}
+		super.onDestroy();
 	}
 }

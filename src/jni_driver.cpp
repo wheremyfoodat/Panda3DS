@@ -42,12 +42,7 @@ void Pandroid::onSmdhLoaded(const std::vector<u8> &smdh){
     
     jbyteArray result = env->NewByteArray(size);
     
-    jbyte buffer[size];
-    
-    for(int i = 0; i < size; i++){
-        buffer[i] = (jbyte) smdh[i];
-    }
-    env->SetByteArrayRegion(result, 0, size, buffer);
+    env->SetByteArrayRegion(result, 0, size, (jbyte*)smdh.data());
 
     
     auto clazz = env->FindClass(alberClass);

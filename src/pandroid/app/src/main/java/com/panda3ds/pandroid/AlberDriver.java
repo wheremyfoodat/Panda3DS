@@ -24,8 +24,9 @@ public class AlberDriver {
 	public static native void TouchScreenDown(int x, int y);
 
 	public static void OnSmdhLoaded(byte[] buffer) {
-		Log.i(Constants.LOG_TAG, "Loaded rom smdh");
 		SMDH smdh = new SMDH(buffer);
+		Log.i(Constants.LOG_TAG, "Loaded rom SDMH");
+		Log.i(Constants.LOG_TAG, String.format("Are you playing '%s' published by '%s'", smdh.getTitle(), smdh.getPublisher()));
 		GameMetadata game = GameUtils.getCurrentGame();
 		GameUtils.removeGame(game);
 		GameUtils.addGame(GameMetadata.applySMDH(game, smdh));
