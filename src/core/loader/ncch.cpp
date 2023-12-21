@@ -6,6 +6,10 @@
 #include "loader/ncch.hpp"
 #include "memory.hpp"
 
+#ifdef __ANDROID__
+#include "jni_driver.hpp"    
+#endif
+
 #include <iostream>
 
 bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSInfo &info) {
@@ -254,6 +258,11 @@ bool NCCH::parseSMDH(const std::vector<u8>& smdh) {
 		printf("Invalid SMDH magic!\n");
 		return false;
 	}
+
+
+    #ifdef __ANDROID__
+    Pandroid::onSmdhLoaded(smdh);
+    #endif
 
 	// Bitmask showing which regions are allowed.
 	// https://www.3dbrew.org/wiki/SMDH#Region_Lockout

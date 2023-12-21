@@ -8,12 +8,16 @@ import androidx.documentfile.provider.DocumentFile;
 
 import com.panda3ds.pandroid.app.PandroidApplication;
 
+import java.io.File;
+
 public class FileUtils {
-
     public static final String MODE_READ = "r";
-
-    private static Uri parseUri(String value) {
-        return Uri.parse(value);
+    private static DocumentFile parseFile(String path){
+        if (path.startsWith("/")){
+            return DocumentFile.fromFile(new File(path));
+        }
+        Uri uri = Uri.parse(path);
+        return DocumentFile.fromSingleUri(getContext(), uri);
     }
 
     private static Context getContext() {
@@ -21,8 +25,21 @@ public class FileUtils {
     }
 
     public static String getName(String path) {
-        DocumentFile file = DocumentFile.fromSingleUri(getContext(), parseUri(path));
-        return file.getName();
+        return parseFile(path).getName();
+    }
+
+    public static boolean createFolder(String path, String name){
+        DocumentFile folder = parseFile(path);
+
+        if (folder.findFile(name) != null){
+            return true;
+        }
+
+        return folder.createDirectory(name) != null;
+    }
+
+    public static String getPrivatePath(){
+        return getContext().getFilesDir().getAbsolutePath();
     }
 
     public static void makeUriPermanent(String uri, String mode) {
@@ -31,6 +48,6 @@ public class FileUtils {
         if (mode.toLowerCase().contains("w"))
             flags &= Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
 
-        getContext().getContentResolver().takePersistableUriPermission(parseUri(uri), flags);
+        getContext().getContentResolver().takePersistableUriPermission(Uri.parse(uri), flags);
     }
 }

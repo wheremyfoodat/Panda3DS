@@ -51,7 +51,7 @@ public class GamesFragment extends Fragment implements ActivityResultCallback<Ur
             String uri = result.toString();
             if (GameUtils.findByRomPath(uri) == null) {
                 FileUtils.makeUriPermanent(uri, FileUtils.MODE_READ);
-                GameMetadata game = new GameMetadata(FileUtils.getName(uri).split("\\.")[0], uri, "Unknown");
+                GameMetadata game = new GameMetadata(uri, FileUtils.getName(uri).split("\\.")[0],"Unknown");
                 GameUtils.addGame(game);
                 GameUtils.launch(requireActivity(), game);
             }

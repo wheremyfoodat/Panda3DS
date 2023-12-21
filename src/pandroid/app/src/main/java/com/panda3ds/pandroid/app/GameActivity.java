@@ -23,7 +23,7 @@ import com.panda3ds.pandroid.view.PandaLayoutController;
 
 public class GameActivity extends BaseActivity {
 
-	private final AlberInputListener inputListener = new AlberInputListener();
+	private final AlberInputListener inputListener = new AlberInputListener(this);
 
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
