@@ -54,7 +54,7 @@ public class FileUtils {
         DocumentFile folder = parseFile(path);
         if (folder.findFile(name) != null)
             return true;
-        return folder.createFile("application/octet-stream", name) != null;
+        return folder.createFile("", name) != null;
     }
 
     public static InputStream getInputStream(String path) throws FileNotFoundException {
