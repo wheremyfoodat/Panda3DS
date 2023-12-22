@@ -19,7 +19,7 @@ public class GsonConfigParser {
     public void save(Object data){
         synchronized (this) {
             new Task(() -> {
-                String json = gson.toJson(data);
+                String json = gson.toJson(data, data.getClass());
                 FileUtils.writeTextFile(FileUtils.getConfigPath(), name + ".json", json);
             }).runSync();
         }

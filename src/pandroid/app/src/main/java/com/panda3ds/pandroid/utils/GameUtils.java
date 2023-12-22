@@ -14,6 +14,7 @@ import com.panda3ds.pandroid.data.game.GameMetadata;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class GameUtils {
@@ -95,6 +96,6 @@ public class GameUtils {
     }
 
     private static class DataModel {
-        public final ArrayList<GameMetadata> games = new ArrayList<>();
+        public final List<GameMetadata> games = new ArrayList<>();
     }
 }

@@ -1,10 +1,12 @@
 package com.panda3ds.pandroid.data.config;
 
+import com.google.gson.internal.LinkedTreeMap;
 import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.utils.Constants;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Map;
 
 public class GlobalConfig {
 
@@ -18,6 +20,7 @@ public class GlobalConfig {
     public static DataModel data;
 
     public static final Key<Integer> KEY_APP_THEME = new Key<>("app.theme", THEME_ANDROID);
+    public static final Key<Boolean> KEY_SCREEN_GAMEPAD_VISIBLE = new Key<>("app.screen_gamepad.visible", true);
 
     public static void initialize() {
         data = parser.load(DataModel.class);
@@ -64,7 +67,7 @@ public class GlobalConfig {
     }
 
     private static class DataModel {
-        private final HashMap<String, Object> configs = new HashMap<>();
+        private final Map<String, Object> configs = new LinkedTreeMap<>();
 
         public Object get(String key){
             return configs.get(key);

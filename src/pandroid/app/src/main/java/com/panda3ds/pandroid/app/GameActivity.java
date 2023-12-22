@@ -16,6 +16,7 @@ import androidx.annotation.Nullable;
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
+import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.input.InputHandler;
 import com.panda3ds.pandroid.input.InputMap;
 import com.panda3ds.pandroid.utils.Constants;
@@ -47,7 +48,13 @@ public class GameActivity extends BaseActivity {
 		PandaLayoutController controllerLayout = findViewById(R.id.controller_layout);
 		controllerLayout.initialize();
 
-		((CheckBox) findViewById(R.id.hide_screen_controller)).setOnCheckedChangeListener((buttonView, isChecked) -> findViewById(R.id.overlay_controller).setVisibility(isChecked ? View.VISIBLE : View.INVISIBLE));
+		((CheckBox) findViewById(R.id.hide_screen_controller)).setOnCheckedChangeListener((buttonView, checked) -> {
+			findViewById(R.id.overlay_controller).setVisibility(checked ? View.VISIBLE : View.GONE);
+			findViewById(R.id.overlay_controller).invalidate();
+			findViewById(R.id.overlay_controller).requestLayout();
+			GlobalConfig.set(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE, checked);
+		});
+		((CheckBox) findViewById(R.id.hide_screen_controller)).setChecked(GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE));
 	}
 
 	@Override
