@@ -1,30 +1,27 @@
 package com.panda3ds.pandroid.input;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
-import com.panda3ds.pandroid.app.PandroidApplication;
+import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.utils.Constants;
 
 public class InputMap {
-
-    private static SharedPreferences data;
-    private static final String KEY_DEAD_ZONE = "deadZone";
+    public static final GsonConfigParser parser = new GsonConfigParser(Constants.PREF_INPUT_MAP);
+    private static DataModel data;
 
     public static void initialize() {
-        data = PandroidApplication.getAppContext().getSharedPreferences(Constants.PREF_INPUT_MAP, Context.MODE_PRIVATE);
+        data = parser.load(DataModel.class);
     }
 
     public static float getDeadZone() {
-        return data.getFloat(KEY_DEAD_ZONE, 0.2f);
+        return data.deadZone;
     }
 
     public static void set(KeyName key, String name) {
-        data.edit().putString(key.name(), name).apply();
+        data.keys[key.ordinal()] = name;
+        writeConfig();
     }
 
     public static String relative(KeyName key) {
-        return data.getString(key.name(), "-");
+        return data.keys[key.ordinal()] == null ? "-" : data.keys[key.ordinal()];
     }
 
     public static KeyName relative(String name) {
@@ -36,7 +33,16 @@ public class InputMap {
     }
 
     public static void setDeadZone(float value) {
-        data.edit().putFloat(KEY_DEAD_ZONE, Math.max(0.0f, Math.min(1.0f, value))).apply();
+        data.deadZone = Math.max(0.0f, Math.min(1.0f, value));
+        writeConfig();
     }
 
+    private static void writeConfig() {
+        parser.save(data);
+    }
+
+    private static class DataModel {
+        public float deadZone = 0.2f;
+        public final String[] keys = new String[32];
+    }
 }

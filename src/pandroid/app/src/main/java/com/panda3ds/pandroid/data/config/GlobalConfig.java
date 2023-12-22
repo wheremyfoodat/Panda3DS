@@ -1,58 +1,56 @@
 package com.panda3ds.pandroid.data.config;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
-import com.panda3ds.pandroid.app.PandroidApplication;
+import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.utils.Constants;
 
 import java.io.Serializable;
+import java.util.HashMap;
 
 public class GlobalConfig {
-    private static SharedPreferences data;
+
+    private static final GsonConfigParser parser = new GsonConfigParser(Constants.PREF_GLOBAL_CONFIG);
 
     public static final int VALUE_THEME_ANDROID = 0;
     public static final int VALUE_THEME_LIGHT = 1;
     public static final int VALUE_THEME_DARK = 2;
     public static final int VALUE_THEME_BLACK = 3;
 
+    public static DataModel data;
+
     public static final Key<Integer> KEY_APP_THEME = new Key<>("app.theme", VALUE_THEME_ANDROID);
 
     public static void initialize() {
-        data = PandroidApplication.getAppContext()
-                .getSharedPreferences(Constants.PREF_GLOBAL_CONFIG, Context.MODE_PRIVATE);
+        data = parser.load(DataModel.class);
     }
 
     public static <T extends Serializable> T get(Key<T> key) {
         Serializable value;
+
+        if (!data.configs.containsKey(key.name)){
+            return key.defaultValue;
+        }
+
         if (key.defaultValue instanceof String) {
-            value = data.getString(key.name, (String) key.defaultValue);
+            value = (String) data.configs.get(key.name);
         } else if (key.defaultValue instanceof Integer) {
-            value = data.getInt(key.name, (int) key.defaultValue);
+            value = ((Number) data.get(key.name)).intValue();
         } else if (key.defaultValue instanceof Boolean) {
-            value = data.getBoolean(key.name, (boolean) key.defaultValue);
+            value = (boolean) data.get(key.name);
         } else if (key.defaultValue instanceof Long) {
-            value = data.getLong(key.name, (long) key.defaultValue);
+            value = ((Number) data.get(key.name)).longValue();
         } else {
-            value = data.getFloat(key.name, (float) key.defaultValue);
+            value = ((Number) data.get(key.name)).floatValue();
         }
         return (T) value;
     }
 
     public static synchronized <T extends Serializable> void set(Key<T> key, T value) {
-        if (value instanceof String) {
-            data.edit().putString(key.name, (String) value).apply();
-        } else if (value instanceof Integer) {
-            data.edit().putInt(key.name, (int) value).apply();
-        } else if (value instanceof Boolean) {
-            data.edit().putBoolean(key.name, (boolean) value).apply();
-        } else if (value instanceof Long) {
-            data.edit().putLong(key.name, (long) value).apply();
-        } else if (value instanceof Float) {
-            data.edit().putFloat(key.name, (float) value).apply();
-        } else {
-            throw new IllegalArgumentException("Invalid global config value instance");
-        }
+        data.configs.put(key.name, value);
+        writeChanges();
+    }
+
+    private static void writeChanges(){
+        parser.save(data);
     }
 
     private static class Key<T extends Serializable> {
@@ -62,6 +60,14 @@ public class GlobalConfig {
         private Key(String name, T defaultValue) {
             this.name = name;
             this.defaultValue = defaultValue;
+        }
+    }
+
+    private static class DataModel {
+        private final HashMap<String, Object> configs = new HashMap<>();
+
+        public Object get(String key){
+            return configs.get(key);
         }
     }
 }
