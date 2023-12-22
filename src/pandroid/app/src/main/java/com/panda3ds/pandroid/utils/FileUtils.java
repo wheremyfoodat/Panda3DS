@@ -64,16 +64,16 @@ public class FileUtils {
 
     public static boolean createFile(String path, String name) {
         DocumentFile folder = parseFile(path);
-        if (folder.findFile(name) != null)
-            return true;
+        if (folder.findFile(name) != null) {
+            folder.findFile(name).delete();
+        }
+
         return folder.createFile("", name) != null;
     }
 
     public static boolean writeTextFile(String path, String name, String content) {
         try {
-            if (!exists(path + "/" + name)) {
-                createFile(path, name);
-            }
+            createFile(path, name);
             OutputStream stream = getOutputStream(path + "/" + name);
             stream.write(content.getBytes(StandardCharsets.UTF_8));
             stream.flush();
