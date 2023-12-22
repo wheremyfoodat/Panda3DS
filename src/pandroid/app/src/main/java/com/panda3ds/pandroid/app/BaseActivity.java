@@ -26,16 +26,16 @@ public class BaseActivity extends AppCompatActivity {
 
     private void applyTheme(){
         switch (GlobalConfig.get(GlobalConfig.KEY_APP_THEME)){
-            case GlobalConfig.VALUE_THEME_ANDROID:
+            case GlobalConfig.THEME_ANDROID:
                 setTheme(R.style.Theme_Pandroid);
                 break;
-            case GlobalConfig.VALUE_THEME_LIGHT:
+            case GlobalConfig.THEME_LIGHT:
                 setTheme(R.style.Theme_Pandroid_Light);
                 break;
-            case GlobalConfig.VALUE_THEME_DARK:
+            case GlobalConfig.THEME_DARK:
                 setTheme(R.style.Theme_Pandroid_Dark);
                 break;
-            case GlobalConfig.VALUE_THEME_BLACK:
+            case GlobalConfig.THEME_BLACK:
                 setTheme(R.style.Theme_Pandroid_Black);
                 break;
         }

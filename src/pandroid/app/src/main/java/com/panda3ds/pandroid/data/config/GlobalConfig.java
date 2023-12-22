@@ -10,14 +10,14 @@ public class GlobalConfig {
 
     private static final GsonConfigParser parser = new GsonConfigParser(Constants.PREF_GLOBAL_CONFIG);
 
-    public static final int VALUE_THEME_ANDROID = 0;
-    public static final int VALUE_THEME_LIGHT = 1;
-    public static final int VALUE_THEME_DARK = 2;
-    public static final int VALUE_THEME_BLACK = 3;
+    public static final int THEME_ANDROID = 0;
+    public static final int THEME_LIGHT = 1;
+    public static final int THEME_DARK = 2;
+    public static final int THEME_BLACK = 3;
 
     public static DataModel data;
 
-    public static final Key<Integer> KEY_APP_THEME = new Key<>("app.theme", VALUE_THEME_ANDROID);
+    public static final Key<Integer> KEY_APP_THEME = new Key<>("app.theme", THEME_ANDROID);
 
     public static void initialize() {
         data = parser.load(DataModel.class);

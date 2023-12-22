@@ -9,10 +9,8 @@ import java.util.List;
 
 public class SearchAgent {
 
-    /**
-     * Store all possibles results in map
-     * id->words
-     */
+    // Store all possibles results in map
+    // id->words
     private final HashMap<String, String> searchBuffer = new HashMap<>();
 
     // Add search item to list
