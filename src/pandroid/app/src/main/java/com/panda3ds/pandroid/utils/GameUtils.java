@@ -40,7 +40,7 @@ public class GameUtils {
 
     public static void launch(Context context, GameMetadata game) {
         currentGame = game;
-        String path = PathUtils.getPath(Uri.parse(game.getRomPath()));
+        String path = FileUtils.obtainRealPath(game.getRomPath());
         context.startActivity(new Intent(context, GameActivity.class).putExtra(Constants.ACTIVITY_PARAMETER_PATH, path));
     }
 

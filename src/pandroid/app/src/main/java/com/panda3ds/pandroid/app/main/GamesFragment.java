@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
@@ -50,6 +51,10 @@ public class GamesFragment extends Fragment implements ActivityResultCallback<Ur
         if (result != null) {
             String uri = result.toString();
             if (GameUtils.findByRomPath(uri) == null) {
+                if (FileUtils.obtainRealPath(uri) == null){
+                    Toast.makeText(getContext(), "Invalid file path", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 FileUtils.makeUriPermanent(uri, FileUtils.MODE_READ);
                 GameMetadata game = new GameMetadata(uri, FileUtils.getName(uri).split("\\.")[0],"Unknown");
                 GameUtils.addGame(game);
