@@ -131,7 +131,7 @@ public class FileUtils {
     }
 
     /**
-     * When call ContentProvider.openFileDescriptor() android open a file descriptor
+     * When call ContentProvider.openFileDescriptor() android opens a file descriptor
      * on app process in /proc/self/fd/[file descriptor id] this is a link to real file path
      * can use File.getCanonicalPath() for get a link origin, but in some android version
      * need use Os.readlink(path) to get a real path.
