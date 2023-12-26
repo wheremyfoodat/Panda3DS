@@ -23,6 +23,15 @@
         <item name="android:color">?colorSecondary</item>
     </style>
 
+    <style name="TextAppearanceGameDrawerSubTitle">
+        <item name="android:textSize">14sp</item>
+        <item name="textAllCaps">true</item>
+        <item name="android:alpha">0.7</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <style name="Pandroid.SeekbarPreference" parent="Preference.SeekBarPreference">
         <item name="android:textColorSecondary">#C00</item>
     </style>
