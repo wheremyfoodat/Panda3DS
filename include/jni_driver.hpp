@@ -3,6 +3,7 @@
 #include "helpers.hpp"
 
 
-namespace Pandroid {
+class Pandroid {
+  public:
 	static void onSmdhLoaded(const std::vector<u8>& smdh);
 };
