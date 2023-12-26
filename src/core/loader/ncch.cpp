@@ -6,7 +6,7 @@
 #include "loader/ncch.hpp"
 #include "memory.hpp"
 
-#ifdef PANDA3DS_FRONTEND_PANDROID
+#ifdef __ANDROID__
 #include "jni_driver.hpp"    
 #endif
 
@@ -260,7 +260,7 @@ bool NCCH::parseSMDH(const std::vector<u8>& smdh) {
 	}
 
 	// In the Android version, notify the application that we're loading an SMDH file, to extract data for the title list
-#ifdef PANDA3DS_FRONTEND_PANDROID
+#ifdef __ANDROID__
 	Pandroid::onSmdhLoaded(smdh);
 #endif
 
