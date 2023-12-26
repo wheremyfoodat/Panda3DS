@@ -44,6 +44,7 @@ public class FileUtils {
         if (!file.exists()) {
             file.mkdirs();
         }
+
         return file.getAbsolutePath();
     }
 
@@ -52,6 +53,7 @@ public class FileUtils {
         if (!file.exists()) {
             file.mkdirs();
         }
+
         return file.getAbsolutePath();
     }
 
@@ -61,8 +63,10 @@ public class FileUtils {
 
     public static boolean createDir(String path, String name) {
         DocumentFile folder = parseFile(path);
-        if (folder.findFile(name) != null)
+        if (folder.findFile(name) != null) {
             return true;
+        }
+    
         return folder.createDirectory(name) != null;
     }
 
@@ -86,12 +90,14 @@ public class FileUtils {
             Log.e(Constants.LOG_TAG, "Error on write text file: ", e);
             return false;
         }
+
         return true;
     }
 
     public static String readTextFile(String path) {
-        if (!exists(path))
+        if (!exists(path)) {
             return null;
+        }
 
         try {
             InputStream stream = getInputStream(path);
@@ -99,15 +105,15 @@ public class FileUtils {
 
             int len;
             byte[] buffer = new byte[1024 * 8];
-            while ((len = stream.read(buffer)) != -1)
+            while ((len = stream.read(buffer)) != -1) {
                 output.write(buffer, 0, len);
+            }
 
             stream.close();
             output.flush();
             output.close();
 
             byte[] data = output.toByteArray();
-
             return new String(data, 0, data.length);
         } catch (Exception e) {
             return null;
@@ -124,8 +130,9 @@ public class FileUtils {
 
     public static void makeUriPermanent(String uri, String mode) {
         int flags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
-        if (mode.toLowerCase().contains("w"))
+        if (mode.toLowerCase().contains("w")) {
             flags &= Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+        }
 
         getContext().getContentResolver().takePersistableUriPermission(Uri.parse(uri), flags);
     }
@@ -141,6 +148,7 @@ public class FileUtils {
             ParcelFileDescriptor parcelDescriptor = getContext().getContentResolver().openFileDescriptor(Uri.parse(uri), "r");
             int fd = parcelDescriptor.getFd();
             File file = new File("/proc/self/fd/" + fd).getAbsoluteFile();
+        
             for (int i = 0; i < CANONICAL_SEARCH_DEEP; i++) {
                 try {
                     String canonical = file.getCanonicalPath();
@@ -156,11 +164,14 @@ public class FileUtils {
                 parcelDescriptor.close();
                 return file.getAbsolutePath();
             }
+
             String path = Os.readlink(file.getAbsolutePath());
             parcelDescriptor.close();
 
-            if (new File(path).exists())
+            if (new File(path).exists()) {
                 return path;
+            }
+    
             return null;
         } catch (Exception e) {
             return null;

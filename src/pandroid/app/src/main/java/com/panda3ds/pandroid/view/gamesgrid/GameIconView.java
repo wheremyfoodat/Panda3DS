@@ -11,7 +11,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatImageView;
 
 public class GameIconView extends AppCompatImageView {
-
     public GameIconView(@NonNull Context context) {
         super(context);
     }

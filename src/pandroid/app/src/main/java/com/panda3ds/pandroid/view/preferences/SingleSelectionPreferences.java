@@ -56,6 +56,7 @@ public class SingleSelectionPreferences extends PreferenceCategory implements Pr
     @Override
     public void onAttached() {
         super.onAttached();
+
         for (int i = 0; i < getPreferenceCount();i++) {
             getPreference(i).setOnPreferenceClickListener(this);
         }
@@ -68,6 +69,7 @@ public class SingleSelectionPreferences extends PreferenceCategory implements Pr
     @Override
     public boolean onPreferenceClick(@NonNull Preference preference) {
         int index = 0;
+
         for (int i = 0; i < getPreferenceCount(); i++){
             Preference item = getPreference(i);
             if (item == preference){

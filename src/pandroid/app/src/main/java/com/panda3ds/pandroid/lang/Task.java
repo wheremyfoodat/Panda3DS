@@ -5,11 +5,11 @@ public class Task extends Thread {
         super(runnable);
     }
 
-
     public void runSync(){
         start();
         waitFinish();
     }
+
     public void waitFinish(){
         try {
             join();

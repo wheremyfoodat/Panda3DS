@@ -28,8 +28,9 @@ public class InputMapActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
         InputHandler.reset();
-        InputHandler.setMotionDeadZone(0.8F);
+        InputHandler.setMotionDeadZone(0.8f);
         InputHandler.setEventListener(this::onInputEvent);
     }
 
@@ -61,7 +62,6 @@ public class InputMapActivity extends BaseActivity {
 
 
     public static final class Contract extends ActivityResultContract<String, String> {
-
         @NonNull
         @Override
         public Intent createIntent(@NonNull Context context, String s) {

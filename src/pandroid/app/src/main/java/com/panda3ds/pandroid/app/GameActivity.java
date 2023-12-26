@@ -10,9 +10,7 @@ import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.Toast;
-
 import androidx.annotation.Nullable;
-
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
@@ -24,7 +22,6 @@ import com.panda3ds.pandroid.view.PandaGlSurfaceView;
 import com.panda3ds.pandroid.view.PandaLayoutController;
 
 public class GameActivity extends BaseActivity {
-
 	private final AlberInputListener inputListener = new AlberInputListener(this);
 
 	@Override
@@ -43,7 +40,7 @@ public class GameActivity extends BaseActivity {
 		setContentView(R.layout.game_activity);
 
 		((FrameLayout) findViewById(R.id.panda_gl_frame))
-				.addView(pandaSurface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+			.addView(pandaSurface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
 		PandaLayoutController controllerLayout = findViewById(R.id.controller_layout);
 		controllerLayout.initialize();
@@ -75,25 +72,28 @@ public class GameActivity extends BaseActivity {
 
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
-		if (InputHandler.processKeyEvent(event))
+		if (InputHandler.processKeyEvent(event)) {
 			return true;
+		}
 
 		return super.dispatchKeyEvent(event);
 	}
 
 	@Override
 	public boolean dispatchGenericMotionEvent(MotionEvent ev) {
-		if (InputHandler.processMotionEvent(ev))
+		if (InputHandler.processMotionEvent(ev)) {
 			return true;
+		}
 
 		return super.dispatchGenericMotionEvent(ev);
 	}
 
 	@Override
 	protected void onDestroy() {
-		if(AlberDriver.HasRomLoaded()){
+		if (AlberDriver.HasRomLoaded()) {
 			AlberDriver.Finalize();
 		}
+
 		super.onDestroy();
 	}
 }

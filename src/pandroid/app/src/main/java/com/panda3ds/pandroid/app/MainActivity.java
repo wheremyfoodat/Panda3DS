@@ -9,17 +9,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.MenuItem;
-
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-
 import com.google.android.material.navigation.NavigationBarView;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.main.GamesFragment;
 import com.panda3ds.pandroid.app.main.SearchFragment;
 import com.panda3ds.pandroid.app.main.SettingsFragment;
+
 
 public class MainActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
 	private static final int PICK_ROM = 2;
@@ -45,8 +44,8 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 				startActivity(intent);
 			}
 		} else {
-			ActivityCompat.requestPermissions(this, new String[]{READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
-			ActivityCompat.requestPermissions(this, new String[]{WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+			ActivityCompat.requestPermissions(this, new String[] {READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+			ActivityCompat.requestPermissions(this, new String[] {WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
 		}
 
 		setContentView(R.layout.activity_main);
@@ -71,9 +70,7 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 			return false;
 		}
 
-		manager.beginTransaction()
-				.replace(R.id.fragment_container, fragment)
-				.commitNow();
+		manager.beginTransaction().replace(R.id.fragment_container, fragment).commitNow();
 		return true;
 	}
 }

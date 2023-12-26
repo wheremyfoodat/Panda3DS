@@ -9,9 +9,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class SMDH {
-
-    public static final int LANGUAGE_ENGLISH = 1;
     public static final int LANGUAGE_JAPANESE = 0;
+    public static final int LANGUAGE_ENGLISH = 1;
     public static final int LANGUAGE_CHINESE = 6;
     public static final int LANGUAGE_KOREAN = 7;
 
@@ -61,6 +60,8 @@ public class SMDH {
         final boolean korea = (regionMasks & REGION_KOREAN_MASK) != 0;
         final boolean taiwan = (regionMasks & REGION_TAIWAN_MASK) != 0;
 
+        // Depending on the regions allowed in the region mask, pick one of the regions to use
+        // We prioritize English-speaking regions both here and in the emulator core, since users are most likely to speak English at least
         if (northAmerica) {
             region = GameRegion.NorthAmerican;
         } else if (europe) {
@@ -71,14 +72,14 @@ public class SMDH {
             region = GameRegion.Japan;
             metaLanguage = LANGUAGE_JAPANESE;
         } else if (korea) {
-            metaLanguage = LANGUAGE_KOREAN;
             region = GameRegion.Korean;
+            metaLanguage = LANGUAGE_KOREAN;
         } else if (china) {
-            metaLanguage = LANGUAGE_CHINESE;
             region = GameRegion.China;
-        } else if (taiwan) {
             metaLanguage = LANGUAGE_CHINESE;
+        } else if (taiwan) {
             region = GameRegion.Taiwan;
+            metaLanguage = LANGUAGE_CHINESE;
         } else {
             region = GameRegion.None;
         }
@@ -111,29 +112,30 @@ public class SMDH {
                 int indexY = y & ~7;
                 int indexX = x & ~7;
 
-                int i = mortonInterleave(x, y);
-                int offset = (i + (indexX * 8)) * 2;
+                int interleave = mortonInterleave(x, y);
+                int offset = (interleave + (indexX * 8)) * 2;
 
                 offset = offset + indexY * ICON_SIZE * 2;
 
                 smdh.position(offset + IMAGE_OFFSET);
 
-                int byte1 = smdh.get() & 0xFF;
-                int byte2 = smdh.get() & 0xFF;
+                int lowByte = smdh.get() & 0xFF;
+                int highByte = smdh.get() & 0xFF;
+                int texel = (highByte << 8) | lowByte;
 
-                int texel = byte1 | (byte2 << 8);
+                // Convert texel from RGB565 to RGB888
+                int r = (texel >> 11) & 0x1F;
+                int g = (texel >> 5) & 0x3F;
+                int b = texel & 0x1F;
 
-                int r = (texel >> 11) & 0x1f;
-                int g = (texel >> 5) & 0x3f;
-                int b = texel & 0x1f;
-
-                b = (b << 3) | (b >> 2);
-                g = (g << 2) | (g >> 4);
                 r = (r << 3) | (r >> 2);
+                g = (g << 2) | (g >> 4);
+                b = (b << 3) | (b >> 2);
 
                 icon[x + ICON_SIZE * y] = Color.rgb(r, g, b);
             }
         }
+    
         return icon;
     }
 
@@ -160,7 +162,7 @@ public class SMDH {
         return publisher[metaLanguage];
     }
 
-    // SMDH stores string in UTF-16LE format
+    // Strings in SMDH files are stored as UTF-16LE
     private static String convertString(byte[] buffer) {
         try {
             return new String(buffer, 0, buffer.length, StandardCharsets.UTF_16LE)
@@ -174,6 +176,7 @@ public class SMDH {
     private static int mortonInterleave(int u, int v) {
         int[] xlut = {0, 1, 4, 5, 16, 17, 20, 21};
         int[] ylut = {0, 2, 8, 10, 32, 34, 40, 42};
+
         return xlut[u % 8] + ylut[v % 8];
     }
 }

@@ -30,7 +30,10 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
         ((BaseActivity) requireActivity()).getSupportActionBar().setTitle(R.string.controller_mapping);
 
         for (KeyName key : KeyName.values()) {
-            if (key == KeyName.NULL) continue;
+            if (key == KeyName.NULL) {
+                continue;
+            }
+
             setItemClick(key.name(), this::onItemPressed);
         }
 
@@ -59,6 +62,7 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
     @Override
     public void onDetach() {
         super.onDetach();
+        
         if (requestKey != null) {
             requestKey.unregister();
             requestKey = null;
@@ -77,10 +81,14 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
     }
 
     private void refreshList() {
-        deadZonePreference.setValue((int)(InputMap.getDeadZone()*100));
-        deadZonePreference.setSummary(deadZonePreference.getValue()+"%");
+        deadZonePreference.setValue((int)(InputMap.getDeadZone() * 100));
+        deadZonePreference.setSummary(deadZonePreference.getValue() + "%");
+        
         for (KeyName key : KeyName.values()) {
-            if (key == KeyName.NULL) continue;
+            if (key == KeyName.NULL) {
+                continue;
+            }
+            
             findPreference(key.name()).setSummary(InputMap.relative(key));
         }
     }

@@ -26,11 +26,13 @@ public class InputHandler {
 
     private static final HashMap<String, Float> motionDownEvents = new HashMap<>();
 
-    private static boolean containsSource(int[] sources, int sourceMasked) {
+    private static boolean containsSource(int[] sources, int sourceMask) {
         for (int source : sources) {
-            if ((sourceMasked & source) == source)
+            if ((source & sourceMask) == source) {
                 return true;
+            }
         }
+
         return false;
     }
 
@@ -57,8 +59,9 @@ public class InputHandler {
     }
 
     public static boolean processMotionEvent(MotionEvent event) {
-        if (!isSourceValid(event.getSource()))
+        if (!isSourceValid(event.getSource())) {
             return false;
+        }
 
         if (isGamepadSource(event.getSource())) {
             for (InputDevice.MotionRange range : event.getDevice().getMotionRanges()) {
@@ -87,8 +90,9 @@ public class InputHandler {
     }
 
     public static boolean processKeyEvent(KeyEvent event) {
-        if (!isSourceValid(event.getSource()))
+        if (!isSourceValid(event.getSource())) {
             return false;
+        }
 
         if (isGamepadSource(event.getSource())) {
             // Dpad return motion event + key event, this remove the key event
@@ -104,6 +108,7 @@ public class InputHandler {
                     return true;
             }
         }
+        
         handleEvent(new InputEvent(KeyEvent.keyCodeToString(event.getKeyCode()), event.getAction() == KeyEvent.ACTION_UP ? 0.0f : 1.0f));
         return true;
     }

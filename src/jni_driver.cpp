@@ -1,3 +1,5 @@
+#include "jni_driver.hpp"
+
 #include <EGL/egl.h>
 #include <android/log.h>
 #include <jni.h>
@@ -7,8 +9,6 @@
 #include "emulator.hpp"
 #include "renderer_gl/renderer_gl.hpp"
 #include "services/hid.hpp"
-
-#include "jni_driver.hpp"
 
 std::unique_ptr<Emulator> emulator = nullptr;
 HIDService* hidService = nullptr;
@@ -24,41 +24,35 @@ void throwException(JNIEnv* env, const char* message) {
 	env->ThrowNew(exceptionClass, message);
 }
 
-JNIEnv* jniEnv(){
-    JNIEnv* env;
-    auto status = jvm->GetEnv((void **)&env, JNI_VERSION_1_6);
-    if(status == JNI_EDETACHED){
-        jvm->AttachCurrentThread(&env, nullptr);
-    } else if(status != JNI_OK){
-        throw std::runtime_error("Failed to obtain JNIEnv from JVM!!");
-    }
-    return env;
+JNIEnv* jniEnv() {
+	JNIEnv* env;
+	auto status = jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+	if (status == JNI_EDETACHED) {
+		jvm->AttachCurrentThread(&env, nullptr);
+	} else if (status != JNI_OK) {
+		throw std::runtime_error("Failed to obtain JNIEnv from JVM!!");
+	}
+
+	return env;
 }
 
+void Pandroid::onSmdhLoaded(const std::vector<u8>& smdh) {
+	JNIEnv* env = jniEnv();
+	int size = smdh.size();
 
-void Pandroid::onSmdhLoaded(const std::vector<u8> &smdh){
-    JNIEnv* env = jniEnv();
-    int size = smdh.size();
-    
-    jbyteArray result = env->NewByteArray(size);
-    
-    env->SetByteArrayRegion(result, 0, size, (jbyte*)smdh.data());
+	jbyteArray result = env->NewByteArray(size);
+	env->SetByteArrayRegion(result, 0, size, (jbyte*)smdh.data());
 
-    
-    auto clazz = env->FindClass(alberClass);
-    auto method = env->GetStaticMethodID(clazz, "OnSmdhLoaded", "([B)V");
+	auto classLoader = env->FindClass(alberClass);
+	auto method = env->GetStaticMethodID(classLoader, "OnSmdhLoaded", "([B)V");
 
-    env->CallStaticVoidMethod(clazz, method, result);
-
-    env->DeleteLocalRef(result);
+	env->CallStaticVoidMethod(classLoader, method, result);
+	env->DeleteLocalRef(result);
 }
-
 
 extern "C" {
 
-AlberFunction(void, Setup)(JNIEnv* env, jobject obj) {
-    env->GetJavaVM(&jvm);
-}
+AlberFunction(void, Setup)(JNIEnv* env, jobject obj) { env->GetJavaVM(&jvm); }
 
 AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	emulator = std::make_unique<Emulator>();

@@ -13,7 +13,7 @@ public class GsonConfigParser {
     }
 
     private String getPath(){
-        return FileUtils.getConfigPath()+"/"+name+".json";
+        return FileUtils.getConfigPath()+ "/" + name + ".json";
     }
 
     public void save(Object data){
@@ -26,7 +26,7 @@ public class GsonConfigParser {
     }
 
     public <T> T load(Class<T> clazz){
-        String[] content = new String[]{"{}"};
+        String[] content = new String[] {"{}"};
         new Task(()->{
             if (FileUtils.exists(getPath())){
                 content[0] = FileUtils.readTextFile(getPath());

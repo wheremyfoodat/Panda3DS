@@ -8,9 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 
 public class SearchAgent {
-
-    // Store all possibles results in map
-    // id->words
+    // Store all results in a hashmap
+    // Matches IDs -> Result string
     private final HashMap<String, String> searchBuffer = new HashMap<>();
 
     // Add search item to list
@@ -19,15 +18,12 @@ public class SearchAgent {
         for (String word : words) {
             string.append(normalize(word)).append(" ");
         }
+
         searchBuffer.put(id, string.toString());
     }
 
-    /**
-     * Convert string to simple string with only a-z 0-9 for do this first it get the input string
-     * and apply lower case, after convert all chars to ASCII
-     * Ex: ç => c, á => a
-     * after replace all double space for single space
-     */
+    // Convert string to lowercase alphanumeric string, converting all characters to ASCII and turning double spaces into single ones
+    // For example, é will be converted to e
     private String normalize(String string) {
         string = Normalizer.normalize(string, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
 
@@ -40,26 +36,30 @@ public class SearchAgent {
     public List<String> search(String query) {
         String[] words = normalize(query).split("\\s");
 
-        if (words.length == 0)
+        if (words.length == 0) {
             return Collections.emptyList();
+        }
 
         // Map for add all search result: id -> probability
         HashMap<String, Integer> results = new HashMap<>();
         for (String key : searchBuffer.keySet()) {
             int probability = 0;
             String value = searchBuffer.get(key);
+
             for (String word : words) {
                 if (value.contains(word))
                     probability++;
             }
-            if (probability > 0)
+
+            if (probability > 0) {
                 results.put(key, probability);
+            }
         }
 
 
-        // Filter by probability average
-        // Ex: A = 10% B = 30% C = 70% (calc is (10+30+70)/3=36)
-        // After remove all result with probability < 36
+        // Filter by probability average, ie by how closely they match to our query
+        // Ex: A = 10% B = 30% C = 70% (formula is (10+30+70)/3=36)
+        // Afterwards remove all results with probability < 36
         int average = 0;
         for (String key : results.keySet()) {
             average += results.get(key);
@@ -76,6 +76,7 @@ public class SearchAgent {
                 i = 0;
                 continue;
             }
+            
             i++;
         }
 

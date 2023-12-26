@@ -259,10 +259,9 @@ bool NCCH::parseSMDH(const std::vector<u8>& smdh) {
 		return false;
 	}
 
-
-    #ifdef __ANDROID__
-    Pandroid::onSmdhLoaded(smdh);
-    #endif
+#ifdef __ANDROID__
+	Pandroid::onSmdhLoaded(smdh);
+#endif
 
 	// Bitmask showing which regions are allowed.
 	// https://www.3dbrew.org/wiki/SMDH#Region_Lockout
