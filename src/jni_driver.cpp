@@ -1,3 +1,5 @@
+#include "jni_driver.hpp"
+
 #include <EGL/egl.h>
 #include <android/log.h>
 #include <jni.h>
@@ -12,6 +14,8 @@ std::unique_ptr<Emulator> emulator = nullptr;
 HIDService* hidService = nullptr;
 RendererGL* renderer = nullptr;
 bool romLoaded = false;
+JavaVM* jvm = nullptr;
+const char* alberClass = "com/panda3ds/pandroid/AlberDriver";
 
 #define AlberFunction(type, name) JNIEXPORT type JNICALL Java_com_panda3ds_pandroid_AlberDriver_##name
 
@@ -20,7 +24,36 @@ void throwException(JNIEnv* env, const char* message) {
 	env->ThrowNew(exceptionClass, message);
 }
 
+JNIEnv* jniEnv() {
+	JNIEnv* env;
+	auto status = jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+	if (status == JNI_EDETACHED) {
+		jvm->AttachCurrentThread(&env, nullptr);
+	} else if (status != JNI_OK) {
+		throw std::runtime_error("Failed to obtain JNIEnv from JVM!!");
+	}
+
+	return env;
+}
+
+void Pandroid::onSmdhLoaded(const std::vector<u8>& smdh) {
+	JNIEnv* env = jniEnv();
+	int size = smdh.size();
+
+	jbyteArray result = env->NewByteArray(size);
+	env->SetByteArrayRegion(result, 0, size, (jbyte*)smdh.data());
+
+	auto classLoader = env->FindClass(alberClass);
+	auto method = env->GetStaticMethodID(classLoader, "OnSmdhLoaded", "([B)V");
+
+	env->CallStaticVoidMethod(classLoader, method, result);
+	env->DeleteLocalRef(result);
+}
+
 extern "C" {
+
+AlberFunction(void, Setup)(JNIEnv* env, jobject obj) { env->GetJavaVM(&jvm); }
+
 AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	emulator = std::make_unique<Emulator>();
 

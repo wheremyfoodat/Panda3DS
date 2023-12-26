@@ -19,7 +19,10 @@ public class Constants {
 	public static final int N3DS_HALF_HEIGHT = N3DS_FULL_HEIGHT / 2;
 
 	public static final String ACTIVITY_PARAMETER_PATH = "path";
+	public static final String ACTIVITY_PARAMETER_FRAGMENT = "fragment";
 	public static final String LOG_TAG = "pandroid";
 
 	public static final String PREF_GLOBAL_CONFIG = "app.GlobalConfig";
+    public static final String PREF_GAME_UTILS = "app.GameUtils";
+    public static final String PREF_INPUT_MAP = "app.InputMap";
 }

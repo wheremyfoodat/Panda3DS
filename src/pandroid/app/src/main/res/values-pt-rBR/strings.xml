@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">pandroid</string>
+    <string name="load_rom">Carregar ROM</string>
+    <string name="games">Jogos</string>
+    <string name="settings">Configurações</string>
+    <string name="search">Pesquisar</string>
+    <string name="unknown">Desconhecido</string>
+    <string name="left">Esquerda</string>
+    <string name="right">Direita</string>
+    <string name="up">Cima</string>
+    <string name="down">Baixo</string>
+    <string name="others">Outros</string>
+    <string name="press_any_key">Pressione qualquer tecla</string>
+    <string name="axis">Eixos</string>
+    <string name="dead_zone">Zona Morta</string>
+    <string name="options">Opções</string>
+    <string name="pref_input_map_summary">Mapeie um controle ou teclado</string>
+    <string name="controller_mapping">Mapeamento de controle</string>
+    <string name="theme">Tema</string>
+    <string name="pref_appearance_summary">Defina a aparência do aplicativo</string>
+    <string name="appearance">Aparência</string>
+    <string name="theme_device">Mesmo do dispositivo</string>
+    <string name="light">Claro</string>
+    <string name="dark">Escuro</string>
+    <string name="black">Preto</string>
+</resources>

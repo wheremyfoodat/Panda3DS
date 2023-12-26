@@ -8,16 +8,25 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
+import android.view.MenuItem;
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import com.google.android.material.navigation.NavigationBarView;
 import com.panda3ds.pandroid.R;
-import com.panda3ds.pandroid.utils.Constants;
-import com.panda3ds.pandroid.utils.PathUtils;
+import com.panda3ds.pandroid.app.main.GamesFragment;
+import com.panda3ds.pandroid.app.main.SearchFragment;
+import com.panda3ds.pandroid.app.main.SettingsFragment;
 
-public class MainActivity extends BaseActivity {
+
+public class MainActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
 	private static final int PICK_ROM = 2;
 	private static final int PERMISSION_REQUEST_CODE = 3;
+
+	private final GamesFragment gamesFragment = new GamesFragment();
+	private final SearchFragment searchFragment = new SearchFragment();
+	private final SettingsFragment settingsFragment = new SettingsFragment();
 
 	private void openFile() {
 		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -40,18 +49,28 @@ public class MainActivity extends BaseActivity {
 		}
 
 		setContentView(R.layout.activity_main);
-		findViewById(R.id.load_rom).setOnClickListener(v -> { openFile(); });
+
+		NavigationBarView bar = findViewById(R.id.navigation);
+		bar.setOnItemSelectedListener(this);
+		bar.postDelayed(() -> bar.setSelectedItemId(bar.getSelectedItemId()), 5);
 	}
 
 	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (requestCode == PICK_ROM) {
-			if (resultCode == RESULT_OK) {
-				String path = PathUtils.getPath(getApplicationContext(), data.getData());
-				Toast.makeText(getApplicationContext(), "pandroid opening " + path, Toast.LENGTH_LONG).show();
-				startActivity(new Intent(this, GameActivity.class).putExtra(Constants.ACTIVITY_PARAMETER_PATH, path));
-			}
-			super.onActivityResult(requestCode, resultCode, data);
+	public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+		int id = item.getItemId();
+		FragmentManager manager = getSupportFragmentManager();
+		Fragment fragment;
+		if (id == R.id.games) {
+			fragment = gamesFragment;
+		} else if (id == R.id.search) {
+			fragment = searchFragment;
+		} else if (id == R.id.settings) {
+			fragment = settingsFragment;
+		} else {
+			return false;
 		}
+
+		manager.beginTransaction().replace(R.id.fragment_container, fragment).commitNow();
+		return true;
 	}
 }

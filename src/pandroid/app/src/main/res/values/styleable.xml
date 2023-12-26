@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <style name="Pandroid"/>
+
     <style name="ControllerStyle"/>
     <style name="ControllerStyle.SimpleButton">
         <item name="android:layout_height">19pt</item>
@@ -9,4 +12,19 @@
         <item name="android:backgroundTintMode">multiply</item>
         <item name="android:backgroundTint">#FFF</item>
     </style>
+    <style name="ThemedNavigationBottom">
+        <item name="itemActiveIndicatorStyle">@style/ThemedNavigationBottom.Indicator</item>
+        <item name="labelVisibilityMode">selected</item>
+        <item name="android:background">#0000</item>
+        <item name="itemIconTint">@color/bottom_navigation_indicator_tint</item>
+    </style>
+    <style name="ThemedNavigationBottom.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="color">?colorSecondary</item>
+        <item name="android:color">?colorSecondary</item>
+    </style>
+
+    <style name="Pandroid.SeekbarPreference" parent="Preference.SeekBarPreference">
+        <item name="android:textColorSecondary">#C00</item>
+    </style>
+
 </resources>
