@@ -388,10 +388,9 @@ if(ENABLE_VULKAN)
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
 endif()
 
-if(ANDROID AND NOT BUILD_HYDRA_CORE)
+if(ANDROID)
     set(HEADER_FILES ${HEADER_FILES} include/jni_driver.hpp)
     set(ALL_SOURCES ${ALL_SOURCES} src/jni_driver.cpp)
-    target_compile_definitions(Alber PRIVATE PANDA3DS_FRONTEND_PANDROID=1)
 endif()
 
 if(BUILD_HYDRA_CORE)
