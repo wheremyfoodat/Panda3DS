@@ -40,8 +40,9 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
         deadZonePreference = getPreferenceScreen().findPreference("dead_zone");
 
         deadZonePreference.setOnPreferenceChangeListener((preference, value) -> {
-            InputMap.setDeadZone(((int)value/100.0f));
+            InputMap.setDeadZone(((int)value / 100.0f));
             refreshList();
+
             return false;
         });
 
@@ -62,7 +63,7 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
     @Override
     public void onDetach() {
         super.onDetach();
-        
+
         if (requestKey != null) {
             requestKey.unregister();
             requestKey = null;

@@ -29,7 +29,7 @@ public class GlobalConfig {
     public static <T extends Serializable> T get(Key<T> key) {
         Serializable value;
 
-        if (!data.configs.containsKey(key.name)){
+        if (!data.configs.containsKey(key.name)) {
             return key.defaultValue;
         }
 
@@ -52,7 +52,7 @@ public class GlobalConfig {
         writeChanges();
     }
 
-    private static void writeChanges(){
+    private static void writeChanges() {
         parser.save(data);
     }
 
@@ -69,7 +69,7 @@ public class GlobalConfig {
     private static class DataModel {
         private final Map<String, Object> configs = new LinkedTreeMap<>();
 
-        public Object get(String key){
+        public Object get(String key) {
             return configs.get(key);
         }
     }

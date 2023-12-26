@@ -13,7 +13,7 @@ public interface SimpleTextWatcher extends TextWatcher {
     default void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
     @Override
-    default void afterTextChanged(Editable s){
+    default void afterTextChanged(Editable s) {
         onChange(s.toString());
     }
 }

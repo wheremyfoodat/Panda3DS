@@ -8,15 +8,15 @@ public class GsonConfigParser {
     private final Gson gson = new Gson();
     private final String name;
 
-    public GsonConfigParser(String name){
+    public GsonConfigParser(String name) {
         this.name = name;
     }
 
-    private String getPath(){
+    private String getPath() {
         return FileUtils.getConfigPath()+ "/" + name + ".json";
     }
 
-    public void save(Object data){
+    public void save(Object data) {
         synchronized (this) {
             new Task(() -> {
                 String json = gson.toJson(data, data.getClass());
@@ -25,13 +25,14 @@ public class GsonConfigParser {
         }
     }
 
-    public <T> T load(Class<T> clazz){
+    public <T> T load(Class<T> myClass) {
         String[] content = new String[] {"{}"};
         new Task(()->{
-            if (FileUtils.exists(getPath())){
+            if (FileUtils.exists(getPath())) {
                 content[0] = FileUtils.readTextFile(getPath());
             }
         }).runSync();
-        return gson.fromJson(content[0], clazz);
+
+        return gson.fromJson(content[0], myClass);
     }
 }

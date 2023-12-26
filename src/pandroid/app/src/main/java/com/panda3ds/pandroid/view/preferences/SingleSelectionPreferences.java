@@ -62,7 +62,7 @@ public class SingleSelectionPreferences extends PreferenceCategory implements Pr
         }
     }
 
-    public void setSelectedItem(int index){
+    public void setSelectedItem(int index) {
         onPreferenceClick(getPreference(index));
     }
 
@@ -70,9 +70,9 @@ public class SingleSelectionPreferences extends PreferenceCategory implements Pr
     public boolean onPreferenceClick(@NonNull Preference preference) {
         int index = 0;
 
-        for (int i = 0; i < getPreferenceCount(); i++){
+        for (int i = 0; i < getPreferenceCount(); i++) {
             Preference item = getPreference(i);
-            if (item == preference){
+            if (item == preference) {
                 index = i;
                 item.setIcon(R.drawable.ic_done);
             } else {

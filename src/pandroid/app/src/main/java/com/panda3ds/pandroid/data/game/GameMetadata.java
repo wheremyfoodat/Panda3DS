@@ -20,7 +20,7 @@ public class GameMetadata {
     private final GameRegion[] regions;
     private transient Bitmap icon;
 
-    private GameMetadata(String id, String romPath, String title, String publisher, Bitmap icon, GameRegion[] regions){
+    private GameMetadata(String id, String romPath, String title, String publisher, Bitmap icon, GameRegion[] regions) {
         this.id = id;
         this.title = title;
         this.publisher = publisher;
@@ -35,7 +35,7 @@ public class GameMetadata {
         this(UUID.randomUUID().toString(), romPath, title, publisher, null, regions);
     }
 
-    public GameMetadata(String romPath,String title, String publisher){
+    public GameMetadata(String romPath,String title, String publisher) {
         this(romPath,title, publisher, new GameRegion[]{GameRegion.None});
     }
 
@@ -56,7 +56,7 @@ public class GameMetadata {
     }
 
     public Bitmap getIcon() {
-        if (icon == null){
+        if (icon == null) {
             icon = GameUtils.loadGameIcon(id);
         }
         return icon;
@@ -68,13 +68,13 @@ public class GameMetadata {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-        if (obj instanceof GameMetadata){
+        if (obj instanceof GameMetadata) {
             return Objects.equals(((GameMetadata) obj).id, id);
         }
         return false;
     }
 
-    public static GameMetadata applySMDH(GameMetadata meta, SMDH smdh){
+    public static GameMetadata applySMDH(GameMetadata meta, SMDH smdh) {
         Bitmap icon = smdh.getBitmapIcon();
         GameMetadata newMeta = new GameMetadata(meta.getId(), meta.getRomPath(), smdh.getTitle(), smdh.getPublisher(), icon, new GameRegion[]{smdh.getRegion()});
         icon.recycle();
