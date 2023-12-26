@@ -259,7 +259,8 @@ bool NCCH::parseSMDH(const std::vector<u8>& smdh) {
 		return false;
 	}
 
-#ifdef __ANDROID__
+	// In the Android version, notify the application that we're loading an SMDH file, to extract data for the title list
+#ifdef PANDA3DS_FRONTEND_PANDROID
 	Pandroid::onSmdhLoaded(smdh);
 #endif
 
