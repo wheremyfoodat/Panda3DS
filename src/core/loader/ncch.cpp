@@ -6,7 +6,7 @@
 #include "loader/ncch.hpp"
 #include "memory.hpp"
 
-#ifdef __ANDROID__
+#ifdef PANDA3DS_FRONTEND_PANDROID
 #include "jni_driver.hpp"    
 #endif
 
