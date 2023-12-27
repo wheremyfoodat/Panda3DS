@@ -16,7 +16,6 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.navigation.NavigationView;
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
-import com.panda3ds.pandroid.app.BaseActivity;
 import com.panda3ds.pandroid.data.game.GameMetadata;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.view.gamesgrid.GameIconView;
@@ -27,7 +26,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        drawerContainer = ((BaseActivity)requireActivity()).findViewById(R.id.drawer_container);
+        drawerContainer = requireActivity().findViewById(R.id.drawer_container);
         drawerContainer.removeDrawerListener(this);
         drawerContainer.addDrawerListener(this);
         drawerContainer.setScrimColor(Color.argb(160, 0,0,0));
@@ -48,8 +47,6 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
 
         ((NavigationView)view.findViewById(R.id.action_navigation)).setNavigationItemSelectedListener(this);
-
-        open();
     }
 
     @Override
@@ -74,9 +71,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
     }
 
     @Override
-    public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
-
-    }
+    public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {}
 
     @Override
     public void onDrawerOpened(@NonNull View drawerView) {
@@ -90,9 +85,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
     }
 
     @Override
-    public void onDrawerStateChanged(int newState) {
-
-    }
+    public void onDrawerStateChanged(int newState) {}
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {

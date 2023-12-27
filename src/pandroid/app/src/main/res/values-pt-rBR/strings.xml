@@ -24,4 +24,7 @@
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>
     <string name="black">Preto</string>
+    <string name="actions">Ações</string>
+    <string name="exit">Sair</string>
+    <string name="resume">Continuar</string>
 </resources>

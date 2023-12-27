@@ -3,9 +3,9 @@
     <item
         android:id="@+id/resume"
         android:icon="@drawable/ic_shortcut"
-        android:title="Resume"/>
+        android:title="@string/resume"/>
     <item
         android:id="@+id/exit"
         android:icon="@drawable/ic_exit"
-        android:title="Exit"/>
+        android:title="@string/exit"/>
 </menu>
