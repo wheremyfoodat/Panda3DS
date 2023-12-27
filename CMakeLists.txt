@@ -389,7 +389,6 @@ if(ENABLE_VULKAN)
 endif()
 
 if(ANDROID)
-    set(HEADER_FILES ${HEADER_FILES} include/jni_driver.hpp)
     set(ALL_SOURCES ${ALL_SOURCES} src/jni_driver.cpp)
 endif()
 

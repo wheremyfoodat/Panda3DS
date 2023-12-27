@@ -252,6 +252,17 @@ bool Emulator::loadELF(std::ifstream& file) {
 	return true;
 }
 
+std::span<u8> Emulator::getSMDH() {
+	switch (romType) {
+		case ROMType::NCSD:
+		case ROMType::CXI:
+			return memory.getCXI()->smdh;
+		default: {
+			return std::span<u8>();
+		}
+	}
+}
+
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 void Emulator::updateDiscord() {
 	if (config.discordRpcEnabled) {
