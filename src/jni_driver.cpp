@@ -1,5 +1,3 @@
-#include "jni_driver.hpp"
-
 #include <EGL/egl.h>
 #include <android/log.h>
 #include <jni.h>
@@ -15,7 +13,6 @@ HIDService* hidService = nullptr;
 RendererGL* renderer = nullptr;
 bool romLoaded = false;
 JavaVM* jvm = nullptr;
-const char* alberClass = "com/panda3ds/pandroid/AlberDriver";
 
 #define AlberFunction(type, name) JNIEXPORT type JNICALL Java_com_panda3ds_pandroid_AlberDriver_##name
 
@@ -34,20 +31,6 @@ JNIEnv* jniEnv() {
 	}
 
 	return env;
-}
-
-void Pandroid::onSmdhLoaded(const std::vector<u8>& smdh) {
-	JNIEnv* env = jniEnv();
-	int size = smdh.size();
-
-	jbyteArray result = env->NewByteArray(size);
-	env->SetByteArrayRegion(result, 0, size, (jbyte*)smdh.data());
-
-	auto classLoader = env->FindClass(alberClass);
-	auto method = env->GetStaticMethodID(classLoader, "OnSmdhLoaded", "([B)V");
-
-	env->CallStaticVoidMethod(classLoader, method, result);
-	env->DeleteLocalRef(result);
 }
 
 extern "C" {
@@ -103,6 +86,15 @@ AlberFunction(void, KeyDown)(JNIEnv* env, jobject obj, jint keyCode) { hidServic
 AlberFunction(void, SetCirclepadAxis)(JNIEnv* env, jobject obj, jint x, jint y) {
 	hidService->setCirclepadX((s16)x);
 	hidService->setCirclepadY((s16)y);
+}
+
+AlberFunction(jbyteArray, GetSmdh)(JNIEnv* env, jobject obj) {
+	std::span<u8> smdh = emulator->getSMDH();
+
+	jbyteArray result = env->NewByteArray(smdh.size());
+	env->SetByteArrayRegion(result, 0, smdh.size(), (jbyte*)smdh.data());
+
+	return result;
 }
 }
 

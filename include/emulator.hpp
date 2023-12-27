@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <span>
 
 #include "PICA/gpu.hpp"
 #include "cheats.hpp"
@@ -127,4 +128,6 @@ class Emulator {
 
 	std::filesystem::path getConfigPath();
 	std::filesystem::path getAndroidAppPath();
+
+	std::span<u8> getSMDH();
 };

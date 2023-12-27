@@ -8,9 +8,12 @@ import android.opengl.GLSurfaceView;
 import android.util.Log;
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.utils.Constants;
+import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
 import com.panda3ds.pandroid.view.renderer.layout.DefaultScreenLayout;
+import com.panda3ds.pandroid.data.SMDH;
+import com.panda3ds.pandroid.data.game.GameMetadata;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -76,6 +79,19 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 
 		AlberDriver.Initialize();
 		AlberDriver.LoadRom(romPath);
+
+		// Load the SMDH
+		byte[] smdhData = AlberDriver.GetSmdh();
+		if (smdhData.length == 0) {
+			Log.w(Constants.LOG_TAG, "Failed to load SMDH");
+		} else {
+			SMDH smdh = new SMDH(smdhData);
+			Log.i(Constants.LOG_TAG, "Loaded rom SDMH");
+			Log.i(Constants.LOG_TAG, String.format("Are you playing '%s' published by '%s'", smdh.getTitle(), smdh.getPublisher()));
+			GameMetadata game = GameUtils.getCurrentGame();
+			GameUtils.removeGame(game);
+			GameUtils.addGame(GameMetadata.applySMDH(game, smdh));
+		}
 	}
 
 	public void onDrawFrame(GL10 unused) {

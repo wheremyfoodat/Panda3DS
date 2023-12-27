@@ -6,10 +6,6 @@
 #include "loader/ncch.hpp"
 #include "memory.hpp"
 
-#ifdef __ANDROID__
-#include "jni_driver.hpp"    
-#endif
-
 #include <iostream>
 
 bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSInfo &info) {
@@ -30,6 +26,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 
 	codeFile.clear();
 	saveData.clear();
+	smdh.clear();
 	partitionInfo = info;
 
 	size = u64(*(u32*)&header[0x104]) * mediaUnit; // TODO: Maybe don't type pun because big endian will break
@@ -223,11 +220,10 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 				}
 			} else if (std::strcmp(name, "icon") == 0) {
 				// Parse icon file to extract region info and more in the future (logo, etc)
-				std::vector<u8> tmp;
-				tmp.resize(fileSize);
-				readFromFile(file, exeFS, tmp.data(), fileOffset + exeFSHeaderSize, fileSize);
+				smdh.resize(fileSize);
+				readFromFile(file, exeFS, smdh.data(), fileOffset + exeFSHeaderSize, fileSize);
 
-				if (!parseSMDH(tmp)) {
+				if (!parseSMDH(smdh)) {
 					printf("Failed to parse SMDH!\n");
 				}
 			}
@@ -258,11 +254,6 @@ bool NCCH::parseSMDH(const std::vector<u8>& smdh) {
 		printf("Invalid SMDH magic!\n");
 		return false;
 	}
-
-	// In the Android version, notify the application that we're loading an SMDH file, to extract data for the title list
-#ifdef __ANDROID__
-	Pandroid::onSmdhLoaded(smdh);
-#endif
 
 	// Bitmask showing which regions are allowed.
 	// https://www.3dbrew.org/wiki/SMDH#Region_Lockout
