@@ -25,4 +25,7 @@
     <string name="light">Light</string>
     <string name="dark">Dark</string>
     <string name="black">Black</string>
+    <string name="actions">Actions</string>
+    <string name="exit">Exit</string>
+    <string name="resume">Resume</string>
 </resources>

@@ -36,6 +36,8 @@ JNIEnv* jniEnv() {
 extern "C" {
 
 AlberFunction(void, Setup)(JNIEnv* env, jobject obj) { env->GetJavaVM(&jvm); }
+AlberFunction(void, Pause)(JNIEnv* env, jobject obj) { emulator->pause(); }
+AlberFunction(void, Resume)(JNIEnv* env, jobject obj) { emulator->resume(); }
 
 AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	emulator = std::make_unique<Emulator>();

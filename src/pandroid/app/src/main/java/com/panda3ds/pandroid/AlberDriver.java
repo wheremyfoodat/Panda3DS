@@ -17,6 +17,8 @@ public class AlberDriver {
 	public static native void SetCirclepadAxis(int x, int y);
 	public static native void TouchScreenUp();
 	public static native void TouchScreenDown(int x, int y);
+	public static native void Pause();
+	public static native void Resume();
 
 	public static native byte[] GetSmdh();
 

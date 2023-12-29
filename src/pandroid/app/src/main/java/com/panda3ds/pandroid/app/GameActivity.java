@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
+import com.panda3ds.pandroid.app.game.DrawerFragment;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.input.InputHandler;
 import com.panda3ds.pandroid.input.InputMap;
@@ -22,7 +23,14 @@ import com.panda3ds.pandroid.view.PandaGlSurfaceView;
 import com.panda3ds.pandroid.view.PandaLayoutController;
 
 public class GameActivity extends BaseActivity {
-	private final AlberInputListener inputListener = new AlberInputListener(this);
+	private final DrawerFragment drawerFragment = new DrawerFragment();
+	private final AlberInputListener inputListener = new AlberInputListener(() -> {
+		if (drawerFragment.isOpened()) {
+			drawerFragment.close();
+		} else {
+			drawerFragment.open();
+		}
+	});
 
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -52,6 +60,8 @@ public class GameActivity extends BaseActivity {
 			GlobalConfig.set(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE, checked);
 		});
 		((CheckBox) findViewById(R.id.hide_screen_controller)).setChecked(GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE));
+
+		getSupportFragmentManager().beginTransaction().replace(R.id.drawer_fragment, drawerFragment).commitNow();
 	}
 
 	@Override
@@ -67,7 +77,9 @@ public class GameActivity extends BaseActivity {
 	@Override
 	protected void onPause() {
 		super.onPause();
+
 		InputHandler.reset();
+		drawerFragment.open();
 	}
 
 	@Override
