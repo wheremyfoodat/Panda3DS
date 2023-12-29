@@ -24,8 +24,8 @@ import com.panda3ds.pandroid.view.PandaLayoutController;
 
 public class GameActivity extends BaseActivity {
 	private final DrawerFragment drawerFragment = new DrawerFragment();
-	private final AlberInputListener inputListener = new AlberInputListener(()->{
-		if (drawerFragment.isOpened()){
+	private final AlberInputListener inputListener = new AlberInputListener(() -> {
+		if (drawerFragment.isOpened()) {
 			drawerFragment.close();
 		} else {
 			drawerFragment.open();
@@ -77,6 +77,7 @@ public class GameActivity extends BaseActivity {
 	@Override
 	protected void onPause() {
 		super.onPause();
+
 		InputHandler.reset();
 		drawerFragment.open();
 	}

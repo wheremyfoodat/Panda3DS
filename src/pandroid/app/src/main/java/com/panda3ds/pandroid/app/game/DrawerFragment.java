@@ -55,19 +55,25 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         super.onDetach();
     }
 
-    private void refreshLayout(){
+    private void refreshLayout() {
         drawerContainer.measure(View.MeasureSpec.EXACTLY, View.MeasureSpec.EXACTLY);
         drawerContainer.requestLayout();
         drawerContainer.invalidate();
         drawerContainer.forceLayout();
     }
 
-    public void open(){
-        if (drawerContainer.isOpen())
-            return;
-        drawerContainer.setVisibility(View.VISIBLE);
-        drawerContainer.open();
-        drawerContainer.postDelayed(this::refreshLayout, 20);
+    public void open() {
+        if (!drawerContainer.isOpen()) {
+            drawerContainer.setVisibility(View.VISIBLE);
+            drawerContainer.open();
+            drawerContainer.postDelayed(this::refreshLayout, 20);
+        }
+    }
+
+    public void close() {
+        if (drawerContainer.isOpen()) {        
+            drawerContainer.close();
+        }
     }
 
     @Override
@@ -90,9 +96,9 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.resume){
+        if (id == R.id.resume) {
             close();
-        } else if (id == R.id.exit){
+        } else if (id == R.id.exit) {
             requireActivity().onBackPressed();
         }
 
@@ -101,12 +107,5 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
 
     public boolean isOpened() {
         return drawerContainer.isOpen();
-    }
-
-    public void close() {
-        if (!drawerContainer.isOpen()){
-            return;
-        }
-        drawerContainer.close();
     }
 }

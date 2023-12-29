@@ -53,9 +53,7 @@ void Pandroid::onSmdhLoaded(const std::vector<u8>& smdh) {
 extern "C" {
 
 AlberFunction(void, Setup)(JNIEnv* env, jobject obj) { env->GetJavaVM(&jvm); }
-
 AlberFunction(void, Pause)(JNIEnv* env, jobject obj) { emulator->pause(); }
-
 AlberFunction(void, Resume)(JNIEnv* env, jobject obj) { emulator->resume(); }
 
 AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
