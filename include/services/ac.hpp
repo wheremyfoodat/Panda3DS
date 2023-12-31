@@ -19,6 +19,7 @@ class ACService {
 	void getConnectingInfraPriority(u32 messagePointer);
 	void getStatus(u32 messagePointer);
 	void getLastErrorCode(u32 messagePointer);
+	void getWifiStatus(u32 messagePointer);
 	void isConnected(u32 messagePointer);
 	void registerDisconnectEvent(u32 messagePointer);
 	void setClientVersion(u32 messagePointer);

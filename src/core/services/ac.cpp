@@ -8,6 +8,7 @@ namespace ACCommands {
 		CloseAsync = 0x00080004,
 		GetLastErrorCode = 0x000A0000,
 		GetStatus = 0x000C0000,
+		GetWifiStatus = 0x000D0000,
 		GetConnectingInfraPriority = 0x000F0000,
 		RegisterDisconnectEvent = 0x00300004,
 		IsConnected = 0x003E0042,
@@ -29,6 +30,7 @@ void ACService::handleSyncRequest(u32 messagePointer) {
 		case ACCommands::GetConnectingInfraPriority: getConnectingInfraPriority(messagePointer); break;
 		case ACCommands::GetLastErrorCode: getLastErrorCode(messagePointer); break;
 		case ACCommands::GetStatus: getStatus(messagePointer); break;
+		case ACCommands::GetWifiStatus: getWifiStatus(messagePointer); break;
 		case ACCommands::IsConnected: isConnected(messagePointer); break;
 		case ACCommands::RegisterDisconnectEvent: registerDisconnectEvent(messagePointer); break;
 		case ACCommands::SetClientVersion: setClientVersion(messagePointer); break;
@@ -91,6 +93,20 @@ void ACService::getStatus(u32 messagePointer) {
 	mem.write32(messagePointer + 8, 0);
 }
 
+void ACService::getWifiStatus(u32 messagePointer) {
+	log("AC::GetWifiStatus (stubbed)\n");
+
+	enum class WifiStatus : u32 {
+		None = 0,
+		Slot1 = 1,
+		Slot2 = 2,
+		Slot3 = 4,
+	};
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0D, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, static_cast<u32>(WifiStatus::None));
+}
 
 void ACService::isConnected(u32 messagePointer) {
 	log("AC::IsConnected\n");
