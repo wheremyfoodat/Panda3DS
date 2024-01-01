@@ -3,7 +3,25 @@
     <style name="Base.Theme.Pandroid" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-        <item name="alertDialogTheme">@style/Theme.AppCompat.DayNight.Dialog</item>
+        <item name="alertDialogTheme">@style/AlertDialog</item>
+        <item name="preferenceTheme">@style/PreferenceTheme</item>
+    </style>
+
+    <style name="PreferenceTheme" parent="PreferenceThemeOverlay">
+        <item name="preferenceFragmentCompatStyle">@style/PreferenceStyle</item>
+    </style>
+
+    <style name="PreferenceStyle" parent="PreferenceFragment.Material">
+        <item name="android:divider">?colorSurfaceVariant</item>
+    </style>
+
+    <style name="AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowBackground">@drawable/alert_dialog_background</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/AlertDialog.Title</item>
+    </style>
+
+    <style name="AlertDialog.Title" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
+        <item name="android:textSize">32sp</item>
     </style>
 
     <style name="Theme.Pandroid" parent="Base.Theme.Pandroid" />
@@ -17,6 +35,7 @@
         <item name="titleTextColor">?colorOnSurface</item>
         <item name="hintTextColor">?colorOnSurfaceVariant</item>
         <item name="colorOnBackground">?colorOnSurface</item>
+        <item name="colorControlHighlight">?colorSurfaceVariant</item>
     </style>
 
     <style name="Theme.Pandroid.Dark" parent="Theme.Pandroid.Custom">

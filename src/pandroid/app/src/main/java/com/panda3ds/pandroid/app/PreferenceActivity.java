@@ -29,15 +29,22 @@ public class PreferenceActivity extends BaseActivity {
 
 		try {
 			Class<?> clazz = getClassLoader().loadClass(intent.getStringExtra(Constants.ACTIVITY_PARAMETER_FRAGMENT));
-			getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, (Fragment) clazz.newInstance()).commitNow();
+			Fragment fragment = (Fragment) clazz.newInstance();
+			fragment.setArguments(intent.getExtras());
+			getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commitNow();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	public static void launch(Context context, Class<? extends Fragment> clazz) {
+		launch(context, clazz, new Intent());
+	}
+
+	public static void launch(Context context, Class<? extends Fragment> clazz, Intent extras) {
 		context.startActivity(new Intent(context, PreferenceActivity.class)
 								  .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+								  .putExtras(extras)
 								  .putExtra(Constants.ACTIVITY_PARAMETER_FRAGMENT, clazz.getName()));
 	}
 
