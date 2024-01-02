@@ -54,7 +54,16 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	emu = new Emulator();
 	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
-	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work 
+	auto args = QCoreApplication::arguments();
+	if (args.size() > 1) {
+		auto romPath = std::filesystem::current_path() / args.at(1).toStdU16String();
+		if (!emu->loadROM(romPath)) {
+			// For some reason just .c_str() doesn't show the proper path
+			Helpers::warn("Failed to load ROM file: %s", romPath.string().c_str());
+		}
+	}
+
+	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
 	emuThread = std::thread([this]() {
 		const RendererType rendererType = emu->getConfig().rendererType;
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
@@ -157,8 +166,8 @@ void MainWindow::selectLuaFile() {
 
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
-	appRunning = false; // Set our running atomic to false in order to make the emulator thread stop, and join it
-	
+	appRunning = false;  // Set our running atomic to false in order to make the emulator thread stop, and join it
+
 	if (emuThread.joinable()) {
 		emuThread.join();
 	}
@@ -192,7 +201,7 @@ void MainWindow::dumpRomFS() {
 	messageQueueMutex.unlock();
 
 	switch (res) {
-		case RomFS::DumpingResult::Success: break; // Yay!
+		case RomFS::DumpingResult::Success: break;  // Yay!
 		case RomFS::DumpingResult::InvalidFormat: {
 			QMessageBox messageBox(
 				QMessageBox::Icon::Warning, tr("Invalid format for RomFS dumping"),
