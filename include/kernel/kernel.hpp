@@ -146,6 +146,7 @@ public:
 	void getResourceLimitCurrentValues();
 	void getSystemInfo();
 	void getSystemTick();
+	void getThreadContext();
 	void getThreadID();
 	void getThreadIdealProcessor();
 	void getThreadPriority();

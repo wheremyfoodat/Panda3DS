@@ -462,6 +462,13 @@ void Kernel::getThreadIdealProcessor() {
 	regs[1] = static_cast<u32>(ProcessorID::AppCore);
 }
 
+void Kernel::getThreadContext() {
+	Helpers::warn("Stubbed Kernel::GetThreadContext");
+
+	// TODO: Decompile this from Kernel11. 3DBrew says function is stubbed.
+	regs[0] = Result::Success;
+}
+
 void Kernel::setThreadPriority() {
 	const Handle handle = regs[0];
 	const u32 priority = regs[1];
