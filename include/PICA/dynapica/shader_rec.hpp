@@ -1,13 +1,15 @@
 #pragma once
 #include "PICA/shader.hpp"
 
-#if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
+#if defined(PANDA3DS_DYNAPICA_SUPPORTED) && (defined(PANDA3DS_X64_HOST) || defined(PANDA3DS_ARM64_HOST))
 #define PANDA3DS_SHADER_JIT_SUPPORTED
 #include <memory>
 #include <unordered_map>
 
 #ifdef PANDA3DS_X64_HOST
 #include "shader_rec_emitter_x64.hpp"
+#elif defined(PANDA3DS_ARM64_HOST)
+#include "shader_rec_emitter_arm64.hpp"
 #endif
 #endif
 

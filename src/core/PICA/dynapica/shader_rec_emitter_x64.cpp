@@ -342,10 +342,10 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	} else if (std::popcount(writeMask) == 1) { // Only 1 register needs to be written back. This can be done with a simple shift right + movss
 		int bit = std::countr_zero(writeMask); // Get which PICA register needs to be written to (0 = w, 1 = z, etc)
 		size_t index = 3 - bit;
-		const uintptr_t lane_offset = offset + index * sizeof(float);
+		const uintptr_t laneOffset = offset + index * sizeof(float);
 
 		if (index == 0) { // Bottom lane, no need to shift
-			movss(dword[statePointer + lane_offset], source);
+			movss(dword[statePointer + laneOffset], source);
 		} else { // Shift right by 32 * index, then write bottom lane
 			if (haveAVX) {
 				vpsrldq(scratch1, source, index * sizeof(float));
@@ -353,7 +353,7 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 				movaps(scratch1, source);
 				psrldq(scratch1, index * sizeof(float));
 			}
-			movss(dword[statePointer + lane_offset], scratch1);
+			movss(dword[statePointer + laneOffset], scratch1);
 		}
 	} else if (haveSSE4_1) {
 		// Bit reverse the write mask because that is what blendps expects

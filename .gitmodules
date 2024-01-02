@@ -46,3 +46,6 @@
 [submodule "third_party/zep"]
 	path = third_party/zep
 	url = https://github.com/Panda3DS-emu/zep
+[submodule "third_party/oaknut"]
+	path = third_party/oaknut
+	url = https://github.com/merryhime/oaknut
