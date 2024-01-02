@@ -25,5 +25,5 @@ public class Constants {
 	public static final String PREF_GLOBAL_CONFIG = "app.GlobalConfig";
     public static final String PREF_GAME_UTILS = "app.GameUtils";
     public static final String PREF_INPUT_MAP = "app.InputMap";
-    public static final String PREF_SCREEN_CONTROLLER_PROFILES = "app.input.overlay";
+    public static final String PREF_SCREEN_CONTROLLER_PROFILES = "app.input.ScreenControllerManager";
 }

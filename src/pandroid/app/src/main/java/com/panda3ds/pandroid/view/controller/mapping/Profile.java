@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid.view.controller.map;
+package com.panda3ds.pandroid.view.controller.mapping;
 
 import android.view.Gravity;
 import android.view.View;
@@ -17,10 +17,6 @@ public class Profile {
     private final Layout portraitLayout;
     private String name;
 
-    public Profile() {
-        this(UUID.randomUUID().toString(), PandroidApplication.getAppContext().getString(R.string.unknown), new Layout(), new Layout());
-    }
-
     public Profile(String id, String name, Layout landscape, Layout portrait) {
         this.id = id;
         this.name = name;
@@ -28,7 +24,7 @@ public class Profile {
         this.portraitLayout = portrait;
     }
 
-    public void applyToView(NodeID id, View view, int viewportWidth, int viewportHeight) {
+    public void applyToView(ControllerItem id, View view, int viewportWidth, int viewportHeight) {
         float pt = view.getResources().getDimension(R.dimen.SizePt);
 
         int width = view.getLayoutParams().width;
@@ -43,7 +39,7 @@ public class Profile {
         int y = Math.round(location.getY() * pt);
 
         params.gravity = location.getGravity() | Gravity.BOTTOM;
-        params.bottomMargin = Math.max(Math.min(y - (height / 2), viewportHeight-height), 0);
+        params.bottomMargin = Math.max(Math.min(y - (height / 2), viewportHeight - height), 0);
 
         int gravity = location.getGravity() & Gravity.HORIZONTAL_GRAVITY_MASK;
         if (gravity == Gravity.RIGHT) {
@@ -56,11 +52,11 @@ public class Profile {
         view.setLayoutParams(params);
     }
 
-    public void setLocation(NodeID id, int x, int y, int viewportWidth, int viewportHeight) {
+    public void setLocation(ControllerItem item, int x, int y, int viewportWidth, int viewportHeight) {
         float pt = PandroidApplication.getAppContext().getResources().getDimension(R.dimen.SizePt);
 
         Layout layout = getLayoutBySize(viewportWidth, viewportHeight);
-        Location location = layout.getLocation(id);
+        Location location = layout.getLocation(item);
 
         y = viewportHeight - y;
 
@@ -68,7 +64,7 @@ public class Profile {
             location.setGravity(Gravity.LEFT);
             location.setPosition(x / pt, y / pt);
         } else {
-            x = (viewportWidth/2) - (x - (viewportWidth / 2));
+            x = (viewportWidth / 2) - (x - (viewportWidth / 2));
             location.setGravity(Gravity.RIGHT);
             location.setPosition(x / pt, y / pt);
         }
@@ -79,10 +75,11 @@ public class Profile {
         this.name = name;
     }
 
-    public void setVisible(NodeID id, boolean visible) {
+    public void setVisible(ControllerItem id, boolean visible) {
         landscapeLayout.getLocation(id).setVisible(visible);
         portraitLayout.getLocation(id).setVisible(visible);
     }
+
     private Layout getLayoutBySize(int width, int height) {
         return width > height ? landscapeLayout : portraitLayout;
     }
@@ -101,7 +98,7 @@ public class Profile {
         return new Profile(id, name, landscapeLayout.clone(), portraitLayout.clone());
     }
 
-    public boolean isVisible(NodeID id) {
+    public boolean isVisible(ControllerItem id) {
         return landscapeLayout.getLocation(id).isVisible();
     }
 }

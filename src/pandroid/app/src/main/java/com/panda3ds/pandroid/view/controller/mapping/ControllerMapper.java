@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid.view.controller.map;
+package com.panda3ds.pandroid.view.controller.mapping;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -28,7 +28,7 @@ public class ControllerMapper extends FrameLayout {
     private final Paint selectionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int width = -1;
     private int height = -1;
-    private Function<NodeID> changeListener;
+    private Function<ControllerItem> changeListener;
 
     public ControllerMapper(@NonNull Context context) {
         this(context, null);
@@ -53,19 +53,19 @@ public class ControllerMapper extends FrameLayout {
         selectionPaint.setPathEffect(new DashPathEffect(new float[]{dp * 10, dp * 10}, 0.0f));
     }
 
-    public void initialize(Function<NodeID> changeListener, Profile profile) {
+    public void initialize(Function<ControllerItem> changeListener, Profile profile) {
         this.profile = profile;
         this.changeListener = changeListener;
 
         measure(MeasureSpec.EXACTLY, MeasureSpec.EXACTLY);
 
-        new MoveElementListener(NodeID.L, findViewById(R.id.button_l));
-        new MoveElementListener(NodeID.R, findViewById(R.id.button_r));
-        new MoveElementListener(NodeID.START, findViewById(R.id.button_start));
-        new MoveElementListener(NodeID.SELECT, findViewById(R.id.button_select));
-        new MoveElementListener(NodeID.DPAD, findViewById(R.id.dpad));
-        new MoveElementListener(NodeID.GAMEPAD, findViewById(R.id.gamepad));
-        new MoveElementListener(NodeID.JOYSTICK, findViewById(R.id.left_analog));
+        new MoveElementListener(ControllerItem.L, findViewById(R.id.button_l));
+        new MoveElementListener(ControllerItem.R, findViewById(R.id.button_r));
+        new MoveElementListener(ControllerItem.START, findViewById(R.id.button_start));
+        new MoveElementListener(ControllerItem.SELECT, findViewById(R.id.button_select));
+        new MoveElementListener(ControllerItem.DPAD, findViewById(R.id.dpad));
+        new MoveElementListener(ControllerItem.GAMEPAD, findViewById(R.id.gamepad));
+        new MoveElementListener(ControllerItem.JOYSTICK, findViewById(R.id.left_analog));
     }
 
     @Override
@@ -134,13 +134,13 @@ public class ControllerMapper extends FrameLayout {
 
     public void refreshLayout() {
         if (profile != null) {
-            profile.applyToView(NodeID.L, findViewById(R.id.button_l), width, height);
-            profile.applyToView(NodeID.R, findViewById(R.id.button_r), width, height);
-            profile.applyToView(NodeID.START, findViewById(R.id.button_start), width, height);
-            profile.applyToView(NodeID.SELECT, findViewById(R.id.button_select), width, height);
-            profile.applyToView(NodeID.DPAD, findViewById(R.id.dpad), width, height);
-            profile.applyToView(NodeID.GAMEPAD, findViewById(R.id.gamepad), width, height);
-            profile.applyToView(NodeID.JOYSTICK, findViewById(R.id.left_analog), width, height);
+            profile.applyToView(ControllerItem.L, findViewById(R.id.button_l), width, height);
+            profile.applyToView(ControllerItem.R, findViewById(R.id.button_r), width, height);
+            profile.applyToView(ControllerItem.START, findViewById(R.id.button_start), width, height);
+            profile.applyToView(ControllerItem.SELECT, findViewById(R.id.button_select), width, height);
+            profile.applyToView(ControllerItem.DPAD, findViewById(R.id.dpad), width, height);
+            profile.applyToView(ControllerItem.GAMEPAD, findViewById(R.id.gamepad), width, height);
+            profile.applyToView(ControllerItem.JOYSTICK, findViewById(R.id.left_analog), width, height);
         }
     }
 
@@ -153,12 +153,12 @@ public class ControllerMapper extends FrameLayout {
     }
 
     public class MoveElementListener implements OnTouchListener {
-        private final NodeID id;
+        private final ControllerItem id;
         private final View view;
         private final Vector2 downPosition = new Vector2(0.0f, 0.0f);
         private boolean down = false;
 
-        public MoveElementListener(NodeID id, View view) {
+        public MoveElementListener(ControllerItem id, View view) {
             this.view = view;
             this.id = id;
             this.view.setOnTouchListener(this);
@@ -181,7 +181,7 @@ public class ControllerMapper extends FrameLayout {
             profile.setLocation(id, x, y, width, height);
             profile.applyToView(id, view, width, height);
 
-            if(changeListener != null){
+            if (changeListener != null) {
                 changeListener.run(id);
             }
 

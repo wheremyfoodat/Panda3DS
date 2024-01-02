@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <com.panda3ds.pandroid.view.controller.map.ControllerMapper
+    <com.panda3ds.pandroid.view.controller.mapping.ControllerMapper
         android:id="@+id/mapper"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -26,7 +26,7 @@
 
         </FrameLayout>
 
-    </com.panda3ds.pandroid.view.controller.map.ControllerMapper>
+    </com.panda3ds.pandroid.view.controller.mapping.ControllerMapper>
 
     <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="wrap_content"

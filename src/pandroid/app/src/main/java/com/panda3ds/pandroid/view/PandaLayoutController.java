@@ -6,9 +6,9 @@ import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.view.controller.ControllerLayout;
-import com.panda3ds.pandroid.view.controller.map.ControllerProfileManager;
-import com.panda3ds.pandroid.view.controller.map.NodeID;
-import com.panda3ds.pandroid.view.controller.map.Profile;
+import com.panda3ds.pandroid.view.controller.mapping.ControllerProfileManager;
+import com.panda3ds.pandroid.view.controller.mapping.ControllerItem;
+import com.panda3ds.pandroid.view.controller.mapping.Profile;
 import com.panda3ds.pandroid.view.controller.nodes.Button;
 import com.panda3ds.pandroid.view.controller.nodes.Joystick;
 
@@ -68,12 +68,12 @@ public class PandaLayoutController extends ControllerLayout {
 
 	private void applyProfileMap() {
 		Profile profile = ControllerProfileManager.getDefaultProfile();
-		profile.applyToView(NodeID.L,findViewById(R.id.button_l), width, height);
-		profile.applyToView(NodeID.R, findViewById(R.id.button_r), width, height);
-		profile.applyToView(NodeID.START, findViewById(R.id.button_start), width, height);
-		profile.applyToView(NodeID.SELECT, findViewById(R.id.button_select), width, height);
-		profile.applyToView(NodeID.JOYSTICK, findViewById(R.id.left_analog), width, height);
-		profile.applyToView(NodeID.GAMEPAD, findViewById(R.id.gamepad), width, height);
-		profile.applyToView(NodeID.DPAD, findViewById(R.id.dpad), width, height);
+		profile.applyToView(ControllerItem.L,findViewById(R.id.button_l), width, height);
+		profile.applyToView(ControllerItem.R, findViewById(R.id.button_r), width, height);
+		profile.applyToView(ControllerItem.START, findViewById(R.id.button_start), width, height);
+		profile.applyToView(ControllerItem.SELECT, findViewById(R.id.button_select), width, height);
+		profile.applyToView(ControllerItem.JOYSTICK, findViewById(R.id.left_analog), width, height);
+		profile.applyToView(ControllerItem.GAMEPAD, findViewById(R.id.gamepad), width, height);
+		profile.applyToView(ControllerItem.DPAD, findViewById(R.id.dpad), width, height);
 	}
 }

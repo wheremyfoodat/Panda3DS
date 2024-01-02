@@ -15,12 +15,12 @@
         android:summary="-"/>
 
     <PreferenceCategory
-        android:key="screenGamepadProfiles"
+        android:key="gamepadProfileList"
         android:title="@string/pref_screen_controllers_title"
         app:iconSpaceReserved="false">
 
         <Preference
-            android:key="add_screen_profile"
+            android:key="createProfile"
             app:icon="@drawable/ic_add"
             app:title="@string/create_profile"
             app:allowDividerBelow="true"

@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid.view.controller.map;
+package com.panda3ds.pandroid.view.controller.mapping;
 
 import android.view.Gravity;
 

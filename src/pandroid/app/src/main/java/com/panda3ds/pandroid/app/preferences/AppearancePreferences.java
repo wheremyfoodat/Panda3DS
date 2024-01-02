@@ -1,6 +1,5 @@
 package com.panda3ds.pandroid.app.preferences;
 
-import android.app.Activity;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;

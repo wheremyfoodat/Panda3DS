@@ -14,10 +14,10 @@ import androidx.fragment.app.Fragment;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.BaseActivity;
 import com.panda3ds.pandroid.app.base.BottomAlertDialog;
-import com.panda3ds.pandroid.view.controller.map.ControllerMapper;
-import com.panda3ds.pandroid.view.controller.map.ControllerProfileManager;
-import com.panda3ds.pandroid.view.controller.map.NodeID;
-import com.panda3ds.pandroid.view.controller.map.Profile;
+import com.panda3ds.pandroid.view.controller.mapping.ControllerMapper;
+import com.panda3ds.pandroid.view.controller.mapping.ControllerProfileManager;
+import com.panda3ds.pandroid.view.controller.mapping.ControllerItem;
+import com.panda3ds.pandroid.view.controller.mapping.Profile;
 
 public class ControllerMapperPreferences extends Fragment {
 
@@ -47,13 +47,13 @@ public class ControllerMapperPreferences extends Fragment {
             BottomAlertDialog builder = new BottomAlertDialog(v.getContext());
             builder.setTitle("Visibility");
             boolean[] visibleList = {
-                    currentProfile.isVisible(NodeID.START),
-                    currentProfile.isVisible(NodeID.SELECT),
-                    currentProfile.isVisible(NodeID.L),
-                    currentProfile.isVisible(NodeID.R),
-                    currentProfile.isVisible(NodeID.DPAD),
-                    currentProfile.isVisible(NodeID.JOYSTICK),
-                    currentProfile.isVisible(NodeID.GAMEPAD),
+                    currentProfile.isVisible(ControllerItem.START),
+                    currentProfile.isVisible(ControllerItem.SELECT),
+                    currentProfile.isVisible(ControllerItem.L),
+                    currentProfile.isVisible(ControllerItem.R),
+                    currentProfile.isVisible(ControllerItem.DPAD),
+                    currentProfile.isVisible(ControllerItem.JOYSTICK),
+                    currentProfile.isVisible(ControllerItem.GAMEPAD),
             };
             builder.setMultiChoiceItems(new CharSequence[]{
                     "Start", "Select", "L", "R", "Dpad", getString(R.string.axis), "A/B/X/Y"
@@ -63,13 +63,13 @@ public class ControllerMapperPreferences extends Fragment {
 
                 saveButton.setVisibility(View.VISIBLE);
 
-                currentProfile.setVisible(NodeID.START, visibleList[0]);
-                currentProfile.setVisible(NodeID.SELECT, visibleList[1]);
-                currentProfile.setVisible(NodeID.L, visibleList[2]);
-                currentProfile.setVisible(NodeID.R, visibleList[3]);
-                currentProfile.setVisible(NodeID.DPAD, visibleList[4]);
-                currentProfile.setVisible(NodeID.JOYSTICK, visibleList[5]);
-                currentProfile.setVisible(NodeID.GAMEPAD, visibleList[6]);
+                currentProfile.setVisible(ControllerItem.START, visibleList[0]);
+                currentProfile.setVisible(ControllerItem.SELECT, visibleList[1]);
+                currentProfile.setVisible(ControllerItem.L, visibleList[2]);
+                currentProfile.setVisible(ControllerItem.R, visibleList[3]);
+                currentProfile.setVisible(ControllerItem.DPAD, visibleList[4]);
+                currentProfile.setVisible(ControllerItem.JOYSTICK, visibleList[5]);
+                currentProfile.setVisible(ControllerItem.GAMEPAD, visibleList[6]);
 
                 mapper.refreshLayout();
             }).setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss());
@@ -88,8 +88,8 @@ public class ControllerMapperPreferences extends Fragment {
             requireActivity().finish();
         });
 
-        view.findViewById(R.id.rotate).setOnClickListener(v->{
-            requireActivity().setRequestedOrientation(mapper.getCurrentWidth() > mapper.getCurrentHeight() ?  ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        view.findViewById(R.id.rotate).setOnClickListener(v -> {
+            requireActivity().setRequestedOrientation(mapper.getCurrentWidth() > mapper.getCurrentHeight() ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         });
 
         view.findViewById(R.id.delete).setVisibility(ControllerProfileManager.getProfileCount() > 1 ? View.VISIBLE : View.GONE);
@@ -97,7 +97,7 @@ public class ControllerMapperPreferences extends Fragment {
         saveButton.setVisibility(View.GONE);
     }
 
-    public void onLocationChanged(NodeID id) {
+    public void onLocationChanged(ControllerItem id) {
         saveButton.setVisibility(View.VISIBLE);
     }
 }
