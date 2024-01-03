@@ -27,6 +27,9 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	// Filled before compiling a shader by scanning the code for call instructions
 	std::vector<u32> returnPCs;
 
+	// An array of 128-bit masks for blending registers together to perform masked writes.
+	// Eg for writing only the x and y components, the mask is 0x00000000'00000000'FFFFFFFF'FFFF
+	oaknut::Label blendMasks;
 	// Vector value of (1.0, 1.0, 1.0, 1.0) for SLT(i)/SGE(i)
 	oaknut::Label onesVector;
 
