@@ -10,10 +10,10 @@
         app:layout="@layout/preference_simple_about"/>
 
     <Preference
-        app:key="inputMap"
+        app:key="input"
         app:icon="@drawable/ic_key_a"
-        app:title="@string/controller_mapping"
-        app:summary="@string/pref_input_map_summary"
+        app:title="@string/input"
+        app:summary="@string/input_summary"
         app:layout="@layout/preference_start_item"/>
 
     <Preference

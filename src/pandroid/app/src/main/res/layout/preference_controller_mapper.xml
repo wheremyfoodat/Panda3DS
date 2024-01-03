@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <com.panda3ds.pandroid.view.controller.mapping.ControllerMapper
+        android:id="@+id/mapper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.75"
+            tools:visibility="invisible">
+
+            <include layout="@layout/controller_start"/>
+            <include layout="@layout/controller_select"/>
+            <include layout="@layout/controller_joystick"/>
+            <include layout="@layout/controller_dpad"/>
+            <include layout="@layout/controller_gamepad"/>
+            <include layout="@layout/controller_r"/>
+            <include layout="@layout/controller_l"/>
+
+        </FrameLayout>
+
+    </com.panda3ds.pandroid.view.controller.mapping.ControllerMapper>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="end|top"
+        android:layout_marginEnd="10dp"
+        android:layout_marginTop="10dp">
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/save"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_save"
+            android:scaleType="fitCenter"
+            android:padding="8dp"
+            android:tint="?colorOnPrimary"
+            android:layout_margin="10dp"
+            android:backgroundTint="?colorPrimary"
+            android:background="@drawable/simple_card_background"/>
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/change_visibility"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_visibility"
+            android:scaleType="fitCenter"
+            android:padding="8dp"
+            android:tint="?colorOnPrimary"
+            android:layout_margin="10dp"
+            android:backgroundTint="?colorPrimary"
+            android:background="@drawable/simple_card_background"/>
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/delete"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_delete"
+            android:scaleType="fitCenter"
+            android:padding="8dp"
+            android:tint="?colorOnPrimary"
+            android:layout_margin="10dp"
+            android:backgroundTint="?colorPrimary"
+            android:background="@drawable/simple_card_background"/>
+
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/rotate"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_rotate_screen"
+            android:scaleType="fitCenter"
+            android:padding="8dp"
+            android:tint="?colorOnPrimary"
+            android:layout_margin="10dp"
+            android:backgroundTint="?colorPrimary"
+            android:background="@drawable/simple_card_background"/>
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</FrameLayout>
