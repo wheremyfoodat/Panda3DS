@@ -20,7 +20,6 @@ import com.panda3ds.pandroid.view.controller.mapping.ControllerItem;
 import com.panda3ds.pandroid.view.controller.mapping.Profile;
 
 public class ControllerMapperPreferences extends Fragment {
-
     private Profile currentProfile;
     private ControllerMapper mapper;
     private View saveButton;
@@ -30,7 +29,6 @@ public class ControllerMapperPreferences extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.preference_controller_mapper, container, false);
     }
-
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {

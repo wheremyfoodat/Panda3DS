@@ -59,7 +59,8 @@ public class PandaLayoutController extends ControllerLayout {
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 		int measuredWidth = getMeasuredWidth();
 		int measuredHeight = getMeasuredHeight();
-		if (measuredWidth != width || measuredHeight != height){
+
+		if (measuredWidth != width || measuredHeight != height) {
 			width = measuredWidth;
 			height = measuredHeight;
 			applyProfileMap();
@@ -68,6 +69,7 @@ public class PandaLayoutController extends ControllerLayout {
 
 	private void applyProfileMap() {
 		Profile profile = ControllerProfileManager.getDefaultProfile();
+
 		profile.applyToView(ControllerItem.L,findViewById(R.id.button_l), width, height);
 		profile.applyToView(ControllerItem.R, findViewById(R.id.button_r), width, height);
 		profile.applyToView(ControllerItem.START, findViewById(R.id.button_start), width, height);

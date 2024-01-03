@@ -109,6 +109,7 @@ public class ControllerMapper extends FrameLayout {
         int shapeSize = Math.round(getResources().getDimension(R.dimen.SizePt) * 7.2f);
         boolean dark = true;
         boolean start = true;
+
         for (int x = 0; x < width + shapeSize; x += shapeSize) {
             for (int y = 0; y < height + shapeSize; y += shapeSize) {
                 paint.setColor(dark ? COLOR_DARK : COLOR_LIGHT);
@@ -125,6 +126,7 @@ public class ControllerMapper extends FrameLayout {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int measuredWidth = getMeasuredWidth();
         int measuredHeight = getMeasuredHeight();
+        
         if (measuredWidth != width || measuredHeight != height) {
             width = measuredWidth;
             height = measuredHeight;

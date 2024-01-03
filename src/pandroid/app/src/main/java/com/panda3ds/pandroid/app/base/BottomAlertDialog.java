@@ -51,6 +51,7 @@ public class BottomAlertDialog extends AlertDialog.Builder {
     public AlertDialog show() {
         AlertDialog dialog = create();
         dialog.show();
+
         return dialog;
     }
 }

@@ -10,8 +10,7 @@ public class Location {
     private int gravity = Gravity.LEFT;
     private boolean visible = false;
 
-    public Location() {
-    }
+    public Location() {}
 
     public Location(float x, float y, int gravity, boolean visible) {
         this.x = x;
