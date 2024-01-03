@@ -3,6 +3,7 @@ package com.panda3ds.pandroid.app.preferences;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
@@ -39,6 +40,8 @@ public class InputPreferences extends BasePreferenceFragment {
                             profile.setName(name);
                             ControllerProfileManager.add(profile);
                             refreshScreenProfileList();
+                        } else {
+                            Toast.makeText(requireContext(), R.string.invalid_name, Toast.LENGTH_SHORT).show();
                         }
                     }).setTitle(R.string.create_profile).show();
         });
@@ -66,15 +69,7 @@ public class InputPreferences extends BasePreferenceFragment {
     }
 
     public String formatName(String name) {
-        name = String.valueOf(name);
-        while (name.startsWith(" ")) {
-            name = name.substring(1);
-        }
-        while (name.endsWith(" ")) {
-            name = name.substring(0, name.length() - 1);
-        }
-        name = name.replaceAll("\\s\\s", " ");
-        return name;
+        return name.trim().replaceAll("\\s\\s", " ");
     }
 
     private void refresh() {

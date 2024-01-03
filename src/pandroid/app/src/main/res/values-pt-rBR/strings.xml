@@ -34,4 +34,5 @@
     <string name="name">Nome</string>
     <string name="pref_screen_controllers_title">Disposições de controle</string>
     <string name="pref_default_controller_title">Disposição de controle padrão</string>
+    <string name="invalid_name">Nome Invalido</string>
 </resources>

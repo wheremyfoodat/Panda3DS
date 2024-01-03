@@ -87,17 +87,17 @@ public class ControllerMapper extends FrameLayout {
     }
 
     public void drawSelected(Canvas canvas, Paint paint) {
-        int[] mePosition = new int[2];
-        int[] viewPosition = new int[2];
+        int[] absolutePosition = new int[2];
+        int[] selectedViewPosition = new int[2];
 
-        selectedView.getLocationOnScreen(viewPosition);
-        getLocationOnScreen(mePosition);
+        selectedView.getLocationOnScreen(selectedViewPosition);
+        getLocationOnScreen(absolutePosition);
 
         int width = selectedView.getLayoutParams().width;
         int height = selectedView.getLayoutParams().height;
 
-        int x = viewPosition[0] - mePosition[0];
-        int y = viewPosition[1] - mePosition[1];
+        int x = selectedViewPosition[0] - absolutePosition[0];
+        int y = selectedViewPosition[1] - absolutePosition[1];
 
         canvas.drawRect(x, y, x + width, y + height, paint);
     }

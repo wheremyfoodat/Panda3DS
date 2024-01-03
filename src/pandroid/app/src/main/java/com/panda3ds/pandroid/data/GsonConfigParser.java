@@ -1,11 +1,12 @@
 package com.panda3ds.pandroid.data;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.panda3ds.pandroid.lang.Task;
 import com.panda3ds.pandroid.utils.FileUtils;
 
 public class GsonConfigParser {
-    private final Gson gson = new Gson();
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final String name;
 
     public GsonConfigParser(String name) {
