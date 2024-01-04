@@ -30,8 +30,6 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	// An array of 128-bit masks for blending registers together to perform masked writes.
 	// Eg for writing only the x and y components, the mask is 0x00000000'00000000'FFFFFFFF'FFFF
 	oaknut::Label blendMasks;
-	// Vector value of (1.0, 1.0, 1.0, 1.0) for SLT(i)/SGE(i)
-	oaknut::Label onesVector;
 
 	u32 recompilerPC = 0;  // PC the recompiler is currently recompiling @
 	u32 loopLevel = 0;     // The current loop nesting level (0 = not in a loop)
