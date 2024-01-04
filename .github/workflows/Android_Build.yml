@@ -37,7 +37,6 @@ jobs:
 
     - name: Build
       run: |
-        git apply ./.github/gles.patch
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/x86_64/
         cd src/pandroid
@@ -76,7 +75,6 @@ jobs:
 
     - name: Build
       run: |
-        git apply ./.github/gles.patch
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/arm64-v8a/
         cd src/pandroid
