@@ -19,10 +19,13 @@ namespace APTCommands {
 		PreloadLibraryApplet = 0x00160040,
 		PrepareToStartLibraryApplet = 0x00180040,
 		StartLibraryApplet = 0x001E0084,
+		ReceiveDeliverArg = 0x00350080,
+		LoadSysMenuArg = 0x00360040,
 		ReplySleepQuery = 0x003E0080,
 		NotifyToWait = 0x00430040,
 		GetSharedFont = 0x00440000,
 		GetWirelessRebootInfo = 0x00450040,
+		GetCaptureInfo = 0x004A0040,
 		AppletUtility = 0x004B00C2,
 		SetApplicationCpuTimeLimit = 0x004F0080,
 		GetApplicationCpuTimeLimit = 0x00500040,
@@ -58,12 +61,15 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::InquireNotification: [[likely]] inquireNotification(messagePointer); break;
 		case APTCommands::IsRegistered: isRegistered(messagePointer); break;
 		case APTCommands::GetApplicationCpuTimeLimit: getApplicationCpuTimeLimit(messagePointer); break;
+		case APTCommands::GetCaptureInfo: getCaptureInfo(messagePointer); break;
 		case APTCommands::GetLockHandle: getLockHandle(messagePointer); break;
 		case APTCommands::GetWirelessRebootInfo: getWirelessRebootInfo(messagePointer); break;
 		case APTCommands::GlanceParameter: glanceParameter(messagePointer); break;
+		case APTCommands::LoadSysMenuArg: loadSysMenuArg(messagePointer); break;
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::PreloadLibraryApplet: preloadLibraryApplet(messagePointer); break;
 		case APTCommands::PrepareToStartLibraryApplet: prepareToStartLibraryApplet(messagePointer); break;
+		case APTCommands::ReceiveDeliverArg: receiveDeliverArg(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
@@ -372,4 +378,64 @@ void APTService::getWirelessRebootInfo(u32 messagePointer) {
 	for (u32 i = 0; i < size; i++) {
 		mem.write8(messagePointer + 0x104 + i, 0); // Temporarily stub this until we add SetWirelessRebootInfo
 	}
+}
+
+void APTService::receiveDeliverArg(u32 messagePointer) {
+	const u32 parameterSize = mem.read32(messagePointer + 4);
+	const u32 hmacSize = mem.read32(messagePointer + 8);
+	const u32 parameter = mem.read32(messagePointer + 0x104);
+	const u32 hmac = mem.read32(messagePointer + 0x10C);
+	log("APT::ReceiveDeliverArg (parameter size = %X, HMAC size = %X, parameter pointer = %X, HMAC pointer = %X) (stubbed)\n", parameterSize, hmacSize, parameter, hmac);
+
+	for (u32 i = 0; i < parameterSize; i += 4) {
+		mem.write32(parameter + i, 0xDEADC0DE); // Does anything use this
+	}
+
+	for (u32 i = 0; i < hmacSize; i += 4) {
+		mem.write32(hmac + i, 0);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 0); // Program ID
+	mem.write8(messagePointer + 16, 1); // Is valid response
+	mem.write32(messagePointer + 20, IPC::pointerHeader(0, parameterSize, IPC::BufferType::Send));
+	mem.write32(messagePointer + 24, parameter);
+	mem.write32(messagePointer + 28, IPC::pointerHeader(1, hmacSize, IPC::BufferType::Send));
+	mem.write32(messagePointer + 32, hmac);
+}
+
+void APTService::loadSysMenuArg(u32 messagePointer) {
+	const u32 outputSize = mem.read32(messagePointer + 4);
+	const u32 output = mem.read32(messagePointer + 0x104);
+	log("APT::LoadSysMenuArg (output size = %X, output = %X) (stubbed)\n", outputSize, output);
+
+	for (u32 i = 0; i < outputSize; i += 4) {
+		mem.write32(output + i, 0);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x35, 4, 4));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, outputSize, IPC::BufferType::Send));
+	mem.write32(messagePointer + 12, outputSize);
+}
+
+void APTService::getCaptureInfo(u32 messagePointer) {
+	const u32 size = mem.read32(messagePointer + 4);
+	const u32 captureBufferInfo = mem.read32(messagePointer + 0x104);
+	log("APT::GetCaptureInfo (size = %X, capture buffer info pointer = %X) (Stubbed)\n", size, captureBufferInfo);
+
+	mem.write32(captureBufferInfo, 0);       // Size (of structure?)
+	mem.write8(captureBufferInfo + 4, 0);    // 1 = is 3D
+	mem.write32(captureBufferInfo + 8, 0);   // Main screen left offset
+	mem.write32(captureBufferInfo + 12, 0);  // Main screen right offset
+	mem.write32(captureBufferInfo + 16, 0);  // Main screen display buffer mode
+	mem.write32(captureBufferInfo + 20, 0);  // Sub screen left offset
+	mem.write32(captureBufferInfo + 24, 0);  // Sub screen right offset
+	mem.write32(captureBufferInfo + 28, 0);  // Sub screen display buffer mode
+
+	mem.write32(messagePointer, IPC::responseHeader(0x4A, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, size, IPC::BufferType::Send));
+	mem.write32(messagePointer + 12, captureBufferInfo);
 }

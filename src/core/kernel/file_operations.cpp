@@ -111,7 +111,8 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	auto archive = file->archive;
 	std::optional<u32> bytesRead = archive->readFile(file, offset, size, dataPointer);
 	if (!bytesRead.has_value()) {
-		Helpers::panic("Kernel::ReadFile failed");
+		Helpers::warn("Kernel::ReadFile failed");
+		mem.write32(messagePointer + 4, 0xC8804478);
 	} else {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write32(messagePointer + 8, bytesRead.value());

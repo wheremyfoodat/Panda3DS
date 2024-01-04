@@ -35,14 +35,17 @@ namespace KernelHandles {
 		MCU_HWC,   // Used for various MCU hardware-related things like battery control
 		MIC,       // MIC service (Controls the microphone)
 		NFC,       // NFC (Duh), used for Amiibo
-		NIM,       // Updates, DLC, etc
+		NIM_AOC,   // DLC, etc
+		NIM_U,     // Updates
 		NDM,       // ?????
 		NS_S,      // Nintendo Shell service
 		NWM_UDS,   // Local multiplayer
+		NEWS_S,    // news:u on steroids
 		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
 		PTM_U,     // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 		PTM_SYSM,  // PTM system service
 		PTM_PLAY,  // PTM Play service, used for retrieving play history
+		PTM_GETS,  // PTM RTC service (GetSystemTime)
 		SOC,       // Socket service
 		SSL,       // SSL service (Totally didn't expect that)
 		Y2R,       // Also does camera stuff
@@ -96,10 +99,12 @@ namespace KernelHandles {
 			case MCU_HWC: return "MCU::HWC";
 			case MIC: return "MIC";
 			case NDM: return "NDM";
+			case NEWS_S: return "NEWS_S";
 			case NEWS_U: return "NEWS_U";
 			case NWM_UDS: return "nwm::UDS";
 			case NFC: return "NFC";
-			case NIM: return "NIM";
+			case NIM_AOC: return "NIM:AOC";
+			case NIM_U: return "NIM:U";
 			case PTM_U: return "PTM:U";
 			case PTM_SYSM: return "PTM:SYSM";
 			case PTM_PLAY: return "PTM:PLAY";

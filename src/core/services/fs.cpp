@@ -43,6 +43,7 @@ namespace FSCommands {
 		SetThisSaveDataSecureValue = 0x086E00C0,
 		GetThisSaveDataSecureValue = 0x086F0040,
 		TheGameboyVCFunction = 0x08750180,
+		GetNumSeeds = 0x087D0000,
 	};
 }
 
@@ -194,6 +195,14 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::SetThisSaveDataSecureValue: setThisSaveDataSecureValue(messagePointer); break;
 		case FSCommands::AbnegateAccessRight: abnegateAccessRight(messagePointer); break;
 		case FSCommands::TheGameboyVCFunction: theGameboyVCFunction(messagePointer); break;
+		case FSCommands::GetNumSeeds: getNumSeeds(messagePointer); break;
+		case 0x08830000: // Home Menu uses this command, what is this?
+			Helpers::warn("FS command 0x08830000");
+
+			mem.write32(messagePointer, IPC::responseHeader(0x883, 2, 0));
+			mem.write32(messagePointer + 4, Result::Success);
+			mem.write32(messagePointer + 8, 0);
+			break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
 }
@@ -237,6 +246,19 @@ void FSService::openArchive(u32 messagePointer) {
 
 	auto archivePath = readPath(archivePathType, archivePathPointer, archivePathSize);
 	log("FS::OpenArchive(archive ID = %d, archive path type = %d)\n", archiveID, archivePathType);
+
+	// Needed for HOME Menu
+	if ((archiveID == 7) && (archivePathType == 2)) {
+		const u32 id = *(u32*)&archivePath.binary[4];
+
+		if (id == 0xE0000000) {
+			log("FS::OpenArchive: Failed to open archive\n");
+			mem.write32(messagePointer + 4, 0xC8804478);
+			mem.write64(messagePointer + 8, 0);
+
+			return;
+		}
+	}
 
 	Rust::Result<Handle, Result::HorizonResult> res = openArchiveHandle(archiveID, archivePath);
 	mem.write32(messagePointer, IPC::responseHeader(0x80C, 3, 0));
@@ -721,6 +743,14 @@ void FSService::cardSlotIsInserted(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x821, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, cardInserted ? 1 : 0);
+}
+
+void FSService::getNumSeeds(u32 messagePointer) {
+	log("FS::GetNumSeeds (stubbed)");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x87D, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0); // Number of seeds?
 }
 
 void FSService::renameFile(u32 messagePointer) {
