@@ -1,4 +1,6 @@
-#version 410 core
+#version 300 es
+precision mediump float;
+precision mediump int;
 
 layout(location = 0) in vec4 a_coords;
 layout(location = 1) in vec4 a_quaternion;
@@ -20,7 +22,7 @@ out vec2 v_texcoord2;
 flat out vec4 v_textureEnvColor[6];
 flat out vec4 v_textureEnvBufferColor;
 
-out float gl_ClipDistance[2];
+// out float gl_ClipDistance[2];
 
 // TEV uniforms
 uniform uint u_textureEnvColor[6];
@@ -93,6 +95,6 @@ void main() {
 	);
 
 	// There's also another, always-on clipping plane based on vertex z
-	gl_ClipDistance[0] = -a_coords.z;
-	gl_ClipDistance[1] = dot(clipData, a_coords);
+	// gl_ClipDistance[0] = -a_coords.z;
+	// gl_ClipDistance[1] = dot(clipData, a_coords);
 }

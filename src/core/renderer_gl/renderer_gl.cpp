@@ -357,27 +357,27 @@ void RendererGL::bindTexturesToSlots() {
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+	// glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
 	glActiveTexture(GL_TEXTURE0);
 }
 
 void RendererGL::updateLightingLUT() {
-	gpu.lightingLUTDirty = false;
-	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
+	// gpu.lightingLUTDirty = false;
+	// std::array<u16, GPU::LightingLutSize> u16_lightinglut;
 
-	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
-		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
-		u16_lightinglut[i] = value * 65535 / 4095;
-	}
+	// for (int i = 0; i < gpu.lightingLUT.size(); i++) {
+	// 	uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
+	// 	u16_lightinglut[i] = value * 65535 / 4095;
+	// }
 
-	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
-	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glActiveTexture(GL_TEXTURE0);
+	// glActiveTexture(GL_TEXTURE0 + 3);
+	// glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+	// glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
+	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	// glActiveTexture(GL_TEXTURE0);
 }
 
 void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {

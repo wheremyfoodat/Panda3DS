@@ -520,21 +520,21 @@ namespace OpenGL {
 	static void enableBlend() { glEnable(GL_BLEND); }
 	static void disableBlend() { glDisable(GL_BLEND); }
 	static void enableLogicOp() { glEnable(GL_COLOR_LOGIC_OP); }
-	static void disableLogicOp() { glDisable(GL_COLOR_LOGIC_OP); }
+	static void disableLogicOp() { /* glDisable(GL_COLOR_LOGIC_OP); */ }
 	static void enableDepth() { glEnable(GL_DEPTH_TEST); }
 	static void disableDepth() { glDisable(GL_DEPTH_TEST); }
 	static void enableStencil() { glEnable(GL_STENCIL_TEST); }
 	static void disableStencil() { glDisable(GL_STENCIL_TEST); }
 
-	static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
-	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
+	static void enableClipPlane(GLuint index) { /* glEnable(GL_CLIP_DISTANCE0 + index); */ }
+	static void disableClipPlane(GLuint index) { /* glDisable(GL_CLIP_DISTANCE0 + index); */ }
 
 	static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
 	static void setColourMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a) { glColorMask(r, g, b, a); }
 	static void setDepthMask(GLboolean mask) { glDepthMask(mask); }
 
 	// TODO: Add a proper enum for this
-	static void setLogicOp(GLenum op) { glLogicOp(op); }
+	static void setLogicOp(GLenum op) { /* glLogicOp(op); */ }
 
     enum Primitives {
         Triangle = GL_TRIANGLES,
