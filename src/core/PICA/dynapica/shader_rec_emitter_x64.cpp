@@ -405,11 +405,18 @@ void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) 
 	switch (condition) {
 		case 0: // Either cmp register matches 
 			// Z flag is 0 if at least 1 of them is set
-			test(word[statePointer + cmpRegXOffset], refX_refY_merged);
 
-			// Invert z flag
-			setz(al);
-			test(al, al);
+			// Check if X matches
+			cmp(byte[statePointer + cmpRegXOffset], refX);
+			sete(al);
+
+			// Or if Y matches
+			cmp(byte[statePointer + cmpRegYOffset], refY);
+			sete(cl);
+			or_(al, cl);
+
+			// If either of them matches, set Z to 1, else set it to 0
+			xor_(al, 1);
 			break;
 		case 1: // Both cmp registers match
 			cmp(word[statePointer + cmpRegXOffset], refX_refY_merged);

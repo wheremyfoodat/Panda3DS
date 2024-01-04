@@ -27,4 +27,12 @@
     <string name="actions">Ações</string>
     <string name="exit">Sair</string>
     <string name="resume">Continuar</string>
+    <string name="saved">Salvo</string>
+    <string name="create_profile">Criar perfil</string>
+    <string name="input">Entrada</string>
+    <string name="input_summary">Altere o mapeamento de controles, disposição de controle na tela etc.</string>
+    <string name="name">Nome</string>
+    <string name="pref_screen_controllers_title">Disposições de controle</string>
+    <string name="pref_default_controller_title">Disposição de controle padrão</string>
+    <string name="invalid_name">Nome Invalido</string>
 </resources>

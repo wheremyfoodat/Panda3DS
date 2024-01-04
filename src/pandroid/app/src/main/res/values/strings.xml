@@ -16,8 +16,8 @@
     <string name="axis">Axis</string>
     <string name="dead_zone">Dead zone</string>
     <string name="options">Options</string>
-    <string name="pref_input_map_summary">Map physics controller or keyboard</string>
-    <string name="controller_mapping">Controller Mapping</string>
+    <string name="pref_input_map_summary">Map physical controller or keyboard</string>
+    <string name="controller_mapping">Controller mapping</string>
     <string name="theme">Theme</string>
     <string name="pref_appearance_summary">Set application theme</string>
     <string name="appearance">Appearance</string>
@@ -28,4 +28,12 @@
     <string name="actions">Actions</string>
     <string name="exit">Exit</string>
     <string name="resume">Resume</string>
+    <string name="saved">Saved</string>
+    <string name="create_profile">Create profile</string>
+    <string name="input">Input</string>
+    <string name="input_summary">Change input map, screen gamepad, etc.</string>
+    <string name="name">Name</string>
+    <string name="pref_screen_controllers_title">Screen gamepad layouts</string>
+    <string name="pref_default_controller_title">Default screen gamepad layout</string>
+    <string name="invalid_name">Invalid name</string>
 </resources>

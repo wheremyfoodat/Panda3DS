@@ -1,0 +1,280 @@
+diff --git a/src/core/renderer_gl/renderer_gl.cpp b/src/core/renderer_gl/renderer_gl.cpp
+index a11a6ffa..77486a09 100644
+--- a/src/core/renderer_gl/renderer_gl.cpp
++++ b/src/core/renderer_gl/renderer_gl.cpp
+@@ -357,27 +357,27 @@ void RendererGL::bindTexturesToSlots() {
+ 	}
+ 
+ 	glActiveTexture(GL_TEXTURE0 + 3);
+-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
++	// glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+ 	glActiveTexture(GL_TEXTURE0);
+ }
+ 
+ void RendererGL::updateLightingLUT() {
+-	gpu.lightingLUTDirty = false;
+-	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
+-
+-	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
+-		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
+-		u16_lightinglut[i] = value * 65535 / 4095;
+-	}
+-
+-	glActiveTexture(GL_TEXTURE0 + 3);
+-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+-	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
+-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+-	glActiveTexture(GL_TEXTURE0);
++	// gpu.lightingLUTDirty = false;
++	// std::array<u16, GPU::LightingLutSize> u16_lightinglut;
++
++	// for (int i = 0; i < gpu.lightingLUT.size(); i++) {
++	// 	uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
++	// 	u16_lightinglut[i] = value * 65535 / 4095;
++	// }
++
++	// glActiveTexture(GL_TEXTURE0 + 3);
++	// glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
++	// glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
++	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
++	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
++	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++	// glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++	// glActiveTexture(GL_TEXTURE0);
+ }
+ 
+ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
+diff --git a/src/host_shaders/opengl_display.frag b/src/host_shaders/opengl_display.frag
+index 612671c8..1937f711 100644
+--- a/src/host_shaders/opengl_display.frag
++++ b/src/host_shaders/opengl_display.frag
+@@ -1,4 +1,5 @@
+-#version 410 core
++#version 300 es
++precision mediump float;
+ in vec2 UV;
+ out vec4 FragColor;
+ 
+diff --git a/src/host_shaders/opengl_display.vert b/src/host_shaders/opengl_display.vert
+index 990e2f80..2e7842ac 100644
+--- a/src/host_shaders/opengl_display.vert
++++ b/src/host_shaders/opengl_display.vert
+@@ -1,4 +1,5 @@
+-#version 410 core
++#version 300 es
++precision mediump float;
+ out vec2 UV;
+ 
+ void main() {
+diff --git a/src/host_shaders/opengl_fragment_shader.frag b/src/host_shaders/opengl_fragment_shader.frag
+index f6fa6c55..bb88e278 100644
+--- a/src/host_shaders/opengl_fragment_shader.frag
++++ b/src/host_shaders/opengl_fragment_shader.frag
+@@ -1,4 +1,5 @@
+-#version 410 core
++#version 300 es
++precision mediump float;
+ 
+ in vec3 v_tangent;
+ in vec3 v_normal;
+@@ -27,7 +28,7 @@ uniform bool u_depthmapEnable;
+ uniform sampler2D u_tex0;
+ uniform sampler2D u_tex1;
+ uniform sampler2D u_tex2;
+-uniform sampler1DArray u_tex_lighting_lut;
++// uniform sampler1DArray u_tex_lighting_lut;
+ 
+ uniform uint u_picaRegs[0x200 - 0x48];
+ 
+@@ -145,16 +146,23 @@ vec4 tevCalculateCombiner(int tev_id) {
+ #define RR_LUT 6u
+ 
+ float lutLookup(uint lut, uint light, float value) {
+-	if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1;
+-	if (lut == SP_LUT) lut = light + 8;
+-	return texture(u_tex_lighting_lut, vec2(value, lut)).r;
++	// if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1;
++	// if (lut == SP_LUT) lut = light + 8;
++	// return texture(u_tex_lighting_lut, vec2(value, lut)).r;
++	return 0.0;
++}
++
++// some gles versions have bitfieldExtract and complain if you redefine it, some don't and compile error, using this instead
++uint bitfieldExtractCompat(uint val, int off, int size) {
++    uint mask = uint((1 << size) - 1);
++    return uint(val >> off) & mask;
+ }
+ 
+ vec3 regToColor(uint reg) {
+ 	// Normalization scale to convert from [0...255] to [0.0...1.0]
+ 	const float scale = 1.0 / 255.0;
+ 
+-	return scale * vec3(float(bitfieldExtract(reg, 20, 8)), float(bitfieldExtract(reg, 10, 8)), float(bitfieldExtract(reg, 00, 8)));
++	return scale * vec3(float(bitfieldExtractCompat(reg, 20, 8)), float(bitfieldExtractCompat(reg, 10, 8)), float(bitfieldExtractCompat(reg, 00, 8)));
+ }
+ 
+ // Convert an arbitrary-width floating point literal to an f32
+@@ -189,7 +197,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 	vec3 view = normalize(v_view);
+ 
+ 	uint GPUREG_LIGHTING_ENABLE = readPicaReg(0x008Fu);
+-	if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
++	if (bitfieldExtractCompat(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
+ 		primary_color = secondary_color = vec4(1.0);
+ 		return;
+ 	}
+@@ -213,7 +221,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 	bool error_unimpl = false;
+ 
+ 	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
+-		uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
++		uint light_id = bitfieldExtractCompat(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
+ 
+ 		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + 0x10u * light_id);
+ 		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + 0x10u * light_id);
+@@ -224,14 +232,14 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 		uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149u + 0x10u * light_id);
+ 
+ 		vec3 light_vector = normalize(vec3(
+-			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5u, 10u), decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5u, 10u),
+-			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
++			decodeFP(bitfieldExtractCompat(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5u, 10u), decodeFP(bitfieldExtractCompat(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5u, 10u),
++			decodeFP(bitfieldExtractCompat(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
+ 		));
+ 
+ 		vec3 half_vector;
+ 
+ 		// Positional Light
+-		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
++		if (bitfieldExtractCompat(GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
+ 			// error_unimpl = true;
+ 			half_vector = normalize(normalize(light_vector + v_view) + view);
+ 		}
+@@ -242,12 +250,12 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 		}
+ 
+ 		for (int c = 0; c < 7; c++) {
+-			if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0u) {
+-				uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
++			if (bitfieldExtractCompat(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0u) {
++				uint scale_id = bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
+ 				float scale = float(1u << scale_id);
+ 				if (scale_id >= 6u) scale /= 256.0;
+ 
+-				uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
++				uint input_id = bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
+ 				if (input_id == 0u)
+ 					d[c] = dot(normal, half_vector);
+ 				else if (input_id == 1u)
+@@ -260,9 +268,9 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 					uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146u + 0x10u * light_id);
+ 					uint GPUREG_LIGHTi_SPOTDIR_HIGH = readPicaReg(0x0147u + 0x10u * light_id);
+ 					vec3 spot_light_vector = normalize(vec3(
+-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1u, 11u),
+-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1u, 11u),
+-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1u, 11u)
++						decodeFP(bitfieldExtractCompat(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1u, 11u),
++						decodeFP(bitfieldExtractCompat(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1u, 11u),
++						decodeFP(bitfieldExtractCompat(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1u, 11u)
+ 					));
+ 					d[c] = dot(-light_vector, spot_light_vector);  // -L dot P (aka Spotlight aka SP);
+ 				} else if (input_id == 5u) {
+@@ -273,13 +281,13 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 				}
+ 
+ 				d[c] = lutLookup(uint(c), light_id, d[c] * 0.5 + 0.5) * scale;
+-				if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) d[c] = abs(d[c]);
++				if (bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) d[c] = abs(d[c]);
+ 			} else {
+ 				d[c] = 1.0;
+ 			}
+ 		}
+ 
+-		uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG, 4, 4);
++		uint lookup_config = bitfieldExtractCompat(GPUREG_LIGHTi_CONFIG, 4, 4);
+ 		if (lookup_config == 0u) {
+ 			d[D1_LUT] = 0.0;
+ 			d[FR_LUT] = 0.0;
+@@ -310,7 +318,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 		float NdotL = dot(normal, light_vector);  // Li dot N
+ 
+ 		// Two sided diffuse
+-		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
++		if (bitfieldExtractCompat(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
+ 			NdotL = max(0.0, NdotL);
+ 		else
+ 			NdotL = abs(NdotL);
+@@ -321,8 +329,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 		secondary_color.rgb += light_factor * (regToColor(GPUREG_LIGHTi_SPECULAR0) * d[D0_LUT] +
+ 											   regToColor(GPUREG_LIGHTi_SPECULAR1) * d[D1_LUT] * vec3(d[RR_LUT], d[RG_LUT], d[RB_LUT]));
+ 	}
+-	uint fresnel_output1 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 2, 1);
+-	uint fresnel_output2 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 3, 1);
++	uint fresnel_output1 = bitfieldExtractCompat(GPUREG_LIGHTING_CONFIG0, 2, 1);
++	uint fresnel_output2 = bitfieldExtractCompat(GPUREG_LIGHTING_CONFIG0, 3, 1);
+ 
+ 	if (fresnel_output1 == 1u) primary_color.a = d[FR_LUT];
+ 	if (fresnel_output2 == 1u) secondary_color.a = d[FR_LUT];
+diff --git a/src/host_shaders/opengl_vertex_shader.vert b/src/host_shaders/opengl_vertex_shader.vert
+index a25d7a6d..7cf40398 100644
+--- a/src/host_shaders/opengl_vertex_shader.vert
++++ b/src/host_shaders/opengl_vertex_shader.vert
+@@ -1,4 +1,6 @@
+-#version 410 core
++#version 300 es
++precision mediump float;
++precision mediump int;
+ 
+ layout(location = 0) in vec4 a_coords;
+ layout(location = 1) in vec4 a_quaternion;
+@@ -20,7 +22,7 @@ out vec2 v_texcoord2;
+ flat out vec4 v_textureEnvColor[6];
+ flat out vec4 v_textureEnvBufferColor;
+ 
+-out float gl_ClipDistance[2];
++// out float gl_ClipDistance[2];
+ 
+ // TEV uniforms
+ uniform uint u_textureEnvColor[6];
+@@ -93,6 +95,6 @@ void main() {
+ 	);
+ 
+ 	// There's also another, always-on clipping plane based on vertex z
+-	gl_ClipDistance[0] = -a_coords.z;
+-	gl_ClipDistance[1] = dot(clipData, a_coords);
++	// gl_ClipDistance[0] = -a_coords.z;
++	// gl_ClipDistance[1] = dot(clipData, a_coords);
+ }
+diff --git a/third_party/opengl/opengl.hpp b/third_party/opengl/opengl.hpp
+index f368f573..5ead7f63 100644
+--- a/third_party/opengl/opengl.hpp
++++ b/third_party/opengl/opengl.hpp
+@@ -520,21 +520,21 @@ namespace OpenGL {
+ 	static void enableBlend() { glEnable(GL_BLEND); }
+ 	static void disableBlend() { glDisable(GL_BLEND); }
+ 	static void enableLogicOp() { glEnable(GL_COLOR_LOGIC_OP); }
+-	static void disableLogicOp() { glDisable(GL_COLOR_LOGIC_OP); }
++	static void disableLogicOp() { /* glDisable(GL_COLOR_LOGIC_OP); */ }
+ 	static void enableDepth() { glEnable(GL_DEPTH_TEST); }
+ 	static void disableDepth() { glDisable(GL_DEPTH_TEST); }
+ 	static void enableStencil() { glEnable(GL_STENCIL_TEST); }
+ 	static void disableStencil() { glDisable(GL_STENCIL_TEST); }
+ 
+-	static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
+-	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
++	static void enableClipPlane(GLuint index) { /* glEnable(GL_CLIP_DISTANCE0 + index); */ }
++	static void disableClipPlane(GLuint index) { /* glDisable(GL_CLIP_DISTANCE0 + index); */ }
+ 
+ 	static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
+ 	static void setColourMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a) { glColorMask(r, g, b, a); }
+ 	static void setDepthMask(GLboolean mask) { glDepthMask(mask); }
+ 
+ 	// TODO: Add a proper enum for this
+-	static void setLogicOp(GLenum op) { glLogicOp(op); }
++	static void setLogicOp(GLenum op) { /* glLogicOp(op); */ }
+ 
+     enum Primitives {
+         Triangle = GL_TRIANGLES,

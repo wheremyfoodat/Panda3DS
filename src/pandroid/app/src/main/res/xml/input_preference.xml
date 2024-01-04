@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <Preference
+        android:key="inputMap"
+        android:title="@string/controller_mapping"
+        android:summary="@string/pref_input_map_summary"
+        app:iconSpaceReserved="false"/>
+
+    <Preference
+        android:key="defaultControllerProfile"
+        app:iconSpaceReserved="false"
+        android:title="@string/pref_default_controller_title"
+        android:summary="-"/>
+
+    <PreferenceCategory
+        android:key="gamepadProfileList"
+        android:title="@string/pref_screen_controllers_title"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="createProfile"
+            app:icon="@drawable/ic_add"
+            app:title="@string/create_profile"
+            app:allowDividerBelow="true"
+            app:allowDividerAbove="true"/>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

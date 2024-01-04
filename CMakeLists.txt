@@ -98,6 +98,10 @@ add_compile_definitions(BOOST_NO_CXX98_FUNCTION_BASE) # Forbid Boost from using 
 add_library(boost INTERFACE)
 target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
+if(ANDROID)
+    set(CRYPTOPP_OPT_DISABLE_ASM ON CACHE BOOL "" FORCE)
+endif()
+
 set(CRYPTOPP_BUILD_TESTING OFF)
 add_subdirectory(third_party/cryptopp)
 add_subdirectory(third_party/glad)
