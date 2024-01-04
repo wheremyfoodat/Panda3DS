@@ -16,7 +16,7 @@
     <string name="axis">Axis</string>
     <string name="dead_zone">Dead zone</string>
     <string name="options">Options</string>
-    <string name="pref_input_map_summary">Map physical ontroller or keyboard</string>
+    <string name="pref_input_map_summary">Map physical controller or keyboard</string>
     <string name="controller_mapping">Controller mapping</string>
     <string name="theme">Theme</string>
     <string name="pref_appearance_summary">Set application theme</string>
