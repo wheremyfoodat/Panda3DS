@@ -6,6 +6,47 @@
 #include "hydra_icon.hpp"
 #include "swap.hpp"
 
+constexpr const char* settings = R"(
+	[aes_keys]
+	name = "AES Keys"
+	description = "AES keys to use for encrypted ROM decryption"
+	type = "filepicker"
+	extensions = "txt"
+	category = "General"
+
+	[UseVirtualSD]
+	name = "Use Virtual SD"
+	description = "Use a virtual SD card"
+	type = "checkbox"
+	category = "General"
+
+	[WriteProtectVirtualSD]
+	name = "Write Protect Virtual SD"
+	description = "Prevents the emulated 3DS from writing to the virtual SD card"
+	type = "checkbox"
+	category = "General"
+
+	[UseShaderJIT]
+	name = "Use Shader JIT"
+	description = "Use a shader JIT to recompile shaders at runtime"
+	type = "checkbox"
+	category = "Video"
+
+	[BatteryPercentage]
+	name = "Battery Percentage"
+	description = "Percentage of battery remaining"
+	type = "slider"
+	slider_min = 0
+	slider_max = 100
+	category = "Miscellaneous"
+
+	[ChargerPlugged]
+	name = "Charger Plugged"
+	description = "Whether the charger is plugged in"
+	type = "checkbox"
+	category = "Miscellaneous"
+)";
+
 class HC_GLOBAL HydraCore final : public hydra::IBase,
 								  public hydra::IOpenGlRendered,
 								  public hydra::IFrontendDriven,
@@ -172,7 +213,7 @@ HC_API const char* getInfo(hydra::InfoType type) {
 		case hydra::InfoType::License: return "GPLv3";
 		case hydra::InfoType::Website: return "https://panda3ds.com/";
 		case hydra::InfoType::Extensions: return "3ds,cci,cxi,app,3dsx,elf,axf";
-		case hydra::InfoType::Firmware: return "";
+		case hydra::InfoType::Settings: return settings;
 		case hydra::InfoType::IconWidth: return HYDRA_ICON_WIDTH;
 		case hydra::InfoType::IconHeight: return HYDRA_ICON_HEIGHT;
 		case hydra::InfoType::IconData: return (const char*)&HYDRA_ICON_DATA[0];
