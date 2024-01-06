@@ -1,3 +1,4 @@
+#include <config.hpp>
 #include <emulator.hpp>
 #include <hydra/core.hxx>
 #include <renderer_gl/renderer_gl.hpp>
@@ -51,7 +52,8 @@ class HC_GLOBAL HydraCore final : public hydra::IBase,
 								  public hydra::IOpenGlRendered,
 								  public hydra::IFrontendDriven,
 								  public hydra::IInput,
-								  public hydra::ICheat {
+								  public hydra::ICheat,
+								  public hydra::IConfigurable {
 	HYDRA_CLASS
   public:
 	HydraCore();
@@ -83,11 +85,17 @@ class HC_GLOBAL HydraCore final : public hydra::IBase,
 	void enableCheat(u32 id) override;
 	void disableCheat(u32 id) override;
 
+	// IConfigurable
+	void setGetCallback(const char* (*callback)(const char*)) override;
+	void setSetCallback(void (*callback)(const char*, const char*)) override;
+
 	std::unique_ptr<Emulator> emulator;
 	RendererGL* renderer;
 	void (*pollInputCallback)() = nullptr;
 	int32_t (*checkButtonCallback)(uint32_t player, hydra::ButtonType button) = nullptr;
 	void* getProcAddress = nullptr;
+	const char* (*getConfig)(const char*) = nullptr;
+	void (*setConfig)(const char*, const char*) = nullptr;
 };
 
 HydraCore::HydraCore() : emulator(new Emulator) {
@@ -98,8 +106,26 @@ HydraCore::HydraCore() : emulator(new Emulator) {
 }
 
 bool HydraCore::loadFile(const char* type, const char* path) {
-	if (std::string(type) == "rom") {
+	std::string stype = type;
+	if (stype == "rom") {
+		EmulatorConfig& config = emulator->getConfig();
+
+		int batteryPercentage = std::atoi(getConfig("BatteryPercentage"));
+		bool chargerPlugged = std::string(getConfig("ChargerPlugged")) == "true";
+		bool sdCardInserted = std::string(getConfig("UseVirtualSD")) == "true";
+		bool shaderJitEnabled = std::string(getConfig("UseShaderJIT")) == "true";
+		bool sdWriteProtected = std::string(getConfig("WriteProtectVirtualSD")) == "true";
+
+		config.batteryPercentage = batteryPercentage;
+		config.chargerPlugged = chargerPlugged;
+		config.sdCardInserted = sdCardInserted;
+		config.shaderJitEnabled = shaderJitEnabled;
+		config.sdWriteProtected = sdWriteProtected;
+
 		return emulator->loadROM(path);
+	} else if (stype == "aes_keys") {
+		emulator->getConfig().aesKeysPath = path;
+		return true;
 	} else {
 		return false;
 	}
@@ -199,6 +225,9 @@ u32 HydraCore::addCheat(const u8* data, u32 size) {
 void HydraCore::removeCheat(u32 id) { emulator->getCheats().removeCheat(id); }
 void HydraCore::enableCheat(u32 id) { emulator->getCheats().enableCheat(id); }
 void HydraCore::disableCheat(u32 id) { emulator->getCheats().disableCheat(id); }
+
+void HydraCore::setGetCallback(const char* (*callback)(const char*)) { getConfig = callback; }
+void HydraCore::setSetCallback(void (*callback)(const char*, const char*)) { setConfig = callback; }
 
 HC_API hydra::IBase* createEmulator() { return new HydraCore(); }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }

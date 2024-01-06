@@ -18,6 +18,7 @@ struct EmulatorConfig {
 	int batteryPercentage = 3;
 
 	std::filesystem::path filePath;
+	std::filesystem::path aesKeysPath;
 
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
