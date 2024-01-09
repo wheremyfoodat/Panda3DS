@@ -128,8 +128,8 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 	switch (opcode) {
 		case ShaderOpcodes::ADD: recADD(shaderUnit, instruction); break;
 		case ShaderOpcodes::CALL: recCALL(shaderUnit, instruction); break;
-		// case ShaderOpcodes::CALLC: recCALLC(shaderUnit, instruction); break;
-		// case ShaderOpcodes::CALLU: recCALLU(shaderUnit, instruction); break;
+		case ShaderOpcodes::CALLC: recCALLC(shaderUnit, instruction); break;
+		case ShaderOpcodes::CALLU: recCALLU(shaderUnit, instruction); break;
 		case ShaderOpcodes::CMP1:
 		case ShaderOpcodes::CMP2: recCMP(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
@@ -138,13 +138,13 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		// case ShaderOpcodes::DPHI: recDPH(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		// case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
-		// case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
+		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
 		case ShaderOpcodes::JMPC: recJMPC(shaderUnit, instruction); break;
-		// case ShaderOpcodes::JMPU: recJMPU(shaderUnit, instruction); break;
+		case ShaderOpcodes::JMPU: recJMPU(shaderUnit, instruction); break;
 		// case ShaderOpcodes::LG2: recLG2(shaderUnit, instruction); break;
-		// case ShaderOpcodes::LOOP: recLOOP(shaderUnit, instruction); break;
+		case ShaderOpcodes::LOOP: recLOOP(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOVA: recMOVA(shaderUnit, instruction); break;
 		case ShaderOpcodes::MAX: recMAX(shaderUnit, instruction); break;
@@ -156,14 +156,11 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 
 		// Unimplemented opcodes that don't seem to actually be used but exist in the binary
 		// EMIT/SETEMIT are used in geometry shaders, however are sometimes found in vertex shaders?
-		// case ShaderOpcodes::EMIT:
-		// case ShaderOpcodes::SETEMIT:
-		//	log("[ShaderJIT] Unknown PICA opcode: %02X\n", opcode);
-		//	emitPrintLog(shaderUnit);
-		//	break;
+		case ShaderOpcodes::EMIT:
+		case ShaderOpcodes::SETEMIT: log("[ShaderJIT] Unimplemented PICA opcode: %02X\n", opcode); break;
 
-		// case ShaderOpcodes::BREAK:
-		// case ShaderOpcodes::BREAKC: Helpers::warn("[Shader JIT] Unimplemented BREAK(C) instruction!"); break;
+		case ShaderOpcodes::BREAK:
+		case ShaderOpcodes::BREAKC: Helpers::warn("[Shader JIT] Unimplemented BREAK(C) instruction!"); break;
 
 		// We consider both MAD and MADI to be the same instruction and decode which one we actually have in recMAD
 		case 0x30:
@@ -181,15 +178,13 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case 0x3C:
 		case 0x3D:
 		case 0x3E:
-		case 0x3F:
-			recMAD(shaderUnit, instruction);
-			break;
+		case 0x3F: recMAD(shaderUnit, instruction); break;
 
-			// case ShaderOpcodes::SLT:
-			// case ShaderOpcodes::SLTI: recSLT(shaderUnit, instruction); break;
+		case ShaderOpcodes::SLT:
+		case ShaderOpcodes::SLTI: recSLT(shaderUnit, instruction); break;
 
-			// case ShaderOpcodes::SGE:
-			// case ShaderOpcodes::SGEI: recSGE(shaderUnit, instruction); break;
+		case ShaderOpcodes::SGE:
+		case ShaderOpcodes::SGEI: recSGE(shaderUnit, instruction); break;
 
 		default: Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
 	}
@@ -430,6 +425,17 @@ void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	storeRegister(src1_vec, shader, dest, operandDescriptor);
 }
 
+void ShaderEmitter::recFLR(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1_vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
+	FRINTM(src1_vec.S4(), src1_vec.S4());                            // Floor it and store into dest
+	storeRegister(src1_vec, shader, dest, operandDescriptor);
+}
+
 void ShaderEmitter::recMOVA(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src = getBits<12, 7>(instruction);
@@ -630,6 +636,42 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	storeRegister(src3_vec, shader, dest, operandDescriptor);
 }
 
+void ShaderEmitter::recSLT(const PICAShader& shader, u32 instruction) {
+	const bool isSLTI = (instruction >> 26) == ShaderOpcodes::SLTI;
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+
+	const u32 src1 = isSLTI ? getBits<14, 5>(instruction) : getBits<12, 7>(instruction);
+	const u32 src2 = isSLTI ? getBits<7, 7>(instruction) : getBits<7, 5>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1_vec, shader, src1, isSLTI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2_vec, shader, src2, isSLTI ? idx : 0, operandDescriptor);
+	// Set each lane of SRC1 to FFFFFFFF if src2 > src1, else to 0. NEON does not have FCMLT so we use FCMGT with inverted operands
+	// This is more or less a direct port of the relevant x64 JIT code
+	FCMGT(src1_vec.S4(), src2_vec.S4(), src1_vec.S4());
+	AND(src1_vec.B16(), src1_vec.B16(), onesVector.B16());  // AND with vec4(1.0) to convert the FFFFFFFF lanes into 1.0
+	storeRegister(src1_vec, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recSGE(const PICAShader& shader, u32 instruction) {
+	const bool isSGEI = (instruction >> 26) == ShaderOpcodes::SGEI;
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+
+	const u32 src1 = isSGEI ? getBits<14, 5>(instruction) : getBits<12, 7>(instruction);
+	const u32 src2 = isSGEI ? getBits<7, 7>(instruction) : getBits<7, 5>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1_vec, shader, src1, isSGEI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2_vec, shader, src2, isSGEI ? idx : 0, operandDescriptor);
+	// Set each lane of SRC1 to FFFFFFFF if src1 >= src2, else to 0.
+	// This is more or less a direct port of the relevant x64 JIT code
+	FCMGE(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
+	AND(src1_vec.B16(), src1_vec.B16(), onesVector.B16());  // AND with vec4(1.0) to convert the FFFFFFFF lanes into 1.0
+	storeRegister(src1_vec, shader, dest, operandDescriptor);
+}
+
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
@@ -742,6 +784,28 @@ void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
 	LDP(XZR, X30, SP, POST_INDEXED, 16);
 }
 
+void ShaderEmitter::recCALLC(const PICAShader& shader, u32 instruction) {
+	Label skipCall;
+
+	// z is 1 if the call should be taken, 0 otherwise
+	checkCmpRegister(shader, instruction);
+	B(NE, skipCall);
+	recCALL(shader, instruction);
+
+	l(skipCall);
+}
+
+void ShaderEmitter::recCALLU(const PICAShader& shader, u32 instruction) {
+	Label skipCall;
+
+	// z is 0 if the call should be taken, 1 otherwise
+	checkBoolUniform(shader, instruction);
+	B(EQ, skipCall);
+	recCALL(shader, instruction);
+
+	l(skipCall);
+}
+
 void ShaderEmitter::recIFC(const PICAShader& shader, u32 instruction) {
 	// z is 1 if true, else 0
 	checkCmpRegister(shader, instruction);
@@ -799,6 +863,79 @@ void ShaderEmitter::recJMPC(const PICAShader& shader, u32 instruction) {
 	// Z is 1 if the comparison is true
 	checkCmpRegister(shader, instruction);
 	B(EQ, l);
+}
+
+void ShaderEmitter::recJMPU(const PICAShader& shader, u32 instruction) {
+	bool jumpIfFalse = instruction & 1;  // If the LSB is 0 we want to compare to true, otherwise compare to false
+	const u32 dest = getBits<10, 12>(instruction);
+
+	Label& l = instructionLabels[dest];
+	// Z is 0 if the uniform is true
+	checkBoolUniform(shader, instruction);
+
+	if (jumpIfFalse) {
+		B(EQ, l);
+	} else {
+		B(NE, l);
+	}
+}
+
+void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
+	const u32 dest = getBits<10, 12>(instruction);
+	const u32 uniformIndex = getBits<22, 2>(instruction);
+
+	if (loopLevel > 0) {
+		log("[Shader JIT] Detected nested loop. Might be broken?\n");
+	}
+
+	if (dest < recompilerPC) {
+		Helpers::panic("[Shader JIT] Detected backwards loop\n");
+	}
+
+	loopLevel++;
+
+	// Offset of the uniform
+	const auto& uniform = shader.intUniforms[uniformIndex];
+	const uintptr_t uniformOffset = uintptr_t(&uniform[0]) - uintptr_t(&shader);
+	// Offset of the loop register
+	const uintptr_t loopRegOffset = uintptr_t(&shader.loopCounter) - uintptr_t(&shader);
+
+	LDRB(W0, statePointer, uniformOffset);                   // W0 = loop iteration count
+	LDRB(W1, statePointer, uniformOffset + sizeof(u8));      // W1 = initial loop counter value
+	LDRB(W2, statePointer, uniformOffset + 2 * sizeof(u8));  // W2 = Loop increment
+
+	ADD(W0, W0, 1);                        // The iteration count is actually uniform.x + 1
+	STR(W1, statePointer, loopRegOffset);  // Set loop counter
+
+	// Push loop iteration counter & loop increment
+	// TODO: This might break if an instruction in a loop decides to yield...
+	STP(X0, X2, SP, PRE_INDEXED, -16);
+
+	Label loopStart, loopEnd;
+	l(loopStart);
+	compileUntil(shader, dest + 1);
+
+	const size_t stackOffsetOfLoopIncrement = 0;
+	const size_t stackOffsetOfIterationCounter = stackOffsetOfLoopIncrement + 8;
+
+	LDP(X0, X2, SP);                       // W0 = loop iteration, W2 = loop increment
+	LDR(W1, statePointer, loopRegOffset);  // W1 = loop register
+
+	// Increment loop counter
+	ADD(W1, W1, W2);
+	STR(W1, statePointer, loopRegOffset);
+	// Subtract 1 from loop iteration counter,
+	SUBS(W0, W0, 1);
+	B(EQ, loopEnd);
+
+	// Loop hasn't ended: Write back new iteration counter and go back to the start
+	STR(X0, SP);
+	B(loopStart);
+
+	l(loopEnd);
+	// Remove the stuff we pushed on the stack earlier
+	ADD(SP, SP, 16);
+	loopLevel--;
 }
 
 void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
