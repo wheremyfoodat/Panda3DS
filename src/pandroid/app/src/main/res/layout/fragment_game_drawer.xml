@@ -85,6 +85,19 @@
                 app:menu="@menu/game_drawer_actions"
                 android:background="?colorSurface"/>
 
+            <androidx.appcompat.widget.AppCompatTextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/hacks"
+                style="@style/TextAppearanceGameDrawerSubTitle"/>
+
+            <com.google.android.material.navigation.NavigationView
+                android:id="@+id/hacks_navigation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:menu="@menu/game_drawer_hacks"
+                android:background="?colorSurface"/>
+
         </androidx.appcompat.widget.LinearLayoutCompat>
 
     </ScrollView>

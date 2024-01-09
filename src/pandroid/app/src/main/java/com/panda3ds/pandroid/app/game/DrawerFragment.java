@@ -47,6 +47,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
 
         ((NavigationView)view.findViewById(R.id.action_navigation)).setNavigationItemSelectedListener(this);
+        ((NavigationView)view.findViewById(R.id.hacks_navigation)).setNavigationItemSelectedListener(this);
     }
 
     @Override
@@ -100,6 +101,8 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
             close();
         } else if (id == R.id.exit) {
             requireActivity().onBackPressed();
+        } else if (id == R.id.lua_script){
+            new LuaDialogFragment().show(getParentFragmentManager(),null);
         }
 
         return false;
