@@ -20,8 +20,8 @@ import com.panda3ds.pandroid.app.base.BottomDialogFragment;
 import com.panda3ds.pandroid.app.editor.CodeEditorActivity;
 import com.panda3ds.pandroid.lang.Task;
 import com.panda3ds.pandroid.utils.FileUtils;
-import com.panda3ds.pandroid.view.recycle.AutoFitGridLayout;
-import com.panda3ds.pandroid.view.recycle.SimpleListAdapter;
+import com.panda3ds.pandroid.view.recycler.AutoFitGridLayout;
+import com.panda3ds.pandroid.view.recycler.SimpleListAdapter;
 
 import java.util.ArrayList;
 import java.util.UUID;

@@ -12,6 +12,7 @@ import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Scroller;
@@ -46,7 +47,7 @@ public class BasicTextEditor extends AppCompatEditText {
 
         setTypeface(Typeface.createFromAsset(getContext().getAssets(), "fonts/comic_mono.ttf"));
         setGravity(Gravity.START | Gravity.TOP);
-        setTextSize(TypedValue.COMPLEX_UNIT_SP,16);
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         setLineSpacing(0, 1.3f);
         setScroller(new Scroller(getContext()));
 

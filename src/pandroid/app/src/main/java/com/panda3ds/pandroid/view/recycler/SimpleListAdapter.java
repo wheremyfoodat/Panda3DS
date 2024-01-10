@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid.view.recycle;
+package com.panda3ds.pandroid.view.recycler;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,23 +35,23 @@ public class SimpleListAdapter<T> extends RecyclerView.Adapter<SimpleListAdapter
         binder.bind(position, list.get(position), holder.getView());
     }
 
-    public void addAll(T... items){
+    public void addAll(T... items) {
         addAll(Arrays.asList(items));
     }
 
-    public void addAll(List<T> items){
+    public void addAll(List<T> items) {
         int index = list.size();
         this.list.addAll(items);
-        notifyItemRangeInserted(index, getItemCount()-index);
+        notifyItemRangeInserted(index, getItemCount() - index);
     }
 
-    public void clear(){
+    public void clear() {
         int count = getItemCount();
         list.clear();
         notifyItemRangeRemoved(0, count);
     }
 
-    public void sort(Comparator<T> comparator){
+    public void sort(Comparator<T> comparator) {
         list.sort(comparator);
         notifyItemRangeChanged(0, getItemCount());
     }
@@ -70,7 +70,7 @@ public class SimpleListAdapter<T> extends RecyclerView.Adapter<SimpleListAdapter
             super(itemView);
         }
 
-        public View getView(){
+        public View getView() {
             return itemView;
         }
     }

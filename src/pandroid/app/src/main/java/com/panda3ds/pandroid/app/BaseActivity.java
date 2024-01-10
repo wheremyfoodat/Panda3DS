@@ -8,7 +8,7 @@ import com.panda3ds.pandroid.data.config.GlobalConfig;
 
 
 public class BaseActivity extends AppCompatActivity {
-	private int currentTheme = GlobalConfig.get(GlobalConfig.KEY_APP_THEME);
+	private int currentTheme = PandroidApplication.getThemeId();
 
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -20,19 +20,13 @@ public class BaseActivity extends AppCompatActivity {
 	protected void onResume() {
 		super.onResume();
 
-		if (GlobalConfig.get(GlobalConfig.KEY_APP_THEME) != currentTheme) {
+		if (PandroidApplication.getThemeId() != currentTheme) {
 			recreate();
 		}
 	}
 
 	private void applyTheme() {
-		switch (GlobalConfig.get(GlobalConfig.KEY_APP_THEME)) {
-			case GlobalConfig.THEME_ANDROID: setTheme(R.style.Theme_Pandroid); break;
-			case GlobalConfig.THEME_LIGHT: setTheme(R.style.Theme_Pandroid_Light); break;
-			case GlobalConfig.THEME_DARK: setTheme(R.style.Theme_Pandroid_Dark); break;
-			case GlobalConfig.THEME_BLACK: setTheme(R.style.Theme_Pandroid_Black); break;
-		}
-
-		currentTheme = GlobalConfig.get(GlobalConfig.KEY_APP_THEME);
+		currentTheme = PandroidApplication.getThemeId();
+		setTheme(currentTheme);
 	}
 }

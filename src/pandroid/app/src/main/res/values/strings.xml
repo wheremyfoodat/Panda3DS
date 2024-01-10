@@ -41,8 +41,8 @@
     <string name="scripts">Scripts</string>
     <string name="file_not_supported">File type isn\'t supported</string>
     <string name="save_and_exit">Save and exit</string>
-    <string name="exit_without_save">Exit without save</string>
-    <string name="exit_without_save_title_ff">Exit without save \"%s\"?</string>
+    <string name="exit_without_saving">Exit without saving</string>
+    <string name="exit_without_saving_title_ff">Exit without saving \"%s\"?</string>
     <string name="open_file">Open file</string>
     <string name="create_new">Create new</string>
     <string name="running_ff">Running \"%s\" ...</string>

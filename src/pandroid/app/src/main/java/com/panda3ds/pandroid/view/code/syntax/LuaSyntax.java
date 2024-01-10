@@ -55,6 +55,5 @@ class LuaSyntax extends CodeSyntax {
         for (Matcher matcher = comment.matcher(text); matcher.find(); ) {
             Arrays.fill(syntaxBuffer, matcher.start(), matcher.end(), EditorColors.COLOR_COMMENT);
         }
-
     }
 }

@@ -151,7 +151,7 @@ public class BaseEditor extends BasicTextEditor {
 
         canvas.translate(x, 0);
         canvas.drawRect(0, scrollY, getPaddingLeft() - spaceWidth, visibleHeight + scrollY, paint);
-        paint.setColor(applyAlphaToColor(colorEnable, 50));
+        paint.setColor(colors[EditorColors.COLOR_CURRENT_LINE]);
         canvas.drawRect(0, currentLine * lineHeight, getPaddingLeft() - spaceWidth, (currentLine * lineHeight) + lineHeight, paint);
 
         for (int i = beginLine; i < Math.min(getLineCount(), endLine); i++) {
@@ -173,7 +173,7 @@ public class BaseEditor extends BasicTextEditor {
 
     private void drawCurrentLine(Canvas canvas) {
         float y = currentLine * lineHeight;
-        paint.setColor(applyAlphaToColor(colors[EditorColors.COLOR_TEXT], 50));
+        paint.setColor(colors[EditorColors.COLOR_CURRENT_LINE]);
         canvas.drawRect(0, y, contentWidth, y + lineHeight, paint);
     }
 
@@ -280,7 +280,7 @@ public class BaseEditor extends BasicTextEditor {
     protected void onRefreshColorScheme(byte[] buffer, int index, int length) {
     }
 
-    protected void invalidateAll(){
+    protected void invalidateAll() {
         requireUpdate = true;
         invalidate();
     }

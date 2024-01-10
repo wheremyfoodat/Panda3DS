@@ -33,7 +33,7 @@ public class CodeEditor extends BaseEditor {
     @Override
     protected void onTextChanged() {
         super.onTextChanged();
-        if (contentChangeListener != null){
+        if (contentChangeListener != null) {
             contentChangeListener.run();
         }
     }

@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid.view.recycle;
+package com.panda3ds.pandroid.view.recycler;
 
 import android.content.Context;
 import android.util.TypedValue;

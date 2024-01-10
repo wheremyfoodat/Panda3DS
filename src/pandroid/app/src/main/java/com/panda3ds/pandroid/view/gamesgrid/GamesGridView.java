@@ -8,7 +8,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.panda3ds.pandroid.data.game.GameMetadata;
-import com.panda3ds.pandroid.view.recycle.AutoFitGridLayout;
+import com.panda3ds.pandroid.view.recycler.AutoFitGridLayout;
 
 import java.util.List;
 
