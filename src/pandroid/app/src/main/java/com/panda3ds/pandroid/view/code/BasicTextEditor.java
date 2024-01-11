@@ -25,6 +25,7 @@ import com.panda3ds.pandroid.view.SimpleTextWatcher;
 
 public class BasicTextEditor extends AppCompatEditText {
     private GestureDetector gestureDetector;
+    private final Rect visibleRect = new Rect();
 
     public BasicTextEditor(@NonNull Context context) {
         super(context);
@@ -79,7 +80,24 @@ public class BasicTextEditor extends AppCompatEditText {
     }
 
     public void setScroll(int x, int y) {
-        super.scrollTo(x, y);
+        x = Math.max(0, x);
+        y = Math.max(0, y);
+
+        int maxHeight = Math.round(getLineCount() * getLineHeight());
+        getGlobalVisibleRect(visibleRect);
+        maxHeight = Math.max(0, maxHeight - visibleRect.height());
+
+        int maxWidth = (int) getPaint().measureText(getText(), 0, length());
+        maxWidth += getPaddingLeft() + getPaddingRight();
+
+        int scrollX = x - Math.max(Math.min(maxWidth - visibleRect.width(), x), 0);
+        int scrollY = Math.min(maxHeight, y);
+
+        super.scrollTo(scrollX, scrollY);
+    }
+
+    public void adjustScroll(){
+        setScroll(getScrollX(), getScrollY());
     }
 
     protected void onTextChanged() {
@@ -96,8 +114,6 @@ public class BasicTextEditor extends AppCompatEditText {
     }
 
     private class ScrollGesture implements GestureDetector.OnGestureListener {
-        private final Rect visibleRect = new Rect();
-
         @Override
         public boolean onDown(@NonNull MotionEvent e) {
             return true;
@@ -117,16 +133,7 @@ public class BasicTextEditor extends AppCompatEditText {
         public boolean onScroll(@NonNull MotionEvent e1, @NonNull MotionEvent e2, float distanceX, float distanceY) {
             int scrollX = (int) Math.max(0, getScrollX() + distanceX);
             int scrollY = (int) Math.max(0, getScrollY() + distanceY);
-            int maxHeight = Math.round(getLineCount() * getLineHeight());
-            getGlobalVisibleRect(visibleRect);
-            maxHeight = Math.max(0, maxHeight - visibleRect.height());
-
-            int maxWidth = (int) getPaint().measureText(getText(), 0, length());
-            maxWidth += getPaddingLeft() + getPaddingRight();
-
-            scrollX = Math.max(Math.min(maxWidth - visibleRect.width(), scrollX), 0);
-
-            setScroll(scrollX, Math.min(maxHeight, scrollY));
+            setScroll(scrollX, scrollY);
             return true;
         }
 

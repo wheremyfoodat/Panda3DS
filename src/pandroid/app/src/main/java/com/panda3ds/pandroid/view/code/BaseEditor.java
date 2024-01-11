@@ -9,6 +9,7 @@ import android.graphics.Rect;
 import android.text.Editable;
 import android.text.Layout;
 import android.util.AttributeSet;
+import android.view.ViewTreeObserver;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -30,6 +31,8 @@ public class BaseEditor extends BasicTextEditor {
     private int visibleHeight;
     private int contentWidth;
     private Layout textLayout;
+    private int currentWidth = -1;
+    private int currentHeight = -1;
 
     private final char[] textBuffer = new char[1];
     protected final int[] colors = new int[256];
@@ -52,6 +55,15 @@ public class BaseEditor extends BasicTextEditor {
 
     {
         EditorColors.obtainColorScheme(colors, getContext());
+    }
+
+    @Override
+    protected void initialize() {
+        super.initialize();
+        getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            adjustScroll();
+            requireUpdate = true;
+        });
     }
 
     @SuppressLint("MissingSuperCall")
@@ -278,6 +290,16 @@ public class BaseEditor extends BasicTextEditor {
     }
 
     protected void onRefreshColorScheme(byte[] buffer, int index, int length) {
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        if (currentWidth != getMeasuredWidth() || currentHeight != getMeasuredHeight()) {
+            currentWidth = getMeasuredWidth();
+            currentHeight = getMeasuredHeight();
+            invalidateAll();
+        }
     }
 
     protected void invalidateAll() {

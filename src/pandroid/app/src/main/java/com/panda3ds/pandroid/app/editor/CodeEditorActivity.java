@@ -95,8 +95,6 @@ public class CodeEditorActivity extends BaseActivity {
         } else {
             findViewById(R.id.keybar).setVisibility(View.GONE);
         }
-
-        System.out.println(height + "/" + currentHeight);
     }
 
     private void setupReadOnlyEditor() {
@@ -131,7 +129,6 @@ public class CodeEditorActivity extends BaseActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        System.out.println();
         if (event.getKeyCode() == KeyEvent.KEYCODE_TAB) {
             if (event.getAction() == KeyEvent.ACTION_UP) {
                 editor.insert(TAB_CONTENT);
