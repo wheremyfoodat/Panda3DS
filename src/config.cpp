@@ -58,7 +58,7 @@ void EmulatorConfig::load() {
 				rendererType = RendererType::OpenGL;
 			}
 
-			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", true);
+			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
 		}
 	}
 
