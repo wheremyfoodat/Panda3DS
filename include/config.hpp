@@ -5,7 +5,14 @@
 
 // Remember to initialize every field here to its default value otherwise bad things will happen
 struct EmulatorConfig {
-	bool shaderJitEnabled = true;
+    // Only enable the shader JIT by default on platforms where it's completely tested
+#ifdef PANDA3DS_X64_HOST
+	static constexpr bool shaderJitDefault = true;
+#else
+	static constexpr bool shaderJitDefault = false;
+#endif
+
+	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
 
