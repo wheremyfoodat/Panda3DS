@@ -115,14 +115,6 @@ jobs:
        wget https://apt.llvm.org/llvm.sh
        chmod +x ./llvm.sh
        sudo ./llvm.sh 17
-
-    - name: Install newer CMake
-      run: |
-       sudo curl -s https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
-       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 42D5A192B819C5DA
-       sudo add-apt-repository -y 'deb https://apt.kitware.com/ubuntu/ focal main'
-       sudo apt-get update
-       sudo apt-get install cmake
        
     - name: Setup Vulkan SDK
       run: |
