@@ -15,9 +15,12 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import com.google.android.material.navigation.NavigationBarView;
 import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.editor.CodeEditorActivity;
 import com.panda3ds.pandroid.app.main.GamesFragment;
 import com.panda3ds.pandroid.app.main.SearchFragment;
 import com.panda3ds.pandroid.app.main.SettingsFragment;
+
+import java.io.File;
 
 
 public class MainActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
@@ -27,13 +30,6 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 	private final GamesFragment gamesFragment = new GamesFragment();
 	private final SearchFragment searchFragment = new SearchFragment();
 	private final SettingsFragment settingsFragment = new SettingsFragment();
-
-	private void openFile() {
-		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-		intent.addCategory(Intent.CATEGORY_OPENABLE);
-		intent.setType("*/*");
-		startActivityForResult(intent, PICK_ROM);
-	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {

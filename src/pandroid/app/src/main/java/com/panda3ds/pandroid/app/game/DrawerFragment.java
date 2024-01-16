@@ -47,11 +47,15 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
 
         ((NavigationView)view.findViewById(R.id.action_navigation)).setNavigationItemSelectedListener(this);
+        ((NavigationView)view.findViewById(R.id.others_navigation)).setNavigationItemSelectedListener(this);
     }
 
     @Override
     public void onDetach() {
-        drawerContainer.removeDrawerListener(this);
+        if (drawerContainer != null) {
+            drawerContainer.removeDrawerListener(this);
+        }
+
         super.onDetach();
     }
 
@@ -99,7 +103,9 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         if (id == R.id.resume) {
             close();
         } else if (id == R.id.exit) {
-            requireActivity().onBackPressed();
+            requireActivity().finish();
+        } else if (id == R.id.lua_script){
+            new LuaDialogFragment().show(getParentFragmentManager(), null);
         }
 
         return false;

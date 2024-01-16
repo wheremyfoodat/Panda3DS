@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_marginTop="10dp"
+    android:layout_marginBottom="10dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingBottom="100dp">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:layout_constrainedHeight="true"
+                app:layout_constraintHeight_max="400dp"
+                app:layout_constraintHeight_min="200dp"
+                tools:itemCount="5"
+                tools:listitem="@layout/holder_lua_script"
+                android:layout_marginBottom="10dp" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:orientation="vertical"
+            android:layout_gravity="bottom|center">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/open_file"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/open_file"
+                android:layout_margin="5dp"
+                android:textColor="?colorOnPrimary"
+                android:backgroundTint="?colorPrimary"
+                android:background="@drawable/simple_card_background"/>
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/create"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="@string/create_new"
+                android:layout_margin="5dp"
+                android:textColor="?colorOnSurfaceVariant"
+                android:backgroundTint="?colorSurfaceVariant"
+                android:background="@drawable/simple_card_background"
+                android:layout_marginBottom="10dp"/>
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+    </FrameLayout>
+
+</androidx.appcompat.widget.LinearLayoutCompat>

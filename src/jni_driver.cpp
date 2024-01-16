@@ -80,6 +80,12 @@ AlberFunction(void, LoadRom)(JNIEnv* env, jobject obj, jstring path) {
 	env->ReleaseStringUTFChars(path, pathStr);
 }
 
+AlberFunction(void, LoadLuaScript)(JNIEnv* env, jobject obj, jstring script) {
+	const char* scriptStr = env->GetStringUTFChars(script, nullptr);
+	emulator->getLua().loadString(scriptStr);
+	env->ReleaseStringUTFChars(script, scriptStr);
+}
+
 AlberFunction(void, TouchScreenDown)(JNIEnv* env, jobject obj, jint x, jint y) { hidService->setTouchScreenPress((u16)x, (u16)y); }
 AlberFunction(void, TouchScreenUp)(JNIEnv* env, jobject obj) { hidService->releaseTouchScreen(); }
 AlberFunction(void, KeyUp)(JNIEnv* env, jobject obj, jint keyCode) { hidService->releaseKey((u32)keyCode); }

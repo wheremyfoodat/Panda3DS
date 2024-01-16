@@ -35,6 +35,11 @@
             android:name=".app.GameActivity"
             android:configChanges="screenSize|screenLayout|orientation|density|uiMode">
         </activity>
+        <activity
+            android:name=".app.editor.CodeEditorActivity"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="screenSize|screenLayout|orientation|density|uiMode">
+        </activity>
         <activity android:name=".app.PreferenceActivity"
             android:launchMode="standard"
             android:configChanges="screenSize|screenLayout|orientation|density"/>

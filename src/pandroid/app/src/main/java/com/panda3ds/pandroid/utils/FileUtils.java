@@ -39,6 +39,15 @@ public class FileUtils {
         return parseFile(path).getName();
     }
 
+    public static String getResourcesPath(){
+        File file = new File(getPrivatePath(), "config/resources");
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+
+        return file.getAbsolutePath();
+    }
+
     public static String getPrivatePath() {
         File file = getContext().getFilesDir();
         if (!file.exists()) {
@@ -176,5 +185,43 @@ public class FileUtils {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public static void updateFile(String path){
+        DocumentFile file = parseFile(path);
+        Uri uri = file.getUri();
+        
+        switch (uri.getScheme()) {
+            case "file": {
+                new File(uri.getPath()).setLastModified(System.currentTimeMillis());
+                break;
+            }
+
+            case "content": {
+                getContext().getContentResolver().update(uri, null, null, null);
+                break;
+            }
+
+            default: {
+                Log.w(Constants.LOG_TAG, "Cannot update file from scheme: " + uri.getScheme());
+                break;
+            }
+        }
+    }
+
+    public static long getLastModified(String path) {
+        return parseFile(path).lastModified();
+    }
+
+    public static String[] listFiles(String path){
+        DocumentFile folder = parseFile(path);
+        DocumentFile[] files = folder.listFiles();
+
+        String[] result = new String[files.length];
+        for (int i = 0; i < result.length; i++){
+            result[i] = files[i].getName();
+        }
+        
+        return result;
     }
 }

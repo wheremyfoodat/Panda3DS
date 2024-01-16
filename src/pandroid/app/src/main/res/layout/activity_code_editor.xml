@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="start|center"
+                android:paddingLeft="20dp"
+                android:paddingRight="20dp">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textSize="17sp"/>
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="end|center"
+                android:paddingLeft="14dp"
+                android:paddingRight="14dp">
+
+                <androidx.appcompat.widget.AppCompatImageView
+                    android:id="@+id/save"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="5dp"
+                    android:tint="?colorOnSurface"
+                    app:srcCompat="@drawable/ic_save"
+                    android:scaleType="centerInside"
+                    android:background="#0000"/>
+
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:id="@+id/lua_toolbar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <androidx.appcompat.widget.AppCompatImageView
+                        android:id="@+id/lua_play"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:padding="5dp"
+                        android:layout_marginHorizontal="5dp"
+                        android:tint="?colorOnSurface"
+                        app:srcCompat="@drawable/ic_play"
+                        android:scaleType="centerInside"
+                        android:background="#0000"/>
+
+                </androidx.appcompat.widget.LinearLayoutCompat>
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?colorOnSurface"
+            android:alpha="0.1"/>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <com.panda3ds.pandroid.view.code.CodeEditor
+                android:id="@+id/editor"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/keybar"/>
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:id="@+id/keybar"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintHeight="38dp"
+                android:visibility="visible"
+                android:orientation="horizontal"
+                android:background="?colorSurfaceVariant">
+
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/key_tab"
+                    android:layout_width="75dp"
+                    android:layout_height="match_parent"
+                    android:padding="0dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_tab"
+                    android:tint="?colorOnSurfaceVariant"
+                    android:background="#0000"/>
+
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/key_hide"
+                    android:layout_width="75dp"
+                    android:layout_height="match_parent"
+                    android:padding="0dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_keyboard_hide"
+                    android:tint="?colorOnSurfaceVariant"
+                    android:background="#0000"/>
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+</FrameLayout>

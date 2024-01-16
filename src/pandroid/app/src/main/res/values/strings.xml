@@ -36,4 +36,14 @@
     <string name="pref_screen_controllers_title">Screen gamepad layouts</string>
     <string name="pref_default_controller_title">Default screen gamepad layout</string>
     <string name="invalid_name">Invalid name</string>
+    <string name="hacks">Hacks</string>
+    <string name="lua_script">Lua script</string>
+    <string name="scripts">Scripts</string>
+    <string name="file_not_supported">File type isn\'t supported</string>
+    <string name="save_and_exit">Save and exit</string>
+    <string name="exit_without_saving">Exit without saving</string>
+    <string name="exit_without_saving_title_ff">Exit without saving \"%s\"?</string>
+    <string name="open_file">Open file</string>
+    <string name="create_new">Create new</string>
+    <string name="running_ff">Running \"%s\" ...</string>
 </resources>
