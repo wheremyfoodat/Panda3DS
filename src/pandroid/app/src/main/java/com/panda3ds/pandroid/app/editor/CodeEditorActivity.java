@@ -26,14 +26,13 @@ import com.panda3ds.pandroid.view.code.syntax.CodeSyntax;
 import java.io.Serializable;
 
 public class CodeEditorActivity extends BaseActivity {
-    private static final String TAB_CONTENT = "    ";
+    private static final String TAB = "    ";
     private String path;
     private String fileName;
     private CodeEditor editor;
     private AppCompatTextView title;
     private View saveButton;
     private boolean changed = false;
-
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -56,9 +55,10 @@ public class CodeEditorActivity extends BaseActivity {
 
         new Task(() -> {
             String content = FileUtils.readTextFile(path + "/" + fileName);
+        
             editor.post(() -> {
                 editor.setText(content);
-                editor.setSyntax(CodeSyntax.obtainByFileName(fileName));
+                editor.setSyntax(CodeSyntax.getFromFilename(fileName));
                 editor.setOnContentChangedListener(this::onDocumentContentChanged);
             });
         }).start();
@@ -78,7 +78,7 @@ public class CodeEditorActivity extends BaseActivity {
             ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(v.getWindowToken(), 0);
         });
         findViewById(R.id.key_tab).setOnClickListener(v -> {
-            editor.insert(TAB_CONTENT);
+            editor.insert(TAB);
         });
     }
 
@@ -115,14 +115,16 @@ public class CodeEditorActivity extends BaseActivity {
 
     @SuppressLint("SetTextI18n")
     private void onDocumentContentChanged() {
-        title.setText("*" + fileName);
         changed = true;
+
+        title.setText("*" + fileName);
         saveButton.setVisibility(View.VISIBLE);
     }
 
     public void save() {
         title.setText(fileName);
         saveButton.setVisibility(View.GONE);
+
         changed = false;
         new Task(() -> FileUtils.writeTextFile(path, fileName, String.valueOf(editor.getText()))).runSync();
     }
@@ -131,10 +133,12 @@ public class CodeEditorActivity extends BaseActivity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getKeyCode() == KeyEvent.KEYCODE_TAB) {
             if (event.getAction() == KeyEvent.ACTION_UP) {
-                editor.insert(TAB_CONTENT);
+                editor.insert(TAB);
             }
+        
             return true;
         }
+
         return super.dispatchKeyEvent(event);
     }
 

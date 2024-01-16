@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 public class LuaDialogFragment extends BottomDialogFragment {
-
     private final SimpleListAdapter<LuaFile> adapter = new SimpleListAdapter<>(R.layout.holder_lua_script, this::onCreateListItem);
     private ActivityResultLauncher<CodeEditorActivity.Arguments> codeEditorLauncher;
     private LuaFile currentEditorFile;
@@ -47,6 +46,7 @@ public class LuaDialogFragment extends BottomDialogFragment {
         openDocumentLauncher = registerForActivityResult(new ActivityResultContracts.OpenDocument(), result -> {
             if (result != null) {
                 String fileName = FileUtils.getName(result.toString());
+
                 if (fileName.toLowerCase().endsWith(".lua")) {
                     new Task(() -> {
                         String content = FileUtils.readTextFile(result.toString());
@@ -66,6 +66,7 @@ public class LuaDialogFragment extends BottomDialogFragment {
                         break;
                 }
             }
+            
             orderByModified();
         });
     }
@@ -90,6 +91,7 @@ public class LuaDialogFragment extends BottomDialogFragment {
                     }).setTitle(R.string.create_new)
                     .show();
         });
+
         ((RecyclerView) view.findViewById(R.id.recycler)).setAdapter(adapter);
         ((RecyclerView) view.findViewById(R.id.recycler)).setLayoutManager(new AutoFitGridLayout(getContext(), 140));
         FileUtils.createDir(FileUtils.getResourcesPath(), "Lua Scripts");
@@ -117,6 +119,7 @@ public class LuaDialogFragment extends BottomDialogFragment {
             adapter.addAll(file);
             orderByModified();
         });
+
         return file;
     }
 
@@ -137,6 +140,7 @@ public class LuaDialogFragment extends BottomDialogFragment {
 
     private void loadScript(LuaFile file) {
         dismiss();
+        
         Toast.makeText(getContext(), String.format(getString(R.string.running_ff), file.name), Toast.LENGTH_SHORT).show();
         new Task(() -> {
             String script = FileUtils.readTextFile(file.absolutePath());
@@ -148,6 +152,7 @@ public class LuaDialogFragment extends BottomDialogFragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
         openDocumentLauncher.unregister();
         codeEditorLauncher.unregister();
     }

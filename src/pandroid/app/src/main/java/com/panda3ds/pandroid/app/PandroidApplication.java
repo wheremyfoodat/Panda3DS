@@ -35,6 +35,7 @@ public class PandroidApplication extends Application {
 			case GlobalConfig.THEME_BLACK:
 				return R.style.Theme_Pandroid_Black;
 		}
+
 		return R.style.Theme_Pandroid;
 	}
 
@@ -46,6 +47,7 @@ public class PandroidApplication extends Application {
 			case GlobalConfig.THEME_LIGHT:
 				return false;
 		}
+        
 		Resources res = Resources.getSystem();
 		int nightFlags = res.getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
 		return nightFlags == Configuration.UI_MODE_NIGHT_YES;

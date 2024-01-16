@@ -41,6 +41,7 @@ public class CodeEditor extends BaseEditor {
     @Override
     protected void onRefreshColorScheme(byte[] buffer, int index, int length) {
         super.onRefreshColorScheme(buffer, index, length);
+
         if (syntax != null) {
             final CharSequence text = getText().subSequence(index, index + length);
             syntax.apply(syntaxBuffer, text);

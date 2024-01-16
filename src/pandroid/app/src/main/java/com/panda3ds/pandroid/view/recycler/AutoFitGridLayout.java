@@ -14,6 +14,7 @@ public final class AutoFitGridLayout extends GridLayoutManager {
 
     public AutoFitGridLayout(Context context, int iconSize) {
         super(context, 1);
+
         this.iconSize = iconSize;
         this.context = context;
     }
@@ -24,7 +25,9 @@ public final class AutoFitGridLayout extends GridLayoutManager {
         int width = View.MeasureSpec.getSize(widthSpec);
         int iconSize = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, this.iconSize, context.getResources().getDisplayMetrics());
         int iconCount = Math.max(1, width / iconSize);
-        if (getSpanCount() != iconCount)
+        
+        if (getSpanCount() != iconCount) {
             setSpanCount(iconCount);
+        }
     }
 }

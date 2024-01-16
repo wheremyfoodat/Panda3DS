@@ -22,6 +22,7 @@ public class BottomDialogFragment extends DialogFragment {
         Dialog dialog = super.onCreateDialog(savedInstanceState);
         dialog.getWindow().setGravity(Gravity.CENTER | Gravity.BOTTOM);
         dialog.getWindow().getAttributes().y = Math.round(getContext().getResources().getDisplayMetrics().density * 15);
+
         return dialog;
     }
 }

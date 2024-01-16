@@ -102,6 +102,7 @@ public class FileUtils {
 
         return true;
     }
+
     public static String readTextFile(String path) {
         if (!exists(path)) {
             return null;
@@ -189,16 +190,22 @@ public class FileUtils {
     public static void updateFile(String path){
         DocumentFile file = parseFile(path);
         Uri uri = file.getUri();
-        switch (uri.getScheme()){
+        
+        switch (uri.getScheme()) {
             case "file": {
                 new File(uri.getPath()).setLastModified(System.currentTimeMillis());
-            }break;
-            case "content":{
-                getContext().getContentResolver().update(uri, null,null, null);
-            }break;
-            default:{
-                Log.w(Constants.LOG_TAG, "Cannot update file from scheme: "+uri.getScheme());
-            }break;
+                break;
+            }
+
+            case "content": {
+                getContext().getContentResolver().update(uri, null, null, null);
+                break;
+            }
+
+            default: {
+                Log.w(Constants.LOG_TAG, "Cannot update file from scheme: " + uri.getScheme());
+                break;
+            }
         }
     }
 
@@ -209,10 +216,12 @@ public class FileUtils {
     public static String[] listFiles(String path){
         DocumentFile folder = parseFile(path);
         DocumentFile[] files = folder.listFiles();
+
         String[] result = new String[files.length];
         for (int i = 0; i < result.length; i++){
             result[i] = files[i].getName();
         }
+        
         return result;
     }
 }

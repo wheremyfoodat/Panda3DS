@@ -14,7 +14,6 @@ import java.util.Comparator;
 import java.util.List;
 
 public class SimpleListAdapter<T> extends RecyclerView.Adapter<SimpleListAdapter.Holder> {
-
     private final ArrayList<T> list = new ArrayList<>();
     private final Binder<T> binder;
     private final int layoutId;

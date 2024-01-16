@@ -55,6 +55,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         if (drawerContainer != null) {
             drawerContainer.removeDrawerListener(this);
         }
+
         super.onDetach();
     }
 
@@ -104,7 +105,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         } else if (id == R.id.exit) {
             requireActivity().finish();
         } else if (id == R.id.lua_script){
-            new LuaDialogFragment().show(getParentFragmentManager(),null);
+            new LuaDialogFragment().show(getParentFragmentManager(), null);
         }
 
         return false;

@@ -52,7 +52,6 @@ public class BasicTextEditor extends AppCompatEditText {
         setLineSpacing(0, 1.3f);
         setScroller(new Scroller(getContext()));
 
-
         setInputType(InputType.TYPE_CLASS_TEXT |
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
                 InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE |
@@ -70,14 +69,12 @@ public class BasicTextEditor extends AppCompatEditText {
         addTextChangedListener((SimpleTextWatcher) value -> BasicTextEditor.this.onTextChanged());
     }
 
-    // DISABLE ANDROID DEFAULT SCROLL
+    // Disable default Android scroll
     @Override
-    public void scrollBy(int x, int y) {
-    }
+    public void scrollBy(int x, int y) {}
 
     @Override
-    public void scrollTo(int x, int y) {
-    }
+    public void scrollTo(int x, int y) {}
 
     public void setScroll(int x, int y) {
         x = Math.max(0, x);
@@ -100,8 +97,7 @@ public class BasicTextEditor extends AppCompatEditText {
         setScroll(getScrollX(), getScrollY());
     }
 
-    protected void onTextChanged() {
-    }
+    protected void onTextChanged() {}
 
     private boolean onSuperTouchListener(MotionEvent event) {
         return super.onTouchEvent(event);

@@ -29,7 +29,6 @@ class LuaSyntax extends CodeSyntax {
     public static final Pattern symbols = Pattern.compile("([.!&?:;*+/{}()\\]\\[,=-])");
     public static final Pattern numbers = Pattern.compile("\\b((\\d*[.]?\\d+([Ee][+-]?[\\d]+)?[LlfFdD]?)|(0[xX][0-9a-zA-Z]+)|(0[bB][0-1]+)|(0[0-7]+))\\b");
 
-
     @Override
     public void apply(byte[] syntaxBuffer, CharSequence text) {
         for (Matcher matcher = keywords.matcher(text); matcher.find(); ) {

@@ -37,8 +37,8 @@ public class BaseEditor extends BasicTextEditor {
     private final char[] textBuffer = new char[1];
     protected final int[] colors = new int[256];
 
-    //512KB OF BUFFER
-    protected final byte[] syntaxBuffer = new byte[1024 * 512];
+    // Allocate 512KB for the buffer
+    protected final byte[] syntaxBuffer = new byte[512 * 1024];
     private boolean requireUpdate = true;
 
     public BaseEditor(@NonNull Context context) {
@@ -89,6 +89,7 @@ public class BaseEditor extends BasicTextEditor {
             } else {
                 drawSelection(canvas);
             }
+
             drawText(canvas);
             drawLineCount(canvas);
         } catch (Throwable e) {
@@ -102,6 +103,7 @@ public class BaseEditor extends BasicTextEditor {
         paint.setColor(Color.WHITE);
         canvas.drawText("Editor draw error:", getPaddingLeft(), getLineHeight(), paint);
         canvas.drawText(String.valueOf(e), getPaddingLeft(), getLineHeight() * 2, paint);
+
         int index = 2;
         for (StackTraceElement trace : e.getStackTrace()) {
             index++;
@@ -122,7 +124,6 @@ public class BaseEditor extends BasicTextEditor {
         {
             int ascent = (int) Math.abs(fontMetrics.ascent);
             paint.getTextBounds(HELLO_WORLD, 0, HELLO_WORLD.length(), rect);
-            ;
             textOffset = Math.max(((lineHeight - rect.height()) / 2), 0) + ascent;
         }
 
@@ -173,6 +174,7 @@ public class BaseEditor extends BasicTextEditor {
             } else {
                 paint.setColor(colorDisable);
             }
+
             float width = paint.measureText(text);
             canvas.drawText(text, getPaddingLeft() - width - (spaceWidth * 2.5f), (i * lineHeight) + textOffset, paint);
         }
@@ -202,13 +204,15 @@ public class BaseEditor extends BasicTextEditor {
             textBuffer[0] = edit.charAt(i);
             switch (textBuffer[0]) {
                 case '\n':
-                    x = 0;
                     line++;
+                    x = 0;
                     y = (line * lineHeight) + textOffset;
                     break;
+
                 case ' ':
                     x += spaceWidth;
                     break;
+
                 default:
                     paint.setColor(colors[syntaxBuffer[i - beginIndex]]);
                     canvas.drawText(textBuffer, 0, 1, x, y, paint);
@@ -228,7 +232,10 @@ public class BaseEditor extends BasicTextEditor {
         float y = (currentLine * lineHeight);
         Editable text = getText();
         for (int i = start; i < end; i++) {
-            if (i == position) break;
+            if (i == position) {
+                break;
+            }
+
             textBuffer[0] = text.charAt(i);
             x += paint.measureText(textBuffer, 0, 1);
         }
@@ -309,7 +316,7 @@ public class BaseEditor extends BasicTextEditor {
 
     @Override
     protected void onTextChanged() {
-        super.onTextChanged();
         requireUpdate = true;
+        super.onTextChanged();
     }
 }
