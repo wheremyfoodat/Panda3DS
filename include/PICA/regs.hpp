@@ -447,5 +447,17 @@ namespace PICA {
 
 		u32 getColorScale() { return (colorScale <= 2) ? (1 << colorScale) : 1; }
 		u32 getAlphaScale() { return (alphaScale <= 2) ? (1 << alphaScale) : 1; }
+
+		bool isPassthroughStage() {
+			// clang-format off
+			// Thank you to the Citra dev that wrote this out
+			return (
+				colorOp == Operation::Replace && alphaOp == Operation::Replace &&
+				colorSource1 == Source::Previous && alphaSource1 == Source::Previous &&
+				colorOperand1 == ColorOperand::SourceColor && alphaOperand1 == AlphaOperand::SourceAlpha &&
+				getColorScale() == 1 && getAlphaScale() == 1
+			);
+			// clang-format on
+		}
 	};
 }  // namespace PICA
