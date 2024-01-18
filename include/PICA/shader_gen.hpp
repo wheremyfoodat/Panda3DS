@@ -17,6 +17,8 @@ namespace PICA::ShaderGen {
 		API api;
 		Language language;
 
+		void compileTEV(std::string& shader, int stage, const PICARegs& regs);
+
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
 		std::string generate(const PICARegs& regs);

@@ -6,6 +6,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/shader_gen.hpp"
 #include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -60,6 +61,8 @@ class RendererGL final : public Renderer {
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
 
+	PICA::ShaderGen::FragmentGenerator fragShaderGen;
+
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();
 	void setupStencilTest(bool stencilEnable);
@@ -71,7 +74,7 @@ class RendererGL final : public Renderer {
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
-		: Renderer(gpu, internalRegs, externalRegs) {}
+		: Renderer(gpu, internalRegs, externalRegs), fragShaderGen(PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL) {}
 	~RendererGL() override;
 
 	void reset() override;
