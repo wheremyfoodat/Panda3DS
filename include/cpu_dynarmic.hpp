@@ -9,6 +9,7 @@
 #include "helpers.hpp"
 #include "kernel.hpp"
 #include "memory.hpp"
+#include "scheduler.hpp"
 
 class CPU;
 
@@ -112,15 +113,16 @@ public:
 };
 
 class CPU {
-    std::unique_ptr<Dynarmic::A32::Jit> jit;
-    std::shared_ptr<CP15> cp15;
+	std::unique_ptr<Dynarmic::A32::Jit> jit;
+	std::shared_ptr<CP15> cp15;
 
-    // Make exclusive monitor with only 1 CPU core
-    Dynarmic::ExclusiveMonitor exclusiveMonitor{1};
-    MyEnvironment env;
-    Memory& mem;
+	// Make exclusive monitor with only 1 CPU core
+	Dynarmic::ExclusiveMonitor exclusiveMonitor{1};
+	MyEnvironment env;
+	Memory& mem;
+	Scheduler scheduler;
 
-public:
+  public:
     static constexpr u64 ticksPerSec = 268111856;
 
     CPU(Memory& mem, Kernel& kernel);
