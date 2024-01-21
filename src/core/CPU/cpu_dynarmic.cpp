@@ -3,7 +3,7 @@
 
 #include "arm_defs.hpp"
 
-CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel) {
+CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, scheduler) {
 	cp15 = std::make_shared<CP15>();
 
 	Dynarmic::A32::UserConfig config;
@@ -32,6 +32,8 @@ void CPU::reset() {
 	// Reset scheduler and add a VBlank event
 	scheduler.reset();
 	scheduler.addEvent(Scheduler::EventType::VBlank, ticksPerSec / 60);
+
+	printf("%lld\n", scheduler.nextTimestamp);
 }
 
 #endif  // CPU_DYNARMIC

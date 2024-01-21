@@ -11,14 +11,16 @@
 #include "memory.hpp"
 #include "scheduler.hpp"
 
+class Emulator;
 class CPU;
 
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
-public:
-    u64 ticksLeft = 0;
-    u64 totalTicks = 0;
-    Memory& mem;
-    Kernel& kernel;
+  public:
+	u64 ticksLeft = 0;
+	u64 totalTicks = 0;
+	Memory& mem;
+	Kernel& kernel;
+	Scheduler& scheduler;
 
     u64 getCyclesForInstruction(bool isThumb, u32 instruction);
 
@@ -77,39 +79,39 @@ public:
         std::terminate();
     }
 
-    void CallSVC(u32 swi) override {
-        kernel.serviceSVC(swi);
-    }
+	void CallSVC(u32 swi) override {
+		kernel.serviceSVC(swi);
+	}
 
-    void ExceptionRaised(u32 pc, Dynarmic::A32::Exception exception) override {
-        switch (exception) {
-            case Dynarmic::A32::Exception::UnpredictableInstruction:
-                Helpers::panic("Unpredictable instruction at pc = %08X", pc);
-                break;
+	void ExceptionRaised(u32 pc, Dynarmic::A32::Exception exception) override {
+		switch (exception) {
+			case Dynarmic::A32::Exception::UnpredictableInstruction:
+				Helpers::panic("Unpredictable instruction at pc = %08X", pc);
+				break;
 
-            default: Helpers::panic("Fired exception oops");
-        }
-    }
+			default: Helpers::panic("Fired exception oops");
+		}
+	}
 
-    void AddTicks(u64 ticks) override {
-        totalTicks += ticks;
+	void AddTicks(u64 ticks) override {
+		totalTicks += ticks;
 
-        if (ticks > ticksLeft) {
-            ticksLeft = 0;
-            return;
-        }
-        ticksLeft -= ticks;
-    }
+		if (ticks > ticksLeft) {
+			ticksLeft = 0;
+			return;
+		}
+		ticksLeft -= ticks;
+	}
 
-    u64 GetTicksRemaining() override {
-        return ticksLeft;
-    }
+	u64 GetTicksRemaining() override {
+		return ticksLeft;
+	}
 
-    u64 GetTicksForCode(bool isThumb, u32 vaddr, u32 instruction) override {
-        return getCyclesForInstruction(isThumb, instruction);
-    }
+	u64 GetTicksForCode(bool isThumb, u32 vaddr, u32 instruction) override {
+		return getCyclesForInstruction(isThumb, instruction);
+	}
 
-    MyEnvironment(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
+    MyEnvironment(Memory& mem, Kernel& kernel, Scheduler& scheduler) : mem(mem), kernel(kernel), scheduler(scheduler) {}
 };
 
 class CPU {
