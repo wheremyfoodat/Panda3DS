@@ -1,6 +1,8 @@
 #include "panda_qt/main_window.hpp"
 
+#include <QDesktopServices>
 #include <QFileDialog>
+#include <QString>
 #include <cstdio>
 #include <fstream>
 
@@ -26,8 +28,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Create and bind actions for them
 	auto loadGameAction = fileMenu->addAction(tr("Load game"));
 	auto loadLuaAction = fileMenu->addAction(tr("Load Lua script"));
+	auto openAppFolderAction = fileMenu->addAction(tr("Open Panda3DS folder"));
+
 	connect(loadGameAction, &QAction::triggered, this, &MainWindow::selectROM);
 	connect(loadLuaAction, &QAction::triggered, this, &MainWindow::selectLuaFile);
+	connect(openAppFolderAction, &QAction::triggered, this, [this]() {
+		QString path = QString::fromStdU16String(emu->getAppDataRoot().u16string());
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+	});
 
 	auto pauseAction = emulationMenu->addAction(tr("Pause"));
 	auto resumeAction = emulationMenu->addAction(tr("Resume"));
@@ -194,8 +202,7 @@ void MainWindow::dumpRomFS() {
 		return;
 	}
 	std::filesystem::path path(folder.toStdU16String());
-	
-	// TODO: This might break if the game accesses RomFS while we're dumping, we should move it to the emulator thread when we've got a message queue going
+
 	messageQueueMutex.lock();
 	RomFS::DumpingResult res = emu->dumpRomFS(path);
 	messageQueueMutex.unlock();
