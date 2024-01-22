@@ -126,7 +126,7 @@ class CPU {
 	Emulator& emu;
 
   public:
-    static constexpr u64 ticksPerSec = 268111856;
+    static constexpr u64 ticksPerSec = Scheduler::arm11Clock;
 
     CPU(Memory& mem, Kernel& kernel, Emulator& emu);
     void reset();
@@ -174,6 +174,10 @@ class CPU {
     u64& getTicksRef() {
         return scheduler.currentTimestamp;
     }
+
+	Scheduler& getScheduler() {
+		return scheduler;
+	}
 
     void clearCache() { jit->ClearCache(); }
     void runFrame();

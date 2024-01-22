@@ -177,13 +177,12 @@ struct Timer {
 	u64 waitlist;  // Refer to the getWaitlist function below for documentation
 	ResetType resetType = ResetType::OneShot;
 
-	u64 startTick;     // CPU tick the timer started
-	u64 currentDelay;  // Number of ns until the timer fires next time
+	u64 fireTick;      // CPU tick the timer will be fired
 	u64 interval;      // Number of ns until the timer fires for the second and future times
 	bool fired;        // Has this timer been signalled?
 	bool running;      // Is this timer running or stopped?
 
-	Timer(ResetType type) : resetType(type), startTick(0), currentDelay(0), interval(0), waitlist(0), fired(false), running(false) {}
+	Timer(ResetType type) : resetType(type), fireTick(0), interval(0), waitlist(0), fired(false), running(false) {}
 };
 
 struct MemoryBlock {

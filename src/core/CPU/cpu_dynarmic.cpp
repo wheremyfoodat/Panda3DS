@@ -36,7 +36,7 @@ void CPU::runFrame() {
 
 	while (!emu.frameDone) {
 		// Run CPU until the next scheduler event
-		env.ticksLeft = scheduler.nextTimestamp;
+		env.ticksLeft = scheduler.nextTimestamp - scheduler.currentTimestamp;
 
 	execute:
 		const auto exitReason = jit->Run();
@@ -54,6 +54,8 @@ void CPU::runFrame() {
 			}
 		}
 	}
+
+	printf("CPU END!\n");
 }
 
 #endif  // CPU_DYNARMIC

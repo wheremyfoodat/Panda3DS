@@ -120,7 +120,7 @@ void Emulator::pollScheduler() {
 	auto& events = scheduler.events;
 
 	// Pop events until there's none pending anymore
-	while (scheduler.currentTimestamp > scheduler.nextTimestamp) {
+	while (scheduler.currentTimestamp >= scheduler.nextTimestamp) {
 		// Read event timestamp and type, pop it from the scheduler and handle it
 		auto [time, eventType] = std::move(*events.begin());
 		events.erase(events.begin());
@@ -129,6 +129,7 @@ void Emulator::pollScheduler() {
 
 		switch (eventType) {
 			case Scheduler::EventType::VBlank: {
+				printf("VBLANK!!!!!!\n");
 				// Signal that we've reached the end of a frame
 				frameDone = true;
 				lua.signalEvent(LuaEvent::Frame);
@@ -142,6 +143,8 @@ void Emulator::pollScheduler() {
 				scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
 				break;
 			}
+
+			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
 
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));

@@ -5,14 +5,17 @@
 #include <ranges>
 
 #include "helpers.hpp"
+#include "logger.hpp"
 
 struct Scheduler {
 	enum class EventType {
 		VBlank = 0,          // End of frame event
-		Panic = 1,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
+		UpdateTimers = 1,    // Update kernel timer objects
+		Panic = 2,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
 		TotalNumberOfEvents  // How many event types do we have in total?
 	};
 	static constexpr usize totalNumberOfEvents = static_cast<usize>(EventType::TotalNumberOfEvents);
+	static constexpr u64 arm11Clock = 268111856;
 
 	template <typename Key, typename Val, usize size>
 	using EventMap = boost::container::flat_multimap<Key, Val, std::less<Key>, boost::container::static_vector<std::pair<Key, Val>, size>>;
@@ -45,5 +48,38 @@ struct Scheduler {
 		events.clear();
 		// Add a dummy event to always keep the scheduler non-empty
 		addEvent(EventType::Panic, std::numeric_limits<u64>::max());
+	}
+
+  private:
+	static constexpr u64 MAX_VALUE_TO_MULTIPLY = std::numeric_limits<s64>::max() / arm11Clock;
+
+  public:
+	// Function for converting time units to cycles for various kernel functions
+	// Thank you Citra
+	static constexpr s64 nsToCycles(float ns) { return s64(arm11Clock * (0.000000001f) * ns); }
+	static constexpr s64 nsToCycles(int ns) { return arm11Clock * s64(ns) / 1000000000; }
+
+	static constexpr s64 nsToCycles(s64 ns) {
+		if (ns / 1000000000 > static_cast<s64>(MAX_VALUE_TO_MULTIPLY)) {
+			return std::numeric_limits<s64>::max();
+		}
+
+		if (ns > static_cast<s64>(MAX_VALUE_TO_MULTIPLY)) {
+			return arm11Clock * (ns / 1000000000);
+		}
+
+		return (arm11Clock * ns) / 1000000000;
+	}
+
+	static constexpr s64 nsToCycles(u64 ns) {
+		if (ns / 1000000000 > MAX_VALUE_TO_MULTIPLY) {
+			return std::numeric_limits<s64>::max();
+		}
+
+		if (ns > MAX_VALUE_TO_MULTIPLY) {
+			return arm11Clock * (s64(ns) / 1000000000);
+		}
+
+		return (arm11Clock * s64(ns)) / 1000000000;
 	}
 };
