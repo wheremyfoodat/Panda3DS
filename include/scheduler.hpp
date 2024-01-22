@@ -18,6 +18,7 @@ struct Scheduler {
 	using EventMap = boost::container::flat_multimap<Key, Val, std::less<Key>, boost::container::static_vector<std::pair<Key, Val>, size>>;
 
 	EventMap<u64, EventType, totalNumberOfEvents> events;
+	u64 currentTimestamp = 0;
 	u64 nextTimestamp = 0;
 
 	// Set nextTimestamp to the timestamp of the next event
@@ -38,6 +39,8 @@ struct Scheduler {
 	};
 
 	void reset() {
+		currentTimestamp = 0;
+
 		// Clear any pending events
 		events.clear();
 		// Add a dummy event to always keep the scheduler non-empty

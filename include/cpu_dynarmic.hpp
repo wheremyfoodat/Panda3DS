@@ -94,7 +94,7 @@ class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
 	}
 
 	void AddTicks(u64 ticks) override {
-		totalTicks += ticks;
+		scheduler.currentTimestamp += ticks;
 
 		if (ticks > ticksLeft) {
 			ticksLeft = 0;
@@ -111,7 +111,7 @@ class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
 		return getCyclesForInstruction(isThumb, instruction);
 	}
 
-    MyEnvironment(Memory& mem, Kernel& kernel, Scheduler& scheduler) : mem(mem), kernel(kernel), scheduler(scheduler) {}
+	MyEnvironment(Memory& mem, Kernel& kernel, Scheduler& scheduler) : mem(mem), kernel(kernel), scheduler(scheduler) {}
 };
 
 class CPU {
@@ -122,12 +122,13 @@ class CPU {
 	Dynarmic::ExclusiveMonitor exclusiveMonitor{1};
 	MyEnvironment env;
 	Memory& mem;
-	Scheduler scheduler;
+	Scheduler& scheduler;
+	Emulator& emu;
 
   public:
     static constexpr u64 ticksPerSec = 268111856;
 
-    CPU(Memory& mem, Kernel& kernel);
+    CPU(Memory& mem, Kernel& kernel, Emulator& emu);
     void reset();
 
     void setReg(int index, u32 value) {
@@ -166,29 +167,14 @@ class CPU {
     }
 
     u64 getTicks() {
-        return env.totalTicks;
+        return scheduler.currentTimestamp;
     }
 
     // Get reference to tick count. Memory needs access to this
     u64& getTicksRef() {
-        return env.totalTicks;
+        return scheduler.currentTimestamp;
     }
 
     void clearCache() { jit->ClearCache(); }
-
-    void runFrame() {
-		env.ticksLeft = ticksPerSec / 60;
-	execute:
-		const auto exitReason = jit->Run();
-
-		if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
-			// Cache invalidation needs to exit the JIT so it returns a CacheInvalidation HaltReason. In our case, we just go back to executing
-            // The goto might be terrible but it does guarantee that this does not recursively call run and crash, instead getting optimized to a jump
-			if (Dynarmic::Has(exitReason, Dynarmic::HaltReason::CacheInvalidation)) {
-				goto execute;
-			} else {
-				Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
-			}
-		}
-	}
+    void runFrame();
 };

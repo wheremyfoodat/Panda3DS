@@ -2,8 +2,9 @@
 #include "cpu_dynarmic.hpp"
 
 #include "arm_defs.hpp"
+#include "emulator.hpp"
 
-CPU::CPU(Memory& mem, Kernel& kernel) : mem(mem), env(mem, kernel, scheduler) {
+CPU::CPU(Memory& mem, Kernel& kernel, Emulator& emu) : mem(mem), emu(emu), scheduler(emu.getScheduler()), env(mem, kernel, emu.getScheduler()) {
 	cp15 = std::make_shared<CP15>();
 
 	Dynarmic::A32::UserConfig config;
@@ -28,12 +29,31 @@ void CPU::reset() {
 	jit->ClearCache();
 	jit->Regs().fill(0);
 	jit->ExtRegs().fill(0);
+}
 
-	// Reset scheduler and add a VBlank event
-	scheduler.reset();
-	scheduler.addEvent(Scheduler::EventType::VBlank, ticksPerSec / 60);
+void CPU::runFrame() {
+	emu.frameDone = false;
 
-	printf("%lld\n", scheduler.nextTimestamp);
+	while (!emu.frameDone) {
+		// Run CPU until the next scheduler event
+		env.ticksLeft = scheduler.nextTimestamp;
+
+	execute:
+		const auto exitReason = jit->Run();
+
+		// Handle any scheduler events that need handling.
+		emu.pollScheduler();
+
+		if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
+			// Cache invalidation needs to exit the JIT so it returns a CacheInvalidation HaltReason. In our case, we just go back to executing
+			// The goto might be terrible but it does guarantee that this does not recursively call run and crash, instead getting optimized to a jump
+			if (Dynarmic::Has(exitReason, Dynarmic::HaltReason::CacheInvalidation)) {
+				goto execute;
+			} else {
+				Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
+			}
+		}
+	}
 }
 
 #endif  // CPU_DYNARMIC
