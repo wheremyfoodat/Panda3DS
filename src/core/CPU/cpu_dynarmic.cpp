@@ -54,8 +54,6 @@ void CPU::runFrame() {
 			}
 		}
 	}
-
-	printf("CPU END!\n");
 }
 
 #endif  // CPU_DYNARMIC

@@ -57,7 +57,6 @@ void Kernel::cancelTimer(Timer* timer) {
 }
 
 void Kernel::signalTimer(Handle timerHandle, Timer* timer) {
-	printf("DEEPFRIED\n");
 	timer->fired = true;
 	requireReschedule();
 

@@ -129,7 +129,6 @@ void Emulator::pollScheduler() {
 
 		switch (eventType) {
 			case Scheduler::EventType::VBlank: {
-				printf("VBLANK!!!!!!\n");
 				// Signal that we've reached the end of a frame
 				frameDone = true;
 				lua.signalEvent(LuaEvent::Frame);
