@@ -153,6 +153,30 @@ void Emulator::pollScheduler() {
 	}
 }
 
+// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
+// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
+// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
+// If the portable build setting is enabled, then those saves go in the executable directory instead
+std::filesystem::path Emulator::getAppDataRoot() {
+	std::filesystem::path appDataPath;
+
+#ifdef __ANDROID__
+	appDataPath = getAndroidAppPath();
+#else
+	char* appData;
+	if (!config.usePortableBuild) {
+		appData = SDL_GetPrefPath(nullptr, "Alber");
+		appDataPath = std::filesystem::path(appData);
+	} else {
+		appData = SDL_GetBasePath();
+		appDataPath = std::filesystem::path(appData) / "Emulator Files";
+	}
+	SDL_free(appData);
+#endif
+
+	return appDataPath;
+}
+
 bool Emulator::loadROM(const std::filesystem::path& path) {
 	// Reset the emulator if we've already loaded a ROM
 	if (romType != ROMType::None) {
@@ -163,26 +187,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	memory.loadedCXI = std::nullopt;
 	memory.loaded3DSX = std::nullopt;
 
-	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
-	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
-	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
-	// If the portable build setting is enabled, then those saves go in the executable directory instead
-	std::filesystem::path appDataPath;
-
-	#ifdef __ANDROID__
-	appDataPath = getAndroidAppPath();
-	#else
-	char* appData;
-	if (!config.usePortableBuild) {
-		appData = SDL_GetPrefPath(nullptr, "Alber");
-		appDataPath = std::filesystem::path(appData);
-	} else {
-		appData = SDL_GetBasePath();
-		appDataPath = std::filesystem::path(appData) / "Emulator Files";
-	}
-	SDL_free(appData);
-	#endif
-
+	const std::filesystem::path appDataPath = getAppDataRoot();
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
 	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
 	IOFile::setAppDataDir(dataPath);

@@ -135,6 +135,8 @@ class Emulator {
 
 	std::filesystem::path getConfigPath();
 	std::filesystem::path getAndroidAppPath();
+	// Get the root path for the emulator's app data
+	std::filesystem::path getAppDataRoot();
 
 	std::span<u8> getSMDH();
 };
