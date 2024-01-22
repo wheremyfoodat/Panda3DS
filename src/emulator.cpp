@@ -17,10 +17,11 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel), gpu(memory, config),
-	  memory(cpu.getTicksRef(), config), cheats(memory, kernel.getServiceManager().getHID()), lua(memory), running(false), programRunning(false)
+	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
+	  cheats(memory, kernel.getServiceManager().getHID()), lua(memory), running(false), programRunning(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	  , httpServer(this)
+	  ,
+	  httpServer(this)
 #endif
 {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
@@ -45,6 +46,10 @@ void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
 	gpu.reset();
 	memory.reset();
+	// Reset scheduler and add a VBlank event
+	scheduler.reset();
+	scheduler.addEvent(Scheduler::EventType::VBlank, CPU::ticksPerSec / 60);
+
 	// Kernel must be reset last because it depends on CPU/Memory state
 	kernel.reset();
 
@@ -99,12 +104,6 @@ void Emulator::runFrame() {
 	if (running) {
 		cpu.runFrame(); // Run 1 frame of instructions
 		gpu.display();  // Display graphics
-		lua.signalEvent(LuaEvent::Frame);
-
-		// Send VBlank interrupts
-		ServiceManager& srv = kernel.getServiceManager();
-		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
-		srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
 		// Run cheats if any are loaded
 		if (cheats.haveCheats()) [[unlikely]] {
@@ -114,6 +113,43 @@ void Emulator::runFrame() {
 		// If the emulator is not running and a game is loaded, we still want to display the framebuffer otherwise we will get weird
 		// double-buffering issues
 		gpu.display();
+	}
+}
+
+void Emulator::pollScheduler() {
+	auto& events = scheduler.events;
+
+	// Pop events until there's none pending anymore
+	while (scheduler.currentTimestamp >= scheduler.nextTimestamp) {
+		// Read event timestamp and type, pop it from the scheduler and handle it
+		auto [time, eventType] = std::move(*events.begin());
+		events.erase(events.begin());
+
+		scheduler.updateNextTimestamp();
+
+		switch (eventType) {
+			case Scheduler::EventType::VBlank: [[likely]] {
+				// Signal that we've reached the end of a frame
+				frameDone = true;
+				lua.signalEvent(LuaEvent::Frame);
+
+				// Send VBlank interrupts
+				ServiceManager& srv = kernel.getServiceManager();
+				srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+				srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+				
+				// Queue next VBlank event
+				scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
+				break;
+			}
+
+			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
+
+			default: {
+				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
+				break;
+			}
+		}
 	}
 }
 

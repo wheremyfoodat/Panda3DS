@@ -244,7 +244,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
-                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp
+                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp
 )
 
 cmrc_add_resource_library(

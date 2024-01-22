@@ -9,15 +9,18 @@
 #include "helpers.hpp"
 #include "kernel.hpp"
 #include "memory.hpp"
+#include "scheduler.hpp"
 
+class Emulator;
 class CPU;
 
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
-public:
-    u64 ticksLeft = 0;
-    u64 totalTicks = 0;
-    Memory& mem;
-    Kernel& kernel;
+  public:
+	u64 ticksLeft = 0;
+	u64 totalTicks = 0;
+	Memory& mem;
+	Kernel& kernel;
+	Scheduler& scheduler;
 
     u64 getCyclesForInstruction(bool isThumb, u32 instruction);
 
@@ -76,54 +79,56 @@ public:
         std::terminate();
     }
 
-    void CallSVC(u32 swi) override {
-        kernel.serviceSVC(swi);
-    }
+	void CallSVC(u32 swi) override {
+		kernel.serviceSVC(swi);
+	}
 
-    void ExceptionRaised(u32 pc, Dynarmic::A32::Exception exception) override {
-        switch (exception) {
-            case Dynarmic::A32::Exception::UnpredictableInstruction:
-                Helpers::panic("Unpredictable instruction at pc = %08X", pc);
-                break;
+	void ExceptionRaised(u32 pc, Dynarmic::A32::Exception exception) override {
+		switch (exception) {
+			case Dynarmic::A32::Exception::UnpredictableInstruction:
+				Helpers::panic("Unpredictable instruction at pc = %08X", pc);
+				break;
 
-            default: Helpers::panic("Fired exception oops");
-        }
-    }
+			default: Helpers::panic("Fired exception oops");
+		}
+	}
 
-    void AddTicks(u64 ticks) override {
-        totalTicks += ticks;
+	void AddTicks(u64 ticks) override {
+		scheduler.currentTimestamp += ticks;
 
-        if (ticks > ticksLeft) {
-            ticksLeft = 0;
-            return;
-        }
-        ticksLeft -= ticks;
-    }
+		if (ticks > ticksLeft) {
+			ticksLeft = 0;
+			return;
+		}
+		ticksLeft -= ticks;
+	}
 
-    u64 GetTicksRemaining() override {
-        return ticksLeft;
-    }
+	u64 GetTicksRemaining() override {
+		return ticksLeft;
+	}
 
-    u64 GetTicksForCode(bool isThumb, u32 vaddr, u32 instruction) override {
-        return getCyclesForInstruction(isThumb, instruction);
-    }
+	u64 GetTicksForCode(bool isThumb, u32 vaddr, u32 instruction) override {
+		return getCyclesForInstruction(isThumb, instruction);
+	}
 
-    MyEnvironment(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
+	MyEnvironment(Memory& mem, Kernel& kernel, Scheduler& scheduler) : mem(mem), kernel(kernel), scheduler(scheduler) {}
 };
 
 class CPU {
-    std::unique_ptr<Dynarmic::A32::Jit> jit;
-    std::shared_ptr<CP15> cp15;
+	std::unique_ptr<Dynarmic::A32::Jit> jit;
+	std::shared_ptr<CP15> cp15;
 
-    // Make exclusive monitor with only 1 CPU core
-    Dynarmic::ExclusiveMonitor exclusiveMonitor{1};
-    MyEnvironment env;
-    Memory& mem;
+	// Make exclusive monitor with only 1 CPU core
+	Dynarmic::ExclusiveMonitor exclusiveMonitor{1};
+	MyEnvironment env;
+	Memory& mem;
+	Scheduler& scheduler;
+	Emulator& emu;
 
-public:
-    static constexpr u64 ticksPerSec = 268111856;
+  public:
+    static constexpr u64 ticksPerSec = Scheduler::arm11Clock;
 
-    CPU(Memory& mem, Kernel& kernel);
+    CPU(Memory& mem, Kernel& kernel, Emulator& emu);
     void reset();
 
     void setReg(int index, u32 value) {
@@ -162,29 +167,18 @@ public:
     }
 
     u64 getTicks() {
-        return env.totalTicks;
+        return scheduler.currentTimestamp;
     }
 
     // Get reference to tick count. Memory needs access to this
     u64& getTicksRef() {
-        return env.totalTicks;
+        return scheduler.currentTimestamp;
     }
 
-    void clearCache() { jit->ClearCache(); }
-
-    void runFrame() {
-		env.ticksLeft = ticksPerSec / 60;
-	execute:
-		const auto exitReason = jit->Run();
-
-		if (static_cast<u32>(exitReason) != 0) [[unlikely]] {
-			// Cache invalidation needs to exit the JIT so it returns a CacheInvalidation HaltReason. In our case, we just go back to executing
-            // The goto might be terrible but it does guarantee that this does not recursively call run and crash, instead getting optimized to a jump
-			if (Dynarmic::Has(exitReason, Dynarmic::HaltReason::CacheInvalidation)) {
-				goto execute;
-			} else {
-				Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
-			}
-		}
+	Scheduler& getScheduler() {
+		return scheduler;
 	}
+
+    void clearCache() { jit->ClearCache(); }
+    void runFrame();
 };
