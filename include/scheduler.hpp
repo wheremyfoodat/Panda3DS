@@ -2,7 +2,6 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/container/static_vector.hpp>
 #include <limits>
-#include <ranges>
 
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -33,11 +32,14 @@ struct Scheduler {
 	}
 
 	void removeEvent(EventType type) {
-		auto it = std::ranges::find_if(events, [type](decltype(events)::const_reference pair) { return pair.second == type; });
-
-		if (it != events.end()) {
-			events.erase(it);
-			updateNextTimestamp();
+		for (auto it = events.begin(); it != events.end(); it++) {
+			// Find first event of type "type" and remove it.
+			// Our scheduler shouldn't have duplicate events, so it's safe to exit when an event is found
+			if (it->second == type) {
+				events.erase(it);
+				updateNextTimestamp();
+				break;
+			}
 		}
 	};
 
