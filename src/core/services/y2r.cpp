@@ -18,6 +18,7 @@ namespace Y2RCommands {
 		SetSendingY = 0x00100102,
 		SetSendingU = 0x00110102,
 		SetSendingV = 0x00120102,
+		SetSendingYUV = 0x00130102,
 		SetReceiving = 0x00180102,
 		SetInputLineWidth = 0x001A0040,
 		GetInputLineWidth = 0x001B0000,
@@ -82,6 +83,7 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::SetSendingY: setSendingY(messagePointer); break;
 		case Y2RCommands::SetSendingU: setSendingU(messagePointer); break;
 		case Y2RCommands::SetSendingV: setSendingV(messagePointer); break;
+		case Y2RCommands::SetSendingYUV: setSendingYUV(messagePointer); break;
 		case Y2RCommands::SetSpacialDithering: setSpacialDithering(messagePointer); break;
 		case Y2RCommands::SetStandardCoeff: setStandardCoeff(messagePointer); break;
 		case Y2RCommands::SetTemporalDithering: setTemporalDithering(messagePointer); break;
@@ -396,6 +398,14 @@ void Y2RService::setSendingV(u32 messagePointer) {
 	Helpers::warn("Unimplemented Y2R::SetSendingV");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x12, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::setSendingYUV(u32 messagePointer) {
+	log("Y2R::SetSendingYUV\n");
+	Helpers::warn("Unimplemented Y2R::SetSendingYUV");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x13, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
