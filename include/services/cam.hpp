@@ -37,6 +37,7 @@ class CAMService {
 	// Service commands
 	void driverInitialize(u32 messagePointer);
 	void driverFinalize(u32 messagePointer);
+	void getMaxBytes(u32 messagePointer);
 	void getMaxLines(u32 messagePointer);
 	void getBufferErrorInterruptEvent(u32 messagePointer);
 	void getSuitableY2RCoefficients(u32 messagePointer);
@@ -45,6 +46,7 @@ class CAMService {
 	void setFrameRate(u32 messagePointer);
 	void setReceiving(u32 messagePointer);
 	void setSize(u32 messagePointer);
+	void setTransferBytes(u32 messagePointer);
 	void setTransferLines(u32 messagePointer);
 	void setTrimming(u32 messagePointer);
 	void setTrimmingParamsCenter(u32 messagePointer);

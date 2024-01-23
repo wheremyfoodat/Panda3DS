@@ -14,7 +14,9 @@ namespace CAMCommands {
 		DriverFinalize = 0x003A0000,
 		SetTransferLines = 0x00090100,
 		GetMaxLines = 0x000A0080,
+		SetTransferBytes = 0x000B0100,
 		GetTransferBytes = 0x000C0040,
+		GetMaxBytes = 0x000D0080,
 		SetTrimming = 0x000E0080,
 		SetTrimmingParamsCenter = 0x00120140,
 		SetSize = 0x001F00C0,  // Set size has different headers between cam:u and New3DS QTM module
@@ -73,6 +75,7 @@ void CAMService::handleSyncRequest(u32 messagePointer) {
 		case CAMCommands::DriverInitialize: driverInitialize(messagePointer); break;
 		case CAMCommands::DriverFinalize: driverFinalize(messagePointer); break;
 		case CAMCommands::GetBufferErrorInterruptEvent: getBufferErrorInterruptEvent(messagePointer); break;
+		case CAMCommands::GetMaxBytes: getMaxBytes(messagePointer); break;
 		case CAMCommands::GetMaxLines: getMaxLines(messagePointer); break;
 		case CAMCommands::GetSuitableY2rStandardCoefficient: getSuitableY2RCoefficients(messagePointer); break;
 		case CAMCommands::GetTransferBytes: getTransferBytes(messagePointer); break;
@@ -87,7 +90,7 @@ void CAMService::handleSyncRequest(u32 messagePointer) {
 
 		default:
 			Helpers::warn("Unimplemented CAM service requested. Command: %08X\n", command);
-			mem.write32(messagePointer + 4, 0);
+			mem.write32(messagePointer + 4, Result::Success);
 			break;
 	}
 }
@@ -111,6 +114,28 @@ void CAMService::setContrast(u32 messagePointer) {
 	log("CAM::SetPhotoMode (camera select = %d, contrast = %d)\n", cameraSelect, contrast);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x23, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void CAMService::setTransferBytes(u32 messagePointer) {
+	const u32 portIndex = mem.read8(messagePointer + 4);
+	const u32 bytes = mem.read16(messagePointer + 8);
+	// ...why do these parameters even exist?
+	const u16 width = mem.read16(messagePointer + 12);
+	const u16 height = mem.read16(messagePointer + 16);
+	const PortSelect port(portIndex);
+
+	if (port.isValid()) {
+		for (int i : port.getPortIndices()) {
+			ports[i].transferBytes = bytes;
+		}
+	} else {
+		Helpers::warn("CAM::SetTransferBytes: Invalid port\n");
+	}
+
+	log("CAM::SetTransferBytes (port = %d, bytes = %d, width = %d, height = %d)\n", portIndex, bytes, width, height);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -211,6 +236,28 @@ void CAMService::getMaxLines(u32 messagePointer) {
 		mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
 		mem.write32(messagePointer + 4, result);
 		mem.write16(messagePointer + 8, lines);
+	}
+}
+
+void CAMService::getMaxBytes(u32 messagePointer) {
+	const u16 width = mem.read16(messagePointer + 4);
+	const u16 height = mem.read16(messagePointer + 8);
+	log("CAM::GetMaxBytes (width = %d, height = %d)\n", width, height);
+
+	constexpr u32 MIN_TRANSFER_UNIT = 256;
+	constexpr u32 MAX_BUFFER_SIZE = 2560;
+	if (width * height * 2 % MIN_TRANSFER_UNIT != 0) {
+		Helpers::panic("CAM::GetMaxLines out of range");
+	} else {
+		u32 bytes = MAX_BUFFER_SIZE;
+
+		while (width * height * 2 % bytes != 0) {
+			bytes -= MIN_TRANSFER_UNIT;
+		}
+
+		mem.write32(messagePointer, IPC::responseHeader(0xA, 2, 0));
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 8, bytes);
 	}
 }
 
