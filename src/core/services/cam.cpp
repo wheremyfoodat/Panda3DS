@@ -1,4 +1,7 @@
 #include "services/cam.hpp"
+
+#include <vector>
+
 #include "ipc.hpp"
 #include "kernel.hpp"
 
@@ -12,7 +15,7 @@ namespace CAMCommands {
 		GetTransferBytes = 0x000C0040,
 		SetTrimming = 0x000E0080,
 		SetTrimmingParamsCenter = 0x00120140,
-		SetSize = 0x001F00C0, // Set size has different headers between cam:u and New3DS QTM module
+		SetSize = 0x001F00C0,  // Set size has different headers between cam:u and New3DS QTM module
 		SetFrameRate = 0x00200080,
 		SetContrast = 0x00230080,
 		GetSuitableY2rStandardCoefficient = 0x00360000,
@@ -78,9 +81,7 @@ void CAMService::handleSyncRequest(u32 messagePointer) {
 		case CAMCommands::SetTrimmingParamsCenter: setTrimmingParamsCenter(messagePointer); break;
 		case CAMCommands::SetSize: setSize(messagePointer); break;
 
-		default:
-			Helpers::panic("Unimplemented CAM service requested. Command: %08X\n", command);
-			break;
+		default: Helpers::panic("Unimplemented CAM service requested. Command: %08X\n", command); break;
 	}
 }
 
@@ -115,7 +116,7 @@ void CAMService::setTransferLines(u32 messagePointer) {
 
 	if (port.isValid()) {
 		const u32 transferBytes = lines * width * 2;
-	
+
 		for (int i : port.getPortIndices()) {
 			ports[i].transferBytes = transferBytes;
 		}
@@ -145,7 +146,7 @@ void CAMService::setSize(u32 messagePointer) {
 	const u32 context = mem.read32(messagePointer + 12);
 
 	log("CAM::SetSize (camera select = %d, size = %d, context = %d)\n", cameraSelect, size, context);
-	
+
 	mem.write32(messagePointer, IPC::responseHeader(0x1F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
