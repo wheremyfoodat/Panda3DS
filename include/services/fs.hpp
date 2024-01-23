@@ -61,6 +61,7 @@ class FSService {
 	void getFreeBytes(u32 messagePointer);
 	void getFormatInfo(u32 messagePointer);
 	void getPriority(u32 messagePointer);
+	void getSdmcArchiveResource(u32 messagePointer);
 	void getThisSaveDataSecureValue(u32 messagePointer);
 	void theGameboyVCFunction(u32 messagePointer);
 	void initialize(u32 messagePointer);
