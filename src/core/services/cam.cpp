@@ -7,6 +7,7 @@
 
 namespace CAMCommands {
 	enum : u32 {
+		StartCapture = 0x00010040,
 		GetBufferErrorInterruptEvent = 0x00060040,
 		SetReceiving = 0x00070102,
 		DriverInitialize = 0x00390000,
@@ -82,6 +83,7 @@ void CAMService::handleSyncRequest(u32 messagePointer) {
 		case CAMCommands::SetTransferLines: setTransferLines(messagePointer); break;
 		case CAMCommands::SetTrimming: setTrimming(messagePointer); break;
 		case CAMCommands::SetTrimmingParamsCenter: setTrimmingParamsCenter(messagePointer); break;
+		case CAMCommands::StartCapture: startCapture(messagePointer); break;
 
 		default:
 			Helpers::warn("Unimplemented CAM service requested. Command: %08X\n", command);
@@ -281,5 +283,27 @@ void CAMService::setReceiving(u32 messagePointer) {
 		mem.write32(messagePointer + 12, event.value());
 	} else {
 		Helpers::panic("CAM::SetReceiving: Invalid port");
+	}
+}
+
+void CAMService::startCapture(u32 messagePointer) {
+	const u32 portIndex = mem.read8(messagePointer + 4);
+	const PortSelect port(portIndex);
+	log("CAM::StartCapture (port = %d)\n", portIndex);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x01, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	if (port.isValid()) {
+		for (int i : port.getPortIndices()) {
+			auto& event = ports[port.getSingleIndex()].receiveEvent;
+
+			// Until we properly implement cameras, immediately signal the receive event
+			if (event.has_value()) {
+				kernel.signalEvent(event.value());
+			}
+		}
+	} else {
+		Helpers::warn("CAM::StartCapture: Invalid port index");
 	}
 }

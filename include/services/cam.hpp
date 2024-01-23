@@ -48,6 +48,7 @@ class CAMService {
 	void setTransferLines(u32 messagePointer);
 	void setTrimming(u32 messagePointer);
 	void setTrimmingParamsCenter(u32 messagePointer);
+	void startCapture(u32 messagePointer);
 
   public:
 	CAMService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
