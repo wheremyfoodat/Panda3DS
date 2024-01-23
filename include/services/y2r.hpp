@@ -98,6 +98,7 @@ class Y2RService {
 	void setSendingY(u32 messagePointer);
 	void setSendingU(u32 messagePointer);
 	void setSendingV(u32 messagePointer);
+	void setSendingYUV(u32 messagePointer);
 	void setSpacialDithering(u32 messagePointer);
 	void setStandardCoeff(u32 messagePointer);
 	void setTemporalDithering(u32 messagePointer);
