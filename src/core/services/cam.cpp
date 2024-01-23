@@ -8,6 +8,7 @@
 namespace CAMCommands {
 	enum : u32 {
 		GetBufferErrorInterruptEvent = 0x00060040,
+		SetReceiving = 0x00070102,
 		DriverInitialize = 0x00390000,
 		DriverFinalize = 0x003A0000,
 		SetTransferLines = 0x00090100,
@@ -76,12 +77,16 @@ void CAMService::handleSyncRequest(u32 messagePointer) {
 		case CAMCommands::GetTransferBytes: getTransferBytes(messagePointer); break;
 		case CAMCommands::SetContrast: setContrast(messagePointer); break;
 		case CAMCommands::SetFrameRate: setFrameRate(messagePointer); break;
+		case CAMCommands::SetReceiving: setReceiving(messagePointer); break;
+		case CAMCommands::SetSize: setSize(messagePointer); break;
 		case CAMCommands::SetTransferLines: setTransferLines(messagePointer); break;
 		case CAMCommands::SetTrimming: setTrimming(messagePointer); break;
 		case CAMCommands::SetTrimmingParamsCenter: setTrimmingParamsCenter(messagePointer); break;
-		case CAMCommands::SetSize: setSize(messagePointer); break;
 
-		default: Helpers::panic("Unimplemented CAM service requested. Command: %08X\n", command); break;
+		default:
+			Helpers::warn("Unimplemented CAM service requested. Command: %08X\n", command);
+			mem.write32(messagePointer + 4, 0);
+			break;
 	}
 }
 
@@ -108,7 +113,7 @@ void CAMService::setContrast(u32 messagePointer) {
 }
 
 void CAMService::setTransferLines(u32 messagePointer) {
-	const u32 portIndex = mem.read32(messagePointer + 4);
+	const u32 portIndex = mem.read8(messagePointer + 4);
 	const u16 lines = mem.read16(messagePointer + 8);
 	const u16 width = mem.read16(messagePointer + 12);
 	const u16 height = mem.read16(messagePointer + 16);
@@ -152,7 +157,7 @@ void CAMService::setSize(u32 messagePointer) {
 }
 
 void CAMService::setTrimming(u32 messagePointer) {
-	const u32 port = mem.read32(messagePointer + 4);
+	const u32 port = mem.read8(messagePointer + 4);
 	const bool trim = mem.read8(messagePointer + 8) != 0;
 
 	log("CAM::SetTrimming (port = %d, trimming = %s)\n", port, trim ? "enabled" : "disabled");
@@ -162,7 +167,7 @@ void CAMService::setTrimming(u32 messagePointer) {
 }
 
 void CAMService::setTrimmingParamsCenter(u32 messagePointer) {
-	const u32 port = mem.read32(messagePointer + 4);
+	const u32 port = mem.read8(messagePointer + 4);
 	const s16 trimWidth = s16(mem.read16(messagePointer + 8));
 	const s16 trimHeight = s16(mem.read16(messagePointer + 12));
 	const s16 cameraWidth = s16(mem.read16(messagePointer + 16));
@@ -216,7 +221,7 @@ void CAMService::getSuitableY2RCoefficients(u32 messagePointer) {
 }
 
 void CAMService::getTransferBytes(u32 messagePointer) {
-	const u32 portIndex = mem.read32(messagePointer + 4);
+	const u32 portIndex = mem.read8(messagePointer + 4);
 	const PortSelect port(portIndex);
 	log("CAM::GetTransferBytes (port = %d)\n", portIndex);
 
@@ -233,14 +238,14 @@ void CAMService::getTransferBytes(u32 messagePointer) {
 }
 
 void CAMService::getBufferErrorInterruptEvent(u32 messagePointer) {
-	const u32 portIndex = mem.read32(messagePointer + 4);
+	const u32 portIndex = mem.read8(messagePointer + 4);
 	const PortSelect port(portIndex);
 	log("CAM::GetBufferErrorInterruptEvent (port = %d)\n", portIndex);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 2));
 
 	if (port.isSinglePort()) {
-		auto& event = ports[port.getSingleIndex()].bufferErrorInterruptevent;
+		auto& event = ports[port.getSingleIndex()].bufferErrorInterruptEvent;
 		if (!event.has_value()) {
 			event = kernel.makeEvent(ResetType::OneShot);
 		}
@@ -250,5 +255,31 @@ void CAMService::getBufferErrorInterruptEvent(u32 messagePointer) {
 		mem.write32(messagePointer + 12, event.value());
 	} else {
 		Helpers::panic("CAM::GetBufferErrorInterruptEvent: Invalid port");
+	}
+}
+
+void CAMService::setReceiving(u32 messagePointer) {
+	const u32 destination = mem.read32(messagePointer + 4);
+	const u32 portIndex = mem.read8(messagePointer + 8);
+	const u32 size = mem.read32(messagePointer + 12);
+	const u16 transferUnit = mem.read16(messagePointer + 16);
+	const Handle process = mem.read32(messagePointer + 24);
+
+	const PortSelect port(portIndex);
+	log("CAM::SetReceiving (port = %d)\n", portIndex);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x7, 1, 2));
+
+	if (port.isSinglePort()) {
+		auto& event = ports[port.getSingleIndex()].receiveEvent;
+		if (!event.has_value()) {
+			event = kernel.makeEvent(ResetType::OneShot);
+		}
+
+		mem.write32(messagePointer + 4, Result::Success);
+		mem.write32(messagePointer + 8, 0);
+		mem.write32(messagePointer + 12, event.value());
+	} else {
+		Helpers::panic("CAM::SetReceiving: Invalid port");
 	}
 }

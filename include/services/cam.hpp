@@ -15,11 +15,13 @@ class CAMService {
 	using Event = std::optional<Handle>;
 
 	struct Port {
-		Event bufferErrorInterruptevent = std::nullopt;
+		Event bufferErrorInterruptEvent = std::nullopt;
+		Event receiveEvent = std::nullopt;
 		u16 transferBytes;
 
 		void reset() {
-			bufferErrorInterruptevent = std::nullopt;
+			bufferErrorInterruptEvent = std::nullopt;
+			receiveEvent = std::nullopt;
 			transferBytes = 256;
 		}
 	};
@@ -41,6 +43,7 @@ class CAMService {
 	void getTransferBytes(u32 messagePointer);
 	void setContrast(u32 messagePointer);
 	void setFrameRate(u32 messagePointer);
+	void setReceiving(u32 messagePointer);
 	void setSize(u32 messagePointer);
 	void setTransferLines(u32 messagePointer);
 	void setTrimming(u32 messagePointer);
