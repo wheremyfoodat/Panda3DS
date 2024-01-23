@@ -26,6 +26,7 @@ class FSService {
 	SelfNCCHArchive selfNcch;
 	SaveDataArchive saveData;
 	SDMCArchive sdmc;
+	SDMCArchive sdmcWriteOnly;
 	NCCHArchive ncch;
 
 	// UserSaveData archives
@@ -82,9 +83,9 @@ class FSService {
 
 public:
 	FSService(Memory& mem, Kernel& kernel, const EmulatorConfig& config)
-		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem), selfNcch(mem),
-		  ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1), userSaveData2(mem, ArchiveID::UserSaveData2), kernel(kernel), config(config),
-		  systemSaveData(mem) {}
+		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem),
+		  sdmcWriteOnly(mem, true), selfNcch(mem), ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1),
+		  userSaveData2(mem, ArchiveID::UserSaveData2), kernel(kernel), config(config), systemSaveData(mem) {}
 
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
