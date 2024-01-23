@@ -6,10 +6,16 @@ namespace CAMCommands {
 	enum : u32 {
 		GetBufferErrorInterruptEvent = 0x00060040,
 		DriverInitialize = 0x00390000,
+		DriverFinalize = 0x003A0000,
 		SetTransferLines = 0x00090100,
 		GetMaxLines = 0x000A0080,
+		GetTransferBytes = 0x000C0040,
+		SetTrimming = 0x000E0080,
+		SetTrimmingParamsCenter = 0x00120140,
+		SetSize = 0x001F00C0, // Set size has different headers between cam:u and New3DS QTM module
 		SetFrameRate = 0x00200080,
 		SetContrast = 0x00230080,
+		GetSuitableY2rStandardCoefficient = 0x00360000,
 	};
 }
 
