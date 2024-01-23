@@ -97,6 +97,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 
 		case ArchiveID::SystemSaveData: return &systemSaveData;
 		case ArchiveID::SDMC: return &sdmc;
+		case ArchiveID::SDMCWriteOnly: return &sdmcWriteOnly;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
 		default:
 			Helpers::panic("Unknown archive. ID: %d\n", id);

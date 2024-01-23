@@ -5,8 +5,10 @@
 using Result::HorizonResult;
 
 class SDMCArchive : public ArchiveBase {
-public:
-	SDMCArchive(Memory& mem) : ArchiveBase(mem) {}
+	bool isWriteOnly = false;  // There's 2 variants of the SDMC archive: Regular one (Read/Write) and write-only
+
+  public:
+	SDMCArchive(Memory& mem, bool writeOnly = false) : ArchiveBase(mem), isWriteOnly(writeOnly) {}
 
 	u64 getFreeBytes() override { return 1_GB; }
 	std::string name() override { return "SDMC"; }
