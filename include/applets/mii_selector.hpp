@@ -4,7 +4,7 @@ namespace Applets {
 	class MiiSelectorApplet final : public AppletBase {
 	  public:
 		virtual const char* name() override { return "Mii Selector"; }
-		virtual Result::HorizonResult start() override;
+		virtual Result::HorizonResult start(const MemoryBlock& sharedMem, const std::vector<u8>& parameters) override;
 		virtual Result::HorizonResult receiveParameter(const Applets::Parameter& parameter) override;
 		virtual void reset() override;
 

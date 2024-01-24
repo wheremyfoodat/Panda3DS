@@ -64,6 +64,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::PreloadLibraryApplet: preloadLibraryApplet(messagePointer); break;
 		case APTCommands::PrepareToStartLibraryApplet: prepareToStartLibraryApplet(messagePointer); break;
+		case APTCommands::StartLibraryApplet: startLibraryApplet(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
@@ -138,6 +139,43 @@ void APTService::prepareToStartLibraryApplet(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::startLibraryApplet(u32 messagePointer) {
+	const u32 appID = mem.read32(messagePointer + 4);
+	const u32 bufferSize = mem.read32(messagePointer + 8);
+	const Handle parameters = mem.read32(messagePointer + 16);
+	const u32 buffer = mem.read32(messagePointer + 24);
+	log("APT::StartLibraryApplet (app ID = %X)\n", appID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	Applets::AppletBase* destApplet = appletManager.getApplet(appID);
+	if (destApplet == nullptr) {
+		Helpers::warn("APT::StartLibraryApplet: Unimplemented dest applet ID");
+	} else {
+		KernelObject* sharedMemObject = kernel.getObject(parameters);
+		if (sharedMemObject == nullptr) {
+			Helpers::warn("Couldn't find shared memory block\n");
+			return;
+		}
+
+		const MemoryBlock* sharedMem = sharedMemObject->getData<MemoryBlock>();
+		std::vector<u8> data;
+		data.reserve(bufferSize);
+
+		for (u32 i = 0; i < bufferSize; i++) {
+			data.push_back(mem.read8(buffer + i));
+		}
+
+		Helpers::warn("DONE STARTED DAT STUFF");
+		destApplet->start(*sharedMem, data);
+
+		if (resumeEvent.has_value()) {
+			kernel.signalEvent(resumeEvent.value());
+		}
+	}
 }
 
 void APTService::checkNew3DS(u32 messagePointer) {
@@ -222,7 +260,7 @@ void APTService::sendParameter(u32 messagePointer) {
 
 	const u32 parameterHandle = mem.read32(messagePointer + 24); // What dis?
 	const u32 parameterPointer = mem.read32(messagePointer + 32);
-	log("APT::SendParameter (source app = %X, dest app = %X, cmd = %X, size = %X) (Stubbed)", sourceAppID, destAppID, cmd, paramSize);
+	log("APT::SendParameter (source app = %X, dest app = %X, cmd = %X, size = %X)", sourceAppID, destAppID, cmd, paramSize);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -260,7 +298,7 @@ void APTService::sendParameter(u32 messagePointer) {
 void APTService::receiveParameter(u32 messagePointer) {
 	const u32 app = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
-	log("APT::ReceiveParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
+	log("APT::ReceiveParameter(app ID = %X, size = %04X)\n", app, size);
 
 	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
 	auto parameter = appletManager.receiveParameter();
@@ -281,7 +319,7 @@ void APTService::receiveParameter(u32 messagePointer) {
 void APTService::glanceParameter(u32 messagePointer) {
 	const u32 app = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
-	log("APT::GlanceParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
+	log("APT::GlanceParameter(app ID = %X, size = %04X)\n", app, size);
 
 	if (size > 0x1000) Helpers::panic("APT::GlanceParameter with size > 0x1000");
 	auto parameter = appletManager.glanceParameter();
