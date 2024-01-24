@@ -1,6 +1,7 @@
 #include "applets/software_keyboard.hpp"
 
 #include <cstring>
+#include <string>
 
 #include "kernel/handles.hpp"
 
@@ -38,7 +39,18 @@ Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock& sharedMem
 		return Result::Success;
 	}
 
+	// Get keyboard configuration from the application
 	std::memcpy(&config, &parameters[0], sizeof(config));
+
+	const std::u16string text = u"Pander";
+	u32 textAddress = sharedMem.addr;
+	
+	// Copy text to shared memory the app gave us
+	for (u32 i = 0; i < text.size(); i++) {
+		mem.write16(textAddress, u16(text[i]));
+		textAddress += sizeof(u16);
+	}
+	mem.write16(textAddress, 0); // Write UTF-16 null terminator
 
 	// Temporarily hardcode the pressed button to be the firs tone
 	switch (config.numButtonsM1) {
@@ -47,6 +59,9 @@ Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock& sharedMem
 		case SoftwareKeyboardButtonConfig::TripleButton: config.returnCode = SoftwareKeyboardResult::D2Click0; break;
 		case SoftwareKeyboardButtonConfig::NoButton: config.returnCode = SoftwareKeyboardResult::None; break;
 	}
+
+	config.textOffset = 0;
+	config.textLength = static_cast<u16>(text.size());
 
 	if (config.filterFlags & SoftwareKeyboardFilter::Callback) {
 		Helpers::warn("Unimplemented software keyboard profanity callback");

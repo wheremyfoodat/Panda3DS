@@ -18,6 +18,7 @@ namespace ServiceCommands {
 		ReleaseRight = 0x00170000,
 		ImportDisplayCaptureInfo = 0x00180000,
 		SaveVramSysArea = 0x00190000,
+		RestoreVramSysArea = 0x001A0000,
 		SetInternalPriorities = 0x001E0080,
 		StoreDataCache = 0x001F0082
 	};
@@ -51,6 +52,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::ImportDisplayCaptureInfo: importDisplayCaptureInfo(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
 		case ServiceCommands::ReleaseRight: releaseRight(messagePointer); break;
+		case ServiceCommands::RestoreVramSysArea: restoreVramSysArea(messagePointer); break;
 		case ServiceCommands::SaveVramSysArea: saveVramSysArea(messagePointer); break;
 		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
 		case ServiceCommands::SetBufferSwap: setBufferSwap(messagePointer); break;
@@ -478,6 +480,13 @@ void GPUService::saveVramSysArea(u32 messagePointer) {
 	Helpers::warn("GSP::GPU::SaveVramSysArea (stubbed)");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x19, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void GPUService::restoreVramSysArea(u32 messagePointer) {
+	Helpers::warn("GSP::GPU::RestoreVramSysArea (stubbed)");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1A, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
