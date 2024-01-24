@@ -1,5 +1,7 @@
 #include "applets/software_keyboard.hpp"
 
+#include "kernel/handles.hpp"
+
 using namespace Applets;
 
 void SoftwareKeyboardApplet::reset() {}
@@ -12,6 +14,7 @@ Result::HorizonResult SoftwareKeyboardApplet::receiveParameter(const Applets::Pa
 		.senderID = parameter.destID,
 		.destID = AppletIDs::Application,
 		.signal = static_cast<u32>(APTSignal::Response),
+		.object = KernelHandles::APTCaptureSharedMemHandle,
 		.data = {},
 	};
 

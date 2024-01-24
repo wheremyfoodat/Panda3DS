@@ -144,6 +144,7 @@ void Kernel::mapMemoryBlock() {
 				printf("Mapping CSND memory block\n");
 				break;
 
+			case KernelHandles::APTCaptureSharedMemHandle: break;
 			default: Helpers::panic("Mapping unknown shared memory block: %X", block);
 		}
 	} else {

@@ -274,7 +274,7 @@ void APTService::receiveParameter(u32 messagePointer) {
 	// Size of parameter data
 	mem.write32(messagePointer + 16, parameter.data.size());
 	mem.write32(messagePointer + 20, 0x10);
-	mem.write32(messagePointer + 24, 0);
+	mem.write32(messagePointer + 24, parameter.object);
 	mem.write32(messagePointer + 28, 0);
 }
 
@@ -296,7 +296,7 @@ void APTService::glanceParameter(u32 messagePointer) {
 	// Size of parameter data
 	mem.write32(messagePointer + 16, parameter.data.size());
 	mem.write32(messagePointer + 20, 0);
-	mem.write32(messagePointer + 24, 0);
+	mem.write32(messagePointer + 24, parameter.object);
 	mem.write32(messagePointer + 28, 0);
 }
 
