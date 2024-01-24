@@ -50,6 +50,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x1D: svcClearTimer(); break;
 		case 0x1E: createMemoryBlock(); break;
 		case 0x1F: mapMemoryBlock(); break;
+		case 0x20: unmapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
 		case 0x22: arbitrateAddress(); break;
 		case 0x23: svcCloseHandle(); break;

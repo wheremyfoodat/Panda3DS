@@ -137,6 +137,7 @@ public:
 	void duplicateHandle();
 	void exitThread();
 	void mapMemoryBlock();
+	void unmapMemoryBlock();
 	void queryMemory();
 	void getCurrentProcessorNumber();
 	void getProcessID();

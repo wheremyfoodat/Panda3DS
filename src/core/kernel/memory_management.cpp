@@ -207,3 +207,12 @@ void Kernel::createMemoryBlock() {
 	regs[0] = Result::Success;
 	regs[1] = makeMemoryBlock(addr, size, myPermission, otherPermission);
 }
+
+void Kernel::unmapMemoryBlock() {
+	Handle block = regs[0];
+	u32 addr = regs[1];
+	logSVC("Unmap memory block (block handle = %X, addr = %08X)\n", block, addr);
+
+	Helpers::warn("Stubbed svcUnmapMemoryBlock!");
+	regs[0] = Result::Success;
+}
