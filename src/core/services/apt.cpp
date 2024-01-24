@@ -154,6 +154,8 @@ void APTService::startLibraryApplet(u32 messagePointer) {
 	Applets::AppletBase* destApplet = appletManager.getApplet(appID);
 	if (destApplet == nullptr) {
 		Helpers::warn("APT::StartLibraryApplet: Unimplemented dest applet ID");
+		mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
+		mem.write32(messagePointer + 4, Result::Success);
 	} else {
 		KernelObject* sharedMemObject = kernel.getObject(parameters);
 		if (sharedMemObject == nullptr) {
@@ -169,12 +171,13 @@ void APTService::startLibraryApplet(u32 messagePointer) {
 			data.push_back(mem.read8(buffer + i));
 		}
 
-		Helpers::warn("DONE STARTED DAT STUFF");
-		destApplet->start(*sharedMem, data);
-
+		Result::HorizonResult result = destApplet->start(*sharedMem, data, appID);
 		if (resumeEvent.has_value()) {
 			kernel.signalEvent(resumeEvent.value());
 		}
+
+		mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
+		mem.write32(messagePointer + 4, result);
 	}
 }
 
