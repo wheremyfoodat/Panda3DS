@@ -17,6 +17,7 @@ class PTMService {
 	void getAdapterState(u32 messagePointer);
 	void getBatteryChargeState(u32 messagePointer);
 	void getBatteryLevel(u32 messagePointer);
+	void getPedometerState(u32 messagePointer);
 	void getStepHistory(u32 messagePointer);
 	void getStepHistoryAll(u32 messagePointer);
 	void getTotalStepCount(u32 messagePointer);
