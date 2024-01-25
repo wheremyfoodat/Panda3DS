@@ -13,16 +13,16 @@ jobs:
     strategy:
       matrix:
         build_type:
-          - Debug
-          - Release
+          - debug
+          - release
 
     steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
-
-    - name: Set BUILD_TYPE variable
-      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
 
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@v1.2.0
@@ -34,7 +34,7 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
-        distribution: 'zulu' # See 'Supported distributions' for available options
+        distribution: 'zulu'
         java-version: '17'
 
     - name: Configure CMake
@@ -66,16 +66,16 @@ jobs:
     strategy:
       matrix:
         build_type:
-          - Debug
-          - Release
+          - debug
+          - release
 
     steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
-
-    - name: Set BUILD_TYPE variable
-      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
 
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@v1.2.0
@@ -87,7 +87,7 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
-        distribution: 'zulu' # See 'Supported distributions' for available options
+        distribution: 'zulu'
         java-version: '17'
 
     - name: Configure CMake
