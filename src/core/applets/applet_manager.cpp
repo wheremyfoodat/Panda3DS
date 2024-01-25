@@ -4,13 +4,14 @@
 
 using namespace Applets;
 
-AppletManager::AppletManager(Memory& mem) : miiSelector(mem, nextParameter), swkbd(mem, nextParameter) {}
+AppletManager::AppletManager(Memory& mem) : miiSelector(mem, nextParameter), swkbd(mem, nextParameter), error(mem, nextParameter) {}
 
 void AppletManager::reset() {
 	nextParameter = std::nullopt;
 
 	miiSelector.reset();
 	swkbd.reset();
+	error.reset();
 }
 
 AppletBase* AppletManager::getApplet(u32 id) {
@@ -20,6 +21,9 @@ AppletBase* AppletManager::getApplet(u32 id) {
 
 		case AppletIDs::SoftwareKeyboard:
 		case AppletIDs::SoftwareKeyboard2: return &swkbd;
+
+		case AppletIDs::ErrDisp:
+		case AppletIDs::ErrDisp2: return &error;
 
 		default: return nullptr;
 	}

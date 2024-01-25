@@ -10,8 +10,6 @@ using namespace Applets;
 void SoftwareKeyboardApplet::reset() {}
 
 Result::HorizonResult SoftwareKeyboardApplet::receiveParameter(const Applets::Parameter& parameter) {
-	Helpers::warn("Software keyboard: Unimplemented ReceiveParameter");
-
 	switch (parameter.signal) {
 		// Signal == request -> Applet is asking swkbd for a shared memory handle for backing up the framebuffer before opening the applet
 		case u32(APTSignal::Request): {

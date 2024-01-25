@@ -188,7 +188,9 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp src/core/fs/archive_system_save_data.cpp
 )
 
-set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp)
+set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
+                        src/core/applets/error_applet.cpp
+)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
@@ -244,7 +246,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
-                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp
+                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
 )
 
 cmrc_add_resource_library(

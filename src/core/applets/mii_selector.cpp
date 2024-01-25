@@ -35,8 +35,6 @@ Result::HorizonResult MiiSelectorApplet::start(const MemoryBlock* sharedMem, con
 }
 
 Result::HorizonResult MiiSelectorApplet::receiveParameter(const Applets::Parameter& parameter) {
-	Helpers::warn("Mii Selector: Unimplemented ReceiveParameter");
-
 	Applets::Parameter param = Applets::Parameter{
 		.senderID = parameter.destID,
 		.destID = AppletIDs::Application,
