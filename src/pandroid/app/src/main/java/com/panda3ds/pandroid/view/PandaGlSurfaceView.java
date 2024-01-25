@@ -44,4 +44,11 @@ public class PandaGlSurfaceView extends GLSurfaceView implements TouchScreenNode
 	public void onTouch(TouchEvent event) {
 		onTouchScreenPress(renderer, event);
 	}
+
+	@Override
+        public void onSurfaceDestroyed(SurfaceHolder holder) {
+        super.onSurfaceDestroyed(holder);
+        // Release resources from the renderer when the surface is destroyed
+        renderer.releaseResources();
+    }
 }
