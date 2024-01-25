@@ -24,7 +24,11 @@
         <item name="android:textSize">32sp</item>
     </style>
 
-    <style name="Theme.Pandroid" parent="Base.Theme.Pandroid" />
+    <style name="Theme.Pandroid" parent="Base.Theme.Pandroid">
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
 
     <style name="Theme.Pandroid.Custom" parent="Theme.Pandroid">
         <item name="android:textColor">?colorOnSurface</item>
