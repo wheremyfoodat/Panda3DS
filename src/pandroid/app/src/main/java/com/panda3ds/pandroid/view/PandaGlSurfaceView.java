@@ -46,6 +46,13 @@ public class PandaGlSurfaceView extends GLSurfaceView implements TouchScreenNode
 	}
 
 	@Override
+        public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        super.onSurfaceChanged(holder, format, width, height);
+        // Update the dimensions in the renderer when the surface changes
+        renderer.onSurfaceChanged(newWidth, newHeight);
+        }
+
+	@Override
         public void onSurfaceDestroyed(SurfaceHolder holder) {
         super.onSurfaceDestroyed(holder);
         // Release resources from the renderer when the surface is destroyed
