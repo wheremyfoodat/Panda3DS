@@ -123,6 +123,18 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		displayLayout.update(screenWidth, screenHeight);
 	}
 
+	public void releaseResources() {
+        // Release any OpenGL resources, textures, buffers, etc.
+        if (screenTexture != 0) {
+            glDeleteTextures(1, new int[] {screenTexture}, 0);
+        }
+        if (screenFbo != 0) {
+            glDeleteFramebuffers(1, new int[] {screenFbo}, 0);
+        }
+
+        AlberDriver.Shutdown();
+	}
+
 	@Override
 	public void setLayout(ConsoleLayout layout) {
 		displayLayout = layout;
