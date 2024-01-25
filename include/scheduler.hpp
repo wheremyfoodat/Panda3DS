@@ -48,6 +48,8 @@ struct Scheduler {
 
 		// Clear any pending events
 		events.clear();
+		addEvent(Scheduler::EventType::VBlank, arm11Clock / 60);
+
 		// Add a dummy event to always keep the scheduler non-empty
 		addEvent(EventType::Panic, std::numeric_limits<u64>::max());
 	}

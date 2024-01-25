@@ -48,7 +48,6 @@ void Emulator::reset(ReloadOption reload) {
 	memory.reset();
 	// Reset scheduler and add a VBlank event
 	scheduler.reset();
-	scheduler.addEvent(Scheduler::EventType::VBlank, CPU::ticksPerSec / 60);
 
 	// Kernel must be reset last because it depends on CPU/Memory state
 	kernel.reset();
