@@ -94,6 +94,7 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:textColorPrimary">@color/text_secondary_dark</item>
         <item name="android:textColorSecondary">@color/text_secondary_dark</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
 </resources>
