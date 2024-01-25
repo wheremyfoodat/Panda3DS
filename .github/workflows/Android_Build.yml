@@ -21,6 +21,9 @@ jobs:
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@v1.2.0
       with:
@@ -31,18 +34,18 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
-        distribution: 'zulu'  # See 'Supported distributions' for available options
+        distribution: 'zulu' # See 'Supported distributions' for available options
         java-version: '17'
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=x86_64 -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON
+      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=x86_64 -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON
 
     - name: Build
       run: |
         # Apply patch for GLES compatibility
         git apply ./.github/gles.patch
         # Build the project with CMake
-        cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+        cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
         # Move the generated library to the appropriate location
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/x86_64/
         # Build the Android app with Gradle
@@ -71,6 +74,9 @@ jobs:
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@v1.2.0
       with:
@@ -81,18 +87,18 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
-        distribution: 'zulu'  # See 'Supported distributions' for available options
+        distribution: 'zulu' # See 'Supported distributions' for available options
         java-version: '17'
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_CXX_FLAGS="-march=armv8-a+crypto"
+      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_CXX_FLAGS="-march=armv8-a+crypto"
 
     - name: Build
       run: |
         # Apply patch for GLES compatibility
         git apply ./.github/gles.patch
         # Build the project with CMake
-        cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+        cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
         # Move the generated library to the appropriate location
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/arm64-v8a/
         # Build the Android app with Gradle
