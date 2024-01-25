@@ -1,6 +1,7 @@
 #pragma once
 #include <optional>
 
+#include "applets/error_applet.hpp"
 #include "applets/mii_selector.hpp"
 #include "applets/software_keyboard.hpp"
 #include "helpers.hpp"
@@ -11,6 +12,7 @@ namespace Applets {
 	class AppletManager {
 		MiiSelectorApplet miiSelector;
 		SoftwareKeyboardApplet swkbd;
+		ErrorApplet error;
 		std::optional<Applets::Parameter> nextParameter = std::nullopt;
 
 	  public:
