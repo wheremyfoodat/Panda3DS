@@ -33,9 +33,14 @@ Result::HorizonResult SoftwareKeyboardApplet::receiveParameter(const Applets::Pa
 	return Result::Success;
 }
 
-Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock& sharedMem, const std::vector<u8>& parameters, u32 appID) {
+Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock* sharedMem, const std::vector<u8>& parameters, u32 appID) {
 	if (parameters.size() < sizeof(SoftwareKeyboardConfig)) {
 		Helpers::warn("SoftwareKeyboard::Start: Invalid size for keyboard configuration");
+		return Result::Success;
+	}
+
+	if (sharedMem == nullptr) {
+		Helpers::warn("SoftwareKeyboard: Missing shared memory");
 		return Result::Success;
 	}
 
@@ -43,7 +48,7 @@ Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock& sharedMem
 	std::memcpy(&config, &parameters[0], sizeof(config));
 
 	const std::u16string text = u"Pand";
-	u32 textAddress = sharedMem.addr;
+	u32 textAddress = sharedMem->addr;
 	
 	// Copy text to shared memory the app gave us
 	for (u32 i = 0; i < text.size(); i++) {

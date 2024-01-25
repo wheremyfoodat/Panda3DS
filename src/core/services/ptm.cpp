@@ -76,7 +76,7 @@ void PTMService::getBatteryChargeState(u32 messagePointer) {
 
 void PTMService::getPedometerState(u32 messagePointer) {
 	log("PTM::GetPedometerState");
-	const bool countingSteps = true;
+	constexpr bool countingSteps = true;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);

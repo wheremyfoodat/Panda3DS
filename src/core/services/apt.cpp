@@ -155,12 +155,8 @@ void APTService::startLibraryApplet(u32 messagePointer) {
 		mem.write32(messagePointer + 4, Result::Success);
 	} else {
 		KernelObject* sharedMemObject = kernel.getObject(parameters);
-		if (sharedMemObject == nullptr) {
-			Helpers::warn("Couldn't find shared memory block\n");
-			return;
-		}
 
-		const MemoryBlock* sharedMem = sharedMemObject->getData<MemoryBlock>();
+		const MemoryBlock* sharedMem = sharedMemObject ? sharedMemObject->getData<MemoryBlock>() : nullptr;
 		std::vector<u8> data;
 		data.reserve(bufferSize);
 
@@ -168,7 +164,7 @@ void APTService::startLibraryApplet(u32 messagePointer) {
 			data.push_back(mem.read8(buffer + i));
 		}
 
-		Result::HorizonResult result = destApplet->start(*sharedMem, data, appID);
+		Result::HorizonResult result = destApplet->start(sharedMem, data, appID);
 		if (resumeEvent.has_value()) {
 			kernel.signalEvent(resumeEvent.value());
 		}
