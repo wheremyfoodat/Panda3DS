@@ -21,7 +21,7 @@ public class PandaGlSurfaceView extends GLSurfaceView implements TouchScreenNode
 		if (Debug.isDebuggerConnected()) {
 			setDebugFlags(DEBUG_LOG_GL_CALLS);
 		}
-		renderer = new PandaGlRenderer(romPath);
+		renderer = new PandaGlRenderer(romPath, context.getResources()); // pass resources if needed
 		setRenderer(renderer);
 	}
 
