@@ -42,7 +42,7 @@ Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock& sharedMem
 	// Get keyboard configuration from the application
 	std::memcpy(&config, &parameters[0], sizeof(config));
 
-	const std::u16string text = u"Pander";
+	const std::u16string text = u"Pand";
 	u32 textAddress = sharedMem.addr;
 	
 	// Copy text to shared memory the app gave us
@@ -55,13 +55,16 @@ Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock& sharedMem
 	// Temporarily hardcode the pressed button to be the firs tone
 	switch (config.numButtonsM1) {
 		case SoftwareKeyboardButtonConfig::SingleButton: config.returnCode = SoftwareKeyboardResult::D0Click; break;
-		case SoftwareKeyboardButtonConfig::DualButton: config.returnCode = SoftwareKeyboardResult::D1Click0; break;
-		case SoftwareKeyboardButtonConfig::TripleButton: config.returnCode = SoftwareKeyboardResult::D2Click0; break;
+		case SoftwareKeyboardButtonConfig::DualButton: config.returnCode = SoftwareKeyboardResult::D1Click1; break;
+		case SoftwareKeyboardButtonConfig::TripleButton: config.returnCode = SoftwareKeyboardResult::D2Click2; break;
 		case SoftwareKeyboardButtonConfig::NoButton: config.returnCode = SoftwareKeyboardResult::None; break;
+		default: Helpers::warn("Software keyboard: Invalid button mode specification"); break;
 	}
 
 	config.textOffset = 0;
 	config.textLength = static_cast<u16>(text.size());
+	static_assert(offsetof(SoftwareKeyboardConfig, textOffset) == 324);
+	static_assert(offsetof(SoftwareKeyboardConfig, textLength) == 328);
 
 	if (config.filterFlags & SoftwareKeyboardFilter::Callback) {
 		Helpers::warn("Unimplemented software keyboard profanity callback");
