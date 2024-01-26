@@ -66,7 +66,7 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 			return false;
 		}
 
-		manager.beginTransaction().replace(R.id.fragment_container, fragment).commitNow();
+		manager.beginTransaction().replace(R.id.fragment_container, fragment).commit();
 		return true;
 	}
 }
