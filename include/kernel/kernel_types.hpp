@@ -123,6 +123,7 @@ struct Thread {
     bool waitAll;
     // For WaitSynchronizationN: The "out" pointer
     u32 outPointer;
+	u64 wakeupTick;
 
     // Thread context used for switching between threads
     std::array<u32, 16> gprs;

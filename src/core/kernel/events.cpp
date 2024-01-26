@@ -127,6 +127,7 @@ void Kernel::waitSynchronization1() {
 		t.waitList.resize(1);
 		t.status = ThreadStatus::WaitSync1;
 		t.sleepTick = cpu.getTicks();
+		t.wakeupTick = getWakeupTick(ns);
 		t.waitingNanoseconds = ns;
 		t.waitList[0] = handle;
 
@@ -222,6 +223,7 @@ void Kernel::waitSynchronizationN() {
 		t.outPointer = outPointer;
 		t.waitingNanoseconds = ns;
 		t.sleepTick = cpu.getTicks();
+		t.wakeupTick = getWakeupTick(ns);
 
 		for (s32 i = 0; i < handleCount; i++) {
 			t.waitList[i] = waitObjects[i].first; // Add object to this thread's waitlist
