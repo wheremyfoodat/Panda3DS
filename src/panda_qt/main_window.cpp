@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <fstream>
 
+#include "cheats.hpp"
+
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
@@ -48,8 +50,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
-	cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
-	cheatsEditorAction->setEnabled(false);
+	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
 	connect(cheatsEditorAction, &QAction::triggered, this, &MainWindow::openCheatsEditor);
@@ -63,7 +64,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
 	configWindow = new ConfigWindow(this);
-	cheatsEditor = new CheatsWindow(emu, {});
+	cheatsEditor = new CheatsWindow(emu, {}, this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
 
 	auto args = QCoreApplication::arguments();
@@ -245,7 +246,6 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {
 		case MessageType::LoadROM:
 			emu->loadROM(*message.path.p);
-			cheatsEditorAction->setEnabled(true);
 			// Clean up the allocated path
 			delete message.path.p;
 			break;
@@ -254,6 +254,21 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getLua().loadString(*message.string.str);
 			delete message.string.str;
 			break;
+
+		case MessageType::EditCheat: {
+			u32 handle = message.cheat.c->handle;
+			const std::vector<uint8_t>& cheat = message.cheat.c->cheat;
+			const std::function<void(u32)>& callback = message.cheat.c->callback;
+			bool isEditing = handle != badCheatHandle;
+			if (isEditing) {
+				emu->getCheats().removeCheat(handle);
+				u32 handle = emu->getCheats().addCheat(cheat.data(), cheat.size());
+			} else {
+				u32 handle = emu->getCheats().addCheat(cheat.data(), cheat.size());
+				callback(handle);
+			}
+			delete message.cheat.c;
+		} break;
 
 		case MessageType::Pause: emu->pause(); break;
 		case MessageType::Resume: emu->resume(); break;
@@ -325,5 +340,17 @@ void MainWindow::loadLuaScript(const std::string& code) {
 
 	// Make a copy of the code on the heap to send via the message queue
 	message.string.str = new std::string(code);
+	sendMessage(message);
+}
+
+void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback) {
+	EmulatorMessage message{.type = MessageType::EditCheat};
+
+	CheatMessage* c = new CheatMessage();
+	c->handle = handle;
+	c->cheat = cheat;
+	c->callback = callback;
+
+	message.cheat.c = c;
 	sendMessage(message);
 }

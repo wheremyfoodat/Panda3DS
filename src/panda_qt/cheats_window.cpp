@@ -1,313 +1,248 @@
 #include "panda_qt/cheats_window.hpp"
-#include <qlistwidget.h>
-#include <QVBoxLayout>
-#include <QListWidget>
-#include <QPushButton>
-#include <QLabel>
+
 #include <QCheckBox>
 #include <QDialog>
-#include <QLineEdit>
-#include <QTextEdit>
 #include <QDialogButtonBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QPushButton>
+#include <QTextEdit>
+#include <QVBoxLayout>
+
 #include "cheats.hpp"
 #include "emulator.hpp"
+#include "panda_qt/main_window.hpp"
 
-using CheatHandle = u32;
+MainWindow* mainWindow = nullptr;
 
-CheatHandle BAD_CHEAT = 0xFFFFFFFF;
-
-struct CheatMetadata
-{
-    CheatHandle handle = BAD_CHEAT;
-    std::string name = "New cheat";
-    std::string code;
-    bool enabled = true;
+struct CheatMetadata {
+	u32 handle = badCheatHandle;
+	std::string name = "New cheat";
+	std::string code;
+	bool enabled = true;
 };
 
-u32 addCheat(Emulator* emu, u8* data, size_t size)
-{
-    if ((size % 8) != 0) {
-		return BAD_CHEAT;
+class CheatEntryWidget : public QWidget {
+  public:
+	CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListWidget* parent);
+
+	void Update() {
+		name->setText(metadata.name.c_str());
+		enabled->setChecked(metadata.enabled);
+		update();
 	}
 
-	Cheats::Cheat cheat;
-	cheat.enabled = true;
-	cheat.type = Cheats::CheatType::ActionReplay;
-
-	for (size_t i = 0; i < size; i += 8) {
-		auto read32 = [](const u8* ptr) { return (u32(ptr[3]) << 24) | (u32(ptr[2]) << 16) | (u32(ptr[1]) << 8) | u32(ptr[0]); };
-
-		// Data is passed to us in big endian so we bswap
-		u32 firstWord = Common::swap32(read32(data + i));
-		u32 secondWord = Common::swap32(read32(data + i + 4));
-		cheat.instructions.insert(cheat.instructions.end(), {firstWord, secondWord});
+	void Remove() {
+		emu->getCheats().removeCheat(metadata.handle);
+		cheatList->takeItem(cheatList->row(listItem));
+		deleteLater();
 	}
 
-	return emu->getCheats().addCheat(cheat);
-}
+	const CheatMetadata& GetMetadata() { return metadata; }
 
-class CheatEntryWidget : public QWidget
-{
-public:
-    CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListWidget* parent);
+	void SetMetadata(const CheatMetadata& metadata) { this->metadata = metadata; }
 
-    void Update()
-    {
-        name->setText(metadata.name.c_str());
-        enabled->setChecked(metadata.enabled);
-        update();
-    }
+  private:
+	void checkboxChanged(int state);
+	void editClicked();
 
-    void Remove()
-    {
-        emu->getCheats().removeCheat(metadata.handle);
-        cheatList->takeItem(cheatList->row(listItem));
-        deleteLater();
-    }
-
-    const CheatMetadata& GetMetadata()
-    {
-        return metadata;
-    }
-
-    void SetMetadata(const CheatMetadata& metadata)
-    {
-        this->metadata = metadata;
-    }
-
-private:
-    void checkboxChanged(int state);
-    void editClicked();
-
-    Emulator* emu;
-    CheatMetadata metadata;
-    u32 handle;
-    QLabel* name;
-    QCheckBox* enabled;
-    QListWidget* cheatList;
-    QListWidgetItem* listItem;
+	Emulator* emu;
+	CheatMetadata metadata;
+	u32 handle;
+	QLabel* name;
+	QCheckBox* enabled;
+	QListWidget* cheatList;
+	QListWidgetItem* listItem;
 };
 
-class CheatEditDialog : public QDialog
-{
-public:
-    CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry);
+class CheatEditDialog : public QDialog {
+  public:
+	CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry);
 
-    void accepted();
-    void rejected();
-private:
-    Emulator* emu;
-    CheatEntryWidget& cheatEntry;
-    QTextEdit* codeEdit;
-    QLineEdit* nameEdit;
+	void accepted();
+	void rejected();
+
+  private:
+	Emulator* emu;
+	CheatEntryWidget& cheatEntry;
+	QTextEdit* codeEdit;
+	QLineEdit* nameEdit;
 };
 
 CheatEntryWidget::CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListWidget* parent)
-    : QWidget(), emu(emu), metadata(metadata), cheatList(parent)
-{
-    QHBoxLayout* layout = new QHBoxLayout;
+	: QWidget(), emu(emu), metadata(metadata), cheatList(parent) {
+	QHBoxLayout* layout = new QHBoxLayout;
 
-    enabled = new QCheckBox;
-    enabled->setChecked(metadata.enabled);
+	enabled = new QCheckBox;
+	enabled->setChecked(metadata.enabled);
 
-    name = new QLabel(metadata.name.c_str());
-    QPushButton* buttonEdit = new QPushButton(tr("Edit"));
+	name = new QLabel(metadata.name.c_str());
+	QPushButton* buttonEdit = new QPushButton(tr("Edit"));
 
-    connect(enabled, &QCheckBox::stateChanged, this, &CheatEntryWidget::checkboxChanged);
-    connect(buttonEdit, &QPushButton::clicked, this, &CheatEntryWidget::editClicked);
+	connect(enabled, &QCheckBox::stateChanged, this, &CheatEntryWidget::checkboxChanged);
+	connect(buttonEdit, &QPushButton::clicked, this, &CheatEntryWidget::editClicked);
 
-    layout->addWidget(enabled);
-    layout->addWidget(name);
-    layout->addWidget(buttonEdit);
-    setLayout(layout);
+	layout->addWidget(enabled);
+	layout->addWidget(name);
+	layout->addWidget(buttonEdit);
+	setLayout(layout);
 
-    listItem = new QListWidgetItem;
-    listItem->setSizeHint(sizeHint());
-    parent->addItem(listItem);
-    parent->setItemWidget(listItem, this);
+	listItem = new QListWidgetItem;
+	listItem->setSizeHint(sizeHint());
+	parent->addItem(listItem);
+	parent->setItemWidget(listItem, this);
 }
 
-void CheatEntryWidget::checkboxChanged(int state)
-{
-    bool enabled = state == Qt::Checked;
-    if (metadata.handle == BAD_CHEAT)
-    {
-        printf("Cheat handle is bad, this shouldn't happen\n");
-        return;
-    }
+void CheatEntryWidget::checkboxChanged(int state) {
+	bool enabled = state == Qt::Checked;
+	if (metadata.handle == badCheatHandle) {
+		printf("Cheat handle is bad, this shouldn't happen\n");
+		return;
+	}
 
-    if (enabled)
-    {
-        emu->getCheats().enableCheat(metadata.handle);
-        metadata.enabled = true;
-    }
-    else
-    {
-        emu->getCheats().disableCheat(metadata.handle);
-        metadata.enabled = false;
-    }
+	if (enabled) {
+		emu->getCheats().enableCheat(metadata.handle);
+		metadata.enabled = true;
+	} else {
+		emu->getCheats().disableCheat(metadata.handle);
+		metadata.enabled = false;
+	}
 }
 
-void CheatEntryWidget::editClicked()
-{
-    CheatEditDialog* dialog = new CheatEditDialog(emu, *this);
-    dialog->show();
+void CheatEntryWidget::editClicked() {
+	CheatEditDialog* dialog = new CheatEditDialog(emu, *this);
+	dialog->show();
 }
 
-CheatEditDialog::CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry) : QDialog(), emu(emu), cheatEntry(cheatEntry)
-{
-    setAttribute(Qt::WA_DeleteOnClose);
-    setModal(true);
+CheatEditDialog::CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry) : QDialog(), emu(emu), cheatEntry(cheatEntry) {
+	setAttribute(Qt::WA_DeleteOnClose);
+	setModal(true);
 
-    QVBoxLayout* layout = new QVBoxLayout;
-    const CheatMetadata& metadata = cheatEntry.GetMetadata();
-    codeEdit = new QTextEdit;
-    nameEdit = new QLineEdit;
-    nameEdit->setText(metadata.name.c_str());
-    nameEdit->setPlaceholderText(tr("Cheat name"));
-    layout->addWidget(nameEdit);
+	QVBoxLayout* layout = new QVBoxLayout;
+	const CheatMetadata& metadata = cheatEntry.GetMetadata();
+	codeEdit = new QTextEdit;
+	nameEdit = new QLineEdit;
+	nameEdit->setText(metadata.name.c_str());
+	nameEdit->setPlaceholderText(tr("Cheat name"));
+	layout->addWidget(nameEdit);
 
-    QFont font;
-    font.setFamily("Courier");
-    font.setFixedPitch(true);
-    font.setPointSize(10);
-    codeEdit->setFont(font);
+	QFont font;
+	font.setFamily("Courier");
+	font.setFixedPitch(true);
+	font.setPointSize(10);
+	codeEdit->setFont(font);
 
-    if (metadata.code.size() != 0)
-    {
-        // Nicely format it like so:
-        // 01234567 89ABCDEF
-        // 01234567 89ABCDEF
-        std::string formattedCode;
-        for (size_t i = 0; i < metadata.code.size(); i += 2)
-        {
-            if (i != 0) {
-                if (i % 8 == 0 && i % 16 != 0)
-                {
-                    formattedCode += " ";
-                }
-                else if (i % 16 == 0)
-                {
-                    formattedCode += "\n";
-                }
-            }
+	if (metadata.code.size() != 0) {
+		// Nicely format it like so:
+		// 01234567 89ABCDEF
+		// 01234567 89ABCDEF
+		std::string formattedCode;
+		for (size_t i = 0; i < metadata.code.size(); i += 2) {
+			if (i != 0) {
+				if (i % 8 == 0 && i % 16 != 0) {
+					formattedCode += " ";
+				} else if (i % 16 == 0) {
+					formattedCode += "\n";
+				}
+			}
 
-            formattedCode += metadata.code[i];
-            formattedCode += metadata.code[i + 1];
-        }
-        codeEdit->setText(formattedCode.c_str());
-    }
+			formattedCode += metadata.code[i];
+			formattedCode += metadata.code[i + 1];
+		}
+		codeEdit->setText(formattedCode.c_str());
+	}
 
-    layout->addWidget(codeEdit);
-    setLayout(layout);
+	layout->addWidget(codeEdit);
+	setLayout(layout);
 
-    auto buttons = QDialogButtonBox::Ok | QDialogButtonBox::Cancel;
-    QDialogButtonBox* button_box = new QDialogButtonBox(buttons);
-    layout->addWidget(button_box);
+	auto buttons = QDialogButtonBox::Ok | QDialogButtonBox::Cancel;
+	QDialogButtonBox* button_box = new QDialogButtonBox(buttons);
+	layout->addWidget(button_box);
 
-    connect(button_box, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(button_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(this, &QDialog::rejected, this, &CheatEditDialog::rejected);
-    connect(this, &QDialog::accepted, this, &CheatEditDialog::accepted);
+	connect(button_box, &QDialogButtonBox::accepted, this, &QDialog::accept);
+	connect(button_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
+	connect(this, &QDialog::rejected, this, &CheatEditDialog::rejected);
+	connect(this, &QDialog::accepted, this, &CheatEditDialog::accepted);
 }
 
-void CheatEditDialog::accepted()
-{
-    QString code = codeEdit->toPlainText();
-    code.replace(QRegularExpression("[^0-9a-fA-F]"), "");
+void CheatEditDialog::accepted() {
+	QString code = codeEdit->toPlainText();
+	code.replace(QRegularExpression("[^0-9a-fA-F]"), "");
 
-    CheatMetadata metadata = cheatEntry.GetMetadata();
-    bool isEditing = metadata.handle != BAD_CHEAT;
-    metadata.name = nameEdit->text().toStdString();
-    metadata.code = code.toStdString();
+	CheatMetadata metadata = cheatEntry.GetMetadata();
+	metadata.name = nameEdit->text().toStdString();
+	metadata.code = code.toStdString();
 
-    std::vector<uint8_t> bytes;
-    for (size_t i = 0; i < metadata.code.size(); i += 2)
-    {
-        std::string hex = metadata.code.substr(i, 2);
-        bytes.push_back((uint8_t)std::stoul(hex, nullptr, 16));
-    }
+	std::vector<uint8_t> bytes;
+	for (size_t i = 0; i < metadata.code.size(); i += 2) {
+		std::string hex = metadata.code.substr(i, 2);
+		bytes.push_back((uint8_t)std::stoul(hex, nullptr, 16));
+	}
 
-    if (isEditing)
-    {
-        emu->getCheats().removeCheat(metadata.handle);
-        u32 handle = addCheat(emu, bytes.data(), bytes.size());
-        metadata.handle = handle;
-        cheatEntry.SetMetadata(metadata);
-    }
-    else
-    {
-        if (metadata.name.empty())
-        {
-            metadata.name = tr("Cheat code").toStdString();
-        }
-        u32 handle = addCheat(emu, bytes.data(), bytes.size());
-        metadata.handle = handle;
-        cheatEntry.SetMetadata(metadata);
-    }
-
-    cheatEntry.Update();
+	mainWindow->editCheat(cheatEntry.GetMetadata().handle, bytes, [this](u32 handle) {
+		CheatMetadata metadata = cheatEntry.GetMetadata();
+		metadata.handle = handle;
+		cheatEntry.SetMetadata(metadata);
+		cheatEntry.Update();
+	});
 }
 
-void CheatEditDialog::rejected()
-{
-    bool isEditing = cheatEntry.GetMetadata().handle != BAD_CHEAT;
+void CheatEditDialog::rejected() {
+	bool isEditing = cheatEntry.GetMetadata().handle != badCheatHandle;
 
-    if (!isEditing)
-    {
-        // Was adding a cheat but pressed cancel
-        cheatEntry.Remove();
-    }
+	if (!isEditing) {
+		// Was adding a cheat but pressed cancel
+		cheatEntry.Remove();
+	}
 }
 
 CheatsWindow::CheatsWindow(Emulator* emu, const std::filesystem::path& cheatPath, QWidget* parent)
-: QWidget(parent, Qt::Window), emu(emu), cheatPath(cheatPath)
-{
-    QVBoxLayout* layout = new QVBoxLayout;
-    layout->setContentsMargins(6, 6, 6, 6);
-    setLayout(layout);
+	: QWidget(parent, Qt::Window), emu(emu), cheatPath(cheatPath) {
+    mainWindow = static_cast<MainWindow*>(parent);
 
-    cheatList = new QListWidget;
-    layout->addWidget(cheatList);
+	QVBoxLayout* layout = new QVBoxLayout;
+	layout->setContentsMargins(6, 6, 6, 6);
+	setLayout(layout);
 
-    QWidget* buttonBox = new QWidget;
-    QHBoxLayout* buttonLayout = new QHBoxLayout;
+	cheatList = new QListWidget;
+	layout->addWidget(cheatList);
 
-    QPushButton* buttonAdd = new QPushButton(tr("Add"));
-    QPushButton* buttonRemove = new QPushButton(tr("Remove"));
+	QWidget* buttonBox = new QWidget;
+	QHBoxLayout* buttonLayout = new QHBoxLayout;
 
-    connect(buttonAdd, &QPushButton::clicked, this, &CheatsWindow::addEntry);
-    connect(buttonRemove, &QPushButton::clicked, this, &CheatsWindow::removeClicked);
+	QPushButton* buttonAdd = new QPushButton(tr("Add"));
+	QPushButton* buttonRemove = new QPushButton(tr("Remove"));
 
-    buttonLayout->addWidget(buttonAdd);
-    buttonLayout->addWidget(buttonRemove);
-    buttonBox->setLayout(buttonLayout);
+	connect(buttonAdd, &QPushButton::clicked, this, &CheatsWindow::addEntry);
+	connect(buttonRemove, &QPushButton::clicked, this, &CheatsWindow::removeClicked);
 
-    layout->addWidget(buttonBox);
+	buttonLayout->addWidget(buttonAdd);
+	buttonLayout->addWidget(buttonRemove);
+	buttonBox->setLayout(buttonLayout);
 
-    // TODO: load cheats from saved cheats per game
-    // for (const CheatMetadata& metadata : getSavedCheats())
-    // {
-    //     new CheatEntryWidget(emu, metadata, cheatList);
-    // }
+	layout->addWidget(buttonBox);
+
+	// TODO: load cheats from saved cheats per game
+	// for (const CheatMetadata& metadata : getSavedCheats())
+	// {
+	//     new CheatEntryWidget(emu, metadata, cheatList);
+	// }
 }
 
-void CheatsWindow::addEntry()
-{
-    // CheatEntryWidget is added to the list when it's created
-    CheatEntryWidget* entry = new CheatEntryWidget(emu, {BAD_CHEAT, "New cheat", "", true}, cheatList);
-    CheatEditDialog* dialog = new CheatEditDialog(emu, *entry);
-    dialog->show();
+void CheatsWindow::addEntry() {
+	// CheatEntryWidget is added to the list when it's created
+	CheatEntryWidget* entry = new CheatEntryWidget(emu, {badCheatHandle, "New cheat", "", true}, cheatList);
+	CheatEditDialog* dialog = new CheatEditDialog(emu, *entry);
+	dialog->show();
 }
 
-void CheatsWindow::removeClicked()
-{
-    QListWidgetItem* item = cheatList->currentItem();
-    if (item == nullptr)
-    {
-        return;
-    }
+void CheatsWindow::removeClicked() {
+	QListWidgetItem* item = cheatList->currentItem();
+	if (item == nullptr) {
+		return;
+	}
 
-    CheatEntryWidget* entry = static_cast<CheatEntryWidget*>(cheatList->itemWidget(item));
-    entry->Remove();
+	CheatEntryWidget* entry = static_cast<CheatEntryWidget*>(cheatList->itemWidget(item));
+	entry->Remove();
 }

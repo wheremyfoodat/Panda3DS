@@ -17,12 +17,19 @@
 #include "panda_qt/text_editor.hpp"
 #include "services/hid.hpp"
 
+struct CheatMessage
+{
+	u32 handle;
+	std::vector<uint8_t> cheat;
+	std::function<void(u32)> callback;
+};
+
 class MainWindow : public QMainWindow {
 	Q_OBJECT
 
   private:
 	// Types of messages we might send from the GUI thread to the emulator thread
-	enum class MessageType { LoadROM, Reset, Pause, Resume, TogglePause, DumpRomFS, PressKey, ReleaseKey, LoadLuaScript };
+	enum class MessageType { LoadROM, Reset, Pause, Resume, TogglePause, DumpRomFS, PressKey, ReleaseKey, LoadLuaScript, EditCheat };
 
 	// Tagged union representing our message queue messages
 	struct EmulatorMessage {
@@ -40,6 +47,10 @@ class MainWindow : public QMainWindow {
 			struct {
 				std::string* str;
 			} string;
+
+			struct {
+				CheatMessage* c;
+			} cheat;
 		};
 	};
 
@@ -58,8 +69,6 @@ class MainWindow : public QMainWindow {
 	CheatsWindow* cheatsEditor;
 	TextEditorWindow* luaEditor;
 	QMenuBar* menuBar = nullptr;
-
-	QAction* cheatsEditorAction = nullptr;
 
 	void swapEmuBuffer();
 	void emuThreadMainLoop();
@@ -83,4 +92,5 @@ class MainWindow : public QMainWindow {
 	void keyPressEvent(QKeyEvent* event) override;
 	void keyReleaseEvent(QKeyEvent* event) override;
 	void loadLuaScript(const std::string& code);
+	void editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback);
 };

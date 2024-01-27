@@ -9,6 +9,8 @@
 // Forward-declare this since it's just passed and we don't want to include memory.hpp and increase compile time
 class Memory;
 
+constexpr u32 badCheatHandle = 0xFFFFFFFF;
+
 class Cheats {
   public:
 	enum class CheatType {
@@ -24,6 +26,7 @@ class Cheats {
 
 	Cheats(Memory& mem, HIDService& hid);
 	u32 addCheat(const Cheat& cheat);
+	u32 addCheat(const u8* data, size_t size);
 	void removeCheat(u32 id);
 	void enableCheat(u32 id);
 	void disableCheat(u32 id);
