@@ -187,6 +187,7 @@ void CheatEditDialog::accepted() {
 	CheatMetadata metadata = cheatEntry.getMetadata();
 	metadata.name = nameEdit->text().toStdString();
 	metadata.code = code.toStdString();
+	cheatEntry.setMetadata(metadata);
 
 	std::vector<u8> bytes;
 	for (size_t i = 0; i < metadata.code.size(); i += 2) {
