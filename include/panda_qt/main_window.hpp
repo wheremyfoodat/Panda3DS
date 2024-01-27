@@ -30,7 +30,20 @@ class MainWindow : public QMainWindow {
 
   private:
 	// Types of messages we might send from the GUI thread to the emulator thread
-	enum class MessageType { LoadROM, Reset, Pause, Resume, TogglePause, DumpRomFS, PressKey, ReleaseKey, LoadLuaScript, EditCheat };
+	enum class MessageType {
+		LoadROM,
+		Reset,
+		Pause,
+		Resume,
+		TogglePause,
+		DumpRomFS,
+		PressKey,
+		ReleaseKey,
+		SetCirclePadX,
+		SetCirclePadY,
+		LoadLuaScript,
+		EditCheat,
+	};
 
 	// Tagged union representing our message queue messages
 	struct EmulatorMessage {
@@ -44,6 +57,10 @@ class MainWindow : public QMainWindow {
 			struct {
 				u32 key;
 			} key;
+
+			struct {
+				s16 value;
+			} circlepad;
 
 			struct {
 				std::string* str;
