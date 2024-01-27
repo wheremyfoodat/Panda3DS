@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <fstream>
 
+#include "cheats.hpp"
+
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
@@ -48,19 +50,22 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
+	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
+	connect(cheatsEditorAction, &QAction::triggered, this, &MainWindow::openCheatsEditor);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
+	emu = new Emulator();
+	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
+
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
 	configWindow = new ConfigWindow(this);
+	cheatsEditor = new CheatsWindow(emu, {}, this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
-
-	emu = new Emulator();
-	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -184,6 +189,7 @@ MainWindow::~MainWindow() {
 	delete menuBar;
 	delete aboutWindow;
 	delete configWindow;
+	delete cheatsEditor;
 	delete luaEditor;
 }
 
@@ -233,6 +239,7 @@ void MainWindow::showAboutMenu() {
 }
 
 void MainWindow::openLuaEditor() { luaEditor->show(); }
+void MainWindow::openCheatsEditor() { cheatsEditor->show(); }
 
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {
@@ -247,12 +254,29 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			delete message.string.str;
 			break;
 
+		case MessageType::EditCheat: {
+			u32 handle = message.cheat.c->handle;
+			const std::vector<uint8_t>& cheat = message.cheat.c->cheat;
+			const std::function<void(u32)>& callback = message.cheat.c->callback;
+			bool isEditing = handle != Cheats::badCheatHandle;
+			if (isEditing) {
+				emu->getCheats().removeCheat(handle);
+				u32 handle = emu->getCheats().addCheat(cheat.data(), cheat.size());
+			} else {
+				u32 handle = emu->getCheats().addCheat(cheat.data(), cheat.size());
+				callback(handle);
+			}
+			delete message.cheat.c;
+		} break;
+
 		case MessageType::Pause: emu->pause(); break;
 		case MessageType::Resume: emu->resume(); break;
 		case MessageType::TogglePause: emu->togglePause(); break;
 		case MessageType::Reset: emu->reset(Emulator::ReloadOption::Reload); break;
 		case MessageType::PressKey: emu->getServiceManager().getHID().pressKey(message.key.key); break;
 		case MessageType::ReleaseKey: emu->getServiceManager().getHID().releaseKey(message.key.key); break;
+		case MessageType::SetCirclePadX: emu->getServiceManager().getHID().setCirclepadX(message.circlepad.value); break;
+		case MessageType::SetCirclePadY: emu->getServiceManager().getHID().setCirclepadY(message.circlepad.value); break;
 	}
 }
 
@@ -260,7 +284,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 	auto pressKey = [this](u32 key) {
 		EmulatorMessage message{.type = MessageType::PressKey};
 		message.key.key = key;
+		sendMessage(message);
+	};
 
+	auto setCirclePad = [this](MessageType type, s16 value) {
+		EmulatorMessage message{.type = type};
+		message.circlepad.value = value;
 		sendMessage(message);
 	};
 
@@ -272,6 +301,11 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 		case Qt::Key_Q: pressKey(HID::Keys::L); break;
 		case Qt::Key_P: pressKey(HID::Keys::R); break;
+
+		case Qt::Key_W: setCirclePad(MessageType::SetCirclePadY, 0x9C); break;
+		case Qt::Key_A: setCirclePad(MessageType::SetCirclePadX, -0x9C); break;
+		case Qt::Key_S: setCirclePad(MessageType::SetCirclePadY, -0x9C); break;
+		case Qt::Key_D: setCirclePad(MessageType::SetCirclePadX, 0x9C); break;
 
 		case Qt::Key_Right: pressKey(HID::Keys::Right); break;
 		case Qt::Key_Left: pressKey(HID::Keys::Left); break;
@@ -289,7 +323,12 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 	auto releaseKey = [this](u32 key) {
 		EmulatorMessage message{.type = MessageType::ReleaseKey};
 		message.key.key = key;
+		sendMessage(message);
+	};
 
+	auto releaseCirclePad = [this](MessageType type) {
+		EmulatorMessage message{.type = type};
+		message.circlepad.value = 0;
 		sendMessage(message);
 	};
 
@@ -301,6 +340,12 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 
 		case Qt::Key_Q: releaseKey(HID::Keys::L); break;
 		case Qt::Key_P: releaseKey(HID::Keys::R); break;
+
+		case Qt::Key_W:
+		case Qt::Key_S: releaseCirclePad(MessageType::SetCirclePadY); break;
+
+		case Qt::Key_A:
+		case Qt::Key_D: releaseCirclePad(MessageType::SetCirclePadX); break;
 
 		case Qt::Key_Right: releaseKey(HID::Keys::Right); break;
 		case Qt::Key_Left: releaseKey(HID::Keys::Left); break;
@@ -317,5 +362,17 @@ void MainWindow::loadLuaScript(const std::string& code) {
 
 	// Make a copy of the code on the heap to send via the message queue
 	message.string.str = new std::string(code);
+	sendMessage(message);
+}
+
+void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback) {
+	EmulatorMessage message{.type = MessageType::EditCheat};
+
+	CheatMessage* c = new CheatMessage();
+	c->handle = handle;
+	c->cheat = cheat;
+	c->callback = callback;
+
+	message.cheat.c = c;
 	sendMessage(message);
 }

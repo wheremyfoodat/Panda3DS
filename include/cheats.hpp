@@ -24,6 +24,7 @@ class Cheats {
 
 	Cheats(Memory& mem, HIDService& hid);
 	u32 addCheat(const Cheat& cheat);
+	u32 addCheat(const u8* data, size_t size);
 	void removeCheat(u32 id);
 	void enableCheat(u32 id);
 	void disableCheat(u32 id);
@@ -32,6 +33,7 @@ class Cheats {
 
 	void clear();
 	bool haveCheats() const { return cheatsLoaded; }
+	static constexpr u32 badCheatHandle = 0xFFFFFFFF;
 
   private:
 	ActionReplay ar;  // An ActionReplay cheat machine for executing CTRPF codes
