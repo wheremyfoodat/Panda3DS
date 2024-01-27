@@ -12,6 +12,7 @@
 #include "emulator.hpp"
 #include "panda_qt/about_window.hpp"
 #include "panda_qt/config_window.hpp"
+#include "panda_qt/cheats_window.hpp"
 #include "panda_qt/screen.hpp"
 #include "panda_qt/text_editor.hpp"
 #include "services/hid.hpp"
@@ -54,8 +55,11 @@ class MainWindow : public QMainWindow {
 	ScreenWidget screen;
 	AboutWindow* aboutWindow;
 	ConfigWindow* configWindow;
+	CheatsWindow* cheatsEditor;
 	TextEditorWindow* luaEditor;
 	QMenuBar* menuBar = nullptr;
+
+	QAction* cheatsEditorAction = nullptr;
 
 	void swapEmuBuffer();
 	void emuThreadMainLoop();
@@ -63,6 +67,7 @@ class MainWindow : public QMainWindow {
 	void selectROM();
 	void dumpRomFS();
 	void openLuaEditor();
+	void openCheatsEditor();
 	void showAboutMenu();
 	void sendMessage(const EmulatorMessage& message);
 	void dispatchMessage(const EmulatorMessage& message);

@@ -48,19 +48,23 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
+	cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
+	cheatsEditorAction->setEnabled(false);
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
+	connect(cheatsEditorAction, &QAction::triggered, this, &MainWindow::openCheatsEditor);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
+	emu = new Emulator();
+	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
+
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
 	configWindow = new ConfigWindow(this);
+	cheatsEditor = new CheatsWindow(emu, {});
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
-
-	emu = new Emulator();
-	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -184,6 +188,7 @@ MainWindow::~MainWindow() {
 	delete menuBar;
 	delete aboutWindow;
 	delete configWindow;
+	delete cheatsEditor;
 	delete luaEditor;
 }
 
@@ -234,10 +239,13 @@ void MainWindow::showAboutMenu() {
 
 void MainWindow::openLuaEditor() { luaEditor->show(); }
 
+void MainWindow::openCheatsEditor() { cheatsEditor->show(); }
+
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {
 		case MessageType::LoadROM:
 			emu->loadROM(*message.path.p);
+			cheatsEditorAction->setEnabled(true);
 			// Clean up the allocated path
 			delete message.path.p;
 			break;
