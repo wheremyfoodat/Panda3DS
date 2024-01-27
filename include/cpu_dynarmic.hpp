@@ -179,6 +179,8 @@ class CPU {
 		return scheduler;
 	}
 
+    void addTicks(u64 ticks) { env.AddTicks(ticks); }
+
     void clearCache() { jit->ClearCache(); }
     void runFrame();
 };

@@ -95,6 +95,7 @@ public:
 	void releaseMutex(Mutex* moo);
 	void cancelTimer(Timer* timer);
 	void signalTimer(Handle timerHandle, Timer* timer);
+	u64 getWakeupTick(s64 ns);
 
 	// Wake up the thread with the highest priority out of all threads in the waitlist
 	// Returns the index of the woken up thread
