@@ -9,6 +9,8 @@
 #include <QPushButton>
 #include <QTextEdit>
 #include <QVBoxLayout>
+#include <QTimer>
+#include <functional>
 
 #include "cheats.hpp"
 #include "emulator.hpp"
@@ -22,6 +24,19 @@ struct CheatMetadata {
 	std::string code;
 	bool enabled = true;
 };
+
+void dispatchToMainThread(std::function<void()> callback)
+{
+    QTimer* timer = new QTimer();
+    timer->moveToThread(qApp->thread());
+    timer->setSingleShot(true);
+    QObject::connect(timer, &QTimer::timeout, [=]()
+    {
+        callback();
+        timer->deleteLater();
+    });
+    QMetaObject::invokeMethod(timer, "start", Qt::QueuedConnection, Q_ARG(int, 0));
+}
 
 class CheatEntryWidget : public QWidget {
   public:
@@ -181,16 +196,22 @@ void CheatEditDialog::accepted() {
 	}
 
 	mainWindow->editCheat(cheatEntry.GetMetadata().handle, bytes, [this](u32 handle) {
-		CheatMetadata metadata = cheatEntry.GetMetadata();
-		metadata.handle = handle;
-		cheatEntry.SetMetadata(metadata);
-		cheatEntry.Update();
+        dispatchToMainThread([this, handle]() {
+            if (handle == badCheatHandle) {
+                cheatEntry.Remove();
+                return;
+            } else {
+                CheatMetadata metadata = cheatEntry.GetMetadata();
+                metadata.handle = handle;
+                cheatEntry.SetMetadata(metadata);
+                cheatEntry.Update();
+            }
+        });
 	});
 }
 
 void CheatEditDialog::rejected() {
 	bool isEditing = cheatEntry.GetMetadata().handle != badCheatHandle;
-
 	if (!isEditing) {
 		// Was adding a cheat but pressed cancel
 		cheatEntry.Remove();

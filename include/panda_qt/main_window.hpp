@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <atomic>
 #include <filesystem>
+#include <functional>
 #include <mutex>
 #include <thread>
 #include <vector>
