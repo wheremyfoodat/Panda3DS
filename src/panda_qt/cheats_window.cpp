@@ -54,9 +54,8 @@ class CheatEntryWidget : public QWidget {
 		deleteLater();
 	}
 
-	const CheatMetadata& GetMetadata() { return metadata; }
-
-	void SetMetadata(const CheatMetadata& metadata) { this->metadata = metadata; }
+	const CheatMetadata& getMetadata() { return metadata; }
+	void setMetadata(const CheatMetadata& metadata) { this->metadata = metadata; }
 
   private:
 	void checkboxChanged(int state);
@@ -135,7 +134,7 @@ CheatEditDialog::CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry) : 
 	setModal(true);
 
 	QVBoxLayout* layout = new QVBoxLayout;
-	const CheatMetadata& metadata = cheatEntry.GetMetadata();
+	const CheatMetadata& metadata = cheatEntry.getMetadata();
 	codeEdit = new QTextEdit;
 	nameEdit = new QLineEdit;
 	nameEdit->setText(metadata.name.c_str());
@@ -172,11 +171,11 @@ CheatEditDialog::CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry) : 
 	setLayout(layout);
 
 	auto buttons = QDialogButtonBox::Ok | QDialogButtonBox::Cancel;
-	QDialogButtonBox* button_box = new QDialogButtonBox(buttons);
-	layout->addWidget(button_box);
+	QDialogButtonBox* buttonBox = new QDialogButtonBox(buttons);
+	layout->addWidget(buttonBox);
 
-	connect(button_box, &QDialogButtonBox::accepted, this, &QDialog::accept);
-	connect(button_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
+	connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+	connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 	connect(this, &QDialog::rejected, this, &CheatEditDialog::rejected);
 	connect(this, &QDialog::accepted, this, &CheatEditDialog::accepted);
 }
@@ -185,25 +184,25 @@ void CheatEditDialog::accepted() {
 	QString code = codeEdit->toPlainText();
 	code.replace(QRegularExpression("[^0-9a-fA-F]"), "");
 
-	CheatMetadata metadata = cheatEntry.GetMetadata();
+	CheatMetadata metadata = cheatEntry.getMetadata();
 	metadata.name = nameEdit->text().toStdString();
 	metadata.code = code.toStdString();
 
-	std::vector<uint8_t> bytes;
+	std::vector<u8> bytes;
 	for (size_t i = 0; i < metadata.code.size(); i += 2) {
 		std::string hex = metadata.code.substr(i, 2);
-		bytes.push_back((uint8_t)std::stoul(hex, nullptr, 16));
+		bytes.push_back((u8)std::stoul(hex, nullptr, 16));
 	}
 
-	mainWindow->editCheat(cheatEntry.GetMetadata().handle, bytes, [this](u32 handle) {
+	mainWindow->editCheat(cheatEntry.getMetadata().handle, bytes, [this](u32 handle) {
         dispatchToMainThread([this, handle]() {
             if (handle == badCheatHandle) {
                 cheatEntry.Remove();
                 return;
             } else {
-                CheatMetadata metadata = cheatEntry.GetMetadata();
+                CheatMetadata metadata = cheatEntry.getMetadata();
                 metadata.handle = handle;
-                cheatEntry.SetMetadata(metadata);
+                cheatEntry.setMetadata(metadata);
                 cheatEntry.Update();
             }
         });
@@ -211,9 +210,9 @@ void CheatEditDialog::accepted() {
 }
 
 void CheatEditDialog::rejected() {
-	bool isEditing = cheatEntry.GetMetadata().handle != badCheatHandle;
+	bool isEditing = cheatEntry.getMetadata().handle != badCheatHandle;
 	if (!isEditing) {
-		// Was adding a cheat but pressed cancel
+		// Was adding a cheat but user pressed cancel
 		cheatEntry.Remove();
 	}
 }
