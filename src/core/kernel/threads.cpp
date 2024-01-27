@@ -77,6 +77,7 @@ std::optional<int> Kernel::getNextThread() {
 }
 
 u64 Kernel::getWakeupTick(s64 ns) {
+	// Timeout == -1 means that the thread doesn't plan on waking up automatically
 	if (ns == -1) {
 		return std::numeric_limits<u64>::max();
 	}
