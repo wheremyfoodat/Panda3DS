@@ -9,7 +9,7 @@ struct EmulatorConfig {
 #ifdef PANDA3DS_X64_HOST
 	static constexpr bool shaderJitDefault = true;
 #else
-	static constexpr bool shaderJitDefault = false;
+	static constexpr bool shaderJitDefault = true;
 #endif
 
 	bool shaderJitEnabled = shaderJitDefault;
