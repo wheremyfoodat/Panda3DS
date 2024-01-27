@@ -393,8 +393,6 @@ void Kernel::sleepThread(s64 ns) {
 		Thread& t = threads[currentThreadIndex];
 
 		t.status = ThreadStatus::WaitSleep;
-		t.waitingNanoseconds = ns;
-		t.sleepTick = cpu.getTicks();
 		t.wakeupTick = getWakeupTick(ns);
 
 		requireReschedule();
