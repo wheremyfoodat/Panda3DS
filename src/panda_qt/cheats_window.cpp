@@ -19,14 +19,13 @@
 MainWindow* mainWindow = nullptr;
 
 struct CheatMetadata {
-	u32 handle = badCheatHandle;
+	u32 handle = Cheats::badCheatHandle;
 	std::string name = "New cheat";
 	std::string code;
 	bool enabled = true;
 };
 
-void dispatchToMainThread(std::function<void()> callback)
-{
+void dispatchToMainThread(std::function<void()> callback) {
     QTimer* timer = new QTimer();
     timer->moveToThread(qApp->thread());
     timer->setSingleShot(true);
@@ -110,7 +109,7 @@ CheatEntryWidget::CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListW
 
 void CheatEntryWidget::checkboxChanged(int state) {
 	bool enabled = state == Qt::Checked;
-	if (metadata.handle == badCheatHandle) {
+	if (metadata.handle == Cheats::badCheatHandle) {
 		printf("Cheat handle is bad, this shouldn't happen\n");
 		return;
 	}
@@ -196,22 +195,22 @@ void CheatEditDialog::accepted() {
 	}
 
 	mainWindow->editCheat(cheatEntry.getMetadata().handle, bytes, [this](u32 handle) {
-        dispatchToMainThread([this, handle]() {
-            if (handle == badCheatHandle) {
-                cheatEntry.Remove();
-                return;
-            } else {
-                CheatMetadata metadata = cheatEntry.getMetadata();
-                metadata.handle = handle;
-                cheatEntry.setMetadata(metadata);
-                cheatEntry.Update();
-            }
-        });
+		dispatchToMainThread([this, handle]() {
+			if (handle == Cheats::badCheatHandle) {
+				cheatEntry.Remove();
+				return;
+			} else {
+				CheatMetadata metadata = cheatEntry.getMetadata();
+				metadata.handle = handle;
+				cheatEntry.setMetadata(metadata);
+				cheatEntry.Update();
+			}
+		});
 	});
 }
 
 void CheatEditDialog::rejected() {
-	bool isEditing = cheatEntry.getMetadata().handle != badCheatHandle;
+	bool isEditing = cheatEntry.getMetadata().handle != Cheats::badCheatHandle;
 	if (!isEditing) {
 		// Was adding a cheat but user pressed cancel
 		cheatEntry.Remove();
@@ -253,7 +252,7 @@ CheatsWindow::CheatsWindow(Emulator* emu, const std::filesystem::path& cheatPath
 
 void CheatsWindow::addEntry() {
 	// CheatEntryWidget is added to the list when it's created
-	CheatEntryWidget* entry = new CheatEntryWidget(emu, {badCheatHandle, "New cheat", "", true}, cheatList);
+	CheatEntryWidget* entry = new CheatEntryWidget(emu, {Cheats::badCheatHandle, "New cheat", "", true}, cheatList);
 	CheatEditDialog* dialog = new CheatEditDialog(emu, *entry);
 	dialog->show();
 }

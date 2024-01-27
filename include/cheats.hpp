@@ -9,8 +9,6 @@
 // Forward-declare this since it's just passed and we don't want to include memory.hpp and increase compile time
 class Memory;
 
-constexpr u32 badCheatHandle = 0xFFFFFFFF;
-
 class Cheats {
   public:
 	enum class CheatType {
@@ -35,6 +33,7 @@ class Cheats {
 
 	void clear();
 	bool haveCheats() const { return cheatsLoaded; }
+	static constexpr u32 badCheatHandle = 0xFFFFFFFF;
 
   private:
 	ActionReplay ar;  // An ActionReplay cheat machine for executing CTRPF codes

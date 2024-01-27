@@ -18,8 +18,7 @@
 #include "panda_qt/text_editor.hpp"
 #include "services/hid.hpp"
 
-struct CheatMessage
-{
+struct CheatMessage {
 	u32 handle;
 	std::vector<uint8_t> cheat;
 	std::function<void(u32)> callback;

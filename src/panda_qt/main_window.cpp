@@ -239,7 +239,6 @@ void MainWindow::showAboutMenu() {
 }
 
 void MainWindow::openLuaEditor() { luaEditor->show(); }
-
 void MainWindow::openCheatsEditor() { cheatsEditor->show(); }
 
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
@@ -259,7 +258,7 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			u32 handle = message.cheat.c->handle;
 			const std::vector<uint8_t>& cheat = message.cheat.c->cheat;
 			const std::function<void(u32)>& callback = message.cheat.c->callback;
-			bool isEditing = handle != badCheatHandle;
+			bool isEditing = handle != Cheats::badCheatHandle;
 			if (isEditing) {
 				emu->getCheats().removeCheat(handle);
 				u32 handle = emu->getCheats().addCheat(cheat.data(), cheat.size());
