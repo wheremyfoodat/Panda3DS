@@ -139,6 +139,65 @@ void ActionReplay::executeDType(const Cheat& cheat, u32 instruction) {
 	switch (instruction) {
 		case 0xD3000000: offset1 = cheat[pc++]; break;
 		case 0xD3000001: offset2 = cheat[pc++]; break;
+
+		case 0xD6000000:
+			write32(*activeOffset + cheat[pc++], u32(*activeData));
+			*activeOffset += 4;
+			break;
+
+		case 0xD6000001:
+			write32(*activeOffset + cheat[pc++], u32(data1));
+			*activeOffset += 4;
+			break;
+
+		case 0xD6000002:
+			write32(*activeOffset + cheat[pc++], u32(data2));
+			*activeOffset += 4;
+			break;
+
+		case 0xD7000000:
+			write16(*activeOffset + cheat[pc++], u16(*activeData));
+			*activeOffset += 2;
+			break;
+
+		case 0xD7000001:
+			write16(*activeOffset + cheat[pc++], u16(data1));
+			*activeOffset += 2;
+			break;
+
+		case 0xD7000002:
+			write16(*activeOffset + cheat[pc++], u16(data2));
+			*activeOffset += 2;
+			break;
+
+		case 0xD8000000:
+			write8(*activeOffset + cheat[pc++], u8(*activeData));
+			*activeOffset += 1;
+			break;
+
+		case 0xD8000001:
+			write8(*activeOffset + cheat[pc++], u8(data1));
+			*activeOffset += 1;
+			break;
+
+		case 0xD8000002:
+			write8(*activeOffset + cheat[pc++], u8(data2));
+			*activeOffset += 1;
+			break;
+
+
+		case 0xD9000000: *activeData = read32(cheat[pc++] + *activeOffset); break;
+		case 0xD9000001: data1 = read32(cheat[pc++] + *activeOffset); break;
+		case 0xD9000002: data2 = read32(cheat[pc++] + *activeOffset); break;
+
+		case 0xDA000000: *activeData = read16(cheat[pc++] + *activeOffset); break;
+		case 0xDA000001: data1 = read16(cheat[pc++] + *activeOffset); break;
+		case 0xDA000002: data2 = read16(cheat[pc++] + *activeOffset); break;
+
+		case 0xDB000000: *activeData = read8(cheat[pc++] + *activeOffset); break;
+		case 0xDB000001: data1 = read8(cheat[pc++] + *activeOffset); break;
+		case 0xDB000002: data2 = read8(cheat[pc++] + *activeOffset); break;
+
 		case 0xDC000000: *activeOffset += cheat[pc++]; break;
 
 		// DD000000 XXXXXXXX - if KEYPAD has value XXXXXXXX execute next block
