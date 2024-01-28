@@ -1,6 +1,8 @@
 #ifdef PANDA3DS_ENABLE_LUA
 #include "lua_manager.hpp"
 
+void LoadImguiBindings(lua_State* lState);
+
 void LuaManager::initialize() {
 	L = luaL_newstate();  // Open Lua
 
@@ -12,6 +14,7 @@ void LuaManager::initialize() {
 
 	luaL_openlibs(L);
 	initializeThunks();
+	LoadImguiBindings(L);
 
 	initialized = true;
 	haveScript = false;
@@ -91,7 +94,6 @@ void LuaManager::reset() {
 
 // Initialize C++ thunks for Lua code to call here
 // All code beyond this point is terrible and full of global state, don't judge
-
 Memory* LuaManager::g_memory = nullptr;
 
 #define MAKE_MEMORY_FUNCTIONS(size)                                 \
