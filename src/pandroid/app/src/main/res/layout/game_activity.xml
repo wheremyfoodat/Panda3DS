@@ -39,6 +39,15 @@
         android:layout_height="match_parent"
         android:padding="25dp">
 
+        <TextView
+            android:id="@+id/fpsTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|left"
+            android:layout_marginTop="5dp"
+            android:textColor="#FFFFFF"
+            tools:text="60 FPS" />
+
         <CheckBox
             android:id="@+id/hide_screen_controller"
             android:layout_width="24dp"
