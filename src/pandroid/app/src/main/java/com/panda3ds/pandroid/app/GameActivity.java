@@ -121,7 +121,6 @@ public class GameActivity extends BaseActivity {
 
     // Add this method for onDrawFrame
     public void onDrawFrame(GL10 gl) {
-        super.onDrawFrame(gl);
 
         // Increment frameCount for FPS calculation
         frameCount++;
