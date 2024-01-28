@@ -104,6 +104,7 @@ jobs:
         # Build the Android app with Gradle
         cd src/pandroid
         ./gradlew assemble${{ env.BUILD_TYPE }}
+        ls -R app/build/outputs
         cd ../..
 
     - name: Upload artifacts
