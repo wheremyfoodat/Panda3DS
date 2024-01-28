@@ -132,8 +132,12 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		
 		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable keyboard controls
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable gamepad controls
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;      // Enable docking
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;    // Enable multi-viewport
+		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
+		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
 
 		// Setup Dear ImGui style
 		ImGui::StyleColorsDark();
