@@ -261,6 +261,9 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/imgui/imgui_tables.cpp
                              third_party/imgui/imgui_widgets.cpp
                              third_party/imgui/imgui_demo.cpp
+                             third_party/imgui/backends/imgui_impl_opengl3.cpp
+                             third_party/imgui/backends/imgui_impl_sdl2.cpp
+                             third_party/imgui-lua-bindings/imgui_lua_bindings.cpp
 
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
