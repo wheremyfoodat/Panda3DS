@@ -133,11 +133,10 @@ public class GameActivity extends BaseActivity {
 
             // Find the TextView and update it with the FPS value
             runOnUiThread(() -> {
-            TextView fpsTextView = findViewById(R.id.fpsTextView);
-            if (fpsTextView != null) {
+                TextView fpsTextView = findViewById(R.id.fpsTextView);
                 fpsTextView.setText(String.format(Locale.getDefault(), "FPS: %.2f", fps));
-            }
-        });
+             });
+
 
             // Reset counters for the next second
             frameCount = 0;
