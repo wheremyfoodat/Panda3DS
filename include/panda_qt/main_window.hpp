@@ -42,6 +42,8 @@ class MainWindow : public QMainWindow {
 		SetCirclePadY,
 		LoadLuaScript,
 		EditCheat,
+		PressTouchscreen,
+		ReleaseTouchscreen,
 	};
 
 	// Tagged union representing our message queue messages
@@ -68,6 +70,11 @@ class MainWindow : public QMainWindow {
 			struct {
 				CheatMessage* c;
 			} cheat;
+
+			struct {
+				u16 x;
+				u16 y;
+			} touchscreen;
 		};
 	};
 
@@ -108,6 +115,9 @@ class MainWindow : public QMainWindow {
 
 	void keyPressEvent(QKeyEvent* event) override;
 	void keyReleaseEvent(QKeyEvent* event) override;
+	void mousePressEvent(QMouseEvent* event) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+
 	void loadLuaScript(const std::string& code);
 	void editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback);
 };
