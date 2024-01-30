@@ -21,6 +21,7 @@ import com.panda3ds.pandroid.input.InputMap;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.view.PandaGlSurfaceView;
 import com.panda3ds.pandroid.view.PandaLayoutController;
+import com.panda3ds.pandroid.view.utils.PerformanceView;
 
 public class GameActivity extends BaseActivity {
 	private final DrawerFragment drawerFragment = new DrawerFragment();
@@ -56,6 +57,11 @@ public class GameActivity extends BaseActivity {
 		((CheckBox) findViewById(R.id.hide_screen_controller)).setChecked(GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE));
 
 		getSupportFragmentManager().beginTransaction().replace(R.id.drawer_fragment, drawerFragment).commitNow();
+
+		if (GlobalConfig.get(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY)) {
+			PerformanceView view = new PerformanceView(this);
+			((FrameLayout) findViewById(R.id.panda_gl_frame)).addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+		}
 	}
 
 	@Override

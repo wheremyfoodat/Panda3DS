@@ -9,6 +9,7 @@ import android.util.Log;
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.GameUtils;
+import com.panda3ds.pandroid.utils.PerformanceMonitor;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
 import com.panda3ds.pandroid.view.renderer.layout.DefaultScreenLayout;
@@ -41,6 +42,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		if (screenFbo != 0) {
 			glDeleteFramebuffers(1, new int[] {screenFbo}, 0);
 		}
+		PerformanceMonitor.destroy();
 		super.finalize();
 	}
 
@@ -92,6 +94,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 			GameUtils.removeGame(game);
 			GameUtils.addGame(GameMetadata.applySMDH(game, smdh));
 		}
+		PerformanceMonitor.initialize(getBackendName());
 	}
 
 	public void onDrawFrame(GL10 unused) {
@@ -114,6 +117,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 				screenHeight - bottomScreen.bottom, GL_COLOR_BUFFER_BIT, GL_LINEAR
 			);
 		}
+		PerformanceMonitor.runFrame();
 	}
 
 	public void onSurfaceChanged(GL10 unused, int width, int height) {

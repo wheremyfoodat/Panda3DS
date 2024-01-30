@@ -70,6 +70,23 @@ public class FileUtils {
         return parseFile(path).exists();
     }
 
+    public static void rename(String path, String newName){
+        parseFile(path).renameTo(newName);
+    }
+
+    public static void delete(String path){
+        DocumentFile file = parseFile(path);
+        if (file.exists()){
+            if (file.isDirectory()){
+                String[] children = listFiles(path);
+                for (String child: children){
+                    delete(path+"/"+child);
+                }
+            }
+            file.delete();
+        }
+    }
+
     public static boolean createDir(String path, String name) {
         DocumentFile folder = parseFile(path);
         if (folder.findFile(name) != null) {

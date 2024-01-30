@@ -46,5 +46,7 @@
 
         <activity android:name=".app.preferences.InputMapActivity"
             android:configChanges="density|orientation|screenSize"/>
+
+        <service android:name=".app.services.LoggerService" android:process=":logger_service"/>
     </application>
 </manifest>

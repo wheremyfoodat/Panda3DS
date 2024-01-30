@@ -5,7 +5,6 @@ import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.utils.Constants;
 
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 
 public class GlobalConfig {
@@ -19,6 +18,8 @@ public class GlobalConfig {
 
     public static DataModel data;
 
+    public static final Key<Boolean> KEY_SHOW_PERFORMANCE_OVERLAY = new Key<>("dev.performanceOverlay", false);
+    public static final Key<Boolean> KEY_LOGGER_SERVICE = new Key<>("dev.loggerService", false);
     public static final Key<Integer> KEY_APP_THEME = new Key<>("app.theme", THEME_ANDROID);
     public static final Key<Boolean> KEY_SCREEN_GAMEPAD_VISIBLE = new Key<>("app.screen_gamepad.visible", true);
 

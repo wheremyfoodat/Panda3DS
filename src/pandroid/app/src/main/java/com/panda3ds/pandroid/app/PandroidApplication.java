@@ -2,11 +2,13 @@ package com.panda3ds.pandroid.app;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.services.LoggerService;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.input.InputMap;
 import com.panda3ds.pandroid.utils.GameUtils;
@@ -24,6 +26,10 @@ public class PandroidApplication extends Application {
 		GameUtils.initialize();
 		InputMap.initialize();
 		AlberDriver.Setup();
+
+		if (GlobalConfig.get(GlobalConfig.KEY_LOGGER_SERVICE)) {
+			startService(new Intent(this, LoggerService.class));
+		}
 	}
 
 	public static int getThemeId() {
