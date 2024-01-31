@@ -16,6 +16,9 @@ JavaVM* jvm = nullptr;
 
 #define AlberFunction(type, name) JNIEXPORT type JNICALL Java_com_panda3ds_pandroid_AlberDriver_##name
 
+#define MAKE_SETTING(functionName, type, settingName) \
+AlberFunction(void, functionName) (JNIEnv* env, jobject obj, type value) { emulator->getConfig().settingName = value; }
+
 void throwException(JNIEnv* env, const char* message) {
 	jclass exceptionClass = env->FindClass("java/lang/RuntimeException");
 	env->ThrowNew(exceptionClass, message);
@@ -34,6 +37,8 @@ JNIEnv* jniEnv() {
 }
 
 extern "C" {
+
+MAKE_SETTING(setShaderJitEnabled, jboolean, shaderJitEnabled)
 
 AlberFunction(void, Setup)(JNIEnv* env, jobject obj) { env->GetJavaVM(&jvm); }
 AlberFunction(void, Pause)(JNIEnv* env, jobject obj) { emulator->pause(); }

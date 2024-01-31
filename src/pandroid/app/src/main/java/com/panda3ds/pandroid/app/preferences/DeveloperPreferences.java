@@ -20,6 +20,7 @@ public class DeveloperPreferences extends BasePreferenceFragment {
         setActivityTitle(R.string.developer_options);
 
         setItemClick("performanceMonitor", pref -> GlobalConfig.set(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY, ((SwitchPreference) pref).isChecked()));
+        setItemClick("shaderJit", pref -> GlobalConfig.set(GlobalConfig.KEY_SHADER_JIT, ((SwitchPreference) pref).isChecked()));
         setItemClick("loggerService", pref -> {
             boolean checked = ((SwitchPreference) pref).isChecked();
             Context ctx = PandroidApplication.getAppContext();
@@ -43,5 +44,6 @@ public class DeveloperPreferences extends BasePreferenceFragment {
     private void refresh() {
         ((SwitchPreference) findPreference("performanceMonitor")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY));
         ((SwitchPreference) findPreference("loggerService")).setChecked(GlobalConfig.get(GlobalConfig.KEY_LOGGER_SERVICE));
+        ((SwitchPreference) findPreference("shaderJit")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
     }
 }

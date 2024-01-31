@@ -7,6 +7,7 @@ import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
 import com.panda3ds.pandroid.AlberDriver;
+import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.utils.PerformanceMonitor;
@@ -80,6 +81,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		AlberDriver.Initialize();
+		AlberDriver.setShaderJitEnabled(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
 		AlberDriver.LoadRom(romPath);
 
 		// Load the SMDH

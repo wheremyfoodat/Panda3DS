@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatTextView;
 
+import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.utils.PerformanceMonitor;
 
 public class PerformanceView extends AppCompatTextView {
@@ -46,7 +47,7 @@ public class PerformanceView extends AppCompatTextView {
 
         debug += "<b>FPS: </b>"+PerformanceMonitor.getFps()+"<br>";
         debug += "<b>RAM: </b>"+Math.round(((float) memoryUsageMb / memoryTotalMb)*100)+"%  ("+memoryUsageMb+"MB/"+memoryTotalMb+"MB)<br>";
-        debug += "<b>BACKEND: </b>"+PerformanceMonitor.getBackend()+"<br>";
+        debug += "<b>BACKEND: </b>"+PerformanceMonitor.getBackend()+(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT) ? " + JIT" : "")+"<br>";
         setText(Html.fromHtml(debug, Html.FROM_HTML_MODE_COMPACT));
         postDelayed(this::refresh, 250);
     }

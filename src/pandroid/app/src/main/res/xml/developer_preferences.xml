@@ -14,4 +14,16 @@
         app:title="@string/pref_logger_service_title"
         android:summary="@string/pref_logger_service_summary"/>
 
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/graphics">
+
+        <SwitchPreference
+            app:key="shaderJit"
+            app:title="@string/pref_shader_jit_title"
+            app:summary="@string/pref_shader_jit_summary"
+            app:iconSpaceReserved="false"/>
+
+    </PreferenceCategory>
+
 </PreferenceScreen>

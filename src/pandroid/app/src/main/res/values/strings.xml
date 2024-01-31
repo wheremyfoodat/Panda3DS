@@ -52,4 +52,7 @@
     <string name="pref_performance_monitor_summary">Show overlay with fps, memory, etc.</string>
     <string name="pref_logger_service_title">Logger</string>
     <string name="pref_logger_service_summary">Store application logs to file.</string>
+    <string name="pref_shader_jit_title">Shader JIT</string>
+    <string name="pref_shader_jit_summary">Use shader re-compiler</string>
+    <string name="graphics">Graphics</string>
 </resources>
