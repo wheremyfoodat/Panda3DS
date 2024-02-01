@@ -272,6 +272,7 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
     include_directories(third_party/luv/deps/lua-compat-5.3/c-api)
     include_directories(third_party/libuv/include)
     set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/luv/src/luv.c)
+    set(LIBUV_BUILD_SHARED OFF)
 
     add_subdirectory(third_party/libuv)
 endif()
