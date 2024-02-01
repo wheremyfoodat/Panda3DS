@@ -93,7 +93,8 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 		shader += ";\ncolorOp3 = ";
 		getColorOperand(shader, tev.colorSource3, tev.colorOperand3, stage);
 
-		shader += ";\nvec3 outputColor" + std::to_string(stage) + " = vec3(1.0)";
+		shader += ";\nvec3 outputColor" + std::to_string(stage) + " = ";
+		getColorOperation(shader, tev.colorOp);
 		shader += ";\n";
 
 		if (tev.colorOp == TexEnvConfig::Operation::Dot3RGBA) {
@@ -211,6 +212,26 @@ void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source sour
 		default:
 			Helpers::warn("Unimplemented TEV source: %d", static_cast<int>(source));
 			shader += "vec4(1.0, 1.0, 1.0, 1.0)";
+			break;
+	}
+}
+
+void FragmentGenerator::getColorOperation(std::string& shader, TexEnvConfig::Operation op) {
+	switch (op) {
+		case TexEnvConfig::Operation::Replace: shader += "colorOp1"; break;
+		case TexEnvConfig::Operation::Add: shader += "colorOp1 + colorOp2"; break;
+		case TexEnvConfig::Operation::AddSigned: shader += "clamp(colorOp1 + colorOp2 - 0.5, 0.0, 1.0);"; break;
+		case TexEnvConfig::Operation::Subtract: shader += "colorOp1 - colorOp2"; break;
+		case TexEnvConfig::Operation::Modulate: shader += "colorOp1 * colorOp2"; break;
+		case TexEnvConfig::Operation::Lerp: shader += "colorOp1 * colorOp3 + colorOp2 * (vec(1.0) - colorOp3)"; break;
+
+		case TexEnvConfig::Operation::AddMultiply: shader += "min(colorOp1 + colorOp2, vec3(1.0)) * colorOp3"; break;
+		case TexEnvConfig::Operation::MultiplyAdd: shader += "colorOp1 * colorOp2 + colorOp3"; break;
+		case TexEnvConfig::Operation::Dot3RGB:
+		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(colorOp1 - 0.5, colorOp2 - 0.5))"; break;
+		default:
+			Helpers::warn("FragmentGenerator: Unimplemented color op");
+			shader += "vec3(1.0)";
 			break;
 	}
 }
