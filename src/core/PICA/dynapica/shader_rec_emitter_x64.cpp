@@ -235,6 +235,8 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 		compSwizzle = getBits<23, 8>(operandDescriptor);
 	}
 
+	// TODO: Do indexes get applied if src < 0x20?
+
 	// PICA has the swizzle descriptor inverted in comparison to x86. For the PICA, the descriptor is (lowest to highest bits) wzyx while it's xyzw for x86
 	u32 convertedSwizzle = ((compSwizzle >> 6) & 0b11) | (((compSwizzle >> 4) & 0b11) << 2) | (((compSwizzle >> 2) & 0b11) << 4) | ((compSwizzle & 0b11) << 6);
 
@@ -342,10 +344,10 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	} else if (std::popcount(writeMask) == 1) { // Only 1 register needs to be written back. This can be done with a simple shift right + movss
 		int bit = std::countr_zero(writeMask); // Get which PICA register needs to be written to (0 = w, 1 = z, etc)
 		size_t index = 3 - bit;
-		const uintptr_t lane_offset = offset + index * sizeof(float);
+		const uintptr_t laneOffset = offset + index * sizeof(float);
 
 		if (index == 0) { // Bottom lane, no need to shift
-			movss(dword[statePointer + lane_offset], source);
+			movss(dword[statePointer + laneOffset], source);
 		} else { // Shift right by 32 * index, then write bottom lane
 			if (haveAVX) {
 				vpsrldq(scratch1, source, index * sizeof(float));
@@ -353,7 +355,7 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 				movaps(scratch1, source);
 				psrldq(scratch1, index * sizeof(float));
 			}
-			movss(dword[statePointer + lane_offset], scratch1);
+			movss(dword[statePointer + laneOffset], scratch1);
 		}
 	} else if (haveSSE4_1) {
 		// Bit reverse the write mask because that is what blendps expects
@@ -403,11 +405,18 @@ void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) 
 	switch (condition) {
 		case 0: // Either cmp register matches 
 			// Z flag is 0 if at least 1 of them is set
-			test(word[statePointer + cmpRegXOffset], refX_refY_merged);
 
-			// Invert z flag
-			setz(al);
-			test(al, al);
+			// Check if X matches
+			cmp(byte[statePointer + cmpRegXOffset], refX);
+			sete(al);
+
+			// Or if Y matches
+			cmp(byte[statePointer + cmpRegYOffset], refY);
+			sete(cl);
+			or_(al, cl);
+
+			// If either of them matches, set Z to 1, else set it to 0
+			xor_(al, 1);
 			break;
 		case 1: // Both cmp registers match
 			cmp(word[statePointer + cmpRegXOffset], refX_refY_merged);
@@ -838,7 +847,7 @@ void ShaderEmitter::recCALL(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<10, 12>(instruction);
 
 	// Push return PC as stack parameter. This is a decently fast solution and Citra does the same but we should probably switch to a proper PICA-like
-	// Callstack, because it's not great to have an infinitely expanding call stack where popping from empty stack is undefined as hell
+	// Callstack, because it's not great to have an infinitely expanding call stack where popping from empty stack is undefined
 	push(qword, dest + num);
 	// Call subroutine, Xbyak will update the label if it hasn't been initialized yet
 	call(instructionLabels[dest]);

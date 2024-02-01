@@ -2,6 +2,7 @@
 #include "ipc.hpp"
 #include "kernel.hpp"
 
+#include <algorithm>
 #include <vector>
 
 namespace APTCommands {
@@ -32,34 +33,9 @@ namespace APTCommands {
 	};
 }
 
-// https://www.3dbrew.org/wiki/NS_and_APT_Services#Command
-namespace APTTransitions {
-	enum : u32 {
-		None = 0,
-		Wakeup = 1,
-		Request = 2,
-		Response = 3,
-		Exit = 4,
-		Message = 5,
-		HomeButtonSingle = 6,
-		HomeButtonDouble = 7,
-		DSPSleep = 8,
-		DSPWakeup = 9,
-		WakeupByExit = 10,
-		WakuepByPause = 11,
-		WakeupByCancel = 12,
-		WakeupByCancelAll = 13,
-		WakeupByPowerButton = 14,
-		WakeupToJumpHome = 15,
-		RequestForApplet = 16,
-		WakeupToLaunchApp = 17,
-		ProcessDed = 0x41
-	};
-}
-
 void APTService::reset() {
-	// Set the default CPU time limit to 30%. Seems safe, as this is what Metroid 2 uses by default
-	cpuTimeLimit = 30;
+	// Set the default CPU time limit to 0%. Appears to be the default value on hardware
+	cpuTimeLimit = 0;
 
 	// Reset the handles for the various service objects
 	lockHandle = std::nullopt;
@@ -88,6 +64,7 @@ void APTService::handleSyncRequest(u32 messagePointer) {
 		case APTCommands::NotifyToWait: notifyToWait(messagePointer); break;
 		case APTCommands::PreloadLibraryApplet: preloadLibraryApplet(messagePointer); break;
 		case APTCommands::PrepareToStartLibraryApplet: prepareToStartLibraryApplet(messagePointer); break;
+		case APTCommands::StartLibraryApplet: startLibraryApplet(messagePointer); break;
 		case APTCommands::ReceiveParameter: [[likely]] receiveParameter(messagePointer); break;
 		case APTCommands::ReplySleepQuery: replySleepQuery(messagePointer); break;
 		case APTCommands::SetApplicationCpuTimeLimit: setApplicationCpuTimeLimit(messagePointer); break;
@@ -162,6 +139,39 @@ void APTService::prepareToStartLibraryApplet(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void APTService::startLibraryApplet(u32 messagePointer) {
+	const u32 appID = mem.read32(messagePointer + 4);
+	const u32 bufferSize = mem.read32(messagePointer + 8);
+	const Handle parameters = mem.read32(messagePointer + 16);
+	const u32 buffer = mem.read32(messagePointer + 24);
+	log("APT::StartLibraryApplet (app ID = %X)\n", appID);
+
+	Applets::AppletBase* destApplet = appletManager.getApplet(appID);
+	if (destApplet == nullptr) {
+		Helpers::warn("APT::StartLibraryApplet: Unimplemented dest applet ID");
+		mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
+		mem.write32(messagePointer + 4, Result::Success);
+	} else {
+		KernelObject* sharedMemObject = kernel.getObject(parameters);
+
+		const MemoryBlock* sharedMem = sharedMemObject ? sharedMemObject->getData<MemoryBlock>() : nullptr;
+		std::vector<u8> data;
+		data.reserve(bufferSize);
+
+		for (u32 i = 0; i < bufferSize; i++) {
+			data.push_back(mem.read8(buffer + i));
+		}
+
+		Result::HorizonResult result = destApplet->start(sharedMem, data, appID);
+		if (resumeEvent.has_value()) {
+			kernel.signalEvent(resumeEvent.value());
+		}
+
+		mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
+		mem.write32(messagePointer + 4, result);
+	}
 }
 
 void APTService::checkNew3DS(u32 messagePointer) {
@@ -246,7 +256,7 @@ void APTService::sendParameter(u32 messagePointer) {
 
 	const u32 parameterHandle = mem.read32(messagePointer + 24); // What dis?
 	const u32 parameterPointer = mem.read32(messagePointer + 32);
-	log("APT::SendParameter (source app = %X, dest app = %X, cmd = %X, size = %X) (Stubbed)", sourceAppID, destAppID, cmd, paramSize);
+	log("APT::SendParameter (source app = %X, dest app = %X, cmd = %X, size = %X)", sourceAppID, destAppID, cmd, paramSize);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -259,7 +269,21 @@ void APTService::sendParameter(u32 messagePointer) {
 	if (destApplet == nullptr) {
 		Helpers::warn("APT::SendParameter: Unimplemented dest applet ID");
 	} else {
-		auto result = destApplet->receiveParameter();
+		// Construct parameter, send it to applet
+		Applets::Parameter param;
+		param.senderID = sourceAppID;
+		param.destID = destAppID;
+		param.signal = cmd;
+
+		// Fetch parameter data buffer
+		param.data.reserve(paramSize);
+		u32 pointer = parameterPointer;
+
+		for (u32 i = 0; i < paramSize; i++) {
+			param.data.push_back(mem.read8(pointer++));
+		}
+
+		auto result = destApplet->receiveParameter(param);
 	}
 
 	if (resumeEvent.has_value()) {
@@ -270,37 +294,58 @@ void APTService::sendParameter(u32 messagePointer) {
 void APTService::receiveParameter(u32 messagePointer) {
 	const u32 app = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
-	log("APT::ReceiveParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
+	// Parameter data pointer is in the thread static buffer, which starts 0x100 bytes after the command buffer
+	const u32 buffer = mem.read32(messagePointer + 0x100 + 4);
+	log("APT::ReceiveParameter(app ID = %X, size = %04X)\n", app, size);
 
 	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
+	auto parameter = appletManager.receiveParameter();
 
-	// TODO: Properly implement this. We currently stub somewhat like 3dmoo
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Sender App ID
-	mem.write32(messagePointer + 12, APTTransitions::Wakeup); // Command
-	mem.write32(messagePointer + 16, 0);
+	// Sender App ID
+	mem.write32(messagePointer + 8, parameter.senderID);
+	// Command
+	mem.write32(messagePointer + 12, parameter.signal);
+	// Size of parameter data
+	mem.write32(messagePointer + 16, parameter.data.size());
 	mem.write32(messagePointer + 20, 0x10);
-	mem.write32(messagePointer + 24, 0);
+	mem.write32(messagePointer + 24, parameter.object);
 	mem.write32(messagePointer + 28, 0);
+
+	const u32 transferSize = std::min<u32>(size, parameter.data.size());
+	for (u32 i = 0; i < transferSize; i++) {
+		mem.write8(buffer + i, parameter.data[i]);
+	}
 }
 
 void APTService::glanceParameter(u32 messagePointer) {
 	const u32 app = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
-	log("APT::GlanceParameter(app ID = %X, size = %04X) (STUBBED)\n", app, size);
+	// Parameter data pointer is in the thread static buffer, which starts 0x100 bytes after the command buffer
+	const u32 buffer = mem.read32(messagePointer + 0x100 + 4);
+	log("APT::GlanceParameter(app ID = %X, size = %04X)\n", app, size);
 
 	if (size > 0x1000) Helpers::panic("APT::GlanceParameter with size > 0x1000");
+	auto parameter = appletManager.glanceParameter();
 
 	// TODO: Properly implement this. We currently stub it similar
 	mem.write32(messagePointer, IPC::responseHeader(0xE, 4, 4));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Sender App ID
-	mem.write32(messagePointer + 12, APTTransitions::Wakeup); // Command
-	mem.write32(messagePointer + 16, 0);
+	// Sender App ID
+	mem.write32(messagePointer + 8, parameter.senderID);
+	// Command
+	mem.write32(messagePointer + 12, parameter.signal);
+	// Size of parameter data
+	mem.write32(messagePointer + 16, parameter.data.size());
 	mem.write32(messagePointer + 20, 0);
-	mem.write32(messagePointer + 24, 0);
+	mem.write32(messagePointer + 24, parameter.object);
 	mem.write32(messagePointer + 28, 0);
+
+	const u32 transferSize = std::min<u32>(size, parameter.data.size());
+	for (u32 i = 0; i < transferSize; i++) {
+		mem.write8(buffer + i, parameter.data[i]);
+	}
 }
 
 void APTService::replySleepQuery(u32 messagePointer) {
@@ -314,10 +359,13 @@ void APTService::setApplicationCpuTimeLimit(u32 messagePointer) {
 	u32 percentage = mem.read32(messagePointer + 8); // CPU time percentage between 5% and 89%
 	log("APT::SetApplicationCpuTimeLimit (percentage = %d%%)\n", percentage);
 
+	mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
+
+	// If called with invalid parameters, the current time limit is left unchanged, and OS::NotImplemented is returned
 	if (percentage < 5 || percentage > 89 || fixed != 1) {
-		Helpers::panic("Invalid parameters passed to APT::SetApplicationCpuTimeLimit");
+		Helpers::warn("Invalid parameter passed to APT::SetApplicationCpuTimeLimit: (percentage, fixed) = (%d, %d)\n", percentage, fixed);
+		mem.write32(messagePointer + 4, Result::OS::NotImplemented);
 	} else {
-		mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
 		mem.write32(messagePointer + 4, Result::Success);
 		cpuTimeLimit = percentage;
 	}

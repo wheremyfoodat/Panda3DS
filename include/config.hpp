@@ -5,7 +5,14 @@
 
 // Remember to initialize every field here to its default value otherwise bad things will happen
 struct EmulatorConfig {
-	bool shaderJitEnabled = true;
+    // Only enable the shader JIT by default on platforms where it's completely tested
+#ifdef PANDA3DS_X64_HOST
+	static constexpr bool shaderJitDefault = true;
+#else
+	static constexpr bool shaderJitDefault = false;
+#endif
+
+	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
 
@@ -17,7 +24,9 @@ struct EmulatorConfig {
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;
 
+	std::filesystem::path filePath;
+
 	EmulatorConfig(const std::filesystem::path& path);
-	void load(const std::filesystem::path& path);
-	void save(const std::filesystem::path& path);
+	void load();
+	void save();
 };

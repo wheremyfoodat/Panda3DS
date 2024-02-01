@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include "helpers.hpp"
+#include "kernel/kernel_types.hpp"
 #include "memory.hpp"
 #include "result/result.hpp"
 
@@ -65,24 +68,27 @@ namespace Applets {
 	};
 
 	struct Parameter {
-		u32 senderID;
-		u32 destID;
-		APTSignal signal;
-		std::vector<u8> data;
+		u32 senderID;          // ID of the parameter sender
+		u32 destID;            // ID of the app to receive parameter
+		u32 signal;            // Signal type (eg request)
+		u32 object;            // Some applets will also respond with shared memory handles for transferring data between the sender and called
+		std::vector<u8> data;  // Misc data
 	};
 
 	class AppletBase {
+	  protected:
 		Memory& mem;
+		std::optional<Parameter>& nextParameter;
 
 	  public:
 		virtual const char* name() = 0;
 
 		// Called by APT::StartLibraryApplet and similar
-		virtual Result::HorizonResult start() = 0;
+		virtual Result::HorizonResult start(const MemoryBlock* sharedMem, const std::vector<u8>& parameters, u32 appID) = 0;
 		// Transfer parameters from application -> applet
-		virtual Result::HorizonResult receiveParameter() = 0;
+		virtual Result::HorizonResult receiveParameter(const Parameter& parameter) = 0;
 		virtual void reset() = 0;
 
-		AppletBase(Memory& mem) : mem(mem) {}
+		AppletBase(Memory& mem, std::optional<Parameter>& nextParam) : mem(mem), nextParameter(nextParam) {}
 	};
 }  // namespace Applets

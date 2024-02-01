@@ -58,6 +58,7 @@ fb.bat
 *.3ds
 *.3dsx
 *.app
+*.cia
 *.cci
 *.cxi
 *.elf

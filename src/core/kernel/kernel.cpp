@@ -50,6 +50,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x1D: svcClearTimer(); break;
 		case 0x1E: createMemoryBlock(); break;
 		case 0x1F: mapMemoryBlock(); break;
+		case 0x20: unmapMemoryBlock(); break;
 		case 0x21: createAddressArbiter(); break;
 		case 0x22: arbitrateAddress(); break;
 		case 0x23: svcCloseHandle(); break;
@@ -66,6 +67,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x38: getResourceLimit(); break;
 		case 0x39: getResourceLimitLimitValues(); break;
 		case 0x3A: getResourceLimitCurrentValues(); break;
+		case 0x3B: getThreadContext(); break;
 		case 0x3D: outputDebugString(); break;
 		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
@@ -148,6 +150,7 @@ void Kernel::reset() {
 	}
 	objects.clear();
 	mutexHandles.clear();
+	timerHandles.clear();
 	portHandles.clear();
 	threadIndices.clear();
 	serviceManager.reset();
@@ -178,6 +181,30 @@ u32 Kernel::getTLSPointer() {
 // Result CloseHandle(Handle handle)
 void Kernel::svcCloseHandle() {
 	logSVC("CloseHandle(handle = %d) (Unimplemented)\n", regs[0]);
+	const Handle handle = regs[0];
+
+	KernelObject* object = getObject(handle);
+	if (object != nullptr) {
+		switch (object->type) {
+			// Close file descriptor when closing a file to prevent leaks and properly flush file contents
+			case KernelObjectType::File: {
+				FileSession* file = object->getData<FileSession>();
+				if (file->isOpen) {
+					file->isOpen = false;
+
+					if (file->fd != nullptr) {
+						fclose(file->fd);
+						file->fd = nullptr;
+					}
+				}
+				break;
+			}
+
+			default: break;
+		}
+	}
+
+	// Stub to always succeed for now
 	regs[0] = Result::Success;
 }
 

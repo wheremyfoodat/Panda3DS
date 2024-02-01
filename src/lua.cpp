@@ -58,6 +58,31 @@ void LuaManager::loadFile(const char* path) {
 	}
 }
 
+void LuaManager::loadString(const std::string& code) {
+	// Initialize Lua if it has not been initialized
+	if (!initialized) {
+		initialize();
+	}
+
+	// If init failed, don't execute
+	if (!initialized) {
+		printf("Lua initialization failed, file won't run\n");
+		haveScript = false;
+
+		return;
+	}
+
+	int status = luaL_loadstring(L, code.c_str());  // load Lua script
+	int ret = lua_pcall(L, 0, 0, 0);                // tell Lua to run the script
+
+	if (ret != 0) {
+		haveScript = false;
+		fprintf(stderr, "%s\n", lua_tostring(L, -1));  // tell us what mistake we made
+	} else {
+		haveScript = true;
+	}
+}
+
 void LuaManager::signalEventInternal(LuaEvent e) {
 	lua_getglobal(L, "eventHandler"); // We want to call the event handler
 	lua_pushnumber(L, static_cast<int>(e)); // Push event type

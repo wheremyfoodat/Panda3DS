@@ -14,6 +14,7 @@ class BOSSService {
 	void cancelTask(u32 messagePointer);
 	void initializeSession(u32 messagePointer);
 	void getErrorCode(u32 messagePointer);
+	void getNewArrivalFlag(u32 messagePointer);
 	void getNsDataIdList(u32 messagePointer, u32 commandWord);
 	void getOptoutFlag(u32 messagePointer);
 	void getStorageEntryInfo(u32 messagePointer); // Unknown what this is, name taken from Citra

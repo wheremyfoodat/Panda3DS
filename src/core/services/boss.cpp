@@ -6,6 +6,7 @@ namespace BOSSCommands {
 		InitializeSession = 0x00010082,
 		UnregisterStorage = 0x00030000,
 		GetTaskStorageInfo = 0x00040000,
+		GetNewArrivalFlag = 0x00070000,
 		RegisterNewArrivalEvent = 0x00080002,
 		SetOptoutFlag = 0x00090040,
 		GetOptoutFlag = 0x000A0000,
@@ -37,6 +38,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 	switch (command) {
 		case BOSSCommands::CancelTask: cancelTask(messagePointer); break;
 		case BOSSCommands::GetErrorCode: getErrorCode(messagePointer); break;
+		case BOSSCommands::GetNewArrivalFlag: getNewArrivalFlag(messagePointer); break;
 		case BOSSCommands::GetNsDataIdList:
 		case BOSSCommands::GetNsDataIdList1: 
 			getNsDataIdList(messagePointer, command); break;
@@ -240,4 +242,11 @@ void BOSSService::unregisterStorage(u32 messagePointer) {
 	log("BOSS::UnregisterStorage (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void BOSSService::getNewArrivalFlag(u32 messagePointer) {
+	log("BOSS::GetNewArrivalFlag (stubbed)\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x7, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0); // Flag
 }

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000">
+
+
+    <com.panda3ds.pandroid.view.PandaLayoutController
+        android:id="@+id/controller_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <FrameLayout
+            android:id="@+id/panda_gl_frame"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <FrameLayout
+            android:id="@+id/overlay_controller"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.6">
+
+            <include layout="@layout/controller_l"/>
+            <include layout="@layout/controller_r"/>
+            <include layout="@layout/controller_joystick"/>
+            <include layout="@layout/controller_dpad"/>
+            <include layout="@layout/controller_gamepad"/>
+            <include layout="@layout/controller_select"/>
+            <include layout="@layout/controller_start"/>
+
+        </FrameLayout>
+
+    </com.panda3ds.pandroid.view.PandaLayoutController>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="25dp">
+
+        <CheckBox
+            android:id="@+id/hide_screen_controller"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:checked="true"
+            android:button="@drawable/screen_gamepad_checkbox"
+            android:layout_gravity="bottom|right"
+            android:buttonTint="#FFF"
+            android:alpha="0.4"
+            android:theme="@style/Theme.AppCompat.Light"/>
+
+    </FrameLayout>
+
+    <include layout="@layout/drawer_game_container"/>
+
+</FrameLayout>

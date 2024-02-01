@@ -52,14 +52,8 @@ bool Kernel::canThreadRun(const Thread& t) {
 		return true;
 	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1
 		|| t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
-		const u64 elapsedTicks = cpu.getTicks() - t.sleepTick;
-
-		constexpr double ticksPerSec = double(CPU::ticksPerSec);
-		constexpr double nsPerTick = ticksPerSec / 1000000000.0;
-
 		// TODO: Set r0 to the correct error code on timeout for WaitSync{1/Any/All}
-		const s64 elapsedNs = s64(double(elapsedTicks) * nsPerTick);
-		return elapsedNs >= t.waitingNanoseconds;
+		return cpu.getTicks() >= t.wakeupTick;
 	}
 
 	// Handle timeouts and stuff here
@@ -80,6 +74,15 @@ std::optional<int> Kernel::getNextThread() {
 
 	// No thread was found
 	return std::nullopt;
+}
+
+u64 Kernel::getWakeupTick(s64 ns) {
+	// Timeout == -1 means that the thread doesn't plan on waking up automatically
+	if (ns == -1) {
+		return std::numeric_limits<u64>::max();
+	}
+
+	return cpu.getTicks() + Scheduler::nsToCycles(ns);
 }
 
 // See if there is a higher priority, ready thread and switch to that
@@ -368,13 +371,30 @@ void Kernel::sleepThread(s64 ns) {
 			if (index != idleThreadIndex) {
 				switchThread(index);
 			}
+		} else {
+			if (currentThreadIndex == idleThreadIndex) {
+				const Scheduler& scheduler = cpu.getScheduler();
+				u64 timestamp = scheduler.nextTimestamp;
+
+				for (auto i : threadIndices) {
+					const Thread& t = threads[i];
+					if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny ||
+						t.status == ThreadStatus::WaitSyncAll) {
+						timestamp = std::min<u64>(timestamp, t.wakeupTick);
+					}
+				}
+
+				if (timestamp > scheduler.currentTimestamp) {
+					u64 idleCycles = timestamp - scheduler.currentTimestamp;
+					cpu.addTicks(idleCycles);
+				}
+			}
 		}
 	} else {  // If we're sleeping for >= 0 ns
 		Thread& t = threads[currentThreadIndex];
 
 		t.status = ThreadStatus::WaitSleep;
-		t.waitingNanoseconds = ns;
-		t.sleepTick = cpu.getTicks();
+		t.wakeupTick = getWakeupTick(ns);
 
 		requireReschedule();
 	}
@@ -460,6 +480,13 @@ void Kernel::getThreadIdealProcessor() {
 	// TODO: Not documented what this is or what it does. Citra doesn't implement it at all. Return AppCore as the ideal processor for now
 	regs[0] = Result::Success;
 	regs[1] = static_cast<u32>(ProcessorID::AppCore);
+}
+
+void Kernel::getThreadContext() {
+	Helpers::warn("Stubbed Kernel::GetThreadContext");
+
+	// TODO: Decompile this from Kernel11. 3DBrew says function is stubbed.
+	regs[0] = Result::Success;
 }
 
 void Kernel::setThreadPriority() {

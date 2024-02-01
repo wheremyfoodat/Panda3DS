@@ -48,7 +48,7 @@ struct ColourBuffer {
 		fbo.bind(OpenGL::DrawAndReadFramebuffer);
 
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-			Helpers::panic("Incomplete framebuffer");
+			Helpers::warn("ColourBuffer: Incomplete framebuffer");
 		}
 
 		// TODO: This should not clear the framebuffer contents. It should load them from VRAM.

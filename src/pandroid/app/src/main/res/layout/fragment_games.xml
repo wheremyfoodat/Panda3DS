@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.panda3ds.pandroid.view.gamesgrid.GamesGridView
+        android:id="@+id/games"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="15dp"
+        android:paddingEnd="15dp"/>
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/add_rom"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:layout_gravity="end|bottom"
+        android:src="@drawable/ic_add"
+        android:tint="?colorOnPrimary"
+        android:background="@drawable/simple_card_background"
+        android:backgroundTint="?colorPrimary"/>
+
+</FrameLayout>

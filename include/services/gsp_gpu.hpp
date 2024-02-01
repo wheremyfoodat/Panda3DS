@@ -60,11 +60,22 @@ class GPUService {
 	};
 	static_assert(sizeof(FramebufferUpdate) == 64, "GSP::GPU::FramebufferUpdate has the wrong size");
 
+	// Used for saving and restoring GPU state via ImportDisplayCaptureInfo
+	struct CaptureInfo {
+		u32 leftFramebuffer; // Left framebuffer VA
+		u32 rightFramebuffer; // Right framebuffer VA (Top screen only)
+		u32 format;
+		u32 stride;
+	};
+	static_assert(sizeof(CaptureInfo) == 16, "GSP::GPU::CaptureInfo has the wrong size");
+
 	// Service commands
 	void acquireRight(u32 messagePointer);
 	void flushDataCache(u32 messagePointer);
 	void importDisplayCaptureInfo(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
+	void releaseRight(u32 messagePointer);
+	void restoreVramSysArea(u32 messagePointer);
 	void saveVramSysArea(u32 messagePointer);
 	void setAxiConfigQoSMode(u32 messagePointer);
 	void setBufferSwap(u32 messagePointer);
@@ -84,6 +95,15 @@ class GPUService {
 	void flushCacheRegions(u32* cmd);
 
 	void setBufferSwapImpl(u32 screen_id, const FramebufferInfo& info);
+
+	// Get the framebuffer info in shared memory for a given screen
+	FramebufferUpdate* getFramebufferInfo(int screen) {
+		// TODO: Offset depends on GSP thread being triggered
+		return reinterpret_cast<FramebufferUpdate*>(&sharedMem[0x200 + screen * sizeof(FramebufferUpdate)]);
+	}
+
+	FramebufferUpdate* getTopFramebufferInfo() { return getFramebufferInfo(0); }
+	FramebufferUpdate* getBottomFramebufferInfo() { return getFramebufferInfo(1); }
 
 public:
 	GPUService(Memory& mem, GPU& gpu, Kernel& kernel, u32& currentPID) : mem(mem), gpu(gpu),

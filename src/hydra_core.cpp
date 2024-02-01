@@ -4,8 +4,13 @@
 #include <stdexcept>
 
 #include "hydra_icon.hpp"
+#include "swap.hpp"
 
-class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRendered, public hydra::IFrontendDriven, public hydra::IInput {
+class HC_GLOBAL HydraCore final : public hydra::IBase,
+								  public hydra::IOpenGlRendered,
+								  public hydra::IFrontendDriven,
+								  public hydra::IInput,
+								  public hydra::ICheat {
 	HYDRA_CLASS
   public:
 	HydraCore();
@@ -18,22 +23,30 @@ class HC_GLOBAL HydraCore final : public hydra::IBase, public hydra::IOpenGlRend
 	void setOutputSize(hydra::Size size) override;
 
 	// IOpenGlRendered
+	void resetContext() override;
+	void destroyContext() override;
 	void setFbo(unsigned handle) override;
-	void setContext(void* context) override;
 	void setGetProcAddress(void* function) override;
 
 	// IFrontendDriven
 	void runFrame() override;
-	uint16_t getFps() override;
+	u16 getFps() override;
 
 	// IInput
 	void setPollInputCallback(void (*callback)()) override;
-	void setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) override;
+	void setCheckButtonCallback(s32 (*callback)(u32 player, hydra::ButtonType button)) override;
+
+	// ICheat
+	u32 addCheat(const u8* data, u32 size) override;
+	void removeCheat(u32 id) override;
+	void enableCheat(u32 id) override;
+	void disableCheat(u32 id) override;
 
 	std::unique_ptr<Emulator> emulator;
 	RendererGL* renderer;
 	void (*pollInputCallback)() = nullptr;
 	int32_t (*checkButtonCallback)(uint32_t player, hydra::ButtonType button) = nullptr;
+	void* getProcAddress = nullptr;
 };
 
 HydraCore::HydraCore() : emulator(new Emulator) {
@@ -88,11 +101,10 @@ void HydraCore::runFrame() {
 	}
 
 	hid.updateInputs(emulator->getTicks());
-
 	emulator->runFrame();
 }
 
-uint16_t HydraCore::getFps() { return 60; }
+u16 HydraCore::getFps() { return 60; }
 
 void HydraCore::reset() { emulator->reset(Emulator::ReloadOption::Reload); }
 hydra::Size HydraCore::getNativeSize() { return {400, 480}; }
@@ -100,13 +112,13 @@ hydra::Size HydraCore::getNativeSize() { return {400, 480}; }
 // Size doesn't matter as the glBlitFramebuffer call is commented out for the core
 void HydraCore::setOutputSize(hydra::Size size) {}
 
-void HydraCore::setGetProcAddress(void* function) {
+void HydraCore::resetContext() {
 #ifdef __ANDROID__
-	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(function))) {
+	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL ES init failed");
 	}
 #else
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(function))) {
+	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL init failed");
 	}
 #endif
@@ -114,13 +126,22 @@ void HydraCore::setGetProcAddress(void* function) {
 	emulator->initGraphicsContext(nullptr);
 }
 
-void HydraCore::setContext(void*) {}
+void HydraCore::destroyContext() { emulator->deinitGraphicsContext(); }
 void HydraCore::setFbo(unsigned handle) { renderer->setFBO(handle); }
+void HydraCore::setGetProcAddress(void* function) { getProcAddress = function; }
 
 void HydraCore::setPollInputCallback(void (*callback)()) { pollInputCallback = callback; }
-void HydraCore::setCheckButtonCallback(int32_t (*callback)(uint32_t player, hydra::ButtonType button)) { checkButtonCallback = callback; }
+void HydraCore::setCheckButtonCallback(s32 (*callback)(u32 player, hydra::ButtonType button)) { checkButtonCallback = callback; }
 
-HC_API hydra::IBase* createEmulator() { return new HydraCore; }
+u32 HydraCore::addCheat(const u8* data, u32 size) {
+	return emulator->getCheats().addCheat(data, size);
+};
+
+void HydraCore::removeCheat(u32 id) { emulator->getCheats().removeCheat(id); }
+void HydraCore::enableCheat(u32 id) { emulator->getCheats().enableCheat(id); }
+void HydraCore::disableCheat(u32 id) { emulator->getCheats().disableCheat(id); }
+
+HC_API hydra::IBase* createEmulator() { return new HydraCore(); }
 HC_API void destroyEmulator(hydra::IBase* emulator) { delete emulator; }
 
 HC_API const char* getInfo(hydra::InfoType type) {

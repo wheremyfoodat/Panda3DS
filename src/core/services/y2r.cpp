@@ -18,12 +18,16 @@ namespace Y2RCommands {
 		SetSendingY = 0x00100102,
 		SetSendingU = 0x00110102,
 		SetSendingV = 0x00120102,
+		SetSendingYUV = 0x00130102,
 		SetReceiving = 0x00180102,
 		SetInputLineWidth = 0x001A0040,
 		GetInputLineWidth = 0x001B0000,
 		SetInputLines = 0x001C0040,
 		GetInputLines = 0x001D0000,
+		SetCoefficientParams = 0x001E0100,
+		GetCoefficientParams = 0x001F0000,
 		SetStandardCoeff = 0x00200040,
+		GetStandardCoefficientParams = 0x00210040,
 		SetAlpha = 0x00220040,
 		StartConversion = 0x00260000,
 		StopConversion = 0x00270000,
@@ -50,6 +54,8 @@ void Y2RService::reset() {
 	alpha = 0xFFFF;
 	inputLines = 69;
 	inputLineWidth = 420;
+
+	conversionCoefficients.fill(0);
 }
 
 void Y2RService::handleSyncRequest(u32 messagePointer) {
@@ -62,6 +68,7 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::GetInputLineWidth: getInputLineWidth(messagePointer); break;
 		case Y2RCommands::GetOutputFormat: getOutputFormat(messagePointer); break;
 		case Y2RCommands::GetTransferEndEvent: getTransferEndEvent(messagePointer); break;
+		case Y2RCommands::GetStandardCoefficientParams: getStandardCoefficientParams(messagePointer); break;
 		case Y2RCommands::IsBusyConversion: isBusyConversion(messagePointer); break;
 		case Y2RCommands::PingProcess: pingProcess(messagePointer); break;
 		case Y2RCommands::SetAlpha: setAlpha(messagePointer); break;
@@ -76,12 +83,17 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::SetSendingY: setSendingY(messagePointer); break;
 		case Y2RCommands::SetSendingU: setSendingU(messagePointer); break;
 		case Y2RCommands::SetSendingV: setSendingV(messagePointer); break;
+		case Y2RCommands::SetSendingYUV: setSendingYUV(messagePointer); break;
 		case Y2RCommands::SetSpacialDithering: setSpacialDithering(messagePointer); break;
 		case Y2RCommands::SetStandardCoeff: setStandardCoeff(messagePointer); break;
 		case Y2RCommands::SetTemporalDithering: setTemporalDithering(messagePointer); break;
 		case Y2RCommands::SetTransferEndInterrupt: setTransferEndInterrupt(messagePointer); break;
 		case Y2RCommands::StartConversion: [[likely]] startConversion(messagePointer); break;
 		case Y2RCommands::StopConversion: stopConversion(messagePointer); break;
+
+		// Intentionally break ordering a bit for less-used Y2R functions
+		case Y2RCommands::SetCoefficientParams: setCoefficientParams(messagePointer); break;
+		case Y2RCommands::GetCoefficientParams: getCoefficientParams(messagePointer); break;
 		default: Helpers::panic("Y2R service requested. Command: %08X\n", command);
 	}
 }
@@ -97,6 +109,8 @@ void Y2RService::driverInitialize(u32 messagePointer) {
 	log("Y2R::DriverInitialize\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x2B, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+
+	conversionCoefficients.fill(0);
 }
 
 void Y2RService::driverFinalize(u32 messagePointer) {
@@ -276,6 +290,7 @@ void Y2RService::getInputLineWidth(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, inputLineWidth);
 }
+
 void Y2RService::setInputLines(u32 messagePointer) {
 	const u16 lines = mem.read16(messagePointer + 4);
 	log("Y2R::SetInputLines (lines = %d)\n", lines);
@@ -306,13 +321,59 @@ void Y2RService::setStandardCoeff(u32 messagePointer) {
 	log("Y2R::SetStandardCoeff (coefficient = %d)\n", coeff);
 	mem.write32(messagePointer, IPC::responseHeader(0x20, 1, 0));
 
-	if (coeff > 3) {
+	if (coeff > 3) { // Invalid coefficient, should have an error code
 		Helpers::panic("Y2R: Invalid standard coefficient (coefficient = %d)\n", coeff);
 	}
 
 	else {
 		Helpers::warn("Unimplemented: Y2R standard coefficient");
 		mem.write32(messagePointer + 4, Result::Success);
+	}
+}
+
+void Y2RService::getStandardCoefficientParams(u32 messagePointer) {
+	const u32 coefficientIndex = mem.read32(messagePointer + 4);
+	log("Y2R::GetStandardCoefficientParams (coefficient = %d)\n", coefficientIndex);
+
+	if (coefficientIndex > 3) {  // Invalid coefficient, should have an error code
+		Helpers::panic("Y2R: Invalid standard coefficient (coefficient = %d)\n", coefficientIndex);
+	} else {
+		mem.write32(messagePointer, IPC::responseHeader(0x21, 5, 0));
+		mem.write32(messagePointer + 4, Result::Success);
+		const auto& coeff = standardCoefficients[coefficientIndex];
+
+		// Write standard coefficient parameters to output buffer
+		for (int i = 0; i < 8; i++) {
+			const u32 pointer = messagePointer + 8 + i * sizeof(u16); // Pointer to write parameter to
+			mem.write16(pointer, coeff[i]);
+		}
+	}
+}
+
+void Y2RService::setCoefficientParams(u32 messagePointer) {
+	log("Y2R::SetCoefficientParams\n");
+	auto& coeff = conversionCoefficients;
+
+	// Write coefficient parameters to output buffer
+	for (int i = 0; i < 8; i++) {
+		const u32 pointer = messagePointer + 4 + i * sizeof(u16);  // Pointer to write parameter to
+		coeff[i] = mem.read16(pointer);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1E, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::getCoefficientParams(u32 messagePointer) {
+	log("Y2R::GetCoefficientParams\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x1F, 5, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	const auto& coeff = conversionCoefficients;
+
+	// Write coefficient parameters to output buffer
+	for (int i = 0; i < 8; i++) {
+		const u32 pointer = messagePointer + 8 + i * sizeof(u16);  // Pointer to write parameter to
+		mem.write16(pointer, coeff[i]);
 	}
 }
 
@@ -337,6 +398,14 @@ void Y2RService::setSendingV(u32 messagePointer) {
 	Helpers::warn("Unimplemented Y2R::SetSendingV");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x12, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::setSendingYUV(u32 messagePointer) {
+	log("Y2R::SetSendingYUV\n");
+	Helpers::warn("Unimplemented Y2R::SetSendingYUV");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x13, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

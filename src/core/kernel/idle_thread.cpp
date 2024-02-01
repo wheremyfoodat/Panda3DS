@@ -8,13 +8,6 @@
 	The code for our idle thread looks like this
 
 idle_thread_main:
-	mov r0, #4096            @ Loop counter
-	
-	.loop:
-	nop; nop; nop; nop       @ NOP 4 times to waste some cycles
-	subs r0, #1              @ Decrement counter by 1, go back to looping if loop counter != 0
-	bne .loop
-
 	// Sleep for 0 seconds with the SleepThread SVC, which just yields execution
 	mov r0, #0
 	mov r1, #0
@@ -24,14 +17,10 @@ idle_thread_main:
 */
 
 static constexpr u8 idleThreadCode[] = {
-	0x01, 0x0A, 0xA0, 0xE3, // mov r0, #4096
-	0x00, 0xF0, 0x20, 0xE3, 0x00, 0xF0, 0x20, 0xE3, 0x00, 0xF0, 0x20, 0xE3, 0x00, 0xF0, 0x20, 0xE3, // nop (4 times)
-	0x01, 0x00, 0x50, 0xE2,  // subs r0, #1
-	0xF9, 0xFF, 0xFF, 0x1A,  // bne loop
 	0x00, 0x00, 0xA0, 0xE3,  // mov r0, #0
 	0x00, 0x10, 0xA0, 0xE3,  // mov r1, #0
 	0x0A, 0x00, 0x00, 0xEF,  // svc SleepThread
-	0xF4, 0xFF, 0xFF, 0xEA   // b idle_thread_main
+	0xFB, 0xFF, 0xFF, 0xEA   // b idle_thread_main
 };
 
 // Set up an idle thread to run when no thread is able to run

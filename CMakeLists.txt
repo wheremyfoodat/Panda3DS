@@ -103,6 +103,10 @@ add_compile_definitions(BOOST_NO_CXX98_FUNCTION_BASE) # Forbid Boost from using 
 add_library(boost INTERFACE)
 target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
+if(ANDROID)
+    set(CRYPTOPP_OPT_DISABLE_ASM ON CACHE BOOL "" FORCE)
+endif()
+
 set(CRYPTOPP_BUILD_TESTING OFF)
 add_subdirectory(third_party/cryptopp)
 add_subdirectory(third_party/glad)
@@ -133,6 +137,9 @@ endif()
 # Check for arm64
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
     set(HOST_ARM64 TRUE)
+    add_subdirectory(third_party/oaknut) # Add Oaknut submodule for arm64 JITs
+    include_directories(third_party/oaknut/include)
+    add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
     add_compile_definitions(PANDA3DS_ARM64_HOST)
 else()
     set(HOST_ARM64 FALSE)
@@ -177,6 +184,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
+                      src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp
 )
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
@@ -185,20 +193,32 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp src/core/fs/archive_system_save_data.cpp
 )
 
-set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp)
+set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
+                        src/core/applets/error_applet.cpp
+)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
-if(ENABLE_QT_GUI)
-    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp)
-    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp)
+if(NOT ANDROID)
+    if(ENABLE_QT_GUI)
+        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
+            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp
+        )   
+        set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
+            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
+        )
 
-    source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
-    source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
-    include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
-else()
-    set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
-    set(FRONTEND_HEADER_FILES "")
+        source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
+        source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
+        include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
+
+        include_directories(third_party/zep/include) # Include zep for text editor usage
+        configure_file(third_party/zep/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/zep_config/config_app.h)
+        include_directories(${CMAKE_BINARY_DIR}/zep_config)
+    else()
+        set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
+        set(FRONTEND_HEADER_FILES "")
+    endif()
 endif()
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
@@ -231,6 +251,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
+                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
 )
 
 cmrc_add_resource_library(
@@ -392,6 +413,10 @@ if(ENABLE_VULKAN)
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
 endif()
 
+if(ANDROID)
+    set(ALL_SOURCES ${ALL_SOURCES} src/jni_driver.cpp)
+endif()
+
 if(BUILD_HYDRA_CORE)
     include_directories(third_party/hydra_core/include)
     add_library(Alber SHARED ${ALL_SOURCES} src/hydra_core.cpp)
@@ -400,11 +425,19 @@ else()
     add_executable(Alber ${ALL_SOURCES})
 endif()
 
+if(ANDROID)
+    target_link_libraries(Alber PRIVATE EGL log)
+endif()
+
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic SDL2-static cryptopp glad resources_console_fonts)
+target_link_libraries(Alber PRIVATE dynarmic cryptopp glad resources_console_fonts)
+
+if(NOT ANDROID)
+    target_link_libraries(Alber PRIVATE SDL2-static)
+endif()
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
@@ -428,6 +461,9 @@ endif()
 
 if(ENABLE_QT_GUI)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_QT=1")
+    target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
+    target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
+
     target_link_libraries(Alber PRIVATE Qt6::Widgets)
 
     if(LINUX OR FREEBSD)
@@ -443,7 +479,7 @@ if(ENABLE_QT_GUI)
     qt_add_resources(Alber "app_images"
         PREFIX "/"
         FILES
-            docs/img/rsob_icon.png
+            docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
     )
 else()
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")

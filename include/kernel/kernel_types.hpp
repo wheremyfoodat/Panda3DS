@@ -83,56 +83,53 @@ struct Port {
 };
 
 struct Session {
-    Handle portHandle; // The port this session is subscribed to
-    Session(Handle portHandle) : portHandle(portHandle) {}
+	Handle portHandle;  // The port this session is subscribed to
+	Session(Handle portHandle) : portHandle(portHandle) {}
 };
 
 enum class ThreadStatus {
-    Running,     // Currently running
-    Ready,       // Ready to run
-    WaitArbiter, // Waiting on an address arbiter
-    WaitSleep,   // Waiting due to a SleepThread SVC
-    WaitSync1,   // Waiting for the single object in the wait list to be ready
-    WaitSyncAny, // Wait for one object of the many that might be in the wait list to be ready
-    WaitSyncAll, // Waiting for ALL sync objects in its wait list to be ready
-    WaitIPC,     // Waiting for the reply from an IPC request
-    Dormant,     // Created but not yet made ready
-    Dead         // Run to completion, or forcefully terminated
+	Running,      // Currently running
+	Ready,        // Ready to run
+	WaitArbiter,  // Waiting on an address arbiter
+	WaitSleep,    // Waiting due to a SleepThread SVC
+	WaitSync1,    // Waiting for the single object in the wait list to be ready
+	WaitSyncAny,  // Wait for one object of the many that might be in the wait list to be ready
+	WaitSyncAll,  // Waiting for ALL sync objects in its wait list to be ready
+	WaitIPC,      // Waiting for the reply from an IPC request
+	Dormant,      // Created but not yet made ready
+	Dead          // Run to completion, or forcefully terminated
 };
 
 struct Thread {
-    u32 initialSP;  // Initial r13 value
-    u32 entrypoint; // Initial r15 value
-    u32 priority;
-    u32 arg;
-    ProcessorID processorID;
-    ThreadStatus status;
-    Handle handle;  // OS handle for this thread
-    int index; // Index of the thread. 0 for the first thread, 1 for the second, and so on
+	u32 initialSP;   // Initial r13 value
+	u32 entrypoint;  // Initial r15 value
+	u32 priority;
+	u32 arg;
+	ProcessorID processorID;
+	ThreadStatus status;
+	Handle handle;  // OS handle for this thread
+	int index;      // Index of the thread. 0 for the first thread, 1 for the second, and so on
 
-    // The waiting address for threads that are waiting on an AddressArbiter
-    u32 waitingAddress;
+	// The waiting address for threads that are waiting on an AddressArbiter
+	u32 waitingAddress;
 
-    // The nanoseconds until a thread wakes up from being asleep or from timing out while waiting on an arbiter
-    u64 waitingNanoseconds;
-    // The tick this thread went to sleep on
-    u64 sleepTick;
-    // For WaitSynchronization(N): A vector of objects this thread is waiting for
-    std::vector<Handle> waitList;
-    // For WaitSynchronizationN: Shows whether the object should wait for all objects in the wait list or just one
-    bool waitAll;
-    // For WaitSynchronizationN: The "out" pointer
-    u32 outPointer;
+	// For WaitSynchronization(N): A vector of objects this thread is waiting for
+	std::vector<Handle> waitList;
+	// For WaitSynchronizationN: Shows whether the object should wait for all objects in the wait list or just one
+	bool waitAll;
+	// For WaitSynchronizationN: The "out" pointer
+	u32 outPointer;
+	u64 wakeupTick;
 
-    // Thread context used for switching between threads
-    std::array<u32, 16> gprs;
-    std::array<u32, 32> fprs; // Stored as u32 because dynarmic does it
-    u32 cpsr;
-    u32 fpscr;
-    u32 tlsBase; // Base pointer for thread-local storage
+	// Thread context used for switching between threads
+	std::array<u32, 16> gprs;
+	std::array<u32, 32> fprs;  // Stored as u32 because dynarmic does it
+	u32 cpsr;
+	u32 fpscr;
+	u32 tlsBase;  // Base pointer for thread-local storage
 
-    // A list of threads waiting for this thread to terminate. Yes, threads are sync objects too.
-    u64 threadsWaitingForTermination;
+	// A list of threads waiting for this thread to terminate. Yes, threads are sync objects too.
+	u64 threadsWaitingForTermination;
 };
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {
@@ -177,13 +174,12 @@ struct Timer {
 	u64 waitlist;  // Refer to the getWaitlist function below for documentation
 	ResetType resetType = ResetType::OneShot;
 
-	u64 startTick;     // CPU tick the timer started
-	u64 currentDelay;  // Number of ns until the timer fires next time
+	u64 fireTick;      // CPU tick the timer will be fired
 	u64 interval;      // Number of ns until the timer fires for the second and future times
 	bool fired;        // Has this timer been signalled?
 	bool running;      // Is this timer running or stopped?
 
-	Timer(ResetType type) : resetType(type), startTick(0), currentDelay(0), interval(0), waitlist(0), fired(false), running(false) {}
+	Timer(ResetType type) : resetType(type), fireTick(0), interval(0), waitlist(0), fired(false), running(false) {}
 };
 
 struct MemoryBlock {

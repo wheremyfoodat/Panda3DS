@@ -144,6 +144,7 @@ void Kernel::mapMemoryBlock() {
 				printf("Mapping CSND memory block\n");
 				break;
 
+			case KernelHandles::APTCaptureSharedMemHandle: break;
 			default: Helpers::panic("Mapping unknown shared memory block: %X", block);
 		}
 	} else {
@@ -205,4 +206,13 @@ void Kernel::createMemoryBlock() {
 
 	regs[0] = Result::Success;
 	regs[1] = makeMemoryBlock(addr, size, myPermission, otherPermission);
+}
+
+void Kernel::unmapMemoryBlock() {
+	Handle block = regs[0];
+	u32 addr = regs[1];
+	logSVC("Unmap memory block (block handle = %X, addr = %08X)\n", block, addr);
+
+	Helpers::warn("Stubbed svcUnmapMemoryBlock!");
+	regs[0] = Result::Success;
 }
