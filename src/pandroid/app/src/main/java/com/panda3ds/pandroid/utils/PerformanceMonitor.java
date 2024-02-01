@@ -34,7 +34,7 @@ public class PerformanceMonitor {
                     ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
                     manager.getMemoryInfo(info);
                     totalMemory = info.totalMem;
-                    availMemory = info.availMem;
+                    availableMemory = info.availMem;
                 } catch (Exception e) {}
             }
         }
