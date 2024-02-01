@@ -22,7 +22,7 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
