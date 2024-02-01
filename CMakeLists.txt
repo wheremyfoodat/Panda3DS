@@ -40,11 +40,6 @@ option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 
-if(ENABLE_LUAJIT AND ANDROID)
-    message(STATUS "Enabled LuaJIT on Android build. Automatically disabling it until it works properly")
-    set(ENABLE_LUAJIT OFF)
-endif()
-
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories (${FMT_INCLUDE_DIR})
@@ -271,8 +266,8 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/xxhash/xxhash.c
 )
 
-if(ENABLE_LUAJIT)
-    # Build luv and libuv for TCP Lua server usage
+if(ENABLE_LUAJIT AND NOT ANDROID)
+    # Build luv and libuv for Lua TCP server usage if we're not on Android
     include_directories(third_party/luv/src)
     include_directories(third_party/luv/deps/lua-compat-5.3/c-api)
     include_directories(third_party/libuv/include)
@@ -446,7 +441,12 @@ endif()
 
 if(ENABLE_LUAJIT)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_LUA=1")
-    target_link_libraries(Alber PRIVATE libluajit uv_a)
+    target_link_libraries(Alber PRIVATE libluajit)
+
+    # If we're not on Android, link libuv too
+    if (NOT ANDROID)
+        target_link_libraries(Alber PRIVATE uv_a)
+    endif()
 endif()
 
 if(ENABLE_OPENGL)

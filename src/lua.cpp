@@ -1,9 +1,11 @@
 #ifdef PANDA3DS_ENABLE_LUA
 #include "lua_manager.hpp"
 
+#ifndef __ANDROID__
 extern "C" {
 	#include "luv.h"
 }
+#endif
 
 void LuaManager::initialize() {
 	L = luaL_newstate();  // Open Lua
@@ -13,13 +15,15 @@ void LuaManager::initialize() {
 		initialized = false;
 		return;
 	}
-
 	luaL_openlibs(L);
+
+#ifndef __ANDROID__
 	lua_pushstring(L, "luv");
 	luaopen_luv(L);
 	lua_settable(L, LUA_GLOBALSINDEX);
-	initializeThunks();
+#endif
 
+	initializeThunks();
 	initialized = true;
 	haveScript = false;
 }
