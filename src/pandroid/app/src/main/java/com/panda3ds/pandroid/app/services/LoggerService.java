@@ -55,15 +55,15 @@ public class LoggerService extends Service {
             errorTask.start();
             outputTask.start();
 
-            Log.i(Constants.LOG_TAG, "STARTED LOGGER SERVICE");
-            printDeviceAbout();
+            Log.i(Constants.LOG_TAG, "Started logger service");
+            logDeviceInfo();
         } catch (Exception e) {
             stopSelf();
-            Log.e(Constants.LOG_TAG, "Failed to start LoggerService!");
+            Log.e(Constants.LOG_TAG, "Failed to start logger service");
         }
     }
 
-    private void printDeviceAbout() {
+    private void logDeviceInfo() {
         Log.i(Constants.LOG_TAG, "----------------------");
         Log.i(Constants.LOG_TAG, "Android SDK: " + Build.VERSION.SDK_INT);
         Log.i(Constants.LOG_TAG, "Device: " + Build.DEVICE);
@@ -76,7 +76,7 @@ public class LoggerService extends Service {
             Log.i(Constants.LOG_TAG, "Install location: " + info.installLocation);
             Log.i(Constants.LOG_TAG, "App version: " + info.versionName + " (" + info.versionCode + ")");
         } catch (Exception e) {
-            Log.e(Constants.LOG_TAG, "Error on obtain package info: " + e);
+            Log.e(Constants.LOG_TAG, "Error obtaining package info: " + e);
         }
         Log.i(Constants.LOG_TAG, "----------------------");
     }
@@ -93,7 +93,7 @@ public class LoggerService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.i(Constants.LOG_TAG, "FINISHED LOGGER SERVICE");
+        Log.i(Constants.LOG_TAG, "Logger service terminating");
         errorTask.close();
         outputTask.close();
         try {

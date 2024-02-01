@@ -14,7 +14,7 @@ public class PerformanceMonitor {
     private static int frames = 0;
     private static long lastUpdate = 0;
     private static long totalMemory = 1;
-    private static long availMemory = 0;
+    private static long availableMemory = 0;
 
     public static void initialize(String backendName) {
         fps = 1;
@@ -35,21 +35,21 @@ public class PerformanceMonitor {
                     manager.getMemoryInfo(info);
                     totalMemory = info.totalMem;
                     availMemory = info.availMem;
-                } catch (Exception e) {/**/}
+                } catch (Exception e) {}
             }
         }
     }
 
-    public static long getUsageMemory() {
-        return Math.max(1, totalMemory - availMemory);
+    public static long getUsedMemory() {
+        return Math.max(1, totalMemory - availableMemory);
     }
 
     public static long getTotalMemory() {
         return totalMemory;
     }
 
-    public static long getAvailMemory() {
-        return availMemory;
+    public static long getAvailableMemory() {
+        return availableMemory;
     }
 
     public static int getFps() {

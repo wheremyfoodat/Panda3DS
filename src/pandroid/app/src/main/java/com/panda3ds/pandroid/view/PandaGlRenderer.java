@@ -40,9 +40,11 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		if (screenTexture != 0) {
 			glDeleteTextures(1, new int[] {screenTexture}, 0);
 		}
-		if (screenFbo != 0) {
+		
+        if (screenFbo != 0) {
 			glDeleteFramebuffers(1, new int[] {screenFbo}, 0);
 		}
+
 		PerformanceMonitor.destroy();
 		super.finalize();
 	}
@@ -96,6 +98,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 			GameUtils.removeGame(game);
 			GameUtils.addGame(GameMetadata.applySMDH(game, smdh));
 		}
+    
 		PerformanceMonitor.initialize(getBackendName());
 	}
 
@@ -119,6 +122,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 				screenHeight - bottomScreen.bottom, GL_COLOR_BUFFER_BIT, GL_LINEAR
 			);
 		}
+
 		PerformanceMonitor.runFrame();
 	}
 

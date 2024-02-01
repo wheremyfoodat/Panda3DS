@@ -74,15 +74,17 @@ public class FileUtils {
         parseFile(path).renameTo(newName);
     }
 
-    public static void delete(String path){
+    public static void delete(String path) {
         DocumentFile file = parseFile(path);
-        if (file.exists()){
-            if (file.isDirectory()){
+
+        if (file.exists()) {
+            if (file.isDirectory()) {
                 String[] children = listFiles(path);
-                for (String child: children){
-                    delete(path+"/"+child);
+                for (String child : children) {
+                    delete(path + "/" + child);
                 }
             }
+
             file.delete();
         }
     }

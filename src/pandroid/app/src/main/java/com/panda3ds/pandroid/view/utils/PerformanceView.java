@@ -36,18 +36,19 @@ public class PerformanceView extends AppCompatTextView {
 
     public void refresh(){
         running = isShown();
-        if (!running){
+        if (!running) {
             return;
         }
 
         String debug = "";
 
-        int memoryTotalMb = (int) Math.round((PerformanceMonitor.getTotalMemory()/1024.0)/1024.0);
-        int memoryUsageMb = (int) Math.round((PerformanceMonitor.getUsageMemory()/1024.0)/1024.0);
+        // Calculate total memory in MB and the current memory usage
+        int memoryTotalMb = (int) Math.round(PerformanceMonitor.getTotalMemory() / (1024.0 * 1024.0));
+        int memoryUsageMb = (int) Math.round(PerformanceMonitor.getUsedMemory() / (1024.0 * 1024.0));
 
-        debug += "<b>FPS: </b>"+PerformanceMonitor.getFps()+"<br>";
-        debug += "<b>RAM: </b>"+Math.round(((float) memoryUsageMb / memoryTotalMb)*100)+"%  ("+memoryUsageMb+"MB/"+memoryTotalMb+"MB)<br>";
-        debug += "<b>BACKEND: </b>"+PerformanceMonitor.getBackend()+(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT) ? " + JIT" : "")+"<br>";
+        debug += "<b>FPS: </b>" + PerformanceMonitor.getFps() + "<br>";
+        debug += "<b>RAM: </b>" + Math.round(((float) memoryUsageMb / memoryTotalMb) * 100) + "%  (" + memoryUsageMb + "MB/" + memoryTotalMb + "MB)<br>";
+        debug += "<b>BACKEND: </b>" + PerformanceMonitor.getBackend() + (GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT) ? " + JIT" : "") + "<br>";
         setText(Html.fromHtml(debug, Html.FROM_HTML_MODE_COMPACT));
         postDelayed(this::refresh, 250);
     }
@@ -55,7 +56,8 @@ public class PerformanceView extends AppCompatTextView {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (!running){
+        
+        if (!running) {
             refresh();
         }
     }
