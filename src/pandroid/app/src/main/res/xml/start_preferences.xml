@@ -23,4 +23,11 @@
         app:summary="@string/pref_appearance_summary"
         app:layout="@layout/preference_start_item"/>
 
+    <Preference
+        app:key="developer"
+        app:icon="@drawable/ic_code"
+        app:title="@string/developer_options"
+        app:summary="@string/pref_developer_summary"
+        app:layout="@layout/preference_start_item"/>
+
 </PreferenceScreen>

@@ -8,6 +8,7 @@ import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.PreferenceActivity;
 import com.panda3ds.pandroid.app.base.BasePreferenceFragment;
 import com.panda3ds.pandroid.app.preferences.AppearancePreferences;
+import com.panda3ds.pandroid.app.preferences.DeveloperPreferences;
 import com.panda3ds.pandroid.app.preferences.InputPreferences;
 
 public class SettingsFragment extends BasePreferenceFragment {
@@ -16,5 +17,6 @@ public class SettingsFragment extends BasePreferenceFragment {
         setPreferencesFromResource(R.xml.start_preferences, rootKey);
         setItemClick("input", (item) -> PreferenceActivity.launch(requireContext(), InputPreferences.class));
         setItemClick("appearance", (item)-> PreferenceActivity.launch(requireContext(), AppearancePreferences.class));
+        setItemClick("developer", (item)-> PreferenceActivity.launch(requireContext(), DeveloperPreferences.class));
     }
 }
