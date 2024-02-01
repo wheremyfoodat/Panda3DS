@@ -26,7 +26,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		flat in vec4 v_textureEnvColor[6];
 		flat in vec4 v_textureEnvBufferColor;
 
-		out vec4 fragColour;
+		out vec4 fragColor;
 		uniform sampler2D u_tex0;
 		uniform sampler2D u_tex1;
 		uniform sampler2D u_tex2;
@@ -50,6 +50,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 			tevSources[0] = v_colour;
 			tevSources[13] = vec4(0.0);  // Previous buffer colour 
 			tevSources[15] = v_colour;   // Previous combiner
+			vec4 combinerOutput = v_colour;   // Last TEV output
 	)";
 
 	ret += R"(
@@ -66,6 +67,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		compileTEV(ret, i, regs);
 	}
 
+	ret += "fragColor = combinerOutput;\n";
 	ret += "}"; // End of main function
 	ret += "\n\n\n\n\n\n\n\n\n\n\n\n\n";
 
@@ -114,6 +116,10 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 			shader += ";\nvec3 outputAlpha" + std::to_string(stage) + " = 1.0";
 			shader += ";\n";
 		}
+
+		shader += "combinerOutput = vec4(clamp(outputColor" + std::to_string(stage) + " * " + std::to_string(tev.getColorScale()) +
+				  ".0, vec3(0.0), vec3(1.0)), clamp(outputAlpha" + std::to_string(stage) + " * " + std::to_string(tev.getAlphaScale()) +
+				  ".0, 0.0, 1.0));\n";
 	}
 }
 
