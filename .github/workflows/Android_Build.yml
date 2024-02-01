@@ -6,15 +6,19 @@ on:
       - master
   pull_request:
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-
 jobs:
   x64:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        build_type:
+          - release
+
     steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
@@ -29,7 +33,7 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
-        distribution: 'zulu' # See 'Supported distributions' for available options
+        distribution: 'zulu'
         java-version: '17'
 
     - name: Configure CMake
@@ -37,23 +41,36 @@ jobs:
 
     - name: Build
       run: |
+        # Apply patch for GLES compatibility
         git apply ./.github/gles.patch
-        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        # Build the project with CMake
+        cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
+        # Move the generated library to the appropriate location
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/x86_64/
+        # Build the Android app with Gradle
         cd src/pandroid
-        ./gradlew assembleDebug
+        ./gradlew assemble${{ env.BUILD_TYPE }}
         cd ../..
 
-    - name: Upload executable
+    - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Android APK (x86-64)
-        path: './src/pandroid/app/build/outputs/apk/debug/app-debug.apk'
+        name: Android APKs (x86-64)
+        path: |
+          ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
 
   arm64:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        build_type:
+          - release
+
     steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
@@ -68,7 +85,7 @@ jobs:
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
-        distribution: 'zulu' # See 'Supported distributions' for available options
+        distribution: 'zulu'
         java-version: '17'
 
     - name: Configure CMake
@@ -76,16 +93,21 @@ jobs:
 
     - name: Build
       run: |
+        # Apply patch for GLES compatibility
         git apply ./.github/gles.patch
-        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        # Build the project with CMake
+        cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
+        # Move the generated library to the appropriate location
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/arm64-v8a/
+        # Build the Android app with Gradle
         cd src/pandroid
-        ./gradlew assembleDebug
+        ./gradlew assemble${{ env.BUILD_TYPE }}
+        ls -R app/build/outputs
         cd ../..
 
-    - name: Upload executable
+    - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Android APK (arm64)
-        path: './src/pandroid/app/build/outputs/apk/debug/app-debug.apk'
-
+        name: Android APKs (arm64)
+        path: |
+          ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
