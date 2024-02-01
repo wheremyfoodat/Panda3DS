@@ -18,6 +18,11 @@ namespace PICA::ShaderGen {
 		Language language;
 
 		void compileTEV(std::string& shader, int stage, const PICARegs& regs);
+		void getSource(std::string& shader, PICA::TexEnvConfig::Source source, int index);
+		void getColorOperand(std::string& shader, PICA::TexEnvConfig::Source source, PICA::TexEnvConfig::ColorOperand color, int index);
+		void getAlphaOperand(std::string& shader, PICA::TexEnvConfig::Source source, PICA::TexEnvConfig::AlphaOperand alpha, int index);
+		void getColorOperation(std::string& shader, PICA::TexEnvConfig::Operation op);
+		void getAlphaOperation(std::string& shader, PICA::TexEnvConfig::Operation op);
 
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}

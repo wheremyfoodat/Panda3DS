@@ -52,9 +52,22 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 			tevSources[15] = v_colour;   // Previous combiner
 	)";
 
+	ret += R"(
+		vec3 colorOperand1 = vec3(0.0);
+		vec3 colorOperand2 = vec3(0.0);
+		vec3 colorOperand3 = vec3(0.0);
+
+		float alphaOperand1 = 0.0;
+		float alphaOperand2 = 0.0;
+		float alphaOperand3 = 0.0;
+	)";
+
 	for (int i = 0; i < 6; i++) {
 		compileTEV(ret, i, regs);
 	}
+
+	ret += "}"; // End of main function
+	ret += "\n\n\n\n\n\n\n\n\n\n\n\n\n";
 
 	return ret;
 }
@@ -68,4 +81,136 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 
 	const u32 ioBase = ioBases[stage];
 	TexEnvConfig tev(regs[ioBase], regs[ioBase + 1], regs[ioBase + 2], regs[ioBase + 3], regs[ioBase + 4]);
+
+	if (!tev.isPassthroughStage()) {
+		// Get color operands
+		shader += "colorOp1 = ";
+		getColorOperand(shader, tev.colorSource1, tev.colorOperand1, stage);
+
+		shader += ";\ncolorOp2 = ";
+		getColorOperand(shader, tev.colorSource2, tev.colorOperand2, stage);
+
+		shader += ";\ncolorOp3 = ";
+		getColorOperand(shader, tev.colorSource3, tev.colorOperand3, stage);
+
+		shader += ";\nvec3 outputColor" + std::to_string(stage) + " = vec3(1.0)";
+		shader += ";\n";
+
+		if (tev.colorOp == TexEnvConfig::Operation::Dot3RGBA) {
+			// Dot3 RGBA also writes to the alpha component so we don't need to do anything more
+			shader += "float outputAlpha" + std::to_string(stage) + " = colorOutput" + std::to_string(stage) + ".x;\n";
+		} else {
+			// Get alpha operands
+			shader += "alphaOp1 = ";
+			getAlphaOperand(shader, tev.alphaSource1, tev.alphaOperand1, stage);
+
+			shader += ";\nalphaOp2 = ";
+			getAlphaOperand(shader, tev.alphaSource2, tev.alphaOperand2, stage);
+
+			shader += ";\nalphaOp3 = ";
+			getAlphaOperand(shader, tev.alphaSource3, tev.alphaOperand3, stage);
+
+			shader += ";\nvec3 outputAlpha" + std::to_string(stage) + " = 1.0";
+			shader += ";\n";
+		}
+	}
+}
+
+void FragmentGenerator::getColorOperand(std::string& shader, TexEnvConfig::Source source, TexEnvConfig::ColorOperand color, int index) {
+	using OperandType = TexEnvConfig::ColorOperand;
+
+	// For inverting operands, add the 1.0 - x subtraction
+	if (color == OperandType::OneMinusSourceColor || color == OperandType::OneMinusSourceRed || color == OperandType::OneMinusSourceGreen ||
+		color == OperandType::OneMinusSourceBlue || color == OperandType::OneMinusSourceAlpha) {
+		shader += "vec3(1.0, 1.0, 1.0) - ";
+	}
+
+	switch (color) {
+		case OperandType::SourceColor:
+		case OperandType::OneMinusSourceColor:
+			getSource(shader, source, index);
+			shader += ".rgb";
+			break;
+
+		case OperandType::SourceRed:
+		case OperandType::OneMinusSourceRed:
+			getSource(shader, source, index);
+			shader += ".rrr";
+			break;
+
+		case OperandType::SourceGreen:
+		case OperandType::OneMinusSourceGreen:
+			getSource(shader, source, index);
+			shader += ".ggg";
+			break;
+
+		case OperandType::SourceBlue:
+		case OperandType::OneMinusSourceBlue:
+			getSource(shader, source, index);
+			shader += ".bbb";
+			break;
+
+		case OperandType::SourceAlpha:
+		case OperandType::OneMinusSourceAlpha:
+			getSource(shader, source, index);
+			shader += ".aaa";
+			break;
+
+		default:
+			shader += "vec3(1.0, 1.0, 1.0)";
+			Helpers::warn("FragmentGenerator: Invalid TEV color operand");
+			break;
+	}
+}
+
+void FragmentGenerator::getAlphaOperand(std::string& shader, TexEnvConfig::Source source, TexEnvConfig::AlphaOperand color, int index) {
+	using OperandType = TexEnvConfig::AlphaOperand;
+
+	// For inverting operands, add the 1.0 - x subtraction
+	if (color == OperandType::OneMinusSourceRed || color == OperandType::OneMinusSourceGreen || color == OperandType::OneMinusSourceBlue ||
+		color == OperandType::OneMinusSourceAlpha) {
+		shader += "1.0 - ";
+	}
+
+	switch (color) {
+		case OperandType::SourceRed:
+		case OperandType::OneMinusSourceRed:
+			getSource(shader, source, index);
+			shader += ".r";
+			break;
+
+		case OperandType::SourceGreen:
+		case OperandType::OneMinusSourceGreen:
+			getSource(shader, source, index);
+			shader += ".g";
+			break;
+
+		case OperandType::SourceBlue:
+		case OperandType::OneMinusSourceBlue:
+			getSource(shader, source, index);
+			shader += ".b";
+			break;
+
+		case OperandType::SourceAlpha:
+		case OperandType::OneMinusSourceAlpha:
+			getSource(shader, source, index);
+			shader += ".a";
+			break;
+
+		default:
+			shader += "1.0";
+			Helpers::warn("FragmentGenerator: Invalid TEV color operand");
+			break;
+	}
+}
+
+void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source source, int index) {
+	switch (source) {
+		case TexEnvConfig::Source::PrimaryColor: shader += "v_colour"; break;
+
+		default:
+			Helpers::warn("Unimplemented TEV source: %d", static_cast<int>(source));
+			shader += "vec4(1.0, 1.0, 1.0, 1.0)";
+			break;
+	}
 }
