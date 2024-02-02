@@ -188,17 +188,19 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp src/core/fs/archive_system_save_data.cpp
 )
 
-set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp)
+set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
+                        src/core/applets/error_applet.cpp
+)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
 if(NOT ANDROID)
     if(ENABLE_QT_GUI)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
-            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp
+            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp
         )   
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
-            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp
+            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
@@ -244,7 +246,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
-                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/PICA/shader_gen.hpp
+                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp include/PICA/shader_gen.hpp
 )
 
 cmrc_add_resource_library(
@@ -264,6 +266,16 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/xxhash/xxhash.c
 )
 
+if(ENABLE_LUAJIT AND NOT ANDROID)
+    # Build luv and libuv for Lua TCP server usage if we're not on Android
+    include_directories(third_party/luv/src)
+    include_directories(third_party/luv/deps/lua-compat-5.3/c-api)
+    include_directories(third_party/libuv/include)
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/luv/src/luv.c)
+    set(LIBUV_BUILD_SHARED OFF)
+
+    add_subdirectory(third_party/libuv)
+endif()
 
 if(ENABLE_QT_GUI)
     include_directories(third_party/duckstation)
@@ -431,6 +443,11 @@ endif()
 if(ENABLE_LUAJIT)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_LUA=1")
     target_link_libraries(Alber PRIVATE libluajit)
+
+    # If we're not on Android, link libuv too
+    if (NOT ANDROID)
+        target_link_libraries(Alber PRIVATE uv_a)
+    endif()
 endif()
 
 if(ENABLE_OPENGL)

@@ -70,6 +70,7 @@ public:
 	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
 	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
 	Handle makeTimer(ResetType resetType);
+	void pollTimers();
 
 	// Signals an event, returns true on success or false if the event does not exist
 	bool signalEvent(Handle e);
@@ -94,7 +95,7 @@ public:
 	void releaseMutex(Mutex* moo);
 	void cancelTimer(Timer* timer);
 	void signalTimer(Handle timerHandle, Timer* timer);
-	void updateTimer(Handle timerHandle, Timer* timer);
+	u64 getWakeupTick(s64 ns);
 
 	// Wake up the thread with the highest priority out of all threads in the waitlist
 	// Returns the index of the woken up thread
@@ -137,6 +138,7 @@ public:
 	void duplicateHandle();
 	void exitThread();
 	void mapMemoryBlock();
+	void unmapMemoryBlock();
 	void queryMemory();
 	void getCurrentProcessorNumber();
 	void getProcessID();

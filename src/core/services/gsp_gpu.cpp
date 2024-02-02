@@ -18,6 +18,7 @@ namespace ServiceCommands {
 		ReleaseRight = 0x00170000,
 		ImportDisplayCaptureInfo = 0x00180000,
 		SaveVramSysArea = 0x00190000,
+		RestoreVramSysArea = 0x001A0000,
 		SetInternalPriorities = 0x001E0080,
 		StoreDataCache = 0x001F0082
 	};
@@ -51,6 +52,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::ImportDisplayCaptureInfo: importDisplayCaptureInfo(messagePointer); break;
 		case ServiceCommands::RegisterInterruptRelayQueue: registerInterruptRelayQueue(messagePointer); break;
 		case ServiceCommands::ReleaseRight: releaseRight(messagePointer); break;
+		case ServiceCommands::RestoreVramSysArea: restoreVramSysArea(messagePointer); break;
 		case ServiceCommands::SaveVramSysArea: saveVramSysArea(messagePointer); break;
 		case ServiceCommands::SetAxiConfigQoSMode: setAxiConfigQoSMode(messagePointer); break;
 		case ServiceCommands::SetBufferSwap: setBufferSwap(messagePointer); break;
@@ -143,8 +145,7 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	// Not emulating this causes Yoshi's Wooly World, Captain Toad, Metroid 2 et al to hang
 	if (type == GPUInterrupt::VBlank0 || type == GPUInterrupt::VBlank1) {
 		int screen = static_cast<u32>(type) - static_cast<u32>(GPUInterrupt::VBlank0); // 0 for top screen, 1 for bottom
-		// TODO: Offset depends on GSP thread being triggered
-		FramebufferUpdate* update = reinterpret_cast<FramebufferUpdate*>(&sharedMem[0x200 + screen * sizeof(FramebufferUpdate)]);
+		FramebufferUpdate* update = getFramebufferInfo(screen);
 
 		if (update->dirtyFlag & 1) {
 			setBufferSwapImpl(screen, update->framebufferInfo[update->index]);
@@ -482,10 +483,50 @@ void GPUService::saveVramSysArea(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void GPUService::restoreVramSysArea(u32 messagePointer) {
+	Helpers::warn("GSP::GPU::RestoreVramSysArea (stubbed)");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1A, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 // Used in similar fashion to the SaveVramSysArea function
 void GPUService::importDisplayCaptureInfo(u32 messagePointer) {
 	Helpers::warn("GSP::GPU::ImportDisplayCaptureInfo (stubbed)");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x18, 9, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+
+	if (sharedMem == nullptr) {
+		Helpers::warn("GSP::GPU::ImportDisplayCaptureInfo called without GSP module being properly initialized!");
+		return;
+	}
+
+	FramebufferUpdate* topScreen = getTopFramebufferInfo();
+	FramebufferUpdate* bottomScreen = getBottomFramebufferInfo();
+
+	// Capture the relevant data for both screens and return them to the caller
+	CaptureInfo topScreenCapture = {
+		.leftFramebuffer = topScreen->framebufferInfo[topScreen->index].leftFramebufferVaddr,
+		.rightFramebuffer = topScreen->framebufferInfo[topScreen->index].rightFramebufferVaddr,
+		.format = topScreen->framebufferInfo[topScreen->index].format,
+		.stride = topScreen->framebufferInfo[topScreen->index].stride,
+	};
+
+	CaptureInfo bottomScreenCapture = {
+		.leftFramebuffer = bottomScreen->framebufferInfo[bottomScreen->index].leftFramebufferVaddr,
+		.rightFramebuffer = bottomScreen->framebufferInfo[bottomScreen->index].rightFramebufferVaddr,
+		.format = bottomScreen->framebufferInfo[bottomScreen->index].format,
+		.stride = bottomScreen->framebufferInfo[bottomScreen->index].stride,
+	};
+
+	mem.write32(messagePointer + 8, topScreenCapture.leftFramebuffer);
+	mem.write32(messagePointer + 12, topScreenCapture.rightFramebuffer);
+	mem.write32(messagePointer + 16, topScreenCapture.format);
+	mem.write32(messagePointer + 20, topScreenCapture.stride);
+
+	mem.write32(messagePointer + 24, bottomScreenCapture.leftFramebuffer);
+	mem.write32(messagePointer + 28, bottomScreenCapture.rightFramebuffer);
+	mem.write32(messagePointer + 32, bottomScreenCapture.format);
+	mem.write32(messagePointer + 36, bottomScreenCapture.stride);
 }

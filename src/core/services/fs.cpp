@@ -27,6 +27,7 @@ namespace FSCommands {
 		CloseArchive = 0x080E0080,
 		FormatThisUserSaveData = 0x080F0180,
 		GetFreeBytes = 0x08120080,
+		GetSdmcArchiveResource = 0x08140000,
 		IsSdmcDetected = 0x08170000,
 		IsSdmcWritable = 0x08180000,
 		CardSlotIsInserted = 0x08210000,
@@ -96,6 +97,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 
 		case ArchiveID::SystemSaveData: return &systemSaveData;
 		case ArchiveID::SDMC: return &sdmc;
+		case ArchiveID::SDMCWriteOnly: return &sdmcWriteOnly;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
 		default:
 			Helpers::panic("Unknown archive. ID: %d\n", id);
@@ -179,6 +181,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::GetFreeBytes: getFreeBytes(messagePointer); break;
 		case FSCommands::GetFormatInfo: getFormatInfo(messagePointer); break;
 		case FSCommands::GetPriority: getPriority(messagePointer); break;
+		case FSCommands::GetSdmcArchiveResource: getSdmcArchiveResource(messagePointer); break;
 		case FSCommands::GetThisSaveDataSecureValue: getThisSaveDataSecureValue(messagePointer); break;
 		case FSCommands::Initialize: initialize(messagePointer); break;
 		case FSCommands::InitializeWithSdkVersion: initializeWithSdkVersion(messagePointer); break;
@@ -763,4 +766,23 @@ void FSService::renameFile(u32 messagePointer) {
 	// Everything is OK, let's do the rename. Both archives should match so we don't need the dest anymore
 	const HorizonResult res = sourceArchive->archive->renameFile(sourcePath, destPath);
 	mem.write32(messagePointer + 4, static_cast<u32>(res));
+}
+
+void FSService::getSdmcArchiveResource(u32 messagePointer) {
+	log("FS::GetSdmcArchiveResource");  // For the time being, return the same stubbed archive resource for every media type
+
+	static constexpr ArchiveResource resource = {
+		.sectorSize = 512,
+		.clusterSize = 16_KB,
+		.partitionCapacityInClusters = 0x80000,  // 0x80000 * 16 KB = 8GB
+		.freeSpaceInClusters = 0x80000,          // Same here
+	};
+
+	mem.write32(messagePointer, IPC::responseHeader(0x814, 5, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+
+	mem.write32(messagePointer + 8, resource.sectorSize);
+	mem.write32(messagePointer + 12, resource.clusterSize);
+	mem.write32(messagePointer + 16, resource.partitionCapacityInClusters);
+	mem.write32(messagePointer + 20, resource.freeSpaceInClusters);
 }

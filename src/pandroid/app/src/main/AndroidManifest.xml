@@ -20,6 +20,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:isGame="true"
+        android:hardwareAccelerated="true"
         android:theme="@style/Theme.Pandroid"
         tools:targetApi="31">
         <activity
@@ -46,5 +48,7 @@
 
         <activity android:name=".app.preferences.InputMapActivity"
             android:configChanges="density|orientation|screenSize"/>
+
+        <service android:name=".app.services.LoggerService" android:process=":logger_service"/>
     </application>
 </manifest>

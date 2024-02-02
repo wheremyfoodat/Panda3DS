@@ -49,3 +49,9 @@
 [submodule "third_party/oaknut"]
 	path = third_party/oaknut
 	url = https://github.com/merryhime/oaknut
+[submodule "third_party/luv"]
+	path = third_party/luv
+	url = https://github.com/luvit/luv
+[submodule "third_party/libuv"]
+	path = third_party/libuv
+	url = https://github.com/libuv/libuv

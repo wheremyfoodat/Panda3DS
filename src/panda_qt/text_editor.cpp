@@ -16,8 +16,8 @@ TextEditorWindow::TextEditorWindow(QWidget* parent, const std::string& filename,
 	ZepReplExCommand::Register(zepWidget.GetEditor(), &replProvider);
 
 	// Default to standard mode instead of vim mode, initialize text box
-	zepWidget.GetEditor().SetGlobalMode(Zep::ZepMode_Standard::StaticName());
 	zepWidget.GetEditor().InitWithText(filename, initialText);
+	zepWidget.GetEditor().SetGlobalMode(Zep::ZepMode_Standard::StaticName());
 
 	// Layout for widgets
 	QVBoxLayout* mainLayout = new QVBoxLayout();

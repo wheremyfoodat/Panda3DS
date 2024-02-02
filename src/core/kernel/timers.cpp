@@ -1,5 +1,8 @@
-#include "kernel.hpp"
+#include <limits>
+
 #include "cpu.hpp"
+#include "kernel.hpp"
+#include "scheduler.hpp"
 
 Handle Kernel::makeTimer(ResetType type) {
 	Handle ret = makeObject(KernelObjectType::Timer);
@@ -13,27 +16,44 @@ Handle Kernel::makeTimer(ResetType type) {
 	return ret;
 }
 
-void Kernel::updateTimer(Handle handle, Timer* timer) {
-	if (timer->running) {
-		const u64 currentTicks = cpu.getTicks();
-		u64 elapsedTicks = currentTicks - timer->startTick;
+void Kernel::pollTimers() {
+	u64 currentTick = cpu.getTicks();
 
-		constexpr double ticksPerSec = double(CPU::ticksPerSec);
-		constexpr double nsPerTick = ticksPerSec / 1000000000.0;
-		const s64 elapsedNs = s64(double(elapsedTicks) * nsPerTick);
+	// Find the next timestamp we'll poll KTimers on. To do this, we find the minimum tick one of our timers will fire
+	u64 nextTimestamp = std::numeric_limits<u64>::max();
+	// Do we have any active timers anymore? If not, then we won't need to schedule a new timer poll event
+	bool haveActiveTimers = false;
 
-		// Timer has fired
-		if (elapsedNs >= timer->currentDelay) {
-			timer->startTick = currentTicks;
-			timer->currentDelay = timer->interval;
-			signalTimer(handle, timer);
+	for (auto handle : timerHandles) {
+		KernelObject* object = getObject(handle, KernelObjectType::Timer);
+		if (object != nullptr) {
+			Timer* timer = object->getData<Timer>();
+
+			if (timer->running) {
+				// If timer has fired, signal it and set the tick it will next time
+				if (currentTick >= timer->fireTick) {
+					signalTimer(handle, timer);
+				}
+
+				// Update our next timer fire timestamp and mark that we should schedule a new event to poll timers
+				// We recheck timer->running because signalling a timer stops it if interval == 0
+				if (timer->running) {
+					nextTimestamp = std::min<u64>(nextTimestamp, timer->fireTick);
+					haveActiveTimers = true;
+				}
+			}
 		}
+	}
+
+	// If we still have active timers, schedule next poll event
+	if (haveActiveTimers) {
+		Scheduler& scheduler = cpu.getScheduler();
+		scheduler.addEvent(Scheduler::EventType::UpdateTimers, nextTimestamp);
 	}
 }
 
 void Kernel::cancelTimer(Timer* timer) {
 	timer->running = false;
-	// TODO: When we have a scheduler this should properly cancel timer events in the scheduler
 }
 
 void Kernel::signalTimer(Handle timerHandle, Timer* timer) {
@@ -54,6 +74,8 @@ void Kernel::signalTimer(Handle timerHandle, Timer* timer) {
 
 	if (timer->interval == 0) {
 		cancelTimer(timer);
+	} else {
+		timer->fireTick = cpu.getTicks() + Scheduler::nsToCycles(timer->interval);
 	}
 }
 
@@ -87,18 +109,20 @@ void Kernel::svcSetTimer() {
 
 	Timer* timer = object->getData<Timer>();
 	cancelTimer(timer);
-	timer->currentDelay = initial;
 	timer->interval = interval;
 	timer->running = true;
-	timer->startTick = cpu.getTicks();
+	timer->fireTick = cpu.getTicks() + Scheduler::nsToCycles(initial);
+	
+	Scheduler& scheduler = cpu.getScheduler();
+	// Signal an event to poll timers as soon as possible
+	scheduler.removeEvent(Scheduler::EventType::UpdateTimers);
+	scheduler.addEvent(Scheduler::EventType::UpdateTimers, cpu.getTicks() + 1);
 
 	// If the initial delay is 0 then instantly signal the timer
 	if (initial == 0) {
 		signalTimer(handle, timer);
-	} else {
-		// This should schedule an event in the scheduler when we have one
 	}
-	
+
 	regs[0] = Result::Success;
 }
 

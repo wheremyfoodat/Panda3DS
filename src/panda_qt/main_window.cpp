@@ -1,8 +1,13 @@
 #include "panda_qt/main_window.hpp"
 
+#include <QDesktopServices>
 #include <QFileDialog>
+#include <QString>
+#include <cmath>
 #include <cstdio>
 #include <fstream>
+
+#include "cheats.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
 	setWindowTitle("Alber");
@@ -26,8 +31,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Create and bind actions for them
 	auto loadGameAction = fileMenu->addAction(tr("Load game"));
 	auto loadLuaAction = fileMenu->addAction(tr("Load Lua script"));
+	auto openAppFolderAction = fileMenu->addAction(tr("Open Panda3DS folder"));
+
 	connect(loadGameAction, &QAction::triggered, this, &MainWindow::selectROM);
 	connect(loadLuaAction, &QAction::triggered, this, &MainWindow::selectLuaFile);
+	connect(openAppFolderAction, &QAction::triggered, this, [this]() {
+		QString path = QString::fromStdU16String(emu->getAppDataRoot().u16string());
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+	});
 
 	auto pauseAction = emulationMenu->addAction(tr("Pause"));
 	auto resumeAction = emulationMenu->addAction(tr("Resume"));
@@ -40,19 +51,22 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
+	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
+	connect(cheatsEditorAction, &QAction::triggered, this, &MainWindow::openCheatsEditor);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
+	emu = new Emulator();
+	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
+
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
 	configWindow = new ConfigWindow(this);
+	cheatsEditor = new CheatsWindow(emu, {}, this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
-
-	emu = new Emulator();
-	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -176,6 +190,7 @@ MainWindow::~MainWindow() {
 	delete menuBar;
 	delete aboutWindow;
 	delete configWindow;
+	delete cheatsEditor;
 	delete luaEditor;
 }
 
@@ -194,8 +209,7 @@ void MainWindow::dumpRomFS() {
 		return;
 	}
 	std::filesystem::path path(folder.toStdU16String());
-	
-	// TODO: This might break if the game accesses RomFS while we're dumping, we should move it to the emulator thread when we've got a message queue going
+
 	messageQueueMutex.lock();
 	RomFS::DumpingResult res = emu->dumpRomFS(path);
 	messageQueueMutex.unlock();
@@ -226,6 +240,7 @@ void MainWindow::showAboutMenu() {
 }
 
 void MainWindow::openLuaEditor() { luaEditor->show(); }
+void MainWindow::openCheatsEditor() { cheatsEditor->show(); }
 
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {
@@ -240,12 +255,33 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			delete message.string.str;
 			break;
 
+		case MessageType::EditCheat: {
+			u32 handle = message.cheat.c->handle;
+			const std::vector<uint8_t>& cheat = message.cheat.c->cheat;
+			const std::function<void(u32)>& callback = message.cheat.c->callback;
+			bool isEditing = handle != Cheats::badCheatHandle;
+			if (isEditing) {
+				emu->getCheats().removeCheat(handle);
+				u32 handle = emu->getCheats().addCheat(cheat.data(), cheat.size());
+			} else {
+				u32 handle = emu->getCheats().addCheat(cheat.data(), cheat.size());
+				callback(handle);
+			}
+			delete message.cheat.c;
+		} break;
+
 		case MessageType::Pause: emu->pause(); break;
 		case MessageType::Resume: emu->resume(); break;
 		case MessageType::TogglePause: emu->togglePause(); break;
 		case MessageType::Reset: emu->reset(Emulator::ReloadOption::Reload); break;
 		case MessageType::PressKey: emu->getServiceManager().getHID().pressKey(message.key.key); break;
 		case MessageType::ReleaseKey: emu->getServiceManager().getHID().releaseKey(message.key.key); break;
+		case MessageType::SetCirclePadX: emu->getServiceManager().getHID().setCirclepadX(message.circlepad.value); break;
+		case MessageType::SetCirclePadY: emu->getServiceManager().getHID().setCirclepadY(message.circlepad.value); break;
+		case MessageType::PressTouchscreen:
+			emu->getServiceManager().getHID().setTouchScreenPress(message.touchscreen.x, message.touchscreen.y);
+			break;
+		case MessageType::ReleaseTouchscreen: emu->getServiceManager().getHID().releaseTouchScreen(); break;
 	}
 }
 
@@ -253,7 +289,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 	auto pressKey = [this](u32 key) {
 		EmulatorMessage message{.type = MessageType::PressKey};
 		message.key.key = key;
+		sendMessage(message);
+	};
 
+	auto setCirclePad = [this](MessageType type, s16 value) {
+		EmulatorMessage message{.type = type};
+		message.circlepad.value = value;
 		sendMessage(message);
 	};
 
@@ -265,6 +306,11 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 		case Qt::Key_Q: pressKey(HID::Keys::L); break;
 		case Qt::Key_P: pressKey(HID::Keys::R); break;
+
+		case Qt::Key_W: setCirclePad(MessageType::SetCirclePadY, 0x9C); break;
+		case Qt::Key_A: setCirclePad(MessageType::SetCirclePadX, -0x9C); break;
+		case Qt::Key_S: setCirclePad(MessageType::SetCirclePadY, -0x9C); break;
+		case Qt::Key_D: setCirclePad(MessageType::SetCirclePadX, 0x9C); break;
 
 		case Qt::Key_Right: pressKey(HID::Keys::Right); break;
 		case Qt::Key_Left: pressKey(HID::Keys::Left); break;
@@ -282,7 +328,12 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 	auto releaseKey = [this](u32 key) {
 		EmulatorMessage message{.type = MessageType::ReleaseKey};
 		message.key.key = key;
+		sendMessage(message);
+	};
 
+	auto releaseCirclePad = [this](MessageType type) {
+		EmulatorMessage message{.type = type};
+		message.circlepad.value = 0;
 		sendMessage(message);
 	};
 
@@ -295,6 +346,12 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 		case Qt::Key_Q: releaseKey(HID::Keys::L); break;
 		case Qt::Key_P: releaseKey(HID::Keys::R); break;
 
+		case Qt::Key_W:
+		case Qt::Key_S: releaseCirclePad(MessageType::SetCirclePadY); break;
+
+		case Qt::Key_A:
+		case Qt::Key_D: releaseCirclePad(MessageType::SetCirclePadX); break;
+
 		case Qt::Key_Right: releaseKey(HID::Keys::Right); break;
 		case Qt::Key_Left: releaseKey(HID::Keys::Left); break;
 		case Qt::Key_Up: releaseKey(HID::Keys::Up); break;
@@ -305,10 +362,56 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 	}
 }
 
+void MainWindow::mousePressEvent(QMouseEvent* event) {
+	if (event->button() == Qt::MouseButton::LeftButton) {
+		const QPointF clickPos = event->globalPosition();
+		const QPointF widgetPos = screen.mapFromGlobal(clickPos);
+
+		// Press is inside the screen area
+		if (widgetPos.x() >= 0 && widgetPos.x() < screen.width() && widgetPos.y() >= 0 && widgetPos.y() < screen.height()) {
+			// Go from widget positions to [0, 400) for x and [0, 480) for y
+			uint x = (uint)std::round(widgetPos.x() / screen.width() * 400.f);
+			uint y = (uint)std::round(widgetPos.y() / screen.height() * 480.f);
+
+			// Check if touch falls in the touch screen area
+			if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
+				// Convert to 3DS coordinates
+				u16 x_converted = static_cast<u16>(x) - 40;
+				u16 y_converted = static_cast<u16>(y) - 240;
+
+				EmulatorMessage message{.type = MessageType::PressTouchscreen};
+				message.touchscreen.x = x_converted;
+				message.touchscreen.y = y_converted;
+				sendMessage(message);
+			} else {
+				sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
+			}
+		}
+	}
+}
+
+void MainWindow::mouseReleaseEvent(QMouseEvent* event) {
+	if (event->button() == Qt::MouseButton::LeftButton) {
+		sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
+	}
+}
+
 void MainWindow::loadLuaScript(const std::string& code) {
 	EmulatorMessage message{.type = MessageType::LoadLuaScript};
 
 	// Make a copy of the code on the heap to send via the message queue
 	message.string.str = new std::string(code);
+	sendMessage(message);
+}
+
+void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback) {
+	EmulatorMessage message{.type = MessageType::EditCheat};
+
+	CheatMessage* c = new CheatMessage();
+	c->handle = handle;
+	c->cheat = cheat;
+	c->callback = callback;
+
+	message.cheat.c = c;
 	sendMessage(message);
 }

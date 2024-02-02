@@ -15,6 +15,7 @@
 #include "io_file.hpp"
 #include "lua_manager.hpp"
 #include "memory.hpp"
+#include "scheduler.hpp"
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "http_server.hpp"
@@ -42,6 +43,7 @@ class Emulator {
 	Kernel kernel;
 	Crypto::AESEngine aesEngine;
 	Cheats cheats;
+	Scheduler scheduler;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
@@ -85,6 +87,8 @@ class Emulator {
 	// change ROMs. If Reload is selected, the emulator will reload its selected ROM. This is useful for eg a "reset" button that keeps the current
 	// ROM and just resets the emu
 	enum class ReloadOption { NoReload, Reload };
+	// Used in CPU::runFrame
+	bool frameDone = false;
 
 	Emulator();
 	~Emulator();
@@ -94,6 +98,8 @@ class Emulator {
 	void reset(ReloadOption reload);
 	void run(void* frontend = nullptr);
 	void runFrame();
+	// Poll the scheduler for events
+	void pollScheduler();
 
 	void resume();  // Resume the emulator
 	void pause();   // Pause the emulator
@@ -121,6 +127,7 @@ class Emulator {
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
+	Scheduler& getScheduler() { return scheduler; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
@@ -128,6 +135,8 @@ class Emulator {
 
 	std::filesystem::path getConfigPath();
 	std::filesystem::path getAndroidAppPath();
+	// Get the root path for the emulator's app data
+	std::filesystem::path getAppDataRoot();
 
 	std::span<u8> getSMDH();
 };

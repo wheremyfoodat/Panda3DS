@@ -45,8 +45,16 @@ HorizonResult SDMCArchive::deleteFile(const FSPath& path) {
 
 FileDescriptor SDMCArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	FilePerms realPerms = perms;
-	// SD card always has read permission
-	realPerms.raw |= (1 << 0);
+
+	if (isWriteOnly) {
+		if (perms.read()) {
+			Helpers::warn("SDMC: Read flag is not allowed in SDMC Write-Only archive");
+			return FileError;
+		}
+	} else {
+		// Regular SDMC archive always has read permission
+		realPerms.raw |= (1 << 0);
+	}
 
 	if ((realPerms.create() && !realPerms.write())) {
 		Helpers::panic("[SDMC] Unsupported flags for OpenFile");
@@ -130,6 +138,11 @@ HorizonResult SDMCArchive::createDirectory(const FSPath& path) {
 }
 
 Rust::Result<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const FSPath& path) {
+	if (isWriteOnly) {
+		Helpers::warn("SDMC: OpenDirectory is not allowed in SDMC Write-Only archive");
+		return Err(Result::FS::UnexpectedFileOrDir);
+	}
+
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::OpenDirectory");

@@ -17,10 +17,11 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel), gpu(memory, config),
-	  memory(cpu.getTicksRef(), config), cheats(memory, kernel.getServiceManager().getHID()), lua(memory), running(false), programRunning(false)
+	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
+	  cheats(memory, kernel.getServiceManager().getHID()), lua(memory), running(false), programRunning(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
-	  , httpServer(this)
+	  ,
+	  httpServer(this)
 #endif
 {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
@@ -45,6 +46,9 @@ void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
 	gpu.reset();
 	memory.reset();
+	// Reset scheduler and add a VBlank event
+	scheduler.reset();
+
 	// Kernel must be reset last because it depends on CPU/Memory state
 	kernel.reset();
 
@@ -99,12 +103,6 @@ void Emulator::runFrame() {
 	if (running) {
 		cpu.runFrame(); // Run 1 frame of instructions
 		gpu.display();  // Display graphics
-		lua.signalEvent(LuaEvent::Frame);
-
-		// Send VBlank interrupts
-		ServiceManager& srv = kernel.getServiceManager();
-		srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
-		srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
 		// Run cheats if any are loaded
 		if (cheats.haveCheats()) [[unlikely]] {
@@ -117,6 +115,67 @@ void Emulator::runFrame() {
 	}
 }
 
+void Emulator::pollScheduler() {
+	auto& events = scheduler.events;
+
+	// Pop events until there's none pending anymore
+	while (scheduler.currentTimestamp >= scheduler.nextTimestamp) {
+		// Read event timestamp and type, pop it from the scheduler and handle it
+		auto [time, eventType] = std::move(*events.begin());
+		events.erase(events.begin());
+
+		scheduler.updateNextTimestamp();
+
+		switch (eventType) {
+			case Scheduler::EventType::VBlank: [[likely]] {
+				// Signal that we've reached the end of a frame
+				frameDone = true;
+				lua.signalEvent(LuaEvent::Frame);
+
+				// Send VBlank interrupts
+				ServiceManager& srv = kernel.getServiceManager();
+				srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+				srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+				
+				// Queue next VBlank event
+				scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
+				break;
+			}
+
+			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
+
+			default: {
+				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
+				break;
+			}
+		}
+	}
+}
+
+// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
+// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
+// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
+// If the portable build setting is enabled, then those saves go in the executable directory instead
+std::filesystem::path Emulator::getAppDataRoot() {
+	std::filesystem::path appDataPath;
+
+#ifdef __ANDROID__
+	appDataPath = getAndroidAppPath();
+#else
+	char* appData;
+	if (!config.usePortableBuild) {
+		appData = SDL_GetPrefPath(nullptr, "Alber");
+		appDataPath = std::filesystem::path(appData);
+	} else {
+		appData = SDL_GetBasePath();
+		appDataPath = std::filesystem::path(appData) / "Emulator Files";
+	}
+	SDL_free(appData);
+#endif
+
+	return appDataPath;
+}
+
 bool Emulator::loadROM(const std::filesystem::path& path) {
 	// Reset the emulator if we've already loaded a ROM
 	if (romType != ROMType::None) {
@@ -127,26 +186,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	memory.loadedCXI = std::nullopt;
 	memory.loaded3DSX = std::nullopt;
 
-	// Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
-	// Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
-	// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
-	// If the portable build setting is enabled, then those saves go in the executable directory instead
-	std::filesystem::path appDataPath;
-
-	#ifdef __ANDROID__
-	appDataPath = getAndroidAppPath();
-	#else
-	char* appData;
-	if (!config.usePortableBuild) {
-		appData = SDL_GetPrefPath(nullptr, "Alber");
-		appDataPath = std::filesystem::path(appData);
-	} else {
-		appData = SDL_GetBasePath();
-		appDataPath = std::filesystem::path(appData) / "Emulator Files";
-	}
-	SDL_free(appData);
-	#endif
-
+	const std::filesystem::path appDataPath = getAppDataRoot();
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
 	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
 	IOFile::setAppDataDir(dataPath);
