@@ -46,8 +46,8 @@
     <string name="open_file">Open file</string>
     <string name="create_new">Create new</string>
     <string name="running_ff">Running \"%s\" ...</string>
-    <string name="developer_options">Advanced options</string>
-    <string name="pref_developer_summary">Logger, performance statistics, etc.</string>
+    <string name="advanced_options">Advanced options</string>
+    <string name="pref_advanced_summary">Logger, performance statistics, etc.</string>
     <string name="pref_performance_monitor_title">Performance monitor</string>
     <string name="pref_performance_monitor_summary">Show overlay with fps, memory, etc.</string>
     <string name="pref_logger_service_title">Logger</string>

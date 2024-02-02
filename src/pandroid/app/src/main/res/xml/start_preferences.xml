@@ -26,8 +26,8 @@
     <Preference
         app:key="advanced"
         app:icon="@drawable/ic_code"
-        app:title="@string/developer_options"
-        app:summary="@string/pref_developer_summary"
+        app:title="@string/advanced_options"
+        app:summary="@string/pref_advanced_summary"
         app:layout="@layout/preference_start_item"/>
 
 </PreferenceScreen>

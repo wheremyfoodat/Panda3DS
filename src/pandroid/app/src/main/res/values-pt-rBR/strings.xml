@@ -45,8 +45,8 @@
     <string name="open_file">Abrir arquivo</string>
     <string name="create_new">Criar novo</string>
     <string name="running_ff">Executando \"%s\" ...</string>
-    <string name="developer_options">Opções avançada.</string>
-    <string name="pref_developer_summary">Depuração, mostrar fps, etc.</string>
+    <string name="advanced_options">Opções avançada.</string>
+    <string name="pref_advanced_summary">Depuração, mostrar fps, etc.</string>
     <string name="pref_performance_monitor_title">Monitor de desempenho</string>
     <string name="pref_performance_monitor_summary">Mostrar um overlay com fps, memoria, etc.</string>
     <string name="pref_logger_service_title">Depuração</string>
