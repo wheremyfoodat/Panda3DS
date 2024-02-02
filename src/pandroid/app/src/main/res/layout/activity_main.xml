@@ -5,7 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".app.MainActivity">
+    tools:context=".app.MainActivity"
+    android:background="?colorSurface">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fragment_container"
@@ -24,6 +25,7 @@
         app:layout_constraintTop_toBottomOf="@id/fragment_container"
         app:labelVisibilityMode="selected"
         app:menu="@menu/main_activity_navigation"
-        style="@style/ThemedNavigationBottom"/>
+        style="@style/ThemedNavigationBottom"
+        android:background="@drawable/color_surface"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

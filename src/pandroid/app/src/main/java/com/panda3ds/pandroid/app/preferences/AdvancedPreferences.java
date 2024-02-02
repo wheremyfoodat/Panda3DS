@@ -13,11 +13,11 @@ import com.panda3ds.pandroid.app.base.BasePreferenceFragment;
 import com.panda3ds.pandroid.app.services.LoggerService;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 
-public class DeveloperPreferences extends BasePreferenceFragment {
+public class AdvancedPreferences extends BasePreferenceFragment {
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
-        setPreferencesFromResource(R.xml.developer_preferences, rootKey);
-        setActivityTitle(R.string.developer_options);
+        setPreferencesFromResource(R.xml.advanced_preferences, rootKey);
+        setActivityTitle(R.string.advanced_options);
 
         setItemClick("performanceMonitor", pref -> GlobalConfig.set(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY, ((SwitchPreference) pref).isChecked()));
         setItemClick("shaderJit", pref -> GlobalConfig.set(GlobalConfig.KEY_SHADER_JIT, ((SwitchPreference) pref).isChecked()));

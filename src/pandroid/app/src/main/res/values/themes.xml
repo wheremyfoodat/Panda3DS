@@ -5,6 +5,22 @@
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
         <item name="alertDialogTheme">@style/AlertDialog</item>
         <item name="preferenceTheme">@style/PreferenceTheme</item>
+        <item name="android:statusBarColor">?colorSurface</item>
+        <item name="android:windowLightStatusBar">?isLightTheme</item>
+
+        <item name="switchStyle">@style/SwitchStyle</item>
+        <item name="materialSwitchStyle">@style/SwitchStyle</item>
+        <item name="android:switchStyle">@style/SwitchStyle</item>
+    </style>
+
+    <style name="SwitchStyle" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="android:thumb">@drawable/switch_thumb</item>
+        <item name="android:track">@drawable/switch_track</item>
+        <item name="thumbRadius">0dp</item>
+        <item name="android:thumbOffset">0dp</item>
+        <item name="android:padding">0dp</item>
+        <item name="showText">false</item>
+        <item name="android:showText">false</item>
     </style>
 
     <style name="PreferenceTheme" parent="PreferenceThemeOverlay">
@@ -24,17 +40,12 @@
         <item name="android:textSize">32sp</item>
     </style>
 
-    <style name="Theme.Pandroid" parent="Base.Theme.Pandroid">
-        <item name="android:enforceNavigationBarContrast">false</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentNavigation">false</item>
-    </style>
+    <style name="Theme.Pandroid" parent="Base.Theme.Pandroid"/>
 
     <style name="Theme.Pandroid.Custom" parent="Theme.Pandroid">
         <item name="android:textColor">?colorOnSurface</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textColorHint">?colorOnSurfaceVariant</item>
-        <item name="android:statusBarColor">?colorSurfaceVariant</item>
         <item name="android:windowBackground">?colorSurface</item>
         <item name="titleTextColor">?colorOnSurface</item>
         <item name="hintTextColor">?colorOnSurfaceVariant</item>
@@ -57,8 +68,7 @@
 
         <item name="android:textColorPrimary">@color/text_secondary_light</item>
         <item name="android:textColorSecondary">@color/text_secondary_light</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="isLightTheme">false</item>
     </style>
 
     <style name="Theme.Pandroid.Black" parent="Theme.Pandroid.Custom">
@@ -76,8 +86,7 @@
 
         <item name="android:textColorPrimary">@color/text_secondary_light</item>
         <item name="android:textColorSecondary">@color/text_secondary_light</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="isLightTheme">false</item>
     </style>
 
     <style name="Theme.Pandroid.Light" parent="Theme.Pandroid.Custom">
@@ -93,10 +102,9 @@
         <item name="colorSecondary">#B37749</item>
         <item name="colorOnSecondary">#FFF</item>
 
-        <item name="android:windowLightStatusBar">true</item>
         <item name="android:textColorPrimary">@color/text_secondary_dark</item>
         <item name="android:textColorSecondary">@color/text_secondary_dark</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="isLightTheme">true</item>
     </style>
 
 </resources>
