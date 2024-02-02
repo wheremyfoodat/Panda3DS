@@ -24,7 +24,7 @@
         app:layout="@layout/preference_start_item"/>
 
     <Preference
-        app:key="developer"
+        app:key="advanced"
         app:icon="@drawable/ic_code"
         app:title="@string/developer_options"
         app:summary="@string/pref_developer_summary"

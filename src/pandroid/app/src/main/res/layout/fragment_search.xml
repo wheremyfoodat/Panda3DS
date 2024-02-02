@@ -35,14 +35,14 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingStart="10dp"
-        android:paddingEnd="10dp">
+        android:layout_height="match_parent">
 
         <com.panda3ds.pandroid.view.gamesgrid.GamesGridView
             android:id="@+id/games"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent"
+            android:paddingStart="15dp"
+            android:paddingEnd="15dp"/>
 
     </FrameLayout>
 

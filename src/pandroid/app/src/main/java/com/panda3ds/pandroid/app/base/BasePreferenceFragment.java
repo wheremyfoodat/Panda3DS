@@ -3,6 +3,7 @@ package com.panda3ds.pandroid.app.base;
 import android.annotation.SuppressLint;
 
 import androidx.annotation.StringRes;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -22,6 +23,9 @@ public abstract class BasePreferenceFragment extends PreferenceFragmentCompat {
 	}
 
 	protected void setActivityTitle(@StringRes int titleId) {
-		((AppCompatActivity) requireActivity()).getSupportActionBar().setTitle(titleId);
+		ActionBar header = ((AppCompatActivity) requireActivity()).getSupportActionBar();
+		if (header != null) {
+			header.setTitle(titleId);
+		}
 	}
 }
