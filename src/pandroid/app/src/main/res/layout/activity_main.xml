@@ -7,6 +7,14 @@
     android:layout_height="match_parent"
     tools:context=".app.MainActivity">
 
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/topAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?colorSurfaceVariant"
+        android:minHeight="?attr/actionBarSize"
+        app:title="@string/app_name" />
+
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fragment_container"
         android:layout_width="0dp"

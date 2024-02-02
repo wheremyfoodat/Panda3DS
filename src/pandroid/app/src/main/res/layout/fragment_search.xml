@@ -9,16 +9,17 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:paddingHorizontal="20dp">
+        android:paddingHorizontal="20dp"
+        android:background="?colorSurfaceVariant">
 
-        <androidx.appcompat.widget.AppCompatEditText
+        <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/search_bar"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_gravity="center"
-            android:hint="@string/search"
             android:paddingEnd="10dp"
             android:paddingStart="50dp"
+            android:hint="@string/search"
             android:textSize="16sp"
             android:background="@drawable/search_bar_background"
             android:backgroundTint="?colorSurfaceVariant" />
