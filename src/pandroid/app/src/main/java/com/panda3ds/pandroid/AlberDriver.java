@@ -34,16 +34,38 @@ public class AlberDriver {
 
 	public static int openDocument(String path, String mode){
 		try {
-			mode = mode.substring(0,1);
+			mode = mode.toLowerCase();
+			switch (mode) {
+				case "rb":
+				case "rb+":
+				case "r+b":
+					mode = "r";
+					break;
+				case "wb":
+				case "wb+":
+				case "w+b":
+					mode = "w";
+					break;
+				case "rwt":
+				case "wt":
+				case "rw":
+				case "r":
+				case "w":
+				case "wa":
+					break;
+				default:
+					throw new IllegalArgumentException("Invalid mode: "+mode);
+			}
 			Context context = PandroidApplication.getAppContext();
 			Uri uri = FileUtils.obtainUri(path);
 			ParcelFileDescriptor parcel;
 			if (Objects.equals(uri.getScheme(), "game")) {
+				if (mode.contains("w")){
+					throw new IllegalArgumentException("Cannot write to rom-fs");
+				}
 				uri = FileUtils.obtainUri(GameUtils.getCurrentGame().getRomPath());
-				parcel = context.getContentResolver().openFileDescriptor(uri, "r");
-			} else {
-				parcel = context.getContentResolver().openFileDescriptor(uri, mode);
 			}
+			parcel = context.getContentResolver().openFileDescriptor(uri, mode);
 			int fd = parcel.detachFd();
 			parcel.close();
 
