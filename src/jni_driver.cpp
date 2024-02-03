@@ -7,6 +7,7 @@
 #include "emulator.hpp"
 #include "renderer_gl/renderer_gl.hpp"
 #include "services/hid.hpp"
+#include "android_utils.hpp"
 
 std::unique_ptr<Emulator> emulator = nullptr;
 HIDService* hidService = nullptr;
@@ -31,6 +32,23 @@ JNIEnv* jniEnv() {
 	}
 
 	return env;
+}
+
+int AndroidUtils::openDocument(const char* path, const char* perms) {
+    auto env = jniEnv();
+
+    auto clazz = env->FindClass("com/panda3ds/pandroid/AlberDriver");
+    auto method = env->GetStaticMethodID(clazz, "openDocument", "(Ljava/lang/String;Ljava/lang/String;)I");
+
+    jstring uri = env->NewStringUTF(path);
+    jstring jmode = env->NewStringUTF(perms);
+
+    jint result = env->CallStaticIntMethod(clazz, method, uri, jmode);
+
+    env->DeleteLocalRef(uri);
+    env->DeleteLocalRef(jmode);
+
+    return (int)result;
 }
 
 extern "C" {
