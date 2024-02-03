@@ -34,16 +34,6 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-			if (!Environment.isExternalStorageManager()) {
-				Intent intent = new Intent(ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-				startActivity(intent);
-			}
-		} else {
-			ActivityCompat.requestPermissions(this, new String[] {READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
-			ActivityCompat.requestPermissions(this, new String[] {WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
-		}
-
 		setContentView(R.layout.activity_main);
 
 		NavigationBarView bar = findViewById(R.id.navigation);

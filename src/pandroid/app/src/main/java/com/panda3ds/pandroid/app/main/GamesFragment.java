@@ -49,7 +49,7 @@ public class GamesFragment extends Fragment implements ActivityResultCallback<Ur
 		if (result != null) {
 			String uri = result.toString();
 			if (GameUtils.findByRomPath(uri) == null) {
-				if (FileUtils.obtainRealPath(uri) == null) {
+				if (!FileUtils.exists(uri)) {
 					Toast.makeText(getContext(), "Invalid file path", Toast.LENGTH_LONG).show();
 					return;
 				}
