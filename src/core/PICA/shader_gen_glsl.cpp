@@ -63,6 +63,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		float alphaOperand3 = 0.0;
 	)";
 
+	textureConfig = regs[InternalRegs::TexUnitCfg];
 	for (int i = 0; i < 6; i++) {
 		compileTEV(ret, i, regs);
 	}
@@ -113,8 +114,10 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 			shader += ";\nalphaOp3 = ";
 			getAlphaOperand(shader, tev.alphaSource3, tev.alphaOperand3, stage);
 
-			shader += ";\nvec3 outputAlpha" + std::to_string(stage) + " = 1.0";
-			shader += ";\n";
+			shader += ";\nvec3 outputAlpha" + std::to_string(stage) + " = ";
+			getAlphaOperation(shader, tev.alphaOp);
+			// Clamp the alpha value to [0.0, 1.0]
+			shader += ";\nclamp(outputAlpha" + std::to_string(stage) + ", 0.0, 1.0);\n";
 		}
 
 		shader += "combinerOutput = vec4(clamp(outputColor" + std::to_string(stage) + " * " + std::to_string(tev.getColorScale()) +
@@ -214,6 +217,19 @@ void FragmentGenerator::getAlphaOperand(std::string& shader, TexEnvConfig::Sourc
 void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source source, int index) {
 	switch (source) {
 		case TexEnvConfig::Source::PrimaryColor: shader += "v_colour"; break;
+		case TexEnvConfig::Source::Texture0: shader += "texture(u_tex0, v_texcoord0.xy)"; break;
+		case TexEnvConfig::Source::Texture1: shader += "texture(u_tex1, v_texcoord1)"; break;
+		case TexEnvConfig::Source::Texture2: {
+			// If bit 13 in texture config is set then we use the texcoords for texture 1, otherwise for texture 2
+			if (Helpers::getBit<13>(textureConfig)) {
+				shader += "texture(u_tex2, v_texcoord1)";
+			} else {
+				shader += "texture(u_tex2, v_texcoord2)";
+			}
+			break;
+		}
+
+		case TexEnvConfig::Source::Previous: shader += "combinerOutput"; break;
 
 		default:
 			Helpers::warn("Unimplemented TEV source: %d", static_cast<int>(source));
@@ -237,6 +253,26 @@ void FragmentGenerator::getColorOperation(std::string& shader, TexEnvConfig::Ope
 		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(colorOp1 - 0.5, colorOp2 - 0.5))"; break;
 		default:
 			Helpers::warn("FragmentGenerator: Unimplemented color op");
+			shader += "vec3(1.0)";
+			break;
+	}
+}
+
+void FragmentGenerator::getAlphaOperation(std::string& shader, TexEnvConfig::Operation op) {
+	switch (op) {
+		case TexEnvConfig::Operation::Replace: shader += "alphaOp1"; break;
+		case TexEnvConfig::Operation::Add: shader += "alphaOp1 + alphaOp2"; break;
+		case TexEnvConfig::Operation::AddSigned: shader += "clamp(alphaOp1 + alphaOp2 - 0.5, 0.0, 1.0);"; break;
+		case TexEnvConfig::Operation::Subtract: shader += "alphaOp1 - alphaOp2"; break;
+		case TexEnvConfig::Operation::Modulate: shader += "alphaOp1 * alphaOp2"; break;
+		case TexEnvConfig::Operation::Lerp: shader += "alphaOp1 * alphaOp3 + alphaOp2 * (vec(1.0) - alphaOp3)"; break;
+
+		case TexEnvConfig::Operation::AddMultiply: shader += "min(alphaOp1 + alphaOp2, vec3(1.0)) * alphaOp3"; break;
+		case TexEnvConfig::Operation::MultiplyAdd: shader += "alphaOp1 * alphaOp2 + alphaOp3"; break;
+		case TexEnvConfig::Operation::Dot3RGB:
+		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(alphaOp1 - 0.5, alphaOp2 - 0.5))"; break;
+		default:
+			Helpers::warn("FragmentGenerator: Unimplemented alpha op");
 			shader += "vec3(1.0)";
 			break;
 	}

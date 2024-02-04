@@ -24,6 +24,8 @@ namespace PICA::ShaderGen {
 		void getColorOperation(std::string& shader, PICA::TexEnvConfig::Operation op);
 		void getAlphaOperation(std::string& shader, PICA::TexEnvConfig::Operation op);
 
+		u32 textureConfig = 0;
+
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
 		std::string generate(const PICARegs& regs);
