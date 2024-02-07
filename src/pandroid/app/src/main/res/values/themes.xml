@@ -26,6 +26,10 @@
 
     <style name="Theme.Pandroid" parent="Base.Theme.Pandroid" />
 
+<style name="Widget.App.NavigationView" parent="Widget.Material3.NavigationView">
+    <item name="android:listDivider">@android:color/transparent</item>
+</style>
+
     <style name="Theme.Pandroid.Custom" parent="Theme.Pandroid">
         <item name="android:textColor">?colorOnSurface</item>
         <item name="android:textSize">16sp</item>
