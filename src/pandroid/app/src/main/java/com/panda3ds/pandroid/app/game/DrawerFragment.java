@@ -12,6 +12,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatTextView;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 
 import com.google.android.material.navigation.NavigationView;
 import com.panda3ds.pandroid.AlberDriver;
@@ -47,7 +49,6 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
 
         ((NavigationView)view.findViewById(R.id.action_navigation)).setNavigationItemSelectedListener(this);
-        ((NavigationView)view.findViewById(R.id.others_navigation)).setNavigationItemSelectedListener(this);
     }
 
     @Override
@@ -80,6 +81,17 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         }
     }
 
+    private void changeScreenOrientation() {
+    int currentOrientation = getResources().getConfiguration().orientation;
+
+    // Change the orientation
+    if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
+        requireActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    } else {
+        requireActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+    }
+}
+
     @Override
     public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {}
 
@@ -106,6 +118,8 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
             requireActivity().finish();
         } else if (id == R.id.lua_script){
             new LuaDialogFragment().show(getParentFragmentManager(), null);
+        } else if (id == R.id.change_orientation) {
+        changeScreenOrientation();
         }
 
         return false;

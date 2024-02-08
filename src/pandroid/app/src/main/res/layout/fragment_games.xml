@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
+    android:layout_marginTop="60dp"
     android:layout_height="match_parent">
 
     <com.panda3ds.pandroid.view.gamesgrid.GamesGridView
@@ -10,16 +13,16 @@
         android:paddingStart="15dp"
         android:paddingEnd="15dp"/>
 
-    <androidx.appcompat.widget.AppCompatImageButton
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/add_rom"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="20dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
         android:layout_gravity="end|bottom"
         android:src="@drawable/ic_add"
-        android:tint="?colorOnPrimary"
-        android:background="@drawable/simple_card_background"
-        android:backgroundTint="?colorPrimary"/>
+        android:gravity="center"
+        app:rippleColor="?colorOnSurfaceVariant"
+        app:backgroundTint="?colorPrimary"
+        tools:ignore="PrivateResource"/>
 
 </FrameLayout>
