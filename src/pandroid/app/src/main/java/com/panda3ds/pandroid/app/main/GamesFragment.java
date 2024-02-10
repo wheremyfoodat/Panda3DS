@@ -48,6 +48,10 @@ public class GamesFragment extends Fragment implements ActivityResultCallback<Ur
 	public void onActivityResult(Uri result) {
 		if (result != null) {
 			String uri = result.toString();
+			if (!uri.endsWith(".3ds") && !uri.endsWith(".cia")) {
+                            Toast.makeText(getContext(), "Invalid ROM file", Toast.LENGTH_LONG).show();
+                            return;
+		         }
 			if (GameUtils.findByRomPath(uri) == null) {
 				if (FileUtils.obtainRealPath(uri) == null) {
 					Toast.makeText(getContext(), "Invalid file path", Toast.LENGTH_LONG).show();
