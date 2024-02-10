@@ -4,13 +4,17 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:foreground="@drawable/rounded_selectable_item_background"
+    android:focusable="true"
     android:orientation="vertical"
     android:padding="15dp">
 
-    <androidx.cardview.widget.CardView
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.Material3.CardView.Elevated"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="16dp">
+        android:layout_margin="10dp"
+        app:shapeAppearance="?attr/shapeAppearanceCornerLarge">
 
         <com.panda3ds.pandroid.view.gamesgrid.GameIconView
             android:id="@+id/icon"
@@ -19,15 +23,20 @@
             android:scaleType="centerCrop"
             android:background="?colorSurfaceVariant"/>
 
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        style="?attr/textAppearanceTitleSmall"
         android:text="@string/app_name"
-        android:layout_marginTop="8dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
         android:textStyle="bold"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:singleLine="true"
         android:gravity="center"/>
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -36,6 +45,11 @@
         android:layout_height="wrap_content"
         android:text="@string/app_name"
         android:textSize="10sp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:ellipsize="marquee"
+        android:marqueeRepeatLimit="marquee_forever"
+        android:singleLine="true"
         android:gravity="center"/>
 
 </androidx.appcompat.widget.LinearLayoutCompat>
