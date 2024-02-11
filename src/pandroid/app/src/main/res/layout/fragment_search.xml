@@ -9,8 +9,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:paddingHorizontal="20dp"
-        android:background="?colorSurfaceVariant">
+        android:paddingHorizontal="20dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/search_bar"

@@ -29,7 +29,8 @@
                 android:layout_height="90dp"
                 app:cardCornerRadius="10dp"
                 android:layout_marginTop="20dp"
-                android:layout_marginBottom="20dp">
+                android:layout_marginBottom="20dp"
+                app:strokeWidth="0px">
 
                 <com.panda3ds.pandroid.view.gamesgrid.GameIconView
                     android:id="@+id/game_icon"
@@ -55,10 +56,6 @@
                     android:paddingBottom="4dp"
                     android:gravity="center"
                     android:textStyle="bold"
-                    android:ellipsize="marquee"
-                    style="?attr/textAppearanceTitleSmall"
-                    android:marqueeRepeatLimit="marquee_forever"
-                    android:singleLine="true"
                     android:textSize="19sp"/>
 
                 <androidx.appcompat.widget.AppCompatTextView
@@ -84,10 +81,10 @@
         android:layout_marginTop="195dp">
 
         <com.google.android.material.navigation.NavigationView
-            android:id="@+id/action_navigation"
+            android:id="@+id/menu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:menu="@menu/game_drawer_settings"
+            app:menu="@menu/game_drawer"
             android:background="?colorSurface"
             android:theme="@style/Widget.App.NavigationView"
             app:subheaderTextAppearance="@style/TextAppearanceGameDrawerSubTitle"/>

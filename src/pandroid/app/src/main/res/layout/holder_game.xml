@@ -10,11 +10,10 @@
     android:padding="15dp">
 
     <com.google.android.material.card.MaterialCardView
-        style="@style/Widget.Material3.CardView.Elevated"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        app:shapeAppearance="?attr/shapeAppearanceCornerLarge">
+        app:cardCornerRadius="10dp"
+        app:strokeWidth="0dp">
 
         <com.panda3ds.pandroid.view.gamesgrid.GameIconView
             android:id="@+id/icon"
@@ -29,27 +28,19 @@
         android:id="@+id/title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        style="?attr/textAppearanceTitleSmall"
+        android:textColor="?colorOnSurface"
         android:text="@string/app_name"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
         android:textStyle="bold"
-        android:ellipsize="marquee"
-        android:marqueeRepeatLimit="marquee_forever"
-        android:singleLine="true"
-        android:gravity="center"/>
+        android:gravity="center"
+        android:layout_marginTop="10dp"/>
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/description"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/app_name"
-        android:textSize="10sp"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
-        android:ellipsize="marquee"
-        android:marqueeRepeatLimit="marquee_forever"
-        android:singleLine="true"
+        android:textSize="11sp"
+        android:alpha="0.75"
         android:gravity="center"/>
 
 </androidx.appcompat.widget.LinearLayoutCompat>
