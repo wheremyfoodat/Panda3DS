@@ -91,29 +91,28 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		AlberDriver.Initialize();
 		AlberDriver.setShaderJitEnabled(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
 
-         // If loading the ROM failed, display an error message and early exit
-         if (!AlberDriver.LoadRom(romPath)) {
-             // Get a handler that can be used to post to the main thread
-             Handler mainHandler = new Handler(context.getMainLooper());
+		// If loading the ROM failed, display an error message and early exit
+		if (!AlberDriver.LoadRom(romPath)) {
+			// Get a handler that can be used to post to the main thread
+			Handler mainHandler = new Handler(context.getMainLooper());
 
-             Runnable runnable = new Runnable() {
-                 @Override
-                 public void run() {
-                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                     builder.setTitle("Failed to load ROM")
-                            .setMessage("Make sure it's a valid 3DS ROM and that storage permissions are configured properly.")
-                            .setPositiveButton("OK", null)
-			    .setCancelable(false)
-                            .show();
-                 }
-              };
-              mainHandler.post(runnable);
+			Runnable runnable = new Runnable() {
+				@Override
+				public void run() {
+					AlertDialog.Builder builder = new AlertDialog.Builder(context);
+					builder.setTitle("Failed to load ROM")
+						.setMessage("Make sure it's a valid 3DS ROM and that storage permissions are configured properly.")
+						.setPositiveButton("OK", null)
+						.setCancelable(false)
+						.show();
+				}
+			};
+			mainHandler.post(runnable);
 
-              GameMetadata game = GameUtils.getCurrentGame();
-              GameUtils.removeGame(game);
-              return;
-           }
-
+			GameMetadata game = GameUtils.getCurrentGame();
+			GameUtils.removeGame(game);
+			return;
+		}
 
 		// Load the SMDH
 		byte[] smdhData = AlberDriver.GetSmdh();
