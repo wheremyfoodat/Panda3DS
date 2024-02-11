@@ -1,16 +1,16 @@
 <resources>
     <string name="app_name">pandroid</string>
+    <!-- Common -->
     <string name="load_rom">Load ROM</string>
     <string name="games">Games</string>
     <string name="settings">Settings</string>
     <string name="search">Search</string>
     <string name="unknown">Unknown</string>
-
+    <!-- Input Settings -->
     <string name="left">Left</string>
     <string name="right">Right</string>
     <string name="up">Up</string>
     <string name="down">Down</string>
-
     <string name="others">Others</string>
     <string name="press_any_key">Press any key</string>
     <string name="axis">Axis</string>
@@ -18,16 +18,6 @@
     <string name="options">Options</string>
     <string name="pref_input_map_summary">Map physical controller or keyboard</string>
     <string name="controller_mapping">Controller mapping</string>
-    <string name="theme">Theme</string>
-    <string name="pref_appearance_summary">Set application theme</string>
-    <string name="appearance">Appearance</string>
-    <string name="theme_device">Device</string>
-    <string name="light">Light</string>
-    <string name="dark">Dark</string>
-    <string name="black">Black</string>
-    <string name="actions">Actions</string>
-    <string name="exit">Exit</string>
-    <string name="resume">Resume</string>
     <string name="saved">Saved</string>
     <string name="create_profile">Create profile</string>
     <string name="input">Input</string>
@@ -36,6 +26,18 @@
     <string name="pref_screen_controllers_title">Screen gamepad layouts</string>
     <string name="pref_default_controller_title">Default screen gamepad layout</string>
     <string name="invalid_name">Invalid name</string>
+    <!-- Appearance Settings -->
+    <string name="theme">Theme</string>
+    <string name="pref_appearance_summary">Set application theme</string>
+    <string name="appearance">Appearance</string>
+    <string name="theme_device">Device</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="black">Black</string>
+    <!-- Game Menu -->
+    <string name="actions">Actions</string>
+    <string name="exit">Exit</string>
+    <string name="resume">Resume</string>
     <string name="hacks">Hacks</string>
     <string name="lua_script">Lua script</string>
     <string name="scripts">Scripts</string>
@@ -46,6 +48,8 @@
     <string name="open_file">Open file</string>
     <string name="create_new">Create new</string>
     <string name="running_ff">Running \"%s\" ...</string>
+    <string name="rotate">Rotate</string>
+    <!-- Advanced Settings -->
     <string name="advanced_options">Advanced options</string>
     <string name="pref_advanced_summary">Logger, performance statistics, etc.</string>
     <string name="pref_performance_monitor_title">Performance monitor</string>
@@ -55,5 +59,4 @@
     <string name="pref_shader_jit_title">Shader JIT</string>
     <string name="pref_shader_jit_summary">Use shader recompiler.</string>
     <string name="graphics">Graphics</string>
-    <string name="rotate">Rotate</string>
 </resources>
