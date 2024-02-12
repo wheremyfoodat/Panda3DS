@@ -4,12 +4,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+   <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    android:id="@+id/swipe_refresh_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
     <com.panda3ds.pandroid.view.gamesgrid.GamesGridView
         android:id="@+id/games"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:paddingStart="15dp"
         android:paddingEnd="15dp"/>
+
+   </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/add_rom"
