@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import com.google.android.material.color.DynamicColors
+import com.google.android.material.color.DynamicColorsOptions
 
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
@@ -29,6 +31,12 @@ public class PandroidApplication extends Application {
 
 		if (GlobalConfig.get(GlobalConfig.KEY_LOGGER_SERVICE)) {
 			startService(new Intent(this, LoggerService.class));
+		}
+		if (GlobalConfig.get(GlobalConfig.KEY_DYNAMIC_COLORS)) {
+		DynamicColorsOptions dynamicColorsOptions = new DynamicColorsOptions.Builder()
+                   .setPrecondition(null)
+                   .build();
+                DynamicColors.applyToActivitiesIfAvailable(this, dynamicColorsOptions);
 		}
 	}
 
