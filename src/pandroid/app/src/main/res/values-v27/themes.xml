@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Base.Theme.Pandroid.V27"  parent="Base.Theme.Pandroid">
+        <item name="android:windowLightNavigationBar">?isLightTheme</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
+    <style name="GameActivityNavigationBar">
+        <item name="android:statusBarColor">#5000</item>
+        <item name="android:navigationBarColor">#5000</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
+    <style name="Theme.Pandroid" parent="Base.Theme.Pandroid.V27"/>
+</resources>

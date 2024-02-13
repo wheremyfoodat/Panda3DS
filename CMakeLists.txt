@@ -198,10 +198,10 @@ set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 if(NOT ANDROID)
     if(ENABLE_QT_GUI)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
-            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp
+            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp
         )   
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
-            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp
+            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
@@ -267,6 +267,16 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/xxhash/xxhash.c
 )
 
+if(ENABLE_LUAJIT AND NOT ANDROID)
+    # Build luv and libuv for Lua TCP server usage if we're not on Android
+    include_directories(third_party/luv/src)
+    include_directories(third_party/luv/deps/lua-compat-5.3/c-api)
+    include_directories(third_party/libuv/include)
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/luv/src/luv.c)
+    set(LIBUV_BUILD_SHARED OFF)
+
+    add_subdirectory(third_party/libuv)
+endif()
 
 if(ENABLE_QT_GUI)
     include_directories(third_party/duckstation)
@@ -455,6 +465,11 @@ endif()
 if(ENABLE_LUAJIT)
     target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_LUA=1")
     target_link_libraries(Alber PRIVATE libluajit)
+
+    # If we're not on Android, link libuv too
+    if (NOT ANDROID)
+        target_link_libraries(Alber PRIVATE uv_a)
+    endif()
 endif()
 
 if(ENABLE_OPENGL)

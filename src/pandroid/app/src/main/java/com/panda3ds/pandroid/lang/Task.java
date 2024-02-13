@@ -5,6 +5,8 @@ public class Task extends Thread {
         super(runnable);
     }
 
+    protected Task() {}
+
     public void runSync() {
         start();
         waitFinish();

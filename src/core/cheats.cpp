@@ -1,4 +1,5 @@
 #include "cheats.hpp"
+#include "swap.hpp"
 
 Cheats::Cheats(Memory& mem, HIDService& hid) : ar(mem, hid) { reset(); }
 
@@ -21,6 +22,27 @@ u32 Cheats::addCheat(const Cheat& cheat) {
 	// Otherwise, just add a new slot
 	cheats.push_back(cheat);
 	return cheats.size() - 1;
+}
+
+u32 Cheats::addCheat(const u8* data, size_t size) {
+	if ((size % 8) != 0) {
+		return badCheatHandle;
+	}
+
+	Cheats::Cheat cheat;
+	cheat.enabled = true;
+	cheat.type = Cheats::CheatType::ActionReplay;
+
+	for (size_t i = 0; i < size; i += 8) {
+		auto read32 = [](const u8* ptr) { return (u32(ptr[3]) << 24) | (u32(ptr[2]) << 16) | (u32(ptr[1]) << 8) | u32(ptr[0]); };
+
+		// Data is passed to us in big endian so we bswap
+		u32 firstWord = Common::swap32(read32(data + i));
+		u32 secondWord = Common::swap32(read32(data + i + 4));
+		cheat.instructions.insert(cheat.instructions.end(), {firstWord, secondWord});
+	}
+
+	return addCheat(cheat);
 }
 
 void Cheats::removeCheat(u32 id) {

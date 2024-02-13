@@ -17,7 +17,6 @@ class CPU;
 class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
   public:
 	u64 ticksLeft = 0;
-	u64 totalTicks = 0;
 	Memory& mem;
 	Kernel& kernel;
 	Scheduler& scheduler;

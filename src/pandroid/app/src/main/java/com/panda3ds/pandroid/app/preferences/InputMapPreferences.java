@@ -27,7 +27,7 @@ public class InputMapPreferences extends BasePreferenceFragment implements Activ
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
         setPreferencesFromResource(R.xml.input_map_preferences, rootKey);
 
-        ((BaseActivity) requireActivity()).getSupportActionBar().setTitle(R.string.controller_mapping);
+        setActivityTitle(R.string.controller_mapping);
 
         for (KeyName key : KeyName.values()) {
             if (key == KeyName.NULL) {

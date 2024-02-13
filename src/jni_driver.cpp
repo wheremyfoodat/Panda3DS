@@ -35,6 +35,13 @@ JNIEnv* jniEnv() {
 
 extern "C" {
 
+#define MAKE_SETTING(functionName, type, settingName) \
+AlberFunction(void, functionName) (JNIEnv* env, jobject obj, type value) { emulator->getConfig().settingName = value; }
+
+MAKE_SETTING(setShaderJitEnabled, jboolean, shaderJitEnabled)
+
+#undef MAKE_SETTING
+
 AlberFunction(void, Setup)(JNIEnv* env, jobject obj) { env->GetJavaVM(&jvm); }
 AlberFunction(void, Pause)(JNIEnv* env, jobject obj) { emulator->pause(); }
 AlberFunction(void, Resume)(JNIEnv* env, jobject obj) { emulator->resume(); }
@@ -74,10 +81,12 @@ AlberFunction(void, Finalize)(JNIEnv* env, jobject obj) {
 
 AlberFunction(jboolean, HasRomLoaded)(JNIEnv* env, jobject obj) { return romLoaded; }
 
-AlberFunction(void, LoadRom)(JNIEnv* env, jobject obj, jstring path) {
+AlberFunction(jboolean, LoadRom)(JNIEnv* env, jobject obj, jstring path) {
 	const char* pathStr = env->GetStringUTFChars(path, nullptr);
 	romLoaded = emulator->loadROM(pathStr);
 	env->ReleaseStringUTFChars(path, pathStr);
+
+	return romLoaded;
 }
 
 AlberFunction(void, LoadLuaScript)(JNIEnv* env, jobject obj, jstring script) {

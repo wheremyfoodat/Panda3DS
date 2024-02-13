@@ -22,7 +22,6 @@ Result::HorizonResult MiiSelectorApplet::start(const MemoryBlock* sharedMem, con
 	// Thanks to Citra devs as always for the default mii data and other applet help
 	output = getDefaultMii();
 	output.returnCode = 0;  // Success
-	// output.selectedMiiData = miiData;
 	output.selectedGuestMiiIndex = std::numeric_limits<u32>::max();
 	output.miiChecksum = boost::crc<16, 0x1021, 0, 0, false, false>(&output.selectedMiiData, sizeof(MiiData) + sizeof(output.unknown1));
 

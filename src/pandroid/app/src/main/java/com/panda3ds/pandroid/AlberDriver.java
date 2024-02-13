@@ -9,7 +9,7 @@ public class AlberDriver {
 	public static native void Initialize();
 	public static native void RunFrame(int fbo);
 	public static native boolean HasRomLoaded();
-	public static native void LoadRom(String path);
+	public static native boolean LoadRom(String path);
 	public static native void Finalize();
 
 	public static native void KeyDown(int code);
@@ -21,6 +21,8 @@ public class AlberDriver {
 	public static native void Resume();
 	public static native void LoadLuaScript(String script);
 	public static native byte[] GetSmdh();
+
+	public static native void setShaderJitEnabled(boolean enable);
 
 	static { System.loadLibrary("Alber"); }
 }

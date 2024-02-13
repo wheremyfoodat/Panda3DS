@@ -15,7 +15,7 @@ public class AppearancePreferences extends BasePreferenceFragment {
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
         setPreferencesFromResource(R.xml.appearance_preference, rootKey);
 
-        ((BaseActivity) requireActivity()).getSupportActionBar().setTitle(R.string.appearance);
+        setActivityTitle(R.string.appearance);
 
         SingleSelectionPreferences themePreference = findPreference("theme");
         themePreference.setSelectedItem(GlobalConfig.get(GlobalConfig.KEY_APP_THEME));
