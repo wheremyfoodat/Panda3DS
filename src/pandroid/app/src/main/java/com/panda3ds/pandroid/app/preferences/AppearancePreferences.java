@@ -4,6 +4,7 @@ import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 import androidx.preference.SwitchPreference;
+import com.google.android.material.color.DynamicColors;
 
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.BaseActivity;
@@ -37,6 +38,10 @@ public class AppearancePreferences extends BasePreferenceFragment {
 
         private void refresh() {
         ((SwitchPreference) findPreference("dynamic_colors")).setChecked(GlobalConfig.get(GlobalConfig.KEY_DYNAMIC_COLORS));
+        if (!DynamicColors.isDynamicColorAvailable(this)) {
+        ((SwitchPreference) findPreference("dynamic_colors")).setEnabled(false);
         }
-       
+            
     }
+       
+ }
