@@ -34,7 +34,6 @@ public class PandroidApplication extends Application {
 		}
 		if (GlobalConfig.get(GlobalConfig.KEY_DYNAMIC_COLORS)) {
 		DynamicColorsOptions dynamicColorsOptions = new DynamicColorsOptions.Builder()
-                   .setPrecondition(null)
                    .build();
                 DynamicColors.applyToActivitiesIfAvailable(this, dynamicColorsOptions);
 		}
