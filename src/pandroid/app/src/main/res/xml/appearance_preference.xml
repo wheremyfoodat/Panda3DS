@@ -11,4 +11,11 @@
         <Preference app:title="@string/black"/>
 
     </com.panda3ds.pandroid.view.preferences.SingleSelectionPreferences>
+
+    <SwitchPreference
+        android:key="dynamic_colors"
+        app:title="Use Dynamic Colors"
+        app:summary="Dynamic colors will be used"
+        app:iconSpaceReserved="false"/>
+
 </PreferenceScreen>
