@@ -40,4 +40,3 @@ public class AppearancePreferences extends BasePreferenceFragment {
         }
        
     }
-}
