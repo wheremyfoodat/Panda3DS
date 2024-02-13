@@ -16,12 +16,12 @@
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
-        app:title="Colors">
+        app:title="@string/colors">
 
     <SwitchPreference
         android:key="dynamic_colors"
-        app:title="Use Dynamic Colors"
-        app:summary="Dynamic colors will be used"
+        app:title="@string/pref_dynamic_colors_title"
+        app:summary="@string/pref_dynamic_colors_summary"
         app:iconSpaceReserved="false"/>
         
     </PreferenceCategory>
