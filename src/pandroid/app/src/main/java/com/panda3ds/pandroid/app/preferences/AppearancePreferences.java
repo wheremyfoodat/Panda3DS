@@ -38,7 +38,7 @@ public class AppearancePreferences extends BasePreferenceFragment {
 
         private void refresh() {
         ((SwitchPreference) findPreference("dynamic_colors")).setChecked(GlobalConfig.get(GlobalConfig.KEY_DYNAMIC_COLORS));
-        if (!DynamicColors.isDynamicColorAvailable(this)) {
+        if (!DynamicColors.isDynamicColorAvailable()) {
         ((SwitchPreference) findPreference("dynamic_colors")).setEnabled(false);
         }
             
