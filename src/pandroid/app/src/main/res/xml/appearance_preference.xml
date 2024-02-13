@@ -14,10 +14,15 @@
 
     </com.panda3ds.pandroid.view.preferences.SingleSelectionPreferences>
 
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="Colors">
+
     <SwitchPreference
         android:key="dynamic_colors"
         app:title="Use Dynamic Colors"
         app:summary="Dynamic colors will be used"
         app:iconSpaceReserved="false"/>
-
+        
+    </PreferenceCategory>
 </PreferenceScreen>
