@@ -66,6 +66,27 @@ public class FileUtils {
         return file.getAbsolutePath();
     }
 
+    public static String parseNativeMode(String mode){
+        mode = mode.toLowerCase();
+        switch (mode){
+            case "r":
+            case "rb":
+                return "r";
+            case "r+":
+            case "r+b":
+            case "rb+":
+                return "rw";
+            case "w+":
+                return "rwt";
+            case "w":
+            case "wb":
+                return "wt";
+            case "wa":
+                return "wa";
+        }
+        throw new IllegalArgumentException("Invalid file mode: "+mode);
+    }
+
     public static boolean exists(String path) {
         return parseFile(path).exists();
     }

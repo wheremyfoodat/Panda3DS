@@ -33,30 +33,10 @@ public class AlberDriver {
 	public static native void setShaderJitEnabled(boolean enable);
 
 
-	public static String parseNativeMode(String mode){
-		mode = mode.toLowerCase();
-		switch (mode){
-			case "r":
-			case "rb":
-				return "r";
-			case "r+":
-			case "r+b":
-			case "rb+":
-				return "rw";
-			case "w+":
-				return "rwt";
-			case "w":
-			case "wb":
-				return "wt";
-			case "wa":
-				return "wa";
-		}
-		throw new IllegalArgumentException("Invalid file mode: "+mode);
-	}
 
 	public static int openDocument(String path, String mode){
 		try {
-			mode = parseNativeMode(mode);
+			mode = FileUtils.parseNativeMode(mode);
 			Context context = PandroidApplication.getAppContext();
 			Uri uri = FileUtils.obtainUri(path);
 			ParcelFileDescriptor parcel;
