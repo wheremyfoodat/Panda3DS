@@ -2,10 +2,12 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <span>
 
 #include "PICA/gpu.hpp"
+#include "audio/dsp_core.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
@@ -41,9 +43,11 @@ class Emulator {
 	GPU gpu;
 	Memory memory;
 	Kernel kernel;
+	std::unique_ptr<Audio::DSPCore> dsp;
+	Scheduler scheduler;
+
 	Crypto::AESEngine aesEngine;
 	Cheats cheats;
-	Scheduler scheduler;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state

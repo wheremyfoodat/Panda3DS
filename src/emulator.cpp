@@ -24,6 +24,8 @@ Emulator::Emulator()
 	  httpServer(this)
 #endif
 {
+	dsp = Audio::makeDSPCore(Audio::DSPCore::Type::Null, memory);
+
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();

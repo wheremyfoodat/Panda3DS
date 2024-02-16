@@ -36,6 +36,7 @@ namespace Log {
 	static Logger<false> gpuLogger;
 	static Logger<false> rendererLogger;
 	static Logger<false> shaderJITLogger;
+	static Logger<false> dspLogger;
 
 	// Service loggers
 	static Logger<false> acLogger;
