@@ -55,12 +55,6 @@ void TeakraDSP::reset() {
 	running = false;
 }
 
-void TeakraDSP::runAudioFrame() {
-	if (running) {
-		teakra.Run(16384);
-	}
-}
-
 void TeakraDSP::writeProcessPipe(u32 channel, u32 size, u32 buffer) {
 	// TODO
 }

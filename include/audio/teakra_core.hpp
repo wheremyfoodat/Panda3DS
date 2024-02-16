@@ -12,7 +12,12 @@ namespace Audio {
 		TeakraDSP(Memory& mem);
 
 		void reset() override;
-		void runAudioFrame() override;
+		void runAudioFrame() override {
+			if (running) {
+				teakra.Run(16384);
+			}
+		}
+
 		u8* getDspMemory() override { return teakra.GetDspMemory().data(); }
 
 		u16 recvData(u32 regId) override { return teakra.RecvData(regId); }
