@@ -124,7 +124,6 @@ void DSPService::recvData(u32 messagePointer) {
 	log("DSP::RecvData (register = %d)\n", registerIndex);
 	if (registerIndex != 0) Helpers::panic("Unknown register in DSP::RecvData");
 
-	// Return 0 if the DSP is running, otherwise 1
 	const u16 data = dsp->recvData(registerIndex);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x01, 2, 0));

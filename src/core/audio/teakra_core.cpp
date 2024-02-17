@@ -35,8 +35,6 @@ struct Dsp1 {
 };
 
 TeakraDSP::TeakraDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspService), pipeBaseAddr(0), running(false) {
-	teakra.Reset();
-
 	// Set up callbacks for Teakra
 	Teakra::AHBMCallback ahbm;
 
@@ -53,21 +51,23 @@ TeakraDSP::TeakraDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspServ
 		// NOP for now
 	});
 
-	// Set up event handlers
+	// Set up event handlers. These handlers forward a hardware interrupt to the DSP service, which is responsible
+	// For triggering the appropriate DSP kernel events
+	// Note: It's important not to fire any events if "loaded" is false, ie if we haven't fully loaded a DSP component yet
 	teakra.SetRecvDataHandler(0, [&]() {
-		if (running) {
+		if (loaded) {
 			dspService.triggerInterrupt0();
 		}
 	});
 
 	teakra.SetRecvDataHandler(1, [&]() {
-		if (running) {
+		if (loaded) {
 			dspService.triggerInterrupt1();
 		}
 	});
 
 	auto processPipeEvent = [&](bool dataEvent) {
-		if (!running) {
+		if (!loaded) {
 			return;
 		}
 
@@ -85,7 +85,7 @@ TeakraDSP::TeakraDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspServ
 			signalledSemaphore = signalledData = false;
 
 			u16 slot = teakra.RecvData(2);
-			u16 side = slot % 2;
+			u16 side = slot & 1;
 			u16 pipe = slot / 2;
 
 			if (side != static_cast<u16>(PipeDirection::DSPtoCPU)) {
@@ -107,6 +107,7 @@ TeakraDSP::TeakraDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspServ
 void TeakraDSP::reset() {
 	teakra.Reset();
 	running = false;
+	loaded = false;
 	signalledData = signalledSemaphore = false;
 }
 
@@ -222,12 +223,13 @@ std::vector<u8> TeakraDSP::readPipe(u32 channel, u32 peer, u32 size, u32 buffer)
 
 void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) {
 	// TODO: maybe move this to the DSP service
-	if (running) {
+	if (loaded) {
 		Helpers::warn("Loading DSP component when already loaded");
 		return;
 	}
 
 	teakra.Reset();
+	running = true;
 
 	u8* dspCode = teakra.GetDspMemory().data();
 	u8* dspData = dspCode + 0x40000;
@@ -239,7 +241,7 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 
 	// Load DSP segments to DSP RAM
 	// TODO: verify hashes
-	for (unsigned int i = 0; i < dsp1.segmentCount; i++) {
+	for (uint i = 0; i < dsp1.segmentCount; i++) {
 		auto& segment = dsp1.segments[i];
 		u32 addr = segment.dspAddr << 1;
 		u8* src = data.data() + segment.offs;
@@ -262,8 +264,6 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 		log("LoadComponent: special segment not supported");
 	}
 
-	running = true;
-
 	if (syncWithDsp) {
 		// Wait for the DSP to reply with 1s in all RECV registers
 		for (int i = 0; i < 3; i++) {
@@ -275,19 +275,23 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 		}
 	}
 
+	printf("DSP::LoadComponent: Semaphore value: %X\n", teakra.GetSemaphore());
+
 	// Retrieve the pipe base address
 	while (!teakra.RecvDataIsReady(2)) {
 		runAudioFrame();
 	}
 
 	pipeBaseAddr = teakra.RecvData(2);
+	loaded = true;
 }
 
 void TeakraDSP::unloadComponent() {
-	if (!running) {
+	if (!loaded) {
 		Helpers::warn("Audio: unloadComponent called without a running program");
 		return;
 	}
+	loaded = false;
 
 	// Wait for SEND2 to be ready, then send the shutdown command to the DSP
 	while (!teakra.SendDataIsEmpty(2)) {

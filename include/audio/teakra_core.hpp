@@ -7,7 +7,8 @@ namespace Audio {
 	class TeakraDSP : public DSPCore {
 		Teakra::Teakra teakra;
 		u32 pipeBaseAddr;
-		bool running;
+		bool running;  // Is the DSP running?
+		bool loaded;   // Have we finished loading a binary with LoadComponent?
 
 		// Get a pointer to a data memory address
 		u8* getDataPointer(u32 address) { return getDspMemory() + Memory::DSP_DATA_MEMORY_OFFSET + address; }
@@ -17,7 +18,7 @@ namespace Audio {
 			CPUtoDSP = 1,
 		};
 
-		// A lot of Teakra integration code, especially pipe stuff are based on Citra's integration here:
+		// A lot of Teakra integration code, especially pipe stuff is based on Citra's integration here:
 		// https://github.com/citra-emu/citra/blob/master/src/audio_core/lle/lle.cpp
 		struct PipeStatus {
 			// All addresses and sizes here refer to byte values, NOT 16-bit values.
