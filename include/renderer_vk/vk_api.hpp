@@ -1,12 +1,12 @@
 #pragma once
 
-#define VK_NO_PROTOTYPES
-#include <vulkan/vulkan.h>
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 
+#define VK_NO_PROTOTYPES
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #define VULKAN_HPP_NO_EXCEPTIONS
-// Disable asserts on result-codes
 #define VULKAN_HPP_ASSERT_ON_RESULT
+#define VULKAN_HPP_NO_CONSTRUCTORS
+#define VULKAN_HPP_NO_UNION_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_format_traits.hpp>
-#include <vulkan/vulkan_hash.hpp>

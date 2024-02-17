@@ -17,7 +17,6 @@ class FrontendSDL {
 	bool loadROM(const std::filesystem::path& path);
 	void run();
 
-	SDL_Window* window = nullptr;
 	SDL_GameController* gameController = nullptr;
 	int gameControllerID;
 };

@@ -28,6 +28,7 @@ namespace PICA {
 			// Texture registers
 			TexUnitCfg = 0x80,
 			Tex0BorderColor = 0x81,
+			LightingEnable = 0x8F,
 			Tex1BorderColor = 0x91,
 			Tex2BorderColor = 0x99,
 			TexEnvUpdateBuffer = 0xE0,
@@ -67,7 +68,21 @@ namespace PICA {
 			ColourBufferLoc = 0x11D,
 			FramebufferSize = 0x11E,
 
-			//LightingRegs
+			// Lights
+			Light0Specular0 = 0x0140,
+			Light1Specular0 = 0x0150,
+			Light2Specular0 = 0x0160,
+			Light3Specular0 = 0x0170,
+			Light4Specular0 = 0x0180,
+			Light5Specular0 = 0x0190,
+			Light6Specular0 = 0x01A0,
+			Light7Specular0 = 0x01B0,
+
+			// LightingRegs
+			LightingAmbient = 0x01C0,
+			LightingNumLights = 0x01C2,
+			LightingConfig0 = 0x01C3,
+			LightingConfig1 = 0x01C4,
 			LightingLUTIndex =  0x01C5,
 			LightingLUTData0 =  0x01C8,
 			LightingLUTData1 =  0x01C9,
@@ -77,6 +92,10 @@ namespace PICA {
 			LightingLUTData5 =  0x01CD,
 			LightingLUTData6 =  0x01CE,
 			LightingLUTData7 =  0x01CF,
+			LightingLutInputAbs = 0x01D0,
+			LightingLutInputSelect = 0x01D1,
+			LightingLutInputScale = 0x01D2,
+			LightingLightPermutation = 0x01D9,
 			
 			// Geometry pipeline registers
 			VertexAttribLoc = 0x200,
@@ -269,7 +288,8 @@ namespace PICA {
 		A4 = 0xB,
 		ETC1 = 0xC,
 		ETC1A4 = 0xD,
-	};
+        Invalid = 0xFF,
+    };
 
 	enum class ColorFmt : u32 {
 		RGBA8 = 0x0,
@@ -277,13 +297,15 @@ namespace PICA {
 		RGBA5551 = 0x2,
 		RGB565 = 0x3,
 		RGBA4 = 0x4,
-	};
+        Invalid = 0xFF,
+    };
 
 	enum class DepthFmt : u32 {
 		Depth16 = 0,
 		Unknown1 = 1,  // Technically selectable, but function is unknown
 		Depth24 = 2,
 		Depth24Stencil8 = 3,
+        Invalid = 0xFF,
 	};
 
 	// Returns the string representation of a texture format

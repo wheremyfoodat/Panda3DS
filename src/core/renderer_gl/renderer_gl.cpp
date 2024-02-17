@@ -8,45 +8,16 @@
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
 #include "math_util.hpp"
+#include "renderer_gl/surfaces.hpp"
 
 CMRC_DECLARE(RendererGL);
 
 using namespace Floats;
 using namespace Helpers;
-using namespace PICA;
+using PICA::Vertex;
 
-RendererGL::~RendererGL() {}
-
-void RendererGL::reset() {
-	depthBufferCache.reset();
-	colourBufferCache.reset();
-	textureCache.reset();
-
-	// Init the colour/depth buffer settings to some random defaults on reset
-	colourBufferLoc = 0;
-	colourBufferFormat = PICA::ColorFmt::RGBA8;
-
-	depthBufferLoc = 0;
-	depthBufferFormat = PICA::DepthFmt::Depth16;
-
-	if (triangleProgram.exists()) {
-		const auto oldProgram = OpenGL::getProgram();
-
-		gl.useProgram(triangleProgram);
-
-		oldDepthScale = -1.0;       // Default depth scale to -1.0, which is what games typically use
-		oldDepthOffset = 0.0;       // Default depth offset to 0
-		oldDepthmapEnable = false;  // Enable w buffering
-
-		glUniform1f(depthScaleLoc, oldDepthScale);
-		glUniform1f(depthOffsetLoc, oldDepthOffset);
-		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
-
-		gl.useProgram(oldProgram);  // Switch to old GL program
-	}
-}
-
-void RendererGL::initGraphicsContextInternal() {
+RendererGL::RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
+	: Renderer(gpu, internalRegs, externalRegs) {
 	gl.reset();
 
 	auto gl_resources = cmrc::RendererGL::get_filesystem();
@@ -168,9 +139,36 @@ void RendererGL::initGraphicsContextInternal() {
 	reset();
 }
 
-// The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
-// So we just call initGraphicsContextInternal for both
-void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { initGraphicsContextInternal(); }
+RendererGL::~RendererGL() = default;
+
+void RendererGL::reset() {
+	depthBufferCache.reset();
+	colourBufferCache.reset();
+	textureCache.reset();
+
+	// Init the colour/depth buffer settings to some random defaults on reset
+	colourBufferLoc = 0;
+	colourBufferFormat = PICA::ColorFmt::RGBA8;
+
+	depthBufferLoc = 0;
+	depthBufferFormat = PICA::DepthFmt::Depth16;
+
+	if (triangleProgram.exists()) {
+		const auto oldProgram = OpenGL::getProgram();
+
+		gl.useProgram(triangleProgram);
+
+		oldDepthScale = -1.0;       // Default depth scale to -1.0, which is what games typically use
+		oldDepthOffset = 0.0;       // Default depth offset to 0
+		oldDepthmapEnable = false;  // Enable w buffering
+
+		glUniform1f(depthScaleLoc, oldDepthScale);
+		glUniform1f(depthOffsetLoc, oldDepthOffset);
+		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
+
+		gl.useProgram(oldProgram);  // Switch to old GL program
+	}
+}
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
@@ -372,7 +370,7 @@ void RendererGL::updateLightingLUT() {
 
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
-	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
+    glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, PICA::Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -553,7 +551,7 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 
 		float depthVal;
 		const auto format = depth->get().format;
-		if (format == DepthFmt::Depth16) {
+        if (format == PICA::DepthFmt::Depth16) {
 			depthVal = (value & 0xffff) / 65535.0f;
 		} else {
 			depthVal = (value & 0xffffff) / 16777215.0f;
@@ -562,7 +560,7 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		gl.setDepthMask(true);
 		OpenGL::setClearDepth(depthVal);
 
-		if (format == DepthFmt::Depth24Stencil8) {
+        if (format == PICA::DepthFmt::Depth24Stencil8) {
 			const u8 stencil = (value >> 24);
 			gl.setStencilMask(0xff);
 			OpenGL::setClearStencil(stencil);
@@ -618,7 +616,7 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
 	} else {
 		const auto textureData = std::span{gpu.getPointerPhys<u8>(tex.location), tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
 		Texture& newTex = textureCache.add(tex);
-		newTex.decodeTexture(textureData);
+        newTex.uploadTexture(textureData);
 
 		return newTex.texture;
 	}

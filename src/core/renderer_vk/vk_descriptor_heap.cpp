@@ -1,4 +1,5 @@
 #include "renderer_vk/vk_descriptor_heap.hpp"
+#include "renderer_vk/vk_scheduler.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -6,22 +7,24 @@
 
 namespace Vulkan {
 
-	DescriptorHeap::DescriptorHeap(vk::Device device) : device(device) {}
+	DescriptorHeap::DescriptorHeap(vk::Device device, Scheduler& scheduler) : device(device), scheduler(scheduler) {}
 
 	std::optional<vk::DescriptorSet> DescriptorHeap::allocateDescriptorSet() {
 		// Find a free slot
-		const auto freeSlot = std::find(allocationMap.begin(), allocationMap.end(), false);
+		scheduler.refresh();
+		const auto freeSlot = std::find_if(timestamps.begin(), timestamps.end(), [this](u64 tick) {
+			return scheduler.isFree(tick);
+		});
 
 		// If there is no free slot, return
-		if (freeSlot == allocationMap.end()) {
+		if (freeSlot == timestamps.end()) {
 			return std::nullopt;
 		}
 
 		// Mark the slot as allocated
-		*freeSlot = true;
+		*freeSlot = scheduler.getCpuCounter();
 
-		const u16 index = static_cast<u16>(std::distance(allocationMap.begin(), freeSlot));
-
+		const u16 index = static_cast<u16>(std::distance(timestamps.begin(), freeSlot));
 		vk::UniqueDescriptorSet& newDescriptorSet = descriptorSets[index];
 
 		if (!newDescriptorSet) {
@@ -43,28 +46,10 @@ namespace Vulkan {
 		return newDescriptorSet.get();
 	}
 
-	bool DescriptorHeap::freeDescriptorSet(vk::DescriptorSet Set) {
-		// Find the descriptor set
-		const auto found =
-			std::find_if(descriptorSets.begin(), descriptorSets.end(), [&Set](const auto& CurSet) -> bool { return CurSet.get() == Set; });
-
-		// If the descriptor set is not found, return
-		if (found == descriptorSets.end()) {
-			return false;
-		}
-
-		// Mark the slot as free
-		const u16 index = static_cast<u16>(std::distance(descriptorSets.begin(), found));
-
-		allocationMap[index] = false;
-
-		return true;
-	}
-
 	std::optional<DescriptorHeap> DescriptorHeap::create(
-		vk::Device device, std::span<const vk::DescriptorSetLayoutBinding> bindings, u16 descriptorHeapCount
+		vk::Device device, Scheduler& scheduler, std::span<const vk::DescriptorSetLayoutBinding> bindings, u16 descriptorHeapCount
 	) {
-		DescriptorHeap newDescriptorHeap(device);
+		DescriptorHeap newDescriptorHeap(device, scheduler);
 
 		// Create a histogram of each of the descriptor types and how many of each
 		// the pool should have
@@ -110,8 +95,7 @@ namespace Vulkan {
 		}
 
 		newDescriptorHeap.descriptorSets.resize(descriptorHeapCount);
-		newDescriptorHeap.allocationMap.resize(descriptorHeapCount);
-
+		newDescriptorHeap.timestamps.resize(descriptorHeapCount);
 		newDescriptorHeap.bindings.assign(bindings.begin(), bindings.end());
 
 		return {std::move(newDescriptorHeap)};

@@ -26,30 +26,30 @@ using namespace Floats;
 
 // Note: For when we have multiple backends, the GL state manager can stay here and have the constructor for the Vulkan-or-whatever renderer ignore it
 // Thus, our GLStateManager being here does not negatively impact renderer-agnosticness
-GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
+GPU::GPU(Memory& mem, EmulatorConfig& config, const Window& window) : mem(mem), config(config) {
 	vram = new u8[vramSize];
 	mem.setVRAM(vram);  // Give the bus a pointer to our VRAM
 
 	switch (config.rendererType) {
 		case RendererType::Null: {
-			renderer.reset(new RendererNull(*this, regs, externalRegs));
+            renderer = std::make_unique<RendererNull>(*this, regs, externalRegs);
 			break;
 		}
 
 		case RendererType::Software: {
-			renderer.reset(new RendererSw(*this, regs, externalRegs));
+            renderer = std::make_unique<RendererSw>(*this, regs, externalRegs);
 			break;
 		}
 
 #ifdef PANDA3DS_ENABLE_OPENGL
 		case RendererType::OpenGL: {
-			renderer.reset(new RendererGL(*this, regs, externalRegs));
+            renderer = std::make_unique<RendererGL>(*this, regs, externalRegs);
 			break;
 		}
 #endif
 #ifdef PANDA3DS_ENABLE_VULKAN
 		case RendererType::Vulkan: {
-			renderer.reset(new RendererVK(*this, regs, externalRegs));
+            renderer = std::make_unique<RendererVK>(*this, window, regs, externalRegs);
 			break;
 		}
 #endif

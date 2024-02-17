@@ -1,32 +1,18 @@
 #pragma once
+
 #include "PICA/regs.hpp"
-#include "boost/icl/interval.hpp"
+#include "PICA/texture.hpp"
 #include "helpers.hpp"
-#include "math_util.hpp"
 #include "opengl.hpp"
 
-template <typename T>
-using Interval = boost::icl::right_open_interval<T>;
-
-struct ColourBuffer {
-	u32 location;
-	PICA::ColorFmt format;
-	OpenGL::uvec2 size;
-	bool valid;
-
-	// Range of VRAM taken up by buffer
-	Interval<u32> range;
+struct ColourBuffer : public PICA::ColourBuffer<false> {
 	// OpenGL resources allocated to buffer
 	OpenGL::Texture texture;
 	OpenGL::Framebuffer fbo;
 
-	ColourBuffer() : valid(false) {}
-
-	ColourBuffer(u32 loc, PICA::ColorFmt format, u32 x, u32 y, bool valid = true) : location(loc), format(format), size({x, y}), valid(valid) {
-		u64 endLoc = (u64)loc + sizeInBytes();
-		// Check if start and end are valid here
-		range = Interval<u32>(loc, (u32)endLoc);
-	}
+    ColourBuffer() = default;
+    ColourBuffer(u32 loc, PICA::ColorFmt format, u32 x, u32 y, bool valid = true)
+        : PICA::ColourBuffer<false>(loc, format, x, y, valid) {}
 
 	void allocate() {
 		// Create texture for the FBO, setting up filters and the like
@@ -73,44 +59,16 @@ struct ColourBuffer {
 			fbo.free();
 		}
 	}
-
-	Math::Rect<u32> getSubRect(u32 inputAddress, u32 width, u32 height) {
-		// PICA textures have top-left origin while OpenGL has bottom-left origin.
-		// Flip the rectangle on the x axis to account for this.
-		const u32 startOffset = (inputAddress - location) / sizePerPixel(format);
-		const u32 x0 = (startOffset % (size.x() * 8)) / 8;
-		const u32 y0 = (startOffset / (size.x() * 8)) * 8;
-		return Math::Rect<u32>{x0, size.y() - y0, x0 + width, size.y() - height - y0};
-	}
-
-	bool matches(ColourBuffer& other) {
-		return location == other.location && format == other.format && size.x() == other.size.x() && size.y() == other.size.y();
-	}
-
-	size_t sizeInBytes() {
-		return (size_t)size.x() * (size_t)size.y() * PICA::sizePerPixel(format);
-	}
 };
 
-struct DepthBuffer {
-	u32 location;
-	PICA::DepthFmt format;
-	OpenGL::uvec2 size;  // Implicitly set to the size of the framebuffer
-	bool valid;
-
-	// Range of VRAM taken up by buffer
-	Interval<u32> range;
+struct DepthBuffer : public PICA::DepthBuffer {
 	// OpenGL texture used for storing depth/stencil
 	OpenGL::Texture texture;
 	OpenGL::Framebuffer fbo;
 
-	DepthBuffer() : valid(false) {}
-
-	DepthBuffer(u32 loc, PICA::DepthFmt format, u32 x, u32 y, bool valid = true) : location(loc), format(format), size({x, y}), valid(valid) {
-		u64 endLoc = (u64)loc + sizeInBytes();
-		// Check if start and end are valid here
-		range = Interval<u32>(loc, (u32)endLoc);
-	}
+    DepthBuffer() = default;
+    DepthBuffer(u32 loc, PICA::DepthFmt format, u32 x, u32 y, bool valid = true)
+        : PICA::DepthBuffer(loc, format, x, y, valid) {}
 
 	void allocate() {
 		// Create texture for the FBO, setting up filters and the like
@@ -163,13 +121,5 @@ struct DepthBuffer {
 		if (texture.exists()) {
 			texture.free();
 		}
-	}
-
-	bool matches(DepthBuffer& other) {
-		return location == other.location && format == other.format && size.x() == other.size.x() && size.y() == other.size.y();
-	}
-
-	size_t sizeInBytes() {
-		return (size_t)size.x() * (size_t)size.y() * PICA::sizePerPixel(format);
 	}
 };

@@ -16,5 +16,5 @@ namespace PICAHash {
 	using HashType = std::uint64_t;
 	#endif
 
-	HashType computeHash(const char* buf, std::size_t len);
+	HashType computeHash(const void* buf, std::size_t len);
 } // namespace PICAHash 

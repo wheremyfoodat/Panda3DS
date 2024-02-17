@@ -16,6 +16,7 @@
 #include "lua_manager.hpp"
 #include "memory.hpp"
 #include "scheduler.hpp"
+#include "window.hpp"
 
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 #include "http_server.hpp"
@@ -37,6 +38,7 @@ enum class ROMType {
 
 class Emulator {
 	EmulatorConfig config;
+	WindowSDL window;
 	CPU cpu;
 	GPU gpu;
 	Memory memory;
@@ -44,6 +46,9 @@ class Emulator {
 	Crypto::AESEngine aesEngine;
 	Cheats cheats;
 	Scheduler scheduler;
+
+	SDL_GameController* gameController = nullptr;
+	int gameControllerID;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
@@ -111,13 +116,6 @@ class Emulator {
 	bool load3DSX(const std::filesystem::path& path);
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
-
-#ifdef PANDA3DS_FRONTEND_QT
-	// For passing the GL context from Qt to the renderer
-	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
-#else
-	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
-#endif
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }

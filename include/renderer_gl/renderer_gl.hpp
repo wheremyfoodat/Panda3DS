@@ -11,6 +11,7 @@
 #include "logger.hpp"
 #include "renderer.hpp"
 #include "surface_cache.hpp"
+#include "surfaces.hpp"
 #include "textures.hpp"
 
 // More circular dependencies!
@@ -67,16 +68,13 @@ class RendererGL final : public Renderer {
 	void setupTextureEnvState();
 	void bindTexturesToSlots();
 	void updateLightingLUT();
-	void initGraphicsContextInternal();
 
   public:
-	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
-		: Renderer(gpu, internalRegs, externalRegs) {}
+    RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	~RendererGL() override;
 
 	void reset() override;
 	void display() override;                                                              // Display the 3DS screen contents to the window
-	void initGraphicsContext(SDL_Window* window) override;                                // Initialize graphics context
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
@@ -88,10 +86,6 @@ class RendererGL final : public Renderer {
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this
 	void setFBO(uint handle) { screenFramebuffer.m_handle = handle; }
 	void resetStateManager() { gl.reset(); }
-
-#ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override { initGraphicsContextInternal(); }
-#endif
 
 	// Take a screenshot of the screen and store it in a file
 	void screenshot(const std::string& name) override;
