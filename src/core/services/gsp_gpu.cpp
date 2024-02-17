@@ -289,7 +289,7 @@ void GPUService::setBufferSwap(u32 messagePointer) {
 	info.displayFb = mem.read32(messagePointer + 28);  // Selects either framebuffer A or B
 
 	log("GSP::GPU::SetBufferSwap\n");
-	Helpers::panic("Untested GSP::GPU::SetBufferSwap call");
+	Helpers::warn("Untested GSP::GPU::SetBufferSwap call");
 
 	setBufferSwapImpl(screenId, info);
 	mem.write32(messagePointer, IPC::responseHeader(0x05, 1, 0));
