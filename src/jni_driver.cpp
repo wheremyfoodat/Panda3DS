@@ -37,20 +37,6 @@ JNIEnv* jniEnv() {
 	return env;
 }
 
-int AndroidUtils::openDocument(const char* path, const char* perms) {
-    auto env = jniEnv();
-
-    jstring uri = env->NewStringUTF(path);
-    jstring jmode = env->NewStringUTF(perms);
-
-    jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
-
-    env->DeleteLocalRef(uri);
-    env->DeleteLocalRef(jmode);
-
-    return (int)result;
-}
-
 extern "C" {
 
 #define MAKE_SETTING(functionName, type, settingName) \
@@ -140,3 +126,17 @@ AlberFunction(jbyteArray, GetSmdh)(JNIEnv* env, jobject obj) {
 }
 
 #undef AlberFunction
+
+int AndroidUtils::openDocument(const char* path, const char* perms) {
+    auto env = jniEnv();
+
+    jstring uri = env->NewStringUTF(path);
+    jstring jmode = env->NewStringUTF(perms);
+
+    jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
+
+    env->DeleteLocalRef(uri);
+    env->DeleteLocalRef(jmode);
+
+    return (int)result;
+}

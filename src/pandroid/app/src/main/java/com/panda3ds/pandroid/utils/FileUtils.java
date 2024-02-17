@@ -91,6 +91,7 @@ public class FileUtils {
             case "wa":
                 return "wa";
         }
+
         throw new IllegalArgumentException("Invalid file mode: "+mode);
     }
 
@@ -282,6 +283,7 @@ public class FileUtils {
             return name.toLowerCase();
         }
         String[] parts = name.split("\\.");
+        
         return parts[parts.length-1].toLowerCase();
     }
 

@@ -68,12 +68,14 @@ public class GameUtils {
         if (!lower.contains("://")) {
             return path;
         }
+
         Uri uri = Uri.parse(path);
         switch (uri.getScheme().toLowerCase()) {
-            case "elf":{
+            case "elf": {
                 return FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF)+"/"+uri.getAuthority();
             }
         }
+        
         return path;
     }
 
