@@ -46,6 +46,7 @@ public class GameUtils {
             String name = parts[parts.length - 1];
             path = "game://internal/" + name;
         }
+        
         context.startActivity(new Intent(context, GameActivity.class).putExtra(Constants.ACTIVITY_PARAMETER_PATH, path));
     }
 
@@ -75,7 +76,7 @@ public class GameUtils {
                 return FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF)+"/"+uri.getAuthority();
             }
         }
-        
+    
         return path;
     }
 
