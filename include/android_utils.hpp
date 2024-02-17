@@ -1,6 +1,5 @@
 #pragma once
 
-class AndroidUtils {
-    public:
-        static int openDocument(const char* directory, const char* mode);
-};
+namespace AndroidUtils {
+	int openDocument(const char* directory, const char* mode);
+}

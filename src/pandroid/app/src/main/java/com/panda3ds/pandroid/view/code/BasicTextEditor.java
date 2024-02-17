@@ -93,7 +93,7 @@ public class BasicTextEditor extends AppCompatEditText {
         super.scrollTo(scrollX, scrollY);
     }
 
-    public void adjustScroll(){
+    public void adjustScroll() {
         setScroll(getScrollX(), getScrollY());
     }
 

@@ -63,13 +63,13 @@ public class GameUtils {
         writeChanges();
     }
 
-    public static String resolvePath(String path){
+    public static String resolvePath(String path) {
         String lower = path.toLowerCase();
-        if (!lower.contains("://")){
+        if (!lower.contains("://")) {
             return path;
         }
         Uri uri = Uri.parse(path);
-        switch (uri.getScheme().toLowerCase()){
+        switch (uri.getScheme().toLowerCase()) {
             case "elf":{
                 return FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF)+"/"+uri.getAuthority();
             }

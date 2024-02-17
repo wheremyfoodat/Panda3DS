@@ -32,17 +32,15 @@ public class AlberDriver {
 
 	public static native void setShaderJitEnabled(boolean enable);
 
-
-
-	public static int openDocument(String path, String mode){
+	public static int openDocument(String path, String mode) {
 		try {
 			mode = FileUtils.parseNativeMode(mode);
 			Context context = PandroidApplication.getAppContext();
 			Uri uri = FileUtils.obtainUri(path);
 			ParcelFileDescriptor parcel;
 			if (Objects.equals(uri.getScheme(), "game")) {
-				if (mode.contains("w")){
-					throw new IllegalArgumentException("Cannot write to rom-fs");
+				if (mode.contains("w")) {
+					throw new IllegalArgumentException("Cannot open ROM file as writable");
 				}
 				uri = FileUtils.obtainUri(GameUtils.getCurrentGame().getRealPath());
 			}
@@ -51,7 +49,7 @@ public class AlberDriver {
 			parcel.close();
 
 			return fd;
-		} catch (Exception e){
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}

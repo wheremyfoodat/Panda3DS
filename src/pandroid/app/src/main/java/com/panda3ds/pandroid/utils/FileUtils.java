@@ -39,7 +39,7 @@ public class FileUtils {
         return parseFile(path).getName();
     }
 
-    public static String getResourcesPath(){
+    public static String getResourcesPath() {
         File file = new File(getPrivatePath(), "config/resources");
         if (!file.exists()) {
             file.mkdirs();
@@ -48,7 +48,7 @@ public class FileUtils {
         return file.getAbsolutePath();
     }
 
-    public static String getResourcePath(String name){
+    public static String getResourcePath(String name) {
         File file = new File(getResourcesPath(), name);
         file.mkdirs();
 
@@ -73,9 +73,9 @@ public class FileUtils {
         return file.getAbsolutePath();
     }
 
-    public static String parseNativeMode(String mode){
+    public static String parseNativeMode(String mode) {
         mode = mode.toLowerCase();
-        switch (mode){
+        switch (mode) {
             case "r":
             case "rb":
                 return "r";
@@ -98,7 +98,7 @@ public class FileUtils {
         return parseFile(path).exists();
     }
 
-    public static void rename(String path, String newName){
+    public static void rename(String path, String newName) {
         parseFile(path).renameTo(newName);
     }
 
@@ -234,7 +234,7 @@ public class FileUtils {
         }
     }
 
-    public static void updateFile(String path){
+    public static void updateFile(String path) {
         DocumentFile file = parseFile(path);
         Uri uri = file.getUri();
         
@@ -260,12 +260,12 @@ public class FileUtils {
         return parseFile(path).lastModified();
     }
 
-    public static String[] listFiles(String path){
+    public static String[] listFiles(String path) {
         DocumentFile folder = parseFile(path);
         DocumentFile[] files = folder.listFiles();
 
         String[] result = new String[files.length];
-        for (int i = 0; i < result.length; i++){
+        for (int i = 0; i < result.length; i++) {
             result[i] = files[i].getName();
         }
         
@@ -278,7 +278,7 @@ public class FileUtils {
 
     public static String extension(String uri) {
         String name = getName(uri);
-        if (!name.contains(".")){
+        if (!name.contains(".")) {
             return name.toLowerCase();
         }
         String[] parts = name.split("\\.");
@@ -302,7 +302,7 @@ public class FileUtils {
             out.flush();
             out.close();
             in.close();
-        } catch (Exception e){
+        } catch (Exception e) {
             Log.e(Constants.LOG_TAG, "ERROR ON COPY FILE", e);
             return false;
         }

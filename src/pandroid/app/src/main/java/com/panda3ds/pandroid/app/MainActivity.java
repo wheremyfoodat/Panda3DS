@@ -2,7 +2,6 @@ package com.panda3ds.pandroid.app;
 
 import android.os.Bundle;
 import android.view.MenuItem;
-
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -12,7 +11,6 @@ import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.main.GamesFragment;
 import com.panda3ds.pandroid.app.main.SearchFragment;
 import com.panda3ds.pandroid.app.main.SettingsFragment;
-
 
 public class MainActivity extends BaseActivity implements NavigationBarView.OnItemSelectedListener {
 	private final GamesFragment gamesFragment = new GamesFragment();

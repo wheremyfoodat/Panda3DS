@@ -43,7 +43,7 @@ public class GameMetadata {
         return romPath;
     }
 
-    public String getRealPath(){
+    public String getRealPath() {
         return GameUtils.resolvePath(romPath);
     }
 

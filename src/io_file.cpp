@@ -41,7 +41,8 @@ bool IOFile::open(const char* filename, const char* permissions) {
     #ifdef __ANDROID__
         std::string path(filename);
 
-        if(path.find("://") != std::string::npos){ //IF SAF URI
+        // Check if this is a URI directory, which will need special handling due to SAF
+        if (path.find("://") != std::string::npos ) {
             handle = fdopen(AndroidUtils::openDocument(filename, permissions), permissions);
         } else {
             handle = std::fopen(filename, permissions);
@@ -49,6 +50,7 @@ bool IOFile::open(const char* filename, const char* permissions) {
 	#else
     	handle = std::fopen(filename, permissions);
 	#endif
+
 	return isOpen();
 }
 
