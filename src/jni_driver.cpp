@@ -15,6 +15,9 @@ RendererGL* renderer = nullptr;
 bool romLoaded = false;
 JavaVM* jvm = nullptr;
 
+jclass alberClass;
+jmethodID alberClassOpenDocument;
+
 #define AlberFunction(type, name) JNIEXPORT type JNICALL Java_com_panda3ds_pandroid_AlberDriver_##name
 
 void throwException(JNIEnv* env, const char* message) {
@@ -37,13 +40,10 @@ JNIEnv* jniEnv() {
 int AndroidUtils::openDocument(const char* path, const char* perms) {
     auto env = jniEnv();
 
-    auto clazz = env->FindClass("com/panda3ds/pandroid/AlberDriver");
-    auto method = env->GetStaticMethodID(clazz, "openDocument", "(Ljava/lang/String;Ljava/lang/String;)I");
-
     jstring uri = env->NewStringUTF(path);
     jstring jmode = env->NewStringUTF(perms);
 
-    jint result = env->CallStaticIntMethod(clazz, method, uri, jmode);
+    jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
 
     env->DeleteLocalRef(uri);
     env->DeleteLocalRef(jmode);
@@ -60,7 +60,13 @@ MAKE_SETTING(setShaderJitEnabled, jboolean, shaderJitEnabled)
 
 #undef MAKE_SETTING
 
-AlberFunction(void, Setup)(JNIEnv* env, jobject obj) { env->GetJavaVM(&jvm); }
+AlberFunction(void, Setup)(JNIEnv* env, jobject obj) {
+    env->GetJavaVM(&jvm);
+
+    alberClass = (jclass)env->NewGlobalRef((jclass)env->FindClass("com/panda3ds/pandroid/AlberDriver"));
+    alberClassOpenDocument = env->GetStaticMethodID(alberClass, "openDocument", "(Ljava/lang/String;Ljava/lang/String;)I");
+}
+
 AlberFunction(void, Pause)(JNIEnv* env, jobject obj) { emulator->pause(); }
 AlberFunction(void, Resume)(JNIEnv* env, jobject obj) { emulator->resume(); }
 

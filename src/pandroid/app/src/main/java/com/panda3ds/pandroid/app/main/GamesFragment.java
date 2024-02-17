@@ -11,12 +11,18 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.base.LoadingAlertDialog;
 import com.panda3ds.pandroid.data.game.GameMetadata;
+import com.panda3ds.pandroid.lang.Task;
+import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.FileUtils;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.view.gamesgrid.GamesGridView;
+
+import java.util.UUID;
 
 
 public class GamesFragment extends Fragment implements ActivityResultCallback<Uri> {
@@ -53,12 +59,39 @@ public class GamesFragment extends Fragment implements ActivityResultCallback<Ur
 					Toast.makeText(getContext(), "Invalid file path", Toast.LENGTH_LONG).show();
 					return;
 				}
-				FileUtils.makeUriPermanent(uri, FileUtils.MODE_READ);
-				GameMetadata game = new GameMetadata(uri, FileUtils.getName(uri).split("\\.")[0], "Unknown");
-				GameUtils.addGame(game);
-				GameUtils.launch(requireActivity(), game);
+
+				String extension = FileUtils.extension(uri);
+
+				if (extension.equals("elf") || extension.endsWith("axf")){
+					importELF(uri);
+				} else {
+					FileUtils.makeUriPermanent(uri, FileUtils.MODE_READ);
+					importGame(uri);
+				}
 			}
 		}
+	}
+
+	private void importGame(String uri){
+		GameMetadata game = new GameMetadata(uri, FileUtils.getName(uri).split("\\.")[0], getString(R.string.unknown));
+		GameUtils.addGame(game);
+		GameUtils.launch(requireActivity(), game);
+	}
+
+	private void importELF(String uri) {
+		AlertDialog dialog = new LoadingAlertDialog(requireActivity(), R.string.loading).create();
+		dialog.show();
+		new Task(()->{
+			String uuid = UUID.randomUUID().toString() + "." + FileUtils.extension(uri);
+			String name = FileUtils.getName(uri);
+			FileUtils.copyFile(uri, FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF), uuid);
+			gameListView.post(()->{
+				dialog.hide();
+				GameMetadata game = new GameMetadata("elf://"+uuid, name.substring(0, name.length()-4).trim(), "");
+				GameUtils.addGame(game);
+				GameUtils.launch(requireActivity(), game);
+			});
+		}).start();
 	}
 
 	@Override

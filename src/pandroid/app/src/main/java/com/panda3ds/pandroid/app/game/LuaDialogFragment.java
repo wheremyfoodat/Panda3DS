@@ -19,6 +19,7 @@ import com.panda3ds.pandroid.app.base.BottomAlertDialog;
 import com.panda3ds.pandroid.app.base.BottomDialogFragment;
 import com.panda3ds.pandroid.app.editor.CodeEditorActivity;
 import com.panda3ds.pandroid.lang.Task;
+import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.FileUtils;
 import com.panda3ds.pandroid.view.recycler.AutoFitGridLayout;
 import com.panda3ds.pandroid.view.recycler.SimpleListAdapter;
@@ -94,9 +95,8 @@ public class LuaDialogFragment extends BottomDialogFragment {
 
         ((RecyclerView) view.findViewById(R.id.recycler)).setAdapter(adapter);
         ((RecyclerView) view.findViewById(R.id.recycler)).setLayoutManager(new AutoFitGridLayout(getContext(), 140));
-        FileUtils.createDir(FileUtils.getResourcesPath(), "Lua Scripts");
         ArrayList<LuaFile> files = new ArrayList<>();
-        String path = FileUtils.getResourcesPath() + "/Lua Scripts/";
+        String path = FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_LUA_SCRIPTS);
         for (String file : FileUtils.listFiles(path)) {
             files.add(new LuaFile(file));
         }
@@ -167,7 +167,7 @@ public class LuaDialogFragment extends BottomDialogFragment {
         }
 
         private LuaFile(String name) {
-            this(FileUtils.getResourcesPath() + "/Lua Scripts/", name);
+            this(FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_LUA_SCRIPTS), name);
         }
 
         private String absolutePath() {

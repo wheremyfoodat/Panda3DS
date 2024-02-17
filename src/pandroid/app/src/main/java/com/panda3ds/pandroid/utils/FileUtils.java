@@ -48,6 +48,13 @@ public class FileUtils {
         return file.getAbsolutePath();
     }
 
+    public static String getResourcePath(String name){
+        File file = new File(getResourcesPath(), name);
+        file.mkdirs();
+
+        return file.getAbsolutePath();
+    }
+
     public static String getPrivatePath() {
         File file = getContext().getFilesDir();
         if (!file.exists()) {
@@ -267,5 +274,38 @@ public class FileUtils {
 
     public static Uri obtainUri(String path) {
         return parseFile(path).getUri();
+    }
+
+    public static String extension(String uri) {
+        String name = getName(uri);
+        if (!name.contains(".")){
+            return name.toLowerCase();
+        }
+        String[] parts = name.split("\\.");
+        return parts[parts.length-1].toLowerCase();
+    }
+
+    public static boolean copyFile(String source, String path, String name) {
+        try {
+            String fullPath = path + "/" + name;
+            if (!FileUtils.exists(fullPath)) {
+                FileUtils.delete(fullPath);
+            }
+            FileUtils.createFile(path, name);
+            InputStream in = getInputStream(source);
+            OutputStream out = getOutputStream(fullPath);
+            byte[] buffer = new byte[1024 * 128]; //128 KB
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+            out.flush();
+            out.close();
+            in.close();
+        } catch (Exception e){
+            Log.e(Constants.LOG_TAG, "ERROR ON COPY FILE", e);
+            return false;
+        }
+        return true;
     }
 }

@@ -44,7 +44,7 @@ public class AlberDriver {
 				if (mode.contains("w")){
 					throw new IllegalArgumentException("Cannot write to rom-fs");
 				}
-				uri = FileUtils.obtainUri(GameUtils.getCurrentGame().getRomPath());
+				uri = FileUtils.obtainUri(GameUtils.getCurrentGame().getRealPath());
 			}
 			parcel = context.getContentResolver().openFileDescriptor(uri, mode);
 			int fd = parcel.detachFd();
