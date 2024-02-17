@@ -3,16 +3,16 @@
 #include "audio/null_core.hpp"
 #include "audio/teakra_core.hpp"
 
-std::unique_ptr<Audio::DSPCore> Audio::makeDSPCore(DSPCore::Type type, Memory& mem) {
+std::unique_ptr<Audio::DSPCore> Audio::makeDSPCore(DSPCore::Type type, Memory& mem, DSPService& dspService) {
 	std::unique_ptr<DSPCore> core;
 
 	switch (type) {
-		case DSPCore::Type::Null: core = std::make_unique<NullDSP>(mem); break;
-		case DSPCore::Type::Teakra: core = std::make_unique<TeakraDSP>(mem); break;
+		case DSPCore::Type::Null: core = std::make_unique<NullDSP>(mem, dspService); break;
+		case DSPCore::Type::Teakra: core = std::make_unique<TeakraDSP>(mem, dspService); break;
 
 		default:
 			Helpers::warn("Invalid DSP core selected!");
-			core = std::make_unique<NullDSP>(mem);
+			core = std::make_unique<NullDSP>(mem, dspService);
 			break;
 	}
 

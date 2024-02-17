@@ -269,3 +269,27 @@ void DSPService::signalEvents() {
 	if (interrupt0.has_value()) { kernel.signalEvent(interrupt0.value()); }
 	if (interrupt1.has_value()) { kernel.signalEvent(interrupt1.value()); }
 }
+
+void DSPService::triggerPipeEvent(int index) {
+	if (index < pipeCount && pipeEvents[index].has_value()) {
+		kernel.signalEvent(*pipeEvents[index]);
+	}
+}
+
+void DSPService::triggerSemaphoreEvent() {
+	if (semaphoreEvent.has_value()) {
+		kernel.signalEvent(*semaphoreEvent);
+	}
+}
+
+void DSPService::triggerInterrupt0() {
+	if (interrupt0.has_value()) {
+		kernel.signalEvent(*interrupt0);
+	}
+}
+
+void DSPService::triggerInterrupt1() {
+	if (interrupt1.has_value()) {
+		kernel.signalEvent(*interrupt1);
+	}
+}

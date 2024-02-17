@@ -1,10 +1,14 @@
 #include "audio/teakra_core.hpp"
 
+#include <algorithm>
+#include <cstring>
+
+#include "services/dsp.hpp"
+
 using namespace Audio;
 
 struct Dsp1 {
 	// All sizes are in bytes unless otherwise specified
-
 	u8 signature[0x100];
 	u8 magic[4];
 	u32 size;
@@ -30,7 +34,7 @@ struct Dsp1 {
 	Segment segments[10];
 };
 
-TeakraDSP::TeakraDSP(Memory& mem) : DSPCore(mem), pipeBaseAddr(0), running(false) {
+TeakraDSP::TeakraDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspService), pipeBaseAddr(0), running(false) {
 	teakra.Reset();
 
 	// Set up callbacks for Teakra
@@ -48,30 +52,188 @@ TeakraDSP::TeakraDSP(Memory& mem) : DSPCore(mem), pipeBaseAddr(0), running(false
 	teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
 		// NOP for now
 	});
+
+	// Set up event handlers
+	teakra.SetRecvDataHandler(0, [&]() {
+		if (running) {
+			dspService.triggerInterrupt0();
+		}
+	});
+
+	teakra.SetRecvDataHandler(1, [&]() {
+		if (running) {
+			dspService.triggerInterrupt1();
+		}
+	});
+
+	auto processPipeEvent = [&](bool dataEvent) {
+		if (!running) {
+			return;
+		}
+
+		if (dataEvent) {
+			signalledData = true;
+		} else {
+			if ((teakra.GetSemaphore() & 0x8000) == 0) {
+				return;
+			}
+
+			signalledSemaphore = true;
+		}
+
+		if (signalledSemaphore && signalledData) {
+			signalledSemaphore = signalledData = false;
+
+			u16 slot = teakra.RecvData(2);
+			u16 side = slot % 2;
+			u16 pipe = slot / 2;
+
+			if (side != static_cast<u16>(PipeDirection::DSPtoCPU)) {
+				return;
+			}
+
+			if (pipe == 0) {
+				Helpers::warn("Pipe event for debug pipe: Should be ignored and the data should be flushed");
+			} else {
+				dspService.triggerPipeEvent(pipe);
+			}
+		}
+	};
+
+	teakra.SetRecvDataHandler(2, [processPipeEvent]() { processPipeEvent(true); });
+	teakra.SetSemaphoreHandler([processPipeEvent]() { processPipeEvent(false); });
 }
 
 void TeakraDSP::reset() {
 	teakra.Reset();
 	running = false;
+	signalledData = signalledSemaphore = false;
 }
 
+// https://github.com/citra-emu/citra/blob/master/src/audio_core/lle/lle.cpp
 void TeakraDSP::writeProcessPipe(u32 channel, u32 size, u32 buffer) {
-	// TODO
+	Helpers::warn("Teakra: Write process pipe");
+	size &= 0xffff;
+
+	PipeStatus status = getPipeStatus(channel, PipeDirection::CPUtoDSP);
+	bool needUpdate = false;  // Do we need to update the pipe status and catch up Teakra?
+
+	std::vector<u8> data;
+	data.reserve(size);
+
+	// Read data to write
+	for (int i = 0; i < size; i++) {
+		const u8 byte = mem.read8(buffer + i);
+		data.push_back(byte);
+	}
+	u8* dataPointer = data.data();
+
+	while (size != 0) {
+		if (status.isFull()) {
+			Helpers::warn("Teakra: Writing to full pipe");
+		}
+
+		// Calculate begin/end/size for write
+		const u16 writeEnd = status.isWrapped() ? (status.readPointer & PipeStatus::pointerMask) : status.byteSize;
+		const u16 writeBegin = status.writePointer & PipeStatus::pointerMask;
+		const u16 writeSize = std::min<u16>(u16(size), writeEnd - writeBegin);
+
+		if (writeEnd <= writeBegin) [[unlikely]] {
+			Helpers::warn("Teakra: Writing to pipe but end <= start");
+		}
+
+		// Write data to pipe, increment write and buffer pointers, decrement size
+		std::memcpy(getDataPointer(status.address * 2 + writeBegin), dataPointer, writeSize);
+		dataPointer += writeSize;
+		status.writePointer += writeSize;
+		size -= writeSize;
+
+		if ((status.writePointer & PipeStatus::pointerMask) > status.byteSize) [[unlikely]] {
+			Helpers::warn("Teakra: Writing to pipe but write > size");
+		}
+
+		if ((status.writePointer & PipeStatus::pointerMask) == status.byteSize) {
+			status.writePointer &= PipeStatus::wrapBit;
+			status.writePointer ^= PipeStatus::wrapBit;
+		}
+		needUpdate = true;
+	}
+
+	if (needUpdate) {
+		updatePipeStatus(status);
+		while (!teakra.SendDataIsEmpty(2)) {
+			runAudioFrame();
+		}
+
+		teakra.SendData(2, status.slot);
+	}
 }
 
 std::vector<u8> TeakraDSP::readPipe(u32 channel, u32 peer, u32 size, u32 buffer) {
-	// TODO
-	return std::vector<u8>();
+	Helpers::warn("Teakra: Read pipe");
+	size &= 0xffff;
+
+	PipeStatus status = getPipeStatus(channel, PipeDirection::DSPtoCPU);
+
+	std::vector<u8> pipeData(size);
+	u8* dataPointer = pipeData.data();
+	bool needUpdate = false;  // Do we need to update the pipe status and catch up Teakra?
+
+	while (size != 0) {
+		if (status.isEmpty()) [[unlikely]] {
+			Helpers::warn("Teakra: Reading from empty pipe");
+			return pipeData;
+		}
+
+		// Read as many bytes as possible
+		const u16 readEnd = status.isWrapped() ? status.byteSize : (status.writePointer & PipeStatus::pointerMask);
+		const u16 readBegin = status.readPointer & PipeStatus::pointerMask;
+		const u16 readSize = std::min<u16>(u16(size), readEnd - readBegin);
+
+		// Copy bytes to the output vector, increment the read and vector pointers and decrement the size appropriately
+		std::memcpy(dataPointer, getDataPointer(status.address * 2 + readBegin), readSize);
+		dataPointer += readSize;
+		status.readPointer += readSize;
+		size -= readSize;
+
+		if ((status.readPointer & PipeStatus::pointerMask) > status.byteSize) [[unlikely]] {
+			Helpers::warn("Teakra: Reading from pipe but read > size");
+		}
+
+		if ((status.readPointer & PipeStatus::pointerMask) == status.byteSize) {
+			status.readPointer &= PipeStatus::wrapBit;
+			status.readPointer ^= PipeStatus::wrapBit;
+		}
+
+		needUpdate = true;
+	}
+
+	if (needUpdate) {
+		updatePipeStatus(status);
+		while (!teakra.SendDataIsEmpty(2)) {
+			runAudioFrame();
+		}
+
+		teakra.SendData(2, status.slot);
+	}
+
+	return pipeData;
 }
 
 void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) {
 	// TODO: maybe move this to the DSP service
+	if (running) {
+		Helpers::warn("Loading DSP component when already loaded");
+		return;
+	}
+
+	teakra.Reset();
 
 	u8* dspCode = teakra.GetDspMemory().data();
 	u8* dspData = dspCode + 0x40000;
 
 	Dsp1 dsp1;
-	memcpy(&dsp1, data.data(), sizeof(dsp1));
+	std::memcpy(&dsp1, data.data(), sizeof(dsp1));
 
 	// TODO: verify DSP1 signature
 
@@ -89,7 +251,7 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 			default: dst = dspData + addr; break;
 		}
 
-		memcpy(dst, src, segment.size);
+		std::memcpy(dst, src, segment.size);
 	}
 
 	bool syncWithDsp = dsp1.flags & 0x1;
@@ -123,7 +285,8 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 
 void TeakraDSP::unloadComponent() {
 	if (!running) {
-		Helpers::panic("Audio: unloadComponent called without a running program");
+		Helpers::warn("Audio: unloadComponent called without a running program");
+		return;
 	}
 
 	// Wait for SEND2 to be ready, then send the shutdown command to the DSP

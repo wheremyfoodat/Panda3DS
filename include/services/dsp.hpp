@@ -63,4 +63,8 @@ public:
 	};
 
 	void signalEvents();
+	void triggerPipeEvent(int index);
+	void triggerSemaphoreEvent();
+	void triggerInterrupt0();
+	void triggerInterrupt1();
 };

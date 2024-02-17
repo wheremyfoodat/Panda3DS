@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -7,15 +8,19 @@
 #include "logger.hpp"
 #include "memory.hpp"
 
+// The DSP core must have access to the DSP service to be able to trigger interrupts properly
+class DSPService;
+
 namespace Audio {
 	class DSPCore {
 	  protected:
 		Memory& mem;
+		DSPService& dspService;
 		MAKE_LOG_FUNCTION(log, dspLogger)
 
 	  public:
 		enum class Type { Null, Teakra };
-		DSPCore(Memory& mem) : mem(mem) {}
+		DSPCore(Memory& mem, DSPService& dspService) : mem(mem), dspService(dspService) {}
 
 		virtual void reset() = 0;
 		virtual void runAudioFrame() = 0;
@@ -31,5 +36,5 @@ namespace Audio {
 		virtual void setSemaphoreMask(u16 value) = 0;
 	};
 
-	std::unique_ptr<DSPCore> makeDSPCore(DSPCore::Type type, Memory& mem);
+	std::unique_ptr<DSPCore> makeDSPCore(DSPCore::Type type, Memory& mem, DSPService& dspService);
 }  // namespace Audio
