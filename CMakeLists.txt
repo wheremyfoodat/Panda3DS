@@ -38,6 +38,7 @@ option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
+option(USE_KVM "Use KVM instead of Dynarmic" OFF)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
@@ -140,18 +141,20 @@ else()
     set(HOST_ARM64 FALSE)
 endif()
 
-if(HOST_X64 OR HOST_ARM64)
+if(NOT USE_KVM AND (HOST_X64 OR HOST_ARM64))
     set(DYNARMIC_TESTS OFF)
     #set(DYNARMIC_NO_BUNDLED_FMT ON)
     set(DYNARMIC_FRONTENDS "A32" CACHE STRING "")
     add_subdirectory(third_party/dynarmic)
     add_compile_definitions(CPU_DYNARMIC)
+elseif(USE_KVM AND HOST_ARM64)
+    add_compile_definitions(CPU_KVM)
 else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
 set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
-				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
+				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp src/core/CPU/cpu_kvm.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
                  src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp
@@ -429,7 +432,11 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic cryptopp glad resources_console_fonts)
+target_link_libraries(Alber PRIVATE cryptopp glad resources_console_fonts)
+
+if(NOT USE_KVM)
+    target_link_libraries(Alber PRIVATE dynarmic)
+endif()
 
 if(NOT ANDROID)
     target_link_libraries(Alber PRIVATE SDL2-static)

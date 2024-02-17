@@ -17,9 +17,14 @@
 namespace PhysicalAddrs {
 	enum : u32 {
 		VRAM = 0x18000000,
-		VRAMEnd = VRAM + 0x005FFFFF,
+		VRAMSize = 0x00600000,
+		VRAMEnd = VRAM + VRAMSize - 1,
 		FCRAM = 0x20000000,
-		FCRAMEnd = FCRAM + 0x07FFFFFF
+		FCRAMSize = 0x08000000,
+		FCRAMEnd = FCRAM + FCRAMSize - 1,
+		DSPMem = 0x1FF00000,
+		DSPMemSize = 0x00080000,
+		DSPMemEnd = DSPMem + DSPMemSize - 1
 	};
 }
 
@@ -279,6 +284,7 @@ private:
 	u8* getDSPDataMem() { return &dspRam[DSP_DATA_MEMORY_OFFSET]; }
 	u8* getDSPCodeMem() { return &dspRam[DSP_CODE_MEMORY_OFFSET]; }
 	u32 getUsedUserMem() { return usedUserMemory; }
+	u8* getVRAM() { return vram; }
 
 	void setVRAM(u8* pointer) { vram = pointer; }
 	bool allocateMainThreadStack(u32 size);

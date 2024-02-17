@@ -14,7 +14,7 @@ struct EmulatorConfig {
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
-	RendererType rendererType = RendererType::OpenGL;
+	RendererType rendererType = RendererType::Null;
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
