@@ -54,5 +54,6 @@
     <string name="pref_shader_jit_title">Shader Jit</string>
     <string name="pref_shader_jit_summary">Usar recompilador de shaders.</string>
     <string name="graphics">Gráficos</string>
+    <string name="loading">Carregando</string>
     <string name="rotate">Rotacionar</string>
 </resources>

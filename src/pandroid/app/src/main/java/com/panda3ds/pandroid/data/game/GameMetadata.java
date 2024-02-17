@@ -43,6 +43,10 @@ public class GameMetadata {
         return romPath;
     }
 
+    public String getRealPath() {
+        return GameUtils.resolvePath(romPath);
+    }
+
     public String getId() {
         return id;
     }

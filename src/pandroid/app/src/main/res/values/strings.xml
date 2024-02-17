@@ -59,4 +59,5 @@
     <string name="pref_shader_jit_title">Shader JIT</string>
     <string name="pref_shader_jit_summary">Use shader recompiler.</string>
     <string name="graphics">Graphics</string>
+    <string name="loading">Loading</string>
 </resources>

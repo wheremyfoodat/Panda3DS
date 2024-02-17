@@ -105,7 +105,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
             close();
         } else if (id == R.id.exit) {
             requireActivity().finish();
-        } else if (id == R.id.lua_script){
+        } else if (id == R.id.lua_script) {
             new LuaDialogFragment().show(getParentFragmentManager(), null);
         } else if (id == R.id.change_orientation) {
             boolean isLandscape = getResources().getDisplayMetrics().widthPixels > getResources().getDisplayMetrics().heightPixels;

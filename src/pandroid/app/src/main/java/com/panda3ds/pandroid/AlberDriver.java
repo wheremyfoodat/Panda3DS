@@ -1,6 +1,14 @@
 package com.panda3ds.pandroid;
 
-import android.util.Log;
+import android.content.Context;
+import android.net.Uri;
+import android.os.ParcelFileDescriptor;
+
+import com.panda3ds.pandroid.app.PandroidApplication;
+import com.panda3ds.pandroid.utils.FileUtils;
+import com.panda3ds.pandroid.utils.GameUtils;
+
+import java.util.Objects;
 
 public class AlberDriver {
 	AlberDriver() { super(); }
@@ -24,5 +32,26 @@ public class AlberDriver {
 
 	public static native void setShaderJitEnabled(boolean enable);
 
+	public static int openDocument(String path, String mode) {
+		try {
+			mode = FileUtils.parseNativeMode(mode);
+			Context context = PandroidApplication.getAppContext();
+			Uri uri = FileUtils.obtainUri(path);
+			ParcelFileDescriptor parcel;
+			if (Objects.equals(uri.getScheme(), "game")) {
+				if (mode.contains("w")) {
+					throw new IllegalArgumentException("Cannot open ROM file as writable");
+				}
+				uri = FileUtils.obtainUri(GameUtils.getCurrentGame().getRealPath());
+			}
+			parcel = context.getContentResolver().openFileDescriptor(uri, mode);
+			int fd = parcel.detachFd();
+			parcel.close();
+
+			return fd;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 	static { System.loadLibrary("Alber"); }
 }
