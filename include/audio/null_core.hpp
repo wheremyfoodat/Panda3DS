@@ -20,7 +20,7 @@ namespace Audio {
 		void resetAudioPipe();
 
 	  public:
-		NullDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspService) {}
+		NullDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
 
 		void reset() override;
 		void runAudioFrame() override {}

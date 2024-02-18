@@ -34,7 +34,8 @@ struct Dsp1 {
 	Segment segments[10];
 };
 
-TeakraDSP::TeakraDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspService), pipeBaseAddr(0), running(false) {
+TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService)
+	: DSPCore(mem, scheduler, dspService), pipeBaseAddr(0), running(false) {
 	// Set up callbacks for Teakra
 	Teakra::AHBMCallback ahbm;
 
@@ -117,7 +118,6 @@ void TeakraDSP::reset() {
 
 // https://github.com/citra-emu/citra/blob/master/src/audio_core/lle/lle.cpp
 void TeakraDSP::writeProcessPipe(u32 channel, u32 size, u32 buffer) {
-	Helpers::warn("Teakra: Write process pipe");
 	size &= 0xffff;
 
 	PipeStatus status = getPipeStatus(channel, PipeDirection::CPUtoDSP);
@@ -167,7 +167,7 @@ void TeakraDSP::writeProcessPipe(u32 channel, u32 size, u32 buffer) {
 	if (needUpdate) {
 		updatePipeStatus(status);
 		while (!teakra.SendDataIsEmpty(2)) {
-			runAudioFrame();
+			runSlice();
 		}
 
 		teakra.SendData(2, status.slot);
@@ -175,7 +175,6 @@ void TeakraDSP::writeProcessPipe(u32 channel, u32 size, u32 buffer) {
 }
 
 std::vector<u8> TeakraDSP::readPipe(u32 channel, u32 peer, u32 size, u32 buffer) {
-	Helpers::warn("Teakra: Read pipe");
 	size &= 0xffff;
 
 	PipeStatus status = getPipeStatus(channel, PipeDirection::DSPtoCPU);
@@ -216,7 +215,7 @@ std::vector<u8> TeakraDSP::readPipe(u32 channel, u32 peer, u32 size, u32 buffer)
 	if (needUpdate) {
 		updatePipeStatus(status);
 		while (!teakra.SendDataIsEmpty(2)) {
-			runAudioFrame();
+			runSlice();
 		}
 
 		teakra.SendData(2, status.slot);
@@ -273,20 +272,20 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 		for (int i = 0; i < 3; i++) {
 			do {
 				while (!teakra.RecvDataIsReady(i)) {
-					runAudioFrame();
+					runSlice();
 				}
 			} while (teakra.RecvData(i) != 1);
 		}
 	}
 
-	printf("DSP::LoadComponent: Semaphore value: %X\n", teakra.GetSemaphore());
-
 	// Retrieve the pipe base address
 	while (!teakra.RecvDataIsReady(2)) {
-		runAudioFrame();
+		runSlice();
 	}
-
 	pipeBaseAddr = teakra.RecvData(2);
+	
+	// Schedule next DSP event
+	scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::lleSlice * 2);
 	loaded = true;
 }
 
@@ -296,17 +295,19 @@ void TeakraDSP::unloadComponent() {
 		return;
 	}
 	loaded = false;
+	// Stop scheduling DSP events
+	scheduler.removeEvent(Scheduler::EventType::RunDSP);
 
 	// Wait for SEND2 to be ready, then send the shutdown command to the DSP
 	while (!teakra.SendDataIsEmpty(2)) {
-		runAudioFrame();
+		runSlice();
 	}
 
 	teakra.SendData(2, 0x8000);
 
 	// Wait for shutdown to be acknowledged
 	while (!teakra.RecvDataIsReady(2)) {
-		runAudioFrame();
+		runSlice();
 	}
 
 	// Read the value and discard it, completing shutdown

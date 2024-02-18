@@ -65,14 +65,22 @@ namespace Audio {
 		bool signalledData;
 		bool signalledSemaphore;
 
+		// Run 1 slice of DSP instructions
+		void runSlice() {
+			if (running) {
+				teakra.Run(Audio::lleSlice);
+			}
+		}
+
 	  public:
-		TeakraDSP(Memory& mem, DSPService& dspService);
+		TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
 
 		void reset() override;
+
+		// Run 1 slice of DSP instructions and schedule the next audio frame
 		void runAudioFrame() override {
-			if (running) {
-				teakra.Run(16384);
-			}
+			runSlice();
+			scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::lleSlice * 2);
 		}
 
 		u8* getDspMemory() override { return teakra.GetDspMemory().data(); }

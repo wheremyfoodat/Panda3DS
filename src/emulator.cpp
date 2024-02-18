@@ -26,7 +26,7 @@ Emulator::Emulator()
 {
 	DSPService& dspService = kernel.getServiceManager().getDSP();
 
-	dsp = Audio::makeDSPCore(Audio::DSPCore::Type::Teakra, memory, dspService);
+	dsp = Audio::makeDSPCore(Audio::DSPCore::Type::Teakra, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
@@ -151,7 +151,6 @@ void Emulator::pollScheduler() {
 
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
 			case Scheduler::EventType::RunDSP: {
-				scheduler.addEvent(Scheduler::EventType::RunDSP, time + 16384 * 2);
 				dsp->runAudioFrame();
 				break;
 			}
