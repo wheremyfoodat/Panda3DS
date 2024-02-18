@@ -32,6 +32,7 @@ namespace Result {
 
 void DSPService::reset() {
 	totalEventCount = 0;
+	semaphoreMask = 0;
 
 	semaphoreEvent = std::nullopt;
 	interrupt0 = std::nullopt;
@@ -83,6 +84,7 @@ void DSPService::loadComponent(u32 messagePointer) {
 	for (u32 i = 0; i < size; i++) {
 		data[i] = mem.read8(buffer + i);
 	}
+	printf("Loado compartment: %08X %08X %08X %08X\n", data[0], data[1], data[2], data[3]);
 
 	log("DSP::LoadComponent (size = %08X, program mask = %X, data mask = %X\n", size, programMask, dataMask);
 	dsp->loadComponent(data, programMask, dataMask);
@@ -200,7 +202,7 @@ void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
 	log("DSP::GetSemaphoreEventHandle\n");
 
 	if (!semaphoreEvent.has_value()) {
-		semaphoreEvent = kernel.makeEvent(ResetType::OneShot);
+		semaphoreEvent = kernel.makeEvent(ResetType::OneShot, Event::CallbackType::DSPSemaphore);
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 2));
@@ -224,6 +226,8 @@ void DSPService::setSemaphoreMask(u32 messagePointer) {
 	log("DSP::SetSemaphoreMask(mask = %04X)\n", mask);
 
 	dsp->setSemaphoreMask(mask);
+	semaphoreMask = mask;
+
 	mem.write32(messagePointer, IPC::responseHeader(0x17, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

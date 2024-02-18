@@ -12,9 +12,9 @@ const char* Kernel::resetTypeToString(u32 type) {
 	}
 }
 
-Handle Kernel::makeEvent(ResetType resetType) {
+Handle Kernel::makeEvent(ResetType resetType, Event::CallbackType callback) {
 	Handle ret = makeObject(KernelObjectType::Event);
-	objects[ret].data = new Event(resetType);
+	objects[ret].data = new Event(resetType, callback);
 	return ret;
 }
 
@@ -42,8 +42,13 @@ bool Kernel::signalEvent(Handle handle) {
 			event->fired = false;
 		}
 	}
-	
+
 	rescheduleThreads();
+	// Run the callback for events that require a special callback
+	if (event->callback != Event::CallbackType::None) [[unlikely]] {
+		runEventCallback(event->callback);
+	}
+
 	return true;
 }
 
@@ -229,5 +234,13 @@ void Kernel::waitSynchronizationN() {
 		requireReschedule();
 	} else {
 		Helpers::panic("WaitSynchronizationN with waitAll");
+	}
+}
+
+void Kernel::runEventCallback(Event::CallbackType callback) {
+	switch (callback) {
+		case Event::CallbackType::None: break;
+		case Event::CallbackType::DSPSemaphore: serviceManager.getDSP().onSemaphoreEventSignal(); break;
+		default: Helpers::panic("Unimplemented special callback for kernel event!"); break;
 	}
 }

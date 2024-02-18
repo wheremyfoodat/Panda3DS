@@ -27,6 +27,7 @@ class DSPService {
 	DSPEvent interrupt0;
 	DSPEvent interrupt1;
 	std::array<DSPEvent, pipeCount> pipeEvents;
+	u16 semaphoreMask = 0;
 
 	DSPEvent& getEventRef(u32 type, u32 pipe);
 	static constexpr size_t maxEventCount = 6;
@@ -55,6 +56,9 @@ public:
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	void setDSPCore(Audio::DSPCore* pointer) { dsp = pointer; }
+	
+	// Special callback that's ran when the semaphore event is signalled
+	void onSemaphoreEventSignal() { dsp->setSemaphore(semaphoreMask); }
 
 	enum class SoundOutputMode : u8 {
 		Mono = 0,

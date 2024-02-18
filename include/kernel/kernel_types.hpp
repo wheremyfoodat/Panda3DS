@@ -62,11 +62,19 @@ struct Process {
 };
 
 struct Event {
+    // Some events (for now, only the DSP semaphore events) need to execute a callback when signalled
+    // This enum stores what kind of callback they should execute
+    enum class CallbackType : u32 {
+        None, DSPSemaphore,
+    };
+
     u64 waitlist; // A bitfield where each bit symbolizes if the thread with thread with the corresponding index is waiting on the event
     ResetType resetType = ResetType::OneShot;
+    CallbackType callback = CallbackType::None;
     bool fired = false;
 
     Event(ResetType resetType) : resetType(resetType), waitlist(0) {}
+    Event(ResetType resetType, CallbackType cb) : resetType(resetType), waitlist(0), callback(cb) {}
 };
 
 struct Port {

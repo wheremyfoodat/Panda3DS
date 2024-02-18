@@ -38,16 +38,20 @@ TeakraDSP::TeakraDSP(Memory& mem, DSPService& dspService) : DSPCore(mem, dspServ
 	// Set up callbacks for Teakra
 	Teakra::AHBMCallback ahbm;
 
-	ahbm.read8 = [&](u32 addr) -> u8 { return mem.read8(addr); };
-	ahbm.read16 = [&](u32 addr) -> u16 { return mem.read16(addr); };
-	ahbm.read32 = [&](u32 addr) -> u32 { return mem.read32(addr); };
+	// The AHBM read handlers read from paddrs rather than vaddrs which mem.read8 and the like use
+	// TODO: When we implement more efficient paddr accesses with a page table or similar, these handlers
+	// Should be made to properly use it, since this method is hacky and will segfault if given an invalid addr
+	ahbm.read8 = [&](u32 addr) -> u8 { return mem.getFCRAM()[addr - PhysicalAddrs::FCRAM]; };
+	ahbm.read16 = [&](u32 addr) -> u16 { return *(u16*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM]; };
+	ahbm.read32 = [&](u32 addr) -> u32 { return *(u32*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM]; };
 
-	ahbm.write8 = [&](u32 addr, u8 value) { mem.write8(addr, value); };
-	ahbm.write16 = [&](u32 addr, u16 value) { mem.write16(addr, value); };
-	ahbm.write32 = [&](u32 addr, u32 value) { mem.write32(addr, value); };
+	ahbm.write8 = [&](u32 addr, u8 value) { mem.getFCRAM()[addr - PhysicalAddrs::FCRAM] = value; };
+	ahbm.write16 = [&](u32 addr, u16 value) { *(u16*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM] = value; };
+	ahbm.write32 = [&](u32 addr, u32 value) { *(u32*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM] = value; };
 
 	teakra.SetAHBMCallback(ahbm);
 	teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
+		//printf("%d %d\n", sample[0], sample[1]);
 		// NOP for now
 	});
 

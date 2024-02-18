@@ -79,7 +79,7 @@ namespace Audio {
 
 		u16 recvData(u32 regId) override { return teakra.RecvData(regId); }
 		bool recvDataIsReady(u32 regId) override { return teakra.RecvDataIsReady(regId); }
-		void setSemaphore(u16 value) override { return teakra.SetSemaphore(value); }
+		void setSemaphore(u16 value) override { teakra.SetSemaphore(value); }
 		void setSemaphoreMask(u16 value) override { teakra.MaskSemaphore(value); }
 
 		void writeProcessPipe(u32 channel, u32 size, u32 buffer) override;
