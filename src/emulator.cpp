@@ -26,7 +26,7 @@ Emulator::Emulator()
 {
 	DSPService& dspService = kernel.getServiceManager().getDSP();
 
-	dsp = Audio::makeDSPCore(Audio::DSPCore::Type::Teakra, memory, scheduler, dspService);
+	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC

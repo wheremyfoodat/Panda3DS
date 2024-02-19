@@ -1,6 +1,8 @@
 #pragma once
 #include <array>
+
 #include "audio/dsp_core.hpp"
+#include "memory.hpp"
 
 namespace Audio {
 	class NullDSP : public DSPCore {
@@ -27,7 +29,7 @@ namespace Audio {
 		u8* getDspMemory() override { return dspRam.data(); }
 
 		u16 recvData(u32 regId) override;
-		bool recvDataIsReady(u32 regId) override { return true; } // Treat data as always ready
+		bool recvDataIsReady(u32 regId) override { return true; }  // Treat data as always ready
 		void writeProcessPipe(u32 channel, u32 size, u32 buffer) override;
 		std::vector<u8> readPipe(u32 channel, u32 peer, u32 size, u32 buffer) override;
 

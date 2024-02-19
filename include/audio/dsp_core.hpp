@@ -2,15 +2,17 @@
 #include <array>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "helpers.hpp"
 #include "logger.hpp"
-#include "memory.hpp"
 #include "scheduler.hpp"
 
 // The DSP core must have access to the DSP service to be able to trigger interrupts properly
 class DSPService;
+class Memory;
 
 namespace Audio {
 	// There are 160 stereo samples in 1 audio frame, so 320 samples total
@@ -44,6 +46,9 @@ namespace Audio {
 		virtual void loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) = 0;
 		virtual void unloadComponent() = 0;
 		virtual void setSemaphoreMask(u16 value) = 0;
+
+		static Audio::DSPCore::Type typeFromString(std::string inString);
+		static const char* typeToString(Audio::DSPCore::Type type);
 	};
 
 	std::unique_ptr<DSPCore> makeDSPCore(DSPCore::Type type, Memory& mem, Scheduler& scheduler, DSPService& dspService);

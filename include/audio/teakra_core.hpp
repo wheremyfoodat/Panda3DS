@@ -1,5 +1,6 @@
 #pragma once
 #include "audio/dsp_core.hpp"
+#include "memory.hpp"
 #include "swap.hpp"
 #include "teakra/teakra.h"
 
@@ -35,9 +36,9 @@ namespace Audio {
 			bool isFull() const { return (readPointer ^ writePointer) == wrapBit; }
 			bool isEmpty() const { return (readPointer ^ writePointer) == 0; }
 
-			 // isWrapped: Are read and write pointers in different memory passes.
-			 // true:   xxxx]----[xxxx (data is wrapping around the end of memory)
-			 // false:  ----[xxxx]----
+			// isWrapped: Are read and write pointers in different memory passes.
+			// true:   xxxx]----[xxxx (data is wrapping around the end of memory)
+			// false:  ----[xxxx]----
 			bool isWrapped() const { return (readPointer ^ writePointer) >= wrapBit; }
 		};
 		static_assert(sizeof(PipeStatus) == 10, "Teakra: Pipe Status size is wrong");

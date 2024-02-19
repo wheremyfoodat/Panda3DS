@@ -84,7 +84,6 @@ void DSPService::loadComponent(u32 messagePointer) {
 	for (u32 i = 0; i < size; i++) {
 		data[i] = mem.read8(buffer + i);
 	}
-	printf("Loado compartment: %08X %08X %08X %08X\n", data[0], data[1], data[2], data[3]);
 
 	log("DSP::LoadComponent (size = %08X, program mask = %X, data mask = %X\n", size, programMask, dataMask);
 	dsp->loadComponent(data, programMask, dataMask);
