@@ -89,6 +89,7 @@ include_directories(third_party/toml11)
 include_directories(third_party/glm)
 
 add_subdirectory(third_party/cmrc)
+add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
 
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
@@ -191,6 +192,7 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
 set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
                         src/core/applets/error_applet.cpp
 )
+set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp src/core/audio/teakra_core.cpp)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
@@ -247,6 +249,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
                  include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
+                 include/audio/dsp_core.hpp include/audio/null_core.hpp include/audio/teakra_core.hpp
 )
 
 cmrc_add_resource_library(
@@ -299,6 +302,7 @@ source_group("Source Files\\Core\\Loader" FILES ${LOADER_SOURCE_FILES})
 source_group("Source Files\\Core\\Services" FILES ${SERVICE_SOURCE_FILES})
 source_group("Source Files\\Core\\Applets" FILES ${APPLET_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
+source_group("Source Files\\Core\\Audio" FILES ${AUDIO_SOURCE_FILES})
 source_group("Source Files\\Core\\Software Renderer" FILES ${RENDERER_SW_SOURCE_FILES})
 source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
 
@@ -397,7 +401,7 @@ endif()
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 set(ALL_SOURCES ${SOURCE_FILES} ${FRONTEND_SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
     ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
-    ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
+    ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 
 if(ENABLE_OPENGL)
     # Add the OpenGL source files to ALL_SOURCES
@@ -429,7 +433,7 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic cryptopp glad resources_console_fonts)
+target_link_libraries(Alber PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
 
 if(NOT ANDROID)
     target_link_libraries(Alber PRIVATE SDL2-static)

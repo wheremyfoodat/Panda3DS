@@ -66,15 +66,20 @@ class Kernel {
 	Handle makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
 
 public:
-	Handle makeEvent(ResetType resetType); // Needs to be public to be accessible to the APT/HID services
-	Handle makeMutex(bool locked = false); // Needs to be public to be accessible to the APT/DSP services
-	Handle makeSemaphore(u32 initialCount, u32 maximumCount); // Needs to be public to be accessible to the service manager port
+	// Needs to be public to be accessible to the APT/HID services
+	Handle makeEvent(ResetType resetType, Event::CallbackType callback = Event::CallbackType::None);
+	// Needs to be public to be accessible to the APT/DSP services
+	Handle makeMutex(bool locked = false);
+	// Needs to be public to be accessible to the service manager port
+	Handle makeSemaphore(u32 initialCount, u32 maximumCount);
 	Handle makeTimer(ResetType resetType);
 	void pollTimers();
 
 	// Signals an event, returns true on success or false if the event does not exist
 	bool signalEvent(Handle e);
-	
+	// Run the callback for "special" events that have callbacks
+	void runEventCallback(Event::CallbackType callback);
+
 	void clearEvent(Handle e) {
 		KernelObject* object = getObject(e, KernelObjectType::Event);
 		if (object != nullptr) {
@@ -240,6 +245,5 @@ public:
 	ServiceManager& getServiceManager() { return serviceManager; }
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
-	void signalDSPEvents() { serviceManager.signalDSPEvents(); }
 	void clearInstructionCache();
 };

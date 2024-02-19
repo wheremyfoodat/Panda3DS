@@ -15,7 +15,6 @@ using namespace KernelMemoryTypes;
 
 Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks), config(config) {
 	fcram = new uint8_t[FCRAM_SIZE]();
-	dspRam = new uint8_t[DSP_RAM_SIZE]();
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);

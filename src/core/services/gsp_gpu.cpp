@@ -123,10 +123,6 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 }
 
 void GPUService::requestInterrupt(GPUInterrupt type) {
-	// HACK: Signal DSP events on GPU interrupt for now until we have the DSP since games need DSP events
-	// Maybe there's a better alternative?
-	kernel.signalDSPEvents();
-
 	if (sharedMem == nullptr) [[unlikely]] { // Shared memory hasn't been set up yet
 		return;
 	}

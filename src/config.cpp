@@ -62,6 +62,16 @@ void EmulatorConfig::load() {
 		}
 	}
 
+	if (data.contains("Audio")) {
+		auto audioResult = toml::expect<toml::value>(data.at("Audio"));
+		if (audioResult.is_ok()) {
+			auto audio = audioResult.unwrap();
+
+			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "Null");
+			dspType = Audio::DSPCore::typeFromString(dspCoreName);
+		}
+	}
+
 	if (data.contains("Battery")) {
 		auto batteryResult = toml::expect<toml::value>(data.at("Battery"));
 		if (batteryResult.is_ok()) {
@@ -109,6 +119,7 @@ void EmulatorConfig::save() {
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
+	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 
 	data["Battery"]["ChargerPlugged"] = chargerPlugged;
 	data["Battery"]["BatteryPercentage"] = batteryPercentage;

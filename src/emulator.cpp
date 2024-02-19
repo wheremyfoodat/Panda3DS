@@ -24,6 +24,11 @@ Emulator::Emulator()
 	  httpServer(this)
 #endif
 {
+	DSPService& dspService = kernel.getServiceManager().getDSP();
+
+	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
+	dspService.setDSPCore(dsp.get());
+
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
@@ -46,6 +51,8 @@ void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
 	gpu.reset();
 	memory.reset();
+	dsp->reset();
+
 	// Reset scheduler and add a VBlank event
 	scheduler.reset();
 
@@ -136,13 +143,17 @@ void Emulator::pollScheduler() {
 				ServiceManager& srv = kernel.getServiceManager();
 				srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
 				srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
-				
+
 				// Queue next VBlank event
 				scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
 				break;
 			}
 
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
+			case Scheduler::EventType::RunDSP: {
+				dsp->runAudioFrame();
+				break;
+			}
 
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
