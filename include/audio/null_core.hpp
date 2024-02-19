@@ -20,12 +20,14 @@ namespace Audio {
 		std::array<u8, Memory::DSP_RAM_SIZE> dspRam;
 
 		void resetAudioPipe();
+		bool loaded = false; // Have we loaded a component?
 
 	  public:
 		NullDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
 
 		void reset() override;
-		void runAudioFrame() override {}
+		void runAudioFrame() override;
+
 		u8* getDspMemory() override { return dspRam.data(); }
 
 		u16 recvData(u32 regId) override;
@@ -34,8 +36,8 @@ namespace Audio {
 		std::vector<u8> readPipe(u32 channel, u32 peer, u32 size, u32 buffer) override;
 
 		// NOPs for null DSP core
-		void loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) override {}
-		void unloadComponent() override {}
+		void loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) override;
+		void unloadComponent() override;
 		void setSemaphore(u16 value) override {}
 		void setSemaphoreMask(u16 value) override {}
 	};

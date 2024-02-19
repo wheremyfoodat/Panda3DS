@@ -1,5 +1,7 @@
 #include "audio/null_core.hpp"
 
+#include "services/dsp.hpp"
+
 namespace Audio {
 	namespace DSPPipeType {
 		enum : u32 {
@@ -45,10 +47,40 @@ namespace Audio {
 	}
 
 	void NullDSP::reset() {
-		for (auto& e : pipeData) e.clear();
+		loaded = false;
+		for (auto& e : pipeData) {
+			e.clear();
+		}
 
 		// Note: Reset audio pipe AFTER resetting all pipes, otherwise the new data will be yeeted
 		resetAudioPipe();
+	}
+
+	void NullDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) {
+		if (loaded) {
+			Helpers::warn("Loading DSP component when already loaded");
+		}
+
+		loaded = true;
+		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
+	}
+
+	void NullDSP::unloadComponent() {
+		if (!loaded) {
+			Helpers::warn("Audio: unloadComponent called without a running program");
+		}
+
+		loaded = false;
+		scheduler.removeEvent(Scheduler::EventType::RunDSP);
+	}
+
+	void NullDSP::runAudioFrame() {
+		// Signal audio pipe when an audio frame is done
+		if (dspState == DSPState::On) [[likely]] {
+			dspService.triggerPipeEvent(DSPPipeType::Audio);
+		}
+
+		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
 	}
 	
 	u16 NullDSP::recvData(u32 regId) {
@@ -84,6 +116,8 @@ namespace Audio {
 							// TODO: Other initialization stuff here
 							dspState = DSPState::On;
 							resetAudioPipe();
+							
+							dspService.triggerPipeEvent(DSPPipeType::Audio);
 							break;
 
 						case StateChange::Shutdown:
@@ -98,6 +132,9 @@ namespace Audio {
 
 			case DSPPipeType::Binary:
 				Helpers::warn("Unimplemented write to binary pipe! Size: %d\n", size);
+
+				// This pipe and interrupt are normally used for requests like AAC decode
+				dspService.triggerPipeEvent(DSPPipeType::Binary);
 				break;
 
 			default: log("Audio::NullDSP: Wrote to unimplemented pipe %d\n", channel); break;

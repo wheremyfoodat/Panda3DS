@@ -105,8 +105,6 @@ class ServiceManager {
 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
 	void setCSNDSharedMem(u8* ptr) { csnd.setSharedMemory(ptr); }
 
-	void signalDSPEvents() { dsp.signalEvents(); }
-
 	// Input function wrappers
 	HIDService& getHID() { return hid; }
 	NFCService& getNFC() { return nfc; }
