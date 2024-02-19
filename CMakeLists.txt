@@ -89,7 +89,6 @@ include_directories(third_party/toml11)
 include_directories(third_party/glm)
 
 add_subdirectory(third_party/cmrc)
-add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
 
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
@@ -150,6 +149,7 @@ if(HOST_X64 OR HOST_ARM64)
 else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
+add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
 
 set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
