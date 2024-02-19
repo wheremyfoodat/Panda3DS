@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
-import androidx.preference.SwitchPreference;
+import androidx.preference.SwitchPreferenceCompat;
 
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.PandroidApplication;
@@ -19,10 +19,10 @@ public class AdvancedPreferences extends BasePreferenceFragment {
         setPreferencesFromResource(R.xml.advanced_preferences, rootKey);
         setActivityTitle(R.string.advanced_options);
 
-        setItemClick("performanceMonitor", pref -> GlobalConfig.set(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY, ((SwitchPreference) pref).isChecked()));
-        setItemClick("shaderJit", pref -> GlobalConfig.set(GlobalConfig.KEY_SHADER_JIT, ((SwitchPreference) pref).isChecked()));
+        setItemClick("performanceMonitor", pref -> GlobalConfig.set(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY, ((SwitchPreferenceCompat) pref).isChecked()));
+        setItemClick("shaderJit", pref -> GlobalConfig.set(GlobalConfig.KEY_SHADER_JIT, ((SwitchPreferenceCompat) pref).isChecked()));
         setItemClick("loggerService", pref -> {
-            boolean checked = ((SwitchPreference) pref).isChecked();
+            boolean checked = ((SwitchPreferenceCompat) pref).isChecked();
             Context ctx = PandroidApplication.getAppContext();
             if (checked) {
                 ctx.startService(new Intent(ctx, LoggerService.class));
@@ -42,8 +42,8 @@ public class AdvancedPreferences extends BasePreferenceFragment {
     }
 
     private void refresh() {
-        ((SwitchPreference) findPreference("performanceMonitor")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY));
-        ((SwitchPreference) findPreference("loggerService")).setChecked(GlobalConfig.get(GlobalConfig.KEY_LOGGER_SERVICE));
-        ((SwitchPreference) findPreference("shaderJit")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
+        ((SwitchPreferenceCompat) findPreference("performanceMonitor")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY));
+        ((SwitchPreferenceCompat) findPreference("loggerService")).setChecked(GlobalConfig.get(GlobalConfig.KEY_LOGGER_SERVICE));
+        ((SwitchPreferenceCompat) findPreference("shaderJit")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
     }
 }
