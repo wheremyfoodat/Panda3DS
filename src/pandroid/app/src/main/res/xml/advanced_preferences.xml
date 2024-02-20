@@ -5,18 +5,14 @@
     <SwitchPreferenceCompat
         android:key="performanceMonitor"
         app:title="@string/pref_performance_monitor_title"
-        app:summaryOn="@string/pref_performance_monitor_summary"
-        app:summaryOff="@string/pref_performance_monitor_summary"
-        android:defaultValue="false"
+        app:summary="@string/pref_performance_monitor_summary"
         app:iconSpaceReserved="false"/>
 
     <SwitchPreferenceCompat
         android:key="loggerService"
         app:iconSpaceReserved="false"
         app:title="@string/pref_logger_service_title"
-        android:defaultValue="true"
-        android:summaryOn="@string/pref_logger_service_summary"
-        android:summaryOff="@string/pref_logger_service_summary"/>
+        android:summary="@string/pref_logger_service_summary"/>
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
@@ -25,9 +21,7 @@
         <SwitchPreferenceCompat
             app:key="shaderJit"
             app:title="@string/pref_shader_jit_title"
-            android:defaultValue="false"
-            app:summaryOn="@string/pref_shader_jit_summary"
-            app:summaryOff="@string/pref_shader_jit_summary"
+            app:summary="@string/pref_shader_jit_summary"
             app:iconSpaceReserved="false"/>
 
     </PreferenceCategory>
