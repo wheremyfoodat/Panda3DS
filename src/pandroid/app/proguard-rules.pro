@@ -1,16 +1,19 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
+# Pandroid Proguard Rules
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep all JNI and C++ related classes and methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep all native libraries and their methods
+-keep class * {
+    native <methods>;
+}
+
+# Keep all classes in the specified package and its subpackages
+-keep class com.panda3ds.pandroid.** {*;}
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
