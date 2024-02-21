@@ -7,8 +7,8 @@
     native <methods>;
 }
 
-# Keep all classes with native methods
--keepclasseswithmembernames class * {
+# Keep all native libraries and their methods
+-keep class * {
     native <methods>;
 }
 
