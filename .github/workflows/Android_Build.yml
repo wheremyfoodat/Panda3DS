@@ -98,7 +98,7 @@ jobs:
         # Build the project with CMake
         cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
         # Move the generated library to the appropriate location
-        strip --strip-unneeded ./build/libAlber.so
+        aarch64-linux-android-strip --strip-unneeded ./build/libAlber.so
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/arm64-v8a/
         # Build the Android app with Gradle
         cd src/pandroid
