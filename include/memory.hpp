@@ -275,6 +275,8 @@ private:
 	// File handle for reading the loaded ncch
 	IOFile CXIFile;
 
+	std::optional<u64> getProgramID();
+
 	u8* getDSPMem() { return dspRam; }
 	u8* getDSPDataMem() { return &dspRam[DSP_DATA_MEMORY_OFFSET]; }
 	u8* getDSPCodeMem() { return &dspRam[DSP_CODE_MEMORY_OFFSET]; }
