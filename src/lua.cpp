@@ -159,6 +159,22 @@ static int resetThunk(lua_State* L) {
 	return 0;
 }
 
+static int loadROMThunk(lua_State* L) {
+	// Path argument is invalid, report that loading failed and exit
+	if (lua_type(L, -1) != LUA_TSTRING) {
+		lua_pushboolean(L, 0);
+		return 1;
+	}
+
+	size_t pathLength;
+	const char* const str = lua_tolstring(L, -1, &pathLength);
+
+	const auto path = std::filesystem::path(std::string(str, pathLength));
+	// Load ROM and reply if it succeeded or not
+	lua_pushboolean(L, LuaManager::g_emulator->loadROM(path) ? 1 : 0);
+	return 1;
+}
+
 // clang-format off
 static constexpr luaL_Reg functions[] = {
 	{ "__read8", read8Thunk },
@@ -173,6 +189,7 @@ static constexpr luaL_Reg functions[] = {
 	{ "__pause", pauseThunk}, 
 	{ "__resume", resumeThunk},
 	{ "__reset", resetThunk},
+	{ "__loadROM", loadROMThunk},
 	{ nullptr, nullptr },
 };
 // clang-format on
@@ -200,6 +217,7 @@ void LuaManager::initializeThunks() {
 		pause = function() GLOBALS.__pause() end,
 		resume = function() GLOBALS.__resume() end,
 		reset = function() GLOBALS.__reset() end,
+		loadROM = function(path) return GLOBALS.__loadROM(path) end,
 
 		Frame = __Frame,
 	}
