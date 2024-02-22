@@ -58,3 +58,6 @@
 [submodule "third_party/teakra"]
 	path = third_party/teakra
 	url = https://github.com/wwylele/teakra
+[submodule "third_party/miniaudio"]
+	path = third_party/miniaudio
+	url = https://github.com/mackron/miniaudio

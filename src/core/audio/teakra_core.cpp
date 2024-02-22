@@ -6,6 +6,10 @@
 #include "services/dsp.hpp"
 
 using namespace Audio;
+static constexpr u32 sampleRate = 32768;
+static constexpr u32 duration = 30;
+static s16 samples[sampleRate * duration * 2];
+static uint sampleIndex = 0;
 
 struct Dsp1 {
 	// All sizes are in bytes unless otherwise specified
@@ -51,10 +55,7 @@ TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService)
 	ahbm.write32 = [&](u32 addr, u32 value) { *(u32*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM] = value; };
 
 	teakra.SetAHBMCallback(ahbm);
-	teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
-		//printf("%d %d\n", sample[0], sample[1]);
-		// NOP for now
-	});
+	teakra.SetAudioCallback([=](std::array<s16, 2> sample) { sampleBuffer.push(sample.data(), 2); });
 
 	// Set up event handlers. These handlers forward a hardware interrupt to the DSP service, which is responsible
 	// For triggering the appropriate DSP kernel events

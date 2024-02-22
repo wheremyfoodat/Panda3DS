@@ -54,6 +54,7 @@ include_directories(third_party/xxhash/include)
 include_directories(third_party/httplib)
 include_directories(third_party/stb)
 include_directories(third_party/opengl)
+include_directories(third_party/miniaudio)
 include_directories(third_party/mio/single_include)
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
@@ -89,7 +90,6 @@ include_directories(third_party/toml11)
 include_directories(third_party/glm)
 
 add_subdirectory(third_party/cmrc)
-add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
 
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
@@ -150,12 +150,13 @@ if(HOST_X64 OR HOST_ARM64)
 else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
+add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
 
 set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
 				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
 				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
 				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -192,7 +193,9 @@ set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_d
 set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
                         src/core/applets/error_applet.cpp
 )
-set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp src/core/audio/teakra_core.cpp)
+set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp src/core/audio/teakra_core.cpp
+                       src/core/audio/miniaudio_device.cpp
+)
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
@@ -250,6 +253,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
                  include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
                  include/audio/dsp_core.hpp include/audio/null_core.hpp include/audio/teakra_core.hpp
+                 include/audio/miniaudio_device.hpp include/ring_buffer.hpp
 )
 
 cmrc_add_resource_library(
