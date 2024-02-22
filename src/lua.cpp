@@ -175,6 +175,34 @@ static int loadROMThunk(lua_State* L) {
 	return 1;
 }
 
+static int getButtonsThunk(lua_State* L) {
+	auto buttons = LuaManager::g_emulator->getServiceManager().getHID().getOldButtons();
+	lua_pushinteger(L, static_cast<lua_Integer>(buttons));
+
+	return 1;
+}
+
+static int getCirclepadThunk(lua_State* L) {
+	auto& hid = LuaManager::g_emulator->getServiceManager().getHID();
+	s16 x = hid.getCirclepadX();
+	s16 y = hid.getCirclepadY();
+
+	lua_pushinteger(L, static_cast<lua_Number>(x));
+	lua_pushinteger(L, static_cast<lua_Number>(y));
+	return 2;
+}
+
+static int getButtonThunk(lua_State* L) {
+	auto& hid = LuaManager::g_emulator->getServiceManager().getHID();
+	// This function accepts a mask. You can use it to check if one or more buttons are pressed at a time
+	const u32 mask = (u32)lua_tonumber(L, 1);
+	const bool result = (hid.getOldButtons() & mask) == mask;
+
+	// Return whether the selected buttons are all pressed
+	lua_pushboolean(L, result ? 1 : 0);
+	return 1;
+}
+
 // clang-format off
 static constexpr luaL_Reg functions[] = {
 	{ "__read8", read8Thunk },
@@ -190,6 +218,9 @@ static constexpr luaL_Reg functions[] = {
 	{ "__resume", resumeThunk},
 	{ "__reset", resetThunk},
 	{ "__loadROM", loadROMThunk},
+	{ "__getButtons", getButtonsThunk},
+	{ "__getCirclepad", getCirclepadThunk},
+	{ "__getButton", getButtonThunk},
 	{ nullptr, nullptr },
 };
 // clang-format on
@@ -219,7 +250,21 @@ void LuaManager::initializeThunks() {
 		reset = function() GLOBALS.__reset() end,
 		loadROM = function(path) return GLOBALS.__loadROM(path) end,
 
+		getButtons = function() return GLOBALS.__getButtons() end,
+		getButton = function(button) return GLOBALS.__getButton(button) end,
+		getCirclepad = function() return GLOBALS.__getCirclepad() end,
+
 		Frame = __Frame,
+		ButtonA = __ButtonA,
+		ButtonB = __ButtonB,
+		ButtonX = __ButtonX,
+		ButtonY = __ButtonY,
+		ButtonL = __ButtonL,
+		ButtonR = __ButtonR,
+		ButtonUp = __ButtonUp,
+		ButtonDown = __ButtonDown,
+		ButtonLeft = __ButtonLeft,
+		ButtonRight= __ButtonRight,
 	}
 )";
 
@@ -229,7 +274,20 @@ void LuaManager::initializeThunks() {
 	};
 
 	luaL_register(L, "GLOBALS", functions);
+	// Add values for event enum
 	addIntConstant(LuaEvent::Frame, "__Frame");
+
+	// Add enums for 3DS keys
+	addIntConstant(HID::Keys::A, "__ButtonA");
+	addIntConstant(HID::Keys::B, "__ButtonB");
+	addIntConstant(HID::Keys::X, "__ButtonX");
+	addIntConstant(HID::Keys::Y, "__ButtonY");
+	addIntConstant(HID::Keys::Up, "__ButtonUp");
+	addIntConstant(HID::Keys::Down, "__ButtonDown");
+	addIntConstant(HID::Keys::Left, "__ButtonLeft");
+	addIntConstant(HID::Keys::Right, "__ButtonRight");
+	addIntConstant(HID::Keys::L, "__ButtonL");
+	addIntConstant(HID::Keys::R, "__ButtonR");
 
 	// Call our Lua runtime initialization before any Lua script runs
 	luaL_loadstring(L, runtimeInit);
