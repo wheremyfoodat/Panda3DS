@@ -167,9 +167,9 @@ static int loadROMThunk(lua_State* L) {
 	}
 
 	size_t pathLength;
-	const char* const r = lua_tolstring(L, -1, &pathLength);
+	const char* const str = lua_tolstring(L, -1, &pathLength);
 
-	const auto path = std::filesystem::path(std::string(r, pathLength));
+	const auto path = std::filesystem::path(std::string(str, pathLength));
 	// Load ROM and reply if it succeeded or not
 	lua_pushboolean(L, LuaManager::g_emulator->loadROM(path) ? 1 : 0);
 	return 1;
