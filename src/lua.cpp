@@ -144,6 +144,21 @@ static int getAppIDThunk(lua_State* L) {
 	return 3;
 }
 
+static int pauseThunk(lua_State* L) {
+	LuaManager::g_emulator->pause();
+	return 0;
+}
+
+static int resumeThunk(lua_State* L) {
+	LuaManager::g_emulator->resume();
+	return 0;
+}
+
+static int resetThunk(lua_State* L) {
+	LuaManager::g_emulator->reset(Emulator::ReloadOption::Reload);
+	return 0;
+}
+
 // clang-format off
 static constexpr luaL_Reg functions[] = {
 	{ "__read8", read8Thunk },
@@ -155,6 +170,9 @@ static constexpr luaL_Reg functions[] = {
 	{ "__write32", write32Thunk },
 	{ "__write64", write64Thunk },
 	{ "__getAppID", getAppIDThunk },
+	{ "__pause", pauseThunk}, 
+	{ "__resume", resumeThunk},
+	{ "__reset", resetThunk},
 	{ nullptr, nullptr },
 };
 // clang-format on
@@ -178,6 +196,10 @@ void LuaManager::initializeThunks() {
 			id = bit.bor(ffi.cast("uint64_t", low), (bit.lshift(ffi.cast("uint64_t", high), 32)))
 			return result, id
 		end,
+
+		pause = function() GLOBALS.__pause() end,
+		resume = function() GLOBALS.__resume() end,
+		reset = function() GLOBALS.__reset() end,
 
 		Frame = __Frame,
 	}
