@@ -2,6 +2,8 @@
 
 #include "helpers.hpp"
 
+static constexpr uint channelCount = 2;
+
 MiniAudioDevice::MiniAudioDevice() : initialized(false), running(false), samples(nullptr) {}
 
 void MiniAudioDevice::init(Samples& samples, bool safe) {
@@ -79,10 +81,10 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 	deviceConfig = ma_device_config_init(ma_device_type_playback);
 	// The 3DS outputs s16 stereo audio @ 32768 Hz
 	deviceConfig.playback.format = ma_format_s16;
-	deviceConfig.playback.channels = 2;
+	deviceConfig.playback.channels = channelCount;
 	deviceConfig.sampleRate = 32768;
 	//deviceConfig.periodSizeInFrames = 64;
-	//deviceConfig.periods = 2;
+	//deviceConfig.periods = 16;
 	deviceConfig.pUserData = this;
 	deviceConfig.aaudio.usage = ma_aaudio_usage_game;
 	deviceConfig.wasapi.noAutoConvertSRC = true;
@@ -91,7 +93,8 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 		auto self = reinterpret_cast<MiniAudioDevice*>(device->pUserData);
 		s16* output = reinterpret_cast<ma_int16*>(out);
 
-		self->samples->pop(output, frameCount);
+		while (self->samples->size() < frameCount * channelCount) {}
+		self->samples->pop(output, frameCount * 2);
 	};
 
 	if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {
