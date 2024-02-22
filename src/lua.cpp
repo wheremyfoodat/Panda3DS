@@ -1,4 +1,5 @@
 #ifdef PANDA3DS_ENABLE_LUA
+#include "emulator.hpp"
 #include "lua_manager.hpp"
 
 #ifndef __ANDROID__
@@ -42,7 +43,7 @@ void LuaManager::loadFile(const char* path) {
 	if (!initialized) {
 		initialize();
 	}
-	
+
 	// If init failed, don't execute
 	if (!initialized) {
 		printf("Lua initialization failed, file won't run\n");
@@ -88,8 +89,8 @@ void LuaManager::loadString(const std::string& code) {
 }
 
 void LuaManager::signalEventInternal(LuaEvent e) {
-	lua_getglobal(L, "eventHandler"); // We want to call the event handler
-	lua_pushnumber(L, static_cast<int>(e)); // Push event type
+	lua_getglobal(L, "eventHandler");        // We want to call the event handler
+	lua_pushnumber(L, static_cast<int>(e));  // Push event type
 
 	// Call the function with 1 argument and 0 outputs, without an error handler
 	lua_pcall(L, 1, 0, 0);
@@ -103,27 +104,45 @@ void LuaManager::reset() {
 // Initialize C++ thunks for Lua code to call here
 // All code beyond this point is terrible and full of global state, don't judge
 
-Memory* LuaManager::g_memory = nullptr;
+Emulator* LuaManager::g_emulator = nullptr;
 
-#define MAKE_MEMORY_FUNCTIONS(size)                                 \
-	static int read##size##Thunk(lua_State* L) {                    \
-		const u32 vaddr = (u32)lua_tonumber(L, 1);                  \
-		lua_pushnumber(L, LuaManager::g_memory->read##size(vaddr)); \
-		return 1;                                                   \
-	}                                                               \
-	static int write##size##Thunk(lua_State* L) {                   \
-		const u32 vaddr = (u32)lua_tonumber(L, 1);                  \
-		const u##size value = (u##size)lua_tonumber(L, 2);          \
-		LuaManager::g_memory->write##size(vaddr, value);            \
-		return 0;                                                   \
+#define MAKE_MEMORY_FUNCTIONS(size)                                               \
+	static int read##size##Thunk(lua_State* L) {                                  \
+		const u32 vaddr = (u32)lua_tonumber(L, 1);                                \
+		lua_pushnumber(L, LuaManager::g_emulator->getMemory().read##size(vaddr)); \
+		return 1;                                                                 \
+	}                                                                             \
+	static int write##size##Thunk(lua_State* L) {                                 \
+		const u32 vaddr = (u32)lua_tonumber(L, 1);                                \
+		const u##size value = (u##size)lua_tonumber(L, 2);                        \
+		LuaManager::g_emulator->getMemory().write##size(vaddr, value);            \
+		return 0;                                                                 \
 	}
-
 
 MAKE_MEMORY_FUNCTIONS(8)
 MAKE_MEMORY_FUNCTIONS(16)
 MAKE_MEMORY_FUNCTIONS(32)
 MAKE_MEMORY_FUNCTIONS(64)
 #undef MAKE_MEMORY_FUNCTIONS
+
+static int getAppIDThunk(lua_State* L) {
+	std::optional<u64> id = LuaManager::g_emulator->getMemory().getProgramID();
+	
+	// If the app has an ID, return true + its ID
+	// Otherwise return false and 0 as the ID
+	if (id.has_value()) {
+		lua_pushboolean(L, 1);    // Return true
+		lua_pushnumber(L, u32(*id));  // Return bottom 32 bits
+		lua_pushnumber(L, u32(*id >> 32));  // Return top 32 bits
+	} else {
+		lua_pushboolean(L, 0);  // Return false
+		// Return no ID
+		lua_pushnumber(L, 0);
+		lua_pushnumber(L, 0);
+	}
+
+	return 3;
+}
 
 // clang-format off
 static constexpr luaL_Reg functions[] = {
@@ -135,6 +154,7 @@ static constexpr luaL_Reg functions[] = {
 	{ "__write16", write16Thunk },
 	{ "__write32", write32Thunk },
 	{ "__write64", write64Thunk },
+	{ "__getAppID", getAppIDThunk },
 	{ nullptr, nullptr },
 };
 // clang-format on
@@ -150,6 +170,15 @@ void LuaManager::initializeThunks() {
 		write16 = function(addr, value) GLOBALS.__write16(addr, value) end,
 		write32 = function(addr, value) GLOBALS.__write32(addr, value) end,
 		write64 = function(addr, value) GLOBALS.__write64(addr, value) end,
+
+		getAppID = function()
+			local ffi = require("ffi")
+
+			result, low, high = GLOBALS.__getAppID()
+			id = bit.bor(ffi.cast("uint64_t", low), (bit.lshift(ffi.cast("uint64_t", high), 32)))
+			return result, id
+		end,
+
 		Frame = __Frame,
 	}
 )";
