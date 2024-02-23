@@ -53,7 +53,7 @@ TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService)
 	ahbm.write32 = [&](u32 addr, u32 value) { *(u32*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM] = value; };
 
 	teakra.SetAHBMCallback(ahbm);
-	teakra.SetAudioCallback([=](std::array<s16, 2> sample) { /* Do nothing */ });
+	teakra.SetAudioCallback([](std::array<s16, 2> sample) { /* Do nothing */ });
 
 	// Set up event handlers. These handlers forward a hardware interrupt to the DSP service, which is responsible
 	// For triggering the appropriate DSP kernel events
@@ -123,7 +123,7 @@ void TeakraDSP::setAudioEnabled(bool enable) {
 
 		// Set the appropriate audio callback for Teakra
 		if (audioEnabled) {
-			teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
+			teakra.SetAudioCallback([this](std::array<s16, 2> sample) {
 				audioFrame[audioFrameIndex++] = sample[0];
 				audioFrame[audioFrameIndex++] = sample[1];
 
@@ -140,7 +140,7 @@ void TeakraDSP::setAudioEnabled(bool enable) {
 				}
 			});
 		} else {
-			teakra.SetAudioCallback([=](std::array<s16, 2> sample) { /* Do nothing */ });
+			teakra.SetAudioCallback([](std::array<s16, 2> sample) { /* Do nothing */ });
 		}
 	}
 }
