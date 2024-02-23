@@ -109,7 +109,6 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 	}
 
 	initialized = true;
-	start();
 }
 
 void MiniAudioDevice::start() {
