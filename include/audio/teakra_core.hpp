@@ -75,6 +75,7 @@ namespace Audio {
 
 	  public:
 		TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
+		~TeakraDSP() override {}
 
 		void reset() override;
 

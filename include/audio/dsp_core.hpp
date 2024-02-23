@@ -33,6 +33,7 @@ namespace Audio {
 	  public:
 		enum class Type { Null, Teakra };
 		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService) : mem(mem), scheduler(scheduler), dspService(dspService) {}
+		virtual ~DSPCore() {}
 
 		virtual void reset() = 0;
 		virtual void runAudioFrame() = 0;

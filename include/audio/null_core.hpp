@@ -24,6 +24,7 @@ namespace Audio {
 
 	  public:
 		NullDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
+		~NullDSP() override {}
 
 		void reset() override;
 		void runAudioFrame() override;
