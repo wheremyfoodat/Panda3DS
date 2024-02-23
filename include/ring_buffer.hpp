@@ -56,7 +56,7 @@ namespace Common {
 			}
 			std::unique_lock<std::mutex> l(m_mu);
 			using namespace std::chrono_literals;
-			bool safe = m_cv.wait_for(l, 20ms, [this, N]() -> bool { return N < availableLocked(); });
+			bool safe = m_cv.wait_for(l, 5ms, [this, N]() -> bool { return N < availableLocked(); });
 			if (safe) enqueueSafe(data, N);
 			return safe;
 		}
