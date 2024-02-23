@@ -269,7 +269,7 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
                              third_party/xxhash/xxhash.c
 )
 
-if(ENABLE_LUAJIT AND NOT ANDROID)
+if(ENABLE_LUAJIT)
     # Build luv and libuv for Lua TCP server usage if we're not on Android
     include_directories(third_party/luv/src)
     include_directories(third_party/luv/deps/lua-compat-5.3/c-api)
@@ -449,9 +449,7 @@ if(ENABLE_LUAJIT)
     target_link_libraries(Alber PRIVATE libluajit)
 
     # If we're not on Android, link libuv too
-    if (NOT ANDROID)
-        target_link_libraries(Alber PRIVATE uv_a)
-    endif()
+    target_link_libraries(Alber PRIVATE uv_a)
 endif()
 
 if(ENABLE_OPENGL)
