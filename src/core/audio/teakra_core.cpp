@@ -6,10 +6,6 @@
 #include "services/dsp.hpp"
 
 using namespace Audio;
-static constexpr u32 sampleRate = 32768;
-static constexpr u32 duration = 30;
-static s16 samples[sampleRate * duration * 2];
-static uint sampleIndex = 0;
 
 struct Dsp1 {
 	// All sizes are in bytes unless otherwise specified
@@ -115,6 +111,8 @@ void TeakraDSP::reset() {
 	running = false;
 	loaded = false;
 	signalledData = signalledSemaphore = false;
+
+	audioFrameIndex = 0;
 }
 
 void TeakraDSP::setAudioEnabled(bool enable) {
@@ -124,10 +122,14 @@ void TeakraDSP::setAudioEnabled(bool enable) {
 		// Set the appropriate audio callback for Teakra
 		if (audioEnabled) {
 			teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
-				// Wait until we can push our samples
-				while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+				audioFrame[audioFrameIndex++] = sample[0];
+				audioFrame[audioFrameIndex++] = sample[1];
+
+				// Push our samples at the end of an audio frame
+				if (audioFrameIndex >= audioFrame.size()) {
+					audioFrameIndex -= audioFrame.size();
+					sampleBuffer.push(audioFrame.data(), audioFrame.size());
 				}
-				sampleBuffer.push(sample.data(), 2);
 			});
 		} else {
 			teakra.SetAudioCallback([=](std::array<s16, 2> sample) { /* Do nothing */ });

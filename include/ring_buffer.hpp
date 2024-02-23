@@ -1,117 +1,110 @@
-// SPDX-FileCopyrightText: Copyright 2018 yuzu Emulator Project
-// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+
+MIT License
+
+Copyright (c) 2021 PCSX-Redux authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
 
 #pragma once
 
+#include <memory.h>
+
 #include <algorithm>
-#include <array>
-#include <atomic>
-#include <cstddef>
-#include <cstring>
-#include <new>
-#include <span>
-#include <type_traits>
-#include <vector>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
+#include <stdexcept>
 
 namespace Common {
 
-/// SPSC ring buffer
-/// @tparam T            Element type
-/// @tparam capacity     Number of slots in ring buffer
-template <typename T, std::size_t capacity>
-class RingBuffer {
-    /// A "slot" is made of a single `T`.
-    static constexpr std::size_t slot_size = sizeof(T);
-    // T must be safely memcpy-able and have a trivial default constructor.
-    static_assert(std::is_trivial_v<T>);
-    // Ensure capacity is sensible.
-    static_assert(capacity < std::numeric_limits<std::size_t>::max() / 2);
-    static_assert((capacity & (capacity - 1)) == 0, "capacity must be a power of two");
-    // Ensure lock-free.
-    static_assert(std::atomic_size_t::is_always_lock_free);
+	template <typename T, size_t BS = 1024>
+	class RingBuffer {
 
-public:
-    /// Pushes slots into the ring buffer
-    /// @param new_slots   Pointer to the slots to push
-    /// @param slot_count  Number of slots to push
-    /// @returns The number of slots actually pushed
-    std::size_t push(const void* new_slots, std::size_t slot_count) {
-        const std::size_t write_index = m_write_index.load();
-        const std::size_t slots_free = capacity + m_read_index.load() - write_index;
-        const std::size_t push_count = std::min(slot_count, slots_free);
+	  public:
+		static constexpr size_t BUFFER_SIZE = BS;
+		size_t available() {
+			std::unique_lock<std::mutex> l(m_mu);
+			return availableLocked();
+		}
+		size_t buffered() {
+			std::unique_lock<std::mutex> l(m_mu);
+			return bufferedLocked();
+		}
 
-        const std::size_t pos = write_index % capacity;
-        const std::size_t first_copy = std::min(capacity - pos, push_count);
-        const std::size_t second_copy = push_count - first_copy;
+		bool push(const T* data, size_t N) {
+			if (N > BUFFER_SIZE) {
+				throw std::runtime_error("Trying to enqueue too much data");
+			}
+			std::unique_lock<std::mutex> l(m_mu);
+			using namespace std::chrono_literals;
+			bool safe = m_cv.wait_for(l, 20ms, [this, N]() -> bool { return N < availableLocked(); });
+			if (safe) enqueueSafe(data, N);
+			return safe;
+		}
+		size_t pop(T* data, size_t N) {
+			std::unique_lock<std::mutex> l(m_mu);
+			N = std::min(N, bufferedLocked());
+			dequeueSafe(data, N);
 
-        const char* in = static_cast<const char*>(new_slots);
-        std::memcpy(m_data.data() + pos, in, first_copy * slot_size);
-        in += first_copy * slot_size;
-        std::memcpy(m_data.data(), in, second_copy * slot_size);
+			return N;
+		}
 
-        m_write_index.store(write_index + push_count);
+	  private:
+		size_t availableLocked() const { return BUFFER_SIZE - m_size; }
+		size_t bufferedLocked() const { return m_size; }
+		void enqueueSafe(const T* data, size_t N) {
+			size_t end = m_end;
+			const size_t subLen = BUFFER_SIZE - end;
+			if (N > subLen) {
+				enqueueSafe(data, subLen);
+				enqueueSafe(data + subLen, N - subLen);
+			} else {
+				memcpy(m_buffer + end, data, N * sizeof(T));
+				end += N;
+				if (end == BUFFER_SIZE) end = 0;
+				m_end = end;
+				m_size += N;
+			}
+		}
+		void dequeueSafe(T* data, size_t N) {
+			size_t begin = m_begin;
+			const size_t subLen = BUFFER_SIZE - begin;
+			if (N > subLen) {
+				dequeueSafe(data, subLen);
+				dequeueSafe(data + subLen, N - subLen);
+			} else {
+				memcpy(data, m_buffer + begin, N * sizeof(T));
+				begin += N;
+				if (begin == BUFFER_SIZE) begin = 0;
+				m_begin = begin;
+				m_size -= N;
+				m_cv.notify_one();
+			}
+		}
 
-        return push_count;
-    }
+		size_t m_begin = 0, m_end = 0, m_size = 0;
+		T m_buffer[BUFFER_SIZE];
 
-    std::size_t push(std::span<const T> input) {
-        return push(input.data(), input.size());
-    }
-
-    /// Pops slots from the ring buffer
-    /// @param output     Where to store the popped slots
-    /// @param max_slots  Maximum number of slots to pop
-    /// @returns The number of slots actually popped
-    std::size_t pop(void* output, std::size_t max_slots = ~std::size_t(0)) {
-        const std::size_t read_index = m_read_index.load();
-        const std::size_t slots_filled = m_write_index.load() - read_index;
-        const std::size_t pop_count = std::min(slots_filled, max_slots);
-
-        const std::size_t pos = read_index % capacity;
-        const std::size_t first_copy = std::min(capacity - pos, pop_count);
-        const std::size_t second_copy = pop_count - first_copy;
-
-        char* out = static_cast<char*>(output);
-        std::memcpy(out, m_data.data() + pos, first_copy * slot_size);
-        out += first_copy * slot_size;
-        std::memcpy(out, m_data.data(), second_copy * slot_size);
-
-        m_read_index.store(read_index + pop_count);
-
-        return pop_count;
-    }
-
-    std::vector<T> pop(std::size_t max_slots = ~std::size_t(0)) {
-        std::vector<T> out(std::min(max_slots, capacity));
-        const std::size_t count = Pop(out.data(), out.size());
-        out.resize(count);
-        return out;
-    }
-
-    /// @returns Number of slots used
-    [[nodiscard]] std::size_t size() const {
-        return m_write_index.load() - m_read_index.load();
-    }
-
-    /// @returns Maximum size of ring buffer
-    [[nodiscard]] constexpr std::size_t Capacity() const {
-        return capacity;
-    }
-
-private:
-    // It is important to align the below variables for performance reasons:
-    // Having them on the same cache-line would result in false-sharing between them.
-    // TODO: Remove this ifdef whenever clang and GCC support
-    //       std::hardware_destructive_interference_size.
-#ifdef __cpp_lib_hardware_interference_size
-    alignas(std::hardware_destructive_interference_size) std::atomic_size_t m_read_index{0};
-    alignas(std::hardware_destructive_interference_size) std::atomic_size_t m_write_index{0};
-#else
-    alignas(128) std::atomic_size_t m_read_index{0};
-    alignas(128) std::atomic_size_t m_write_index{0};
-#endif
-
-    std::array<T, capacity> m_data;
-};
-
-} // namespace Common
+		std::mutex m_mu;
+		std::condition_variable m_cv;
+	};
+}  // namespace Common
