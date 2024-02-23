@@ -32,6 +32,7 @@ namespace Audio {
 		DSPService& dspService;
 
 		Samples sampleBuffer;
+		bool audioEnabled = false;
 
 		MAKE_LOG_FUNCTION(log, dspLogger)
 
@@ -55,7 +56,9 @@ namespace Audio {
 
 		static Audio::DSPCore::Type typeFromString(std::string inString);
 		static const char* typeToString(Audio::DSPCore::Type type);
+
 		Samples& getSamples() { return sampleBuffer; }
+		virtual void setAudioEnabled(bool enable) { audioEnabled = enable; }
 	};
 
 	std::unique_ptr<DSPCore> makeDSPCore(DSPCore::Type type, Memory& mem, Scheduler& scheduler, DSPService& dspService);
