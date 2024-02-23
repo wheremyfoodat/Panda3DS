@@ -77,6 +77,7 @@ class Emulator {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	Discord::RPC discordRpc;
 #endif
+	void setAudioEnabled(bool enable);
 	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it

@@ -87,7 +87,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			// Make GL context current for this thread, enable VSync
 			GL::Context* glContext = screen.getGLContext();
 			glContext->MakeCurrent();
-			glContext->SetSwapInterval(1);
+			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
 
 			emu->initGraphicsContext(glContext);
 		} else if (usingVk) {

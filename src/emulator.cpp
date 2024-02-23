@@ -25,10 +25,12 @@ Emulator::Emulator()
 #endif
 {
 	DSPService& dspService = kernel.getServiceManager().getDSP();
+
 	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());
+	setAudioEnabled(config.audioEnabled);
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
@@ -103,8 +105,19 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 // Only resume if a ROM is properly loaded
-void Emulator::resume() { running = (romType != ROMType::None); }
-void Emulator::pause() { running = false; }
+void Emulator::resume() {
+	running = (romType != ROMType::None);
+
+	if (running) {
+		audioDevice.start();
+	}
+}
+
+void Emulator::pause() {
+	running = false;
+	audioDevice.stop();
+}
+
 void Emulator::togglePause() { running ? pause() : resume(); }
 
 void Emulator::runFrame() {
@@ -388,4 +401,16 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 	dumpRomFSNode(*node, (const char*)&romFS[0], path);
 
 	return DumpingResult::Success;
+}
+
+void Emulator::setAudioEnabled(bool enable) {
+	if (!enable) {
+		audioDevice.stop();
+	} else if (enable && romType != ROMType::None && running) {
+		// Don't start the audio device yet if there's no ROM loaded or the emulator is paused
+		// Resume and Pause will handle it
+		audioDevice.start();
+	}
+
+	dsp->setAudioEnabled(enable);
 }

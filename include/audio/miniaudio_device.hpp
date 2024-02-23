@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -7,8 +8,8 @@
 
 class MiniAudioDevice {
 	using Samples = Common::RingBuffer<ma_int16, 1024>;
-	// static constexpr ma_uint32 sampleRateIn = 32768; // 3DS sample rate
-	// static constexpr ma_uint32 sampleRateOut = 44100; // Output sample rate
+	static constexpr ma_uint32 sampleRate = 32768;  // 3DS sample rate
+	static constexpr ma_uint32 channelCount = 2;    // Audio output is stereo
 
 	ma_context context;
 	ma_device_config deviceConfig;
@@ -24,5 +25,7 @@ class MiniAudioDevice {
 	MiniAudioDevice();
 	// If safe is on, we create a null audio device
 	void init(Samples& samples, bool safe = false);
+
 	void start();
+	void stop();
 };

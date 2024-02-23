@@ -55,11 +55,7 @@ TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService)
 	ahbm.write32 = [&](u32 addr, u32 value) { *(u32*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM] = value; };
 
 	teakra.SetAHBMCallback(ahbm);
-	teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
-		while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {}
-
-		sampleBuffer.push(sample.data(), 2);
-	});
+	teakra.SetAudioCallback([=](std::array<s16, 2> sample) { /* Do nothing */ });
 
 	// Set up event handlers. These handlers forward a hardware interrupt to the DSP service, which is responsible
 	// For triggering the appropriate DSP kernel events
@@ -119,6 +115,25 @@ void TeakraDSP::reset() {
 	running = false;
 	loaded = false;
 	signalledData = signalledSemaphore = false;
+}
+
+void TeakraDSP::setAudioEnabled(bool enable) {
+	if (audioEnabled != enable) {
+		audioEnabled = enable;
+
+		// Set the appropriate audio callback for Teakra
+		if (audioEnabled) {
+			teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
+				// Wait until we can push our samples
+				while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+					printf("shit\n");
+				}
+				sampleBuffer.push(sample.data(), 2);
+			});
+		} else {
+			teakra.SetAudioCallback([=](std::array<s16, 2> sample) { /* Do nothing */ });
+		}
+	}
 }
 
 // https://github.com/citra-emu/citra/blob/master/src/audio_core/lle/lle.cpp

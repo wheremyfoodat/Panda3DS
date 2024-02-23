@@ -2,16 +2,15 @@
 
 #include "helpers.hpp"
 
-static constexpr uint channelCount = 2;
-
 MiniAudioDevice::MiniAudioDevice() : initialized(false), running(false), samples(nullptr) {}
 
 void MiniAudioDevice::init(Samples& samples, bool safe) {
 	this->samples = &samples;
+	running = false;
 
 	// Probe for device and available backends and initialize audio
 	ma_backend backends[ma_backend_null + 1];
-	unsigned count = 0;
+	uint count = 0;
 
 	if (safe) {
 		backends[0] = ma_backend_null;
@@ -82,7 +81,7 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 	// The 3DS outputs s16 stereo audio @ 32768 Hz
 	deviceConfig.playback.format = ma_format_s16;
 	deviceConfig.playback.channels = channelCount;
-	deviceConfig.sampleRate = 32768;
+	deviceConfig.sampleRate = sampleRate;
 	//deviceConfig.periodSizeInFrames = 64;
 	//deviceConfig.periods = 16;
 	deviceConfig.pUserData = this;
@@ -93,8 +92,16 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 		auto self = reinterpret_cast<MiniAudioDevice*>(device->pUserData);
 		s16* output = reinterpret_cast<ma_int16*>(out);
 
-		while (self->samples->size() < frameCount * channelCount) {}
-		self->samples->pop(output, frameCount * 2);
+		// Wait until there's enough samples to pop
+		while (self->samples->size() < frameCount * channelCount) {
+			printf("Waiting\n");
+			// If audio output is disabled from the emulator thread, make sure that this callback will return and not hang
+			if (!self->running) {
+				return;
+			}
+		}
+
+		self->samples->pop(output, frameCount * channelCount);
 	};
 
 	if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {
@@ -109,14 +116,31 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 
 void MiniAudioDevice::start() {
 	if (!initialized) {
-		Helpers::warn("MiniAudio device not initialize, won't start");
+		Helpers::warn("MiniAudio device not initialized, won't start");
 		return;
 	}
 
-	if (ma_device_start(&device) == MA_SUCCESS) {
-		running = true;
-	} else {
+	// Ignore the call to start if the device is already running
+	if (!running) {
+		if (ma_device_start(&device) == MA_SUCCESS) {
+			running = true;
+		} else {
+			Helpers::warn("Failed to start audio device");
+		}
+	}
+}
+
+void MiniAudioDevice::stop() {
+	if (!initialized) {
+		Helpers::warn("MiniAudio device not initialized, can't start");
+		return;
+	}
+
+	if (running) {
 		running = false;
-		Helpers::warn("Failed to start audio device");
+
+		if (ma_device_stop(&device) != MA_SUCCESS) {
+			Helpers::warn("Failed to stop audio device");
+		} 
 	}
 }

@@ -22,6 +22,9 @@ struct EmulatorConfig {
 	bool sdWriteProtected = false;
 	bool usePortableBuild = false;
 
+	bool audioEnabled = false;
+	bool vsyncEnabled = true;
+
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;

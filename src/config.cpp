@@ -59,6 +59,7 @@ void EmulatorConfig::load() {
 			}
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
+			vsyncEnabled = toml::find_or<toml::boolean>(gpu, "EnableVSync", true);
 		}
 	}
 
@@ -69,6 +70,7 @@ void EmulatorConfig::load() {
 
 			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "Null");
 			dspType = Audio::DSPCore::typeFromString(dspCoreName);
+			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", false);
 		}
 	}
 
@@ -119,7 +121,9 @@ void EmulatorConfig::save() {
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
+	data["GPU"]["EnableVSync"] = vsyncEnabled;
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
+	data["Audio"]["EnableAudio"] = audioEnabled;
 
 	data["Battery"]["ChargerPlugged"] = chargerPlugged;
 	data["Battery"]["BatteryPercentage"] = batteryPercentage;

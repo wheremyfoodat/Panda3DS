@@ -84,6 +84,7 @@ namespace Audio {
 			scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::lleSlice * 2);
 		}
 
+		void setAudioEnabled(bool enable) override;
 		u8* getDspMemory() override { return teakra.GetDspMemory().data(); }
 
 		u16 recvData(u32 regId) override { return teakra.RecvData(regId); }
