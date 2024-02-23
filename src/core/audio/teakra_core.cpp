@@ -131,6 +131,7 @@ void TeakraDSP::setAudioEnabled(bool enable) {
 
 					// Wait until we've actually got room to do so
 					while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+						std::this_thread::sleep_for(std::chrono::milliseconds{1});
 					}
 
 					sampleBuffer.push(audioFrame.data(), audioFrame.size());
