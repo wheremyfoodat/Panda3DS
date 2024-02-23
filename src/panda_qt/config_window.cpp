@@ -1,7 +1,8 @@
 #include "panda_qt/config_window.hpp"
 
-ConfigWindow::ConfigWindow(QWidget* parent) : QDialog(parent) {
+ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuConfig, QWidget* parent) : QDialog(parent), config(emuConfig) {
 	setWindowTitle(tr("Configuration"));
+	updateConfig = std::move(callback);
 
 	// Set up theme selection
 	setTheme(Theme::Dark);
@@ -15,6 +16,14 @@ ConfigWindow::ConfigWindow(QWidget* parent) : QDialog(parent) {
 	themeSelect->setGeometry(40, 40, 100, 50);
 	themeSelect->show();
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setTheme(static_cast<Theme>(index)); });
+
+	QCheckBox* useShaderJIT = new QCheckBox(tr("Enable Shader recompiler"), this);
+	useShaderJIT->setChecked(config.shaderJitEnabled);
+
+	connect(useShaderJIT, &QCheckBox::toggled, this, [this, useShaderJIT]() {
+		config.shaderJitEnabled = useShaderJIT->isChecked();
+		updateConfig();
+	});
 }
 
 void ConfigWindow::setTheme(Theme theme) {

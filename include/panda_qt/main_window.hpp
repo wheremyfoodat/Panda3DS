@@ -44,6 +44,7 @@ class MainWindow : public QMainWindow {
 		EditCheat,
 		PressTouchscreen,
 		ReleaseTouchscreen,
+		UpdateConfig
 	};
 
 	// Tagged union representing our message queue messages

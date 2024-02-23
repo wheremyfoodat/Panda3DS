@@ -64,7 +64,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
-	configWindow = new ConfigWindow(this);
+	configWindow = new ConfigWindow(
+		[&]() {
+			EmulatorMessage message{.type = MessageType::UpdateConfig};
+			sendMessage(message);
+		},
+		emu->getConfig(), this
+	);
+
 	cheatsEditor = new CheatsWindow(emu, {}, this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
 
@@ -282,6 +289,7 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getServiceManager().getHID().setTouchScreenPress(message.touchscreen.x, message.touchscreen.y);
 			break;
 		case MessageType::ReleaseTouchscreen: emu->getServiceManager().getHID().releaseTouchScreen(); break;
+		case MessageType::UpdateConfig: emu->getConfig() = configWindow->getConfig(); break;
 	}
 }
 
