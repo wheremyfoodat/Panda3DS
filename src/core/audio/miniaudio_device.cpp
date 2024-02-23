@@ -24,7 +24,6 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 			}
 
 			backends[count++] = backend;
-			printf("Found audio backend: %s\n", ma_get_backend_name(backend));
 
 			// TODO: Make backend selectable here
 			found = true;
