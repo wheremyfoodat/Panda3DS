@@ -1,6 +1,7 @@
 #include "panda_qt/config_window.hpp"
 
 #include <QHBoxLayout>
+#include <QPalette>
 #include <QSizePolicy>
 #include <QVBoxLayout>
 
@@ -21,6 +22,7 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 	widgetList->setMinimumWidth(100);
 	widgetList->setMaximumWidth(100);
 	widgetList->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+	widgetList->setPalette(QPalette(QColor(25, 25, 25)));
 
 	widgetList->setCurrentRow(0);
 	widgetContainer->setCurrentIndex(0);
