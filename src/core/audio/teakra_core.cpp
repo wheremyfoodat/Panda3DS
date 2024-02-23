@@ -1,7 +1,9 @@
 #include "audio/teakra_core.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
+#include <thread>
 
 #include "services/dsp.hpp"
 
