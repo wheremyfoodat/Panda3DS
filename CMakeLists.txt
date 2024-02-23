@@ -485,6 +485,8 @@ if(ENABLE_QT_GUI)
         PREFIX "/"
         FILES
             docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
+            docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
+            docs/img/sparkling_icon.png
     )
 else()
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")

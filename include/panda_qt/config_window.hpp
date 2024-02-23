@@ -4,9 +4,13 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
+#include <QListWidget>
 #include <QPalette>
+#include <QStackedWidget>
+#include <QTextEdit>
 #include <QWidget>
 #include <QtWidgets>
+#include <array>
 #include <functional>
 #include <utility>
 
@@ -27,11 +31,19 @@ class ConfigWindow : public QDialog {
 
 	Theme currentTheme;
 	QComboBox* themeSelect = nullptr;
+	QTextEdit* helpText = nullptr;
+	QListWidget* widgetList = nullptr;
+	QStackedWidget* widgetContainer = nullptr;
+
+	static constexpr size_t settingWidgetCount = 4;
+	std::array<QString, settingWidgetCount> helpTexts;
 
 	// The config class holds a copy of the emulator config which it edits and sends
 	// over to the emulator
 	EmulatorConfig config;
 	ConfigCallback updateConfig;
+
+	void addWidget(QWidget* widget, QString title, QString icon, QString helpText);
 	void setTheme(Theme theme);
 
   public:

@@ -1,12 +1,50 @@
 #include "panda_qt/config_window.hpp"
 
+#include <QHBoxLayout>
+#include <QSizePolicy>
+#include <QVBoxLayout>
+
 ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuConfig, QWidget* parent) : QDialog(parent), config(emuConfig) {
 	setWindowTitle(tr("Configuration"));
 	updateConfig = std::move(callback);
 
+	// Initialize the widget list and the widget container widgets
+	widgetList = new QListWidget(this);
+	widgetContainer = new QStackedWidget(this);
+
+	helpText = new QTextEdit(this);
+	helpText->setReadOnly(true);
+
+	helpText->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+	helpText->setFixedHeight(50);
+
+	widgetList->setMinimumWidth(100);
+	widgetList->setMaximumWidth(100);
+	widgetList->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+
+	widgetList->setCurrentRow(0);
+	widgetContainer->setCurrentIndex(0);
+
+	connect(widgetList, &QListWidget::currentRowChanged, this, [&](int row) {
+		widgetContainer->setCurrentIndex(row);
+		helpText->setText(helpTexts[row]);
+	});
+
+	QVBoxLayout* mainLayout = new QVBoxLayout;
+	QHBoxLayout* hLayout = new QHBoxLayout;
+
+	// Set up widget layouts
+	setLayout(mainLayout);
+	mainLayout->addLayout(hLayout);
+	mainLayout->addWidget(helpText);
+
+	hLayout->setAlignment(Qt::AlignLeft);
+	hLayout->addWidget(widgetList);
+	hLayout->addWidget(widgetContainer);
+
 	// Set up theme selection
 	setTheme(Theme::Dark);
-	themeSelect = new QComboBox(this);
+	themeSelect = new QComboBox(widgetContainer);
 	themeSelect->addItem(tr("System"));
 	themeSelect->addItem(tr("Light"));
 	themeSelect->addItem(tr("Dark"));
@@ -17,8 +55,17 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 	themeSelect->show();
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setTheme(static_cast<Theme>(index)); });
 
-	QCheckBox* useShaderJIT = new QCheckBox(tr("Enable Shader recompiler"), this);
+	QCheckBox* useShaderJIT = new QCheckBox(tr("Enable shader recompiler"), widgetContainer);
 	useShaderJIT->setChecked(config.shaderJitEnabled);
+	useShaderJIT->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+
+	// Add all our settings widgets to our widget list
+	addWidget(themeSelect, tr("General"), ":/docs/img/settings_icon.png", tr("General emulator settings"));
+	addWidget(useShaderJIT, tr("UI"), ":/docs/img/sparkling_icon.png", tr("User Interface (UI) settings"));
+	addWidget(useShaderJIT, tr("Graphics"), ":/docs/img/display_icon.png", tr("Graphics emulation and output settings"));
+	addWidget(useShaderJIT, tr("Audio"), ":/docs/img/speaker_icon.png", tr("Audio emulation and output settings"));
+	
+	helpText->setText(helpTexts[0]);
 
 	connect(useShaderJIT, &QCheckBox::toggled, this, [this, useShaderJIT]() {
 		config.shaderJitEnabled = useShaderJIT->isChecked();
@@ -103,6 +150,23 @@ void ConfigWindow::setTheme(Theme theme) {
 			break;
 		}
 	}
+}
+
+void ConfigWindow::addWidget(QWidget* widget, QString title, QString icon, QString helpText) {
+	const int index = widgetList->count();
+
+	QListWidgetItem* item = new QListWidgetItem(widgetList);
+	item->setText(title);
+	if (!icon.isEmpty()) {
+		item->setIcon(QIcon::fromTheme(icon));
+	}
+
+	widgetContainer->addWidget(widget);
+
+	if (index >= settingWidgetCount) {
+		Helpers::panic("Qt: ConfigWindow::settingWidgetCount has not been updated correctly!");
+	}
+	helpTexts[index] = std::move(helpText);
 }
 
 ConfigWindow::~ConfigWindow() { delete themeSelect; }

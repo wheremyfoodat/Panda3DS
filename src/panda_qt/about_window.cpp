@@ -1,5 +1,6 @@
 #include "panda_qt/about_window.hpp"
 
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QTextEdit>
 #include <QVBoxLayout>
