@@ -128,6 +128,11 @@ void TeakraDSP::setAudioEnabled(bool enable) {
 				// Push our samples at the end of an audio frame
 				if (audioFrameIndex >= audioFrame.size()) {
 					audioFrameIndex -= audioFrame.size();
+
+					// Wait until we've actually got room to do so
+					while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+					}
+
 					sampleBuffer.push(audioFrame.data(), audioFrame.size());
 				}
 			});

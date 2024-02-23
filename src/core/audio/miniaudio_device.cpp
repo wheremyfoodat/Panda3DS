@@ -92,6 +92,14 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 		auto self = reinterpret_cast<MiniAudioDevice*>(device->pUserData);
 		s16* output = reinterpret_cast<ma_int16*>(out);
 
+		// Wait until there's enough samples to pop
+		while (self->samples->size() < frameCount * channelCount) {
+			// If audio output is disabled from the emulator thread, make sure that this callback will return and not hang
+			if (!self->running) {
+				return;
+			}
+		}
+
 		self->samples->pop(output, frameCount * channelCount);
 	};
 
