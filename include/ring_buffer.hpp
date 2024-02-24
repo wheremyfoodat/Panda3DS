@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstring>
+#include <limits>
 #include <new>
 #include <span>
 #include <type_traits>
