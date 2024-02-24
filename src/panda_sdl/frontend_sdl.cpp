@@ -49,6 +49,8 @@ FrontendSDL::FrontendSDL() {
 		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
 			Helpers::panic("OpenGL init failed");
 		}
+
+		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
 	}
 
 #ifdef PANDA3DS_ENABLE_VULKAN

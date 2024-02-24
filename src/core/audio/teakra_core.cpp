@@ -1,7 +1,9 @@
 #include "audio/teakra_core.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
+#include <thread>
 
 #include "services/dsp.hpp"
 
@@ -51,10 +53,7 @@ TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService)
 	ahbm.write32 = [&](u32 addr, u32 value) { *(u32*)&mem.getFCRAM()[addr - PhysicalAddrs::FCRAM] = value; };
 
 	teakra.SetAHBMCallback(ahbm);
-	teakra.SetAudioCallback([=](std::array<s16, 2> sample) {
-		//printf("%d %d\n", sample[0], sample[1]);
-		// NOP for now
-	});
+	teakra.SetAudioCallback([](std::array<s16, 2> sample) { /* Do nothing */ });
 
 	// Set up event handlers. These handlers forward a hardware interrupt to the DSP service, which is responsible
 	// For triggering the appropriate DSP kernel events
@@ -114,6 +113,36 @@ void TeakraDSP::reset() {
 	running = false;
 	loaded = false;
 	signalledData = signalledSemaphore = false;
+
+	audioFrameIndex = 0;
+}
+
+void TeakraDSP::setAudioEnabled(bool enable) {
+	if (audioEnabled != enable) {
+		audioEnabled = enable;
+
+		// Set the appropriate audio callback for Teakra
+		if (audioEnabled) {
+			teakra.SetAudioCallback([this](std::array<s16, 2> sample) {
+				audioFrame[audioFrameIndex++] = sample[0];
+				audioFrame[audioFrameIndex++] = sample[1];
+
+				// Push our samples at the end of an audio frame
+				if (audioFrameIndex >= audioFrame.size()) {
+					audioFrameIndex -= audioFrame.size();
+
+					// Wait until we've actually got room to do so
+					while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+						std::this_thread::sleep_for(std::chrono::milliseconds{1});
+					}
+
+					sampleBuffer.push(audioFrame.data(), audioFrame.size());
+				}
+			});
+		} else {
+			teakra.SetAudioCallback([](std::array<s16, 2> sample) { /* Do nothing */ });
+		}
+	}
 }
 
 // https://github.com/citra-emu/citra/blob/master/src/audio_core/lle/lle.cpp

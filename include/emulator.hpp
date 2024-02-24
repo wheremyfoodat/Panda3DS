@@ -8,6 +8,7 @@
 
 #include "PICA/gpu.hpp"
 #include "audio/dsp_core.hpp"
+#include "audio/miniaudio_device.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
@@ -47,6 +48,7 @@ class Emulator {
 	Scheduler scheduler;
 
 	Crypto::AESEngine aesEngine;
+	MiniAudioDevice audioDevice;
 	Cheats cheats;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
@@ -75,6 +77,7 @@ class Emulator {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	Discord::RPC discordRpc;
 #endif
+	void setAudioEnabled(bool enable);
 	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
