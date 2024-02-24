@@ -135,6 +135,7 @@ class Emulator {
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
 	Scheduler& getScheduler() { return scheduler; }
+	Memory& getMemory() { return memory; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }

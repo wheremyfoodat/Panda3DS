@@ -525,3 +525,13 @@ void Memory::copySharedFont(u8* pointer) {
 	auto font = fonts.open("CitraSharedFontUSRelocated.bin");
 	std::memcpy(pointer, font.begin(), font.size());
 }
+
+std::optional<u64> Memory::getProgramID() {
+	auto cxi = getCXI();
+
+	if (cxi) {
+		return cxi->programID;
+	}
+
+	return std::nullopt;
+}

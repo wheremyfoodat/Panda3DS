@@ -32,7 +32,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	size = u64(*(u32*)&header[0x104]) * mediaUnit; // TODO: Maybe don't type pun because big endian will break
 	exheaderSize = *(u32*)&header[0x180];
 
-	const u64 programID = *(u64*)&header[0x118];
+	programID = *(u64*)&header[0x118];
 
 	// Read NCCH flags
 	secondaryKeySlot = header[0x188 + 3];
