@@ -19,7 +19,8 @@ public enum KeyName {
     SELECT(Constants.INPUT_KEY_SELECT),
     L(Constants.INPUT_KEY_L),
     R(Constants.INPUT_KEY_R),
-    NULL;
+    NULL,
+    CHANGE_DS_LAYOUT;
 
     private final int keyId;
 

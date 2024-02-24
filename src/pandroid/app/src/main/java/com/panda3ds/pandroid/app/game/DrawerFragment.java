@@ -1,6 +1,7 @@
 package com.panda3ds.pandroid.app.game;
 
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -42,13 +43,21 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         super.onViewCreated(view, savedInstanceState);
         drawerContainer.setVisibility(View.GONE);
 
-        GameMetadata game = GameUtils.getCurrentGame();
+        ((NavigationView)view.findViewById(R.id.menu)).setNavigationItemSelectedListener(this);
+        refresh();
+    }
 
-        ((GameIconView)view.findViewById(R.id.game_icon)).setImageBitmap(game.getIcon());
+    private void refresh(){
+        GameMetadata game = GameUtils.getCurrentGame();
+        View view = getView();
+        if (game.getIcon() != null && !game.getIcon().isRecycled()) {
+            ((GameIconView) view.findViewById(R.id.game_icon)).setImageBitmap(game.getIcon());
+        } else {
+            ((GameIconView) view.findViewById(R.id.game_icon)).setImageDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
         ((AppCompatTextView)view.findViewById(R.id.game_title)).setText(game.getTitle());
         ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
 
-        ((NavigationView)view.findViewById(R.id.menu)).setNavigationItemSelectedListener(this);
     }
 
     @Override
@@ -72,6 +81,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
             drawerContainer.setVisibility(View.VISIBLE);
             drawerContainer.open();
             drawerContainer.postDelayed(this::refreshLayout, 20);
+            refresh();
         }
     }
 

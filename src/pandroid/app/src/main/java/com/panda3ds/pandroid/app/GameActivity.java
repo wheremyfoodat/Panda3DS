@@ -3,6 +3,7 @@ package com.panda3ds.pandroid.app;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -16,17 +17,22 @@ import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
 import com.panda3ds.pandroid.app.game.DrawerFragment;
+import com.panda3ds.pandroid.app.game.EmulatorListener;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.input.InputHandler;
 import com.panda3ds.pandroid.input.InputMap;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.view.PandaGlSurfaceView;
 import com.panda3ds.pandroid.view.PandaLayoutController;
+import com.panda3ds.pandroid.view.ds.DsLayoutManager;
+import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 import com.panda3ds.pandroid.view.utils.PerformanceView;
 
-public class GameActivity extends BaseActivity {
+public class GameActivity extends BaseActivity implements EmulatorListener {
 	private final DrawerFragment drawerFragment = new DrawerFragment();
-	private final AlberInputListener inputListener = new AlberInputListener(this::onBackPressed);
+	private final AlberInputListener inputListener = new AlberInputListener(this);
+	private ConsoleRenderer renderer;
+	private int currentDsLayout;
 
 	@Override
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -42,6 +48,8 @@ public class GameActivity extends BaseActivity {
 
 		PandaGlSurfaceView pandaSurface = new PandaGlSurfaceView(this, intent.getStringExtra(Constants.ACTIVITY_PARAMETER_PATH));
 		setContentView(R.layout.game_activity);
+
+		renderer = pandaSurface.getRenderer();
 
 		((FrameLayout) findViewById(R.id.panda_gl_frame))
 			.addView(pandaSurface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -102,6 +110,12 @@ public class GameActivity extends BaseActivity {
 		} else {
 			drawerFragment.open();
 		}
+	}
+
+	@Override
+	public void switchDualScreenLayout() {
+		currentDsLayout = currentDsLayout + 1 < DsLayoutManager.getLayoutCount() ? currentDsLayout + 1 : 0;
+		renderer.setLayout(DsLayoutManager.createLayout(currentDsLayout));
 	}
 
 	@Override

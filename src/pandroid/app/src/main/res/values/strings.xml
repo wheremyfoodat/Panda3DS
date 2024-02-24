@@ -60,4 +60,18 @@
     <string name="pref_shader_jit_summary">Use shader recompiler.</string>
     <string name="graphics">Graphics</string>
     <string name="loading">Loading</string>
+    <string name="apply">Apply</string>
+    <string name="pref_theme_summary">Set application theme</string>
+    <string name="pref_theme_title">Application theme</string>
+    <string name="failed_load_rom">Failed to load ROM</string>
+    <string name="dialog_message_invalid_rom">Make sure it\'s a valid 3DS ROM and that storage permissions are configured properly.</string>
+    <string name="system">System</string>
+    <string name="general">General</string>
+    <string name="pref_general_summary">General application configurations.</string>
+    <string name="bottom_display">Bottom Display</string>
+    <string name="top_display">Top Display</string>
+    <string name="fix_aspect">Fix aspect</string>
+    <string name="dual_screen_layouts">Dual Screen layouts</string>
+    <string name="dual_screen_layouts_summary">Change layout of console screens.</string>
+    <string name="click_to_change">Click to change</string>
 </resources>

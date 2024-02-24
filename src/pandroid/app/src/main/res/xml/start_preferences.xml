@@ -4,6 +4,7 @@
     android:divider="#F00">
 
     <Preference
+        android:key="application"
         app:title="@string/app_name"
         app:enabled="false"
         app:summary="1.0"
@@ -17,10 +18,10 @@
         app:layout="@layout/preference_start_item"/>
 
     <Preference
-        app:key="appearance"
-        app:icon="@drawable/ic_theme"
-        app:title="@string/appearance"
-        app:summary="@string/pref_appearance_summary"
+        app:key="general"
+        app:icon="@drawable/ic_settings"
+        app:title="@string/general"
+        app:summary="@string/pref_general_summary"
         app:layout="@layout/preference_start_item"/>
 
     <Preference

@@ -56,4 +56,17 @@
     <string name="graphics">Gráficos</string>
     <string name="loading">Carregando</string>
     <string name="rotate">Rotacionar</string>
+    <string name="apply">Aplicar</string>
+    <string name="pref_theme_summary">Definir o tema do aplicativo</string>
+    <string name="pref_theme_title">Tema do aplicativo</string>
+    <string name="failed_load_rom">Falha ao carregar a ROM.</string>
+    <string name="dialog_message_invalid_rom">Falha ao carregar o arquivo ROM, por favor verifique se o arquivo não esta corrompido ou se o emulator tem permição para acessa-lo.</string>
+    <string name="system">Sistema</string>
+    <string name="general">Geral</string>
+    <string name="pref_general_summary">Configurações gerais do emulador.</string>
+    <string name="bottom_display">Tela inferior</string>
+    <string name="top_display">Tela superior</string>
+    <string name="fix_aspect">Manter porporção</string>
+    <string name="dual_screen_layouts">Disposições para as duas telas.</string>
+    <string name="dual_screen_layouts_summary">Altere as disposições disponiveis para as telas do console</string>
 </resources>

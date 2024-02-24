@@ -69,26 +69,25 @@
             </LinearLayout>
 
         </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- Drawer content layout -->
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="start"
-        android:layout_marginTop="195dp">
-
-        <com.google.android.material.navigation.NavigationView
-            android:id="@+id/menu"
+        <!-- Drawer content layout -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:menu="@menu/game_drawer"
-            android:background="?colorSurface"
-            android:theme="@style/Widget.App.NavigationView"
-            app:subheaderTextAppearance="@style/TextAppearanceGameDrawerSubTitle"/>
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="start">
+
+            <com.google.android.material.navigation.NavigationView
+                android:id="@+id/menu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:menu="@menu/game_drawer"
+                android:background="?colorSurface"
+                android:theme="@style/Widget.App.NavigationView"
+                app:subheaderTextAppearance="@style/TextAppearanceGameDrawerSubTitle"/>
+
+        </LinearLayout>
 
     </LinearLayout>
+
 
 </androidx.drawerlayout.widget.DrawerLayout>

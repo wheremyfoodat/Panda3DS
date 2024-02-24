@@ -25,6 +25,7 @@ public class InputHandler {
     };
 
     private static final HashMap<String, Float> motionDownEvents = new HashMap<>();
+    private static final HashMap<String, InputEvent> keyDownEvents = new HashMap<>();
 
     private static boolean containsSource(int[] sources, int sourceMask) {
         for (int source : sources) {
@@ -108,8 +109,17 @@ public class InputHandler {
                     return true;
             }
         }
-        
-        handleEvent(new InputEvent(KeyEvent.keyCodeToString(event.getKeyCode()), event.getAction() == KeyEvent.ACTION_UP ? 0.0f : 1.0f));
+        String code = KeyEvent.keyCodeToString(event.getKeyCode());
+        if (event.getAction() == KeyEvent.ACTION_UP){
+            keyDownEvents.remove(code);
+            handleEvent(new InputEvent(code, 0.0f));
+        } else if (!keyDownEvents.containsKey(code)){
+            keyDownEvents.put(code, new InputEvent(code, 1.0f));
+        }
+        for (InputEvent env: keyDownEvents.values()){
+            handleEvent(env);
+        }
+
         return true;
     }
 
@@ -117,5 +127,6 @@ public class InputHandler {
         eventListener = null;
         motionDeadZone = 0.0f;
         motionDownEvents.clear();
+        keyDownEvents.clear();
     }
 }
