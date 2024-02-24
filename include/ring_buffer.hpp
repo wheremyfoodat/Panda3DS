@@ -96,7 +96,7 @@ namespace Common {
 		// Having them on the same cache-line would result in false-sharing between them.
 		// TODO: Remove this ifdef whenever clang and GCC support
 		//       std::hardware_destructive_interference_size.
-#if __cpp_lib_hardware_interference_size == 201703L
+#if defined(__cpp_lib_hardware_interference_size) && !defined(__ANDROID__)
 		alignas(std::hardware_destructive_interference_size) std::atomic_size_t m_read_index{0};
 		alignas(std::hardware_destructive_interference_size) std::atomic_size_t m_write_index{0};
 #else
