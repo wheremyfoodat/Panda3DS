@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+
 #include "audio/dsp_core.hpp"
 #include "memory.hpp"
 #include "swap.hpp"
@@ -10,6 +12,11 @@ namespace Audio {
 		u32 pipeBaseAddr;
 		bool running;  // Is the DSP running?
 		bool loaded;   // Have we finished loading a binary with LoadComponent?
+		bool signalledData;
+		bool signalledSemaphore;
+
+		uint audioFrameIndex = 0; // Index in our audio frame
+		std::array<s16, 160 * 2> audioFrame;
 
 		// Get a pointer to a data memory address
 		u8* getDataPointer(u32 address) { return getDspMemory() + Memory::DSP_DATA_MEMORY_OFFSET + address; }
@@ -62,10 +69,6 @@ namespace Audio {
 				std::memcpy(statusAddress + 6, &status.writePointer, sizeof(u16));
 			}
 		}
-
-		bool signalledData;
-		bool signalledSemaphore;
-
 		// Run 1 slice of DSP instructions
 		void runSlice() {
 			if (running) {
@@ -75,6 +78,7 @@ namespace Audio {
 
 	  public:
 		TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
+		~TeakraDSP() override {}
 
 		void reset() override;
 
@@ -84,6 +88,7 @@ namespace Audio {
 			scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::lleSlice * 2);
 		}
 
+		void setAudioEnabled(bool enable) override;
 		u8* getDspMemory() override { return teakra.GetDspMemory().data(); }
 
 		u16 recvData(u32 regId) override { return teakra.RecvData(regId); }
