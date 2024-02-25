@@ -108,7 +108,7 @@ void Emulator::render() {}
 void Emulator::resume() {
 	running = (romType != ROMType::None);
 
-	if (running) {
+	if (running && config.audioEnabled) {
 		audioDevice.start();
 	}
 }
