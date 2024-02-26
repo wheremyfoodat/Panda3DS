@@ -14,7 +14,6 @@ import androidx.appcompat.widget.AppCompatTextView;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 
 import com.google.android.material.navigation.NavigationView;
 import com.panda3ds.pandroid.AlberDriver;
@@ -25,10 +24,12 @@ import com.panda3ds.pandroid.view.gamesgrid.GameIconView;
 
 public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListener, NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerContainer;
+    private EmulatorCallback emulator;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        emulator = ((EmulatorCallback) requireActivity());
         drawerContainer = requireActivity().findViewById(R.id.drawer_container);
         drawerContainer.removeDrawerListener(this);
         drawerContainer.addDrawerListener(this);
@@ -112,6 +113,9 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         if (id == R.id.resume) {
+            close();
+        } else if (id == R.id.ds_switch) {
+            emulator.swapScreens();
             close();
         } else if (id == R.id.exit) {
             requireActivity().finish();

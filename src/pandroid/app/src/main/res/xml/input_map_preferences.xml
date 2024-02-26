@@ -134,7 +134,7 @@
             app:iconSpaceReserved="false"/>
 
         <Preference
-            app:title="Switch dual screen layout"
+            app:title="@string/swap_screen"
             app:key="CHANGE_DS_LAYOUT"
             app:summary="none"
             app:iconSpaceReserved="false"/>

@@ -11,8 +11,8 @@ import java.util.Objects;
 
 
 public class AlberInputListener implements Function<InputEvent> {
-	private final EmulatorListener emulator;
-	public AlberInputListener(EmulatorListener emulator) { this.emulator = emulator;  }
+	private final EmulatorCallback emulator;
+	public AlberInputListener(EmulatorCallback emulator) { this.emulator = emulator;  }
 
 	private final Vector2 axis = new Vector2(0.0f, 0.0f);
 
@@ -50,7 +50,7 @@ public class AlberInputListener implements Function<InputEvent> {
 				break;
 			case CHANGE_DS_LAYOUT:
 				if (!event.isDown()){
-					emulator.switchDualScreenLayout();
+					emulator.swapScreens();
 				}
 				break;
 			default:

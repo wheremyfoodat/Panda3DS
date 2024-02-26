@@ -74,4 +74,5 @@
     <string name="dual_screen_layouts">Dual Screen layouts</string>
     <string name="dual_screen_layouts_summary">Change layout of console screens.</string>
     <string name="click_to_change">Click to change</string>
+    <string name="swap_screen">Swap screen</string>
 </resources>

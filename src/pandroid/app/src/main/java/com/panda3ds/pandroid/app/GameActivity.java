@@ -3,7 +3,6 @@ package com.panda3ds.pandroid.app;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -17,7 +16,7 @@ import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
 import com.panda3ds.pandroid.app.game.DrawerFragment;
-import com.panda3ds.pandroid.app.game.EmulatorListener;
+import com.panda3ds.pandroid.app.game.EmulatorCallback;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.input.InputHandler;
 import com.panda3ds.pandroid.input.InputMap;
@@ -28,7 +27,7 @@ import com.panda3ds.pandroid.view.ds.DsLayoutManager;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 import com.panda3ds.pandroid.view.utils.PerformanceView;
 
-public class GameActivity extends BaseActivity implements EmulatorListener {
+public class GameActivity extends BaseActivity implements EmulatorCallback {
 	private final DrawerFragment drawerFragment = new DrawerFragment();
 	private final AlberInputListener inputListener = new AlberInputListener(this);
 	private ConsoleRenderer renderer;
@@ -113,7 +112,7 @@ public class GameActivity extends BaseActivity implements EmulatorListener {
 	}
 
 	@Override
-	public void switchDualScreenLayout() {
+	public void swapScreens() {
 		currentDsLayout = currentDsLayout + 1 < DsLayoutManager.getLayoutCount() ? currentDsLayout + 1 : 0;
 		renderer.setLayout(DsLayoutManager.createLayout(currentDsLayout));
 	}
