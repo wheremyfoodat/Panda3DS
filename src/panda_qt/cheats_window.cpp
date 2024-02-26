@@ -1,15 +1,9 @@
 #include "panda_qt/cheats_window.hpp"
 
-#include <QCheckBox>
-#include <QDialog>
 #include <QDialogButtonBox>
-#include <QLabel>
-#include <QLineEdit>
-#include <QListWidget>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <functional>
 
 #include "cheats.hpp"
@@ -17,13 +11,6 @@
 #include "panda_qt/main_window.hpp"
 
 MainWindow* mainWindow = nullptr;
-
-struct CheatMetadata {
-	u32 handle = Cheats::badCheatHandle;
-	std::string name = "New cheat";
-	std::string code;
-	bool enabled = true;
-};
 
 void dispatchToMainThread(std::function<void()> callback) {
     QTimer* timer = new QTimer();
@@ -36,52 +23,6 @@ void dispatchToMainThread(std::function<void()> callback) {
     });
     QMetaObject::invokeMethod(timer, "start", Qt::QueuedConnection, Q_ARG(int, 0));
 }
-
-class CheatEntryWidget : public QWidget {
-  public:
-	CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListWidget* parent);
-
-	void Update() {
-		name->setText(metadata.name.c_str());
-		enabled->setChecked(metadata.enabled);
-		update();
-	}
-
-	void Remove() {
-		emu->getCheats().removeCheat(metadata.handle);
-		cheatList->takeItem(cheatList->row(listItem));
-		deleteLater();
-	}
-
-	const CheatMetadata& getMetadata() { return metadata; }
-	void setMetadata(const CheatMetadata& metadata) { this->metadata = metadata; }
-
-  private:
-	void checkboxChanged(int state);
-	void editClicked();
-
-	Emulator* emu;
-	CheatMetadata metadata;
-	u32 handle;
-	QLabel* name;
-	QCheckBox* enabled;
-	QListWidget* cheatList;
-	QListWidgetItem* listItem;
-};
-
-class CheatEditDialog : public QDialog {
-  public:
-	CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry);
-
-	void accepted();
-	void rejected();
-
-  private:
-	Emulator* emu;
-	CheatEntryWidget& cheatEntry;
-	QTextEdit* codeEdit;
-	QLineEdit* nameEdit;
-};
 
 CheatEntryWidget::CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListWidget* parent)
 	: QWidget(), emu(emu), metadata(metadata), cheatList(parent) {

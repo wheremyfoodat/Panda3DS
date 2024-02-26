@@ -469,6 +469,9 @@ if(ENABLE_VULKAN)
 endif()
 
 if(ENABLE_QT_GUI)
+    option(GENERATE_QT_TRANSLATION "Generate Qt translation file" OFF)
+    set(QT_LANGUAGES docs/translations)
+
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_QT=1")
     target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
     target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
@@ -492,6 +495,17 @@ if(ENABLE_QT_GUI)
             docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
             docs/img/sparkling_icon.png
     )
+
+    # Generates an en.ts file for translations
+    if(GENERATE_QT_TRANSLATION)
+        find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+        qt_add_lupdate(Alber TS_FILES ${QT_LANGUAGES}/en.ts
+            SOURCES ${FRONTEND_SOURCE_FILES}
+            INCLUDE_DIRECTORIES ${FRONTEND_HEADER_FILES}
+            NO_GLOBAL_TARGET)
+
+        add_custom_target(translation-qt ALL DEPENDS Alber_lupdate)
+    endif()
 else()
     target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
