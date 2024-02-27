@@ -81,4 +81,6 @@
     <string name="games_count_f">%d Games</string>
     <string name="directory">Directory</string>
     <string name="remove">Remove</string>
+    <string name="play">Play</string>
+    <string name="region">Region</string>
 </resources>
