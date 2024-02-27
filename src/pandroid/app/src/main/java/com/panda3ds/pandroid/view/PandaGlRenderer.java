@@ -122,9 +122,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 			SMDH smdh = new SMDH(smdhData);
 			Log.i(Constants.LOG_TAG, "Loaded rom SDMH");
 			Log.i(Constants.LOG_TAG, String.format("You are playing '%s' published by '%s'", smdh.getTitle(), smdh.getPublisher()));
-			GameMetadata game = GameUtils.getCurrentGame();
-			GameUtils.removeGame(game);
-			GameUtils.addGame(GameMetadata.applySMDH(game, smdh));
+			GameUtils.getCurrentGame().applySMDH(smdh);
 		}
 
 		PerformanceMonitor.initialize(getBackendName());

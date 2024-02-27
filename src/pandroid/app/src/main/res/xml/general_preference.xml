@@ -16,7 +16,12 @@
             app:iconSpaceReserved="false"/>
     </PreferenceCategory>
     <PreferenceCategory
-        app:title="@string/graphics"
+        app:title="@string/games"
         app:iconSpaceReserved="false">
+        <Preference
+            android:key="games.folders"
+            app:title="@string/pref_games_folders"
+            app:summary="@string/pref_games_folders_summary"
+            app:iconSpaceReserved="false"/>
     </PreferenceCategory>
 </PreferenceScreen>

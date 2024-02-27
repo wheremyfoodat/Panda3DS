@@ -2,8 +2,10 @@ package com.panda3ds.pandroid.utils;
 
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.provider.DocumentsContract;
 import android.system.Os;
 import android.util.Log;
 
@@ -21,6 +23,7 @@ import java.util.Objects;
 
 public class FileUtils {
     public static final String MODE_READ = "r";
+    private static final String TREE_URI = "tree";
     public static final int CANONICAL_SEARCH_DEEP = 8;
 
     private static DocumentFile parseFile(String path) {
@@ -28,7 +31,14 @@ public class FileUtils {
             return DocumentFile.fromFile(new File(path));
         }
         Uri uri = Uri.parse(path);
-        return DocumentFile.fromSingleUri(getContext(), uri);
+        DocumentFile singleFile = DocumentFile.fromSingleUri(getContext(), uri);
+        if (singleFile.length() > 0 && singleFile.length() != 4096){
+            return singleFile;
+        }
+        if (uri.getScheme().equals("content") && uri.getPath().startsWith("/"+TREE_URI)){
+            return DocumentFile.fromTreeUri(getContext(), uri);
+        }
+        return singleFile;
     }
 
     private static Context getContext() {
@@ -309,5 +319,13 @@ public class FileUtils {
             return false;
         }
         return true;
+    }
+
+    public static String getChild(String path, String name){
+        return parseFile(path).findFile(name).getUri().toString();
+    }
+
+    public static boolean isDirectory(String path) {
+        return parseFile(path).isDirectory();
     }
 }

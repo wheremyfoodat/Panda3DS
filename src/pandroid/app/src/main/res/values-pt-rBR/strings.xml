@@ -69,4 +69,10 @@
     <string name="fix_aspect">Manter porporção</string>
     <string name="dual_screen_layouts">Disposições para as duas telas.</string>
     <string name="dual_screen_layouts_summary">Altere as disposições disponiveis para as telas do console</string>
+    <string name="click_to_change">Clique para mudar</string>
+    <string name="swap_screen">Mudar telas</string>
+    <string name="pref_games_folders_summary">Pastas usadas para importar os jogos</string>
+    <string name="pref_games_folders">Pastas de jogos</string>
+    <string name="import_folder">Adicionar pasta</string>
+    <string name="games_count_f">%d Jogos</string>
 </resources>

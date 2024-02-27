@@ -15,6 +15,7 @@ public class GeneralPreferences extends BasePreferenceFragment {
         setPreferencesFromResource(R.xml.general_preference, rootKey);
         setItemClick("appearance.theme", (pref) -> new ThemeSelectorDialog(requireActivity()).show());
         setItemClick("appearance.ds", (pref) -> PreferenceActivity.launch(requireActivity(), DsListPreferences.class));
+        setItemClick("games.folders", (pref) -> PreferenceActivity.launch(requireActivity(), GamesFoldersPreferences.class));
         setActivityTitle(R.string.general);
     }
 }

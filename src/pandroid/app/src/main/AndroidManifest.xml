@@ -45,6 +45,17 @@
         <activity android:name=".app.preferences.InputMapActivity"
             android:configChanges="density|orientation|screenSize"/>
 
+        <provider
+            android:authorities="com.panda3ds.pandroid.user"
+            android:name="com.panda3ds.pandroid.app.provider.AppDataDocumentProvider"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
         <service android:name=".app.services.LoggerService" android:process=":logger_service"/>
     </application>
 </manifest>

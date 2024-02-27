@@ -75,4 +75,10 @@
     <string name="dual_screen_layouts_summary">Change layout of console screens.</string>
     <string name="click_to_change">Click to change</string>
     <string name="swap_screen">Swap screen</string>
+    <string name="pref_games_folders_summary">Folders for auto import games</string>
+    <string name="pref_games_folders">Games folders</string>
+    <string name="import_folder">Import folder</string>
+    <string name="games_count_f">%d Games</string>
+    <string name="directory">Directory</string>
+    <string name="remove">Remove</string>
 </resources>
