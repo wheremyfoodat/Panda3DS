@@ -20,6 +20,10 @@
         android:hardwareAccelerated="true"
         android:theme="@style/Theme.Pandroid"
         tools:targetApi="31">
+
+        <meta-data android:name="android.game_mode_config"
+            android:resource="@xml/game_mode_config" />
+        
         <activity
             android:name=".app.MainActivity"
             android:exported="true"
