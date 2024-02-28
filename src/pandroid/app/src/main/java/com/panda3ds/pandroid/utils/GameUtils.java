@@ -31,7 +31,7 @@ public class GameUtils {
 
     public static GameMetadata findByRomPath(String romPath) {
         for (GameMetadata game : data.games) {
-            if (Objects.equals(romPath, game.getRomPath())) {
+            if (Objects.equals(romPath, game.getRealPath())) {
                 return game;
             }
         }
@@ -40,7 +40,13 @@ public class GameUtils {
 
     public static void launch(Context context, GameMetadata game) {
         currentGame = game;
-        String path = FileUtils.obtainRealPath(game.getRomPath());
+        String path = game.getRealPath();
+        if (path.contains("://")) {
+            String[] parts = Uri.decode(game.getRomPath()).split("/");
+            String name = parts[parts.length - 1];
+            path = "game://internal/" + name;
+        }
+        
         context.startActivity(new Intent(context, GameActivity.class).putExtra(Constants.ACTIVITY_PARAMETER_PATH, path));
     }
 
@@ -56,6 +62,22 @@ public class GameUtils {
     public static void addGame(GameMetadata game) {
         data.games.add(0, game);
         writeChanges();
+    }
+
+    public static String resolvePath(String path) {
+        String lower = path.toLowerCase();
+        if (!lower.contains("://")) {
+            return path;
+        }
+
+        Uri uri = Uri.parse(path);
+        switch (uri.getScheme().toLowerCase()) {
+            case "elf": {
+                return FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF)+"/"+uri.getAuthority();
+            }
+        }
+    
+        return path;
     }
 
     public static ArrayList<GameMetadata> getGames() {

@@ -12,6 +12,7 @@
         android:key="loggerService"
         app:iconSpaceReserved="false"
         app:title="@string/pref_logger_service_title"
+        app:defaultValue="true"
         android:summary="@string/pref_logger_service_summary"/>
 
     <PreferenceCategory

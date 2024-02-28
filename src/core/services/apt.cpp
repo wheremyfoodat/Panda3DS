@@ -84,7 +84,7 @@ void APTService::appletUtility(u32 messagePointer) {
 	u32 outputSize = mem.read32(messagePointer + 12);
 	u32 inputPointer = mem.read32(messagePointer + 20);
 
-	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X) (Stubbed)\n", utility, inputSize, outputSize,
+	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X)\n", utility, inputSize, outputSize,
 		inputPointer);
 
 	std::vector<u8> out(outputSize);
@@ -218,7 +218,7 @@ void APTService::initialize(u32 messagePointer) {
 }
 
 void APTService::inquireNotification(u32 messagePointer) {
-	log("APT::InquireNotification (STUBBED TO RETURN NONE)\n");
+	log("APT::InquireNotification\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);

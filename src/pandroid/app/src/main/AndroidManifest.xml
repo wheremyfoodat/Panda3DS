@@ -2,10 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage"/>
-
     <uses-feature
         android:required="true"
         android:glEsVersion="0x0030001"/>
@@ -24,6 +20,10 @@
         android:hardwareAccelerated="true"
         android:theme="@style/Theme.Pandroid"
         tools:targetApi="31">
+
+        <meta-data android:name="android.game_mode_config"
+            android:resource="@xml/game_mode_config" />
+        
         <activity
             android:name=".app.MainActivity"
             android:exported="true"

@@ -11,13 +11,17 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.base.LoadingAlertDialog;
 import com.panda3ds.pandroid.data.game.GameMetadata;
+import com.panda3ds.pandroid.lang.Task;
+import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.FileUtils;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.view.gamesgrid.GamesGridView;
-
+import java.util.UUID;
 
 public class GamesFragment extends Fragment implements ActivityResultCallback<Uri> {
 	private final ActivityResultContracts.OpenDocument openRomContract = new ActivityResultContracts.OpenDocument();
@@ -49,16 +53,43 @@ public class GamesFragment extends Fragment implements ActivityResultCallback<Ur
 		if (result != null) {
 			String uri = result.toString();
 			if (GameUtils.findByRomPath(uri) == null) {
-				if (FileUtils.obtainRealPath(uri) == null) {
+				if (!FileUtils.exists(uri)) {
 					Toast.makeText(getContext(), "Invalid file path", Toast.LENGTH_LONG).show();
 					return;
 				}
-				FileUtils.makeUriPermanent(uri, FileUtils.MODE_READ);
-				GameMetadata game = new GameMetadata(uri, FileUtils.getName(uri).split("\\.")[0], "Unknown");
-				GameUtils.addGame(game);
-				GameUtils.launch(requireActivity(), game);
+
+				String extension = FileUtils.extension(uri);
+
+				// For ELF and AXF files the emulator core uses the C++ iostreams API to be compatible with elfio unlike other file types
+				// As such, instead of writing more SAF code for operating with iostreams we just copy the ELF/AXF file to our own private directory
+				// And use it without caring about SAF
+				if (extension.equals("elf") || extension.endsWith("axf")) {
+					importELF(uri);
+				} else {
+					FileUtils.makeUriPermanent(uri, FileUtils.MODE_READ);
+
+					GameMetadata game = new GameMetadata(uri, FileUtils.getName(uri).split("\\.")[0], getString(R.string.unknown));
+					GameUtils.addGame(game);
+					GameUtils.launch(requireActivity(), game);
+				}
 			}
 		}
+	}
+
+	private void importELF(String uri) {
+		AlertDialog dialog = new LoadingAlertDialog(requireActivity(), R.string.loading).create();
+		dialog.show();
+		new Task(() -> {
+			String uuid = UUID.randomUUID().toString() + "." + FileUtils.extension(uri);
+			String name = FileUtils.getName(uri);
+			FileUtils.copyFile(uri, FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF), uuid);
+			gameListView.post(() -> {
+				dialog.hide();
+				GameMetadata game = new GameMetadata("elf://" + uuid, name.substring(0, name.length() - 4).trim(), "");
+				GameUtils.addGame(game);
+				GameUtils.launch(requireActivity(), game);
+			});
+		}).start();
 	}
 
 	@Override

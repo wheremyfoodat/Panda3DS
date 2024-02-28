@@ -21,6 +21,10 @@
 #include <unistd.h>  // For ftruncate
 #endif
 
+#ifdef __ANDROID__
+#include "android_utils.hpp"
+#endif
+
 IOFile::IOFile(const std::filesystem::path& path, const char* permissions) : handle(nullptr) { open(path, permissions); }
 
 bool IOFile::open(const std::filesystem::path& path, const char* permissions) {
@@ -34,8 +38,19 @@ bool IOFile::open(const char* filename, const char* permissions) {
 	if (isOpen()) {
 		close();
 	}
+    #ifdef __ANDROID__
+        std::string path(filename);
 
-	handle = std::fopen(filename, permissions);
+        // Check if this is a URI directory, which will need special handling due to SAF
+        if (path.find("://") != std::string::npos ) {
+            handle = fdopen(AndroidUtils::openDocument(filename, permissions), permissions);
+        } else {
+            handle = std::fopen(filename, permissions);
+        }
+	#else
+    	handle = std::fopen(filename, permissions);
+	#endif
+
 	return isOpen();
 }
 

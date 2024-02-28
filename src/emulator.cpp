@@ -18,12 +18,20 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
-	  cheats(memory, kernel.getServiceManager().getHID()), lua(memory), running(false), programRunning(false)
+	  cheats(memory, kernel.getServiceManager().getHID()), lua(*this), running(false), programRunning(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
 #endif
 {
+	DSPService& dspService = kernel.getServiceManager().getDSP();
+
+	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
+	dspService.setDSPCore(dsp.get());
+
+	audioDevice.init(dsp->getSamples());
+	setAudioEnabled(config.audioEnabled);
+
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
@@ -46,6 +54,8 @@ void Emulator::reset(ReloadOption reload) {
 	cpu.reset();
 	gpu.reset();
 	memory.reset();
+	dsp->reset();
+
 	// Reset scheduler and add a VBlank event
 	scheduler.reset();
 
@@ -95,8 +105,19 @@ void Emulator::step() {}
 void Emulator::render() {}
 
 // Only resume if a ROM is properly loaded
-void Emulator::resume() { running = (romType != ROMType::None); }
-void Emulator::pause() { running = false; }
+void Emulator::resume() {
+	running = (romType != ROMType::None);
+
+	if (running && config.audioEnabled) {
+		audioDevice.start();
+	}
+}
+
+void Emulator::pause() {
+	running = false;
+	audioDevice.stop();
+}
+
 void Emulator::togglePause() { running ? pause() : resume(); }
 
 void Emulator::runFrame() {
@@ -136,13 +157,17 @@ void Emulator::pollScheduler() {
 				ServiceManager& srv = kernel.getServiceManager();
 				srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
 				srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
-				
+
 				// Queue next VBlank event
 				scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
 				break;
 			}
 
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
+			case Scheduler::EventType::RunDSP: {
+				dsp->runAudioFrame();
+				break;
+			}
 
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
@@ -376,4 +401,16 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 	dumpRomFSNode(*node, (const char*)&romFS[0], path);
 
 	return DumpingResult::Success;
+}
+
+void Emulator::setAudioEnabled(bool enable) {
+	if (!enable) {
+		audioDevice.stop();
+	} else if (enable && romType != ROMType::None && running) {
+		// Don't start the audio device yet if there's no ROM loaded or the emulator is paused
+		// Resume and Pause will handle it
+		audioDevice.start();
+	}
+
+	dsp->setAudioEnabled(enable);
 }

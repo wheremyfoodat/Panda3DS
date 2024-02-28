@@ -2,20 +2,24 @@ package com.panda3ds.pandroid.view;
 
 import static android.opengl.GLES32.*;
 
+import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
+import android.os.Handler;
 import android.util.Log;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import com.panda3ds.pandroid.AlberDriver;
+import com.panda3ds.pandroid.data.SMDH;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
+import com.panda3ds.pandroid.data.game.GameMetadata;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.utils.PerformanceMonitor;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
 import com.panda3ds.pandroid.view.renderer.layout.DefaultScreenLayout;
-import com.panda3ds.pandroid.data.SMDH;
-import com.panda3ds.pandroid.data.game.GameMetadata;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -25,9 +29,11 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 	private int screenWidth, screenHeight;
 	private int screenTexture;
 	public int screenFbo;
+	private final Context context;
 
-	PandaGlRenderer(String romPath) {
+	PandaGlRenderer(Context context, String romPath) {
 		super();
+		this.context = context;
 		this.romPath = romPath;
 
 		screenWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
@@ -40,8 +46,8 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		if (screenTexture != 0) {
 			glDeleteTextures(1, new int[] {screenTexture}, 0);
 		}
-		
-        if (screenFbo != 0) {
+
+		if (screenFbo != 0) {
 			glDeleteFramebuffers(1, new int[] {screenFbo}, 0);
 		}
 
@@ -84,7 +90,29 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 
 		AlberDriver.Initialize();
 		AlberDriver.setShaderJitEnabled(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
-		AlberDriver.LoadRom(romPath);
+
+		// If loading the ROM failed, display an error message and early exit
+		if (!AlberDriver.LoadRom(romPath)) {
+			// Get a handler that can be used to post to the main thread
+			Handler mainHandler = new Handler(context.getMainLooper());
+
+			Runnable runnable = new Runnable() {
+				@Override
+				public void run() {
+					AlertDialog.Builder builder = new AlertDialog.Builder(context);
+					builder.setTitle("Failed to load ROM")
+						.setMessage("Make sure it's a valid 3DS ROM and that storage permissions are configured properly.")
+						.setPositiveButton("OK", null)
+						.setCancelable(false)
+						.show();
+				}
+			};
+			mainHandler.post(runnable);
+
+			GameMetadata game = GameUtils.getCurrentGame();
+			GameUtils.removeGame(game);
+			return;
+		}
 
 		// Load the SMDH
 		byte[] smdhData = AlberDriver.GetSmdh();
@@ -93,12 +121,12 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		} else {
 			SMDH smdh = new SMDH(smdhData);
 			Log.i(Constants.LOG_TAG, "Loaded rom SDMH");
-			Log.i(Constants.LOG_TAG, String.format("Are you playing '%s' published by '%s'", smdh.getTitle(), smdh.getPublisher()));
+			Log.i(Constants.LOG_TAG, String.format("You are playing '%s' published by '%s'", smdh.getTitle(), smdh.getPublisher()));
 			GameMetadata game = GameUtils.getCurrentGame();
 			GameUtils.removeGame(game);
 			GameUtils.addGame(GameMetadata.applySMDH(game, smdh));
 		}
-    
+
 		PerformanceMonitor.initialize(getBackendName());
 	}
 

@@ -15,7 +15,6 @@ using namespace KernelMemoryTypes;
 
 Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks), config(config) {
 	fcram = new uint8_t[FCRAM_SIZE]();
-	dspRam = new uint8_t[DSP_RAM_SIZE]();
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
@@ -525,4 +524,14 @@ void Memory::copySharedFont(u8* pointer) {
 	auto fonts = cmrc::ConsoleFonts::get_filesystem();
 	auto font = fonts.open("CitraSharedFontUSRelocated.bin");
 	std::memcpy(pointer, font.begin(), font.size());
+}
+
+std::optional<u64> Memory::getProgramID() {
+	auto cxi = getCXI();
+
+	if (cxi) {
+		return cxi->programID;
+	}
+
+	return std::nullopt;
 }

@@ -39,11 +39,18 @@ public class FileUtils {
         return parseFile(path).getName();
     }
 
-    public static String getResourcesPath(){
+    public static String getResourcesPath() {
         File file = new File(getPrivatePath(), "config/resources");
         if (!file.exists()) {
             file.mkdirs();
         }
+
+        return file.getAbsolutePath();
+    }
+
+    public static String getResourcePath(String name) {
+        File file = new File(getResourcesPath(), name);
+        file.mkdirs();
 
         return file.getAbsolutePath();
     }
@@ -66,11 +73,33 @@ public class FileUtils {
         return file.getAbsolutePath();
     }
 
+    public static String parseNativeMode(String mode) {
+        mode = mode.toLowerCase();
+        switch (mode) {
+            case "r":
+            case "rb":
+                return "r";
+            case "r+":
+            case "r+b":
+            case "rb+":
+                return "rw";
+            case "w+":
+                return "rwt";
+            case "w":
+            case "wb":
+                return "wt";
+            case "wa":
+                return "wa";
+        }
+
+        throw new IllegalArgumentException("Invalid file mode: "+mode);
+    }
+
     public static boolean exists(String path) {
         return parseFile(path).exists();
     }
 
-    public static void rename(String path, String newName){
+    public static void rename(String path, String newName) {
         parseFile(path).renameTo(newName);
     }
 
@@ -206,7 +235,7 @@ public class FileUtils {
         }
     }
 
-    public static void updateFile(String path){
+    public static void updateFile(String path) {
         DocumentFile file = parseFile(path);
         Uri uri = file.getUri();
         
@@ -232,15 +261,53 @@ public class FileUtils {
         return parseFile(path).lastModified();
     }
 
-    public static String[] listFiles(String path){
+    public static String[] listFiles(String path) {
         DocumentFile folder = parseFile(path);
         DocumentFile[] files = folder.listFiles();
 
         String[] result = new String[files.length];
-        for (int i = 0; i < result.length; i++){
+        for (int i = 0; i < result.length; i++) {
             result[i] = files[i].getName();
         }
         
         return result;
+    }
+
+    public static Uri obtainUri(String path) {
+        return parseFile(path).getUri();
+    }
+
+    public static String extension(String uri) {
+        String name = getName(uri);
+        if (!name.contains(".")) {
+            return name.toLowerCase();
+        }
+        String[] parts = name.split("\\.");
+        
+        return parts[parts.length-1].toLowerCase();
+    }
+
+    public static boolean copyFile(String source, String path, String name) {
+        try {
+            String fullPath = path + "/" + name;
+            if (!FileUtils.exists(fullPath)) {
+                FileUtils.delete(fullPath);
+            }
+            FileUtils.createFile(path, name);
+            InputStream in = getInputStream(source);
+            OutputStream out = getOutputStream(fullPath);
+            byte[] buffer = new byte[1024 * 128]; //128 KB
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+            out.flush();
+            out.close();
+            in.close();
+        } catch (Exception e) {
+            Log.e(Constants.LOG_TAG, "ERROR ON COPY FILE", e);
+            return false;
+        }
+        return true;
     }
 }

@@ -2,7 +2,6 @@
 #include <string>
 
 #include "helpers.hpp"
-#include "memory.hpp"
 
 // The kinds of events that can cause a Lua call.
 // Frame: Call program on frame end
@@ -10,6 +9,8 @@
 enum class LuaEvent {
 	Frame,
 };
+
+class Emulator;
 
 #ifdef PANDA3DS_ENABLE_LUA
 extern "C" {
@@ -30,9 +31,9 @@ class LuaManager {
   public:
 	// For Lua we must have some global pointers to our emulator objects to use them in script code via thunks. See the thunks in lua.cpp as an
 	// example
-	static Memory* g_memory;
+	static Emulator* g_emulator;
 
-	LuaManager(Memory& mem) { g_memory = &mem; }
+	LuaManager(Emulator& emulator) { g_emulator = &emulator; }
 
 	void close();
 	void initialize();
@@ -51,7 +52,7 @@ class LuaManager {
 #else  // Lua not enabled, Lua manager does nothing
 class LuaManager {
   public:
-	LuaManager(Memory& mem) {}
+	LuaManager(Emulator& emulator) {}
 
 	void close() {}
 	void initialize() {}

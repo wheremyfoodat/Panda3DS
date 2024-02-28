@@ -123,10 +123,6 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
 }
 
 void GPUService::requestInterrupt(GPUInterrupt type) {
-	// HACK: Signal DSP events on GPU interrupt for now until we have the DSP since games need DSP events
-	// Maybe there's a better alternative?
-	kernel.signalDSPEvents();
-
 	if (sharedMem == nullptr) [[unlikely]] { // Shared memory hasn't been set up yet
 		return;
 	}
@@ -289,7 +285,7 @@ void GPUService::setBufferSwap(u32 messagePointer) {
 	info.displayFb = mem.read32(messagePointer + 28);  // Selects either framebuffer A or B
 
 	log("GSP::GPU::SetBufferSwap\n");
-	Helpers::panic("Untested GSP::GPU::SetBufferSwap call");
+	Helpers::warn("Untested GSP::GPU::SetBufferSwap call");
 
 	setBufferSwapImpl(screenId, info);
 	mem.write32(messagePointer, IPC::responseHeader(0x05, 1, 0));

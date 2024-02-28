@@ -12,6 +12,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatTextView;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 
 import com.google.android.material.navigation.NavigationView;
 import com.panda3ds.pandroid.AlberDriver;
@@ -46,8 +48,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         ((AppCompatTextView)view.findViewById(R.id.game_title)).setText(game.getTitle());
         ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
 
-        ((NavigationView)view.findViewById(R.id.action_navigation)).setNavigationItemSelectedListener(this);
-        ((NavigationView)view.findViewById(R.id.others_navigation)).setNavigationItemSelectedListener(this);
+        ((NavigationView)view.findViewById(R.id.menu)).setNavigationItemSelectedListener(this);
     }
 
     @Override
@@ -104,8 +105,11 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
             close();
         } else if (id == R.id.exit) {
             requireActivity().finish();
-        } else if (id == R.id.lua_script){
+        } else if (id == R.id.lua_script) {
             new LuaDialogFragment().show(getParentFragmentManager(), null);
+        } else if (id == R.id.change_orientation) {
+            boolean isLandscape = getResources().getDisplayMetrics().widthPixels > getResources().getDisplayMetrics().heightPixels;
+            requireActivity().setRequestedOrientation(isLandscape ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         }
 
         return false;

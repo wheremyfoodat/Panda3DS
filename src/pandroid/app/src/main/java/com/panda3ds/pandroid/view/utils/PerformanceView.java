@@ -34,7 +34,7 @@ public class PerformanceView extends AppCompatTextView {
         setShadowLayer(padding,0,0,Color.BLACK);
     }
 
-    public void refresh(){
+    public void refresh() {
         running = isShown();
         if (!running) {
             return;

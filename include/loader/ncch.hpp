@@ -36,6 +36,7 @@ struct NCCH {
 	};
 
 	u64 partitionIndex = 0;
+	u64 programID = 0;
 	u64 fileOffset = 0;
 
 	bool isNew3DS = false;

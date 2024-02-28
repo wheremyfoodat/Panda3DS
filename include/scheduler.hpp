@@ -10,7 +10,8 @@ struct Scheduler {
 	enum class EventType {
 		VBlank = 0,          // End of frame event
 		UpdateTimers = 1,    // Update kernel timer objects
-		Panic = 2,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
+		RunDSP = 2,          // Make the emulated DSP run for one audio frame
+		Panic = 3,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
 		TotalNumberOfEvents  // How many event types do we have in total?
 	};
 	static constexpr usize totalNumberOfEvents = static_cast<usize>(EventType::TotalNumberOfEvents);

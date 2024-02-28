@@ -45,8 +45,11 @@ jobs:
         git apply ./.github/gles.patch
         # Build the project with CMake
         cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
-        # Move the generated library to the appropriate location
+
+        # Strip the generated library and move it to the appropriate location
+        ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded ./build/libAlber.so
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/x86_64/
+
         # Build the Android app with Gradle
         cd src/pandroid
         ./gradlew assemble${{ env.BUILD_TYPE }}
@@ -97,8 +100,11 @@ jobs:
         git apply ./.github/gles.patch
         # Build the project with CMake
         cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
-        # Move the generated library to the appropriate location
+
+        # Strip the generated library and move it to the appropriate location
+        ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded ./build/libAlber.so
         mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/arm64-v8a/
+        
         # Build the Android app with Gradle
         cd src/pandroid
         ./gradlew assemble${{ env.BUILD_TYPE }}

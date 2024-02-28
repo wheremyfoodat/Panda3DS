@@ -37,7 +37,9 @@ public class ControllerMapperPreferences extends Fragment {
 
         currentProfile = ControllerProfileManager.get(getArguments().getString("profile")).clone();
 
-        ((BaseActivity) requireActivity()).getSupportActionBar().hide();
+        if (((BaseActivity)requireActivity()).getSupportActionBar() != null) {
+            ((BaseActivity) requireActivity()).getSupportActionBar().hide();
+        }
         mapper = view.findViewById(R.id.mapper);
         mapper.initialize(this::onLocationChanged, currentProfile);
 

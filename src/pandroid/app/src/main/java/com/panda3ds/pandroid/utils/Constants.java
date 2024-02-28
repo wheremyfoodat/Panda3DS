@@ -26,4 +26,6 @@ public class Constants {
     public static final String PREF_GAME_UTILS = "app.GameUtils";
     public static final String PREF_INPUT_MAP = "app.InputMap";
     public static final String PREF_SCREEN_CONTROLLER_PROFILES = "app.input.ScreenControllerManager";
+    public static final String RESOURCE_FOLDER_ELF = "ELF"; // Folder for caching ELF files
+    public static final String RESOURCE_FOLDER_LUA_SCRIPTS = "Lua Scripts";
 }

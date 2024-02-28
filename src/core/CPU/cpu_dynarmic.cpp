@@ -21,7 +21,6 @@ CPU::CPU(Memory& mem, Kernel& kernel, Emulator& emu) : mem(mem), emu(emu), sched
 void CPU::reset() {
 	setCPSR(CPSR::UserMode);
 	setFPSCR(FPSCR::MainThreadDefault);
-	env.totalTicks = 0;
 
 	cp15->reset();
 	cp15->setTLSBase(VirtualAddrs::TLSBase);  // Set cp15 TLS pointer to the main thread's thread-local storage

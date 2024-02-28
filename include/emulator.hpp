@@ -2,10 +2,13 @@
 
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <span>
 
 #include "PICA/gpu.hpp"
+#include "audio/dsp_core.hpp"
+#include "audio/miniaudio_device.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
@@ -41,9 +44,12 @@ class Emulator {
 	GPU gpu;
 	Memory memory;
 	Kernel kernel;
-	Crypto::AESEngine aesEngine;
-	Cheats cheats;
+	std::unique_ptr<Audio::DSPCore> dsp;
 	Scheduler scheduler;
+
+	Crypto::AESEngine aesEngine;
+	MiniAudioDevice audioDevice;
+	Cheats cheats;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
@@ -71,6 +77,7 @@ class Emulator {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	Discord::RPC discordRpc;
 #endif
+	void setAudioEnabled(bool enable);
 	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
@@ -128,6 +135,7 @@ class Emulator {
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
 	Scheduler& getScheduler() { return scheduler; }
+	Memory& getMemory() { return memory; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }

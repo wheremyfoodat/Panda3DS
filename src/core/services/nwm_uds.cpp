@@ -37,7 +37,8 @@ void NwmUdsService::initializeWithVersion(u32 messagePointer) {
 
 	initialized = true;
 
-	mem.write32(messagePointer + 4, Result::Success);
+	// Stubbed to fail temporarily, since some games will break trying to establish networks otherwise
+	mem.write32(messagePointer + 4, Result::FailurePlaceholder);
 	mem.write32(messagePointer + 8, 0);
 	mem.write32(messagePointer + 12, eventHandle.value());
 }

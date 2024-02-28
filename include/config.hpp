@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 
+#include "audio/dsp_core.hpp"
 #include "renderer.hpp"
 
 // Remember to initialize every field here to its default value otherwise bad things will happen
@@ -15,10 +16,14 @@ struct EmulatorConfig {
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
+	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Null;
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
 	bool usePortableBuild = false;
+
+	bool audioEnabled = false;
+	bool vsyncEnabled = true;
 
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer
