@@ -130,6 +130,7 @@ static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
 
 template <bool indexed, bool useShaderJIT>
 void GPU::drawArrays() {
+	return;
 	if constexpr (useShaderJIT) {
 		shaderJIT.prepare(shaderUnit.vs);
 	}
