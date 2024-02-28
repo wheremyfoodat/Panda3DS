@@ -60,6 +60,7 @@ class RendererGL final : public Renderer {
 
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
+	OpenGL::Program getSpecializedShader();
 
 	PICA::ShaderGen::FragmentGenerator fragShaderGen;
 

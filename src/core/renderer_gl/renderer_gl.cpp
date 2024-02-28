@@ -393,10 +393,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	std::string fs = fragShaderGen.generate(regs);
 	std::cout << fs << "\n\n\n";
 
-	OpenGL::Program program;
-	OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
-	OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
-	program.create({vertShader, fragShader});
+	OpenGL::Program program = getSpecializedShader();
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
@@ -785,6 +782,26 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 	// Otherwise create and cache a new buffer.
 	ColourBuffer sampleBuffer(addr, format, width, height);
 	return colourBufferCache.add(sampleBuffer);
+}
+
+OpenGL::Program RendererGL::getSpecializedShader() {
+	OpenGL::Program program;
+
+	std::string vs = fragShaderGen.getVertexShader(regs);
+	std::string fs = fragShaderGen.generate(regs);
+
+	OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
+	OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
+	program.create({vertShader, fragShader});
+	program.use();
+
+	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
+
+	return program;
 }
 
 void RendererGL::screenshot(const std::string& name) {
