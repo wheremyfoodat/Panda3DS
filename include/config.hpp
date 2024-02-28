@@ -16,7 +16,7 @@ struct EmulatorConfig {
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
-	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Lle;
+	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Teakra;
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
