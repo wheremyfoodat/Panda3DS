@@ -388,7 +388,15 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::TriangleFan,
 		OpenGL::Triangle,
 	};
-	std::cout << fragShaderGen.generate(regs);
+
+	std::string vs = fragShaderGen.getVertexShader(regs);
+	std::string fs = fragShaderGen.generate(regs);
+	std::cout << fs << "\n\n\n";
+
+	OpenGL::Program program;
+	OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
+	OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
+	program.create({vertShader, fragShader});
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();

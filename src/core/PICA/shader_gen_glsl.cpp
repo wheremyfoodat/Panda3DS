@@ -2,6 +2,69 @@
 using namespace PICA;
 using namespace PICA::ShaderGen;
 
+std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
+	std::string ret = "";
+
+	switch (api) {
+		case API::GL: ret += "#version 410 core"; break;
+		case API::GLES: ret += "#version 300 es"; break;
+		default: break;
+	}
+
+	ret += R"(
+		layout(location = 0) in vec4 a_coords;
+		layout(location = 1) in vec4 a_quaternion;
+		layout(location = 2) in vec4 a_vertexColour;
+		layout(location = 3) in vec2 a_texcoord0;
+		layout(location = 4) in vec2 a_texcoord1;
+		layout(location = 5) in float a_texcoord0_w;
+		layout(location = 6) in vec3 a_view;
+		layout(location = 7) in vec2 a_texcoord2;
+
+		out vec3 v_normal;
+		out vec3 v_tangent;
+		out vec3 v_bitangent;
+		out vec4 v_colour;
+		out vec3 v_texcoord0;
+		out vec2 v_texcoord1;
+		out vec3 v_view;
+		out vec2 v_texcoord2;
+		flat out vec4 v_textureEnvColor[6];
+		flat out vec4 v_textureEnvBufferColor;
+
+		//out float gl_ClipDistance[2];
+
+		vec4 abgr8888ToVec4(uint abgr) {
+			const float scale = 1.0 / 255.0;
+			return scale * vec4(float(abgr & 0xffu), float((abgr >> 8) & 0xffu), float((abgr >> 16) & 0xffu), float(abgr >> 24));
+		}
+
+		vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
+			vec3 u = q.xyz;
+			float s = q.w;
+			return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
+		}
+
+		void main() {
+			gl_Position = a_coords;
+			vec4 colourAbs = abs(a_vertexColour);
+			v_colour = min(colourAbs, vec4(1.f));
+
+			// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
+			v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
+			v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
+			v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+			v_view = a_view;
+
+			v_normal = normalize(rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), a_quaternion));
+			v_tangent = normalize(rotateVec3ByQuaternion(vec3(1.0, 0.0, 0.0), a_quaternion));
+			v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0, 1.0, 0.0), a_quaternion));
+		}
+)";
+
+	return ret;
+}
+
 std::string FragmentGenerator::generate(const PICARegs& regs) {
 	std::string ret = "";
 
@@ -54,13 +117,13 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 	)";
 
 	ret += R"(
-		vec3 colorOperand1 = vec3(0.0);
-		vec3 colorOperand2 = vec3(0.0);
-		vec3 colorOperand3 = vec3(0.0);
+		vec3 colorOp1 = vec3(0.0);
+		vec3 colorOp2 = vec3(0.0);
+		vec3 colorOp3 = vec3(0.0);
 
-		float alphaOperand1 = 0.0;
-		float alphaOperand2 = 0.0;
-		float alphaOperand3 = 0.0;
+		float alphaOp1 = 0.0;
+		float alphaOp2 = 0.0;
+		float alphaOp3 = 0.0;
 	)";
 
 	textureConfig = regs[InternalRegs::TexUnitCfg];
@@ -114,7 +177,7 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 			shader += ";\nalphaOp3 = ";
 			getAlphaOperand(shader, tev.alphaSource3, tev.alphaOperand3, stage);
 
-			shader += ";\nvec3 outputAlpha" + std::to_string(stage) + " = ";
+			shader += ";\nfloat outputAlpha" + std::to_string(stage) + " = ";
 			getAlphaOperation(shader, tev.alphaOp);
 			// Clamp the alpha value to [0.0, 1.0]
 			shader += ";\nclamp(outputAlpha" + std::to_string(stage) + ", 0.0, 1.0);\n";
