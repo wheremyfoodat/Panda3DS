@@ -10,16 +10,18 @@ import android.util.Log;
 import com.panda3ds.pandroid.app.GameActivity;
 import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.data.game.GameMetadata;
+import com.panda3ds.pandroid.data.game.GamesFolder;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
 public class GameUtils {
     private static final Bitmap DEFAULT_ICON = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888);
-    public static GsonConfigParser parser = new GsonConfigParser(Constants.PREF_GAME_UTILS);
+    private final static GsonConfigParser parser = new GsonConfigParser(Constants.PREF_GAME_UTILS);
 
     private static DataModel data;
 
@@ -27,10 +29,12 @@ public class GameUtils {
 
     public static void initialize() {
         data = parser.load(DataModel.class);
+        refreshFolders();
     }
 
     public static GameMetadata findByRomPath(String romPath) {
-        for (GameMetadata game : data.games) {
+        ArrayList<GameMetadata> games = getGames();
+        for (GameMetadata game : games) {
             if (Objects.equals(romPath, game.getRealPath())) {
                 return game;
             }
@@ -42,9 +46,7 @@ public class GameUtils {
         currentGame = game;
         String path = game.getRealPath();
         if (path.contains("://")) {
-            String[] parts = Uri.decode(game.getRomPath()).split("/");
-            String name = parts[parts.length - 1];
-            path = "game://internal/" + name;
+            path = "game://internal/" + FileUtils.getName(game.getRealPath());
         }
         
         context.startActivity(new Intent(context, GameActivity.class).putExtra(Constants.ACTIVITY_PARAMETER_PATH, path));
@@ -72,19 +74,39 @@ public class GameUtils {
 
         Uri uri = Uri.parse(path);
         switch (uri.getScheme().toLowerCase()) {
+            case "folder": {
+                return FileUtils.getChild(data.folders.get(uri.getAuthority()).getPath(), uri.getPathSegments().get(0));
+            }
             case "elf": {
-                return FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF)+"/"+uri.getAuthority();
+                return FileUtils.getResourcePath(Constants.RESOURCE_FOLDER_ELF) + "/" + uri.getAuthority();
             }
         }
-    
         return path;
     }
 
-    public static ArrayList<GameMetadata> getGames() {
-        return new ArrayList<>(data.games);
+    public static void refreshFolders() {
+        String[] keys = data.folders.keySet().toArray(new String[0]);
+        for (String key : keys) {
+            GamesFolder folder = data.folders.get(key);
+            if (!folder.isValid()){
+                data.folders.remove(key);
+            } else {
+                folder.refresh();
+            }
+        }
+        writeChanges();
     }
 
-    private static void writeChanges() {
+    public static ArrayList<GameMetadata> getGames() {
+        ArrayList<GameMetadata> games = new ArrayList<>();
+        games.addAll(data.games);
+        for (GamesFolder folder: data.folders.values()){
+            games.addAll(folder.getGames());
+        }
+        return games;
+    }
+
+    public static void writeChanges() {
         parser.save(data);
     }
 
@@ -117,7 +139,35 @@ public class GameUtils {
         return DEFAULT_ICON;
     }
 
+    public static GamesFolder[] getFolders() {
+        return data.folders.values().toArray(new GamesFolder[0]);
+    }
+
+    public static void registerFolder(String path) {
+        if (!data.folders.containsKey(path)){
+            GamesFolder folder = new GamesFolder(path);
+            data.folders.put(folder.getId(),folder);
+            folder.refresh();
+            writeChanges();
+        }
+    }
+
+    public static void removeFolder(GamesFolder folder) {
+        data.folders.remove(folder.getId());
+        writeChanges();
+    }
+
+    public static GameMetadata findGameById(String id) {
+        for (GameMetadata game: getGames()){
+            if (game.getId().equals(id)){
+                return game;
+            }
+        }
+        return null;
+    }
+
     private static class DataModel {
         public final List<GameMetadata> games = new ArrayList<>();
+        public final HashMap<String, GamesFolder> folders = new HashMap<>();
     }
 }

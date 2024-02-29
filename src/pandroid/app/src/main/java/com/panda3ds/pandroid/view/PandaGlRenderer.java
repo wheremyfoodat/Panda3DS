@@ -2,24 +2,27 @@ package com.panda3ds.pandroid.view;
 
 import static android.opengl.GLES32.*;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
 import android.os.Handler;
 import android.util.Log;
-import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
+
 import com.panda3ds.pandroid.AlberDriver;
+import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.base.BottomAlertDialog;
 import com.panda3ds.pandroid.data.SMDH;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.data.game.GameMetadata;
+import com.panda3ds.pandroid.utils.CompatUtils;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.utils.PerformanceMonitor;
+import com.panda3ds.pandroid.view.ds.DsLayoutManager;
 import com.panda3ds.pandroid.view.renderer.ConsoleRenderer;
 import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
-import com.panda3ds.pandroid.view.renderer.layout.DefaultScreenLayout;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -38,7 +41,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 
 		screenWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
 		screenHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
-		setLayout(new DefaultScreenLayout());
+		setLayout(DsLayoutManager.createLayout(0));
 	}
 
 	@Override
@@ -74,9 +77,9 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		glGenTextures(1, generateBuffer, 0);
 		screenTexture = generateBuffer[0];
 		glBindTexture(GL_TEXTURE_2D, screenTexture);
-		glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, screenWidth, screenHeight);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, Constants.N3DS_WIDTH, Constants.N3DS_FULL_HEIGHT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		glGenFramebuffers(1, generateBuffer, 0);
@@ -95,19 +98,17 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		if (!AlberDriver.LoadRom(romPath)) {
 			// Get a handler that can be used to post to the main thread
 			Handler mainHandler = new Handler(context.getMainLooper());
-
-			Runnable runnable = new Runnable() {
-				@Override
-				public void run() {
-					AlertDialog.Builder builder = new AlertDialog.Builder(context);
-					builder.setTitle("Failed to load ROM")
-						.setMessage("Make sure it's a valid 3DS ROM and that storage permissions are configured properly.")
-						.setPositiveButton("OK", null)
+			mainHandler.post(()-> {
+				new BottomAlertDialog(context)
+						.setTitle(R.string.failed_load_rom)
+						.setMessage(R.string.dialog_message_invalid_rom)
+						.setPositiveButton(android.R.string.ok, (dialog, witch) -> {
+							dialog.dismiss();
+							CompatUtils.findActivity(context).finishAndRemoveTask();
+						})
 						.setCancelable(false)
 						.show();
-				}
-			};
-			mainHandler.post(runnable);
+			});
 
 			GameMetadata game = GameUtils.getCurrentGame();
 			GameUtils.removeGame(game);
@@ -122,15 +123,16 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 			SMDH smdh = new SMDH(smdhData);
 			Log.i(Constants.LOG_TAG, "Loaded rom SDMH");
 			Log.i(Constants.LOG_TAG, String.format("You are playing '%s' published by '%s'", smdh.getTitle(), smdh.getPublisher()));
-			GameMetadata game = GameUtils.getCurrentGame();
-			GameUtils.removeGame(game);
-			GameUtils.addGame(GameMetadata.applySMDH(game, smdh));
+			GameUtils.getCurrentGame().applySMDH(smdh);
 		}
 
 		PerformanceMonitor.initialize(getBackendName());
 	}
 
 	public void onDrawFrame(GL10 unused) {
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		if (AlberDriver.HasRomLoaded()) {
 			AlberDriver.RunFrame(screenFbo);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

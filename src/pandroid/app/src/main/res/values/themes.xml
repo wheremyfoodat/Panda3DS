@@ -7,29 +7,20 @@
         <item name="preferenceTheme">@style/PreferenceTheme</item>
         <item name="android:statusBarColor">?colorSurface</item>
         <item name="android:windowLightStatusBar">?isLightTheme</item>
-
-        <item name="switchStyle">@style/SwitchStyle</item>
-        <item name="materialSwitchStyle">@style/SwitchStyle</item>
-        <item name="android:switchStyle">@style/SwitchStyle</item>
-    </style>
-
-    <style name="SwitchStyle" parent="Widget.Material3.CompoundButton.MaterialSwitch">
-        <item name="android:thumb">@drawable/switch_thumb</item>
-        <item name="android:track">@drawable/switch_track</item>
-        <item name="thumbRadius">0dp</item>
-        <item name="android:thumbOffset">0dp</item>
-        <item name="android:padding">0dp</item>
-        <item name="showText">false</item>
-        <item name="android:showText">false</item>
     </style>
 
     <style name="PreferenceTheme" parent="PreferenceThemeOverlay">
         <item name="preferenceFragmentCompatStyle">@style/PreferenceStyle</item>
+        <item name="switchPreferenceCompatStyle">@style/Preference.SwitchPreferenceCompat</item>
     </style>
 
     <style name="PreferenceStyle" parent="PreferenceFragment.Material">
         <item name="android:divider">?colorSurfaceVariant</item>
     </style>
+
+    <style name="Preference.SwitchPreferenceCompat" parent="Preference.SwitchPreferenceCompat.Material">
+        <item name="android:widgetLayout">@layout/material_switch_widget</item>
+   </style>
 
     <style name="AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <item name="android:windowBackground">@drawable/alert_dialog_background</item>

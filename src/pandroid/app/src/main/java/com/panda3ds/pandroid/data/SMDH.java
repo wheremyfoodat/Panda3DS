@@ -93,7 +93,7 @@ public class SMDH {
             smdh.position(META_OFFSET + (512 * i) + 0x80);
             data = new byte[0x100];
             smdh.get(data);
-            title[i] = convertString(data).replaceAll("\n", " ");
+            title[i] = convertString(data);
 
             smdh.position(META_OFFSET + (512 * i) + 0x180);
             data = new byte[0x80];

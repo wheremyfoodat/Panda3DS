@@ -31,6 +31,7 @@
         android:textColor="?colorOnSurface"
         android:text="@string/app_name"
         android:textStyle="bold"
+        android:textSize="14sp"
         android:gravity="center"
         android:layout_marginTop="10dp"/>
 

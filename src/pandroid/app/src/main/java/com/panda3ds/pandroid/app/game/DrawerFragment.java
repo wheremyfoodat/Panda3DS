@@ -1,6 +1,8 @@
 package com.panda3ds.pandroid.app.game;
 
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -13,7 +15,6 @@ import androidx.appcompat.widget.AppCompatTextView;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 
 import com.google.android.material.navigation.NavigationView;
 import com.panda3ds.pandroid.AlberDriver;
@@ -24,10 +25,14 @@ import com.panda3ds.pandroid.view.gamesgrid.GameIconView;
 
 public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListener, NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerContainer;
+    private View drawerLayout;
+    private EmulatorCallback emulator;
+    private GameMetadata game;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        emulator = ((EmulatorCallback) requireActivity());
         drawerContainer = requireActivity().findViewById(R.id.drawer_container);
         drawerContainer.removeDrawerListener(this);
         drawerContainer.addDrawerListener(this);
@@ -41,14 +46,22 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         drawerContainer.setVisibility(View.GONE);
-
-        GameMetadata game = GameUtils.getCurrentGame();
-
-        ((GameIconView)view.findViewById(R.id.game_icon)).setImageBitmap(game.getIcon());
-        ((AppCompatTextView)view.findViewById(R.id.game_title)).setText(game.getTitle());
-        ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
+        drawerLayout = view.findViewById(R.id.drawer_layout);
 
         ((NavigationView)view.findViewById(R.id.menu)).setNavigationItemSelectedListener(this);
+        refresh();
+    }
+
+    private void refresh(){
+        game = GameUtils.getCurrentGame();
+        if (game.getIcon() != null && !game.getIcon().isRecycled()) {
+            ((GameIconView) drawerLayout.findViewById(R.id.game_icon)).setImageBitmap(game.getIcon());
+        } else {
+            ((GameIconView) drawerLayout.findViewById(R.id.game_icon)).setImageDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+        ((AppCompatTextView)drawerLayout.findViewById(R.id.game_title)).setText(game.getTitle());
+        ((AppCompatTextView)drawerLayout.findViewById(R.id.game_publisher)).setText(game.getPublisher());
+
     }
 
     @Override
@@ -72,6 +85,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
             drawerContainer.setVisibility(View.VISIBLE);
             drawerContainer.open();
             drawerContainer.postDelayed(this::refreshLayout, 20);
+            refresh();
         }
     }
 
@@ -103,8 +117,11 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         int id = item.getItemId();
         if (id == R.id.resume) {
             close();
+        } else if (id == R.id.ds_switch) {
+            emulator.swapScreens();
+            close();
         } else if (id == R.id.exit) {
-            requireActivity().finish();
+            requireActivity().finishAndRemoveTask();
         } else if (id == R.id.lua_script) {
             new LuaDialogFragment().show(getParentFragmentManager(), null);
         } else if (id == R.id.change_orientation) {

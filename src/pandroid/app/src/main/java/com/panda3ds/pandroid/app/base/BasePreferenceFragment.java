@@ -7,7 +7,7 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
-import androidx.preference.SwitchPreference;
+import androidx.preference.SwitchPreferenceCompat;
 
 import com.panda3ds.pandroid.lang.Function;
 
@@ -20,6 +20,10 @@ public abstract class BasePreferenceFragment extends PreferenceFragmentCompat {
 			getPreferenceScreen().performClick();
 			return false;
 		});
+	}
+
+	protected void setSwitchValue(String id, boolean value){
+		((SwitchPreferenceCompat)findPreference(id)).setChecked(value);
 	}
 
 	protected void setActivityTitle(@StringRes int titleId) {

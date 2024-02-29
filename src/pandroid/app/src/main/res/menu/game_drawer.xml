@@ -11,6 +11,10 @@
                 android:icon="@drawable/ic_shortcut"
                 android:title="@string/resume" />
             <item
+                android:id="@+id/ds_switch"
+                android:icon="@drawable/ic_switch_screen"
+                android:title="@string/swap_screen"/>
+            <item
                 android:id="@+id/exit"
                 android:icon="@drawable/ic_exit"
                 android:title="@string/exit"/>

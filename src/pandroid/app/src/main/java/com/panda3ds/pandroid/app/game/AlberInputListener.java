@@ -11,8 +11,8 @@ import java.util.Objects;
 
 
 public class AlberInputListener implements Function<InputEvent> {
-	private final Runnable backListener;
-	public AlberInputListener(Runnable backListener) { this.backListener = backListener;  }
+	private final EmulatorCallback emulator;
+	public AlberInputListener(EmulatorCallback emulator) { this.emulator = emulator;  }
 
 	private final Vector2 axis = new Vector2(0.0f, 0.0f);
 
@@ -21,7 +21,7 @@ public class AlberInputListener implements Function<InputEvent> {
 		KeyName key = InputMap.relative(event.getName());
 
 		if (Objects.equals(event.getName(), "KEYCODE_BACK")) {
-			backListener.run();
+			emulator.onBackPressed();
 			return;
 		}
 
@@ -47,6 +47,11 @@ public class AlberInputListener implements Function<InputEvent> {
 			case AXIS_RIGHT:
 				axis.x = event.getValue();
 				axisChanged = true;
+				break;
+			case CHANGE_DS_LAYOUT:
+				if (!event.isDown()){
+					emulator.swapScreens();
+				}
 				break;
 			default:
 				if (event.isDown()) {

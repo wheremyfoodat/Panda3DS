@@ -15,9 +15,9 @@ import java.util.UUID;
 public class GameMetadata {
     private final String id;
     private final String romPath;
-    private final String title;
-    private final String publisher;
-    private final GameRegion[] regions;
+    private String title;
+    private String publisher;
+    private GameRegion[] regions;
     private transient Bitmap icon;
 
     private GameMetadata(String id, String romPath, String title, String publisher, Bitmap icon, GameRegion[] regions) {
@@ -60,7 +60,7 @@ public class GameMetadata {
     }
 
     public Bitmap getIcon() {
-        if (icon == null) {
+        if (icon == null || icon.isRecycled()) {
             icon = GameUtils.loadGameIcon(id);
         }
         return icon;
@@ -78,10 +78,15 @@ public class GameMetadata {
         return false;
     }
 
-    public static GameMetadata applySMDH(GameMetadata meta, SMDH smdh) {
+    public void applySMDH(SMDH smdh) {
         Bitmap icon = smdh.getBitmapIcon();
-        GameMetadata newMeta = new GameMetadata(meta.getId(), meta.getRomPath(), smdh.getTitle(), smdh.getPublisher(), icon, new GameRegion[]{smdh.getRegion()});
-        icon.recycle();
-        return newMeta;
+        this.title = smdh.getTitle();
+        this.publisher = smdh.getPublisher();
+        this.icon = icon;
+        if (icon != null){
+            GameUtils.setGameIcon(id, icon);
+        }
+        this.regions = new GameRegion[]{smdh.getRegion()};
+        GameUtils.writeChanges();
     }
 }
