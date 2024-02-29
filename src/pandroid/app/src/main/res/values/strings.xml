@@ -52,12 +52,16 @@
     <!-- Advanced Settings -->
     <string name="advanced_options">Advanced options</string>
     <string name="pref_advanced_summary">Logger, performance statistics, etc.</string>
+    <string name="display">Display</string>
     <string name="pref_performance_monitor_title">Performance monitor</string>
     <string name="pref_performance_monitor_summary">Show overlay with fps, memory, etc.</string>
-    <string name="pref_logger_service_title">Logger</string>
-    <string name="pref_logger_service_summary">Store application logs to file.</string>
+    <string name="pref_picture_in_picture_title">Picture In Picture</string>
+    <string name="pref_picture_in_picture_summary">Minimize window when placed in the background.</string>
+    <string name="graphics">Graphics</string>
     <string name="pref_shader_jit_title">Shader JIT</string>
     <string name="pref_shader_jit_summary">Use shader recompiler.</string>
-    <string name="graphics">Graphics</string>
+    <string name="debug">Debug</string>
+    <string name="pref_logger_service_title">Logger</string>
+    <string name="pref_logger_service_summary">Store application logs to file.</string>
     <string name="loading">Loading</string>
 </resources>

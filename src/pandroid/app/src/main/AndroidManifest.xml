@@ -31,7 +31,8 @@
         </activity>
         <activity
             android:name=".app.GameActivity"
-            android:configChanges="screenSize|screenLayout|orientation|density|uiMode">
+            android:supportsPictureInPicture="true"
+            android:configChanges="screenSize|screenLayout|smallestScreenSize|orientation|density|uiMode">
         </activity>
         <activity
             android:name=".app.editor.CodeEditorActivity"
