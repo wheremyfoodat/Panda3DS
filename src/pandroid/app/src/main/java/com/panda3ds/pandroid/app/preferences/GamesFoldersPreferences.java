@@ -17,6 +17,7 @@ import androidx.preference.PreferenceScreen;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.base.BasePreferenceFragment;
+import com.panda3ds.pandroid.app.base.BaseSheetDialog;
 import com.panda3ds.pandroid.data.game.GamesFolder;
 import com.panda3ds.pandroid.utils.FileUtils;
 import com.panda3ds.pandroid.utils.GameUtils;
@@ -34,13 +35,13 @@ public class GamesFoldersPreferences extends BasePreferenceFragment implements A
     }
 
     @SuppressLint("RestrictedApi")
-    private void refreshList(){
+    private void refreshList() {
         GamesFolder[] folders = GameUtils.getFolders();
         PreferenceScreen screen = getPreferenceScreen();
         screen.removeAll();
-        for (GamesFolder folder: folders){
+        for (GamesFolder folder : folders) {
             Preference preference = new Preference(screen.getContext());
-            preference.setOnPreferenceClickListener((item)-> {
+            preference.setOnPreferenceClickListener((item) -> {
                 showFolderInfo(folder);
                 screen.performClick();
                 return false;
@@ -62,12 +63,12 @@ public class GamesFoldersPreferences extends BasePreferenceFragment implements A
     }
 
     private void showFolderInfo(GamesFolder folder) {
-        BottomSheetDialog dialog = new BottomSheetDialog(requireActivity());
-        View layout = LayoutInflater.from(requireActivity()).inflate(R.layout.games_folder_about, null, false);
+        BaseSheetDialog dialog = new BaseSheetDialog(requireActivity());
+        View layout = LayoutInflater.from(requireActivity()).inflate(R.layout.dialog_games_folder, null, false);
         dialog.setContentView(layout);
 
         ((TextView) layout.findViewById(R.id.name)).setText(FileUtils.getName(folder.getPath()));
-        ((TextView) layout.findViewById(R.id.directory)).setText(folder.getPath());
+        ((TextView) layout.findViewById(R.id.directory)).setText(FileUtils.obtainUri(folder.getPath()).getPath());
         ((TextView) layout.findViewById(R.id.games)).setText(String.valueOf(folder.getGames().size()));
 
         layout.findViewById(R.id.ok).setOnClickListener(v -> dialog.dismiss());
@@ -83,7 +84,7 @@ public class GamesFoldersPreferences extends BasePreferenceFragment implements A
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (pickFolderRequest != null){
+        if (pickFolderRequest != null) {
             pickFolderRequest.unregister();
             pickFolderRequest = null;
         }
@@ -91,7 +92,7 @@ public class GamesFoldersPreferences extends BasePreferenceFragment implements A
 
     @Override
     public void onActivityResult(Uri result) {
-        if (result != null){
+        if (result != null) {
             FileUtils.makeUriPermanent(result.toString(), "r");
             GameUtils.registerFolder(result.toString());
             refreshList();

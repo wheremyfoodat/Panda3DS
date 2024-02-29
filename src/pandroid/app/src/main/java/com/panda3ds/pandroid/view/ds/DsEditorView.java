@@ -26,14 +26,14 @@ import androidx.appcompat.widget.AppCompatTextView;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.panda3ds.pandroid.R;
-import com.panda3ds.pandroid.math.Shape;
 import com.panda3ds.pandroid.math.Vector2;
+import com.panda3ds.pandroid.utils.CompatUtils;
 import com.panda3ds.pandroid.utils.Constants;
 
 public class DsEditorView extends FrameLayout {
 
-    private static final int COLOR_TOP_SELECTION = Color.RED;
-    private static final int COLOR_BOTTOM_SELECTION = Color.BLUE;
+    private final int COLOR_TOP_SELECTION;
+    private final int COLOR_BOTTOM_SELECTION;
     private final float SIZE_DP;
 
     private final Paint selectionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -53,8 +53,9 @@ public class DsEditorView extends FrameLayout {
     public DsEditorView(Context context, int index) {
         super(context);
         layout = (DsLayout) DsLayoutManager.createLayout(index);
-
-        SIZE_DP = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
+        SIZE_DP = CompatUtils.applyDimen(TypedValue.COMPLEX_UNIT_DIP, 1);
+        COLOR_BOTTOM_SELECTION = CompatUtils.resolveColor(context, androidx.appcompat.R.attr.colorPrimary);
+        COLOR_TOP_SELECTION = CompatUtils.resolveColor(context, com.google.android.material.R.attr.colorAccent);
 
         selectionPaint.setColor(COLOR_TOP_SELECTION);
         selectionPaint.setStrokeWidth(SIZE_DP * 2);
@@ -105,16 +106,11 @@ public class DsEditorView extends FrameLayout {
             });
         }
 
-        {
-            aspectRatioFixLayout = (LinearLayout) inflater.inflate(R.layout.ds_editor_lock_aspect, this, false);
-            ((MaterialCheckBox) aspectRatioFixLayout.findViewById(R.id.checkbox)).setOnCheckedChangeListener((buttonView, checked) -> {
-                layout.getCurrentModel().lockAspect = checked;
-                if (checked) {
-                    fixAspect();
-                }
-                refreshPoints();
-            });
-        }
+        aspectRatioFixLayout = (LinearLayout) inflater.inflate(R.layout.ds_editor_lock_aspect, this, false);
+        ((MaterialCheckBox) aspectRatioFixLayout.findViewById(R.id.checkbox)).setOnCheckedChangeListener((buttonView, checked) -> {
+            layout.getCurrentModel().lockAspect = checked;
+            refreshPoints();
+        });
 
         spacePoint = new PointView();
         spacePoint.setColor(Color.WHITE, COLOR_TOP_SELECTION);
@@ -136,11 +132,13 @@ public class DsEditorView extends FrameLayout {
         topDisplay = new PointView();
         topDisplay.setText(R.string.top_display);
         topDisplay.setOnTouchListener(new DisplayTouchEvent(true));
+        topDisplay.setTextColor(COLOR_TOP_SELECTION);
         topDisplay.setBackground(new SelectionDrawable(COLOR_TOP_SELECTION));
 
         bottomDisplay = new PointView();
         bottomDisplay.setText(R.string.bottom_display);
         bottomDisplay.setOnTouchListener(new DisplayTouchEvent(false));
+        bottomDisplay.setTextColor(COLOR_BOTTOM_SELECTION);
         bottomDisplay.setBackground(new SelectionDrawable(COLOR_BOTTOM_SELECTION));
 
         topDisplayResizer = new PointView();
@@ -164,16 +162,10 @@ public class DsEditorView extends FrameLayout {
         }
     }
 
-    private void fixAspect() {
-        Shape top = layout.getCurrentModel().preferredTop;
-        Shape bottom = layout.getCurrentModel().preferredBottom;
-
-        top.height = (int) (((float) top.width / Constants.N3DS_WIDTH) * Constants.N3DS_HALF_HEIGHT);
-        bottom.height = (int) (((float) bottom.width / (Constants.N3DS_WIDTH - 80)) * Constants.N3DS_HALF_HEIGHT);
-    }
-
     private void refreshPoints() {
         Model data = layout.getCurrentModel();
+        data.preferredTop.fixOverlay(width, height, (int) (SIZE_DP*5));
+        data.preferredBottom.fixOverlay(width, height, (int) (SIZE_DP*30));
         layout.update(width, height);
         Rect bottomDisplay = layout.getBottomDisplayBounds();
         Rect topDisplay = layout.getTopDisplayBounds();
@@ -193,9 +185,6 @@ public class DsEditorView extends FrameLayout {
             }
             break;
         }
-
-        data.preferredTop.maxSize((int) (SIZE_DP * 64), (int) (SIZE_DP * 64));
-        data.preferredBottom.maxSize((int) (SIZE_DP * 64), (int) (SIZE_DP * 64));
 
         this.topDisplay.setSize(topDisplay.width(), topDisplay.height());
         this.topDisplay.setPosition(topDisplay.left, topDisplay.top);
@@ -305,7 +294,6 @@ public class DsEditorView extends FrameLayout {
 
     private class DisplayTouchEvent implements OnTouchListener {
         private final boolean topScreen;
-        private final Vector2 inner = new Vector2(0, 0);
         private Vector2 downEvent = null;
 
         private DisplayTouchEvent(boolean topScreen) {
@@ -314,66 +302,39 @@ public class DsEditorView extends FrameLayout {
 
         @Override
         public boolean onTouch(View v, MotionEvent event) {
-            Shape preferred = topScreen ? layout.getCurrentModel().preferredTop : layout.getCurrentModel().preferredBottom;
-            if (layout.getCurrentModel().mode == Mode.ABSOLUTE) {
-                PointView point = (PointView) v;
-                if (event.getAction() != MotionEvent.ACTION_UP) {
-                    if (downEvent == null) {
-                        downEvent = new Vector2(event.getRawX(), event.getRawY());
-                        inner.set(point.x(), point.y());
-                        return true;
-                    }
-
-                    preferred.x = (int) ((event.getRawX() - downEvent.x) + inner.x);
-                    preferred.y = (int) ((event.getRawY() - downEvent.y) + inner.y);
-                    preferred.normalize();
-
-                    refreshPoints();
-
+            Bounds preferred = topScreen ? layout.getCurrentModel().preferredTop : layout.getCurrentModel().preferredBottom;
+            if (layout.getCurrentModel().mode == Mode.ABSOLUTE && event.getAction() != MotionEvent.ACTION_UP) {
+                if (downEvent == null) {
+                    downEvent = new Vector2(event.getRawX(), event.getRawY());
                     return true;
                 }
-
-                downEvent = null;
-                return false;
+                preferred.move((int) (event.getRawX() - downEvent.x), (int) (event.getRawY() - downEvent.y));
+                downEvent.set(event.getRawX(), event.getRawY());
+                refreshPoints();
+                return true;
             } else if (layout.getCurrentModel().mode == Mode.SINGLE && event.getAction() == MotionEvent.ACTION_UP) {
                 callOnClick();
             }
+            downEvent = null;
             return false;
         }
     }
 
     private class DisplayResizeTouchEvent implements OnTouchListener {
         private final boolean topScreen;
-        private final Vector2 size = new Vector2(0, 0);
-        private Vector2 downEvent = null;
-
         private DisplayResizeTouchEvent(boolean topScreen) {
             this.topScreen = topScreen;
         }
 
-
         @Override
         public boolean onTouch(View v, MotionEvent event) {
-            Shape preferred = topScreen ? layout.getCurrentModel().preferredTop : layout.getCurrentModel().preferredBottom;
+            Bounds preferred = topScreen ? layout.getCurrentModel().preferredTop : layout.getCurrentModel().preferredBottom;
             if (event.getAction() != MotionEvent.ACTION_UP) {
-                if (downEvent == null) {
-                    downEvent = new Vector2(event.getRawX(), event.getRawY());
-                    size.set(preferred.width, preferred.height);
-                    return true;
-                }
-
-                preferred.width = (int) (size.x + ((event.getRawX() - downEvent.x)));
-
-                if (layout.getCurrentModel().lockAspect) {
-                    fixAspect();
-                } else {
-                    preferred.height = (int) (size.y + ((event.getRawY() - downEvent.y)));
-                }
-                preferred.maxSize((int) (SIZE_DP * 32), (int) (SIZE_DP * 32));
+                preferred.right = (int) (width - (((PointView) v).x() + event.getX()));
+                preferred.bottom = (int) (height - (((PointView) v).y() + event.getY()));
                 refreshPoints();
                 return true;
             }
-            downEvent = null;
             return false;
         }
     }
@@ -389,7 +350,7 @@ public class DsEditorView extends FrameLayout {
         public void draw(Canvas canvas) {
             int color = this.getColor();
             selectionPaint.setColor(color);
-            solidPaint.setColor(Color.argb(50, Color.red(color), Color.green(color), Color.blue(color)));
+            solidPaint.setColor(Color.argb(65, Color.red(color), Color.green(color), Color.blue(color)));
             canvas.drawRect(this.getBounds(), solidPaint);
             canvas.drawRect(this.getBounds(), selectionPaint);
         }

@@ -5,14 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center|top"
-    android:padding="10dp"
-    android:background="@drawable/alert_dialog_background">
-
-    <View
-        android:layout_width="128dp"
-        android:layout_height="4dp"
-        android:background="?colorSurfaceVariant"
-        android:layout_margin="5dp"/>
+    android:padding="10dp">
 
     <androidx.appcompat.widget.AppCompatImageView
         android:layout_width="64dp"

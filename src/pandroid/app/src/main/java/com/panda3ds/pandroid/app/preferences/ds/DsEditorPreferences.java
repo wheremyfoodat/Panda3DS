@@ -24,6 +24,7 @@ public class DsEditorPreferences extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         layout = new LinearLayout(container.getContext());
+        layout.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_IMMERSIVE);
         return layout;
     }
 
@@ -34,12 +35,6 @@ public class DsEditorPreferences extends Fragment {
         layout.removeAllViews();
         layout.addView(editor = new DsEditorView(view.getContext(), index), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         ((BaseActivity)requireActivity()).getSupportActionBar().hide();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        requireActivity().getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE);
     }
 
     @Override

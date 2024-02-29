@@ -3,7 +3,6 @@ package com.panda3ds.pandroid.view.ds;
 import android.graphics.Rect;
 import android.view.Gravity;
 
-import com.panda3ds.pandroid.math.Shape;
 import com.panda3ds.pandroid.math.Vector2;
 import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
 
@@ -70,14 +69,13 @@ class DsLayout implements ConsoleLayout {
     }
 
     private void absolute(Model data) {
-        Shape top = data.preferredTop;
-        Shape bottom = data.preferredBottom;
-
-        top.normalize();
-        bottom.normalize();
-
-        topDisplay.set(top.x, top.y, top.x +top.width, top.y + top.height);
-        bottomDisplay.set(bottom.x, bottom.y, bottom.x +bottom.width, bottom.y + bottom.height);
+        if (data.lockAspect){
+            data.preferredTop.applyWithAspect(topDisplay, (int) screenSize.x, (double) sourceTop.y/sourceTop.x);
+            data.preferredBottom.applyWithAspect(bottomDisplay, (int) screenSize.x, (double) sourceBottom.y/sourceBottom.x);
+        } else {
+            data.preferredTop.apply(topDisplay, (int) screenSize.x, (int) screenSize.y);
+            data.preferredBottom.apply(bottomDisplay, (int) screenSize.x, (int) screenSize.y);
+        }
     }
 
     /**

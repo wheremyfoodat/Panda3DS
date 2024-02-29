@@ -21,7 +21,7 @@ import java.util.Objects;
 
 public class GameUtils {
     private static final Bitmap DEFAULT_ICON = Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888);
-    private static GsonConfigParser parser = new GsonConfigParser(Constants.PREF_GAME_UTILS);
+    private final static GsonConfigParser parser = new GsonConfigParser(Constants.PREF_GAME_UTILS);
 
     private static DataModel data;
 

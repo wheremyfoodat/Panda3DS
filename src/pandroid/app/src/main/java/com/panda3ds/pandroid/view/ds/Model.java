@@ -5,13 +5,12 @@ import android.view.Gravity;
 
 import androidx.annotation.NonNull;
 
-import com.panda3ds.pandroid.math.Shape;
 import com.panda3ds.pandroid.utils.Constants;
 
 class Model implements Cloneable {
     public Mode mode = Mode.RELATIVE;
-    public final Shape preferredTop = new Shape();
-    public final Shape preferredBottom = new Shape();
+    public final Bounds preferredTop = new Bounds();
+    public final Bounds preferredBottom = new Bounds();
     public boolean reverse = false;
     public boolean singleTop = true;
     public float space = 0.6f;

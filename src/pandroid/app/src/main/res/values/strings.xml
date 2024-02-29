@@ -83,4 +83,10 @@
     <string name="remove">Remove</string>
     <string name="play">Play</string>
     <string name="region">Region</string>
+    <string name="region_north_armerican">North American</string>
+    <string name="region_japan">Japan</string>
+    <string name="region_europe">Europe</string>
+    <string name="region_australia">Australia</string>
+    <string name="region_korean">Korean</string>
+    <string name="region_taiwan">Taiwan</string>
 </resources>

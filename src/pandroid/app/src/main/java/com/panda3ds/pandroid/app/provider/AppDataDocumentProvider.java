@@ -88,10 +88,14 @@ public class AppDataDocumentProvider extends DocumentsProvider {
     }
 
     private void includeFile(MatrixCursor cursor, File file) {
+        int flags = 0;
+        if (file.isFile()) {
+            flags = Document.FLAG_SUPPORTS_WRITE;
+        }
         cursor.newRow()
                 .add(Document.COLUMN_DOCUMENT_ID, obtainDocumentId(file))
                 .add(Document.COLUMN_MIME_TYPE, file.isDirectory() ? Document.MIME_TYPE_DIR : "application/octect-stream")
-                .add(Document.COLUMN_FLAGS, 0)
+                .add(Document.COLUMN_FLAGS, flags)
                 .add(Document.COLUMN_LAST_MODIFIED, file.lastModified())
                 .add(Document.COLUMN_DISPLAY_NAME, file.getName())
                 .add(Document.COLUMN_SIZE, file.length());

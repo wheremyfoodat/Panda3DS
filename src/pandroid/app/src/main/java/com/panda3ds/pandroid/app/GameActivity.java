@@ -127,6 +127,16 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 	}
 
 	@Override
+	public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode) {
+		super.onPictureInPictureModeChanged(isInPictureInPictureMode);
+	}
+
+	@Override
+	protected void onUserLeaveHint() {
+		super.onUserLeaveHint();
+	}
+
+	@Override
 	protected void onDestroy() {
 		if (AlberDriver.HasRomLoaded()) {
 			AlberDriver.Finalize();

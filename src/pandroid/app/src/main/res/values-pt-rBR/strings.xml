@@ -75,4 +75,14 @@
     <string name="pref_games_folders">Pastas de jogos</string>
     <string name="import_folder">Adicionar pasta</string>
     <string name="games_count_f">%d Jogos</string>
+    <string name="directory">Diretorio</string>
+    <string name="remove">Remover</string>
+    <string name="play">Jogar</string>
+    <string name="region">Região</string>
+    <string name="region_north_armerican">Estados Unidos</string>
+    <string name="region_japan">Japão</string>
+    <string name="region_europe">Europa</string>
+    <string name="region_australia">Australia</string>
+    <string name="region_korean">Coréia</string>
+    <string name="region_taiwan">Taiwan</string>
 </resources>

@@ -6,15 +6,8 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:gravity="top|center"
-    android:padding="10dp"
-    android:background="@drawable/alert_dialog_background">
+    android:padding="10dp">
 
-    <View
-        android:layout_width="128dp"
-        android:layout_height="4dp"
-        android:background="?colorSurfaceVariant"
-        android:layout_margin="5dp"/>
-    
     <com.google.android.material.card.MaterialCardView
         android:layout_width="128dp"
         android:layout_height="128dp"
@@ -111,9 +104,12 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/play"
+            android:paddingHorizontal="20dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/play"
+            android:textColor="?colorOnPrimary"
+            android:backgroundTint="?colorPrimary"
             app:icon="@drawable/ic_play"
             app:iconTint="?colorOnPrimary"/>
 

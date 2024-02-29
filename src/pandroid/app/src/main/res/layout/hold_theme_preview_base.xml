@@ -7,13 +7,13 @@
     android:paddingVertical="10dp"
     android:paddingHorizontal="20dp"
     android:foreground="@drawable/rounded_selectable_item_background"
-    android:gravity="center">
+    android:gravity="top|center">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/preview"
         android:layout_width="match_parent"
         app:strokeColor="?colorSurfaceVariant"
-        android:layout_height="150dp">
+        android:layout_height="125dp">
 
     </com.google.android.material.card.MaterialCardView>
 
@@ -23,6 +23,7 @@
         android:layout_height="wrap_content"
         android:textStyle="bold"
         android:textSize="16sp"
+        android:gravity="center"
         android:layout_margin="10dp"
         android:text="@string/app_name"/>
 

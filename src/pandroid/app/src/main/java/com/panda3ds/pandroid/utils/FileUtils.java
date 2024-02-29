@@ -24,7 +24,6 @@ import java.util.Objects;
 public class FileUtils {
     public static final String MODE_READ = "r";
     private static final String TREE_URI = "tree";
-    public static final int CANONICAL_SEARCH_DEEP = 8;
 
     private static DocumentFile parseFile(String path) {
         if (path.startsWith("/")) {
@@ -202,47 +201,6 @@ public class FileUtils {
         }
 
         getContext().getContentResolver().takePersistableUriPermission(Uri.parse(uri), flags);
-    }
-
-    /**
-     * When call ContentProvider.openFileDescriptor() android opens a file descriptor
-     * on app process in /proc/self/fd/[file descriptor id] this is a link to real file path
-     * can use File.getCanonicalPath() for get a link origin, but in some android version
-     * need use Os.readlink(path) to get a real path.
-     */
-    public static String obtainRealPath(String uri) {
-        try {
-            ParcelFileDescriptor parcelDescriptor = getContext().getContentResolver().openFileDescriptor(Uri.parse(uri), "r");
-            int fd = parcelDescriptor.getFd();
-            File file = new File("/proc/self/fd/" + fd).getAbsoluteFile();
-        
-            for (int i = 0; i < CANONICAL_SEARCH_DEEP; i++) {
-                try {
-                    String canonical = file.getCanonicalPath();
-                    if (!Objects.equals(canonical, file.getAbsolutePath())) {
-                        file = new File(canonical).getAbsoluteFile();
-                    }
-                } catch (Exception x) {
-                    break;
-                }
-            }
-
-            if (!file.getAbsolutePath().startsWith("/proc/self/")) {
-                parcelDescriptor.close();
-                return file.getAbsolutePath();
-            }
-
-            String path = Os.readlink(file.getAbsolutePath());
-            parcelDescriptor.close();
-
-            if (new File(path).exists()) {
-                return path;
-            }
-    
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     public static void updateFile(String path) {

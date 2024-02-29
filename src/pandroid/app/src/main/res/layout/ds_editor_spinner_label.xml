@@ -5,7 +5,8 @@
     android:layout_width="128dp"
     android:layout_height="35dp"
     android:paddingHorizontal="6dp"
-    android:textColor="?colorOnPrimary"
+    android:textColor="?colorOnSurfaceVariant"
+    android:background="?colorSurfaceVariant"
     android:textSize="14sp"
     android:gravity="start|center">
 </TextView>
