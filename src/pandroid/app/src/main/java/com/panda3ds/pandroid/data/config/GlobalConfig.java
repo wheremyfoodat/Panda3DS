@@ -23,6 +23,7 @@ public class GlobalConfig {
 
     public static final Key<Boolean> KEY_SHADER_JIT = new Key<>("emu.shader_jit", false);
     public static final Key<Boolean> KEY_SHOW_PERFORMANCE_OVERLAY = new Key<>("dev.performanceOverlay", false);
+    public static final Key<Boolean> KEY_PICTURE_IN_PICTURE = new Key<>("dev.pictureInPicture", false);
     public static final Key<Boolean> KEY_LOGGER_SERVICE = new Key<>("dev.loggerService", false);
     public static final Key<Integer> KEY_APP_THEME = new Key<>("app.theme", THEME_ANDROID);
     public static final Key<Boolean> KEY_SCREEN_GAMEPAD_VISIBLE = new Key<>("app.screen_gamepad.visible", true);

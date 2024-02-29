@@ -12,6 +12,10 @@ import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
+import android.app.PictureInPictureParams;
+import android.content.res.Configuration;
+import android.util.DisplayMetrics;
+import android.util.Rational;
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
@@ -80,10 +84,53 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		InputHandler.reset();
 		InputHandler.setMotionDeadZone(InputMap.getDeadZone());
 		InputHandler.setEventListener(inputListener);
+		if (GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE)) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+		if (!drawerFragment.isOpened()) {
+                    setPictureInPictureParams(new PictureInPictureParams.Builder().setAutoEnterEnabled(true).build());
+		   }
+		 }
+	      }
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
 			getTheme().applyStyle(R.style.GameActivityNavigationBar, true);
 		}
 	}
+
+	@Override
+        public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (isInPictureInPictureMode) {
+           findViewById(R.id.overlay_controller).setVisibility(View.GONE);
+        } else {
+	  if (GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE)) {
+            findViewById(R.id.overlay_controller).setVisibility(View.VISIBLE);
+	  }
+        }
+    }
+
+	@Override
+        public void onUserLeaveHint() {
+        super.onUserLeaveHint();
+	DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+
+        int widthPixels = displayMetrics.widthPixels;
+        int heightPixels = displayMetrics.heightPixels;
+
+        // Calculate aspect ratio
+        float aspectRatio = (float) widthPixels / (float) heightPixels;
+
+        if (GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE)) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+	if (!drawerFragment.isOpened()) {
+            Rational aspectRatioRational = new Rational(widthPixels, heightPixels);
+            PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder();
+            pipBuilder.setAspectRatio(aspectRatioRational);
+            enterPictureInPictureMode(pipBuilder.build());
+	  }
+       }
+     }
+  }
 
 	@Override
 	protected void onPause() {
