@@ -83,9 +83,10 @@ public class GameMetadata {
         this.title = smdh.getTitle();
         this.publisher = smdh.getPublisher();
         this.icon = icon;
-        if (icon != null){
+        if (icon != null) {
             GameUtils.setGameIcon(id, icon);
         }
+        
         this.regions = new GameRegion[]{smdh.getRegion()};
         GameUtils.writeChanges();
     }

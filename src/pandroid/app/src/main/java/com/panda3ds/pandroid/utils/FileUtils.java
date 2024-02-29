@@ -31,12 +31,13 @@ public class FileUtils {
         }
         Uri uri = Uri.parse(path);
         DocumentFile singleFile = DocumentFile.fromSingleUri(getContext(), uri);
-        if (singleFile.length() > 0 && singleFile.length() != 4096){
+        if (singleFile.length() > 0 && singleFile.length() != 4096) {
             return singleFile;
         }
-        if (uri.getScheme().equals("content") && uri.getPath().startsWith("/"+TREE_URI)){
+        if (uri.getScheme().equals("content") && uri.getPath().startsWith("/" + TREE_URI)) {
             return DocumentFile.fromTreeUri(getContext(), uri);
         }
+        
         return singleFile;
     }
 
@@ -264,22 +265,26 @@ public class FileUtils {
             FileUtils.createFile(path, name);
             InputStream in = getInputStream(source);
             OutputStream out = getOutputStream(fullPath);
-            byte[] buffer = new byte[1024 * 128]; //128 KB
+             // Make a 128KB temp buffer used for copying in chunks
+            byte[] buffer = new byte[1024 * 128];
             int length;
+
             while ((length = in.read(buffer)) != -1) {
                 out.write(buffer, 0, length);
             }
+
             out.flush();
             out.close();
             in.close();
         } catch (Exception e) {
-            Log.e(Constants.LOG_TAG, "ERROR ON COPY FILE", e);
+            Log.e(Constants.LOG_TAG, "Error while trying to copy file", e);
             return false;
         }
+
         return true;
     }
 
-    public static String getChild(String path, String name){
+    public static String getChild(String path, String name) {
         return parseFile(path).findFile(name).getUri().toString();
     }
 

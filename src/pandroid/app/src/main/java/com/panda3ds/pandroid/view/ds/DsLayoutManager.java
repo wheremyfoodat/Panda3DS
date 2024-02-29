@@ -10,7 +10,7 @@ public class DsLayoutManager {
 
     static {
         data = GlobalConfig.getExtra(GlobalConfig.KEY_DS_LAYOUTS, DataModel.class);
-        if (data.models.size() == 0){
+        if (data.models.size() == 0) {
             setupBasicModels();
         }
     }
@@ -26,24 +26,24 @@ public class DsLayoutManager {
         model3.mode = Mode.SINGLE;
         model3.onlyTop = true;
 
-        data.models.add(new Model[]{model1, model1.clone()});
-        data.models.add(new Model[]{model2, model2.clone()});
-        data.models.add(new Model[]{model3, model3.clone()});
+        data.models.add(new Model[] {model1, model1.clone()});
+        data.models.add(new Model[] {model2, model2.clone()});
+        data.models.add(new Model[] {model3, model3.clone()});
 
         save();
     }
 
-    public static synchronized void save(){
+    public static synchronized void save() {
         GlobalConfig.putExtra(GlobalConfig.KEY_DS_LAYOUTS, data);
     }
 
-    public static int getLayoutCount(){
+    public static int getLayoutCount() {
         return data.models.size();
     }
 
-    public static ConsoleLayout createLayout(int index){
-        index = Math.min(getLayoutCount()-1, index);
-        return new DsLayout(data.models.get(index)[0],data.models.get(index)[1]);
+    public static ConsoleLayout createLayout(int index) {
+        index = Math.min(getLayoutCount() - 1, index);
+        return new DsLayout(data.models.get(index)[0], data.models.get(index)[1]);
     }
 
     private static class DataModel {

@@ -29,7 +29,7 @@ public class GeneralPreferences extends BasePreferenceFragment {
         refresh();
     }
 
-    private void refresh(){
+    private void refresh() {
         setSwitchValue("behavior.pictureInPicture", GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE));
     }
 }

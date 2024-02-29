@@ -33,7 +33,7 @@ public class GsonConfigParser {
         new Task(()->{
             if (FileUtils.exists(getPath())) {
                 String src = FileUtils.readTextFile(getPath());
-                if(src != null && src.length() > 2){
+                if (src != null && src.length() > 2) {
                     content[0] = src;
                 }
             }

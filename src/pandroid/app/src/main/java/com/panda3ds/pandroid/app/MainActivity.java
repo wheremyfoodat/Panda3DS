@@ -31,11 +31,11 @@ public class MainActivity extends BaseActivity implements NavigationBarView.OnIt
 
 	@Override
 	public void onBackPressed() {
-		if (navigationBar.getSelectedItemId() != R.id.games){
+		if (navigationBar.getSelectedItemId() != R.id.games) {
 			navigationBar.setSelectedItemId(R.id.games);
-			return;
-		}
-		super.onBackPressed();
+		} else {
+		    super.onBackPressed();
+        }
 	}
 
 	@Override

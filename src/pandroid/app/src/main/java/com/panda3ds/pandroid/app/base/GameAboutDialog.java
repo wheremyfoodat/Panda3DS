@@ -61,14 +61,16 @@ public class GameAboutDialog extends BaseSheetDialog {
         }
     }
 
+    // Make a shortcut for a specific game
     private void makeShortcut() {
         Context context = CompatUtils.findActivity(getContext());
         ShortcutInfoCompat.Builder shortcut = new ShortcutInfoCompat.Builder(context, game.getId());
-        if (game.getIcon() != null){
+        if (game.getIcon() != null) {
             shortcut.setIcon(IconCompat.createWithAdaptiveBitmap(game.getIcon()));
         } else {
             shortcut.setIcon(IconCompat.createWithResource(getContext(), R.mipmap.ic_launcher));
         }
+
         shortcut.setActivity(new ComponentName(context, GameLauncher.class));
         shortcut.setLongLabel(game.getTitle());
         shortcut.setShortLabel(game.getTitle());
@@ -76,6 +78,6 @@ public class GameAboutDialog extends BaseSheetDialog {
         intent.setAction(Intent.ACTION_VIEW);
         intent.setData(new Uri.Builder().scheme("pandroid-game").authority(game.getId()).build());
         shortcut.setIntent(intent);
-        ShortcutManagerCompat.requestPinShortcut(context,shortcut.build(),null);
+        ShortcutManagerCompat.requestPinShortcut(context, shortcut.build(), null);
     }
 }

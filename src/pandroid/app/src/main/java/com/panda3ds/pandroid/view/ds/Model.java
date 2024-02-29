@@ -22,7 +22,7 @@ class Model implements Cloneable {
     public Model clone() {
         try {
             return (Model) super.clone();
-        } catch (Exception e){
+        } catch (Exception e) {
             Log.e(Constants.LOG_TAG, "Error on clone DsModel!", e);
             return new Model();
         }

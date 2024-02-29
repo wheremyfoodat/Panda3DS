@@ -20,13 +20,14 @@ public class ScreenLayoutsPreference extends BasePreferenceFragment {
         refresh();
     }
 
-    public void refresh(){
+    public void refresh() {
         PreferenceScreen screen = getPreferenceScreen();
         screen.removeAll();
-        for (int i = 0; i < DsLayoutManager.getLayoutCount(); i++){
+
+        for (int i = 0; i < DsLayoutManager.getLayoutCount(); i++) {
             Preference pref = new Preference(getPreferenceScreen().getContext());
             pref.setIconSpaceReserved(false);
-            pref.setTitle("Layout "+(i+1));
+            pref.setTitle("Layout "+ (i + 1));
             pref.setSummary(R.string.click_to_change);
             pref.setIcon(R.drawable.ic_edit);
             pref.setKey(String.valueOf(i));

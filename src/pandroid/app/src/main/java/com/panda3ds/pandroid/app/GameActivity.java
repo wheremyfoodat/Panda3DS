@@ -76,7 +76,7 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		swapScreens(GlobalConfig.get(GlobalConfig.KEY_CURRENT_DS_LAYOUT));
 	}
 
-	private void changeOverlayVisibility(boolean visible){
+	private void changeOverlayVisibility(boolean visible) {
 		findViewById(R.id.overlay_controller).setVisibility(visible ? View.VISIBLE : View.GONE);
 		findViewById(R.id.overlay_controller).invalidate();
 		findViewById(R.id.overlay_controller).requestLayout();
@@ -95,13 +95,14 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		}
 	}
 
-	private void goToPictureInPicture() {
+	private void enablePIP() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder();
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 				builder.setAutoEnterEnabled(true);
 				builder.setSeamlessResizeEnabled(true);
 			}
+
 			builder.setAspectRatio(new Rational(10, 14));
 			enterPictureInPictureMode(builder.build());
 		}
@@ -114,7 +115,7 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		InputHandler.reset();
 		if (GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE)) {
 			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
-				goToPictureInPicture();
+				enablePIP();
 			}
 		} else {
 			drawerFragment.open();
@@ -142,7 +143,7 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 	@Override
 	public void swapScreens(int index) {
 		currentDsLayout = index;
-		GlobalConfig.set(GlobalConfig.KEY_CURRENT_DS_LAYOUT,index);
+		GlobalConfig.set(GlobalConfig.KEY_CURRENT_DS_LAYOUT, index);
 		renderer.setLayout(DsLayoutManager.createLayout(currentDsLayout));
 	}
 
@@ -158,11 +159,13 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 	@Override
 	public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode) {
 		super.onPictureInPictureModeChanged(isInPictureInPictureMode);
+
 		changeOverlayVisibility(!isInPictureInPictureMode && GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE));
 		findViewById(R.id.hide_screen_controller).setVisibility(isInPictureInPictureMode ? View.INVISIBLE : View.VISIBLE);
-		if (isInPictureInPictureMode){
+		
+        if (isInPictureInPictureMode) {
 			getWindow().getDecorView().postDelayed(drawerFragment::close, 250);
-		} else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S){
+		} else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
 			ActivityManager manager = ((ActivityManager) getSystemService(ACTIVITY_SERVICE));
 			manager.getAppTasks().forEach(ActivityManager.AppTask::moveToFront);
 		}
@@ -173,6 +176,7 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		if (AlberDriver.HasRomLoaded()) {
 			AlberDriver.Finalize();
 		}
+
 		super.onDestroy();
 	}
 }

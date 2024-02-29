@@ -18,11 +18,15 @@ public class BaseSheetDialog extends BottomSheetDialog {
     private final LinearLayout contentView;
     public BaseSheetDialog(@NonNull Context context) {
         super(CompatUtils.findActivity(context));
+
         int width = CompatUtils.findActivity(context).getWindow().getDecorView().getMeasuredWidth();
         int height = CompatUtils.findActivity(context).getWindow().getDecorView().getMeasuredHeight();
-        getBehavior().setPeekHeight((int) (height*0.87));
+        float heightScale = 0.87f; // What percentage of the screen's height to use up
+
+        getBehavior().setPeekHeight((int) (height * heightScale));
+        getBehavior().setMaxHeight((int) (height * heightScale));
         getBehavior().setMaxWidth(width);
-        getBehavior().setMaxHeight((int) (height*0.87));
+        
         super.setContentView(R.layout.dialog_bottom_sheet);
         contentView = super.findViewById(R.id.content);
     }

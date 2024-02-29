@@ -21,17 +21,19 @@ public class GameLauncher extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(new TextView(this));
         Uri uri = getIntent().getData();
-        if(uri != null && uri.getScheme().equals("pandroid-game")){
+        if (uri != null && uri.getScheme().equals("pandroid-game")) {
             String gameId = uri.getAuthority();
             GameMetadata game = GameUtils.findGameById(gameId);
-            if (game != null){
+
+            if (game != null) {
                 GameUtils.launch(this, game);
             } else {
-                Toast.makeText(this, R.string.invalid_game,Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.invalid_game, Toast.LENGTH_LONG).show();
                 ShortcutManagerCompat.removeDynamicShortcuts(this, Arrays.asList(gameId));
                 ShortcutManagerCompat.removeLongLivedShortcuts(this, Arrays.asList(gameId));
             }
         }
+        
         finish();
     }
 }

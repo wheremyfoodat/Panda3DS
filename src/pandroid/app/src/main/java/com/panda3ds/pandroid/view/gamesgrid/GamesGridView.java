@@ -41,7 +41,7 @@ public class GamesGridView extends RecyclerView {
     }
 
     private void onLongClickGame(GameMetadata game) {
-        if (longClickListener != null){
+        if (longClickListener != null) {
             longClickListener.run(game);
         }
     }

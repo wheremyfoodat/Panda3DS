@@ -49,7 +49,7 @@ public class AlberInputListener implements Function<InputEvent> {
 				axisChanged = true;
 				break;
 			case CHANGE_DS_LAYOUT:
-				if (!event.isDown()){
+				if (!event.isDown()) {
 					emulator.swapScreens();
 				}
 				break;

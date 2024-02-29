@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.UUID;
 
 public class GamesFolder {
-
     private final String id = UUID.randomUUID().toString();
     private final String path;
     private final HashMap<String, GameMetadata> games = new HashMap<>();
@@ -21,7 +20,7 @@ public class GamesFolder {
         this.path = path;
     }
 
-    public boolean isValid(){
+    public boolean isValid() {
         return FileUtils.exists(path);
     }
 
@@ -39,22 +38,24 @@ public class GamesFolder {
 
     public void refresh() {
         String[] gamesId = games.keySet().toArray(new String[0]);
-        for (String file: gamesId){
-            if (!FileUtils.exists(path+"/"+file)){
+        for (String file: gamesId) {
+            if (!FileUtils.exists(path + "/" + file)) {
                 games.remove(file);
             }
         }
+        
         String unknown = PandroidApplication.getAppContext().getString(R.string.unknown);
 
-        for (String file: FileUtils.listFiles(path)){
+        for (String file: FileUtils.listFiles(path)) {
             String path = FileUtils.getChild(this.path, file);
-            if (FileUtils.isDirectory(path) || games.containsKey(file)){
+            if (FileUtils.isDirectory(path) || games.containsKey(file)) {
                 continue;
             }
+
             String ext = FileUtils.extension(path);
-            if (ext.equals("3ds") || ext.equals("3dsx")){
+            if (ext.equals("3ds") || ext.equals("3dsx") || ext.equals("cci") || ext.equals("cxi") || ext.equals("app") || ext.equals("ncch")) {
                 String name = FileUtils.getName(path).trim().split("\\.")[0];
-                games.put(file, new GameMetadata(new Uri.Builder().path(file).authority(id).scheme("folder").build().toString(),name, unknown));
+                games.put(file, new GameMetadata(new Uri.Builder().path(file).authority(id).scheme("folder").build().toString(), name, unknown));
             }
         }
     }

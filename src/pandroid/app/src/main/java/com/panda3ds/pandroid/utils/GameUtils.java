@@ -88,7 +88,7 @@ public class GameUtils {
         String[] keys = data.folders.keySet().toArray(new String[0]);
         for (String key : keys) {
             GamesFolder folder = data.folders.get(key);
-            if (!folder.isValid()){
+            if (!folder.isValid()) {
                 data.folders.remove(key);
             } else {
                 folder.refresh();
@@ -100,7 +100,7 @@ public class GameUtils {
     public static ArrayList<GameMetadata> getGames() {
         ArrayList<GameMetadata> games = new ArrayList<>();
         games.addAll(data.games);
-        for (GamesFolder folder: data.folders.values()){
+        for (GamesFolder folder: data.folders.values()) {
             games.addAll(folder.getGames());
         }
         return games;
@@ -144,9 +144,9 @@ public class GameUtils {
     }
 
     public static void registerFolder(String path) {
-        if (!data.folders.containsKey(path)){
+        if (!data.folders.containsKey(path)) {
             GamesFolder folder = new GamesFolder(path);
-            data.folders.put(folder.getId(),folder);
+            data.folders.put(folder.getId(), folder);
             folder.refresh();
             writeChanges();
         }
@@ -158,11 +158,12 @@ public class GameUtils {
     }
 
     public static GameMetadata findGameById(String id) {
-        for (GameMetadata game: getGames()){
-            if (game.getId().equals(id)){
+        for (GameMetadata game: getGames()) {
+            if (game.getId().equals(id)) {
                 return game;
             }
         }
+        
         return null;
     }
 

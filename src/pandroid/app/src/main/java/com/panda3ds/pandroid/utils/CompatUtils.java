@@ -19,21 +19,22 @@ public class CompatUtils {
         } else if ((context instanceof ContextWrapper)) {
             return findActivity(((ContextWrapper) context).getBaseContext());
         }
+
         return ((Activity) context);
     }
 
-    public static int resolveColor(Context context, @AttrRes int id){
+    public static int resolveColor(Context context, @AttrRes int id) {
         try {
             TypedArray values = context.obtainStyledAttributes(new int[]{id});
             int color = values.getColor(0, Color.RED);
             values.recycle();
             return color;
-        } catch (Exception e){
+        } catch (Exception e) {
             return Color.rgb(255,0,255);
         }
     }
 
-    public static float applyDimen(int unit, int size) {
+    public static float applyDimensions(int unit, int size) {
         return TypedValue.applyDimension(unit, size, PandroidApplication.getAppContext().getResources().getDisplayMetrics());
     }
 }

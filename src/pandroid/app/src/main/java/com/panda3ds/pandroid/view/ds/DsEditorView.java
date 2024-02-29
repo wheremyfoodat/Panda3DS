@@ -51,13 +51,13 @@ public class DsEditorView extends FrameLayout {
     public DsEditorView(Context context, int index) {
         super(context);
         layout = (DsLayout) DsLayoutManager.createLayout(index);
-        SIZE_DP = CompatUtils.applyDimen(TypedValue.COMPLEX_UNIT_DIP, 1);
+        SIZE_DP = CompatUtils.applyDimensions(TypedValue.COMPLEX_UNIT_DIP, 1);
         int colorBottomSelection = CompatUtils.resolveColor(context, androidx.appcompat.R.attr.colorPrimary);
         int colorTopSelection = CompatUtils.resolveColor(context, com.google.android.material.R.attr.colorAccent);
 
         selectionPaint.setColor(colorTopSelection);
         selectionPaint.setStrokeWidth(SIZE_DP * 2);
-        selectionPaint.setPathEffect(new DashPathEffect(new float[]{SIZE_DP * 10, SIZE_DP * 10}, 0.0f));
+        selectionPaint.setPathEffect(new DashPathEffect(new float[] { SIZE_DP * 10, SIZE_DP * 10 }, 0.0f));
         selectionPaint.setStyle(Paint.Style.STROKE);
 
         layout.setTopDisplaySourceSize(Constants.N3DS_WIDTH, Constants.N3DS_HALF_HEIGHT);
@@ -71,14 +71,17 @@ public class DsEditorView extends FrameLayout {
             layout.getCurrentModel().gravity = Gravity.TOP;
             refreshLayout();
         });
+
         gravityAnchor.findViewById(R.id.center).setOnClickListener(v -> {
             layout.getCurrentModel().gravity = Gravity.CENTER;
             refreshLayout();
         });
+        
         gravityAnchor.findViewById(R.id.down).setOnClickListener(v -> {
             layout.getCurrentModel().gravity = Gravity.BOTTOM;
             refreshLayout();
         });
+        
         gravityAnchor.findViewById(R.id.revert).setOnClickListener(v -> {
             layout.getCurrentModel().reverse = !layout.getCurrentModel().reverse;
             refreshLayout();
@@ -87,7 +90,7 @@ public class DsEditorView extends FrameLayout {
         {
             modeSelectorLayout = (LinearLayout) inflater.inflate(R.layout.ds_editor_spinner, this, false);
             ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(getContext(), R.layout.ds_editor_spinner_label);
-            spinnerAdapter.addAll("SINGLE", "RELATIVE", "ABSOLUTE");
+            spinnerAdapter.addAll("Single", "Relative", "Absolute");
             modeSelector = modeSelectorLayout.findViewById(R.id.spinner);
             modeSelector.setAdapter(spinnerAdapter);
             modeSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -149,6 +152,7 @@ public class DsEditorView extends FrameLayout {
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
+
         if (this.width != getWidth() || this.height != getHeight()) {
             this.width = getWidth();
             this.height = getHeight();
@@ -172,12 +176,12 @@ public class DsEditorView extends FrameLayout {
                     spacePoint.setCenterPosition(primaryDisplay.width(), (int) (SIZE_DP * 15));
                     spacePoint.setText(String.valueOf((int) (data.space * 100)));
                 }
+                
+                break;
             }
-            break;
+
             case SINGLE:
-            case ABSOLUTE: {
-            }
-            break;
+            case ABSOLUTE: break;
         }
 
         this.topDisplay.setSize(topDisplay.width(), topDisplay.height());
@@ -212,18 +216,22 @@ public class DsEditorView extends FrameLayout {
                 if (landscape) {
                     addView(spacePoint);
                 }
+
+                break;
             }
-            break;
+            
             case ABSOLUTE: {
                 addView(aspectRatioFixLayout, new LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER | Gravity.TOP));
                 addView(topDisplayResizer);
                 addView(bottomDisplayResizer);
+
+                break;
             }
-            break;
+
             case SINGLE: {
                 addView(aspectRatioFixLayout, new LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER | Gravity.TOP));
+                break;
             }
-            break;
         }
         ((MaterialCheckBox) aspectRatioFixLayout.findViewById(R.id.checkbox)).setChecked(layout.getCurrentModel().lockAspect);
 
@@ -233,7 +241,6 @@ public class DsEditorView extends FrameLayout {
     }
 
     private class PointView extends AppCompatTextView {
-
         public PointView() {
             super(DsEditorView.this.getContext());
             setLayoutParams(new FrameLayout.LayoutParams((int) (SIZE_DP * 30), (int) (SIZE_DP * 30)));
@@ -302,6 +309,7 @@ public class DsEditorView extends FrameLayout {
                     downEvent = new Vector2(event.getRawX(), event.getRawY());
                     return true;
                 }
+
                 preferred.move((int) (event.getRawX() - downEvent.x), (int) (event.getRawY() - downEvent.y));
                 downEvent.set(event.getRawX(), event.getRawY());
                 refreshPoints();
@@ -330,6 +338,7 @@ public class DsEditorView extends FrameLayout {
                 refreshPoints();
                 return true;
             }
+            
             return false;
         }
     }

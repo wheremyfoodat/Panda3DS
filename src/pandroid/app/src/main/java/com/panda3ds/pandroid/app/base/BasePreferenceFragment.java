@@ -22,7 +22,7 @@ public abstract class BasePreferenceFragment extends PreferenceFragmentCompat {
 		});
 	}
 
-	protected void setSwitchValue(String id, boolean value){
+	protected void setSwitchValue(String id, boolean value) {
 		((SwitchPreferenceCompat)findPreference(id)).setChecked(value);
 	}
 

@@ -102,12 +102,7 @@ class DsLayout implements ConsoleLayout {
         (data.onlyTop ? bottomDisplay : topDisplay).set(0, 0, 0, 0);
     }
 
-
-    /***
-     * RELATIVE LAYOUT:
-     * ORGANIZE SCREEN IN POSITION BASED IN GRAVITY
-     * AND SPACE, THE SPACE DETERMINE LANDSCAPE TOP SCREEN SIZE
-     */
+    // Relative layout: Organize screen position based on gravity and space, the space determined by the top screen size in landscape mode
     private void relative(Model data) {
         int screenWidth = (int) screenSize.x;
         int screenHeight = (int) screenSize.y;
@@ -144,13 +139,14 @@ class DsLayout implements ConsoleLayout {
                 case Gravity.CENTER: {
                     bottomDisplay.offset(0, (screenHeight - bottomDisplay.height()) / 2);
                     topDisplay.offset(0, (screenHeight - topDisplay.height()) / 2);
+                    break;
                 }
-                break;
+
                 case Gravity.BOTTOM: {
                     bottomDisplay.offset(0, (screenHeight - bottomDisplay.height()));
                     topDisplay.offset(0, (screenHeight - topDisplay.height()));
+                    break;
                 }
-                break;
             }
 
         } else {

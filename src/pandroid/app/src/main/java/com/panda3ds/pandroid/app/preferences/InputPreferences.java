@@ -80,7 +80,7 @@ public class InputPreferences extends BasePreferenceFragment {
     @SuppressLint("RestrictedApi")
     private void refreshScreenProfileList() {
         PreferenceCategory category = findPreference(ID_GAMEPAD_PROFILE_LIST);
-        Preference add = category.getPreference(category.getPreferenceCount() - 1);
+        Preference pref = category.getPreference(category.getPreferenceCount() - 1);
         category.removeAll();
         category.setOrderingAsAdded(true);
 
@@ -97,8 +97,8 @@ public class InputPreferences extends BasePreferenceFragment {
             category.addPreference(item);
         }
 
-        add.setOrder(category.getPreferenceCount());
-        category.addPreference(add);
+        pref.setOrder(category.getPreferenceCount());
+        category.addPreference(pref);
     }
 
     @Override

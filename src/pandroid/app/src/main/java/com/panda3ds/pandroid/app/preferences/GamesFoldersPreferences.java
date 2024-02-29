@@ -51,14 +51,14 @@ public class GamesFoldersPreferences extends BasePreferenceFragment implements A
             screen.addPreference(preference);
         }
 
-        Preference add = new Preference(screen.getContext());
-        add.setTitle(R.string.import_folder);
-        add.setIcon(R.drawable.ic_add);
-        add.setOnPreferenceClickListener(preference -> {
+        Preference pref = new Preference(screen.getContext());
+        pref.setTitle(R.string.import_folder);
+        pref.setIcon(R.drawable.ic_add);
+        pref.setOnPreferenceClickListener(preference -> {
             pickFolderRequest.launch(null);
             return false;
         });
-        screen.addPreference(add);
+        screen.addPreference(pref);
     }
 
     private void showFolderInfo(GamesFolder folder) {
@@ -83,6 +83,7 @@ public class GamesFoldersPreferences extends BasePreferenceFragment implements A
     @Override
     public void onDestroy() {
         super.onDestroy();
+        
         if (pickFolderRequest != null) {
             pickFolderRequest.unregister();
             pickFolderRequest = null;

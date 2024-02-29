@@ -60,17 +60,19 @@ public class GlobalConfig {
         writeChanges();
     }
 
-    public static <T extends Object> T getExtra(Key<String> key, Class<T> dataClass){
-        if (data.extras.has(key.name)){
+    public static <T extends Object> T getExtra(Key<String> key, Class<T> dataClass) {
+        if (data.extras.has(key.name)) {
             return gson.fromJson(data.extras.getAsJsonObject(key.name), dataClass);
         }
+
         return gson.fromJson("{}", dataClass);
     }
 
-    public static synchronized void putExtra(Key<String> key, Object value){
-        if (data.extras.has(key.name)){
+    public static synchronized void putExtra(Key<String> key, Object value) {
+        if (data.extras.has(key.name)) {
             data.extras.remove(key.name);
         }
+    
         data.extras.add(key.name, gson.toJsonTree(value));
         writeChanges();
     }

@@ -79,6 +79,7 @@ public class AppDataDocumentProvider extends DocumentsProvider {
                 .add(Root.COLUMN_TITLE, context().getString(R.string.app_name))
                 .add(Root.COLUMN_MIME_TYPES, "*/*")
                 .add(Root.COLUMN_ICON, R.mipmap.ic_launcher);
+
         return cursor;
     }
 
@@ -87,6 +88,7 @@ public class AppDataDocumentProvider extends DocumentsProvider {
         File file = obtainFile(documentId);
         MatrixCursor cursor = new MatrixCursor(projection == null ? DEFAULT_DOCUMENT_PROJECTION : projection);
         includeFile(cursor, file);
+        
         return cursor;
     }
 
@@ -125,20 +127,20 @@ public class AppDataDocumentProvider extends DocumentsProvider {
     public String createDocument(String parentDocumentId, String mimeType, String displayName) throws FileNotFoundException {
         File parent = obtainFile(parentDocumentId);
         File file = new File(parent, displayName);
-        if (!parent.exists()){
-            throw new FileNotFoundException("Parent don't exists");
+        if (!parent.exists()) {
+            throw new FileNotFoundException("Parent doesn't exist");
         }
 
-        if (Objects.equals(mimeType, Document.MIME_TYPE_DIR)){
-            if (!file.mkdirs()){
-                throw new FileNotFoundException("Error on create directory");
+        if (Objects.equals(mimeType, Document.MIME_TYPE_DIR)) {
+            if (!file.mkdirs()) {
+                throw new FileNotFoundException("Error while creating directory");
             }
         } else {
             try {
-                if (!file.createNewFile()){
-                    throw new Exception("Error on create file");
+                if (!file.createNewFile()) {
+                    throw new Exception("Error while creating file");
                 }
-            } catch (Exception e){
+            } catch (Exception e) {
                 throw new FileNotFoundException(e.getMessage());
             }
         }
@@ -148,7 +150,7 @@ public class AppDataDocumentProvider extends DocumentsProvider {
     @Override
     public void deleteDocument(String documentId) throws FileNotFoundException {
         File file = obtainFile(documentId);
-        if (file.exists()){
+        if (file.exists()) {
             FileUtils.delete(file.getAbsolutePath());
         } else {
             throw new FileNotFoundException("File not exists");

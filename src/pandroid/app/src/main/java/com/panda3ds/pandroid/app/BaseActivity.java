@@ -30,7 +30,8 @@ public class BaseActivity extends AppCompatActivity {
 	private void applyTheme() {
 		currentTheme = PandroidApplication.getThemeId();
 		setTheme(currentTheme);
-		if (GlobalConfig.get(GlobalConfig.KEY_APP_THEME) == GlobalConfig.THEME_ANDROID){
+
+		if (GlobalConfig.get(GlobalConfig.KEY_APP_THEME) == GlobalConfig.THEME_ANDROID) {
 			DynamicColors.applyToActivityIfAvailable(this);
 		}
 	}

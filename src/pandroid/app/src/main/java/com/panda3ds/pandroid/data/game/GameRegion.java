@@ -12,8 +12,8 @@ public enum GameRegion {
     Taiwan,
     None;
 
-    public  int localizedName(){
-        switch (this){
+    public int localizedName() {
+        switch (this) {
             case NorthAmerican:
                 return R.string.region_north_armerican;
             case Japan:

@@ -110,13 +110,14 @@ public class InputHandler {
             }
         }
         String code = KeyEvent.keyCodeToString(event.getKeyCode());
-        if (event.getAction() == KeyEvent.ACTION_UP){
+        if (event.getAction() == KeyEvent.ACTION_UP) {
             keyDownEvents.remove(code);
             handleEvent(new InputEvent(code, 0.0f));
-        } else if (!keyDownEvents.containsKey(code)){
+        } else if (!keyDownEvents.containsKey(code)) {
             keyDownEvents.put(code, new InputEvent(code, 1.0f));
         }
-        for (InputEvent env: keyDownEvents.values()){
+        
+        for (InputEvent env: keyDownEvents.values()) {
             handleEvent(env);
         }
 

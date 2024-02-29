@@ -52,7 +52,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         refresh();
     }
 
-    private void refresh(){
+    private void refresh() {
         game = GameUtils.getCurrentGame();
         if (game.getIcon() != null && !game.getIcon().isRecycled()) {
             ((GameIconView) drawerLayout.findViewById(R.id.game_icon)).setImageBitmap(game.getIcon());
@@ -61,7 +61,6 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
         }
         ((AppCompatTextView)drawerLayout.findViewById(R.id.game_title)).setText(game.getTitle());
         ((AppCompatTextView)drawerLayout.findViewById(R.id.game_publisher)).setText(game.getPublisher());
-
     }
 
     @Override

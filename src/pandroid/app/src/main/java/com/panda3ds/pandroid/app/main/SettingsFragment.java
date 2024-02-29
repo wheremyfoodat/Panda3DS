@@ -27,8 +27,8 @@ public class SettingsFragment extends BasePreferenceFragment {
         try {
             Context context = PandroidApplication.getAppContext();
             return context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
-        } catch (Exception e){
-            return "???";
+        } catch (Exception e) {
+            return "Error: Unknown version";
         }
     }
 }
