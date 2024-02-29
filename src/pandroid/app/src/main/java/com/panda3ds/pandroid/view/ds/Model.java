@@ -12,7 +12,7 @@ class Model implements Cloneable {
     public final Bounds preferredTop = new Bounds();
     public final Bounds preferredBottom = new Bounds();
     public boolean reverse = false;
-    public boolean singleTop = true;
+    public boolean onlyTop = true;
     public float space = 0.6f;
     public int gravity = Gravity.CENTER;
     public boolean lockAspect = true;

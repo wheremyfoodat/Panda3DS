@@ -157,6 +157,15 @@ public class GameUtils {
         writeChanges();
     }
 
+    public static GameMetadata findGameById(String id) {
+        for (GameMetadata game: getGames()){
+            if (game.getId().equals(id)){
+                return game;
+            }
+        }
+        return null;
+    }
+
     private static class DataModel {
         public final List<GameMetadata> games = new ArrayList<>();
         public final HashMap<String, GamesFolder> folders = new HashMap<>();

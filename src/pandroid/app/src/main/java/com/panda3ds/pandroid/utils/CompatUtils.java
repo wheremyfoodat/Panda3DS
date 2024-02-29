@@ -1,6 +1,7 @@
 package com.panda3ds.pandroid.utils;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.res.TypedArray;

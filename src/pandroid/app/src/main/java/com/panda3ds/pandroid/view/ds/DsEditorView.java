@@ -30,10 +30,8 @@ import com.panda3ds.pandroid.math.Vector2;
 import com.panda3ds.pandroid.utils.CompatUtils;
 import com.panda3ds.pandroid.utils.Constants;
 
+@SuppressLint("ViewConstructor")
 public class DsEditorView extends FrameLayout {
-
-    private final int COLOR_TOP_SELECTION;
-    private final int COLOR_BOTTOM_SELECTION;
     private final float SIZE_DP;
 
     private final Paint selectionPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -54,10 +52,10 @@ public class DsEditorView extends FrameLayout {
         super(context);
         layout = (DsLayout) DsLayoutManager.createLayout(index);
         SIZE_DP = CompatUtils.applyDimen(TypedValue.COMPLEX_UNIT_DIP, 1);
-        COLOR_BOTTOM_SELECTION = CompatUtils.resolveColor(context, androidx.appcompat.R.attr.colorPrimary);
-        COLOR_TOP_SELECTION = CompatUtils.resolveColor(context, com.google.android.material.R.attr.colorAccent);
+        int colorBottomSelection = CompatUtils.resolveColor(context, androidx.appcompat.R.attr.colorPrimary);
+        int colorTopSelection = CompatUtils.resolveColor(context, com.google.android.material.R.attr.colorAccent);
 
-        selectionPaint.setColor(COLOR_TOP_SELECTION);
+        selectionPaint.setColor(colorTopSelection);
         selectionPaint.setStrokeWidth(SIZE_DP * 2);
         selectionPaint.setPathEffect(new DashPathEffect(new float[]{SIZE_DP * 10, SIZE_DP * 10}, 0.0f));
         selectionPaint.setStyle(Paint.Style.STROKE);
@@ -100,9 +98,7 @@ public class DsEditorView extends FrameLayout {
                 }
 
                 @Override
-                public void onNothingSelected(AdapterView<?> parent) {
-
-                }
+                public void onNothingSelected(AdapterView<?> parent) {}
             });
         }
 
@@ -113,7 +109,7 @@ public class DsEditorView extends FrameLayout {
         });
 
         spacePoint = new PointView();
-        spacePoint.setColor(Color.WHITE, COLOR_TOP_SELECTION);
+        spacePoint.setColor(CompatUtils.resolveColor(context, com.google.android.material.R.attr.colorOnPrimary), colorTopSelection);
         spacePoint.setOnTouchListener((view, motion) -> {
             layout.getCurrentModel().space = (motion.getX() + spacePoint.x()) / (float) width;
             refreshPoints();
@@ -124,7 +120,7 @@ public class DsEditorView extends FrameLayout {
 
         setOnClickListener(v -> {
             if (layout.getCurrentModel().mode == Mode.SINGLE) {
-                layout.getCurrentModel().singleTop = !layout.getCurrentModel().singleTop;
+                layout.getCurrentModel().onlyTop = !layout.getCurrentModel().onlyTop;
                 refreshPoints();
             }
         });
@@ -132,40 +128,38 @@ public class DsEditorView extends FrameLayout {
         topDisplay = new PointView();
         topDisplay.setText(R.string.top_display);
         topDisplay.setOnTouchListener(new DisplayTouchEvent(true));
-        topDisplay.setTextColor(COLOR_TOP_SELECTION);
-        topDisplay.setBackground(new SelectionDrawable(COLOR_TOP_SELECTION));
+        topDisplay.setTextColor(colorTopSelection);
+        topDisplay.setBackground(new SelectionDrawable(colorTopSelection));
 
         bottomDisplay = new PointView();
         bottomDisplay.setText(R.string.bottom_display);
         bottomDisplay.setOnTouchListener(new DisplayTouchEvent(false));
-        bottomDisplay.setTextColor(COLOR_BOTTOM_SELECTION);
-        bottomDisplay.setBackground(new SelectionDrawable(COLOR_BOTTOM_SELECTION));
+        bottomDisplay.setTextColor(colorBottomSelection);
+        bottomDisplay.setBackground(new SelectionDrawable(colorBottomSelection));
 
         topDisplayResizer = new PointView();
-        topDisplayResizer.setColor(0, COLOR_TOP_SELECTION);
+        topDisplayResizer.setColor(0, colorTopSelection);
         topDisplayResizer.setOnTouchListener(new DisplayResizeTouchEvent(true));
 
         bottomDisplayResizer = new PointView();
-        bottomDisplayResizer.setColor(0, COLOR_BOTTOM_SELECTION);
+        bottomDisplayResizer.setColor(0, colorBottomSelection);
         bottomDisplayResizer.setOnTouchListener(new DisplayResizeTouchEvent(false));
     }
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        int width = getMeasuredWidth();
-        int height = getMeasuredHeight();
-        if (this.width != width || this.height != height) {
-            this.width = width;
-            this.height = height;
+    public void draw(Canvas canvas) {
+        super.draw(canvas);
+        if (this.width != getWidth() || this.height != getHeight()) {
+            this.width = getWidth();
+            this.height = getHeight();
             refreshLayout();
         }
     }
 
     private void refreshPoints() {
         Model data = layout.getCurrentModel();
-        data.preferredTop.fixOverlay(width, height, (int) (SIZE_DP*5));
-        data.preferredBottom.fixOverlay(width, height, (int) (SIZE_DP*30));
+        data.preferredTop.fixOverlay(width, height, (int) (SIZE_DP * 5));
+        data.preferredBottom.fixOverlay(width, height, (int) (SIZE_DP * 30));
         layout.update(width, height);
         Rect bottomDisplay = layout.getBottomDisplayBounds();
         Rect topDisplay = layout.getTopDisplayBounds();
@@ -322,6 +316,7 @@ public class DsEditorView extends FrameLayout {
 
     private class DisplayResizeTouchEvent implements OnTouchListener {
         private final boolean topScreen;
+
         private DisplayResizeTouchEvent(boolean topScreen) {
             this.topScreen = topScreen;
         }

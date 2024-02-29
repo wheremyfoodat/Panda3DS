@@ -16,6 +16,7 @@ import com.panda3ds.pandroid.app.base.BottomAlertDialog;
 import com.panda3ds.pandroid.data.SMDH;
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.data.game.GameMetadata;
+import com.panda3ds.pandroid.utils.CompatUtils;
 import com.panda3ds.pandroid.utils.Constants;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.utils.PerformanceMonitor;
@@ -103,7 +104,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 						.setMessage(R.string.dialog_message_invalid_rom)
 						.setPositiveButton(android.R.string.ok, (dialog, witch) -> {
 							dialog.dismiss();
-							((Activity) context).finish();
+							CompatUtils.findActivity(context).finishAndRemoveTask();
 						})
 						.setCancelable(false)
 						.show();

@@ -21,7 +21,6 @@ public class AdvancedPreferences extends BasePreferenceFragment {
         setActivityTitle(R.string.advanced_options);
 
         setItemClick("performanceMonitor", pref -> GlobalConfig.set(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY, ((SwitchPreferenceCompat) pref).isChecked()));
-        setItemClick("pictureInPicture", pref -> GlobalConfig.set(GlobalConfig.KEY_PICTURE_IN_PICTURE, ((SwitchPreferenceCompat) pref).isChecked()));
         setItemClick("shaderJit", pref -> GlobalConfig.set(GlobalConfig.KEY_SHADER_JIT, ((SwitchPreferenceCompat) pref).isChecked()));
         setItemClick("loggerService", pref -> {
             boolean checked = ((SwitchPreferenceCompat) pref).isChecked();
@@ -45,14 +44,7 @@ public class AdvancedPreferences extends BasePreferenceFragment {
 
     private void refresh() {
         ((SwitchPreferenceCompat) findPreference("performanceMonitor")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY));
-        ((SwitchPreferenceCompat) findPreference("pictureInPicture")).setChecked(GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE));
         ((SwitchPreferenceCompat) findPreference("loggerService")).setChecked(GlobalConfig.get(GlobalConfig.KEY_LOGGER_SERVICE));
         ((SwitchPreferenceCompat) findPreference("shaderJit")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            findPreference("pictureInPicture").setEnabled(true);
-        } else {
-            findPreference("pictureInPicture").setEnabled(false);
-            findPreference("pictureInPicture").setSummary("Your device does not support this feature");
-        }
     }
 }

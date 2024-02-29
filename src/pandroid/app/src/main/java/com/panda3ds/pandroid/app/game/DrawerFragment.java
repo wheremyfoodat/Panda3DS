@@ -25,7 +25,9 @@ import com.panda3ds.pandroid.view.gamesgrid.GameIconView;
 
 public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListener, NavigationView.OnNavigationItemSelectedListener {
     private DrawerLayout drawerContainer;
+    private View drawerLayout;
     private EmulatorCallback emulator;
+    private GameMetadata game;
 
     @Nullable
     @Override
@@ -44,21 +46,21 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         drawerContainer.setVisibility(View.GONE);
+        drawerLayout = view.findViewById(R.id.drawer_layout);
 
         ((NavigationView)view.findViewById(R.id.menu)).setNavigationItemSelectedListener(this);
         refresh();
     }
 
     private void refresh(){
-        GameMetadata game = GameUtils.getCurrentGame();
-        View view = getView();
+        game = GameUtils.getCurrentGame();
         if (game.getIcon() != null && !game.getIcon().isRecycled()) {
-            ((GameIconView) view.findViewById(R.id.game_icon)).setImageBitmap(game.getIcon());
+            ((GameIconView) drawerLayout.findViewById(R.id.game_icon)).setImageBitmap(game.getIcon());
         } else {
-            ((GameIconView) view.findViewById(R.id.game_icon)).setImageDrawable(new ColorDrawable(Color.TRANSPARENT));
+            ((GameIconView) drawerLayout.findViewById(R.id.game_icon)).setImageDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
-        ((AppCompatTextView)view.findViewById(R.id.game_title)).setText(game.getTitle());
-        ((AppCompatTextView)view.findViewById(R.id.game_publisher)).setText(game.getPublisher());
+        ((AppCompatTextView)drawerLayout.findViewById(R.id.game_title)).setText(game.getTitle());
+        ((AppCompatTextView)drawerLayout.findViewById(R.id.game_publisher)).setText(game.getPublisher());
 
     }
 
@@ -119,7 +121,7 @@ public class DrawerFragment extends Fragment implements DrawerLayout.DrawerListe
             emulator.swapScreens();
             close();
         } else if (id == R.id.exit) {
-            requireActivity().finish();
+            requireActivity().finishAndRemoveTask();
         } else if (id == R.id.lua_script) {
             new LuaDialogFragment().show(getParentFragmentManager(), null);
         } else if (id == R.id.change_orientation) {

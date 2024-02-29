@@ -52,7 +52,6 @@
     <!-- Advanced Settings -->
     <string name="advanced_options">Advanced options</string>
     <string name="pref_advanced_summary">Logger, performance statistics, etc.</string>
-    <string name="display">Display</string>
     <string name="pref_performance_monitor_title">Performance monitor</string>
     <string name="pref_performance_monitor_summary">Show overlay with fps, memory, etc.</string>
     <string name="pref_picture_in_picture_title">Picture In Picture</string>
@@ -60,7 +59,7 @@
     <string name="graphics">Graphics</string>
     <string name="pref_shader_jit_title">Shader JIT</string>
     <string name="pref_shader_jit_summary">Use shader recompiler.</string>
-    <string name="debug">Debug</string>
+    <string name="tools">Tools</string>
     <string name="pref_logger_service_title">Logger</string>
     <string name="pref_logger_service_summary">Store application logs to file.</string>
     <string name="loading">Loading</string>
@@ -71,21 +70,23 @@
     <string name="dialog_message_invalid_rom">Make sure it\'s a valid 3DS ROM and that storage permissions are configured properly.</string>
     <string name="system">System</string>
     <string name="general">General</string>
-    <string name="pref_general_summary">General application configurations.</string>
-    <string name="bottom_display">Bottom Display</string>
-    <string name="top_display">Top Display</string>
-    <string name="fix_aspect">Fix aspect</string>
-    <string name="dual_screen_layouts">Dual Screen layouts</string>
+    <string name="pref_general_summary">General application configuration.</string>
+    <string name="dual_screen_layouts">Screen layouts</string>
     <string name="dual_screen_layouts_summary">Change layout of console screens.</string>
     <string name="click_to_change">Click to change</string>
     <string name="swap_screen">Swap screen</string>
-    <string name="pref_games_folders_summary">Folders for auto import games</string>
-    <string name="pref_games_folders">Games folders</string>
+    <string name="pref_game_folders_summary">Folders for importing games</string>
+    <string name="pref_game_folders">Game folders</string>
     <string name="import_folder">Import folder</string>
     <string name="games_count_f">%d Games</string>
     <string name="directory">Directory</string>
     <string name="remove">Remove</string>
     <string name="play">Play</string>
+    <!-- Screen layout editor -->
+    <string name="fix_aspect">Maintain aspect ratio</string>
+    <string name="bottom_display">Bottom Display</string>
+    <string name="top_display">Top Display</string>
+    <!-- Game about -->
     <string name="region">Region</string>
     <string name="region_north_armerican">North American</string>
     <string name="region_japan">Japan</string>
@@ -93,4 +94,6 @@
     <string name="region_australia">Australia</string>
     <string name="region_korean">Korean</string>
     <string name="region_taiwan">Taiwan</string>
+    <string name="behavior">Behavior</string>
+    <string name="invalid_game">Invalid game</string>
 </resources>

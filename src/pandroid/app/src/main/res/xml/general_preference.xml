@@ -20,8 +20,17 @@
         app:iconSpaceReserved="false">
         <Preference
             android:key="games.folders"
-            app:title="@string/pref_games_folders"
-            app:summary="@string/pref_games_folders_summary"
+            app:title="@string/pref_game_folders"
+            app:summary="@string/pref_game_folders_summary"
+            app:iconSpaceReserved="false"/>
+    </PreferenceCategory>
+    <PreferenceCategory
+        app:title="@string/behavior"
+        app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            android:key="behavior.pictureInPicture"
+            app:title="@string/pref_picture_in_picture_title"
+            app:summary="@string/pref_picture_in_picture_summary"
             app:iconSpaceReserved="false"/>
     </PreferenceCategory>
 </PreferenceScreen>

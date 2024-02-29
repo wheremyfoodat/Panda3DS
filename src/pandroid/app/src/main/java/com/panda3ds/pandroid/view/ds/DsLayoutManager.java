@@ -20,11 +20,11 @@ public class DsLayoutManager {
 
         Model model2 = new Model();
         model2.mode = Mode.SINGLE;
-        model2.singleTop = false;
+        model2.onlyTop = false;
 
         Model model3 = new Model();
         model3.mode = Mode.SINGLE;
-        model3.singleTop = true;
+        model3.onlyTop = true;
 
         data.models.add(new Model[]{model1, model1.clone()});
         data.models.add(new Model[]{model2, model2.clone()});

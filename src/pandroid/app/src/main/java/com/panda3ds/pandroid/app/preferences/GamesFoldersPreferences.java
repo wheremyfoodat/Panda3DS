@@ -14,7 +14,6 @@ import androidx.annotation.Nullable;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceScreen;
 
-import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.base.BasePreferenceFragment;
 import com.panda3ds.pandroid.app.base.BaseSheetDialog;
@@ -29,7 +28,7 @@ public class GamesFoldersPreferences extends BasePreferenceFragment implements A
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
         setPreferencesFromResource(R.xml.empty_preferences, rootKey);
-        setActivityTitle(R.string.pref_games_folders);
+        setActivityTitle(R.string.pref_game_folders);
         refreshList();
         pickFolderRequest = registerForActivityResult(openFolderContract, this);
     }

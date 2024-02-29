@@ -92,15 +92,26 @@
         android:gravity="end|center">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/remove"
+            android:id="@+id/shortcut"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/remove"
-            app:icon="@drawable/ic_delete"
+            app:icon="@drawable/ic_shortcut"
             app:iconTint="?colorOnSurfaceVariant"
             android:textColor="?colorOnSurfaceVariant"
             android:backgroundTint="?colorSurfaceVariant"
-            android:layout_marginHorizontal="10dp"/>
+            android:layout_marginHorizontal="10dp"
+            style="@style/Widget.Material3.Button.IconButton"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/remove"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_delete"
+            app:iconTint="?colorSurfaceVariant"
+            android:textColor="?colorOnSurfaceVariant"
+            android:backgroundTint="?colorOnSurfaceVariant"
+            android:layout_marginHorizontal="10dp"
+            style="@style/Widget.Material3.Button.IconButton"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/play"
@@ -111,6 +122,7 @@
             android:textColor="?colorOnPrimary"
             android:backgroundTint="?colorPrimary"
             app:icon="@drawable/ic_play"
+            app:rippleColor="?colorOnPrimary"
             app:iconTint="?colorOnPrimary"/>
 
     </LinearLayout>

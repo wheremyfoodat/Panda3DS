@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid.app.preferences.ds;
+package com.panda3ds.pandroid.app.preferences.screen_editor;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -16,9 +16,8 @@ import com.panda3ds.pandroid.app.BaseActivity;
 import com.panda3ds.pandroid.view.ds.DsEditorView;
 import com.panda3ds.pandroid.view.ds.DsLayoutManager;
 
-public class DsEditorPreferences extends Fragment {
+public class ScreenEditorPreference extends Fragment {
     private LinearLayout layout;
-    private DsEditorView editor;
 
     @Nullable
     @Override
@@ -33,7 +32,7 @@ public class DsEditorPreferences extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         int index = getArguments().getInt("index");
         layout.removeAllViews();
-        layout.addView(editor = new DsEditorView(view.getContext(), index), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        layout.addView(new DsEditorView(view.getContext(), index), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         ((BaseActivity)requireActivity()).getSupportActionBar().hide();
     }
 

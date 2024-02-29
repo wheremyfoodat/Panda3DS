@@ -13,9 +13,12 @@ import androidx.annotation.Nullable;
 
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.PandroidApplication;
+import com.panda3ds.pandroid.utils.FileUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Objects;
 
 public class AppDataDocumentProvider extends DocumentsProvider {
     private static final String ROOT_ID = "root";
@@ -89,8 +92,10 @@ public class AppDataDocumentProvider extends DocumentsProvider {
 
     private void includeFile(MatrixCursor cursor, File file) {
         int flags = 0;
-        if (file.isFile()) {
-            flags = Document.FLAG_SUPPORTS_WRITE;
+        if (file.isDirectory()) {
+            flags = Document.FLAG_DIR_SUPPORTS_CREATE;
+        } else {
+            flags = Document.FLAG_SUPPORTS_WRITE | Document.FLAG_SUPPORTS_REMOVE | Document.FLAG_SUPPORTS_DELETE;
         }
         cursor.newRow()
                 .add(Document.COLUMN_DOCUMENT_ID, obtainDocumentId(file))
@@ -114,6 +119,40 @@ public class AppDataDocumentProvider extends DocumentsProvider {
         }
 
         return cursor;
+    }
+
+    @Override
+    public String createDocument(String parentDocumentId, String mimeType, String displayName) throws FileNotFoundException {
+        File parent = obtainFile(parentDocumentId);
+        File file = new File(parent, displayName);
+        if (!parent.exists()){
+            throw new FileNotFoundException("Parent don't exists");
+        }
+
+        if (Objects.equals(mimeType, Document.MIME_TYPE_DIR)){
+            if (!file.mkdirs()){
+                throw new FileNotFoundException("Error on create directory");
+            }
+        } else {
+            try {
+                if (!file.createNewFile()){
+                    throw new Exception("Error on create file");
+                }
+            } catch (Exception e){
+                throw new FileNotFoundException(e.getMessage());
+            }
+        }
+        return obtainDocumentId(file);
+    }
+
+    @Override
+    public void deleteDocument(String documentId) throws FileNotFoundException {
+        File file = obtainFile(documentId);
+        if (file.exists()){
+            FileUtils.delete(file.getAbsolutePath());
+        } else {
+            throw new FileNotFoundException("File not exists");
+        }
     }
 
     @Override

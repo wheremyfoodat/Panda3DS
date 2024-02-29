@@ -10,17 +10,17 @@ class DsLayout implements ConsoleLayout {
     private final Rect topDisplay = new Rect();
     private final Rect bottomDisplay = new Rect();
 
-    private final Vector2 screenSize = new Vector2(0,0);
-    private final Vector2 sourceTop = new Vector2(0,0);
-    private final Vector2 sourceBottom = new Vector2(0,0);
+    private final Vector2 screenSize = new Vector2(0, 0);
+    private final Vector2 sourceTop = new Vector2(0, 0);
+    private final Vector2 sourceBottom = new Vector2(0, 0);
     private final Model[] modes = new Model[2];
 
-    public DsLayout(Model landscape, Model portrait){
+    public DsLayout(Model landscape, Model portrait) {
         modes[0] = landscape;
         modes[1] = portrait;
     }
 
-    public DsLayout(){
+    public DsLayout() {
         this(new Model(), new Model());
     }
 
@@ -52,10 +52,10 @@ class DsLayout implements ConsoleLayout {
         return topDisplay;
     }
 
-    public void update(){
+    public void update() {
         Model data = getCurrentModel();
         Mode mode = data.mode;
-        switch (mode){
+        switch (mode) {
             case RELATIVE:
                 relative(data);
                 break;
@@ -69,22 +69,18 @@ class DsLayout implements ConsoleLayout {
     }
 
     private void absolute(Model data) {
-        if (data.lockAspect){
-            data.preferredTop.applyWithAspect(topDisplay, (int) screenSize.x, (double) sourceTop.y/sourceTop.x);
-            data.preferredBottom.applyWithAspect(bottomDisplay, (int) screenSize.x, (double) sourceBottom.y/sourceBottom.x);
+        if (data.lockAspect) {
+            data.preferredTop.applyWithAspect(topDisplay, (int) screenSize.x, (double) sourceTop.y / sourceTop.x);
+            data.preferredBottom.applyWithAspect(bottomDisplay, (int) screenSize.x, (double) sourceBottom.y / sourceBottom.x);
         } else {
             data.preferredTop.apply(topDisplay, (int) screenSize.x, (int) screenSize.y);
             data.preferredBottom.apply(bottomDisplay, (int) screenSize.x, (int) screenSize.y);
         }
     }
 
-    /**
-     * SINGLE LAYOUT:
-     * SHOW ONLY SCREEN IN FIT MODE
-     */
     private void single(Model data) {
-        Vector2 source = data.singleTop ? sourceTop : sourceBottom;
-        Rect dest = data.singleTop ? topDisplay : bottomDisplay;
+        Vector2 source = data.onlyTop ? sourceTop : sourceBottom;
+        Rect dest = data.onlyTop ? topDisplay : bottomDisplay;
 
         if (data.lockAspect) {
             int x = 0, y = 0;
@@ -99,11 +95,11 @@ class DsLayout implements ConsoleLayout {
                 height = (int) screenSize.y;
                 x = (int) ((screenSize.x - width) / 2);
             }
-            dest.set(x,y,x+width,y+height);
+            dest.set(x, y, x + width, y + height);
         } else {
-            dest.set(0,0, (int) screenSize.x, (int) screenSize.y);
+            dest.set(0, 0, (int) screenSize.x, (int) screenSize.y);
         }
-        (data.singleTop ? bottomDisplay : topDisplay).set(0,0,0,0);
+        (data.onlyTop ? bottomDisplay : topDisplay).set(0, 0, 0, 0);
     }
 
 
@@ -122,7 +118,7 @@ class DsLayout implements ConsoleLayout {
         Rect topDisplay = this.topDisplay;
         Rect bottomDisplay = this.bottomDisplay;
 
-        if (data.reverse){
+        if (data.reverse) {
             topSourceSize = this.sourceBottom;
             bottomSourceSize = this.sourceTop;
 
@@ -144,15 +140,17 @@ class DsLayout implements ConsoleLayout {
             topDisplay.set(0, 0, topDisplayWidth, topDisplayHeight);
             bottomDisplay.set(topDisplayWidth, 0, topDisplayWidth + (screenWidth - topDisplayWidth), bottomDisplayHeight);
 
-            switch (data.gravity){
-                case Gravity.CENTER:{
-                    bottomDisplay.offset(0, (screenHeight-bottomDisplay.height())/2);
-                    topDisplay.offset(0, (screenHeight-topDisplay.height())/2);
-                }break;
-                case Gravity.BOTTOM:{
-                    bottomDisplay.offset(0, (screenHeight-bottomDisplay.height()));
-                    topDisplay.offset(0, (screenHeight-topDisplay.height()));
-                }break;
+            switch (data.gravity) {
+                case Gravity.CENTER: {
+                    bottomDisplay.offset(0, (screenHeight - bottomDisplay.height()) / 2);
+                    topDisplay.offset(0, (screenHeight - topDisplay.height()) / 2);
+                }
+                break;
+                case Gravity.BOTTOM: {
+                    bottomDisplay.offset(0, (screenHeight - bottomDisplay.height()));
+                    topDisplay.offset(0, (screenHeight - topDisplay.height()));
+                }
+                break;
             }
 
         } else {

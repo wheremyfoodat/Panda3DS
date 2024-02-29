@@ -1,4 +1,4 @@
-package com.panda3ds.pandroid.app.preferences.ds;
+package com.panda3ds.pandroid.app.preferences.screen_editor;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -12,7 +12,7 @@ import com.panda3ds.pandroid.app.PreferenceActivity;
 import com.panda3ds.pandroid.app.base.BasePreferenceFragment;
 import com.panda3ds.pandroid.view.ds.DsLayoutManager;
 
-public class DsListPreferences extends BasePreferenceFragment {
+public class ScreenLayoutsPreference extends BasePreferenceFragment {
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
         setPreferencesFromResource(R.xml.empty_preferences, rootKey);
@@ -33,7 +33,7 @@ public class DsListPreferences extends BasePreferenceFragment {
 
             final int index = i;
             pref.setOnPreferenceClickListener(preference -> {
-                PreferenceActivity.launch(requireContext(), DsEditorPreferences.class, new Intent().putExtra("index", index));
+                PreferenceActivity.launch(requireContext(), ScreenEditorPreference.class, new Intent().putExtra("index", index));
                 return false;
             });
             screen.addPreference(pref);

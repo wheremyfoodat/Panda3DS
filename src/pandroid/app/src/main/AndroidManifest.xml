@@ -32,6 +32,8 @@
         <activity
             android:name=".app.GameActivity"
             android:supportsPictureInPicture="true"
+            android:taskAffinity="emulator.GameActivity"
+            android:launchMode="singleTop"
             android:configChanges="screenSize|screenLayout|smallestScreenSize|orientation|density|uiMode">
         </activity>
         <activity
@@ -56,6 +58,15 @@
                 <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
             </intent-filter>
         </provider>
+
+        <activity
+            android:name=".app.game.GameLauncher"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <data android:scheme="pandroid-game"/>
+            </intent-filter>
+        </activity>
 
         <service android:name=".app.services.LoggerService" android:process=":logger_service"/>
     </application>

@@ -1,8 +1,11 @@
 package com.panda3ds.pandroid.app;
 
+import android.app.ActivityManager;
+import android.app.PictureInPictureParams;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Rational;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -11,11 +14,9 @@ import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+
 import androidx.annotation.Nullable;
-import android.app.PictureInPictureParams;
-import android.content.res.Configuration;
-import android.util.DisplayMetrics;
-import android.util.Rational;
+
 import com.panda3ds.pandroid.AlberDriver;
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.app.game.AlberInputListener;
@@ -55,15 +56,13 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		renderer = pandaSurface.getRenderer();
 
 		((FrameLayout) findViewById(R.id.panda_gl_frame))
-			.addView(pandaSurface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+				.addView(pandaSurface, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
 		PandaLayoutController controllerLayout = findViewById(R.id.controller_layout);
 		controllerLayout.initialize();
 
 		((CheckBox) findViewById(R.id.hide_screen_controller)).setOnCheckedChangeListener((buttonView, checked) -> {
-			findViewById(R.id.overlay_controller).setVisibility(checked ? View.VISIBLE : View.GONE);
-			findViewById(R.id.overlay_controller).invalidate();
-			findViewById(R.id.overlay_controller).requestLayout();
+			changeOverlayVisibility(checked);
 			GlobalConfig.set(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE, checked);
 		});
 		((CheckBox) findViewById(R.id.hide_screen_controller)).setChecked(GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE));
@@ -74,6 +73,13 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 			PerformanceView view = new PerformanceView(this);
 			((FrameLayout) findViewById(R.id.panda_gl_frame)).addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 		}
+		swapScreens(GlobalConfig.get(GlobalConfig.KEY_CURRENT_DS_LAYOUT));
+	}
+
+	private void changeOverlayVisibility(boolean visible){
+		findViewById(R.id.overlay_controller).setVisibility(visible ? View.VISIBLE : View.GONE);
+		findViewById(R.id.overlay_controller).invalidate();
+		findViewById(R.id.overlay_controller).requestLayout();
 	}
 
 	@Override
@@ -84,60 +90,35 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		InputHandler.reset();
 		InputHandler.setMotionDeadZone(InputMap.getDeadZone());
 		InputHandler.setEventListener(inputListener);
-		if (GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE)) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-		if (!drawerFragment.isOpened()) {
-                    setPictureInPictureParams(new PictureInPictureParams.Builder().setAutoEnterEnabled(true).build());
-		   }
-		 }
-	      }
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
 			getTheme().applyStyle(R.style.GameActivityNavigationBar, true);
 		}
 	}
 
-	@Override
-        public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
-        if (isInPictureInPictureMode) {
-           findViewById(R.id.overlay_controller).setVisibility(View.GONE);
-        } else {
-	  if (GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE)) {
-            findViewById(R.id.overlay_controller).setVisibility(View.VISIBLE);
-	  }
-        }
-    }
-
-	@Override
-        public void onUserLeaveHint() {
-        super.onUserLeaveHint();
-	DisplayMetrics displayMetrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-
-        int widthPixels = displayMetrics.widthPixels;
-        int heightPixels = displayMetrics.heightPixels;
-
-        // Calculate aspect ratio
-        float aspectRatio = (float) widthPixels / (float) heightPixels;
-
-        if (GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE)) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-	if (!drawerFragment.isOpened()) {
-            Rational aspectRatioRational = new Rational(widthPixels, heightPixels);
-            PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder();
-            pipBuilder.setAspectRatio(aspectRatioRational);
-            enterPictureInPictureMode(pipBuilder.build());
-	  }
-       }
-     }
-  }
+	private void goToPictureInPicture() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder();
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				builder.setAutoEnterEnabled(true);
+				builder.setSeamlessResizeEnabled(true);
+			}
+			builder.setAspectRatio(new Rational(10, 14));
+			enterPictureInPictureMode(builder.build());
+		}
+	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
 
 		InputHandler.reset();
-		drawerFragment.open();
+		if (GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE)) {
+			if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O) {
+				goToPictureInPicture();
+			}
+		} else {
+			drawerFragment.open();
+		}
 	}
 
 	@Override
@@ -159,8 +140,9 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 	}
 
 	@Override
-	public void swapScreens() {
-		currentDsLayout = currentDsLayout + 1 < DsLayoutManager.getLayoutCount() ? currentDsLayout + 1 : 0;
+	public void swapScreens(int index) {
+		currentDsLayout = index;
+		GlobalConfig.set(GlobalConfig.KEY_CURRENT_DS_LAYOUT,index);
 		renderer.setLayout(DsLayoutManager.createLayout(currentDsLayout));
 	}
 
@@ -176,11 +158,14 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 	@Override
 	public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode) {
 		super.onPictureInPictureModeChanged(isInPictureInPictureMode);
-	}
-
-	@Override
-	protected void onUserLeaveHint() {
-		super.onUserLeaveHint();
+		changeOverlayVisibility(!isInPictureInPictureMode && GlobalConfig.get(GlobalConfig.KEY_SCREEN_GAMEPAD_VISIBLE));
+		findViewById(R.id.hide_screen_controller).setVisibility(isInPictureInPictureMode ? View.INVISIBLE : View.VISIBLE);
+		if (isInPictureInPictureMode){
+			getWindow().getDecorView().postDelayed(drawerFragment::close, 250);
+		} else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S){
+			ActivityManager manager = ((ActivityManager) getSystemService(ACTIVITY_SERVICE));
+			manager.getAppTasks().forEach(ActivityManager.AppTask::moveToFront);
+		}
 	}
 
 	@Override
@@ -188,7 +173,6 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 		if (AlberDriver.HasRomLoaded()) {
 			AlberDriver.Finalize();
 		}
-
 		super.onDestroy();
 	}
 }

@@ -1,23 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    
-    <PreferenceCategory
-        app:iconSpaceReserved="false"
-        app:title="@string/display">
-        
-    <SwitchPreferenceCompat
-        android:key="performanceMonitor"
-        app:title="@string/pref_performance_monitor_title"
-        app:summary="@string/pref_performance_monitor_summary"
-        app:iconSpaceReserved="false"/>
 
-	<SwitchPreferenceCompat
-		android:key="loggerService"
-		app:iconSpaceReserved="false"
-		app:title="@string/pref_logger_service_title"
-		android:summary="@string/pref_logger_service_summary"/>
-	</PreferenceCategory>
+    <PreferenceCategory
+        app:title="@string/tools"
+        app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            android:key="performanceMonitor"
+            app:title="@string/pref_performance_monitor_title"
+            app:summary="@string/pref_performance_monitor_summary"
+            app:iconSpaceReserved="false"/>
+
+        <SwitchPreferenceCompat
+            android:key="loggerService"
+            app:iconSpaceReserved="false"
+            app:title="@string/pref_logger_service_title"
+            android:summary="@string/pref_logger_service_summary"/>
+    </PreferenceCategory>
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
@@ -30,17 +29,4 @@
             app:iconSpaceReserved="false"/>
 
     </PreferenceCategory>
-
-    <PreferenceCategory
-        app:iconSpaceReserved="false"
-        app:title="@string/debug">
-
-    <SwitchPreferenceCompat
-        android:key="loggerService"
-        app:iconSpaceReserved="false"
-        app:title="@string/pref_logger_service_title"
-        android:defaultValue="true"
-        android:summaryOn="@string/pref_logger_service_summary"
-        android:summaryOff="@string/pref_logger_service_summary"/>
-   </PreferenceCategory>
 </PreferenceScreen>
