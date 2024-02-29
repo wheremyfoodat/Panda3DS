@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="true"
+    android:padding="4dp">
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/simple_card_background"
+        android:layout_margin="4dp"
+        android:elevation="4dp"
+        android:backgroundTint="?colorSurfaceVariant">
+
+        <androidx.appcompat.widget.AppCompatSpinner
+            android:id="@+id/spinner"
+            android:layout_width="140dp"
+            android:layout_height="20dp"
+            android:layout_margin="6dp"
+            android:dropDownWidth="140dp"
+            android:popupElevation="2dp"
+            android:popupBackground="@drawable/ds_editor_popup_background"
+            android:backgroundTint="?colorOnSurfaceVariant"
+            android:foregroundTint="?colorOnSurfaceVariant"/>
+
+    </LinearLayout>
+</LinearLayout>

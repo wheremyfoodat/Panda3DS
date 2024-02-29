@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory
+        app:title="@string/appearance"
+        app:iconSpaceReserved="false">
+        <Preference
+            android:key="appearance.theme"
+            app:title="@string/theme"
+            app:summary="@string/theme"
+            app:iconSpaceReserved="false"/>
+        <Preference
+            android:key="appearance.ds"
+            app:title="@string/dual_screen_layouts"
+            app:summary="@string/dual_screen_layouts_summary"
+            app:iconSpaceReserved="false"/>
+    </PreferenceCategory>
+    <PreferenceCategory
+        app:title="@string/games"
+        app:iconSpaceReserved="false">
+        <Preference
+            android:key="games.folders"
+            app:title="@string/pref_game_folders"
+            app:summary="@string/pref_game_folders_summary"
+            app:iconSpaceReserved="false"/>
+    </PreferenceCategory>
+    <PreferenceCategory
+        app:title="@string/behavior"
+        app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            android:key="behavior.pictureInPicture"
+            app:title="@string/pref_picture_in_picture_title"
+            app:summary="@string/pref_picture_in_picture_summary"
+            app:iconSpaceReserved="false"/>
+    </PreferenceCategory>
+</PreferenceScreen>

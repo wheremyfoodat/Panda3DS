@@ -13,7 +13,7 @@ import com.panda3ds.pandroid.R;
 public class LoadingAlertDialog extends BottomAlertDialog {
     public LoadingAlertDialog(@NonNull Context context, @StringRes int title) {
         super(context);
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_loading,null, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.dialog_loading, null, false);
         setView(view);
         setCancelable(false);
         ((AppCompatTextView)view.findViewById(R.id.title))

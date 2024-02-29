@@ -8,12 +8,20 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.panda3ds.pandroid.R;
 import com.panda3ds.pandroid.data.game.GameMetadata;
+import com.panda3ds.pandroid.lang.Function;
 
 import java.util.ArrayList;
 import java.util.List;
 
 class GameAdapter extends RecyclerView.Adapter<ItemHolder> {
     private final ArrayList<GameMetadata> games = new ArrayList<>();
+    private final Function<GameMetadata> clickListener;
+    private final Function<GameMetadata> longClickListener;
+
+    GameAdapter(Function<GameMetadata> clickListener, Function<GameMetadata> longClickListener) {
+        this.clickListener = clickListener;
+        this.longClickListener = longClickListener;
+    }
 
     @NonNull
     @Override
@@ -23,6 +31,11 @@ class GameAdapter extends RecyclerView.Adapter<ItemHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ItemHolder holder, int position) {
+        holder.itemView.setOnClickListener(v -> clickListener.run(games.get(position)));
+        holder.itemView.setOnLongClickListener(v -> {
+            longClickListener.run(games.get(position));
+            return false;
+        });
         holder.apply(games.get(position));
     }
 

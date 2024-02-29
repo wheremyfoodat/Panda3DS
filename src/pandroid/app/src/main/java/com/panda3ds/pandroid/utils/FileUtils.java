@@ -2,8 +2,10 @@ package com.panda3ds.pandroid.utils;
 
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.provider.DocumentsContract;
 import android.system.Os;
 import android.util.Log;
 
@@ -21,14 +23,22 @@ import java.util.Objects;
 
 public class FileUtils {
     public static final String MODE_READ = "r";
-    public static final int CANONICAL_SEARCH_DEEP = 8;
+    private static final String TREE_URI = "tree";
 
     private static DocumentFile parseFile(String path) {
         if (path.startsWith("/")) {
             return DocumentFile.fromFile(new File(path));
         }
         Uri uri = Uri.parse(path);
-        return DocumentFile.fromSingleUri(getContext(), uri);
+        DocumentFile singleFile = DocumentFile.fromSingleUri(getContext(), uri);
+        if (singleFile.length() > 0 && singleFile.length() != 4096) {
+            return singleFile;
+        }
+        if (uri.getScheme().equals("content") && uri.getPath().startsWith("/" + TREE_URI)) {
+            return DocumentFile.fromTreeUri(getContext(), uri);
+        }
+        
+        return singleFile;
     }
 
     private static Context getContext() {
@@ -194,47 +204,6 @@ public class FileUtils {
         getContext().getContentResolver().takePersistableUriPermission(Uri.parse(uri), flags);
     }
 
-    /**
-     * When call ContentProvider.openFileDescriptor() android opens a file descriptor
-     * on app process in /proc/self/fd/[file descriptor id] this is a link to real file path
-     * can use File.getCanonicalPath() for get a link origin, but in some android version
-     * need use Os.readlink(path) to get a real path.
-     */
-    public static String obtainRealPath(String uri) {
-        try {
-            ParcelFileDescriptor parcelDescriptor = getContext().getContentResolver().openFileDescriptor(Uri.parse(uri), "r");
-            int fd = parcelDescriptor.getFd();
-            File file = new File("/proc/self/fd/" + fd).getAbsoluteFile();
-        
-            for (int i = 0; i < CANONICAL_SEARCH_DEEP; i++) {
-                try {
-                    String canonical = file.getCanonicalPath();
-                    if (!Objects.equals(canonical, file.getAbsolutePath())) {
-                        file = new File(canonical).getAbsoluteFile();
-                    }
-                } catch (Exception x) {
-                    break;
-                }
-            }
-
-            if (!file.getAbsolutePath().startsWith("/proc/self/")) {
-                parcelDescriptor.close();
-                return file.getAbsolutePath();
-            }
-
-            String path = Os.readlink(file.getAbsolutePath());
-            parcelDescriptor.close();
-
-            if (new File(path).exists()) {
-                return path;
-            }
-    
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     public static void updateFile(String path) {
         DocumentFile file = parseFile(path);
         Uri uri = file.getUri();
@@ -296,18 +265,30 @@ public class FileUtils {
             FileUtils.createFile(path, name);
             InputStream in = getInputStream(source);
             OutputStream out = getOutputStream(fullPath);
-            byte[] buffer = new byte[1024 * 128]; //128 KB
+             // Make a 128KB temp buffer used for copying in chunks
+            byte[] buffer = new byte[1024 * 128];
             int length;
+
             while ((length = in.read(buffer)) != -1) {
                 out.write(buffer, 0, length);
             }
+
             out.flush();
             out.close();
             in.close();
         } catch (Exception e) {
-            Log.e(Constants.LOG_TAG, "ERROR ON COPY FILE", e);
+            Log.e(Constants.LOG_TAG, "Error while trying to copy file", e);
             return false;
         }
+
         return true;
+    }
+
+    public static String getChild(String path, String name) {
+        return parseFile(path).findFile(name).getUri().toString();
+    }
+
+    public static boolean isDirectory(String path) {
+        return parseFile(path).isDirectory();
     }
 }

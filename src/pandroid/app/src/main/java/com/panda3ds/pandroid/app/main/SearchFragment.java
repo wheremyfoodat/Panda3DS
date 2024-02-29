@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatEditText;
 import androidx.fragment.app.Fragment;
 import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.base.GameAboutDialog;
 import com.panda3ds.pandroid.data.game.GameMetadata;
 import com.panda3ds.pandroid.utils.GameUtils;
 import com.panda3ds.pandroid.utils.SearchAgent;
@@ -33,6 +34,11 @@ public class SearchFragment extends Fragment {
 		super.onViewCreated(view, savedInstanceState);
 
 		gamesListView = view.findViewById(R.id.games);
+		gamesListView.setItemLongClick((game)->{
+			GameAboutDialog dialog = new GameAboutDialog(requireActivity(), game);
+			dialog.setOnDismissListener((x)-> search(((AppCompatEditText) view.findViewById(R.id.search_bar)).getText().toString()));
+			dialog.show();
+		});
 		((AppCompatEditText) view.findViewById(R.id.search_bar)).addTextChangedListener((SimpleTextWatcher) this::search);
 	}
 

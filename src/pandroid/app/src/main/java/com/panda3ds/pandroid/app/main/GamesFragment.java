@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import com.panda3ds.pandroid.R;
+import com.panda3ds.pandroid.app.base.GameAboutDialog;
 import com.panda3ds.pandroid.app.base.LoadingAlertDialog;
 import com.panda3ds.pandroid.data.game.GameMetadata;
 import com.panda3ds.pandroid.lang.Task;
@@ -38,6 +39,13 @@ public class GamesFragment extends Fragment implements ActivityResultCallback<Ur
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 		gameListView = view.findViewById(R.id.games);
+		gameListView.setItemLongClick((game)->{
+			GameAboutDialog dialog = new GameAboutDialog(requireActivity(), game);
+			dialog.setOnDismissListener((x)-> {
+				gameListView.setGameList(GameUtils.getGames());
+			});
+			dialog.show();
+		});
 
 		view.findViewById(R.id.add_rom).setOnClickListener((v) -> pickFileRequest.launch(new String[] {"*/*"}));
 	}

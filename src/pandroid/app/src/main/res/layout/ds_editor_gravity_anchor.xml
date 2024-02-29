@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="4dp">
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/up"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_arrow_up"
+        android:background="@drawable/simple_card_background"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:elevation="4dp"
+        android:backgroundTint="?colorPrimary"
+        android:layout_margin="2dp"
+        android:tint="?colorOnPrimary"/>
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_align_center"
+        android:background="@drawable/simple_card_background"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:elevation="4dp"
+        android:backgroundTint="?colorPrimary"
+        android:layout_margin="2dp"
+        android:tint="?colorOnPrimary"/>
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/down"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_arrow_down"
+        android:background="@drawable/simple_card_background"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:elevation="4dp"
+        android:backgroundTint="?colorPrimary"
+        android:layout_margin="2dp"
+        android:tint="?colorOnPrimary"/>
+
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/revert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_compare_arrow"
+        android:background="@drawable/simple_card_background"
+        android:padding="5dp"
+        android:scaleType="fitCenter"
+        android:elevation="4dp"
+        android:backgroundTint="?colorPrimary"
+        android:layout_margin="2dp"
+        android:tint="?colorOnPrimary"/>
+
+</LinearLayout>

@@ -1,5 +1,7 @@
 package com.panda3ds.pandroid.data;
 
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.panda3ds.pandroid.lang.Task;
@@ -30,7 +32,10 @@ public class GsonConfigParser {
         String[] content = new String[] {"{}"};
         new Task(()->{
             if (FileUtils.exists(getPath())) {
-                content[0] = FileUtils.readTextFile(getPath());
+                String src = FileUtils.readTextFile(getPath());
+                if (src != null && src.length() > 2) {
+                    content[0] = src;
+                }
             }
         }).runSync();
 

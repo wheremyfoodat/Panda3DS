@@ -2,29 +2,31 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <SwitchPreference
-        android:key="performanceMonitor"
-        app:title="@string/pref_performance_monitor_title"
-        app:summary="@string/pref_performance_monitor_summary"
-        app:iconSpaceReserved="false"/>
+    <PreferenceCategory
+        app:title="@string/tools"
+        app:iconSpaceReserved="false">
+        <SwitchPreferenceCompat
+            android:key="performanceMonitor"
+            app:title="@string/pref_performance_monitor_title"
+            app:summary="@string/pref_performance_monitor_summary"
+            app:iconSpaceReserved="false"/>
 
-    <SwitchPreference
-        android:key="loggerService"
-        app:iconSpaceReserved="false"
-        app:title="@string/pref_logger_service_title"
-        app:defaultValue="true"
-        android:summary="@string/pref_logger_service_summary"/>
+        <SwitchPreferenceCompat
+            android:key="loggerService"
+            app:iconSpaceReserved="false"
+            app:title="@string/pref_logger_service_title"
+            android:summary="@string/pref_logger_service_summary"/>
+    </PreferenceCategory>
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
         app:title="@string/graphics">
 
-        <SwitchPreference
+        <SwitchPreferenceCompat
             app:key="shaderJit"
             app:title="@string/pref_shader_jit_title"
             app:summary="@string/pref_shader_jit_summary"
             app:iconSpaceReserved="false"/>
 
     </PreferenceCategory>
-
 </PreferenceScreen>
