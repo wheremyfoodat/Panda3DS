@@ -819,7 +819,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
 		program.create({vertShader, fragShader});
-		program.use();
+		gl.useProgram(program);
 
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
