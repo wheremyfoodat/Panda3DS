@@ -31,6 +31,7 @@
 #include <utility>
 
 #include <glad/gl.h>
+#include <android/log.h>
 
 // Check if we have C++20. If yes, we can add C++20 std::span support
 #ifdef _MSVC_LANG // MSVC does not properly define __cplusplus without a compiler flag...
@@ -413,6 +414,7 @@ namespace OpenGL {
                 char buf[4096];
                 glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
                 fprintf(stderr, "Failed to link program\nError: %s\n", buf);
+		  __android_log_print(ANDROID_LOG_ERROR, "Panda3DS", "Failed to link program\nError: %s", buf);
                 glDeleteProgram(m_handle);
 
                 m_handle = 0;
