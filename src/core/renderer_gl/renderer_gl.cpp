@@ -44,6 +44,10 @@ void RendererGL::reset() {
 
 		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
+
+#ifdef __ANDROID__
+	fragShaderGen.setTarget(PICA::ShaderGen::API::GLES, PICA::ShaderGen::Language::GLSL);
+#endif
 }
 
 void RendererGL::initGraphicsContextInternal() {
