@@ -308,7 +308,7 @@ void FragmentGenerator::getColorOperation(std::string& shader, TexEnvConfig::Ope
 		case TexEnvConfig::Operation::AddSigned: shader += "clamp(colorOp1 + colorOp2 - 0.5, 0.0, 1.0);"; break;
 		case TexEnvConfig::Operation::Subtract: shader += "colorOp1 - colorOp2"; break;
 		case TexEnvConfig::Operation::Modulate: shader += "colorOp1 * colorOp2"; break;
-		case TexEnvConfig::Operation::Lerp: shader += "colorOp1 * colorOp3 + colorOp2 * (vec(1.0) - colorOp3)"; break;
+		case TexEnvConfig::Operation::Lerp: shader += "colorOp1 * colorOp3 + colorOp2 * (vec3(1.0) - colorOp3)"; break;
 
 		case TexEnvConfig::Operation::AddMultiply: shader += "min(colorOp1 + colorOp2, vec3(1.0)) * colorOp3"; break;
 		case TexEnvConfig::Operation::MultiplyAdd: shader += "colorOp1 * colorOp2 + colorOp3"; break;
@@ -328,15 +328,15 @@ void FragmentGenerator::getAlphaOperation(std::string& shader, TexEnvConfig::Ope
 		case TexEnvConfig::Operation::AddSigned: shader += "clamp(alphaOp1 + alphaOp2 - 0.5, 0.0, 1.0);"; break;
 		case TexEnvConfig::Operation::Subtract: shader += "alphaOp1 - alphaOp2"; break;
 		case TexEnvConfig::Operation::Modulate: shader += "alphaOp1 * alphaOp2"; break;
-		case TexEnvConfig::Operation::Lerp: shader += "alphaOp1 * alphaOp3 + alphaOp2 * (vec(1.0) - alphaOp3)"; break;
+		case TexEnvConfig::Operation::Lerp: shader += "alphaOp1 * alphaOp3 + alphaOp2 * (1.0 - alphaOp3)"; break;
 
-		case TexEnvConfig::Operation::AddMultiply: shader += "min(alphaOp1 + alphaOp2, vec3(1.0)) * alphaOp3"; break;
+		case TexEnvConfig::Operation::AddMultiply: shader += "min(alphaOp1 + alphaOp2, 1.0) * alphaOp3"; break;
 		case TexEnvConfig::Operation::MultiplyAdd: shader += "alphaOp1 * alphaOp2 + alphaOp3"; break;
 		case TexEnvConfig::Operation::Dot3RGB:
 		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(alphaOp1 - 0.5, alphaOp2 - 0.5))"; break;
 		default:
 			Helpers::warn("FragmentGenerator: Unimplemented alpha op");
-			shader += "vec3(1.0)";
+			shader += "1.0";
 			break;
 	}
 }
