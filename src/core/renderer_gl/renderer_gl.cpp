@@ -291,6 +291,9 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 
 void RendererGL::setupTextureEnvState() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
+	if (!usingUbershader) {
+		return;
+	}
 
 	static constexpr std::array<u32, 6> ioBases = {
 		PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
@@ -388,13 +391,17 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
-	OpenGL::Program& program = getSpecializedShader();
+	if (usingUbershader) {
+		gl.useProgram(triangleProgram);
+	} else {
+		OpenGL::Program& program = getSpecializedShader();
+		gl.useProgram(program);
+	}
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
 	gl.bindVBO(vbo);
 	gl.bindVAO(vao);
-	gl.useProgram(triangleProgram);
 
 	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
@@ -420,27 +427,31 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
 	// Update depth uniforms
-	if (oldDepthScale != depthScale) {
-		oldDepthScale = depthScale;
-		glUniform1f(ubershaderData.depthScaleLoc, depthScale);
-	}
+	if (usingUbershader) {
+		if (oldDepthScale != depthScale) {
+			oldDepthScale = depthScale;
+			glUniform1f(ubershaderData.depthScaleLoc, depthScale);
+		}
 
-	if (oldDepthOffset != depthOffset) {
-		oldDepthOffset = depthOffset;
-		glUniform1f(ubershaderData.depthOffsetLoc, depthOffset);
-	}
+		if (oldDepthOffset != depthOffset) {
+			oldDepthOffset = depthOffset;
+			glUniform1f(ubershaderData.depthOffsetLoc, depthOffset);
+		}
 
-	if (oldDepthmapEnable != depthMapEnable) {
-		oldDepthmapEnable = depthMapEnable;
-		glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
+		if (oldDepthmapEnable != depthMapEnable) {
+			oldDepthmapEnable = depthMapEnable;
+			glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
+		}
 	}
 
 	setupTextureEnvState();
 	bindTexturesToSlots();
 
-	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
-	// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
-	glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
+	if (usingUbershader) {
+		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
+		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
+		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
+	}
 
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT();
