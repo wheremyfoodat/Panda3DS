@@ -11,6 +11,15 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 		default: break;
 	}
 
+	if (api == API::GLES) {
+		ret += R"(
+			#define USING_GLES 1
+
+			precision mediump int;
+			precision mediump float;
+		)";
+	}
+
 	ret += R"(
 		layout(location = 0) in vec4 a_coords;
 		layout(location = 1) in vec4 a_quaternion;
@@ -75,6 +84,14 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 	}
 
 	bool unimplementedFlag = false;
+	if (api == API::GLES) {
+		ret += R"(
+			#define USING_GLES 1
+
+			precision mediump int;
+			precision mediump float;
+		)";
+	}
 
 	// Input and output attributes
 	ret += R"(
@@ -93,17 +110,13 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		uniform sampler2D u_tex0;
 		uniform sampler2D u_tex1;
 		uniform sampler2D u_tex2;
+		// GLES doesn't support sampler1DArray, as such we'll have to change how we handle lighting later
+#ifndef USING_GLES
 		uniform sampler1DArray u_tex_lighting_lut;
+#endif
 
 		vec4 tevSources[16];
 		vec4 tevNextPreviousBuffer;
-
-		vec3 regToColor(uint reg) {
-			// Normalization scale to convert from [0...255] to [0.0...1.0]
-			const float scale = 1.0 / 255.0;
-
-			return scale * vec3(float(bitfieldExtract(reg, 20, 8)), float(bitfieldExtract(reg, 10, 8)), float(bitfieldExtract(reg, 00, 8)));
-		}
 	)";
 
 	// Emit main function for fragment shader
