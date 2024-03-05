@@ -3,7 +3,7 @@
 	url = https://github.com/serge1/ELFIO
 [submodule "third_party/dynarmic"]
 	path = third_party/dynarmic
-	url = https://github.com/merryhime/dynarmic
+	url = https://github.com/lioncash/dynarmic
 [submodule "third_party/SDL2"]
 	path = third_party/SDL2
 	url = https://github.com/libsdl-org/SDL
@@ -60,4 +60,4 @@
 	url = https://github.com/wwylele/teakra
 [submodule "third_party/boost"]
 	path = third_party/boost
-	url = https://github.com/Panda3DS-emu/ext-boost
+	url = https://github.com/boostorg/boost
