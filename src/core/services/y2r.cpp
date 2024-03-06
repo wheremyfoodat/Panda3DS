@@ -19,7 +19,12 @@ namespace Y2RCommands {
 		SetSendingU = 0x00110102,
 		SetSendingV = 0x00120102,
 		SetSendingYUV = 0x00130102,
+		IsFinishedSendingYUV = 0x00140000,
+		IsFinishedSendingY = 0x00150000,
+		IsFinishedSendingU = 0x00160000,
+		IsFinishedSendingV = 0x00170000,
 		SetReceiving = 0x00180102,
+		IsFinishedReceiving = 0x00190000,
 		SetInputLineWidth = 0x001A0040,
 		GetInputLineWidth = 0x001B0000,
 		SetInputLines = 0x001C0040,
@@ -70,6 +75,11 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::GetTransferEndEvent: getTransferEndEvent(messagePointer); break;
 		case Y2RCommands::GetStandardCoefficientParams: getStandardCoefficientParams(messagePointer); break;
 		case Y2RCommands::IsBusyConversion: isBusyConversion(messagePointer); break;
+		case Y2RCommands::IsFinishedReceiving: isFinishedReceiving(messagePointer); break;
+		case Y2RCommands::IsFinishedSendingY: isFinishedSendingY(messagePointer); break;
+		case Y2RCommands::IsFinishedSendingU: isFinishedSendingU(messagePointer); break;
+		case Y2RCommands::IsFinishedSendingV: isFinishedSendingV(messagePointer); break;
+		case Y2RCommands::IsFinishedSendingYUV: isFinishedSendingYUV(messagePointer); break;
 		case Y2RCommands::PingProcess: pingProcess(messagePointer); break;
 		case Y2RCommands::SetAlpha: setAlpha(messagePointer); break;
 		case Y2RCommands::SetBlockAlignment: setBlockAlignment(messagePointer); break;
@@ -429,4 +439,49 @@ void Y2RService::startConversion(u32 messagePointer) {
 	if (transferEndEvent.has_value()) {
 		kernel.signalEvent(transferEndEvent.value());
 	}
+}
+
+void Y2RService::isFinishedSendingYUV(u32 messagePointer) {
+	log("Y2R::IsFinishedSendingYUV");
+	constexpr bool finished = true; // For now, Y2R transfers are instant
+
+	mem.write32(messagePointer, IPC::responseHeader(0x14, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, finished ? 1 : 0);
+}
+
+void Y2RService::isFinishedSendingY(u32 messagePointer) {
+	log("Y2R::IsFinishedSendingY");
+	constexpr bool finished = true;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x15, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, finished ? 1 : 0);
+}
+
+void Y2RService::isFinishedSendingU(u32 messagePointer) {
+	log("Y2R::IsFinishedSendingU");
+	constexpr bool finished = true;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, finished ? 1 : 0);
+}
+
+void Y2RService::isFinishedSendingV(u32 messagePointer) {
+	log("Y2R::IsFinishedSendingV");
+	constexpr bool finished = true;
+
+	mem.write32(messagePointer, IPC::responseHeader(0x17, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, finished ? 1 : 0);
+}
+
+void Y2RService::isFinishedReceiving(u32 messagePointer) {
+	log("Y2R::IsFinishedSendingReceiving");
+	constexpr bool finished = true; // For now, receiving components is also instant
+
+	mem.write32(messagePointer, IPC::responseHeader(0x17, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, finished ? 1 : 0);
 }

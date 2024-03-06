@@ -82,6 +82,11 @@ class Y2RService {
 	void getInputLineWidth(u32 messagePointer);
 	void getOutputFormat(u32 messagePointer);
 	void isBusyConversion(u32 messagePointer);
+	void isFinishedReceiving(u32 messagePointer);
+	void isFinishedSendingY(u32 messagePointer);
+	void isFinishedSendingU(u32 messagePointer);
+	void isFinishedSendingV(u32 messagePointer);
+	void isFinishedSendingYUV(u32 messagePointer);
 	void pingProcess(u32 messagePointer);
 	void setTransferEndInterrupt(u32 messagePointer);
 
