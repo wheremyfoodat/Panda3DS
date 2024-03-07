@@ -228,9 +228,19 @@ public:
         return Ok(FormatInfo{ .size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false });
     }
 
-    virtual HorizonResult createDirectory(const FSPath& path) {
-        Helpers::panic("Unimplemented CreateDirectory for %s archive", name().c_str());
-        return Result::FS::AlreadyExists;
+	virtual HorizonResult createDirectory(const FSPath& path) {
+    	Helpers::panic("Unimplemented CreateDirectory for %s archive", name().c_str());
+    	return Result::FS::AlreadyExists;
+    }
+
+	virtual HorizonResult deleteDirectory(const FSPath& path) {
+    	Helpers::warn("Stubbed DeleteDirectory for %s archive", name().c_str());
+    	return Result::Success;
+    }
+
+	virtual HorizonResult deleteDirectoryRecursively(const FSPath& path) {
+    	Helpers::warn("Stubbed DeleteDirectoryRecursively for %s archive", name().c_str());
+    	return Result::Success;
     }
 
     // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)

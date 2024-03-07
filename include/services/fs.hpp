@@ -54,6 +54,7 @@ class FSService {
 	void closeArchive(u32 messagePointer);
 	void controlArchive(u32 messagePointer);
 	void deleteDirectory(u32 messagePointer);
+	void deleteDirectoryRecursively(u32 messagePointer);
 	void deleteExtSaveData(u32 messagePointer);
 	void deleteFile(u32 messagePointer);
 	void formatSaveData(u32 messagePointer);

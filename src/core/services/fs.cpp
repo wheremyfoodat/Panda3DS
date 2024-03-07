@@ -173,6 +173,7 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::ControlArchive: controlArchive(messagePointer); break;
 		case FSCommands::CloseArchive: closeArchive(messagePointer); break;
 		case FSCommands::DeleteDirectory: deleteDirectory(messagePointer); break;
+		case FSCommands::DeleteDirectoryRecursively: deleteDirectoryRecursively(messagePointer); break;
 		case FSCommands::DeleteExtSaveData: deleteExtSaveData(messagePointer); break;
 		case FSCommands::DeleteFile: deleteFile(messagePointer); break;
 		case FSCommands::FormatSaveData: formatSaveData(messagePointer); break;
@@ -431,8 +432,20 @@ void FSService::deleteDirectory(u32 messagePointer) {
 	const u32 filePathPointer = mem.read32(messagePointer + 28);
 	log("FS::DeleteDirectory\n");
 
-	Helpers::warn("Stubbed FS::DeleteDirectory call!");
+	Helpers::warn("Stubbed FS::DeleteDirectory call!"); // note: should we ensure the system isn't about to delete things outside of the VFS?
 	mem.write32(messagePointer, IPC::responseHeader(0x806, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FSService::deleteDirectoryRecursively(u32 messagePointer) {
+	const Handle archiveHandle = Handle(mem.read64(messagePointer + 8));
+	const u32 filePathType = mem.read32(messagePointer + 16);
+	const u32 filePathSize = mem.read32(messagePointer + 20);
+	const u32 filePathPointer = mem.read32(messagePointer + 28);
+	log("FS::DeleteDirectoryRecursively\n");
+
+	Helpers::warn("Stubbed FS::DeleteDirectoryRecursively call!"); // note: should we ensure the system isn't about to delete things outside of the VFS?
+	mem.write32(messagePointer, IPC::responseHeader(0x807, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -530,10 +543,29 @@ void FSService::createExtSaveData(u32 messagePointer) {
 	const u32 smdhSize = mem.read32(messagePointer + 36);
 	const u32 smdhPointer = mem.read32(messagePointer + 44);
 
-	log("FS::CreateExtSaveData (stubbed)\n");
+	log("FS::CreateExtSaveData\n");
+	ArchiveBase::FormatInfo info {
+		.size = (u32) (sizeLimit * 0x200),
+		.numOfDirectories = numOfDirectories,
+		.numOfFiles = numOfFiles,
+		.duplicateData = false
+	};
+	FSPath path = readPath(PathType::Binary, messagePointer + 4, 32);
+	FSPath smdh = readPath(PathType::Binary, smdhPointer, smdhSize);
+
+	switch(mediaType) {
+		case 0:
+			sharedExtSaveData_nand.format(path, info);
+		break;
+		case 1:
+			extSaveData_sdmc.format(path, info);
+		break;
+		default:
+			Helpers::warn("Unhanled ExtSaveData MediaType %d", static_cast<s32>(mediaType));
+		break;
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0851, 1, 0));
-	// TODO: Similar to DeleteExtSaveData, we need to refactor how our ExtSaveData stuff works before properly implementing this
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
