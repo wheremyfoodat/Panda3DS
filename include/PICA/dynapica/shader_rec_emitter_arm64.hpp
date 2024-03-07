@@ -42,6 +42,12 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	oaknut::Label emitLog2Func();
 	oaknut::Label emitExp2Func();
 
+	template <typename T>
+	void getLabelPointer(const oaknut::Label& label) {
+		auto pointer = reinterpret_cast<u8*>(oaknut::CodeBlock::ptr()) + label.offset();
+		return reinterpret_cast<T>(pointer);
+	}
+
 	// Compile all instructions from [current recompiler PC, end)
 	void compileUntil(const PICAShader& shaderUnit, u32 endPC);
 	// Compile instruction "instr"
@@ -118,7 +124,7 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 
 	// PC must be a valid entrypoint here. It doesn't have that much overhead in this case, so we use std::array<>::at() to assert it does
 	InstructionCallback getInstructionCallback(u32 pc) {
-		return reinterpret_cast<InstructionCallback>(oaknut::CodeBlock::ptr() + instructionLabels.at(pc).offset());
+		return getLabelPointer<InstructionCallback>(instructionLabels.at(pc));
 	}
 
 	PrologueCallback getPrologueCallback() { return prologueCb; }
