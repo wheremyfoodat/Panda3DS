@@ -43,7 +43,7 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	oaknut::Label emitExp2Func();
 
 	template <typename T>
-	void getLabelPointer(const oaknut::Label& label) {
+	T getLabelPointer(const oaknut::Label& label) {
 		auto pointer = reinterpret_cast<u8*>(oaknut::CodeBlock::ptr()) + label.offset();
 		return reinterpret_cast<T>(pointer);
 	}
