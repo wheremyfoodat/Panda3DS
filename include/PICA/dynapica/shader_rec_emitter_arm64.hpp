@@ -119,7 +119,7 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	// PC must be a valid entrypoint here. It doesn't have that much overhead in this case, so we use std::array<>::at() to assert it does
 	InstructionCallback getInstructionCallback(u32 pc) {
 		// Cast away the constness because casting to a function pointer is hard otherwise. Legal as long as we don't write to *ptr
-		uint8_t* ptr = instructionLabels.at(pc).ptr<u8*>();
+		uint8_t* ptr = instructionLabels.at(pc).xptr<u8*>();
 		return reinterpret_cast<InstructionCallback>(ptr);
 	}
 
