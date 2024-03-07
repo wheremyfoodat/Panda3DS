@@ -39,7 +39,7 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	align(16);
 
 	l(prologueLabel);
-	prologueCb = prologueLabel.xptr<PrologueCallback>();
+	prologueCb = prreinterpret_cast<prologueCallback>(oaknut::CodeBlock::ptr() + prologueLabel.offset());
 
 	// Set state pointer to the proper pointer
 	// state pointer is volatile, no need to preserve it
@@ -407,8 +407,9 @@ void ShaderEmitter::storeRegister(QReg source, const PICAShader& shader, u32 des
 	if (writeMask == 0xf) {  // No lanes are masked, just use STR
 		STR(source, statePointer, offset);
 	} else {
-		LDR(scratch1, statePointer, offset);                     // Load current value
-		LDR(scratch2, blendMasks.xptr<u8*>() + writeMask * 16);  // Load write mask for blending
+		blendMaskPointer = reinterpret_cast<u8*>(oaknut::CodeBlock::ptr() + blendMasks.offset());
+		LDR(scratch1, statePointer, offset);               // Load current value
+		LDR(scratch2, blendMaskPointer + writeMask * 16);  // Load write mask for blending
 
 		BSL(scratch2.B16(), source.B16(), scratch1.B16());  // Scratch2 = (Source & mask) | (original & ~mask)
 		STR(scratch2, statePointer, offset);                // Write it back
