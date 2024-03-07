@@ -73,6 +73,7 @@ class GPUService {
 	void acquireRight(u32 messagePointer);
 	void flushDataCache(u32 messagePointer);
 	void importDisplayCaptureInfo(u32 messagePointer);
+	void readHwRegs(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
 	void releaseRight(u32 messagePointer);
 	void restoreVramSysArea(u32 messagePointer);

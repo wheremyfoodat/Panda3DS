@@ -7,6 +7,7 @@
 namespace ServiceCommands {
 	enum : u32 {
 		SetAxiConfigQoSMode = 0x00100040,
+		ReadHwRegs = 0x00040080,
 		AcquireRight = 0x00160042,
 		RegisterInterruptRelayQueue = 0x00130042,
 		WriteHwRegs = 0x00010082,
@@ -59,6 +60,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::SetInternalPriorities: setInternalPriorities(messagePointer); break;
 		case ServiceCommands::SetLCDForceBlack: setLCDForceBlack(messagePointer); break;
 		case ServiceCommands::StoreDataCache: storeDataCache(messagePointer); break;
+		case ServiceCommands::ReadHwRegs: readHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
 		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
@@ -153,6 +155,43 @@ void GPUService::requestInterrupt(GPUInterrupt type) {
 	if (interruptEvent.has_value()) {
 		kernel.signalEvent(interruptEvent.value());
 	}
+}
+
+void GPUService::readHwRegs(u32 messagePointer) {
+	u32 ioAddr = mem.read32(messagePointer + 4);      // GPU address based at 0x1EB00000, word aligned
+	const u32 size = mem.read32(messagePointer + 8);  // Size in bytes
+	const u32 initialDataPointer = mem.read32(messagePointer + 0x104);
+	u32 dataPointer = initialDataPointer;
+	log("GSP::GPU::ReadHwRegs (GPU address = %08X, size = %X, data address = %08X)\n", ioAddr, size, dataPointer);
+	
+
+	// Check for alignment
+	if ((size & 3) || (ioAddr & 3) || (dataPointer & 3)) {
+		Helpers::panic("GSP::GPU::ReadHwRegs misalignment");
+	}
+
+	if (size > 0x80) {
+		Helpers::panic("GSP::GPU::ReadHwRegs size too big");
+	}
+
+	if (ioAddr >= 0x420000) {
+		Helpers::panic("GSP::GPU::ReadHwRegs offset too big");
+	}
+
+	ioAddr += 0x1EB00000;
+	// Read the PICA registers and write them to the output buffer
+	for (u32 i = 0; i < size; i += 4) {
+		const u32 value = gpu.readReg(ioAddr);
+		mem.write32(dataPointer, value);
+		dataPointer += 4;
+		ioAddr += 4;
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	// Translation descriptor. TODO: Make a more generic interface for this
+	mem.write32(messagePointer + 8, u32(size << 14) | 2);
+	mem.write32(messagePointer + 12, initialDataPointer);
 }
 
 void GPUService::writeHwRegs(u32 messagePointer) {
