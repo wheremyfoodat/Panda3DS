@@ -58,3 +58,6 @@
 [submodule "third_party/boost"]
 	path = third_party/boost
 	url = https://github.com/Panda3DS-emu/ext-boost
+[submodule "third_party/dynarmic"]
+	path = third_party/dynarmic
+	url = https://github.com/Panda3DS-emu/dynarmic
