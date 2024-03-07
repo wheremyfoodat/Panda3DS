@@ -561,7 +561,7 @@ void FSService::createExtSaveData(u32 messagePointer) {
 			extSaveData_sdmc.format(path, info);
 		break;
 		default:
-			Helpers::warn("Unhanled ExtSaveData MediaType %d", static_cast<s32>(mediaType));
+			Helpers::warn("Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType));
 		break;
 	}
 

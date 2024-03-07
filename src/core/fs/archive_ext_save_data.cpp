@@ -257,7 +257,7 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> ExtSaveDataArchive::getForm
 
 std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path) const {
 	if(path.type != PathType::Binary) {
-		Helpers::panic("GetExtSaveDataPathFromBinary called without a Bianry FSPath!");
+		Helpers::panic("GetExtSaveDataPathFromBinary called without a Binary FSPath!");
 	}
 
 	// TODO: Remove punning here
