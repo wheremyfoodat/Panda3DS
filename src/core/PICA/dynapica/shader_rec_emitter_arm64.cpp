@@ -39,7 +39,7 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	align(16);
 
 	l(prologueLabel);
-	prologueCb = reinterpret_cast<prologueCallback>(oaknut::CodeBlock::ptr() + prologueLabel.offset());
+	prologueCb = reinterpret_cast<PrologueCallback>(oaknut::CodeBlock::ptr() + prologueLabel.offset());
 
 	// Set state pointer to the proper pointer
 	// state pointer is volatile, no need to preserve it
