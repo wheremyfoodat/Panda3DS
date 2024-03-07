@@ -407,7 +407,7 @@ void ShaderEmitter::storeRegister(QReg source, const PICAShader& shader, u32 des
 	if (writeMask == 0xf) {  // No lanes are masked, just use STR
 		STR(source, statePointer, offset);
 	} else {
-		blendMaskPointer = reinterpret_cast<u8*>(oaknut::CodeBlock::ptr() + blendMasks.offset());
+		u8* blendMaskPointer = reinterpret_cast<u8*>(oaknut::CodeBlock::ptr() + blendMasks.offset());
 		LDR(scratch1, statePointer, offset);               // Load current value
 		LDR(scratch2, blendMaskPointer + writeMask * 16);  // Load write mask for blending
 
