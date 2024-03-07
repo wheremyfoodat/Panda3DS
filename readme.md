@@ -76,10 +76,11 @@ Both decrypted and encrypted dumps are supported. However for encrypted dumps yo
 
 ## Controls
 Keyboard & Mouse
-- Up button	W
-- Down button	S
-- Left button	A
-- Right button	D
+- Up analog	  W
+- Down analog S
+- Left analog A
+- Right analog D
+- D-pad     Arrows
 - A button	L
 - B button	K
 - X button	O
