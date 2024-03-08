@@ -55,6 +55,8 @@ void FSService::reset() {
 // Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
 void FSService::initializeFilesystem() {
 	const auto sdmcPath = IOFile::getAppData() / "SDMC"; // Create SDMC directory
+	const auto nandPath = IOFile::getAppData() / "NAND";
+	const auto smdcSharedpath = IOFile::getAppData() / ".." / "SharedFiles" / "SDMC";
 	const auto nandSharedpath = IOFile::getAppData() / ".." / "SharedFiles" / "NAND";
 
 	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
@@ -63,12 +65,20 @@ void FSService::initializeFilesystem() {
 	namespace fs = std::filesystem;
 
 
+	if (!fs::is_directory(smdcSharedpath)) {
+		fs::create_directories(smdcSharedpath);
+	}
+
 	if (!fs::is_directory(nandSharedpath)) {
 		fs::create_directories(nandSharedpath);
 	}
 
 	if (!fs::is_directory(sdmcPath)) {
 		fs::create_directories(sdmcPath);
+	}
+
+	if (!fs::is_directory(nandPath)) {
+		fs::create_directories(nandPath);
 	}
 
 	if (!fs::is_directory(savePath)) {
@@ -86,14 +96,14 @@ void FSService::initializeFilesystem() {
 
 ExtSaveDataArchive* FSService::getExtArchiveFromID(u64 saveId, bool isShared) {
 	if (const auto entry = extSaveData_sdmc.find(saveId); entry == extSaveData_sdmc.end()) {
-		extSaveData_sdmc.emplace(saveId, ExtSaveDataArchive(mem, "SDMC", saveId, isShared));
+		extSaveData_sdmc.emplace(saveId, ExtSaveDataArchive(mem, isShared ? "../SharedFiles/SDMC" : "SDMC", saveId, isShared));
 	}
 	return &extSaveData_sdmc.at(saveId);
 }
 
 ExtSaveDataArchive* FSService::getNANDExtArchiveFromID(u64 saveId, bool isShared) {
 	if (const auto entry = nandExtSaveData_nand.find(saveId); entry == nandExtSaveData_nand.end()) {
-		nandExtSaveData_nand.emplace(saveId, ExtSaveDataArchive(mem, "../SharedFiles/NAND", saveId, isShared));
+		nandExtSaveData_nand.emplace(saveId, ExtSaveDataArchive(mem, isShared ? "../SharedFiles/NAND" : "NAND", saveId, isShared));
 	}
 	return &nandExtSaveData_nand.at(saveId);
 }
