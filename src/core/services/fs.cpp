@@ -96,14 +96,14 @@ void FSService::initializeFilesystem() {
 
 ExtSaveDataArchive* FSService::getExtArchiveFromID(u64 saveId, bool isShared) {
 	if (const auto entry = extSaveData_sdmc.find(saveId); entry == extSaveData_sdmc.end()) {
-		extSaveData_sdmc.emplace(saveId, ExtSaveDataArchive(mem, isShared ? "../SharedFiles/SDMC" : "SDMC", saveId, isShared));
+		extSaveData_sdmc.emplace(saveId, ExtSaveDataArchive(mem, isShared ? "../SharedFiles/SDMC" : "SDMC", saveId, isShared, false));
 	}
 	return &extSaveData_sdmc.at(saveId);
 }
 
 ExtSaveDataArchive* FSService::getNANDExtArchiveFromID(u64 saveId, bool isShared) {
 	if (const auto entry = nandExtSaveData_nand.find(saveId); entry == nandExtSaveData_nand.end()) {
-		nandExtSaveData_nand.emplace(saveId, ExtSaveDataArchive(mem, isShared ? "../SharedFiles/NAND" : "NAND", saveId, isShared));
+		nandExtSaveData_nand.emplace(saveId, ExtSaveDataArchive(mem, isShared ? "../SharedFiles/NAND" : "NAND", saveId, isShared, true));
 	}
 	return &nandExtSaveData_nand.at(saveId);
 }

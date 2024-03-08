@@ -296,7 +296,7 @@ Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const 
 	const fs::path formatInfoPath = getFormatInfoPath(path);
 	// Format info not found so the archive is not formatted
 	if (!fs::is_regular_file(formatInfoPath)) {
-		return Err(Result::FS::NotFoundInvalid);
+		return isNAND ? Err(Result::FS::NotFormatted) : Err(Result::FS::NotFoundInvalid);
 	}
 
 	return Ok((ArchiveBase*)this);

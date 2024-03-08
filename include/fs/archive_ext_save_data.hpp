@@ -13,8 +13,8 @@ struct ExtSaveDataInfo {
 
 class ExtSaveDataArchive : public ArchiveBase {
 public:
-	ExtSaveDataArchive(Memory& mem, const std::string& folder, u64 saveId, bool isShared = false) : ArchiveBase(mem),
-		archiveSaveId(saveId), isShared(isShared), backingFolder(folder) {}
+	ExtSaveDataArchive(Memory& mem, const std::string& folder, u64 saveId, bool isShared = false, bool isNAND = false) : ArchiveBase(mem),
+		archiveSaveId(saveId), isShared(isShared), isNAND(isNAND), backingFolder(folder) {}
 	u64 getFreeBytes() override { Helpers::panic("ExtSaveData::GetFreeBytes unimplemented"); return 0;  }
 	std::string name() override { return "ExtSaveData::" + backingFolder + "::" + std::to_string(archiveSaveId); }
 
@@ -43,5 +43,6 @@ public:
 
 	u64 archiveSaveId = 0;
 	bool isShared = false;
+	bool isNAND = false;
 	std::string backingFolder; // Backing folder for the archive. Can be NAND, Gamecard or SD depending on the archive path.
 };
