@@ -572,20 +572,26 @@ void FSService::createExtSaveData(u32 messagePointer) {
 		.duplicateData = false
 	};
 	FSPath path = readPath(PathType::Binary, messagePointer + 4, 32);
-	FSPath smdh = readPath(PathType::Binary, smdhPointer, smdhSize);
 
+	ExtSaveDataArchive* selected = nullptr;
 	switch(mediaType) {
 		case MediaType::NAND:
-			sharedExtSaveData_nand.format(path, info);
-			sharedExtSaveData_nand.saveIcon(smdh.binary);
+			selected = &sharedExtSaveData_nand;
 		break;
 		case MediaType::SD:
-			extSaveData_sdmc.format(path, info);
-			extSaveData_sdmc.saveIcon(smdh.binary);
+			selected = &extSaveData_sdmc;
 		break;
 		default:
 			Helpers::warn("FS::CreateExtSaveData - Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType));
 		break;
+	}
+
+	if (selected != nullptr) {
+		selected->format(path, info);
+		if(smdhSize > 0) {
+			const FSPath smdh = readPath(PathType::Binary, smdhPointer, smdhSize);
+			selected->saveIcon(smdh.binary);
+		}
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0851, 1, 0));

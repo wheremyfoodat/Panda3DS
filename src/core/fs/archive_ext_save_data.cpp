@@ -230,6 +230,10 @@ void ExtSaveDataArchive::clear(const FSPath& path) const {
 }
 
 void ExtSaveDataArchive::saveIcon(const std::vector<u8>& data) const {
+	if (data.empty()) {
+		return;
+	}
+
 	const fs::path iconPath = IOFile::getAppData() / backingFolder / "icon";
 	IOFile file(iconPath, "wb");
 	file.setSize(data.size());
