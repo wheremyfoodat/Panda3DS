@@ -204,14 +204,12 @@ void ExtSaveDataArchive::format(const FSPath& path, const FormatInfo& info) {
 	const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
 	const fs::path formatInfoPath = getFormatInfoPath(path);
 
-	// Delete all contents by deleting the directory then recreating it
-	fs::remove_all(saveDataPath);
-	fs::create_directories(saveDataPath);
-
 	if (!isShared) {
+		// Delete all contents by deleting the directory then recreating it
+		fs::remove_all(saveDataPath);
+		fs::create_directories(saveDataPath);
 		fs::create_directories(saveDataPath / "user");
 		fs::create_directories(saveDataPath / "boss");
-		// todo: save icon.
 	}
 
 	// Write format info on disk
@@ -275,6 +273,10 @@ std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path)
 }
 
 std::string ExtSaveDataArchive::getExtSaveDataPath() const {
+	if (isShared) {
+		return backingFolder + "/" + std::to_string(mem.getProgramID().value_or(0)) + "/" + std::to_string(archiveSaveId);
+	}
+
 	return backingFolder + "/" + std::to_string(archiveSaveId);
 }
 
@@ -283,11 +285,18 @@ Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const 
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
+	if (isShared) {
+		const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
+		if (!fs::exists(saveDataPath))
+			fs::create_directories(saveDataPath);
+		return Ok((ArchiveBase*) this);
+	}
+
 	// Create a format info path in the style of AppData/FormatInfo/Cartridge10390390194.format
 	const fs::path formatInfoPath = getFormatInfoPath(path);
 	// Format info not found so the archive is not formatted
 	if (!fs::is_regular_file(formatInfoPath)) {
-		return isShared ? Err(Result::FS::NotFormatted) : Err(Result::FS::NotFoundInvalid);
+		return Err(Result::FS::NotFoundInvalid);
 	}
 
 	return Ok((ArchiveBase*)this);
