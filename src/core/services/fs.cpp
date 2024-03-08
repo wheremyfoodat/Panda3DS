@@ -611,7 +611,7 @@ void FSService::readExtSaveDataIcon(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x0851, 1, 0));
 
 	Rust::Result<std::vector<u8>, HorizonResult> data = selected == nullptr ? Err(Result::FS::NotFoundInvalid) : selected->loadIcon();
-	if (data.isErr()) {
+	if (data.isErr() || smdhSize == 0 || smdhPointer == 0) {
 		mem.write32(messagePointer + 4, data.unwrapErr());;
 		mem.write32(messagePointer + 8, 0);
 	} else {
