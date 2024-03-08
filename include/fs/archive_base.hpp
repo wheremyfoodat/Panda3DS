@@ -57,6 +57,14 @@ namespace ArchiveID {
     }
 }
 
+namespace MediaType {
+	enum : u8 {
+		NAND = 0,
+		SD = 1,
+		Gamecard = 2
+	};
+};
+
 struct FSPath {
     u32 type = PathType::Invalid;
 

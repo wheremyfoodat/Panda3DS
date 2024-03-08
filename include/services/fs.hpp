@@ -42,6 +42,7 @@ class FSService {
 	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
 	FSPath readPath(u32 type, u32 pointer, u32 size);
+	void writePointer(const u8* data, u32 pointer, u32 size);
 
 	const EmulatorConfig& config;
 
@@ -78,6 +79,7 @@ class FSService {
 	void setArchivePriority(u32 messagePointer);
 	void setPriority(u32 messagePointer);
 	void setThisSaveDataSecureValue(u32 messagePointer);
+	void readExtSaveDataIcon(u32 messagePointer);
 
 	// Used for set/get priority: Not sure what sort of priority this is referring to
 	u32 priority;
