@@ -125,7 +125,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 			const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&archivePath.binary[0]);
 			switch(info.media_type) {
 				case MediaType::NAND: {
-					return getExtArchiveFromID(info.save_id);
+					return getSharedExtArchiveFromID(info.save_id);
 					break;
 				}
 				default:
