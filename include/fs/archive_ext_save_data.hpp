@@ -23,8 +23,6 @@ public:
 	void format(const FSPath& path, const FormatInfo& info) override;
 	Rust::Result<FormatInfo, HorizonResult> getFormatInfo(const FSPath& path) override;
 	void clear(const FSPath& path) const;
-	void saveIcon(const std::vector<u8>& data) const;
-	Rust::Result<std::vector<u8>, HorizonResult> loadIcon() const;
 
 	std::filesystem::path getFormatInfoPath(const FSPath& path) const;
 	std::filesystem::path getUserDataPath() const;

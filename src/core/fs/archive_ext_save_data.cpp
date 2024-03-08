@@ -229,32 +229,6 @@ void ExtSaveDataArchive::clear(const FSPath& path) const {
 	fs::remove(formatInfoPath);
 }
 
-void ExtSaveDataArchive::saveIcon(const std::vector<u8>& data) const {
-	if (data.empty()) {
-		return;
-	}
-
-	const fs::path iconPath = IOFile::getAppData() / backingFolder / "icon";
-	IOFile file(iconPath, "wb");
-	file.setSize(data.size());
-	file.writeBytes(data.data(), data.size());
-	file.flush();
-	file.close();
-}
-
-Rust::Result<std::vector<u8>, HorizonResult> ExtSaveDataArchive::loadIcon() const {
-	const fs::path iconPath = IOFile::getAppData() / backingFolder / "icon";
-	IOFile file(iconPath, "rb");
-	const s32 size = static_cast<s32>(file.size().value_or(-1));
-	if (size <= 0) {
-		return Err(Result::FS::NotFoundInvalid);
-	}
-
-	std::vector<u8> icon(size);
-	file.readBytes(icon.data(), size);
-	return Ok(icon);
-}
-
 std::filesystem::path ExtSaveDataArchive::getFormatInfoPath(const FSPath& path) const {
 	return IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
 }

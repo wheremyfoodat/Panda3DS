@@ -164,12 +164,6 @@ FSPath FSService::readPath(u32 type, u32 pointer, u32 size) {
 	return FSPath(type, data);
 }
 
-void FSService::writePointer(const u8* data, u32 pointer, u32 size) {
-	for (u32 i = 0; i < size; i++) {
-		mem.write8(pointer + i, data[i]);
-	}
-}
-
 void FSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
@@ -204,7 +198,6 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::SetPriority: setPriority(messagePointer); break;
 		case FSCommands::SetThisSaveDataSecureValue: setThisSaveDataSecureValue(messagePointer); break;
 		case FSCommands::AbnegateAccessRight: abnegateAccessRight(messagePointer); break;
-		case FSCommands::ReadExtSaveDataIcon: readExtSaveDataIcon(messagePointer); break;
 		case FSCommands::TheGameboyVCFunction: theGameboyVCFunction(messagePointer); break;
 		default: Helpers::panic("FS service requested. Command: %08X\n", command);
 	}
@@ -577,50 +570,12 @@ void FSService::createExtSaveData(u32 messagePointer) {
 
 	if (selected != nullptr) {
 		selected->format(path, info);
-
-		if (smdhSize > 0 && smdhPointer != 0) {
-			const FSPath smdh = readPath(PathType::Binary, smdhPointer, smdhSize);
-			selected->saveIcon(smdh.binary);
-		}
+		const FSPath smdh = readPath(PathType::Binary, smdhPointer, smdhSize);
+		// selected->saveIcon(smdh.binary);
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0851, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-}
-
-void FSService::readExtSaveDataIcon(u32 messagePointer) {
-	log("FS::ReadExtSaveDataIcon\n");
-	const u8 mediaType = mem.read8(messagePointer + 4);
-	const u64 saveID = mem.read64(messagePointer + 8); // todo: <-- is this used?
-	const u32 smdhSize = mem.read32(messagePointer + 20);
-	const u32 smdhPointer = mem.read32(messagePointer + 28);
-
-	ExtSaveDataArchive* selected = nullptr;
-	switch(mediaType) {
-		case MediaType::NAND:
-			selected = &sharedExtSaveData_nand;
-		break;
-		case MediaType::SD:
-			selected = &extSaveData_sdmc;
-		break;
-		default:
-			Helpers::warn("FS::ReadExtSaveDataIcon - Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType));
-		break;
-	}
-
-	mem.write32(messagePointer, IPC::responseHeader(0x0853, 1, 0));
-
-	Rust::Result<std::vector<u8>, HorizonResult> data = selected == nullptr ? Err(Result::FS::NotFoundInvalid) : selected->loadIcon();
-	if (data.isErr() || smdhSize == 0 || smdhPointer == 0) {
-		mem.write32(messagePointer + 4, data.unwrapErr());;
-		mem.write32(messagePointer + 8, 0);
-	} else {
-		const std::vector<u8> buffer = data.unwrap<std::vector<u8>>();
-		const u32 copySize = std::min(smdhSize, static_cast<u32>(buffer.size()));
-		writePointer(buffer.data(), smdhPointer, copySize);
-		mem.write32(messagePointer + 4, Result::Success);
-		mem.write32(messagePointer + 8, copySize);
-	}
 }
 
 void FSService::formatThisUserSaveData(u32 messagePointer) {

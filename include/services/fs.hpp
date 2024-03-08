@@ -42,7 +42,6 @@ class FSService {
 	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
 	FSPath readPath(u32 type, u32 pointer, u32 size);
-	void writePointer(const u8* data, u32 pointer, u32 size);
 
 	const EmulatorConfig& config;
 
