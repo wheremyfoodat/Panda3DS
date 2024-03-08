@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <map>
 #include <string>
 
 #include "helpers.hpp"
@@ -99,13 +100,13 @@ void EmulatorConfig::load() {
 }
 
 void EmulatorConfig::save() {
-	toml::basic_value<toml::preserve_comments> data;
+	toml::basic_value<toml::preserve_comments, std::map> data;
 	const std::filesystem::path& path = filePath;
 
 	std::error_code error;
 	if (std::filesystem::exists(path, error)) {
 		try {
-			data = toml::parse<toml::preserve_comments>(path);
+			data = toml::parse<toml::preserve_comments, std::map>(path);
 		} catch (const std::exception& ex) {
 			Helpers::warn("Exception trying to parse config file. Exception: %s\n", ex.what());
 			return;
