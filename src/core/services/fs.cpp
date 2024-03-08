@@ -165,8 +165,9 @@ FSPath FSService::readPath(u32 type, u32 pointer, u32 size) {
 }
 
 void FSService::writePointer(const u8* data, u32 pointer, u32 size) {
-	for (u32 i = 0; i < size; i++)
+	for (u32 i = 0; i < size; i++) {
 		mem.write8(pointer + i, data[i]);
+	}
 }
 
 void FSService::handleSyncRequest(u32 messagePointer) {
@@ -535,16 +536,10 @@ void FSService::deleteExtSaveData(u32 messagePointer) {
 	/*
 	FSPath path = readPath(PathType::Binary, messagePointer + 4, 8);
 
-	switch(mediaType) {
-		case MediaType::NAND:
-			sharedExtSaveData_nand.clear(path);
-			break;
-		case MediaType::SD:
-			extSaveData_sdmc.clear(path);
-		break;
-		default:
-			Helpers::warn("FS::DeleteExtSaveData - Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType));
-		break;
+	switch (mediaType) {
+		case MediaType::NAND: sharedExtSaveData_nand.clear(path); break;
+		case MediaType::SD: extSaveData_sdmc.clear(path); break;
+		default: Helpers::warn("FS::DeleteExtSaveData: Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType)); break;
 	}
 	*/
 
@@ -575,20 +570,15 @@ void FSService::createExtSaveData(u32 messagePointer) {
 
 	ExtSaveDataArchive* selected = nullptr;
 	switch(mediaType) {
-		case MediaType::NAND:
-			selected = &sharedExtSaveData_nand;
-		break;
-		case MediaType::SD:
-			selected = &extSaveData_sdmc;
-		break;
-		default:
-			Helpers::warn("FS::CreateExtSaveData - Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType));
-		break;
+		case MediaType::NAND: selected = &sharedExtSaveData_nand; break;
+		case MediaType::SD: selected = &extSaveData_sdmc; break;
+		default: Helpers::warn("FS::CreateExtSaveData - Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType)); break;
 	}
 
 	if (selected != nullptr) {
 		selected->format(path, info);
-		if(smdhSize > 0) {
+
+		if (smdhSize > 0) {
 			const FSPath smdh = readPath(PathType::Binary, smdhPointer, smdhSize);
 			selected->saveIcon(smdh.binary);
 		}
@@ -621,7 +611,7 @@ void FSService::readExtSaveDataIcon(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x0851, 1, 0));
 
 	Rust::Result<std::vector<u8>, HorizonResult> data = selected == nullptr ? Err(Result::FS::NotFoundInvalid) : selected->loadIcon();
-	if(data.isErr()) {
+	if (data.isErr()) {
 		mem.write32(messagePointer + 4, data.unwrapErr());;
 		mem.write32(messagePointer + 8, 0);
 	} else {

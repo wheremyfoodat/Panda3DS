@@ -208,7 +208,7 @@ void ExtSaveDataArchive::format(const FSPath& path, const FormatInfo& info) {
 	fs::remove_all(saveDataPath);
 	fs::create_directories(saveDataPath);
 
-	if(!isShared) {
+	if (!isShared) {
 		fs::create_directories(saveDataPath / "user");
 		fs::create_directories(saveDataPath / "boss");
 		// todo: save icon.
@@ -246,12 +246,13 @@ Rust::Result<std::vector<u8>, HorizonResult> ExtSaveDataArchive::loadIcon() cons
 	const fs::path iconPath = IOFile::getAppData() / backingFolder / "icon";
 	IOFile file(iconPath, "rb");
 	const s32 size = static_cast<s32>(file.size().value_or(-1));
-	if(size < 0) {
+	if (size < 0) {
 		return Err(Result::FS::NotFoundInvalid);
 	}
-	std::unique_ptr<u8[]> data(new u8[size]);
-	file.readBytes(data.get(), size);
-	return Ok(std::vector(data.get(), data.get() + size));
+
+	std::vector<u8> icon(size);
+	file.readBytes(icon.data(), size);
+	return Ok(icon);
 }
 
 std::filesystem::path ExtSaveDataArchive::getFormatInfoPath(const FSPath& path) const {
@@ -260,7 +261,7 @@ std::filesystem::path ExtSaveDataArchive::getFormatInfoPath(const FSPath& path) 
 
 std::filesystem::path ExtSaveDataArchive::getUserDataPath() const {
 	fs::path p = IOFile::getAppData() / backingFolder;
-	if(!isShared) { // todo: "boss"?
+	if (!isShared) { // todo: "boss"?
 		p /= "user";
 	}
 	return p;
@@ -289,7 +290,7 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> ExtSaveDataArchive::getForm
 }
 
 std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path) const {
-	if(path.type != PathType::Binary) {
+	if (path.type != PathType::Binary) {
 		Helpers::panic("GetExtSaveDataPathFromBinary called without a Binary FSPath!");
 	}
 
