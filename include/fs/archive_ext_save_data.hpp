@@ -1,4 +1,5 @@
 #pragma once
+#include <unordered_map>
 #include "archive_base.hpp"
 
 #pragma pack(push, 1)
