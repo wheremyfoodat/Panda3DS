@@ -85,6 +85,7 @@ public class GameActivity extends BaseActivity implements EmulatorCallback {
 	@Override
 	protected void onResume() {
 		super.onResume();
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		InputHandler.reset();
