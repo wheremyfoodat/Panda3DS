@@ -561,7 +561,7 @@ void FSService::createExtSaveData(u32 messagePointer) {
 	const u32 smdhPointer = mem.read32(messagePointer + 44);
 
 	ArchiveBase::FormatInfo info {
-		.size = (u32) (sizeLimit * 0x200),
+		.size = 0,
 		.numOfDirectories = numOfDirectories,
 		.numOfFiles = numOfFiles,
 		.duplicateData = false

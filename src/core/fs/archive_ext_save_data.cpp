@@ -277,7 +277,7 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> ExtSaveDataArchive::getForm
 		return Err(Result::FS::NotFormatted);
 	}
 
-	FormatInfo ret;
+	FormatInfo ret = {};
 	auto [success, bytesRead] = file.readBytes(&ret, sizeof(FormatInfo));
 	file.close();
 
@@ -285,6 +285,8 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> ExtSaveDataArchive::getForm
 		Helpers::warn("ExtSaveDataArchive::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
 		return Err(Result::FS::NotFormatted);
 	}
+
+	ret.size = 0;
 
 	return Ok(ret);
 }
