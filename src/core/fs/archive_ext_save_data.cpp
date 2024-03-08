@@ -201,7 +201,7 @@ HorizonResult ExtSaveDataArchive::deleteDirectoryRecursively(const FSPath& path)
 }
 
 void ExtSaveDataArchive::format(const FSPath& path, const FormatInfo& info) {
-	const fs::path saveDataPath = IOFile::getAppData() / backingFolder;
+	const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
 	const fs::path formatInfoPath = getFormatInfoPath(path);
 
 	// Delete all contents by deleting the directory then recreating it
@@ -222,7 +222,7 @@ void ExtSaveDataArchive::format(const FSPath& path, const FormatInfo& info) {
 }
 
 void ExtSaveDataArchive::clear(const FSPath& path) const {
-	const fs::path saveDataPath = IOFile::getAppData() / backingFolder;
+	const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
 	const fs::path formatInfoPath = getFormatInfoPath(path);
 
 	fs::remove_all(saveDataPath);
@@ -234,7 +234,7 @@ std::filesystem::path ExtSaveDataArchive::getFormatInfoPath(const FSPath& path) 
 }
 
 std::filesystem::path ExtSaveDataArchive::getUserDataPath() const {
-	fs::path p = IOFile::getAppData() / backingFolder;
+	fs::path p = IOFile::getAppData() / getExtSaveDataPath();
 	if (!isShared) { // todo: "boss"?
 		p /= "user";
 	}
@@ -270,13 +270,12 @@ std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path)
 		Helpers::panic("GetExtSaveDataPathFromBinary called without a Binary FSPath!");
 	}
 
-	// TODO: Remove punning here
-	const u32 mediaType = *(u32*)&path.binary[0];
-	const u32 saveLow = *(u32*)&path.binary[4];
-	const u32 saveHigh = *(u32*)&path.binary[8];
+	const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&path.binary[0]);
+	return backingFolder + "_" + std::to_string(info.save_id);
+}
 
-	// TODO: Should the media type be used here, using it just to be safe.
-	return backingFolder + std::to_string(mediaType) + "_" + std::to_string(saveLow) + "_" + std::to_string(saveHigh);
+std::string ExtSaveDataArchive::getExtSaveDataPath() const {
+	return backingFolder + "/" + std::to_string(archiveSaveId);
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const FSPath& path) {

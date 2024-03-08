@@ -33,11 +33,13 @@ class FSService {
 	UserSaveDataArchive userSaveData1;
 	UserSaveDataArchive userSaveData2;
 
-	ExtSaveDataArchive extSaveData_sdmc;
-	ExtSaveDataArchive sharedExtSaveData_nand;
+	std::unordered_map<u64, ExtSaveDataArchive> extSaveData_sdmc;
+	std::unordered_map<u64, ExtSaveDataArchive> sharedExtSaveData_nand;
 	SystemSaveDataArchive systemSaveData;
 
 	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
+	ExtSaveDataArchive* getExtArchiveFromID(u64 saveId);
+	ExtSaveDataArchive* getSharedExtArchiveFromID(u64 saveId);
 	Rust::Result<Handle, HorizonResult> openArchiveHandle(u32 archiveID, const FSPath& path);
 	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
@@ -85,7 +87,7 @@ class FSService {
 
 public:
 	FSService(Memory& mem, Kernel& kernel, const EmulatorConfig& config)
-		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem),
+		: mem(mem), saveData(mem), sdmc(mem),
 		  sdmcWriteOnly(mem, true), selfNcch(mem), ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1),
 		  userSaveData2(mem, ArchiveID::UserSaveData2), kernel(kernel), config(config), systemSaveData(mem) {}
 
