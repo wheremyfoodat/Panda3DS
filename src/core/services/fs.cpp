@@ -118,14 +118,10 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::ExtSaveData: {
 			const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&archivePath.binary[0]);
 			switch(info.media_type) {
-				case MediaType::NAND: {
+				case MediaType::NAND:
 					return getNANDExtArchiveFromID(info.save_id, false);
-					break;
-				}
-				case MediaType::SD: {
+				case MediaType::SD:
 					return getExtArchiveFromID(info.save_id, false);
-					break;
-				}
 				default:
 					Helpers::panic("Unknown archive media type. ID: %d\n", info.media_type);
 					return nullptr;
@@ -135,14 +131,10 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::SharedExtSaveData: {
 			const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&archivePath.binary[0]);
 			switch(info.media_type) {
-				case MediaType::NAND: {
+				case MediaType::NAND:
 					return getNANDExtArchiveFromID(info.save_id, true);
-					break;
-				}
-				case MediaType::SD: {
+				case MediaType::SD:
 					return getExtArchiveFromID(info.save_id, true);
-					break;
-				}
 				default:
 					Helpers::panic("Unknown archive media type. ID: %d\n", info.media_type);
 					return nullptr;
