@@ -578,7 +578,7 @@ void FSService::createExtSaveData(u32 messagePointer) {
 	if (selected != nullptr) {
 		selected->format(path, info);
 
-		if (smdhSize > 0) {
+		if (smdhSize > 0 && smdhPointer != 0) {
 			const FSPath smdh = readPath(PathType::Binary, smdhPointer, smdhSize);
 			selected->saveIcon(smdh.binary);
 		}

@@ -246,7 +246,7 @@ Rust::Result<std::vector<u8>, HorizonResult> ExtSaveDataArchive::loadIcon() cons
 	const fs::path iconPath = IOFile::getAppData() / backingFolder / "icon";
 	IOFile file(iconPath, "rb");
 	const s32 size = static_cast<s32>(file.size().value_or(-1));
-	if (size < 0) {
+	if (size <= 0) {
 		return Err(Result::FS::NotFoundInvalid);
 	}
 
