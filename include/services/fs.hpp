@@ -34,12 +34,12 @@ class FSService {
 	UserSaveDataArchive userSaveData2;
 
 	std::unordered_map<u64, ExtSaveDataArchive> extSaveData_sdmc;
-	std::unordered_map<u64, ExtSaveDataArchive> sharedExtSaveData_nand;
+	std::unordered_map<u64, ExtSaveDataArchive> nandExtSaveData_nand;
 	SystemSaveDataArchive systemSaveData;
 
 	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
-	ExtSaveDataArchive* getExtArchiveFromID(u64 saveId);
-	ExtSaveDataArchive* getSharedExtArchiveFromID(u64 saveId);
+	ExtSaveDataArchive* getExtArchiveFromID(u64 saveId, bool isShared);
+	ExtSaveDataArchive* getNANDExtArchiveFromID(u64 saveId, bool isShared);
 	Rust::Result<Handle, HorizonResult> openArchiveHandle(u32 archiveID, const FSPath& path);
 	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);

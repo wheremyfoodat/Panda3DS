@@ -269,7 +269,7 @@ std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path)
 	}
 
 	const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&path.binary[0]);
-	return backingFolder + "_" + std::to_string(info.save_id);
+	return fs::path(backingFolder).filename().string() + "_" + std::to_string(info.save_id);
 }
 
 std::string ExtSaveDataArchive::getExtSaveDataPath() const {

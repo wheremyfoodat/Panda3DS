@@ -84,21 +84,18 @@ void FSService::initializeFilesystem() {
 	}
 }
 
-ExtSaveDataArchive* FSService::getExtArchiveFromID(u64 saveId) {
-	// todo: should we have title id in here?
+ExtSaveDataArchive* FSService::getExtArchiveFromID(u64 saveId, bool isShared) {
 	if (const auto entry = extSaveData_sdmc.find(saveId); entry == extSaveData_sdmc.end()) {
-		extSaveData_sdmc.emplace(saveId, ExtSaveDataArchive(mem, "SDMC", saveId));
+		extSaveData_sdmc.emplace(saveId, ExtSaveDataArchive(mem, "SDMC", saveId, isShared));
 	}
 	return &extSaveData_sdmc.at(saveId);
 }
 
-
-ExtSaveDataArchive* FSService::getSharedExtArchiveFromID(u64 saveId) {
-	// todo: should we have title id in here?
-	if (const auto entry = sharedExtSaveData_nand.find(saveId); entry == sharedExtSaveData_nand.end()) {
-		sharedExtSaveData_nand.emplace(saveId, ExtSaveDataArchive(mem, "../SharedFiles/NAND", saveId, true));
+ExtSaveDataArchive* FSService::getNANDExtArchiveFromID(u64 saveId, bool isShared) {
+	if (const auto entry = nandExtSaveData_nand.find(saveId); entry == nandExtSaveData_nand.end()) {
+		nandExtSaveData_nand.emplace(saveId, ExtSaveDataArchive(mem, "../SharedFiles/NAND", saveId, isShared));
 	}
-	return &sharedExtSaveData_nand.at(saveId);
+	return &nandExtSaveData_nand.at(saveId);
 }
 
 
@@ -111,8 +108,12 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::ExtSaveData: {
 			const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&archivePath.binary[0]);
 			switch(info.media_type) {
+				case MediaType::NAND: {
+					return getNANDExtArchiveFromID(info.save_id, false);
+					break;
+				}
 				case MediaType::SD: {
-					return getExtArchiveFromID(info.save_id);
+					return getExtArchiveFromID(info.save_id, false);
 					break;
 				}
 				default:
@@ -125,7 +126,11 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 			const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&archivePath.binary[0]);
 			switch(info.media_type) {
 				case MediaType::NAND: {
-					return getSharedExtArchiveFromID(info.save_id);
+					return getNANDExtArchiveFromID(info.save_id, true);
+					break;
+				}
+				case MediaType::SD: {
+					return getExtArchiveFromID(info.save_id, true);
 					break;
 				}
 				default:
@@ -601,8 +606,9 @@ void FSService::createExtSaveData(u32 messagePointer) {
 
 	ExtSaveDataArchive* selected = nullptr;
 	switch(mediaType) {
-		case MediaType::NAND: selected = getSharedExtArchiveFromID(saveID); break;
-		case MediaType::SD: selected = getExtArchiveFromID(saveID); break;
+		// is there ever a situation where it formats a shared archive?
+		case MediaType::NAND: selected = getNANDExtArchiveFromID(saveID, false); break;
+		case MediaType::SD: selected = getExtArchiveFromID(saveID, false); break;
 		default: Helpers::warn("FS::CreateExtSaveData - Unhandled ExtSaveData MediaType %d", static_cast<s32>(mediaType)); break;
 	}
 
