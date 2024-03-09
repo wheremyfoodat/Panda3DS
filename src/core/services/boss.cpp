@@ -15,6 +15,8 @@ namespace BOSSCommands {
 		GetTaskIdList = 0x000E0000,
 		GetNsDataIdList = 0x00100102,
 		GetNsDataIdList1 = 0x00110102,
+		GetNsDataIdList2 = 0x00120102,
+		GetNsDataIdList3 = 0x00130102,
 		SendProperty = 0x00140082,
 		ReceiveProperty = 0x00160082,
 		GetTaskServiceStatus = 0x001B0042,
@@ -40,7 +42,9 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetErrorCode: getErrorCode(messagePointer); break;
 		case BOSSCommands::GetNewArrivalFlag: getNewArrivalFlag(messagePointer); break;
 		case BOSSCommands::GetNsDataIdList:
-		case BOSSCommands::GetNsDataIdList1: 
+		case BOSSCommands::GetNsDataIdList1:
+		case BOSSCommands::GetNsDataIdList2:
+		case BOSSCommands::GetNsDataIdList3:
 			getNsDataIdList(messagePointer, command); break;
 		case BOSSCommands::GetOptoutFlag: getOptoutFlag(messagePointer); break;
 		case BOSSCommands::GetStorageEntryInfo: getStorageEntryInfo(messagePointer); break;
