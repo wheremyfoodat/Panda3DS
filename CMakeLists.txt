@@ -72,11 +72,6 @@ endif()
 
 if(ENABLE_QT_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
-
-    # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
-    set(CMAKE_AUTOMOC ON)
-    set(CMAKE_AUTORCC ON)
-    set(CMAKE_AUTOUIC ON)
 endif()
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -314,6 +309,8 @@ set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with
 set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
 
 if(ENABLE_OPENGL)
+	find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
+
     # This may look weird but opengl.hpp is our header even if it's in the third_party folder
 	set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
 		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
@@ -422,9 +419,9 @@ if(ANDROID)
 endif()
 
 if(BUILD_HYDRA_CORE)
+	target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
     add_library(AlberCore SHARED ${ALL_SOURCES} src/hydra_core.cpp)
-    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
 else()
     add_library(AlberCore STATIC ${ALL_SOURCES})
 endif()
@@ -437,7 +434,8 @@ if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(AlberCore PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(AlberCore PUBLIC dynarmic cryptopp glad resources_console_fonts teakra)
+target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
+target_link_libraries(AlberCore PUBLIC glad)
 
 if(NOT ANDROID)
     target_link_libraries(AlberCore PUBLIC SDL2-static)
@@ -460,38 +458,12 @@ endif()
 
 if(ENABLE_OPENGL)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
-    target_link_libraries(AlberCore PRIVATE resources_renderer_gl)
+	target_link_libraries(AlberCore PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX resources_renderer_gl)
 endif()
 
 if(ENABLE_VULKAN)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
     target_link_libraries(AlberCore PRIVATE Vulkan::Vulkan resources_renderer_vk)
-endif()
-
-if(ENABLE_QT_GUI)
-    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_QT=1")
-    target_compile_definitions(AlberCore PUBLIC "ZEP_QT=1")
-    target_compile_definitions(AlberCore PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
-
-    target_link_libraries(AlberCore PRIVATE Qt6::Widgets)
-
-    if(LINUX OR FREEBSD)
-        find_package(X11 REQUIRED)
-        target_link_libraries(AlberCore PRIVATE ${X11_LIBRARIES})
-
-        if(ENABLE_OPENGL)
-            find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
-            target_link_libraries(AlberCore PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
-        endif()
-    endif()
-
-    qt_add_resources(AlberCore "app_images"
-        PREFIX "/"
-        FILES
-            docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
-    )
-else()
-    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
 if(GPU_DEBUG_INFO)
@@ -510,5 +482,33 @@ if(ENABLE_HTTP_SERVER)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
 endif()
 
-add_executable(Alber ${FRONTEND_SOURCE_FILES})
+# Configure frontend
+add_executable(Alber ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES})
 target_link_libraries(Alber PRIVATE AlberCore)
+
+if(ENABLE_QT_GUI)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_QT=1")
+	
+    target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
+    target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
+
+    target_link_libraries(Alber PRIVATE Qt6::Widgets)
+
+	# We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
+	set_target_properties(Alber PROPERTIES AUTOMOC ON)
+	set_target_properties(Alber PROPERTIES AUTORCC ON)
+	set_target_properties(Alber PROPERTIES AUTOUIC ON)
+
+    if(LINUX OR FREEBSD)
+        find_package(X11 REQUIRED)
+        target_link_libraries(Alber PRIVATE ${X11_LIBRARIES})
+    endif()
+
+    qt_add_resources(AlberCore "app_images"
+        PREFIX "/"
+        FILES
+            docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
+    )
+else()
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
+endif()
