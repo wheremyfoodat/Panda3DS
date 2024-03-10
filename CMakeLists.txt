@@ -72,6 +72,9 @@ endif()
 
 if(ENABLE_QT_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    if(NOT ENABLE_OPENGL)
+        message(FATAL_ERROR "Qt frontend requires OpenGL")
+    endif()
 endif()
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -148,9 +151,9 @@ endif()
 add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
 
 set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
-				 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
-				 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
-				 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
+                 src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
+                 src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
+                 src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
                  src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
@@ -252,10 +255,10 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
 )
 
 cmrc_add_resource_library(
-	resources_console_fonts
-	NAMESPACE ConsoleFonts
-	WHENCE "src/core/services/fonts/"
-	"src/core/services/fonts/CitraSharedFontUSRelocated.bin"
+    resources_console_fonts
+    NAMESPACE ConsoleFonts
+    WHENCE "src/core/services/fonts/"
+    "src/core/services/fonts/CitraSharedFontUSRelocated.bin"
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -309,65 +312,64 @@ set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with
 set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
 
 if(ENABLE_OPENGL)
-	find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
 
     # This may look weird but opengl.hpp is our header even if it's in the third_party folder
-	set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
-		include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
-		include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
-		include/renderer_gl/gl_state.hpp
-	)
+    set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
+        include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
+        include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
+        include/renderer_gl/gl_state.hpp
+    )
 
-	set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
+    set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
         src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
         src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.frag
         src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
         src/host_shaders/opengl_fragment_shader.frag
-	)
+    )
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
     source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
 
-	cmrc_add_resource_library(
-		resources_renderer_gl
-		NAMESPACE RendererGL
-		WHENCE "src/host_shaders/"
-		"src/host_shaders/opengl_display.frag"
-		"src/host_shaders/opengl_display.vert"
-		"src/host_shaders/opengl_vertex_shader.vert"
-		"src/host_shaders/opengl_fragment_shader.frag"
-	)
+    cmrc_add_resource_library(
+        resources_renderer_gl
+        NAMESPACE RendererGL
+        WHENCE "src/host_shaders/"
+        "src/host_shaders/opengl_display.frag"
+        "src/host_shaders/opengl_display.vert"
+        "src/host_shaders/opengl_vertex_shader.vert"
+        "src/host_shaders/opengl_fragment_shader.frag"
+    )
 endif()
 
 if(ENABLE_VULKAN)
-	find_package(
-		Vulkan 1.3.206 REQUIRED
-		COMPONENTS glslangValidator
-	)
+    find_package(
+        Vulkan 1.3.206 REQUIRED
+        COMPONENTS glslangValidator
+    )
 
-	set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
-		include/renderer_vk/vk_api.hpp include/renderer_vk/vk_debug.hpp
-		include/renderer_vk/vk_descriptor_heap.hpp
-		include/renderer_vk/vk_descriptor_update_batch.hpp
-		include/renderer_vk/vk_sampler_cache.hpp
-		include/renderer_vk/vk_memory.hpp include/renderer_vk/vk_pica.hpp
-	)
+    set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
+        include/renderer_vk/vk_api.hpp include/renderer_vk/vk_debug.hpp
+        include/renderer_vk/vk_descriptor_heap.hpp
+        include/renderer_vk/vk_descriptor_update_batch.hpp
+        include/renderer_vk/vk_sampler_cache.hpp
+        include/renderer_vk/vk_memory.hpp include/renderer_vk/vk_pica.hpp
+    )
 
-	set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
-		src/core/renderer_vk/vk_api.cpp src/core/renderer_vk/vk_debug.cpp
-		src/core/renderer_vk/vk_descriptor_heap.cpp
-		src/core/renderer_vk/vk_descriptor_update_batch.cpp
-		src/core/renderer_vk/vk_sampler_cache.cpp
-		src/core/renderer_vk/vk_memory.cpp src/core/renderer_vk/vk_pica.cpp
-	)
+    set(RENDERER_VK_SOURCE_FILES src/core/renderer_vk/renderer_vk.cpp
+        src/core/renderer_vk/vk_api.cpp src/core/renderer_vk/vk_debug.cpp
+        src/core/renderer_vk/vk_descriptor_heap.cpp
+        src/core/renderer_vk/vk_descriptor_update_batch.cpp
+        src/core/renderer_vk/vk_sampler_cache.cpp
+        src/core/renderer_vk/vk_memory.cpp src/core/renderer_vk/vk_pica.cpp
+    )
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_VK_INCLUDE_FILES})
     source_group("Source Files\\Core\\Vulkan Renderer" FILES ${RENDERER_VK_SOURCE_FILES})
 
-	set(RENDERER_VK_HOST_SHADERS_SOURCE
-		"src/host_shaders/vulkan_display.frag"
-		"src/host_shaders/vulkan_display.vert"
-	)
+    set(RENDERER_VK_HOST_SHADERS_SOURCE
+        "src/host_shaders/vulkan_display.frag"
+        "src/host_shaders/vulkan_display.vert"
+    )
 
     set(RENDERER_VK_HOST_SHADERS_FLAGS -e main --target-env vulkan1.1)
 
@@ -380,23 +382,23 @@ if(ENABLE_VULKAN)
 
     # Compile each vulkan shader into an .spv file
     foreach( HOST_SHADER_SOURCE ${RENDERER_VK_HOST_SHADERS_SOURCE} )
-		get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
-		set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
-	    add_custom_command(
-		    OUTPUT ${HOST_SHADER_SPIRV}
-		    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
-		    COMMAND Vulkan::glslangValidator ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
-		    DEPENDS ${HOST_SHADER_SOURCE}
-	    )
-	    list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
+        get_filename_component( FILE_NAME ${HOST_SHADER_SOURCE} NAME )
+        set( HOST_SHADER_SPIRV "${PROJECT_BINARY_DIR}/host_shaders/${FILE_NAME}.spv" )
+        add_custom_command(
+            OUTPUT ${HOST_SHADER_SPIRV}
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
+            COMMAND Vulkan::glslangValidator ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
+            DEPENDS ${HOST_SHADER_SOURCE}
+        )
+        list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
     endforeach()
 
-	cmrc_add_resource_library(
-		resources_renderer_vk
-		NAMESPACE RendererVK
-		WHENCE "${PROJECT_BINARY_DIR}/host_shaders/"
-		${RENDERER_VK_HOST_SHADERS_SPIRV}
-	)
+    cmrc_add_resource_library(
+        resources_renderer_vk
+        NAMESPACE RendererVK
+        WHENCE "${PROJECT_BINARY_DIR}/host_shaders/"
+        ${RENDERER_VK_HOST_SHADERS_SPIRV}
+    )
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
@@ -419,9 +421,9 @@ if(ANDROID)
 endif()
 
 if(BUILD_HYDRA_CORE)
-	target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
-    include_directories(third_party/hydra_core/include)
     add_library(AlberCore SHARED ${ALL_SOURCES} src/hydra_core.cpp)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
+    include_directories(third_party/hydra_core/include)
 else()
     add_library(AlberCore STATIC ${ALL_SOURCES})
 endif()
@@ -458,7 +460,7 @@ endif()
 
 if(ENABLE_OPENGL)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
-	target_link_libraries(AlberCore PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX resources_renderer_gl)
+    target_link_libraries(AlberCore PRIVATE resources_renderer_gl)
 endif()
 
 if(ENABLE_VULKAN)
@@ -488,20 +490,25 @@ target_link_libraries(Alber PRIVATE AlberCore)
 
 if(ENABLE_QT_GUI)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_QT=1")
-	
+    
     target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
     target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
 
     target_link_libraries(Alber PRIVATE Qt6::Widgets)
 
-	# We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
-	set_target_properties(Alber PROPERTIES AUTOMOC ON)
-	set_target_properties(Alber PROPERTIES AUTORCC ON)
-	set_target_properties(Alber PROPERTIES AUTOUIC ON)
+    # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
+    set_target_properties(Alber PROPERTIES AUTOMOC ON)
+    set_target_properties(Alber PROPERTIES AUTORCC ON)
+    set_target_properties(Alber PROPERTIES AUTOUIC ON)
 
     if(LINUX OR FREEBSD)
         find_package(X11 REQUIRED)
         target_link_libraries(Alber PRIVATE ${X11_LIBRARIES})
+
+        if(ENABLE_OPENGL)
+            find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
+            target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
+        endif()
     endif()
 
     qt_add_resources(AlberCore "app_images"
