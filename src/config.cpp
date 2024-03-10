@@ -148,7 +148,7 @@ std::string EmulatorConfig::textureFilterToString(TextureFilter filter) {
 		case TextureFilter::Auto: return "auto";
 		case TextureFilter::ForceNearest: return "nearest";
 		case TextureFilter::ForceBilinear: return "bilinear";
-		default: Helpers::warn("Invalid texture filter type"); return "unknown";
+		default: Helpers::warn("Invalid texture filter type"); return "auto";
 	}
 }
 
