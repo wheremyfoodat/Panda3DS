@@ -403,7 +403,7 @@ if(ENABLE_VULKAN)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
-set(ALL_SOURCES ${SOURCE_FILES} ${FRONTEND_SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
+set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
     ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 
@@ -423,89 +423,92 @@ endif()
 
 if(BUILD_HYDRA_CORE)
     include_directories(third_party/hydra_core/include)
-    add_library(Alber SHARED ${ALL_SOURCES} src/hydra_core.cpp)
-    target_compile_definitions(Alber PRIVATE PANDA3DS_HYDRA_CORE=1)
+    add_library(AlberCore SHARED ${ALL_SOURCES} src/hydra_core.cpp)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
 else()
-    add_executable(Alber ${ALL_SOURCES})
+    add_library(AlberCore STATIC ${ALL_SOURCES})
 endif()
 
 if(ANDROID)
-    target_link_libraries(Alber PRIVATE EGL log)
+    target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
-    set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_target_properties(AlberCore PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
-target_link_libraries(Alber PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
+target_link_libraries(AlberCore PUBLIC dynarmic cryptopp glad resources_console_fonts teakra)
 
 if(NOT ANDROID)
-    target_link_libraries(Alber PRIVATE SDL2-static)
+    target_link_libraries(AlberCore PUBLIC SDL2-static)
 endif()
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
-    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
-    target_link_libraries(Alber PRIVATE discord-rpc)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
+    target_link_libraries(AlberCore PRIVATE discord-rpc)
 endif()
 
 if(ENABLE_LUAJIT)
-    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_LUA=1")
-    target_link_libraries(Alber PRIVATE libluajit)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_LUA=1")
+    target_link_libraries(AlberCore PRIVATE libluajit)
 
     # If we're not on Android, link libuv too
     if (NOT ANDROID)
-        target_link_libraries(Alber PRIVATE uv_a)
+        target_link_libraries(AlberCore PRIVATE uv_a)
     endif()
 endif()
 
 if(ENABLE_OPENGL)
-    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
-    target_link_libraries(Alber PRIVATE resources_renderer_gl)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
+    target_link_libraries(AlberCore PRIVATE resources_renderer_gl)
 endif()
 
 if(ENABLE_VULKAN)
-    target_compile_definitions(Alber PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
-    target_link_libraries(Alber PRIVATE Vulkan::Vulkan resources_renderer_vk)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
+    target_link_libraries(AlberCore PRIVATE Vulkan::Vulkan resources_renderer_vk)
 endif()
 
 if(ENABLE_QT_GUI)
-    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_QT=1")
-    target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
-    target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_QT=1")
+    target_compile_definitions(AlberCore PUBLIC "ZEP_QT=1")
+    target_compile_definitions(AlberCore PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
 
-    target_link_libraries(Alber PRIVATE Qt6::Widgets)
+    target_link_libraries(AlberCore PRIVATE Qt6::Widgets)
 
     if(LINUX OR FREEBSD)
         find_package(X11 REQUIRED)
-        target_link_libraries(Alber PRIVATE ${X11_LIBRARIES})
+        target_link_libraries(AlberCore PRIVATE ${X11_LIBRARIES})
 
         if(ENABLE_OPENGL)
             find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
-            target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
+            target_link_libraries(AlberCore PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
         endif()
     endif()
 
-    qt_add_resources(Alber "app_images"
+    qt_add_resources(AlberCore "app_images"
         PREFIX "/"
         FILES
             docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
     )
 else()
-    target_compile_definitions(Alber PUBLIC "PANDA3DS_FRONTEND_SDL=1")
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
 if(GPU_DEBUG_INFO)
-    target_compile_definitions(Alber PRIVATE GPU_DEBUG_INFO=1)
+    target_compile_definitions(AlberCore PRIVATE GPU_DEBUG_INFO=1)
 endif()
 
 if(ENABLE_USER_BUILD)
-    target_compile_definitions(Alber PRIVATE PANDA3DS_USER_BUILD=1)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_USER_BUILD=1)
 endif()
 
 if(ENABLE_USER_BUILD OR DISABLE_PANIC_DEV)
-    target_compile_definitions(Alber PRIVATE PANDA3DS_LIMITED_PANICS=1)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_LIMITED_PANICS=1)
 endif()
 
 if(ENABLE_HTTP_SERVER)
-    target_compile_definitions(Alber PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
 endif()
+
+add_executable(Alber ${FRONTEND_SOURCE_FILES})
+target_link_libraries(Alber PRIVATE AlberCore)
