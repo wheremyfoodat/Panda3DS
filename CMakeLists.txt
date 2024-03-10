@@ -197,26 +197,24 @@ set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp 
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
 # Frontend source files
-if(NOT ANDROID)
-    if(ENABLE_QT_GUI)
-        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
-            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp
-        )   
-        set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
-            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
-        )
+if(ENABLE_QT_GUI)
+    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
+        src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp
+    )   
+    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
+        include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
+    )
 
-        source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
-        source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
-        include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
+    source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
+    source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
+    include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
 
-        include_directories(third_party/zep/include) # Include zep for text editor usage
-        configure_file(third_party/zep/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/zep_config/config_app.h)
-        include_directories(${CMAKE_BINARY_DIR}/zep_config)
-    else()
-        set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
-        set(FRONTEND_HEADER_FILES "")
-    endif()
+    include_directories(third_party/zep/include) # Include zep for text editor usage
+    configure_file(third_party/zep/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/zep_config/config_app.h)
+    include_directories(${CMAKE_BINARY_DIR}/zep_config)
+else()
+    set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
+    set(FRONTEND_HEADER_FILES "")
 endif()
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
@@ -406,6 +404,10 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 
+if(ANDROID)
+    set(ALL_SOURCES ${ALL_SOURCES} src/jni_driver.cpp)
+endif()
+
 if(ENABLE_OPENGL)
     # Add the OpenGL source files to ALL_SOURCES
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_GL_SOURCE_FILES})
@@ -416,17 +418,7 @@ if(ENABLE_VULKAN)
     set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
 endif()
 
-if(ANDROID)
-    set(ALL_SOURCES ${ALL_SOURCES} src/jni_driver.cpp)
-endif()
-
-if(BUILD_HYDRA_CORE)
-    add_library(AlberCore SHARED ${ALL_SOURCES} src/hydra_core.cpp)
-    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
-    include_directories(third_party/hydra_core/include)
-else()
-    add_library(AlberCore STATIC ${ALL_SOURCES})
-endif()
+add_library(AlberCore STATIC ${ALL_SOURCES})
 
 if(ANDROID)
     target_link_libraries(AlberCore PRIVATE EGL log)
@@ -485,37 +477,48 @@ if(ENABLE_HTTP_SERVER)
 endif()
 
 # Configure frontend
-add_executable(Alber ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES})
-target_link_libraries(Alber PRIVATE AlberCore)
 
 if(ENABLE_QT_GUI)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_QT=1")
-    
-    target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
-    target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
-
-    target_link_libraries(Alber PRIVATE Qt6::Widgets)
-
-    # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
-    set_target_properties(Alber PROPERTIES AUTOMOC ON)
-    set_target_properties(Alber PROPERTIES AUTORCC ON)
-    set_target_properties(Alber PROPERTIES AUTOUIC ON)
-
-    if(LINUX OR FREEBSD)
-        find_package(X11 REQUIRED)
-        target_link_libraries(Alber PRIVATE ${X11_LIBRARIES})
-
-        if(ENABLE_OPENGL)
-            find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
-            target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
-        endif()
-    endif()
-
-    qt_add_resources(AlberCore "app_images"
-        PREFIX "/"
-        FILES
-            docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
-    )
 else()
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
+endif()
+
+if(NOT BUILD_HYDRA_CORE)
+    add_executable(Alber ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES})
+    target_link_libraries(Alber PRIVATE AlberCore)
+
+    if(ENABLE_QT_GUI)
+        target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
+        target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
+        target_link_libraries(Alber PRIVATE Qt6::Widgets)
+
+        # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
+        set_target_properties(Alber PROPERTIES AUTOMOC ON)
+        set_target_properties(Alber PROPERTIES AUTORCC ON)
+        set_target_properties(Alber PROPERTIES AUTOUIC ON)
+
+        if(LINUX OR FREEBSD)
+            find_package(X11 REQUIRED)
+            target_link_libraries(Alber PRIVATE ${X11_LIBRARIES})
+
+            if(ENABLE_OPENGL)
+                find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
+                target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
+            endif()
+        endif()
+
+        qt_add_resources(AlberCore "app_images"
+            PREFIX "/"
+            FILES
+                docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
+        )
+    else()
+    endif()
+elseif(BUILD_HYDRA_CORE)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
+    include_directories(third_party/hydra_core/include)
+    add_library(Alber SHARED src/hydra_core.cpp)
+    target_link_libraries(Alber PUBLIC AlberCore)
+else()
 endif()
