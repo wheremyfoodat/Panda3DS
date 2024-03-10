@@ -19,7 +19,7 @@ build/
 
 .vs/
 .vscode/*.log
-
+.cache/
 ipch/
 *.aps
 *.ncb
