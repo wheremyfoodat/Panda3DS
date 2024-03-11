@@ -534,7 +534,7 @@ if(ENABLE_TESTS)
     target_include_directories(nihstro-headers SYSTEM INTERFACE ./third_party/nihstro/include)
 
     add_executable(AlberTests
-        tests/dynapica.cpp
+        tests/shader.cpp
     )
     target_link_libraries(
         AlberTests
