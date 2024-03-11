@@ -61,3 +61,6 @@
 [submodule "third_party/dynarmic"]
 	path = third_party/dynarmic
 	url = https://github.com/Panda3DS-emu/dynarmic
+[submodule "third_party/nihstro"]
+	path = third_party/nihstro
+	url = https://github.com/neobrain/nihstro.git

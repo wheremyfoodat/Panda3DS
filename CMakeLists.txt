@@ -524,7 +524,11 @@ endif()
 
 if(ENABLE_TESTS)
     enable_testing()
+
     find_package(Catch2 3 REQUIRED)
+    add_library(nihstro-headers INTERFACE)
+    target_include_directories(nihstro-headers SYSTEM INTERFACE ./third_party/nihstro/include)
+
     add_executable(AlberTests
         tests/dynapica.cpp
     )
@@ -533,6 +537,7 @@ if(ENABLE_TESTS)
         PRIVATE
         Catch2::Catch2WithMain
         AlberCore
+        nihstro-headers
     )
 
     add_test(AlberTests AlberTests)
