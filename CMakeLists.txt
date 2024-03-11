@@ -33,6 +33,7 @@ option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
+option(ENABLE_TESTS "Compile unit-tests" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
 option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF)
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
@@ -519,4 +520,29 @@ endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
     set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
+if(ENABLE_TESTS)
+    enable_testing()
+
+    find_package(Catch2 3)
+    if(NOT Catch2_FOUND)
+        add_subdirectory(third_party/Catch2)
+    endif()
+
+    add_library(nihstro-headers INTERFACE)
+    target_include_directories(nihstro-headers SYSTEM INTERFACE ./third_party/nihstro/include)
+
+    add_executable(AlberTests
+        tests/dynapica.cpp
+    )
+    target_link_libraries(
+        AlberTests
+        PRIVATE
+        Catch2::Catch2WithMain
+        AlberCore
+        nihstro-headers
+    )
+
+    add_test(AlberTests AlberTests)
 endif()
