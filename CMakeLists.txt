@@ -515,7 +515,6 @@ elseif(BUILD_HYDRA_CORE)
     include_directories(third_party/hydra_core/include)
     add_library(Alber SHARED src/hydra_core.cpp)
     target_link_libraries(Alber PUBLIC AlberCore)
-else()
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
