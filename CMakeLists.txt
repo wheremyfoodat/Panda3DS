@@ -310,7 +310,6 @@ set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with
 set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
 
 if(ENABLE_OPENGL)
-
     # This may look weird but opengl.hpp is our header even if it's in the third_party folder
     set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
         include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
