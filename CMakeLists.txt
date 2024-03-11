@@ -525,7 +525,11 @@ endif()
 if(ENABLE_TESTS)
     enable_testing()
 
-    find_package(Catch2 3 REQUIRED)
+    find_package(Catch2 3)
+    if(NOT Catch2_FOUND)
+        add_subdirectory(third_party/Catch2)
+    endif()
+
     add_library(nihstro-headers INTERFACE)
     target_include_directories(nihstro-headers SYSTEM INTERFACE ./third_party/nihstro/include)
 
