@@ -19,28 +19,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Fetch submodules
-      run: git submodule update --init --recursive
-      
-    - name: Install newer Clang
-      run: |
-       wget https://apt.llvm.org/llvm.sh
-       chmod +x ./llvm.sh
-       sudo ./llvm.sh 17
+      - uses: actions/checkout@v2
+      - name: Fetch submodules
+        run: git submodule update --init --recursive
 
-    - name: Setup Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@v1.2.0
-      with:
-        vulkan-query-version: latest
-        vulkan-use-cache: true
-        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
+      - name: Install newer Clang
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x ./llvm.sh
+          sudo ./llvm.sh 17 all
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DENABLE_HTTP_SERVER=ON
+      - name: Setup Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: latest
+          vulkan-use-cache: true
+          vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DENABLE_HTTP_SERVER=ON
+
+      - name: Build
+        # Build your program with the given configuration
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
