@@ -2,7 +2,7 @@
 #include "archive_base.hpp"
 
 class SelfNCCHArchive : public ArchiveBase {
-public:
+  public:
 	SelfNCCHArchive(Memory& mem) : ArchiveBase(mem) {}
 
 	u64 getFreeBytes() override { return 0; }
@@ -11,7 +11,7 @@ public:
 	HorizonResult createFile(const FSPath& path, u64 size) override;
 	HorizonResult deleteFile(const FSPath& path) override;
 
-	Rust::Result<ArchiveBase*, HorizonResult> openArchive(const FSPath& path) override;
+	std::expected<ArchiveBase*, HorizonResult> openArchive(const FSPath& path) override;
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 	std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) override;
 

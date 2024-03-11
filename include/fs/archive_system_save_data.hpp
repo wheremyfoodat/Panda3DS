@@ -16,8 +16,8 @@ class SystemSaveDataArchive : public ArchiveBase {
 	HorizonResult createFile(const FSPath& path, u64 size) override;
 	HorizonResult deleteFile(const FSPath& path) override;
 
-	Rust::Result<ArchiveBase*, HorizonResult> openArchive(const FSPath& path) override;
-	Rust::Result<DirectorySession, HorizonResult> openDirectory(const FSPath& path) override;
+	std::expected<ArchiveBase*, HorizonResult> openArchive(const FSPath& path) override;
+	std::expected<DirectorySession, HorizonResult> openDirectory(const FSPath& path) override;
 
 	FileDescriptor openFile(const FSPath& path, const FilePerms& perms) override;
 

@@ -1,4 +1,5 @@
 #include "fs/archive_save_data.hpp"
+
 #include <algorithm>
 #include <memory>
 
@@ -6,8 +7,7 @@ namespace fs = std::filesystem;
 
 HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
-			Helpers::panic("Unsafe path in SaveData::CreateFile");
+		if (!isPathSafe<PathType::UTF16>(path)) Helpers::panic("Unsafe path in SaveData::CreateFile");
 
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
@@ -110,16 +110,16 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 
 		const char* permString = perms.write() ? "r+b" : "rb";
 
-		if (fs::exists(p)) { // Return file descriptor if the file exists
+		if (fs::exists(p)) {  // Return file descriptor if the file exists
 			IOFile file(p.string().c_str(), permString);
 			return file.isOpen() ? file.getHandle() : FileError;
 		} else {
 			// If the file is not found, create it if the create flag is on
 			if (perms.create()) {
-				IOFile file(p.string().c_str(), "wb"); // Create file
-				file.close(); // Close it
+				IOFile file(p.string().c_str(), "wb");  // Create file
+				file.close();                           // Close it
 
-				file.open(p.string().c_str(), permString); // Reopen with proper perms
+				file.open(p.string().c_str(), permString);  // Reopen with proper perms
 				return file.isOpen() ? file.getHandle() : FileError;
 			} else {
 				return FileError;
@@ -131,7 +131,7 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 	return FileError;
 }
 
-Rust::Result<DirectorySession, HorizonResult> SaveDataArchive::openDirectory(const FSPath& path) {
+std::expected<DirectorySession, HorizonResult> SaveDataArchive::openDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
@@ -142,27 +142,27 @@ Rust::Result<DirectorySession, HorizonResult> SaveDataArchive::openDirectory(con
 
 		if (fs::is_regular_file(p)) {
 			printf("SaveData: OpenDirectory used with a file path");
-			return Err(Result::FS::UnexpectedFileOrDir);
+			return std::unexpected(Result::FS::UnexpectedFileOrDir);
 		}
 
 		if (fs::is_directory(p)) {
-			return Ok(DirectorySession(this, p));
+			return DirectorySession(this, p);
 		} else {
-			return Err(Result::FS::FileNotFoundAlt);
+			return std::unexpected(Result::FS::FileNotFoundAlt);
 		}
 	}
 
 	Helpers::panic("SaveDataArchive::OpenDirectory: Unimplemented path type");
-	return Err(Result::Success);
+	return std::unexpected(Result::Success);
 }
 
-Rust::Result<ArchiveBase::FormatInfo, HorizonResult> SaveDataArchive::getFormatInfo(const FSPath& path) {
+std::expected<ArchiveBase::FormatInfo, HorizonResult> SaveDataArchive::getFormatInfo(const FSPath& path) {
 	const fs::path formatInfoPath = getFormatInfoPath();
 	IOFile file(formatInfoPath, "rb");
 
 	// If the file failed to open somehow, we return that the archive is not formatted
 	if (!file.isOpen()) {
-		return Err(Result::FS::NotFormatted);
+		return std::unexpected(Result::FS::NotFormatted);
 	}
 
 	FormatInfo ret;
@@ -171,10 +171,10 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> SaveDataArchive::getFormatI
 
 	if (!success || bytesRead != sizeof(FormatInfo)) {
 		Helpers::warn("SaveData::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
-		return Err(Result::FS::NotFormatted);
+		return std::unexpected(Result::FS::NotFormatted);
 	}
 
-	return Ok(ret);
+	return ret;
 }
 
 void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& info) {
@@ -192,19 +192,19 @@ void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& 
 	file.close();
 }
 
-Rust::Result<ArchiveBase*, HorizonResult> SaveDataArchive::openArchive(const FSPath& path) {
+std::expected<ArchiveBase*, HorizonResult> SaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);
-		return Err(Result::FS::NotFoundInvalid);
+		return std::unexpected(Result::FS::NotFoundInvalid);
 	}
 
 	const fs::path formatInfoPath = getFormatInfoPath();
 	// Format info not found so the archive is not formatted
 	if (!fs::is_regular_file(formatInfoPath)) {
-		return Err(Result::FS::NotFormatted);
+		return std::unexpected(Result::FS::NotFormatted);
 	}
 
-	return Ok((ArchiveBase*)this);
+	return (ArchiveBase*)this;
 }
 
 std::optional<u32> SaveDataArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

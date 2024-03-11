@@ -1,14 +1,15 @@
-#include <algorithm>
 #include "fs/archive_system_save_data.hpp"
+
+#include <algorithm>
 
 namespace fs = std::filesystem;
 
-Rust::Result<ArchiveBase*, HorizonResult> SystemSaveDataArchive::openArchive(const FSPath& path) {
+std::expected<ArchiveBase*, HorizonResult> SystemSaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary) {
 		Helpers::panic("Unimplemented path type for SystemSaveData::OpenArchive");
 	}
 
-	return Ok((ArchiveBase*)this);
+	return (ArchiveBase*)this;
 }
 
 FileDescriptor SystemSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
@@ -108,7 +109,6 @@ HorizonResult SystemSaveDataArchive::createDirectory(const FSPath& path) {
 	}
 }
 
-
 HorizonResult SystemSaveDataArchive::deleteFile(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
@@ -142,11 +142,11 @@ HorizonResult SystemSaveDataArchive::deleteFile(const FSPath& path) {
 	return Result::Success;
 }
 
-Rust::Result<DirectorySession, HorizonResult> SystemSaveDataArchive::openDirectory(const FSPath& path) {
+std::expected<DirectorySession, HorizonResult> SystemSaveDataArchive::openDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::warn("Unsafe path in SystemSaveData::OpenDirectory");
-			return Err(Result::FS::FileNotFoundAlt);
+			return std::unexpected(Result::FS::FileNotFoundAlt);
 		}
 
 		fs::path p = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
@@ -154,16 +154,16 @@ Rust::Result<DirectorySession, HorizonResult> SystemSaveDataArchive::openDirecto
 
 		if (fs::is_regular_file(p)) {
 			printf("SystemSaveData: OpenDirectory used with a file path");
-			return Err(Result::FS::UnexpectedFileOrDir);
+			return std::unexpected(Result::FS::UnexpectedFileOrDir);
 		}
 
 		if (fs::is_directory(p)) {
-			return Ok(DirectorySession(this, p));
+			return DirectorySession(this, p);
 		} else {
-			return Err(Result::FS::FileNotFoundAlt);
+			return std::unexpected(Result::FS::FileNotFoundAlt);
 		}
 	}
 
 	Helpers::panic("SystemSaveData::OpenDirectory: Unimplemented path type");
-	return Err(Result::Success);
+	return std::unexpected(Result::Success);
 }

@@ -38,8 +38,8 @@ class FSService {
 	SystemSaveDataArchive systemSaveData;
 
 	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
-	Rust::Result<Handle, HorizonResult> openArchiveHandle(u32 archiveID, const FSPath& path);
-	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
+	std::expected<Handle, HorizonResult> openArchiveHandle(u32 archiveID, const FSPath& path);
+	std::expected<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
 	FSPath readPath(u32 type, u32 pointer, u32 size);
 
@@ -81,7 +81,7 @@ class FSService {
 	// Used for set/get priority: Not sure what sort of priority this is referring to
 	u32 priority;
 
-public:
+  public:
 	FSService(Memory& mem, Kernel& kernel, const EmulatorConfig& config)
 		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem),
 		  sdmcWriteOnly(mem, true), selfNcch(mem), ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1),

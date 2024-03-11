@@ -1,7 +1,7 @@
+#include "fs/archive_user_save_data.hpp"
+
 #include <algorithm>
 #include <memory>
-
-#include "fs/archive_user_save_data.hpp"
 
 namespace fs = std::filesystem;
 
@@ -118,7 +118,7 @@ FileDescriptor UserSaveDataArchive::openFile(const FSPath& path, const FilePerms
 	return FileError;
 }
 
-Rust::Result<DirectorySession, HorizonResult> UserSaveDataArchive::openDirectory(const FSPath& path) {
+std::expected<DirectorySession, HorizonResult> UserSaveDataArchive::openDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) Helpers::panic("Unsafe path in UserSaveData::OpenDirectory");
 
@@ -127,27 +127,27 @@ Rust::Result<DirectorySession, HorizonResult> UserSaveDataArchive::openDirectory
 
 		if (fs::is_regular_file(p)) {
 			printf("SaveData: OpenDirectory used with a file path");
-			return Err(Result::FS::UnexpectedFileOrDir);
+			return std::unexpected(Result::FS::UnexpectedFileOrDir);
 		}
 
 		if (fs::is_directory(p)) {
-			return Ok(DirectorySession(this, p));
+			return DirectorySession(this, p);
 		} else {
-			return Err(Result::FS::FileNotFoundAlt);
+			return std::unexpected(Result::FS::FileNotFoundAlt);
 		}
 	}
 
 	Helpers::panic("UserSaveDataArchive::OpenDirectory: Unimplemented path type");
-	return Err(Result::Success);
+	return std::unexpected(Result::Success);
 }
 
-Rust::Result<ArchiveBase::FormatInfo, HorizonResult> UserSaveDataArchive::getFormatInfo(const FSPath& path) {
+std::expected<ArchiveBase::FormatInfo, HorizonResult> UserSaveDataArchive::getFormatInfo(const FSPath& path) {
 	const fs::path formatInfoPath = getFormatInfoPath();
 	IOFile file(formatInfoPath, "rb");
 
 	// If the file failed to open somehow, we return that the archive is not formatted
 	if (!file.isOpen()) {
-		return Err(Result::FS::NotFormatted);
+		return std::unexpected(Result::FS::NotFormatted);
 	}
 
 	FormatInfo ret;
@@ -156,10 +156,10 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> UserSaveDataArchive::getFor
 
 	if (!success || bytesRead != sizeof(FormatInfo)) {
 		Helpers::warn("UserSaveData::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
-		return Err(Result::FS::NotFormatted);
+		return std::unexpected(Result::FS::NotFormatted);
 	}
 
-	return Ok(ret);
+	return ret;
 }
 
 void UserSaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& info) {
@@ -177,19 +177,19 @@ void UserSaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatIn
 	file.close();
 }
 
-Rust::Result<ArchiveBase*, HorizonResult> UserSaveDataArchive::openArchive(const FSPath& path) {
+std::expected<ArchiveBase*, HorizonResult> UserSaveDataArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Binary) {
 		Helpers::panic("Unimplemented path type for UserSaveData archive: %d\n", path.type);
-		return Err(Result::FS::NotFoundInvalid);
+		return std::unexpected(Result::FS::NotFoundInvalid);
 	}
 
 	const fs::path formatInfoPath = getFormatInfoPath();
 	// Format info not found so the archive is not formatted
 	if (!fs::is_regular_file(formatInfoPath)) {
-		return Err(Result::FS::NotFormatted);
+		return std::unexpected(Result::FS::NotFormatted);
 	}
 
-	return Ok((ArchiveBase*)this);
+	return (ArchiveBase*)this;
 }
 
 std::optional<u32> UserSaveDataArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

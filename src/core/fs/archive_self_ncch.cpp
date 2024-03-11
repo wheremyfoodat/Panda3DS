@@ -1,4 +1,5 @@
 #include "fs/archive_self_ncch.hpp"
+
 #include <memory>
 
 // The part of the NCCH archive we're trying to access. Depends on the first 4 bytes of the binary file path
@@ -33,21 +34,21 @@ FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& pe
 
 	// Where to read the file from. (https://www.3dbrew.org/wiki/Filesystem_services#SelfNCCH_File_Path_Data_Format)
 	// We currently only know how to read from an NCCH's RomFS, ie type = 0
-	const u32 type = *(u32*)&path.binary[0]; // TODO: Get rid of UB here
+	const u32 type = *(u32*)&path.binary[0];  // TODO: Get rid of UB here
 	if (type != PathType::RomFS && type != PathType::ExeFS && type != PathType::UpdateRomFS) {
 		Helpers::panic("Read from NCCH's non-RomFS & non-exeFS section! Path type: %d", type);
 	}
 
-	return NoFile; // No file descriptor needed for RomFS
+	return NoFile;  // No file descriptor needed for RomFS
 }
 
-Rust::Result<ArchiveBase*, HorizonResult> SelfNCCHArchive::openArchive(const FSPath& path) {
+std::expected<ArchiveBase*, HorizonResult> SelfNCCHArchive::openArchive(const FSPath& path) {
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Invalid path type for SelfNCCH archive: %d\n", path.type);
-		return Err(Result::FS::NotFoundInvalid);
+		return std::unexpected(Result::FS::NotFoundInvalid);
 	}
 
-	return Ok((ArchiveBase*)this);
+	return (ArchiveBase*)this;
 }
 
 std::optional<u32> SelfNCCHArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {

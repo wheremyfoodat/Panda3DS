@@ -1,4 +1,5 @@
 #include "fs/archive_sdmc.hpp"
+
 #include <memory>
 
 namespace fs = std::filesystem;
@@ -137,10 +138,10 @@ HorizonResult SDMCArchive::createDirectory(const FSPath& path) {
 	return success ? Result::Success : Result::FS::UnexpectedFileOrDir;
 }
 
-Rust::Result<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const FSPath& path) {
+std::expected<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const FSPath& path) {
 	if (isWriteOnly) {
 		Helpers::warn("SDMC: OpenDirectory is not allowed in SDMC Write-Only archive");
-		return Err(Result::FS::UnexpectedFileOrDir);
+		return std::unexpected(Result::FS::UnexpectedFileOrDir);
 	}
 
 	if (path.type == PathType::UTF16) {
@@ -153,27 +154,27 @@ Rust::Result<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const F
 
 		if (fs::is_regular_file(p)) {
 			printf("SDMC: OpenDirectory used with a file path");
-			return Err(Result::FS::UnexpectedFileOrDir);
+			return std::unexpected(Result::FS::UnexpectedFileOrDir);
 		}
 
 		if (fs::is_directory(p)) {
-			return Ok(DirectorySession(this, p));
+			return DirectorySession(this, p);
 		} else {
-			return Err(Result::FS::FileNotFoundAlt);
+			return std::unexpected(Result::FS::FileNotFoundAlt);
 		}
 	}
 
 	Helpers::panic("SDMCArchive::OpenDirectory: Unimplemented path type");
-	return Err(Result::Success);
+	return std::unexpected(Result::Success);
 }
 
-Rust::Result<ArchiveBase*, HorizonResult> SDMCArchive::openArchive(const FSPath& path) {
+std::expected<ArchiveBase*, HorizonResult> SDMCArchive::openArchive(const FSPath& path) {
 	// TODO: Fail here if the SD is disabled in the connfig.
 	if (path.type != PathType::Empty) {
 		Helpers::panic("Unimplemented path type for SDMC::OpenArchive");
 	}
 
-	return Ok((ArchiveBase*)this);
+	return (ArchiveBase*)this;
 }
 
 std::optional<u32> SDMCArchive::readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) {
