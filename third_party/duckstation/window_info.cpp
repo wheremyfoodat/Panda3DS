@@ -16,7 +16,7 @@ static bool GetRefreshRateFromDWM(HWND hwnd, float* refresh_rate)
   if (!load_tried)
   {
     load_tried = true;
-    dwm_module = LoadLibrary(L"dwmapi.dll");
+    dwm_module = LoadLibraryA("dwmapi.dll");
     if (dwm_module)
     {
       std::atexit([]() {
