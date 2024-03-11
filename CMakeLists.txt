@@ -424,10 +424,6 @@ if(ANDROID)
     target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
 
-if(ENABLE_LTO OR ENABLE_USER_BUILD)
-    set_target_properties(AlberCore PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif()
-
 target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
 target_link_libraries(AlberCore PUBLIC glad)
 
@@ -521,4 +517,8 @@ elseif(BUILD_HYDRA_CORE)
     add_library(Alber SHARED src/hydra_core.cpp)
     target_link_libraries(Alber PUBLIC AlberCore)
 else()
+endif()
+
+if(ENABLE_LTO OR ENABLE_USER_BUILD)
+    set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
