@@ -244,8 +244,12 @@ void PICAShader::max(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			const auto maximum = srcVec1[3 - i] > srcVec2[3 - i] ? srcVec1[3 - i] : srcVec2[3 - i];
-			destVector[3 - i] = maximum;
+			const float inputA = srcVec1[3 - i].toFloat32();
+			const float inputB = srcVec2[3 - i].toFloat32();
+			// max(NaN, 2.f) -> NaN
+			// max(2.f, NaN) -> 2
+			const auto& maximum = std::isinf(inputB) ? inputB : std::max(inputB, inputA);
+			destVector[3 - i] = f24::fromFloat32(maximum);
 		}
 	}
 }
@@ -266,8 +270,12 @@ void PICAShader::min(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			const auto mininum = srcVec1[3 - i] < srcVec2[3 - i] ? srcVec1[3 - i] : srcVec2[3 - i];
-			destVector[3 - i] = mininum;
+			const float inputA = srcVec1[3 - i].toFloat32();
+			const float inputB = srcVec2[3 - i].toFloat32();
+			// min(NaN, 2.f) -> NaN
+			// min(2.f, NaN) -> 2
+			const auto& mininum = std::min(inputB, inputA);
+			destVector[3 - i] = f24::fromFloat32(mininum);
 		}
 	}
 }
