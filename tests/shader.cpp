@@ -113,7 +113,7 @@ SHADER_TEST_CASE("RCP", "[shader][vertex]") {
 		{nihstro::OpCode::Id::END},
 	});
 
-	// REQUIRE(shader->RunScalar({-0.0f}) == INFINITY); // Violates IEEE
+	REQUIRE(shader->runScalar({-0.0f}) == INFINITY);
 	REQUIRE(shader->runScalar({0.0f}) == INFINITY);
 	REQUIRE(shader->runScalar({INFINITY}) == 0.0f);
 	REQUIRE(std::isnan(shader->runScalar({NAN})));
