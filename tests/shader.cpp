@@ -3,6 +3,7 @@
 #include <PICA/dynapica/shader_rec.hpp>
 #include <PICA/shader.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <initializer_list>
 #include <memory>
@@ -27,12 +28,12 @@ static std::unique_ptr<PICAShader> assembleVertexShader(std::initializer_list<ni
 	return newShader;
 }
 
-class VertexShaderTest {
+class ShaderInterpreterTest final {
   private:
-	std::unique_ptr<PICAShader> shader;
+	std::unique_ptr<PICAShader> shader = {};
 
   public:
-	explicit VertexShaderTest(std::initializer_list<nihstro::InlineAsm> code) : shader(assembleVertexShader(code)) {}
+	explicit ShaderInterpreterTest(std::initializer_list<nihstro::InlineAsm> code) : shader(assembleVertexShader(code)) {}
 
 	// Multiple inputs, singular scalar output
 	float runScalar(std::initializer_list<float> inputs) {
@@ -45,13 +46,42 @@ class VertexShaderTest {
 		return shader->outputs[0][0];
 	}
 
-	static std::unique_ptr<VertexShaderTest> assembleTest(std::initializer_list<nihstro::InlineAsm> code) {
-		return std::make_unique<VertexShaderTest>(code);
+	static std::unique_ptr<ShaderInterpreterTest> assembleTest(std::initializer_list<nihstro::InlineAsm> code) {
+		return std::make_unique<ShaderInterpreterTest>(code);
 	}
 };
 
-TEST_CASE("ADD", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+#if defined(PANDA3DS_SHADER_JIT_SUPPORTED)
+class ShaderJITTest final {
+  private:
+	std::unique_ptr<PICAShader> shader = {};
+	ShaderJIT shaderJit = {};
+
+  public:
+	explicit ShaderJITTest(std::initializer_list<nihstro::InlineAsm> code) : shader(assembleVertexShader(code)) { shaderJit.prepare(*shader.get()); }
+
+	// Multiple inputs, singular scalar output
+	float runScalar(std::initializer_list<float> inputs) {
+		usize inputIndex = 0;
+		for (const float& input : inputs) {
+			const std::array<Floats::f24, 4> input_vec = std::array<Floats::f24, 4>{f24::fromFloat32(input), f24::zero(), f24::zero(), f24::zero()};
+			shader->inputs[inputIndex++] = input_vec;
+		}
+		shaderJit.run(*shader.get());
+		return shader->outputs[0][0];
+	}
+
+	static std::unique_ptr<ShaderJITTest> assembleTest(std::initializer_list<nihstro::InlineAsm> code) {
+		return std::make_unique<ShaderJITTest>(code);
+	}
+};
+#define SHADER_TEST_CASE(NAME, TAG) TEMPLATE_TEST_CASE(NAME, TAG, ShaderInterpreterTest, ShaderJITTest)
+#else
+#define SHADER_TEST_CASE(NAME, TAG) TEMPLATE_TEST_CASE(NAME, TAG, ShaderInterpreterTest)
+#endif
+
+SHADER_TEST_CASE("ADD", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::ADD, output0, input0, input1},
 		{nihstro::OpCode::Id::END},
 	});
@@ -63,8 +93,8 @@ TEST_CASE("ADD", "[shader][vertex]") {
 	REQUIRE(std::isinf(shader->runScalar({INFINITY, -1.0f})));
 }
 
-TEST_CASE("MUL", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("MUL", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::MUL, output0, input0, input1},
 		{nihstro::OpCode::Id::END},
 	});
@@ -77,8 +107,8 @@ TEST_CASE("MUL", "[shader][vertex]") {
 	REQUIRE(std::isnan(shader->runScalar({NAN, 0.0f})));
 }
 
-TEST_CASE("RCP", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("RCP", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::RCP, output0, input0},
 		{nihstro::OpCode::Id::END},
 	});
@@ -99,8 +129,8 @@ TEST_CASE("RCP", "[shader][vertex]") {
 	REQUIRE(shader->runScalar({0.0625f}) == Catch::Approx(16.0f).margin(0.004f));
 }
 
-TEST_CASE("RSQ", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("RSQ", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::RSQ, output0, input0},
 		{nihstro::OpCode::Id::END},
 	});
@@ -121,8 +151,8 @@ TEST_CASE("RSQ", "[shader][vertex]") {
 	REQUIRE(shader->runScalar({0.0625f}) == Catch::Approx(4.0f).margin(0.004f));
 }
 
-TEST_CASE("LG2", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("LG2", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::LG2, output0, input0},
 		{nihstro::OpCode::Id::END},
 	});
@@ -135,8 +165,8 @@ TEST_CASE("LG2", "[shader][vertex]") {
 	REQUIRE(shader->runScalar({1.e24f}) == Catch::Approx(79.7262742773f));
 }
 
-TEST_CASE("EX2", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("EX2", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::EX2, output0, input0},
 		{nihstro::OpCode::Id::END},
 	});
@@ -150,8 +180,8 @@ TEST_CASE("EX2", "[shader][vertex]") {
 	REQUIRE(std::isinf(shader->runScalar({800.f})));
 }
 
-TEST_CASE("MAX", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("MAX", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::MAX, output0, input0, input1},
 		{nihstro::OpCode::Id::END},
 	});
@@ -165,8 +195,8 @@ TEST_CASE("MAX", "[shader][vertex]") {
 	REQUIRE(std::isnan(shader->runScalar({0.0f, NAN})));
 }
 
-TEST_CASE("MIN", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("MIN", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::MIN, output0, input0, input1},
 		{nihstro::OpCode::Id::END},
 	});
@@ -180,8 +210,8 @@ TEST_CASE("MIN", "[shader][vertex]") {
 	REQUIRE(std::isnan(shader->runScalar({0.0f, NAN})));
 }
 
-TEST_CASE("SGE", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("SGE", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::SGE, output0, input0, input1},
 		{nihstro::OpCode::Id::END},
 	});
@@ -197,8 +227,8 @@ TEST_CASE("SGE", "[shader][vertex]") {
 	REQUIRE(shader->runScalar({-1.0f, +1.0f}) == 0.0f);
 }
 
-TEST_CASE("SLT", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("SLT", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::SLT, output0, input0, input1},
 		{nihstro::OpCode::Id::END},
 	});
@@ -214,8 +244,8 @@ TEST_CASE("SLT", "[shader][vertex]") {
 	REQUIRE(shader->runScalar({-1.0f, +1.0f}) == 1.0f);
 }
 
-TEST_CASE("FLR", "[shader][vertex]") {
-	const auto shader = VertexShaderTest::assembleTest({
+SHADER_TEST_CASE("FLR", "[shader][vertex]") {
+	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::FLR, output0, input0},
 		{nihstro::OpCode::Id::END},
 	});
