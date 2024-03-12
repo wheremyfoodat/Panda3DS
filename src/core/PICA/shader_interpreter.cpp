@@ -223,7 +223,7 @@ void PICAShader::flr(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			destVector[3 - i] = f24::fromFloat32(std::floor(srcVector[3 - 1].toFloat32()));
+			destVector[3 - i] = f24::fromFloat32(std::floor(srcVector[3 - i].toFloat32()));
 		}
 	}
 }
@@ -244,8 +244,12 @@ void PICAShader::max(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			const auto maximum = srcVec1[3 - i] > srcVec2[3 - i] ? srcVec1[3 - i] : srcVec2[3 - i];
-			destVector[3 - i] = maximum;
+			const float inputA = srcVec1[3 - i].toFloat32();
+			const float inputB = srcVec2[3 - i].toFloat32();
+			// max(NaN, 2.f) -> NaN
+			// max(2.f, NaN) -> 2
+			const auto& maximum = std::isinf(inputB) ? inputB : std::max(inputB, inputA);
+			destVector[3 - i] = f24::fromFloat32(maximum);
 		}
 	}
 }
@@ -266,8 +270,12 @@ void PICAShader::min(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			const auto mininum = srcVec1[3 - i] < srcVec2[3 - i] ? srcVec1[3 - i] : srcVec2[3 - i];
-			destVector[3 - i] = mininum;
+			const float inputA = srcVec1[3 - i].toFloat32();
+			const float inputB = srcVec2[3 - i].toFloat32();
+			// min(NaN, 2.f) -> NaN
+			// min(2.f, NaN) -> 2
+			const auto& mininum = std::min(inputB, inputA);
+			destVector[3 - i] = f24::fromFloat32(mininum);
 		}
 	}
 }
@@ -382,7 +390,11 @@ void PICAShader::rcp(u32 instruction) {
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 
 	vec4f& destVector = getDest(dest);
-	f24 res = f24::fromFloat32(1.0f) / srcVec1[0];
+	float input = srcVec1[0].toFloat32();
+	if (input == -0.0f) {
+		input = 0.0f;
+	}
+	const f24 res = f24::fromFloat32(1.0f / input);
 
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
@@ -402,7 +414,11 @@ void PICAShader::rsq(u32 instruction) {
 	vec4f srcVec1 = getSourceSwizzled<1>(src1, operandDescriptor);
 
 	vec4f& destVector = getDest(dest);
-	f24 res = f24::fromFloat32(1.0f / std::sqrt(srcVec1[0].toFloat32()));
+	float input = srcVec1[0].toFloat32();
+	if (input == -0.0f) {
+		input = 0.0f;
+	}
+	const f24 res = f24::fromFloat32(1.0f / std::sqrt(input));
 
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
