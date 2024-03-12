@@ -223,7 +223,7 @@ void PICAShader::flr(u32 instruction) {
 	u32 componentMask = operandDescriptor & 0xf;
 	for (int i = 0; i < 4; i++) {
 		if (componentMask & (1 << i)) {
-			destVector[3 - i] = f24::fromFloat32(std::floor(srcVector[3 - 1].toFloat32()));
+			destVector[3 - i] = f24::fromFloat32(std::floor(srcVector[3 - i].toFloat32()));
 		}
 	}
 }
