@@ -3,7 +3,7 @@ if (APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
     cmake_minimum_required(VERSION 3.16)
 else()
-    cmake_minimum_required(VERSION 3.10)
+    cmake_minimum_required(VERSION 3.11)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -41,9 +41,15 @@ option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 
+if(BUILD_HYDRA_CORE)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+add_library(AlberCore STATIC)
+
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
-include_directories (${FMT_INCLUDE_DIR})
+include_directories(${FMT_INCLUDE_DIR})
 include_directories(third_party/boost/)
 include_directories(third_party/elfio/)
 include_directories(third_party/imgui/)
@@ -62,10 +68,6 @@ add_compile_definitions(NOMINMAX)             # Make windows.h not define min/ma
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
 
-if(BUILD_HYDRA_CORE)
-    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-endif()
-
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
@@ -81,7 +83,11 @@ endif()
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
-add_subdirectory(third_party/SDL2)
+
+if (NOT ANDROID)
+    add_subdirectory(third_party/SDL2)
+    target_link_libraries(AlberCore PUBLIC SDL2-static)
+endif()
 
 add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
@@ -100,6 +106,8 @@ target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
 if(ANDROID)
     set(CRYPTOPP_OPT_DISABLE_ASM ON CACHE BOOL "" FORCE)
+    target_sources(AlberCore PRIVATE src/jni_driver.cpp)
+    target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
 
 set(CRYPTOPP_BUILD_TESTING OFF)
@@ -116,6 +124,9 @@ if(ENABLE_LUAJIT)
       target_compile_definitions(minilua PRIVATE _CRT_SECURE_NO_WARNINGS)
       target_compile_definitions(buildvm PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
+
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_LUA=1")
+    target_link_libraries(AlberCore PRIVATE libluajit)
 endif()
 
 # Check for x64
@@ -279,6 +290,7 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
     set(LIBUV_BUILD_SHARED OFF)
 
     add_subdirectory(third_party/libuv)
+    target_link_libraries(AlberCore PRIVATE uv_a)
 endif()
 
 if(ENABLE_QT_GUI)
@@ -337,6 +349,10 @@ if(ENABLE_OPENGL)
         "src/host_shaders/opengl_vertex_shader.vert"
         "src/host_shaders/opengl_fragment_shader.frag"
     )
+
+    target_sources(AlberCore PRIVATE ${RENDERER_GL_SOURCE_FILES})
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
+    target_link_libraries(AlberCore PRIVATE resources_renderer_gl)
 endif()
 
 if(ENABLE_VULKAN)
@@ -397,63 +413,24 @@ if(ENABLE_VULKAN)
         WHENCE "${PROJECT_BINARY_DIR}/host_shaders/"
         ${RENDERER_VK_HOST_SHADERS_SPIRV}
     )
+
+    target_sources(AlberCore PRIVATE ${RENDERER_VK_SOURCE_FILES})
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
+    target_link_libraries(AlberCore PRIVATE Vulkan::Vulkan resources_renderer_vk)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
 set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
     ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
-
-if(ANDROID)
-    set(ALL_SOURCES ${ALL_SOURCES} src/jni_driver.cpp)
-endif()
-
-if(ENABLE_OPENGL)
-    # Add the OpenGL source files to ALL_SOURCES
-    set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_GL_SOURCE_FILES})
-endif()
-
-if(ENABLE_VULKAN)
-    # Add the Vulkan source files to ALL_SOURCES
-    set(ALL_SOURCES ${ALL_SOURCES} ${RENDERER_VK_SOURCE_FILES})
-endif()
-
-add_library(AlberCore STATIC ${ALL_SOURCES})
-
-if(ANDROID)
-    target_link_libraries(AlberCore PRIVATE EGL log)
-endif()
+target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
 target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
 target_link_libraries(AlberCore PUBLIC glad)
 
-if(NOT ANDROID)
-    target_link_libraries(AlberCore PUBLIC SDL2-static)
-endif()
-
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
     target_link_libraries(AlberCore PRIVATE discord-rpc)
-endif()
-
-if(ENABLE_LUAJIT)
-    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_LUA=1")
-    target_link_libraries(AlberCore PRIVATE libluajit)
-
-    # If we're not on Android, link libuv too
-    if (NOT ANDROID)
-        target_link_libraries(AlberCore PRIVATE uv_a)
-    endif()
-endif()
-
-if(ENABLE_OPENGL)
-    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_OPENGL=1")
-    target_link_libraries(AlberCore PRIVATE resources_renderer_gl)
-endif()
-
-if(ENABLE_VULKAN)
-    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_VULKAN=1")
-    target_link_libraries(AlberCore PRIVATE Vulkan::Vulkan resources_renderer_vk)
 endif()
 
 if(GPU_DEBUG_INFO)
