@@ -57,6 +57,7 @@ include_directories(third_party/stb)
 include_directories(third_party/opengl)
 include_directories(third_party/miniaudio)
 include_directories(third_party/mio/single_include)
+include_directories(third_party/miniz)
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
@@ -268,6 +269,7 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
 
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
+                             third_party/miniz/miniz.c
 )
 
 if(ENABLE_LUAJIT AND NOT ANDROID)

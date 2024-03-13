@@ -4,6 +4,8 @@
 #include <SDL_filesystem.h>
 #endif
 
+#include <miniz.h>
+
 #include <fstream>
 
 #ifdef _WIN32
@@ -224,17 +226,71 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	}
 
 	kernel.initializeFS();
-	auto extension = path.extension();
+
+	// Unzip the ROM if it's a .zip file
+	// Unfortunately users can't be trusted to have the correct file extensions
+	std::ifstream ifs(path, std::ios::binary);
+	if (ifs.fail()) {
+		printf("Failed to open file\n");
+		return false;
+	}
+
+	std::vector<u8> magic(4);
+	ifs.read(reinterpret_cast<char*>(magic.data()), 4);
+	ifs.close();
+
+	std::filesystem::path inputPath = path;
+	if (magic[0] == 'P' && magic[1] == 'K' &&
+		((magic[2] == 0x03 && magic[3] == 0x04) || (magic[2] == 0x05 && magic[3] == 0x06) || (magic[2] == 0x07 && magic[3] == 0x08))) {
+		mz_zip_archive archive = {0};
+		if (mz_zip_reader_init_file(&archive, path.string().c_str(), 0)) {
+			struct ReaderGuard {
+				ReaderGuard(mz_zip_archive* archive) : archive(archive) {}
+				~ReaderGuard() { mz_zip_reader_end(archive); }
+				mz_zip_archive* archive;
+			};
+
+			ReaderGuard guard(&archive);
+			for (u32 i = 0; i < mz_zip_reader_get_num_files(&archive); i++) {
+				mz_zip_archive_file_stat fileStat;
+				if (!mz_zip_reader_file_stat(&archive, i, &fileStat)) {
+					printf("Failed to get file stat\n");
+					return false;
+				}
+
+				std::filesystem::path filePath(fileStat.m_filename);
+				std::string extension = filePath.extension().string();
+				if (extension == ".elf" || extension == ".axf" || extension == ".3ds" || extension == ".cci" || extension == ".cxi" ||
+					extension == ".app" || extension == ".3dsx") {
+					std::filesystem::path outputPath = path.parent_path() / filePath.filename();
+					printf("Extracting to %s...\n", outputPath.string().c_str());
+					if (!mz_zip_reader_extract_to_file(&archive, i, outputPath.string().c_str(), 0)) {
+						printf("Failed to extract file\n");
+						return false;
+					}
+
+					// If there's multiple game files, open the first one we find
+					inputPath = outputPath;
+					break;
+				}
+			}
+		} else {
+			printf("Failed to open zip file\n");
+			return false;
+		}
+	}
+
+	auto extension = inputPath.extension();
 	bool success;  // Tracks if we loaded the ROM successfully
 
 	if (extension == ".elf" || extension == ".axf")
-		success = loadELF(path);
+		success = loadELF(inputPath);
 	else if (extension == ".3ds" || extension == ".cci")
-		success = loadNCSD(path, ROMType::NCSD);
+		success = loadNCSD(inputPath, ROMType::NCSD);
 	else if (extension == ".cxi" || extension == ".app")
-		success = loadNCSD(path, ROMType::CXI);
+		success = loadNCSD(inputPath, ROMType::CXI);
 	else if (extension == ".3dsx")
-		success = load3DSX(path);
+		success = load3DSX(inputPath);
 	else {
 		printf("Unknown file type\n");
 		success = false;
