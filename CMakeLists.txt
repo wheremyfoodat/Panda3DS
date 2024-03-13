@@ -18,7 +18,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(Alber)
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 if(APPLE)
@@ -50,7 +49,7 @@ add_library(AlberCore STATIC)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
 include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
-include_directories (${FMT_INCLUDE_DIR})
+include_directories(${FMT_INCLUDE_DIR})
 include_directories(third_party/boost/)
 include_directories(third_party/elfio/)
 include_directories(third_party/imgui/)
