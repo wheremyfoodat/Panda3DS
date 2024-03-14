@@ -42,6 +42,9 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	oaknut::Label emitLog2Func();
 	oaknut::Label emitExp2Func();
 
+	// Emit a PICA200-compliant multiplication that handles "0 * inf = 0"
+	void emitSafeMUL(oaknut::QReg src1, oaknut::QReg src2, oaknut::QReg scratch0);
+
 	template <typename T>
 	T getLabelPointer(const oaknut::Label& label) {
 		auto pointer = reinterpret_cast<u8*>(oaknut::CodeBlock::ptr()) + label.offset();
@@ -123,9 +126,7 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	ShaderEmitter() : oaknut::CodeBlock(allocSize), oaknut::CodeGenerator(oaknut::CodeBlock::ptr()) {}
 
 	// PC must be a valid entrypoint here. It doesn't have that much overhead in this case, so we use std::array<>::at() to assert it does
-	InstructionCallback getInstructionCallback(u32 pc) {
-		return getLabelPointer<InstructionCallback>(instructionLabels.at(pc));
-	}
+	InstructionCallback getInstructionCallback(u32 pc) { return getLabelPointer<InstructionCallback>(instructionLabels.at(pc)); }
 
 	PrologueCallback getPrologueCallback() { return prologueCb; }
 	void compile(const PICAShader& shaderUnit);
