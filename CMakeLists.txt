@@ -1,4 +1,4 @@
-# We need to be able to use enable_language(OBJC) on Mac, so we need CMake 3.16 vs the 3.10 we use otherwise. Blame Apple.
+# We need to be able to use enable_language(OBJC) on Mac, so we need CMake 3.16 vs the 3.11 we use otherwise. Blame Apple.
 if (APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
     cmake_minimum_required(VERSION 3.16)
@@ -71,13 +71,6 @@ add_compile_definitions(SDL_MAIN_HANDLED)
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
-endif()
-
-if(ENABLE_QT_GUI)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets)
-    if(NOT ENABLE_OPENGL)
-        message(FATAL_ERROR "Qt frontend requires OpenGL")
-    endif()
 endif()
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -207,27 +200,6 @@ set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp 
                        src/core/audio/miniaudio_device.cpp
 )
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
-
-# Frontend source files
-if(ENABLE_QT_GUI)
-    set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
-        src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp
-    )   
-    set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
-        include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
-    )
-
-    source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
-    source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
-    include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
-
-    include_directories(third_party/zep/include) # Include zep for text editor usage
-    configure_file(third_party/zep/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/zep_config/config_app.h)
-    include_directories(${CMAKE_BINARY_DIR}/zep_config)
-else()
-    set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
-    set(FRONTEND_HEADER_FILES "")
-endif()
 
 set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp
                  include/cpu.hpp include/cpu_dynarmic.hpp include/memory.hpp include/renderer.hpp include/kernel/kernel.hpp
@@ -458,10 +430,29 @@ else()
 endif()
 
 if(NOT BUILD_HYDRA_CORE)
-    add_executable(Alber ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES})
-    target_link_libraries(Alber PRIVATE AlberCore)
+    add_executable(Alber)
 
     if(ENABLE_QT_GUI)
+        find_package(Qt6 REQUIRED COMPONENTS Widgets)
+        if(NOT ENABLE_OPENGL)
+            message(FATAL_ERROR "Qt frontend requires OpenGL")
+        endif()
+
+        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
+            src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp
+        )   
+        set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
+            include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
+        )
+
+        source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
+        source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})
+        include_directories(${Qt6Gui_PRIVATE_INCLUDE_DIRS})
+
+        include_directories(third_party/zep/include) # Include zep for text editor usage
+        configure_file(third_party/zep/cmake/config_app.h.cmake ${CMAKE_BINARY_DIR}/zep_config/config_app.h)
+        include_directories(${CMAKE_BINARY_DIR}/zep_config)
+
         target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
         target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
         target_link_libraries(Alber PRIVATE Qt6::Widgets)
@@ -487,7 +478,12 @@ if(NOT BUILD_HYDRA_CORE)
                 docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
         )
     else()
+        set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp)
+        set(FRONTEND_HEADER_FILES "")
     endif()
+
+    target_link_libraries(Alber PRIVATE AlberCore)
+    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES})
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
