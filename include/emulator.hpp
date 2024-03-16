@@ -51,22 +51,11 @@ class Emulator {
 	MiniAudioDevice audioDevice;
 	Cheats cheats;
 
-	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
-	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
-	// And so the user can still use the keyboard to control the analog
-	bool keyboardAnalogX = false;
-	bool keyboardAnalogY = false;
-
-	// For tracking whether to update gyroscope
-	// We bind gyro to right click + mouse movement
-	bool holdingRightClick = false;
-
   public:
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
 	bool running = false;         // Is the emulator running a game?
-	bool programRunning = false;  // Is the emulator program itself running?
 
   private:
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
@@ -103,7 +92,6 @@ class Emulator {
 	void step();
 	void render();
 	void reset(ReloadOption reload);
-	void run(void* frontend = nullptr);
 	void runFrame();
 	// Poll the scheduler for events
 	void pollScheduler();

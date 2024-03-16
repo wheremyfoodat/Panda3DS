@@ -67,19 +67,19 @@ FrontendSDL::FrontendSDL() {
 }
 
 bool FrontendSDL::loadROM(const std::filesystem::path& path) { return emu.loadROM(path); }
-void FrontendSDL::run() { emu.run(this); }
 
-void Emulator::run(void* frontend) {
-	FrontendSDL* frontendSDL = reinterpret_cast<FrontendSDL*>(frontend);
+void FrontendSDL::run() {
 	programRunning = true;
+	keyboardAnalogX = false;
+	keyboardAnalogY = false;
 
 	while (programRunning) {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
 
-		runFrame();
-		HIDService& hid = kernel.getServiceManager().getHID();
+		emu.runFrame();
+		HIDService& hid = emu.getServiceManager().getHID();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -92,7 +92,7 @@ void Emulator::run(void* frontend) {
 					return;
 
 				case SDL_KEYDOWN:
-					if (romType == ROMType::None) break;
+					if (emu.romType == ROMType::None) break;
 
 					switch (event.key.keysym.sym) {
 						case SDLK_l: hid.pressKey(Keys::A); break;
@@ -134,20 +134,20 @@ void Emulator::run(void* frontend) {
 						// Use the F4 button as a hot-key to pause or resume the emulator
 						// We can't use the audio play/pause buttons because it's annoying
 						case SDLK_F4: {
-							togglePause();
+							emu.togglePause();
 							break;
 						}
 
 						// Use F5 as a reset button
 						case SDLK_F5: {
-							reset(ReloadOption::Reload);
+							emu.reset(Emulator::ReloadOption::Reload);
 							break;
 						}
 					}
 					break;
 
 				case SDL_KEYUP:
-					if (romType == ROMType::None) break;
+					if (emu.romType == ROMType::None) break;
 
 					switch (event.key.keysym.sym) {
 						case SDLK_l: hid.releaseKey(Keys::A); break;
@@ -182,7 +182,7 @@ void Emulator::run(void* frontend) {
 					break;
 
 				case SDL_MOUSEBUTTONDOWN:
-					if (romType == ROMType::None) break;
+					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						const s32 x = event.button.x;
@@ -205,7 +205,7 @@ void Emulator::run(void* frontend) {
 					break;
 
 				case SDL_MOUSEBUTTONUP:
-					if (romType == ROMType::None) break;
+					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
 						hid.releaseTouchScreen();
@@ -215,23 +215,23 @@ void Emulator::run(void* frontend) {
 					break;
 
 				case SDL_CONTROLLERDEVICEADDED:
-					if (frontendSDL->gameController == nullptr) {
-						frontendSDL->gameController = SDL_GameControllerOpen(event.cdevice.which);
-						frontendSDL->gameControllerID = event.cdevice.which;
+					if (gameController == nullptr) {
+						gameController = SDL_GameControllerOpen(event.cdevice.which);
+						gameControllerID = event.cdevice.which;
 					}
 					break;
 
 				case SDL_CONTROLLERDEVICEREMOVED:
-					if (event.cdevice.which == frontendSDL->gameControllerID) {
-						SDL_GameControllerClose(frontendSDL->gameController);
-						frontendSDL->gameController = nullptr;
-						frontendSDL->gameControllerID = 0;
+					if (event.cdevice.which == gameControllerID) {
+						SDL_GameControllerClose(gameController);
+						gameController = nullptr;
+						gameControllerID = 0;
 					}
 					break;
 
 				case SDL_CONTROLLERBUTTONUP:
 				case SDL_CONTROLLERBUTTONDOWN: {
-					if (romType == ROMType::None) break;
+					if (emu.romType == ROMType::None) break;
 					u32 key = 0;
 
 					switch (event.cbutton.button) {
@@ -261,7 +261,7 @@ void Emulator::run(void* frontend) {
 
 				// Detect mouse motion events for gyroscope emulation
 				case SDL_MOUSEMOTION: {
-					if (romType == ROMType::None) break;
+					if (emu.romType == ROMType::None) break;
 
 					// Handle "dragging" across the touchscreen
 					if (hid.isTouchScreenPressed()) {
@@ -301,9 +301,9 @@ void Emulator::run(void* frontend) {
 						const std::filesystem::path path(droppedDir);
 
 						if (path.extension() == ".amiibo") {
-							loadAmiibo(path);
+							emu.loadAmiibo(path);
 						} else if (path.extension() == ".lua") {
-							lua.loadFile(droppedDir);
+							emu.getLua().loadFile(droppedDir);
 						} else {
 							loadROM(path);
 						}
@@ -316,10 +316,10 @@ void Emulator::run(void* frontend) {
 		}
 
 		// Update controller analog sticks and HID service
-		if (romType != ROMType::None) {
-			if (frontendSDL->gameController != nullptr) {
-				const s16 stickX = SDL_GameControllerGetAxis(frontendSDL->gameController, SDL_CONTROLLER_AXIS_LEFTX);
-				const s16 stickY = SDL_GameControllerGetAxis(frontendSDL->gameController, SDL_CONTROLLER_AXIS_LEFTY);
+		if (emu.romType != ROMType::None) {
+			if (gameController != nullptr) {
+				const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
+				const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
 				constexpr s16 deadzone = 3276;
 				constexpr s16 maxValue = 0x9C;
 				constexpr s16 div = 0x8000 / maxValue;
@@ -338,11 +338,11 @@ void Emulator::run(void* frontend) {
 				}
 			}
 
-			hid.updateInputs(cpu.getTicks());
+			hid.updateInputs(emu.getTicks());
 		}
 		// TODO: Should this be uncommented?
 		// kernel.evalReschedule();
 
-		SDL_GL_SwapWindow(frontendSDL->window);
+		SDL_GL_SwapWindow(window);
 	}
 }
