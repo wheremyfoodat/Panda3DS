@@ -20,4 +20,15 @@ class FrontendSDL {
 	SDL_Window* window = nullptr;
 	SDL_GameController* gameController = nullptr;
 	int gameControllerID;
+	bool programRunning = true;
+	
+	// For tracking whether to update gyroscope
+	// We bind gyro to right click + mouse movement
+	bool holdingRightClick = false;
+
+	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
+	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
+	// And so the user can still use the keyboard to control the analog
+	bool keyboardAnalogX = false;
+	bool keyboardAnalogY = false;
 };
