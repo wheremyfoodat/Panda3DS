@@ -2,7 +2,7 @@
 
 #include <glad/gl.h>
 
-FrontendSDL::FrontendSDL() {
+FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::DefaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -92,95 +92,74 @@ void FrontendSDL::run() {
 					programRunning = false;
 					return;
 
-				case SDL_KEYDOWN:
+				case SDL_KEYDOWN: {
 					if (emu.romType == ROMType::None) break;
 
-					switch (event.key.keysym.sym) {
-						case SDLK_l: hid.pressKey(Keys::A); break;
-						case SDLK_k: hid.pressKey(Keys::B); break;
-						case SDLK_o: hid.pressKey(Keys::X); break;
-						case SDLK_i: hid.pressKey(Keys::Y); break;
-
-						case SDLK_q: hid.pressKey(Keys::L); break;
-						case SDLK_p: hid.pressKey(Keys::R); break;
-
-						case SDLK_RIGHT: hid.pressKey(Keys::Right); break;
-						case SDLK_LEFT: hid.pressKey(Keys::Left); break;
-						case SDLK_UP: hid.pressKey(Keys::Up); break;
-						case SDLK_DOWN: hid.pressKey(Keys::Down); break;
-
-						case SDLK_w:
-							hid.setCirclepadY(0x9C);
-							keyboardAnalogY = true;
-							break;
-
-						case SDLK_a:
-							hid.setCirclepadX(-0x9C);
-							keyboardAnalogX = true;
-							break;
-
-						case SDLK_s:
-							hid.setCirclepadY(-0x9C);
-							keyboardAnalogY = true;
-							break;
-
-						case SDLK_d:
-							hid.setCirclepadX(0x9C);
-							keyboardAnalogX = true;
-							break;
-
-						case SDLK_RETURN: hid.pressKey(Keys::Start); break;
-						case SDLK_BACKSPACE: hid.pressKey(Keys::Select); break;
-
-						// Use the F4 button as a hot-key to pause or resume the emulator
-						// We can't use the audio play/pause buttons because it's annoying
-						case SDLK_F4: {
-							emu.togglePause();
-							break;
+					u32 key = getMapping(event.key.keysym.scancode);
+					if (key != HID::Keys::Null) {
+						switch (key) {
+							case HID::Keys::CirclePadRight:
+								hid.setCirclepadX(0x9C);
+								keyboardAnalogX = true;
+								break;
+							case HID::Keys::CirclePadLeft:
+								hid.setCirclepadX(-0x9C);
+								keyboardAnalogX = true;
+								break;
+							case HID::Keys::CirclePadUp:
+								hid.setCirclepadY(0x9C);
+								keyboardAnalogY = true;
+								break;
+							case HID::Keys::CirclePadDown:
+								hid.setCirclepadY(-0x9C);
+								keyboardAnalogY = true;
+								break;
+							default: hid.pressKey(key); break;
 						}
+					} else {
+						switch (event.key.keysym.sym) {
+							case SDLK_RETURN: hid.pressKey(Keys::Start); break;
+							case SDLK_BACKSPACE: hid.pressKey(Keys::Select); break;
 
-						// Use F5 as a reset button
-						case SDLK_F5: {
-							emu.reset(Emulator::ReloadOption::Reload);
-							break;
+							// Use the F4 button as a hot-key to pause or resume the emulator
+							// We can't use the audio play/pause buttons because it's annoying
+							case SDLK_F4: {
+								emu.togglePause();
+								break;
+							}
+
+							// Use F5 as a reset button
+							case SDLK_F5: {
+								emu.reset(Emulator::ReloadOption::Reload);
+								break;
+							}
 						}
 					}
 					break;
+				}
 
-				case SDL_KEYUP:
+				case SDL_KEYUP: {
 					if (emu.romType == ROMType::None) break;
 
-					switch (event.key.keysym.sym) {
-						case SDLK_l: hid.releaseKey(Keys::A); break;
-						case SDLK_k: hid.releaseKey(Keys::B); break;
-						case SDLK_o: hid.releaseKey(Keys::X); break;
-						case SDLK_i: hid.releaseKey(Keys::Y); break;
-
-						case SDLK_q: hid.releaseKey(Keys::L); break;
-						case SDLK_p: hid.releaseKey(Keys::R); break;
-
-						case SDLK_RIGHT: hid.releaseKey(Keys::Right); break;
-						case SDLK_LEFT: hid.releaseKey(Keys::Left); break;
-						case SDLK_UP: hid.releaseKey(Keys::Up); break;
-						case SDLK_DOWN: hid.releaseKey(Keys::Down); break;
-
-						// Err this is probably not ideal
-						case SDLK_w:
-						case SDLK_s:
-							hid.setCirclepadY(0);
-							keyboardAnalogY = false;
-							break;
-
-						case SDLK_a:
-						case SDLK_d:
-							hid.setCirclepadX(0);
-							keyboardAnalogX = false;
-							break;
-
-						case SDLK_RETURN: hid.releaseKey(Keys::Start); break;
-						case SDLK_BACKSPACE: hid.releaseKey(Keys::Select); break;
+					u32 key = getMapping(event.key.keysym.scancode);
+					if (key != HID::Keys::Null) {
+						switch (key) {
+							// Err this is probably not ideal
+							case HID::Keys::CirclePadRight:
+							case HID::Keys::CirclePadLeft:
+								hid.setCirclepadX(0);
+								keyboardAnalogX = false;
+								break;
+							case HID::Keys::CirclePadUp:
+							case HID::Keys::CirclePadDown:
+								hid.setCirclepadY(0);
+								keyboardAnalogY = false;
+								break;
+							default: hid.releaseKey(key); break;
+						}
 					}
 					break;
+				}
 
 				case SDL_MOUSEBUTTONDOWN:
 					if (emu.romType == ROMType::None) break;

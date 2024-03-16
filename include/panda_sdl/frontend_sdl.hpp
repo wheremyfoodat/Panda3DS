@@ -5,9 +5,11 @@
 #include <filesystem>
 
 #include "emulator.hpp"
+#include "mappings.hpp"
 
 class FrontendSDL {
 	Emulator emu;
+	InputMappings keyboardMappings;
 #ifdef PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
 #endif
@@ -16,6 +18,7 @@ class FrontendSDL {
 	FrontendSDL();
 	bool loadROM(const std::filesystem::path& path);
 	void run();
+	u32 getMapping(InputMappings::Scancode scancode) { return keyboardMappings.getMapping(scancode); }
 
 	SDL_Window* window = nullptr;
 	SDL_GameController* gameController = nullptr;
