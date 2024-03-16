@@ -72,6 +72,7 @@ void FrontendSDL::run() {
 	programRunning = true;
 	keyboardAnalogX = false;
 	keyboardAnalogY = false;
+	holdingRightClick = false;
 
 	while (programRunning) {
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
