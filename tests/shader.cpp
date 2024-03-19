@@ -269,3 +269,32 @@ SHADER_TEST_CASE("FLR", "[shader][vertex]") {
 	REQUIRE(std::isnan(shader->runScalar({NAN})));
 	REQUIRE(std::isinf(shader->runScalar({INFINITY})));
 }
+
+SHADER_TEST_CASE("Uniform Read", "[shader][vertex][uniform]") {
+	const auto constant0 = nihstro::SourceRegister::MakeFloat(0);
+	auto shader = TestType::assembleTest({
+		{nihstro::OpCode::Id::MOVA, nihstro::DestRegister{}, "x", input0, "x", nihstro::SourceRegister{}, "", nihstro::InlineAsm::RelativeAddress::A1
+		},
+		{nihstro::OpCode::Id::MOV, output0, "xyzw", constant0, "xyzw", nihstro::SourceRegister{}, "", nihstro::InlineAsm::RelativeAddress::A1},
+		{nihstro::OpCode::Id::END},
+	});
+
+	// Generate float uniforms
+	std::array<std::array<Floats::f24, 4>, 96> floatUniforms = {};
+	for (u32 i = 0; i < 96; ++i) {
+		const float color = (i * 2.0f) / 255.0f;
+		const Floats::f24 color24 = Floats::f24::fromFloat32(color);
+		const std::array<Floats::f24, 4> testValue = {color24, color24, color24, Floats::f24::fromFloat32(1.0f)};
+		shader->floatUniforms()[i] = testValue;
+		floatUniforms[i] = testValue;
+	}
+
+	for (u32 i = 0; i < 96; ++i) {
+		const float index = static_cast<float>(i);
+		// Intentionally use some fractional values to verify float->integer
+		// truncation during address translation
+		const float fractional = (i % 17) / 17.0f;
+
+		REQUIRE(shader->runVector({index + fractional}) == floatUniforms[i]);
+	}
+}
