@@ -1,4 +1,4 @@
-#include "mappings.hpp"
+#include "input_mappings.hpp"
 
 #include <SDL.h>
 
@@ -20,5 +20,6 @@ InputMappings InputMappings::DefaultKeyboardMappings() {
 	mappings.setMapping(SDLK_s, HID::Keys::CirclePadDown);
 	mappings.setMapping(SDLK_d, HID::Keys::CirclePadRight);
 	mappings.setMapping(SDLK_a, HID::Keys::CirclePadLeft);
+
 	return mappings;
 }

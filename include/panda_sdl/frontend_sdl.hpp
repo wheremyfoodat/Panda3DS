@@ -5,7 +5,7 @@
 #include <filesystem>
 
 #include "emulator.hpp"
-#include "mappings.hpp"
+#include "input_mappings.hpp"
 
 class FrontendSDL {
 	Emulator emu;

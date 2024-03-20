@@ -8,7 +8,7 @@
 #include <fstream>
 
 #include "cheats.hpp"
-#include "mappings.hpp"
+#include "input_mappings.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::DefaultKeyboardMappings()), screen(this) {
 	setWindowTitle("Alber");
