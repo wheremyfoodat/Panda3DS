@@ -92,6 +92,15 @@ class ShaderJITTest final : public ShaderInterpreterTest {
 #define SHADER_TEST_CASE(NAME, TAG) TEMPLATE_TEST_CASE(NAME, TAG, ShaderInterpreterTest)
 #endif
 
+namespace Catch {
+	template <>
+	struct StringMaker<std::array<Floats::f24, 4>> {
+		static std::string convert(std::array<Floats::f24, 4> value) {
+			return std::format("({}, {}, {}, {})", value[0].toFloat32(), value[1].toFloat32(), value[2].toFloat32(), value[3].toFloat32());
+		}
+	};
+}  // namespace Catch
+
 SHADER_TEST_CASE("ADD", "[shader][vertex]") {
 	const auto shader = TestType::assembleTest({
 		{nihstro::OpCode::Id::ADD, output0, input0, input1},
