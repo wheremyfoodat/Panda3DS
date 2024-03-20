@@ -2,7 +2,7 @@
 
 #include <QKeyEvent>
 
-InputMappings InputMappings::DefaultKeyboardMappings() {
+InputMappings InputMappings::defaultKeyboardMappings() {
 	InputMappings mappings;
 	mappings.setMapping(Qt::Key_L, HID::Keys::A);
 	mappings.setMapping(Qt::Key_K, HID::Keys::B);

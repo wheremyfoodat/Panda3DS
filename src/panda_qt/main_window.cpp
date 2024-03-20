@@ -10,7 +10,7 @@
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::DefaultKeyboardMappings()), screen(this) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);

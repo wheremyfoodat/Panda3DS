@@ -2,7 +2,7 @@
 
 #include <SDL.h>
 
-InputMappings InputMappings::DefaultKeyboardMappings() {
+InputMappings InputMappings::defaultKeyboardMappings() {
 	InputMappings mappings;
 	mappings.setMapping(SDLK_l, HID::Keys::A);
 	mappings.setMapping(SDLK_k, HID::Keys::B);

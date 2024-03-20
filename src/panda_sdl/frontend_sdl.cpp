@@ -2,7 +2,7 @@
 
 #include <glad/gl.h>
 
-FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::DefaultKeyboardMappings()) {
+FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}

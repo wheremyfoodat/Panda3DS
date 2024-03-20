@@ -15,8 +15,7 @@ struct InputMappings {
 	}
 
 	void setMapping(Scancode scancode, u32 key) { container[scancode] = key; }
-
-	static InputMappings DefaultKeyboardMappings();
+	static InputMappings defaultKeyboardMappings();
 
   private:
 	Container container;
