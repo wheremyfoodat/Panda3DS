@@ -88,8 +88,8 @@ class MainWindow : public QMainWindow {
 	std::mutex messageQueueMutex;
 	std::vector<EmulatorMessage> messageQueue;
 
-    InputMappings keyboardMappings;
-    ScreenWidget screen;
+	InputMappings keyboardMappings;
+	ScreenWidget screen;
 	AboutWindow* aboutWindow;
 	ConfigWindow* configWindow;
 	CheatsWindow* cheatsEditor;
