@@ -12,16 +12,19 @@ constexpr bool useSafeMUL = true;
 
 // Similar to the x64 recompiler, we use an odd internal ABI, which abuses the fact that we'll very rarely be calling C++ functions
 // So to avoid pushing and popping, we'll be making use of volatile registers as much as possible
-static constexpr QReg scratch1 = Q0;
-static constexpr QReg scratch2 = Q1;
-static constexpr QReg src1_vec = Q2;
-static constexpr QReg src2_vec = Q3;
-static constexpr QReg src3_vec = Q4;
-static constexpr QReg onesVector = Q5;
+static constexpr QReg src1Vec = Q1;
+static constexpr QReg src2Vec = Q2;
+static constexpr QReg src3Vec = Q3;
+static constexpr QReg scratch1Vec = Q16;
+static constexpr QReg scratch2Vec = Q17;
+static constexpr QReg scratch3Vec = Q18;
+static constexpr QReg onesVector = Q31;
 
 static constexpr XReg arg1 = X0;
 static constexpr XReg arg2 = X1;
-static constexpr XReg statePointer = X9;
+static constexpr XReg scratch1 = X9;
+static constexpr XReg scratch2 = X10;
+static constexpr XReg statePointer = X15;
 
 void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	oaknut::CodeBlock::unprotect();  // Unprotect the memory before writing to it
@@ -62,8 +65,12 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	// Scan the code for call, exp2, log2, etc instructions which need some special care
 	// After that, emit exp2 and log2 functions if the corresponding instructions are present
 	scanCode(shaderUnit);
-	if (codeHasExp2) Helpers::panic("arm64 shader JIT: Code has exp2");
-	if (codeHasLog2) Helpers::panic("arm64 shader JIT: Code has log2");
+	if (codeHasExp2) {
+		exp2Func = emitExp2Func();
+	}
+	if (codeHasLog2) {
+		log2Func = emitLog2Func();
+	}
 
 	align(16);
 	// Compile every instruction in the shader
@@ -140,13 +147,13 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		// case ShaderOpcodes::DPH:
 		// case ShaderOpcodes::DPHI: recDPH(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
-		// case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
+		case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
 		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFC: recIFC(shaderUnit, instruction); break;
 		case ShaderOpcodes::IFU: recIFU(shaderUnit, instruction); break;
 		case ShaderOpcodes::JMPC: recJMPC(shaderUnit, instruction); break;
 		case ShaderOpcodes::JMPU: recJMPU(shaderUnit, instruction); break;
-		// case ShaderOpcodes::LG2: recLG2(shaderUnit, instruction); break;
+		case ShaderOpcodes::LG2: recLG2(shaderUnit, instruction); break;
 		case ShaderOpcodes::LOOP: recLOOP(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOV: recMOV(shaderUnit, instruction); break;
 		case ShaderOpcodes::MOVA: recMOVA(shaderUnit, instruction); break;
@@ -221,7 +228,7 @@ void ShaderEmitter::loadRegister(QReg dest, const PICAShader& shader, u32 src, u
 	u32 compSwizzle;  // Component swizzle pattern for the register
 	bool negate;      // If true, negate all lanes of the register
 
-	if constexpr (sourceIndex == 1) {  // SRC1
+	if constexpr (sourceIndex == 1) {  // src1Vec
 		negate = (getBit<4>(operandDescriptor)) != 0;
 		compSwizzle = getBits<5, 8>(operandDescriptor);
 	} else if constexpr (sourceIndex == 2) {  // SRC2
@@ -252,7 +259,7 @@ void ShaderEmitter::loadRegister(QReg dest, const PICAShader& shader, u32 src, u
 
 					// Some of these cases may still be optimizable
 					default: {
-						MOV(scratch1.B16(), dest.B16());  // Make a copy of the register
+						MOV(scratch1Vec.B16(), dest.B16());  // Make a copy of the register
 
 						const auto newX = getBits<6, 2>(compSwizzle);
 						const auto newY = getBits<4, 2>(compSwizzle);
@@ -262,19 +269,19 @@ void ShaderEmitter::loadRegister(QReg dest, const PICAShader& shader, u32 src, u
 						// If the lane swizzled into the new x component is NOT the current x component, swizzle the correct lane with a mov
 						// Repeat for each component of the vector
 						if (newX != 0) {
-							MOV(dest.Selem()[0], scratch1.Selem()[newX]);
+							MOV(dest.Selem()[0], scratch1Vec.Selem()[newX]);
 						}
 
 						if (newY != 1) {
-							MOV(dest.Selem()[1], scratch1.Selem()[newY]);
+							MOV(dest.Selem()[1], scratch1Vec.Selem()[newY]);
 						}
 
 						if (newZ != 2) {
-							MOV(dest.Selem()[2], scratch1.Selem()[newZ]);
+							MOV(dest.Selem()[2], scratch1Vec.Selem()[newZ]);
 						}
 
 						if (newW != 3) {
-							MOV(dest.Selem()[3], scratch1.Selem()[newW]);
+							MOV(dest.Selem()[3], scratch1Vec.Selem()[newW]);
 						}
 
 						break;
@@ -326,7 +333,7 @@ void ShaderEmitter::loadRegister(QReg dest, const PICAShader& shader, u32 src, u
 
 			// Some of these cases may still be optimizable
 			default: {
-				MOV(scratch1.B16(), dest.B16());  // Make a copy of the register
+				MOV(scratch1Vec.B16(), dest.B16());  // Make a copy of the register
 
 				const auto newX = getBits<6, 2>(compSwizzle);
 				const auto newY = getBits<4, 2>(compSwizzle);
@@ -336,19 +343,19 @@ void ShaderEmitter::loadRegister(QReg dest, const PICAShader& shader, u32 src, u
 				// If the lane swizzled into the new x component is NOT the current x component, swizzle the correct lane with a mov
 				// Repeat for each component of the vector
 				if (newX != 0) {
-					MOV(dest.Selem()[0], scratch1.Selem()[newX]);
+					MOV(dest.Selem()[0], scratch1Vec.Selem()[newX]);
 				}
 
 				if (newY != 1) {
-					MOV(dest.Selem()[1], scratch1.Selem()[newY]);
+					MOV(dest.Selem()[1], scratch1Vec.Selem()[newY]);
 				}
 
 				if (newZ != 2) {
-					MOV(dest.Selem()[2], scratch1.Selem()[newZ]);
+					MOV(dest.Selem()[2], scratch1Vec.Selem()[newZ]);
 				}
 
 				if (newW != 3) {
-					MOV(dest.Selem()[3], scratch1.Selem()[newW]);
+					MOV(dest.Selem()[3], scratch1Vec.Selem()[newW]);
 				}
 
 				break;
@@ -411,11 +418,11 @@ void ShaderEmitter::storeRegister(QReg source, const PICAShader& shader, u32 des
 		STR(source, statePointer, offset);
 	} else {
 		u8* blendMaskPointer = getLabelPointer<u8*>(blendMasks);
-		LDR(scratch1, statePointer, offset);               // Load current value
-		LDR(scratch2, blendMaskPointer + writeMask * 16);  // Load write mask for blending
+		LDR(scratch1Vec, statePointer, offset);               // Load current value
+		LDR(scratch2Vec, blendMaskPointer + writeMask * 16);  // Load write mask for blending
 
-		BSL(scratch2.B16(), source.B16(), scratch1.B16());  // Scratch2 = (Source & mask) | (original & ~mask)
-		STR(scratch2, statePointer, offset);                // Write it back
+		BSL(scratch2Vec.B16(), source.B16(), scratch1Vec.B16());  // Scratch2 = (Source & mask) | (original & ~mask)
+		STR(scratch2Vec, statePointer, offset);                   // Write it back
 	}
 }
 
@@ -425,8 +432,8 @@ void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1Vec
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recFLR(const PICAShader& shader, u32 instruction) {
@@ -435,9 +442,9 @@ void ShaderEmitter::recFLR(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
-	FRINTM(src1_vec.S4(), src1_vec.S4());                            // Floor it and store into dest
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1Vec
+	FRINTM(src1Vec.S4(), src1Vec.S4());                             // Floor it and store into dest
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recMOVA(const PICAShader& shader, u32 instruction) {
@@ -455,16 +462,16 @@ void ShaderEmitter::recMOVA(const PICAShader& shader, u32 instruction) {
 	// If no register is being written to then it is a nop. Probably not common but whatever
 	if (!writeX && !writeY) return;
 
-	loadRegister<1>(src1_vec, shader, src, idx, operandDescriptor);
-	FCVTZS(src1_vec.S4(), src1_vec.S4());  // Convert src1 from floats to s32s with truncation
+	loadRegister<1>(src1Vec, shader, src, idx, operandDescriptor);
+	FCVTZS(src1Vec.S4(), src1Vec.S4());  // Convert src1 from floats to s32s with truncation
 
 	// Write both together
 	if (writeX && writeY) {
-		STR(src1_vec.toD(), statePointer, addrRegisterOffset);
+		STR(src1Vec.toD(), statePointer, addrRegisterOffset);
 	} else if (writeX) {
-		STR(src1_vec.toS(), statePointer, addrRegisterOffset);
+		STR(src1Vec.toS(), statePointer, addrRegisterOffset);
 	} else if (writeY) {
-		MOV(W0, src1_vec.Selem()[1]);  // W0 = Y component
+		MOV(W0, src1Vec.Selem()[1]);  // W0 = Y component
 		STR(W0, statePointer, addrRegisterYOffset);
 	}
 }
@@ -477,26 +484,26 @@ void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = getBits<0, 4>(operandDescriptor);
 
-	loadRegister<1>(src1_vec, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, 0, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 	// Set W component of src1 to 0.0, so that the w factor of the following dp4 will become 0, making it equivalent to a dp3
-	INS(src1_vec.Selem()[3], WZR);
+	INS(src1Vec.Selem()[3], WZR);
 
 	// Now do a full DP4
 	// Do a piecewise multiplication of the vectors first
 	if constexpr (useSafeMUL) {
-		emitSafeMUL(src1_vec, src2_vec, scratch1);
+		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
-		FMUL(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
+		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
 	}
-	FADDP(src1_vec.S4(), src1_vec.S4(), src1_vec.S4());  // Now add the adjacent components together
-	FADDP(src1_vec.toS(), src1_vec.toD().S2());          // Again for the bottom 2 lanes. Now the bottom lane contains the dot product
+	FADDP(src1Vec.S4(), src1Vec.S4(), src1Vec.S4());  // Now add the adjacent components together
+	FADDP(src1Vec.toS(), src1Vec.toD().S2());         // Again for the bottom 2 lanes. Now the bottom lane contains the dot product
 
-	if (writeMask != 0x8) {                       // Copy bottom lane to all lanes if we're not simply writing back x
-		DUP(src1_vec.S4(), src1_vec.Selem()[0]);  // src1_vec = src1_vec.xxxx
+	if (writeMask != 0x8) {                     // Copy bottom lane to all lanes if we're not simply writing back x
+		DUP(src1Vec.S4(), src1Vec.Selem()[0]);  // src1Vec = src1Vec.xxxx
 	}
 
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
@@ -507,23 +514,228 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = getBits<0, 4>(operandDescriptor);
 
-	loadRegister<1>(src1_vec, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, 0, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 
 	// Do a piecewise multiplication of the vectors first
 	if constexpr (useSafeMUL) {
-		emitSafeMUL(src1_vec, src2_vec, scratch1);
+		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
-		FMUL(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
+		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
 	}
-	FADDP(src1_vec.S4(), src1_vec.S4(), src1_vec.S4());  // Now add the adjacent components together
-	FADDP(src1_vec.toS(), src1_vec.toD().S2());          // Again for the bottom 2 lanes. Now the bottom lane contains the dot product
+	FADDP(src1Vec.S4(), src1Vec.S4(), src1Vec.S4());  // Now add the adjacent components together
+	FADDP(src1Vec.toS(), src1Vec.toD().S2());         // Again for the bottom 2 lanes. Now the bottom lane contains the dot product
 
-	if (writeMask != 0x8) {                       // Copy bottom lane to all lanes if we're not simply writing back x
-		DUP(src1_vec.S4(), src1_vec.Selem()[0]);  // src1_vec = src1_vec.xxxx
+	if (writeMask != 0x8) {                     // Copy bottom lane to all lanes if we're not simply writing back x
+		DUP(src1Vec.S4(), src1Vec.Selem()[0]);  // src1Vec = src1Vec.xxxx
 	}
 
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
+}
+
+oaknut::Label ShaderEmitter::emitLog2Func() {
+	oaknut::Label funcStart;
+
+	// We perform this approximation by first performing a range reduction into the range
+	// [1.0, 2.0). A minimax polynomial which was fit for the function log2(x) / (x - 1) is then
+	// evaluated. We multiply the result by (x - 1) then restore the result into the appropriate
+	// range. Coefficients for the minimax polynomial.
+	// f(x) computes approximately log2(x) / (x - 1).
+	// f(x) = c4 + x * (c3 + x * (c2 + x * (c1 + x * c0)).
+	oaknut::Label c0;
+	l(c0);
+	dw(0x3d74552f);
+
+	oaknut::Label c14;
+	l(c14);
+	dw(0xbeee7397);
+	dw(0x3fbd96dd);
+	dw(0xc02153f6);
+	dw(0x4038d96c);
+
+	oaknut::Label negativeInfinityVec;
+	l(negativeInfinityVec);
+	dw(0xff800000);
+	dw(0xff800000);
+	dw(0xff800000);
+	dw(0xff800000);
+
+	oaknut::Label defaultQnanVec;
+	l(defaultQnanVec);
+	dw(0x7fc00000);
+	dw(0x7fc00000);
+	dw(0x7fc00000);
+	dw(0x7fc00000);
+
+	oaknut::Label exit;
+	oaknut::Label inputIsZero;
+	oaknut::Label inputOutOfRange;
+
+	l(inputOutOfRange);
+	B(Cond::EQ, inputIsZero);
+	ADR(scratch1, defaultQnanVec);
+	LDR(src1Vec, scratch1);
+	RET();
+
+	l(inputIsZero);
+	ADR(scratch1, negativeInfinityVec);
+	LDR(src1Vec, scratch1);
+	RET();
+
+	l(funcStart);
+
+	// Here we handle edge cases: input in {NaN, 0, -Inf, Negative}
+	// Ordinal(n) ? 0xFFFFFFFF : 0x0
+	FCMEQ(scratch1Vec.toS(), src1Vec.toS(), src1Vec.toS());
+	MOV(scratch1.toW(), scratch1Vec.Selem()[0]);
+
+	// src1Vec == NaN
+	CMP(scratch1.toW(), 0);
+	B(Cond::EQ, exit);
+
+	// (0.0 >= n) ? 0xFFFFFFFF : 0x0
+	MOV(scratch1.toW(), src1Vec.Selem()[0]);
+
+	// src1Vec <= 0.0
+	CMP(scratch1.toW(), 0);
+	B(Cond::LE, inputOutOfRange);
+
+	// Split input:
+	// src1Vec     = MANT[1,2)
+	// scratch2Vec = Exponent
+	MOV(scratch1.toW(), src1Vec.Selem()[0]);
+	MOV(scratch2.toW(), scratch1.toW());
+	AND(scratch2.toW(), scratch2.toW(), 0x007fffff);
+	ORR(scratch2.toW(), scratch2.toW(), 0x3f800000);
+	MOV(src1Vec.Selem()[0], scratch2.toW());
+	// src1Vec now contains the mantissa of the input
+	UBFX(scratch1.toW(), scratch1.toW(), 23, 8);
+	SUB(scratch1.toW(), scratch1.toW(), 0x7F);
+	MOV(scratch2Vec.Selem()[0], scratch1.toW());
+	UCVTF(scratch2Vec.toS(), scratch2Vec.toS());
+	// scratch2Vec now contains the exponent of the input
+
+	ADR(scratch1, c0);
+	LDR(scratch1.toW(), scratch1);
+	MOV(scratch1Vec.Selem()[0], scratch1.toW());
+
+	// Complete computation of polynomial
+	// Load C1, C2, C3, C4 into a single scratch register
+	const QReg C14 = src2Vec;
+	ADR(scratch1, c14);
+	LDR(C14, scratch1);
+	FMUL(scratch1Vec.toS(), scratch1Vec.toS(), src1Vec.toS());
+	FMLA(scratch1Vec.toS(), onesVector.toS(), C14.Selem()[0]);
+	FMUL(scratch1Vec.toS(), scratch1Vec.toS(), src1Vec.toS());
+	FMLA(scratch1Vec.toS(), onesVector.toS(), C14.Selem()[1]);
+	FMUL(scratch1Vec.toS(), scratch1Vec.toS(), src1Vec.toS());
+	FMLA(scratch1Vec.toS(), onesVector.toS(), C14.Selem()[2]);
+	FMUL(scratch1Vec.toS(), scratch1Vec.toS(), src1Vec.toS());
+
+	FSUB(src1Vec.toS(), src1Vec.toS(), onesVector.toS());
+	FMLA(scratch1Vec.toS(), onesVector.toS(), C14.Selem()[3]);
+
+	FMUL(scratch1Vec.toS(), scratch1Vec.toS(), src1Vec.toS());
+	FADD(scratch2Vec.toS(), scratch1Vec.toS(), scratch2Vec.toS());
+
+	// Duplicate result across vector
+	MOV(src1Vec.Selem()[0], scratch2Vec.Selem()[0]);
+	l(exit);
+	DUP(src1Vec.S4(), src1Vec.Selem()[0]);
+
+	RET();
+
+	return funcStart;
+}
+
+oaknut::Label ShaderEmitter::emitExp2Func() {
+	oaknut::Label funcStart;
+
+	// This  performs a range reduction into the range [-0.5, 0.5)
+	// A minmax polynomial which was fit for the function exp2(x) is then evaluated
+	// Then restore the result into the appropriate range
+
+	oaknut::Label inputMax;
+	l(inputMax);
+	dw(0x43010000);
+	oaknut::Label inputMin;
+	l(inputMin);
+	dw(0xc2fdffff);
+	oaknut::Label half;
+	l(half);
+	dw(0x3f000000);
+	oaknut::Label c0;
+	l(c0);
+	dw(0x3c5dbe69);
+	dw(0x3d5509f9);
+	dw(0x3e773cc5);
+	dw(0x3f3168b3);
+	dw(0x3f800016);
+
+	oaknut::Label exit;
+
+	l(funcStart);
+
+	FCMP(src1Vec.toS(), src1Vec.toS());
+	// Branch if NaN
+	B(Cond::NE, exit);
+
+	// Decompose input:
+	// scratch1Vec = 2^round(input)
+	// src1Vec     = input-round(input) [-0.5, 0.5)
+	// Clamp to maximum range since we shift the value directly into the exponent
+	ADR(scratch1, inputMax);
+	LDR(scratch1Vec.toS(), scratch1, 0);
+	FMIN(src1Vec.toS(), src1Vec.toS(), scratch1Vec.toS());
+
+	LDR(scratch1Vec.toS(), scratch1, 4);
+	FMAX(src1Vec.toS(), src1Vec.toS(), scratch1Vec.toS());
+
+	ADR(scratch1, half);
+	LDR(scratch1Vec.toS(), scratch1);
+	FSUB(scratch1Vec.toS(), src1Vec.toS(), scratch1Vec.toS());
+
+	FCVTNS(scratch1Vec.toS(), scratch1Vec.toS());
+	MOV(scratch1.toW(), scratch1Vec.Selem()[0]);
+	SCVTF(scratch1Vec.toS(), scratch1.toW());
+
+	// scratch1Vec now contains input rounded to the nearest integer
+	ADD(scratch1.toW(), scratch1.toW(), 0x7F);
+	FSUB(src1Vec.toS(), src1Vec.toS(), scratch1Vec.toS());
+	// src1Vec contains input - round(input), which is in [-0.5, 0.5)
+	LSL(scratch1.toW(), scratch1.toW(), 23);
+	MOV(scratch1Vec.Selem()[0], scratch1.toW());
+	// scratch1Vec contains 2^(round(input))
+
+	// Complete computation of polynomial
+	ADR(scratch2, c0);
+	LDR(scratch2Vec.toS(), scratch2, 0);
+	FMUL(scratch2Vec.toS(), src1Vec.toS(), scratch2Vec.toS());
+
+	LDR(scratch3Vec.toS(), scratch2, 4);
+	FADD(scratch2Vec.toS(), scratch2Vec.toS(), scratch3Vec.toS());
+	FMUL(scratch2Vec.toS(), scratch2Vec.toS(), src1Vec.toS());
+
+	LDR(scratch3Vec.toS(), scratch2, 8);
+	FADD(scratch2Vec.toS(), scratch2Vec.toS(), scratch3Vec.toS());
+	FMUL(scratch2Vec.toS(), scratch2Vec.toS(), src1Vec.toS());
+
+	LDR(scratch3Vec.toS(), scratch2, 12);
+	FADD(scratch2Vec.toS(), scratch2Vec.toS(), scratch3Vec.toS());
+	FMUL(src1Vec.toS(), scratch2Vec.toS(), src1Vec.toS());
+
+	LDR(scratch3Vec.toS(), scratch2, 16);
+	FADD(src1Vec.toS(), scratch3Vec.toS(), src1Vec.toS());
+
+	FMUL(src1Vec.toS(), src1Vec.toS(), scratch1Vec.toS());
+
+	// Duplicate result across vector
+	l(exit);
+	DUP(src1Vec.S4(), src1Vec.Selem()[0]);
+
+	RET();
+
+	return funcStart;
 }
 
 void ShaderEmitter::emitSafeMUL(oaknut::QReg src1, oaknut::QReg src2, oaknut::QReg scratch0) {
@@ -534,10 +746,10 @@ void ShaderEmitter::emitSafeMUL(oaknut::QReg src1, oaknut::QReg src2, oaknut::QR
 	// Both a FMUL and FMULX are done and the results are compared to each other
 	// In the case that the results are diferent(a 0.0*inf happened), then
 	// a 0.0 is written
-	FMULX(scratch1.S4(), src1.S4(), src2.S4());
+	FMULX(scratch1Vec.S4(), src1.S4(), src2.S4());
 	FMUL(src1.S4(), src1.S4(), src2.S4());
-	CMEQ(scratch1.S4(), scratch1.S4(), src1.S4());
-	AND(src1.B16(), src1.B16(), scratch1.B16());
+	CMEQ(scratch1Vec.S4(), scratch1Vec.S4(), src1.S4());
+	AND(src1.B16(), src1.B16(), scratch1Vec.B16());
 }
 
 void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
@@ -547,10 +759,10 @@ void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, 0, operandDescriptor);
-	FADD(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
+	FADD(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
@@ -560,10 +772,10 @@ void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, 0, operandDescriptor);
-	FMAX(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
+	FMAX(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recMIN(const PICAShader& shader, u32 instruction) {
@@ -573,10 +785,10 @@ void ShaderEmitter::recMIN(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, 0, operandDescriptor);
-	FMIN(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
+	FMIN(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
@@ -586,16 +798,16 @@ void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, 0, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 
 	if constexpr (useSafeMUL) {
-		emitSafeMUL(src1_vec, src2_vec, scratch1);
+		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
-		FMUL(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
+		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
 	}
 
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recRCP(const PICAShader& shader, u32 instruction) {
@@ -605,16 +817,16 @@ void ShaderEmitter::recRCP(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = operandDescriptor & 0xf;
 
-	loadRegister<1>(src1_vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
-	FDIV(src1_vec.toS(), onesVector.toS(), src1_vec.toS());          // src1 = 1.0 / src1
+	loadRegister<1>(src1Vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1Vec
+	FDIV(src1Vec.toS(), onesVector.toS(), src1Vec.toS());           // src1 = 1.0 / src1
 
 	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
 	// Otherwise we do
-	if (writeMask != 0x8) {                       // Copy bottom lane to all lanes if we're not simply writing back x
-		DUP(src1_vec.S4(), src1_vec.Selem()[0]);  // src1_vec = src1_vec.xxxx
+	if (writeMask != 0x8) {                     // Copy bottom lane to all lanes if we're not simply writing back x
+		DUP(src1Vec.S4(), src1Vec.Selem()[0]);  // src1Vec = src1Vec.xxxx
 	}
 
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
@@ -625,7 +837,7 @@ void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 	const u32 writeMask = operandDescriptor & 0xf;
 	constexpr bool useAccurateRSQ = true;
 
-	loadRegister<1>(src1_vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
+	loadRegister<1>(src1Vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1Vec
 
 	// Compute reciprocal square root approximation
 	// TODO: Should this use frsqte or fsqrt+div? The former is faster but less accurate
@@ -633,19 +845,19 @@ void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 	// It doesn't have regular sqrt/div instructions.
 	// For now, we default to accurate inverse square root
 	if constexpr (useAccurateRSQ) {
-		FSQRT(src1_vec.toS(), src1_vec.toS());                   // src1 = sqrt(src1), scalar
-		FDIV(src1_vec.toS(), onesVector.toS(), src1_vec.toS());  // Now invert src1
+		FSQRT(src1Vec.toS(), src1Vec.toS());                   // src1 = sqrt(src1), scalar
+		FDIV(src1Vec.toS(), onesVector.toS(), src1Vec.toS());  // Now invert src1
 	} else {
-		FRSQRTE(src1_vec.toS(), src1_vec.toS());  // Much nicer
+		FRSQRTE(src1Vec.toS(), src1Vec.toS());  // Much nicer
 	}
 
 	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
 	// Otherwise we do
-	if (writeMask != 0x8) {                       // Copy bottom lane to all lanes if we're not simply writing back x
-		DUP(src1_vec.S4(), src1_vec.Selem()[0]);  // src1_vec = src1_vec.xxxx
+	if (writeMask != 0x8) {                     // Copy bottom lane to all lanes if we're not simply writing back x
+		DUP(src1Vec.S4(), src1Vec.Selem()[0]);  // src1Vec = src1Vec.xxxx
 	}
 
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
@@ -658,17 +870,17 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<22, 2>(instruction);
 	const u32 dest = getBits<24, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, 0, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, isMADI ? 0 : idx, operandDescriptor);
-	loadRegister<3>(src3_vec, shader, src3, isMADI ? idx : 0, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, 0, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, isMADI ? 0 : idx, operandDescriptor);
+	loadRegister<3>(src3Vec, shader, src3, isMADI ? idx : 0, operandDescriptor);
 
 	if constexpr (useSafeMUL) {
-		emitSafeMUL(src1_vec, src2_vec, scratch1);
-		FADD(src3_vec.S4(), src3_vec.S4(), src1_vec.S4());
+		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
+		FADD(src3Vec.S4(), src3Vec.S4(), src1Vec.S4());
 	} else {
-		FMLA(src3_vec.S4(), src1_vec.S4(), src2_vec.S4());
+		FMLA(src3Vec.S4(), src1Vec.S4(), src2Vec.S4());
 	}
-	storeRegister(src3_vec, shader, dest, operandDescriptor);
+	storeRegister(src3Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recSLT(const PICAShader& shader, u32 instruction) {
@@ -680,13 +892,13 @@ void ShaderEmitter::recSLT(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, isSLTI ? 0 : idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, isSLTI ? idx : 0, operandDescriptor);
-	// Set each lane of SRC1 to FFFFFFFF if src2 > src1, else to 0. NEON does not have FCMLT so we use FCMGT with inverted operands
+	loadRegister<1>(src1Vec, shader, src1, isSLTI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, isSLTI ? idx : 0, operandDescriptor);
+	// Set each lane of src1Vec to FFFFFFFF if src2 > src1, else to 0. NEON does not have FCMLT so we use FCMGT with inverted operands
 	// This is more or less a direct port of the relevant x64 JIT code
-	FCMGT(src1_vec.S4(), src2_vec.S4(), src1_vec.S4());
-	AND(src1_vec.B16(), src1_vec.B16(), onesVector.B16());  // AND with vec4(1.0) to convert the FFFFFFFF lanes into 1.0
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	FCMGT(src1Vec.S4(), src2Vec.S4(), src1Vec.S4());
+	AND(src1Vec.B16(), src1Vec.B16(), onesVector.B16());  // AND with vec4(1.0) to convert the FFFFFFFF lanes into 1.0
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recSGE(const PICAShader& shader, u32 instruction) {
@@ -698,13 +910,13 @@ void ShaderEmitter::recSGE(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, isSGEI ? 0 : idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, isSGEI ? idx : 0, operandDescriptor);
-	// Set each lane of SRC1 to FFFFFFFF if src1 >= src2, else to 0.
+	loadRegister<1>(src1Vec, shader, src1, isSGEI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, isSGEI ? idx : 0, operandDescriptor);
+	// Set each lane of src1Vec to FFFFFFFF if src1 >= src2, else to 0.
 	// This is more or less a direct port of the relevant x64 JIT code
-	FCMGE(src1_vec.S4(), src1_vec.S4(), src2_vec.S4());
-	AND(src1_vec.B16(), src1_vec.B16(), onesVector.B16());  // AND with vec4(1.0) to convert the FFFFFFFF lanes into 1.0
-	storeRegister(src1_vec, shader, dest, operandDescriptor);
+	FCMGE(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
+	AND(src1Vec.B16(), src1Vec.B16(), onesVector.B16());  // AND with vec4(1.0) to convert the FFFFFFFF lanes into 1.0
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
@@ -715,8 +927,8 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	const u32 cmpY = getBits<21, 3>(instruction);
 	const u32 cmpX = getBits<24, 3>(instruction);
 
-	loadRegister<1>(src1_vec, shader, src1, idx, operandDescriptor);
-	loadRegister<2>(src2_vec, shader, src2, 0, operandDescriptor);
+	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 
 	// Map from PICA condition codes (used as index) to x86 condition codes
 	// We treat invalid condition codes as "always" as suggested by 3DBrew
@@ -729,13 +941,13 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister[0]) - uintptr_t(&shader);
 
 	// NEON doesn't have SIMD comparisons to do fun stuff with like on x64
-	FCMP(src1_vec.toS(), src2_vec.toS());
+	FCMP(src1Vec.toS(), src2Vec.toS());
 	CSET(W0, conditionCodes[cmpX]);
 
 	// Compare Y components, which annoyingly enough can't be done without moving
-	MOV(scratch1.toS(), src1_vec.Selem()[1]);
-	MOV(scratch2.toS(), src2_vec.Selem()[1]);
-	FCMP(scratch1.toS(), scratch2.toS());
+	MOV(scratch1Vec.toS(), src1Vec.Selem()[1]);
+	MOV(scratch2Vec.toS(), src2Vec.Selem()[1]);
+	FCMP(scratch1Vec.toS(), scratch2Vec.toS());
 	CSET(W1, conditionCodes[cmpY]);
 
 	// Merge the booleans and write them back in one STRh
@@ -915,6 +1127,19 @@ void ShaderEmitter::recJMPU(const PICAShader& shader, u32 instruction) {
 	}
 }
 
+void ShaderEmitter::recLG2(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1Vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1Vec
+	STR(X30, SP, POST_INDEXED, -16);
+	BL(log2Func);
+	LDR(X30, SP, PRE_INDEXED, 16);
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
+}
+
 void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<10, 12>(instruction);
 	const u32 uniformIndex = getBits<22, 2>(instruction);
@@ -977,6 +1202,19 @@ void ShaderEmitter::recEND(const PICAShader& shader, u32 instruction) {
 	// Fetch original LR and return. This also restores SP to its original value, discarding the return guard into XZR
 	LDP(XZR, X30, SP, POST_INDEXED, 16);
 	RET();
+}
+
+void ShaderEmitter::recEX2(const PICAShader& shader, u32 instruction) {
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	loadRegister<1>(src1Vec, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1Vec
+	STR(X30, SP, POST_INDEXED, -16);
+	BL(exp2Func);
+	LDR(X30, SP, PRE_INDEXED, 16);
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
 }
 
 #endif

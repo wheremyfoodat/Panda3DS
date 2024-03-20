@@ -7,6 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <initializer_list>
 #include <memory>
+#include <span>
 
 using namespace Floats;
 static const nihstro::SourceRegister input0 = nihstro::SourceRegister::MakeInput(0);
@@ -28,23 +29,44 @@ static std::unique_ptr<PICAShader> assembleVertexShader(std::initializer_list<ni
 	return newShader;
 }
 
-class ShaderInterpreterTest final {
-  private:
+class ShaderInterpreterTest {
+  protected:
 	std::unique_ptr<PICAShader> shader = {};
+
+	virtual void runShader() { shader->run(); }
 
   public:
 	explicit ShaderInterpreterTest(std::initializer_list<nihstro::InlineAsm> code) : shader(assembleVertexShader(code)) {}
 
-	// Multiple inputs, singular scalar output
-	float runScalar(std::initializer_list<float> inputs) {
-		usize inputIndex = 0;
-		for (const float& input : inputs) {
-			const std::array<Floats::f24, 4> input_vec = std::array<Floats::f24, 4>{f24::fromFloat32(input), f24::zero(), f24::zero(), f24::zero()};
-			shader->inputs[inputIndex++] = input_vec;
-		}
-		shader->run();
-		return shader->outputs[0][0];
+	std::span<const std::array<Floats::f24, 4>> runTest(std::span<const std::array<Floats::f24, 4>> inputs) {
+		std::copy(inputs.begin(), inputs.end(), shader->inputs.begin());
+		runShader();
+		return shader->outputs;
 	}
+
+	// Each input is written to the x component of sequential input registers
+	// The first output vector is returned
+	const std::array<Floats::f24, 4>& runVector(std::initializer_list<float> inputs) {
+		std::vector<std::array<Floats::f24, 4>> inputsVec;
+		for (const float& input : inputs) {
+			const std::array<Floats::f24, 4> inputVec = {
+				f24::fromFloat32(input),
+				f24::zero(),
+				f24::zero(),
+				f24::zero(),
+			};
+			inputsVec.emplace_back(inputVec);
+		}
+		return runTest(inputsVec)[0];
+	}
+
+	// Each input is written to the x component of sequential input registers
+	// The x component of the first output
+	float runScalar(std::initializer_list<float> inputs) { return runVector(inputs)[0].toFloat32(); }
+
+	[[nodiscard]] std::array<std::array<Floats::f24, 4>, 96>& floatUniforms() const { return shader->floatUniforms; }
+	[[nodiscard]] std::array<std::array<u8, 4>, 4>& intUniforms() const { return shader->intUniforms; }
+	[[nodiscard]] u32& boolUniform() const { return shader->boolUniform; }
 
 	static std::unique_ptr<ShaderInterpreterTest> assembleTest(std::initializer_list<nihstro::InlineAsm> code) {
 		return std::make_unique<ShaderInterpreterTest>(code);
@@ -52,24 +74,14 @@ class ShaderInterpreterTest final {
 };
 
 #if defined(PANDA3DS_SHADER_JIT_SUPPORTED)
-class ShaderJITTest final {
+class ShaderJITTest final : public ShaderInterpreterTest {
   private:
-	std::unique_ptr<PICAShader> shader = {};
 	ShaderJIT shaderJit = {};
 
-  public:
-	explicit ShaderJITTest(std::initializer_list<nihstro::InlineAsm> code) : shader(assembleVertexShader(code)) { shaderJit.prepare(*shader.get()); }
+	void runShader() override { shaderJit.run(*shader); }
 
-	// Multiple inputs, singular scalar output
-	float runScalar(std::initializer_list<float> inputs) {
-		usize inputIndex = 0;
-		for (const float& input : inputs) {
-			const std::array<Floats::f24, 4> input_vec = std::array<Floats::f24, 4>{f24::fromFloat32(input), f24::zero(), f24::zero(), f24::zero()};
-			shader->inputs[inputIndex++] = input_vec;
-		}
-		shaderJit.run(*shader.get());
-		return shader->outputs[0][0];
-	}
+  public:
+	explicit ShaderJITTest(std::initializer_list<nihstro::InlineAsm> code) : ShaderInterpreterTest(code) { shaderJit.prepare(*shader); }
 
 	static std::unique_ptr<ShaderJITTest> assembleTest(std::initializer_list<nihstro::InlineAsm> code) {
 		return std::make_unique<ShaderJITTest>(code);
