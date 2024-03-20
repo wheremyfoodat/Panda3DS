@@ -5,11 +5,10 @@
 #include <filesystem>
 
 #include "emulator.hpp"
-#include "mappings.hpp"
+#include "input_mappings.hpp"
 
 class FrontendSDL {
 	Emulator emu;
-	InputMappings keyboardMappings;
 #ifdef PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
 #endif
@@ -22,6 +21,8 @@ class FrontendSDL {
 
 	SDL_Window* window = nullptr;
 	SDL_GameController* gameController = nullptr;
+	InputMappings keyboardMappings;
+
 	int gameControllerID;
 	bool programRunning = true;
 	

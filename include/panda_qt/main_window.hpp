@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "emulator.hpp"
-#include "mappings.hpp"
+#include "input_mappings.hpp"
 #include "panda_qt/about_window.hpp"
 #include "panda_qt/config_window.hpp"
 #include "panda_qt/cheats_window.hpp"
@@ -81,7 +81,6 @@ class MainWindow : public QMainWindow {
 
 	// This would normally be an std::unique_ptr but it's shared between threads so definitely not
 	Emulator* emu = nullptr;
-	InputMappings keyboardMappings;
 	std::thread emuThread;
 
 	std::atomic<bool> appRunning = true;  // Is the application itself running?
@@ -89,7 +88,8 @@ class MainWindow : public QMainWindow {
 	std::mutex messageQueueMutex;
 	std::vector<EmulatorMessage> messageQueue;
 
-	ScreenWidget screen;
+    InputMappings keyboardMappings;
+    ScreenWidget screen;
 	AboutWindow* aboutWindow;
 	ConfigWindow* configWindow;
 	CheatsWindow* cheatsEditor;
