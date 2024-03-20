@@ -118,9 +118,6 @@ void FrontendSDL::run() {
 						}
 					} else {
 						switch (event.key.keysym.sym) {
-							case SDLK_RETURN: hid.pressKey(Keys::Start); break;
-							case SDLK_BACKSPACE: hid.pressKey(Keys::Select); break;
-
 							// Use the F4 button as a hot-key to pause or resume the emulator
 							// We can't use the audio play/pause buttons because it's annoying
 							case SDLK_F4: {
