@@ -136,6 +136,8 @@ PICAShader::vec4f PICAShader::getSource(u32 source) {
 		return tempRegisters[source - 0x10];
 	else if (source <= 0x7f)
 		return floatUniforms[source - 0x20];
+	else if (source <= 0x7f + 96)
+		return vec4f({f24::fromFloat32(1.0f), f24::fromFloat32(1.0f), f24::fromFloat32(1.0f), f24::fromFloat32(1.0f)});
 	else {
 		Helpers::warn("[PICA] Unimplemented source value: %X\n", source);
 		return vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});
