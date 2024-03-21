@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "emulator.hpp"
+#include "input_mappings.hpp"
 #include "panda_qt/about_window.hpp"
 #include "panda_qt/config_window.hpp"
 #include "panda_qt/cheats_window.hpp"
@@ -87,6 +88,7 @@ class MainWindow : public QMainWindow {
 	std::mutex messageQueueMutex;
 	std::vector<EmulatorMessage> messageQueue;
 
+	InputMappings keyboardMappings;
 	ScreenWidget screen;
 	AboutWindow* aboutWindow;
 	ConfigWindow* configWindow;

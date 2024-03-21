@@ -8,8 +8,9 @@
 #include <fstream>
 
 #include "cheats.hpp"
+#include "input_mappings.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), screen(this) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
@@ -298,29 +299,21 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 		sendMessage(message);
 	};
 
-	switch (event->key()) {
-		case Qt::Key_L: pressKey(HID::Keys::A); break;
-		case Qt::Key_K: pressKey(HID::Keys::B); break;
-		case Qt::Key_O: pressKey(HID::Keys::X); break;
-		case Qt::Key_I: pressKey(HID::Keys::Y); break;
+	u32 key = keyboardMappings.getMapping(event->key());
+	if (key != HID::Keys::Null) {
+		switch (key) {
+			case HID::Keys::CirclePadUp: setCirclePad(MessageType::SetCirclePadY, 0x9C); break;
+			case HID::Keys::CirclePadDown: setCirclePad(MessageType::SetCirclePadY, -0x9C); break;
+			case HID::Keys::CirclePadLeft: setCirclePad(MessageType::SetCirclePadX, -0x9C); break;
+			case HID::Keys::CirclePadRight: setCirclePad(MessageType::SetCirclePadX, 0x9C); break;
 
-		case Qt::Key_Q: pressKey(HID::Keys::L); break;
-		case Qt::Key_P: pressKey(HID::Keys::R); break;
-
-		case Qt::Key_W: setCirclePad(MessageType::SetCirclePadY, 0x9C); break;
-		case Qt::Key_A: setCirclePad(MessageType::SetCirclePadX, -0x9C); break;
-		case Qt::Key_S: setCirclePad(MessageType::SetCirclePadY, -0x9C); break;
-		case Qt::Key_D: setCirclePad(MessageType::SetCirclePadX, 0x9C); break;
-
-		case Qt::Key_Right: pressKey(HID::Keys::Right); break;
-		case Qt::Key_Left: pressKey(HID::Keys::Left); break;
-		case Qt::Key_Up: pressKey(HID::Keys::Up); break;
-		case Qt::Key_Down: pressKey(HID::Keys::Down); break;
-
-		case Qt::Key_Return: pressKey(HID::Keys::Start); break;
-		case Qt::Key_Backspace: pressKey(HID::Keys::Select); break;
-		case Qt::Key_F4: sendMessage(EmulatorMessage{.type = MessageType::TogglePause}); break;
-		case Qt::Key_F5: sendMessage(EmulatorMessage{.type = MessageType::Reset}); break;
+			default: pressKey(key); break;
+		}
+	} else {
+		switch (event->key()) {
+			case Qt::Key_F4: sendMessage(EmulatorMessage{.type = MessageType::TogglePause}); break;
+			case Qt::Key_F5: sendMessage(EmulatorMessage{.type = MessageType::Reset}); break;
+		}
 	}
 }
 
@@ -337,28 +330,16 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 		sendMessage(message);
 	};
 
-	switch (event->key()) {
-		case Qt::Key_L: releaseKey(HID::Keys::A); break;
-		case Qt::Key_K: releaseKey(HID::Keys::B); break;
-		case Qt::Key_O: releaseKey(HID::Keys::X); break;
-		case Qt::Key_I: releaseKey(HID::Keys::Y); break;
+	u32 key = keyboardMappings.getMapping(event->key());
+	if (key != HID::Keys::Null) {
+		switch (key) {
+			case HID::Keys::CirclePadUp: releaseCirclePad(MessageType::SetCirclePadY); break;
+			case HID::Keys::CirclePadDown: releaseCirclePad(MessageType::SetCirclePadY); break;
+			case HID::Keys::CirclePadLeft: releaseCirclePad(MessageType::SetCirclePadX); break;
+			case HID::Keys::CirclePadRight: releaseCirclePad(MessageType::SetCirclePadX); break;
 
-		case Qt::Key_Q: releaseKey(HID::Keys::L); break;
-		case Qt::Key_P: releaseKey(HID::Keys::R); break;
-
-		case Qt::Key_W:
-		case Qt::Key_S: releaseCirclePad(MessageType::SetCirclePadY); break;
-
-		case Qt::Key_A:
-		case Qt::Key_D: releaseCirclePad(MessageType::SetCirclePadX); break;
-
-		case Qt::Key_Right: releaseKey(HID::Keys::Right); break;
-		case Qt::Key_Left: releaseKey(HID::Keys::Left); break;
-		case Qt::Key_Up: releaseKey(HID::Keys::Up); break;
-		case Qt::Key_Down: releaseKey(HID::Keys::Down); break;
-
-		case Qt::Key_Return: releaseKey(HID::Keys::Start); break;
-		case Qt::Key_Backspace: releaseKey(HID::Keys::Select); break;
+			default: releaseKey(key); break;
+		}
 	}
 }
 

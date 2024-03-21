@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include "emulator.hpp"
+#include "input_mappings.hpp"
 
 class FrontendSDL {
 	Emulator emu;
@@ -16,9 +17,12 @@ class FrontendSDL {
 	FrontendSDL();
 	bool loadROM(const std::filesystem::path& path);
 	void run();
+	u32 getMapping(InputMappings::Scancode scancode) { return keyboardMappings.getMapping(scancode); }
 
 	SDL_Window* window = nullptr;
 	SDL_GameController* gameController = nullptr;
+	InputMappings keyboardMappings;
+
 	int gameControllerID;
 	bool programRunning = true;
 	

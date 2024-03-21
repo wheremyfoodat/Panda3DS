@@ -10,6 +10,7 @@
 
 namespace HID::Keys {
 	enum : u32 {
+		Null = 0,
 		A = 1 << 0,
 		B = 1 << 1,
 		Select = 1 << 2,
