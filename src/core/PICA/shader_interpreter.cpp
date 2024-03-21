@@ -119,9 +119,17 @@ u8 PICAShader::getIndexedSource(u32 source, u32 index) {
 		return source;
 
 	switch (index) {
-		case 0: [[likely]] return u8(source);  // No offset applied
-		case 1: return u8(source + addrRegister[0]);
-		case 2: return u8(source + addrRegister[1]);
+		// No offset applied
+		case 0: [[likely]] return u8(source);
+		// Address register
+		case 1:
+		case 2: {
+			const s32 offset = addrRegister[index - 1];
+			if (offset < -128 || offset > 127) [[unlikely]] {
+				return u8(source);
+			}
+			return u8(source + offset);
+		}
 		case 3: return u8(source + loopCounter);
 	}
 
@@ -130,17 +138,16 @@ u8 PICAShader::getIndexedSource(u32 source, u32 index) {
 }
 
 PICAShader::vec4f PICAShader::getSource(u32 source) {
-	if (source < 0x10)
+	if (source < 0x10) {
 		return inputs[source];
-	else if (source < 0x20)
+	} else if (source < 0x20) {
 		return tempRegisters[source - 0x10];
-	else if (source <= 0x7f)
-		return floatUniforms[source - 0x20];
-	else if (source <= 0x7f + 96)
-		return vec4f({f24::fromFloat32(1.0f), f24::fromFloat32(1.0f), f24::fromFloat32(1.0f), f24::fromFloat32(1.0f)});
-	else {
-		Helpers::warn("[PICA] Unimplemented source value: %X\n", source);
-		return vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});
+	} else {
+		const usize floatIndex = (source - 0x20) & 0x7f;
+		if (floatIndex >= 96) [[unlikely]] {
+			return vec4f({f24::fromFloat32(1.0f), f24::fromFloat32(1.0f), f24::fromFloat32(1.0f), f24::fromFloat32(1.0f)});
+		}
+		return floatUniforms[floatIndex];
 	}
 }
 
@@ -305,7 +312,6 @@ void PICAShader::mova(u32 instruction) {
 	const u32 src = getBits<12, 7>(instruction);
 	const u32 idx = getBits<19, 2>(instruction);
 
-	if (idx) Helpers::panic("[PICA] MOVA: idx != 0");
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
 
 	u32 componentMask = operandDescriptor & 0xf;
