@@ -309,9 +309,10 @@ void PICAShader::mov(u32 instruction) {
 
 void PICAShader::mova(u32 instruction) {
 	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
-	const u32 src = getBits<12, 7>(instruction);
+	u32 src = getBits<12, 7>(instruction);
 	const u32 idx = getBits<19, 2>(instruction);
 
+	src = getIndexedSource(src, idx);
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
 
 	u32 componentMask = operandDescriptor & 0xf;
