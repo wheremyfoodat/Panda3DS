@@ -1,6 +1,6 @@
 #pragma once
-#include <algorithm>
 #include <array>
+#include <bitset>
 #include <cstring>
 
 #include "PICA/float_types.hpp"
@@ -90,7 +90,7 @@ class PICAShader {
   public:
 	// These are placed close to the temp registers and co because it helps the JIT generate better code
 	u32 entrypoint = 0;  // Initial shader PC
-	u32 boolUniform;
+	std::bitset<16> boolUniform;
 	std::array<std::array<u8, 4>, 4> intUniforms;
 	alignas(16) std::array<vec4f, 96> floatUniforms;
 

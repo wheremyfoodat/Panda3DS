@@ -161,9 +161,9 @@ PICAShader::vec4f& PICAShader::getDest(u32 dest) {
 }
 
 bool PICAShader::isCondTrue(u32 instruction) {
-	u32 condition = getBits<22, 2>(instruction);
-	bool refY = (getBit<24>(instruction)) != 0;
-	bool refX = (getBit<25>(instruction)) != 0;
+	const u32 condition = getBits<22, 2>(instruction);
+	const bool refY = (getBit<24>(instruction)) != 0;
+	const bool refX = (getBit<25>(instruction)) != 0;
 
 	switch (condition) {
 		case 0:  // Either cmp register matches
@@ -190,9 +190,9 @@ void PICAShader::add(u32 instruction) {
 
 	vec4f& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] + srcVec2[3 - i];
 		}
 	}
@@ -211,9 +211,9 @@ void PICAShader::mul(u32 instruction) {
 
 	vec4f& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i];
 		}
 	}
@@ -229,9 +229,9 @@ void PICAShader::flr(u32 instruction) {
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
 	vec4f& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = f24::fromFloat32(std::floor(srcVector[3 - i].toFloat32()));
 		}
 	}
@@ -250,9 +250,9 @@ void PICAShader::max(u32 instruction) {
 
 	vec4f& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			const float inputA = srcVec1[3 - i].toFloat32();
 			const float inputB = srcVec2[3 - i].toFloat32();
 			// max(NaN, 2.f) -> NaN
@@ -276,9 +276,9 @@ void PICAShader::min(u32 instruction) {
 
 	vec4f& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			const float inputA = srcVec1[3 - i].toFloat32();
 			const float inputB = srcVec2[3 - i].toFloat32();
 			// min(NaN, 2.f) -> NaN
@@ -299,9 +299,9 @@ void PICAShader::mov(u32 instruction) {
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
 	vec4f& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVector[3 - i];
 		}
 	}
@@ -315,10 +315,10 @@ void PICAShader::mova(u32 instruction) {
 	src = getIndexedSource(src, idx);
 	vec4f srcVector = getSourceSwizzled<1>(src, operandDescriptor);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	if (componentMask & 0b1000)  // x component
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	if (componentMask.test(3))  // x component
 		addrRegister[0] = static_cast<s32>(srcVector[0].toFloat32());
-	if (componentMask & 0b0100)  // y component
+	if (componentMask.test(2))  // y component
 		addrRegister[1] = static_cast<s32>(srcVector[1].toFloat32());
 }
 
@@ -336,9 +336,9 @@ void PICAShader::dp3(u32 instruction) {
 	vec4f& destVector = getDest(dest);
 	f24 dot = srcVec1[0] * srcVec2[0] + srcVec1[1] * srcVec2[1] + srcVec1[2] * srcVec2[2];
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = dot;
 		}
 	}
@@ -358,9 +358,9 @@ void PICAShader::dp4(u32 instruction) {
 	vec4f& destVector = getDest(dest);
 	f24 dot = srcVec1[0] * srcVec2[0] + srcVec1[1] * srcVec2[1] + srcVec1[2] * srcVec2[2] + srcVec1[3] * srcVec2[3];
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = dot;
 		}
 	}
@@ -381,9 +381,9 @@ void PICAShader::dphi(u32 instruction) {
 	// srcVec1[3] is supposed to be replaced with 1.0 in the dot product, so we just add srcVec2[3] without multiplying it with anything
 	f24 dot = srcVec1[0] * srcVec2[0] + srcVec1[1] * srcVec2[1] + srcVec1[2] * srcVec2[2] + srcVec2[3];
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = dot;
 		}
 	}
@@ -405,9 +405,9 @@ void PICAShader::rcp(u32 instruction) {
 	}
 	const f24 res = f24::fromFloat32(1.0f / input);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = res;
 		}
 	}
@@ -429,9 +429,9 @@ void PICAShader::rsq(u32 instruction) {
 	}
 	const f24 res = f24::fromFloat32(1.0f / std::sqrt(input));
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = res;
 		}
 	}
@@ -449,9 +449,9 @@ void PICAShader::ex2(u32 instruction) {
 	vec4f& destVector = getDest(dest);
 	f24 res = f24::fromFloat32(std::exp2(srcVec[0].toFloat32()));
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = res;
 		}
 	}
@@ -469,9 +469,9 @@ void PICAShader::lg2(u32 instruction) {
 	vec4f& destVector = getDest(dest);
 	f24 res = f24::fromFloat32(std::log2(srcVec[0].toFloat32()));
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = res;
 		}
 	}
@@ -492,9 +492,9 @@ void PICAShader::mad(u32 instruction) {
 	auto srcVec3 = getSourceSwizzled<3>(src3, operandDescriptor);
 	auto& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i] + srcVec3[3 - i];
 		}
 	}
@@ -515,9 +515,9 @@ void PICAShader::madi(u32 instruction) {
 	auto srcVec3 = getSourceSwizzled<3>(src3, operandDescriptor);
 	auto& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] * srcVec2[3 - i] + srcVec3[3 - i];
 		}
 	}
@@ -535,9 +535,9 @@ void PICAShader::slt(u32 instruction) {
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 	auto& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] < srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
 		}
 	}
@@ -555,9 +555,9 @@ void PICAShader::sge(u32 instruction) {
 	vec4f srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 	auto& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] >= srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
 		}
 	}
@@ -576,9 +576,9 @@ void PICAShader::sgei(u32 instruction) {
 	auto srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 	auto& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] >= srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
 		}
 	}
@@ -597,9 +597,9 @@ void PICAShader::slti(u32 instruction) {
 	auto srcVec2 = getSourceSwizzled<2>(src2, operandDescriptor);
 	auto& destVector = getDest(dest);
 
-	u32 componentMask = operandDescriptor & 0xf;
-	for (int i = 0; i < 4; i++) {
-		if (componentMask & (1 << i)) {
+	const std::bitset<4> componentMask(operandDescriptor & 0xf);
+	for (u8 i = 0; i < 4; i++) {
+		if (componentMask.test(i)) {
 			destVector[3 - i] = srcVec1[3 - i] < srcVec2[3 - i] ? f24::fromFloat32(1.0) : f24::zero();
 		}
 	}
@@ -673,7 +673,7 @@ void PICAShader::ifu(u32 instruction) {
 	const u32 dest = getBits<10, 12>(instruction);
 	const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 
-	if (boolUniform & (1 << bit)) {
+	if (boolUniform.test(bit)) {
 		if (ifIndex >= 8) [[unlikely]]
 			Helpers::panic("[PICA] Overflowed IF stack");
 
@@ -710,7 +710,7 @@ void PICAShader::callc(u32 instruction) {
 void PICAShader::callu(u32 instruction) {
 	const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 
-	if (boolUniform & (1 << bit)) {
+	if (boolUniform.test(bit)) {
 		if (callIndex >= 4) [[unlikely]]
 			Helpers::panic("[PICA] Overflowed CALL stack");
 
@@ -747,10 +747,12 @@ void PICAShader::jmpc(u32 instruction) {
 }
 
 void PICAShader::jmpu(u32 instruction) {
-	const u32 test = (instruction & 1) ^ 1;  // If the LSB is 0 we want to compare to true, otherwise compare to false
+	const bool test = (instruction & 1) ^ 1;  // If the LSB is 0 we want to compare to true, otherwise compare to false
 	const u32 dest = getBits<10, 12>(instruction);
 	const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 
-	if (((boolUniform >> bit) & 1) == test)  // Jump if the bool uniform is the value we want
+	// Jump if the bool uniform is the value we want
+	if (boolUniform.test(bit) == test) {
 		pc = dest;
+	}
 }

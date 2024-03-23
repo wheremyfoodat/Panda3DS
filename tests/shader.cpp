@@ -73,7 +73,7 @@ class ShaderInterpreterTest {
 
 	[[nodiscard]] std::array<std::array<Floats::f24, 4>, 96>& floatUniforms() const { return shader->floatUniforms; }
 	[[nodiscard]] std::array<std::array<u8, 4>, 4>& intUniforms() const { return shader->intUniforms; }
-	[[nodiscard]] u32& boolUniforms() const { return shader->boolUniform; }
+	[[nodiscard]] std::bitset<16>& boolUniforms() const { return shader->boolUniform; }
 
 	static std::unique_ptr<ShaderInterpreterTest> assembleTest(std::initializer_list<nihstro::InlineAsm> code) {
 		return std::make_unique<ShaderInterpreterTest>(code);
@@ -346,7 +346,7 @@ SHADER_TEST_CASE("Address Register Offset", "[video_core][shader][shader_jit]") 
 		}
 		// Bool uniforms(bools packed into an integer)
 		else if (i >= 0x70 && i < 0x80) {
-			shader->boolUniforms() |= (i >= 0x78) << (i - 0x70);
+			shader->boolUniforms()[i - 0x70] = (i >= 0x78);
 		}
 	}
 
