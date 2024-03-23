@@ -344,4 +344,120 @@ namespace PICA {
 		GeometryPrimitive = 3,
 	};
 
+	struct TexEnvConfig {
+		enum class Source : u8 {
+			PrimaryColor = 0x0,
+			PrimaryFragmentColor = 0x1,
+			SecondaryFragmentColor = 0x2,
+			Texture0 = 0x3,
+			Texture1 = 0x4,
+			Texture2 = 0x5,
+			Texture3 = 0x6,
+			// TODO: Inbetween values are unknown
+			PreviousBuffer = 0xD,
+			Constant = 0xE,
+			Previous = 0xF,
+		};
+
+		enum class ColorOperand : u8 {
+			SourceColor = 0x0,
+			OneMinusSourceColor = 0x1,
+			SourceAlpha = 0x2,
+			OneMinusSourceAlpha = 0x3,
+			SourceRed = 0x4,
+			OneMinusSourceRed = 0x5,
+			// TODO: Inbetween values are unknown
+			SourceGreen = 0x8,
+			OneMinusSourceGreen = 0x9,
+			// Inbetween values are unknown
+			SourceBlue = 0xC,
+			OneMinusSourceBlue = 0xD,
+		};
+
+		enum class AlphaOperand : u8 {
+			SourceAlpha = 0x0,
+			OneMinusSourceAlpha = 0x1,
+			SourceRed = 0x2,
+			OneMinusSourceRed = 0x3,
+			SourceGreen = 0x4,
+			OneMinusSourceGreen = 0x5,
+			SourceBlue = 0x6,
+			OneMinusSourceBlue = 0x7,
+		};
+
+		enum class Operation : u8 {
+			Replace = 0,
+			Modulate = 1,
+			Add = 2,
+			AddSigned = 3,
+			Lerp = 4,
+			Subtract = 5,
+			Dot3RGB = 6,
+			Dot3RGBA = 7,
+			MultiplyAdd = 8,
+			AddMultiply = 9,
+		};
+
+		// RGB sources
+		Source colorSource1, colorSource2, colorSource3;
+		// Alpha sources
+		Source alphaSource1, alphaSource2, alphaSource3;
+
+		// RGB operands
+		ColorOperand colorOperand1, colorOperand2, colorOperand3;
+		// Alpha operands
+		AlphaOperand alphaOperand1, alphaOperand2, alphaOperand3;
+
+		// Texture environment operations for this stage
+		Operation colorOp, alphaOp;
+
+		u32 constColor;
+
+	  private:
+		// These are the only private members since their value doesn't actually reflect the scale
+		// So we make them public so we'll always use the appropriate member functions instead
+		u8 colorScale;
+		u8 alphaScale;
+
+	  public:
+		// Create texture environment object from TEV registers
+		TexEnvConfig(u32 source, u32 operand, u32 combiner, u32 color, u32 scale) : constColor(color) {
+			colorSource1 = Helpers::getBits<0, 4, Source>(source);
+			colorSource2 = Helpers::getBits<4, 4, Source>(source);
+			colorSource3 = Helpers::getBits<8, 4, Source>(source);
+
+			alphaSource1 = Helpers::getBits<16, 4, Source>(source);
+			alphaSource2 = Helpers::getBits<20, 4, Source>(source);
+			alphaSource3 = Helpers::getBits<24, 4, Source>(source);
+
+			colorOperand1 = Helpers::getBits<0, 4, ColorOperand>(operand);
+			colorOperand2 = Helpers::getBits<4, 4, ColorOperand>(operand);
+			colorOperand3 = Helpers::getBits<8, 4, ColorOperand>(operand);
+
+			alphaOperand1 = Helpers::getBits<12, 3, AlphaOperand>(operand);
+			alphaOperand2 = Helpers::getBits<16, 3, AlphaOperand>(operand);
+			alphaOperand3 = Helpers::getBits<20, 3, AlphaOperand>(operand);
+
+			colorOp = Helpers::getBits<0, 4, Operation>(combiner);
+			alphaOp = Helpers::getBits<16, 4, Operation>(combiner);
+
+			colorScale = Helpers::getBits<0, 2>(scale);
+			alphaScale = Helpers::getBits<16, 2>(scale);
+		}
+
+		u32 getColorScale() { return (colorScale <= 2) ? (1 << colorScale) : 1; }
+		u32 getAlphaScale() { return (alphaScale <= 2) ? (1 << alphaScale) : 1; }
+
+		bool isPassthroughStage() {
+			// clang-format off
+			// Thank you to the Citra dev that wrote this out
+			return (
+				colorOp == Operation::Replace && alphaOp == Operation::Replace &&
+				colorSource1 == Source::Previous && alphaSource1 == Source::Previous &&
+				colorOperand1 == ColorOperand::SourceColor && alphaOperand1 == AlphaOperand::SourceAlpha &&
+				getColorScale() == 1 && getAlphaScale() == 1
+			);
+			// clang-format on
+		}
+	};
 }  // namespace PICA
