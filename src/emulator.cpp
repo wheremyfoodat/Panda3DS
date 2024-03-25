@@ -213,7 +213,12 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	const std::filesystem::path appDataPath = getAppDataRoot();
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
-	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
+	std::filesystem::path aesKeysPath;
+	if (!config.aesKeysPath.empty()) {
+		aesKeysPath = config.aesKeysPath;
+	} else {
+		aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
+	}
 	IOFile::setAppDataDir(dataPath);
 
 	// Open the text file containing our AES keys if it exists. We use the std::filesystem::exists overload that takes an error code param to
