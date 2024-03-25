@@ -3,15 +3,18 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QString>
+#include <QIcon>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
-	setWindowTitle("Alber");
+	setWindowTitle("Panda3DS");
+	setWindowIcon(QIcon(":docs/icon/NewPand.svg"));
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
