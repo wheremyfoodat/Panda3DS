@@ -6,7 +6,7 @@
 
 // Remember to initialize every field here to its default value otherwise bad things will happen
 struct EmulatorConfig {
-    // Only enable the shader JIT by default on platforms where it's completely tested
+	// Only enable the shader JIT by default on platforms where it's completely tested
 #ifdef PANDA3DS_X64_HOST
 	static constexpr bool shaderJitDefault = true;
 #else
@@ -29,6 +29,8 @@ struct EmulatorConfig {
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;
 
+	// Default ROM path to open in Qt and misc frontends
+	std::filesystem::path defaultRomPath = "";
 	std::filesystem::path filePath;
 
 	EmulatorConfig(const std::filesystem::path& path);

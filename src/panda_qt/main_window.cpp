@@ -139,8 +139,10 @@ void MainWindow::swapEmuBuffer() {
 }
 
 void MainWindow::selectROM() {
-	auto path =
-		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), "", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
+	auto path = QFileDialog::getOpenFileName(
+		this, tr("Select 3DS ROM to load"), QString::fromStdU16String(emu->getConfig().defaultRomPath.u16string()),
+		tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)")
+	);
 
 	if (!path.isEmpty()) {
 		std::filesystem::path* p = new std::filesystem::path(path.toStdU16String());
