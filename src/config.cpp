@@ -40,7 +40,7 @@ void EmulatorConfig::load() {
 
 			discordRpcEnabled = toml::find_or<toml::boolean>(general, "EnableDiscordRPC", false);
 			usePortableBuild = toml::find_or<toml::boolean>(general, "UsePortableBuild", false);
-			romsPath = toml::find_or(general, "RomsPath","");
+			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
 		}
 	}
 
@@ -121,7 +121,7 @@ void EmulatorConfig::save() {
 
 	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
 	data["General"]["UsePortableBuild"] = usePortableBuild;
-	data["General"]["RomsPath"] = romsPath;
+	data["General"]["DefaultRomPath"] = defaultRomPath.string();
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 	data["GPU"]["EnableVSync"] = vsyncEnabled;
@@ -137,9 +137,6 @@ void EmulatorConfig::save() {
 	std::ofstream file(path, std::ios::out);
 	file << data;
 	file.close();
-} std::string EmulatorConfig::getRomsPath() {
-	return EmulatorConfig::romsPath;
 }
-
 
 
