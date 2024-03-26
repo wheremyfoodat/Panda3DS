@@ -475,7 +475,7 @@ if(NOT BUILD_HYDRA_CORE)
         qt_add_resources(AlberCore "app_images"
             PREFIX "/"
             FILES
-                docs/img/rsob_icon.png docs/img/rstarstruck_icon.png
+                docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/icon/NewPand.svg
         )
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
@@ -487,7 +487,9 @@ if(NOT BUILD_HYDRA_CORE)
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
-    add_library(Alber SHARED src/hydra_core.cpp)
+    add_library(Alber SHARED src/hydra_core.cpp
+            src/panda_qt/main.cpp
+    )
     target_link_libraries(Alber PUBLIC AlberCore)
 endif()
 
