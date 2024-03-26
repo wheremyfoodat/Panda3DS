@@ -3,18 +3,15 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QString>
-#include <QIcon>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
-
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
-	setWindowTitle("Panda3DS");
-	setWindowIcon(QIcon(":docs/icon/NewPand.svg"));
+	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
@@ -142,23 +139,18 @@ void MainWindow::swapEmuBuffer() {
 }
 
 void MainWindow::selectROM() {
-	if (emu->getConfig().getRomsPath() == "") {
-		auto path =
-		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"),"", tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
-	} else {
-		QString Rompath = QString::fromStdString(emu->getConfig().getRomsPath());
-		auto path =
-		QFileDialog::getOpenFileName(this, tr("Select 3DS ROM to load"), Rompath, tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)"));
+	auto path = QFileDialog::getOpenFileName(
+		this, tr("Select 3DS ROM to load"), QString::fromStdU16String(emu->getConfig().defaultRomPath.u16string()),
+		tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)")
+	);
 
+	if (!path.isEmpty()) {
 		std::filesystem::path* p = new std::filesystem::path(path.toStdU16String());
 
 		EmulatorMessage message{.type = MessageType::LoadROM};
 		message.path.p = p;
 		sendMessage(message);
 	}
-
-
-
 }
 
 void MainWindow::selectLuaFile() {
