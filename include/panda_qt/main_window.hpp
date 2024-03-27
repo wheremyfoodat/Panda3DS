@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SDL.h>
+
 #include <QApplication>
 #include <QMenuBar>
 #include <QtWidgets>
@@ -13,8 +15,8 @@
 #include "emulator.hpp"
 #include "input_mappings.hpp"
 #include "panda_qt/about_window.hpp"
-#include "panda_qt/config_window.hpp"
 #include "panda_qt/cheats_window.hpp"
+#include "panda_qt/config_window.hpp"
 #include "panda_qt/screen.hpp"
 #include "panda_qt/text_editor.hpp"
 #include "services/hid.hpp"
@@ -96,6 +98,10 @@ class MainWindow : public QMainWindow {
 	TextEditorWindow* luaEditor;
 	QMenuBar* menuBar = nullptr;
 
+	// We use SDL's game controller API since it's the sanest API that supports as many controllers as possible
+	SDL_GameController* gameController = nullptr;
+	int gameControllerID = 0;
+
 	void swapEmuBuffer();
 	void emuThreadMainLoop();
 	void selectLuaFile();
@@ -104,12 +110,20 @@ class MainWindow : public QMainWindow {
 	void openLuaEditor();
 	void openCheatsEditor();
 	void showAboutMenu();
+	void initControllers();
+	void pollControllers();
 	void sendMessage(const EmulatorMessage& message);
 	void dispatchMessage(const EmulatorMessage& message);
 
 	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
 	bool usingGL = false;
 	bool usingVk = false;
+
+	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
+	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state
+	// And so the user can still use the keyboard to control the analog
+	bool keyboardAnalogX = false;
+	bool keyboardAnalogY = false;
 
   public:
 	MainWindow(QApplication* app, QWidget* parent = nullptr);
