@@ -120,6 +120,7 @@ void MainWindow::emuThreadMainLoop() {
 
 		emu->runFrame();
 		pollControllers();
+
 		if (emu->romType != ROMType::None) {
 			emu->getServiceManager().getHID().updateInputs(emu->getTicks());
 		}
@@ -459,8 +460,8 @@ void MainWindow::pollControllers() {
 
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
-		using namespace HID;
 		HIDService& hid = emu->getServiceManager().getHID();
+		using namespace HID;
 
 		switch (event.type) {
 			case SDL_CONTROLLERDEVICEADDED:
