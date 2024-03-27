@@ -97,6 +97,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
 
+		// We have to initialize controllers on the same thread they'll be polled in
+		initControllers();
 		emuThreadMainLoop();
 	});
 }
@@ -117,6 +119,7 @@ void MainWindow::emuThreadMainLoop() {
 		}
 
 		emu->runFrame();
+		pollControllers();
 		if (emu->romType != ROMType::None) {
 			emu->getServiceManager().getHID().updateInputs(emu->getTicks());
 		}
@@ -279,8 +282,21 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 		case MessageType::Reset: emu->reset(Emulator::ReloadOption::Reload); break;
 		case MessageType::PressKey: emu->getServiceManager().getHID().pressKey(message.key.key); break;
 		case MessageType::ReleaseKey: emu->getServiceManager().getHID().releaseKey(message.key.key); break;
-		case MessageType::SetCirclePadX: emu->getServiceManager().getHID().setCirclepadX(message.circlepad.value); break;
-		case MessageType::SetCirclePadY: emu->getServiceManager().getHID().setCirclepadY(message.circlepad.value); break;
+
+		// Track whether we're controlling the analog stick with our controller and update the CirclePad X/Y values in HID
+		// Controllers are polled on the emulator thread, so this message type is only used when the circlepad is changed via keyboard input
+		case MessageType::SetCirclePadX: {
+			keyboardAnalogX = message.circlepad.value != 0;
+			emu->getServiceManager().getHID().setCirclepadX(message.circlepad.value);
+			break;
+		}
+
+		case MessageType::SetCirclePadY: {
+			keyboardAnalogY = message.circlepad.value != 0;
+			emu->getServiceManager().getHID().setCirclepadY(message.circlepad.value);
+			break;
+		}
+
 		case MessageType::PressTouchscreen:
 			emu->getServiceManager().getHID().setTouchScreenPress(message.touchscreen.x, message.touchscreen.y);
 			break;
@@ -397,4 +413,102 @@ void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const 
 
 	message.cheat.c = c;
 	sendMessage(message);
+}
+
+void MainWindow::initControllers() {
+	// Make SDL use consistent positional button mapping
+	SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
+	if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) < 0) {
+		Helpers::warn("Failed to initialize SDL2 GameController: %s", SDL_GetError());
+		return;
+	}
+
+	if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
+		gameController = SDL_GameControllerOpen(0);
+
+		if (gameController != nullptr) {
+			SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
+			gameControllerID = SDL_JoystickInstanceID(stick);
+
+			printf("Controller get!\n");
+		}
+	}
+}
+
+void MainWindow::pollControllers() {
+	// Update circlepad if a controller is plugged in
+	if (gameController != nullptr) {
+		HIDService& hid = emu->getServiceManager().getHID();
+		const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
+		const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
+		constexpr s16 deadzone = 3276;
+		constexpr s16 maxValue = 0x9C;
+		constexpr s16 div = 0x8000 / maxValue;
+
+		// Avoid overriding the keyboard's circlepad input
+		if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
+			hid.setCirclepadX(0);
+		} else {
+			hid.setCirclepadX(stickX / div);
+		}
+
+		if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
+			hid.setCirclepadY(0);
+		} else {
+			hid.setCirclepadY(-(stickY / div));
+		}
+	}
+
+	SDL_Event event;
+	while (SDL_PollEvent(&event)) {
+		using namespace HID;
+		HIDService& hid = emu->getServiceManager().getHID();
+
+		switch (event.type) {
+			case SDL_CONTROLLERDEVICEADDED:
+				if (gameController == nullptr) {
+					gameController = SDL_GameControllerOpen(event.cdevice.which);
+					gameControllerID = event.cdevice.which;
+				}
+				break;
+
+			case SDL_CONTROLLERDEVICEREMOVED:
+				if (event.cdevice.which == gameControllerID) {
+					SDL_GameControllerClose(gameController);
+					gameController = nullptr;
+					gameControllerID = 0;
+				}
+				break;
+
+			case SDL_CONTROLLERBUTTONUP:
+			case SDL_CONTROLLERBUTTONDOWN: {
+				if (emu->romType == ROMType::None) break;
+				u32 key = 0;
+
+				switch (event.cbutton.button) {
+					case SDL_CONTROLLER_BUTTON_A: key = Keys::B; break;
+					case SDL_CONTROLLER_BUTTON_B: key = Keys::A; break;
+					case SDL_CONTROLLER_BUTTON_X: key = Keys::Y; break;
+					case SDL_CONTROLLER_BUTTON_Y: key = Keys::X; break;
+					case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: key = Keys::L; break;
+					case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: key = Keys::R; break;
+					case SDL_CONTROLLER_BUTTON_DPAD_LEFT: key = Keys::Left; break;
+					case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: key = Keys::Right; break;
+					case SDL_CONTROLLER_BUTTON_DPAD_UP: key = Keys::Up; break;
+					case SDL_CONTROLLER_BUTTON_DPAD_DOWN: key = Keys::Down; break;
+					case SDL_CONTROLLER_BUTTON_BACK: key = Keys::Select; break;
+					case SDL_CONTROLLER_BUTTON_START: key = Keys::Start; break;
+				}
+
+				if (key != 0) {
+					if (event.cbutton.state == SDL_PRESSED) {
+						hid.pressKey(key);
+					} else {
+						hid.releaseKey(key);
+					}
+				}
+				break;
+			}
+		}
+	}
 }
