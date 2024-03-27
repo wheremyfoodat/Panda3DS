@@ -429,8 +429,6 @@ void MainWindow::initControllers() {
 		if (gameController != nullptr) {
 			SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
 			gameControllerID = SDL_JoystickInstanceID(stick);
-
-			printf("Controller get!\n");
 		}
 	}
 }
