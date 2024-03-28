@@ -15,7 +15,7 @@
     </style>
 
     <style name="PreferenceStyle" parent="PreferenceFragment.Material">
-        <item name="android:divider">?colorSurfaceVariant</item>
+        <item name="android:divider">@drawable/preference_list_divider_m3</item>
     </style>
 
     <style name="Preference.SwitchPreferenceCompat" parent="Preference.SwitchPreferenceCompat.Material">
@@ -53,6 +53,7 @@
         <item name="colorOnSurface">#FFF</item>
 
         <item name="colorSurfaceVariant">#333</item>
+        <item name="colorOutlineVariant">#45464F</item>
         <item name="colorOnSurfaceVariant">#BBB</item>
 
         <item name="colorPrimary">#FF6D00</item>
@@ -71,6 +72,7 @@
         <item name="colorOnSurface">#FFF</item>
 
         <item name="colorSurfaceVariant">#202020</item>
+        <item name="colorOutlineVariant">#45464F</item>
         <item name="colorOnSurfaceVariant">#BBB</item>
 
         <item name="colorPrimary">#FF6D00</item>
@@ -89,6 +91,7 @@
         <item name="colorOnSurface">#111</item>
 
         <item name="colorSurfaceVariant">#EEE</item>
+        <item name="colorOutlineVariant">#C6C5D0</item>
         <item name="colorOnSurfaceVariant">#222</item>
 
         <item name="colorPrimary">#FF6D00</item>
