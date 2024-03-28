@@ -1,5 +1,7 @@
 #include "config.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <map>
@@ -62,6 +64,9 @@ void EmulatorConfig::load() {
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
 			vsyncEnabled = toml::find_or<toml::boolean>(gpu, "EnableVSync", true);
+
+			auto textureFilterName = toml::find_or<std::string>(gpu, "TextureFilter", "Auto");
+			textureFilter = textureFilterFromString(textureFilterName);
 		}
 	}
 
@@ -124,6 +129,7 @@ void EmulatorConfig::save() {
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
+	data["GPU"]["TextureFilter"] = textureFilterToString(textureFilter);
 	data["GPU"]["EnableVSync"] = vsyncEnabled;
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;
@@ -137,4 +143,31 @@ void EmulatorConfig::save() {
 	std::ofstream file(path, std::ios::out);
 	file << data;
 	file.close();
+}
+
+std::string EmulatorConfig::textureFilterToString(TextureFilter filter) {
+	switch (filter) {
+		case TextureFilter::Auto: return "auto";
+		case TextureFilter::ForceNearest: return "nearest";
+		case TextureFilter::ForceBilinear: return "bilinear";
+		default: Helpers::warn("Invalid texture filter type"); return "auto";
+	}
+}
+
+TextureFilter EmulatorConfig::textureFilterFromString(std::string str) {
+	// Transform to lower-case to make the setting case-insensitive
+	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+
+	static const std::unordered_map<std::string, TextureFilter> map = {
+		{"auto", TextureFilter::Auto},
+		{"nearest", TextureFilter::ForceNearest},
+		{"bilinear", TextureFilter::ForceBilinear},
+	};
+
+	if (auto search = map.find(str); search != map.end()) {
+		return search->second;
+	}
+
+	printf("Invalid texture filtering type. Defaulting to auto\n");
+	return TextureFilter::Auto;
 }

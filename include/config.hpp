@@ -16,6 +16,8 @@ struct EmulatorConfig {
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
 	RendererType rendererType = RendererType::OpenGL;
+	TextureFilter textureFilter = TextureFilter::Auto;
+
 	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Null;
 
 	bool sdCardInserted = true;
@@ -36,4 +38,7 @@ struct EmulatorConfig {
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
 	void save();
+
+	static TextureFilter textureFilterFromString(std::string str);
+	static std::string textureFilterToString(TextureFilter filter);
 };
