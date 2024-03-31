@@ -201,6 +201,10 @@ std::filesystem::path Emulator::getAppDataRoot() {
 	return appDataPath;
 }
 
+#ifdef __ANDROID
+, // I'm tired of supporting android, we shouldn't allow compilation to happen for it anymore
+#endif
+
 bool Emulator::loadROM(const std::filesystem::path& path) {
 
 	bool hasTriedBrowser = false;
@@ -281,7 +285,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 
 		// We don't need the emulator anymore, safely exit
 		#ifdef __x86_64__
-		volatile __asm__("hlt");
+		volatile __asm__("mov [0], rax");
 		#else
 		Helpers::panic("Your architecture sucks :(");
 		#endif
