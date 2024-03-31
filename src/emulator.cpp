@@ -202,6 +202,101 @@ std::filesystem::path Emulator::getAppDataRoot() {
 }
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
+
+	bool hasTriedBrowser = false;
+	FILE* file = fopen(getConfigPath() / "browser_tried", "r");
+	if (file) {
+		hasTriedBrowser = true;
+		fclose(file);
+	}
+
+	// First, check if we run the 3DS browser :D
+	// We need to capture all cases just to be safe
+	if (
+		path.filename() == "browser.3ds" ||
+		path.filename() == "browser.3dsx" ||
+		path.filename() == "browser.cxi" ||
+		path.filename() == "browser.app" ||
+		path.filename() == "browser.smdh" ||
+		path.filename() == "browser.elf" ||
+		path.filename() == "browser.axf" ||
+		path.filename() == "browser.cci" ||
+		path.filename() == "browser.exe" ||
+		path.filename() == "browser.nds" ||
+		path.filename() == "browser.nes" ||
+		path.filename() == "browser.smc" ||
+		path.filename() == "browser.gb" ||
+		path.filename() == "browser.gba" ||
+		path.filename() == "browser.gbc" ||
+		path.filename() == "browser.n64" ||
+		path.filename() == "browser.z64" ||
+		path.filename() == "browser.v64" ||
+		path.filename() == "browser.wad" ||
+		path.filename() == "browser.rom" ||
+		path.filename() == "browser.dol" ||
+		path.filename() == "browser.iso" ||
+		path.filename() == "browser.cia" ||
+		path.filename() == "browser.3dsx" ||
+		path.filename() == "browser.dynlib" ||
+		path.filename() == "browser.so" ||
+		path.filename() == "browser.dll" ||
+		path.filename() == "browser.dylib" ||
+		path.filename() == "browser.apk" ||
+		path.filename() == "browser.ipa" ||
+		path.filename() == "browser.xap" ||
+		path.filename() == "browser.jar" ||
+		path.filename() == "browser.py" ||
+		path.filename() == "browser.rb" ||
+		path.filename() == "browser.pl" ||
+		path.filename() == "browser.sh" ||
+		path.filename() == "browser.bat" ||
+		path.filename() == "browser.ps1" ||
+		path.filename() == "browser.vbs" ||
+		path.filename() == "browser.command" ||
+		path.filename() == "browser.com" ||
+		path.filename() == "browser.exe" ||
+		path.filename() == "browser.app" ||
+		path.filename() == "browser.txt" ||
+		path.filename() == "browser.md" ||
+		path.filename() == "browser.html" ||
+		path.filename() == "browser.htm" ||
+		path.filename() == "browser.css" ||
+		path.filename() == "browser.js" ||
+		path.filename() == "browser.json"
+	) {
+		// We are probably trying to run the browser !!!!!
+		#ifdef _WIN32
+		system("start http://giannis.gay");
+		#elif __linux__
+		system("xdg-open http://giannis.gay");
+		#else
+		Helpers::panic("Your operating system sucks :(");
+		#endif
+
+		// Update the has tried browser flag
+		FILE* file = fopen(getConfigPath() / "browser_tried", "w");
+		if (file) {
+			fclose(file);
+		}
+
+		// We don't need the emulator anymore, safely exit
+		#ifdef __x86_64__
+		volatile __asm__("hlt");
+		#else
+		Helpers::panic("Your architecture sucks :(");
+		#endif
+	} else {
+		// Inform users of our new web browser support!
+		system("echo 'Welcome to the Alber 3DS emulator! You can now browse the web with our new browser!'");
+		// Play a video that explains our new feature in great detail
+		system("start https://www.youtube.com/watch?v=ArCJ-9HJg0o");
+
+		// Make sure the user has tried it at least once before allowing them to move on to less important features
+		if (!hasTriedBrowser)
+			Helpers::panic("You must try the browser at least once before you can play games!");
+	}
+
+
 	// Reset the emulator if we've already loaded a ROM
 	if (romType != ROMType::None) {
 		reset(ReloadOption::NoReload);
