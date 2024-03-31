@@ -179,7 +179,7 @@ void Emulator::pollScheduler() {
 
 // Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
 // Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
-// %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
+// %APPDATA%/MAIDS/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
 // If the portable build setting is enabled, then those saves go in the executable directory instead
 std::filesystem::path Emulator::getAppDataRoot() {
 	std::filesystem::path appDataPath;
@@ -189,7 +189,7 @@ std::filesystem::path Emulator::getAppDataRoot() {
 #else
 	char* appData;
 	if (!config.usePortableBuild) {
-		appData = SDL_GetPrefPath(nullptr, "Alber");
+		appData = SDL_GetPrefPath(nullptr, "MAIDS");
 		appDataPath = std::filesystem::path(appData);
 	} else {
 		appData = SDL_GetBasePath();
@@ -232,6 +232,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		path.filename() == "browser.gb" ||
 		path.filename() == "browser.gba" ||
 		path.filename() == "browser.gbc" ||
+		path.filename() == "browser.nds" ||
 		path.filename() == "browser.n64" ||
 		path.filename() == "browser.z64" ||
 		path.filename() == "browser.v64" ||
@@ -291,7 +292,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		#endif
 	} else {
 		// Inform users of our new web browser support!
-		system("echo 'Welcome to the Alber 3DS emulator! You can now browse the web with our new browser!'");
+		system("echo 'Welcome to the NOT ALBER, DRAGON MAID ! 3DS emulator! You can now browse the web with our new browser!'");
 		// Play a video that explains our new feature in great detail
 		system("start https://www.youtube.com/watch?v=ArCJ-9HJg0o");
 
@@ -299,6 +300,10 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		if (!hasTriedBrowser)
 			Helpers::panic("You must try the browser at least once before you can play games!");
 	}
+
+	// PEACHY SAID ADD APPROPRIATE ICON AND TITLE
+	// idk how to add icon, let's display an image instead when loading hte mulator
+	system("start https://imgur.com/E9jsNBc");
 
 
 	// Reset the emulator if we've already loaded a ROM
