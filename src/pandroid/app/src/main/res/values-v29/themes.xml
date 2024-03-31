@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Base.Theme.Pandroid.V29" parent="Base.Theme.Pandroid.V27">
-        <item name="android:enforceNavigationBarContrast">false</item>
-    </style>
-    <style name="Theme.Pandroid" parent="Base.Theme.Pandroid.V29"/>
-</resources>
