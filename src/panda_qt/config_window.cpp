@@ -10,7 +10,7 @@ ConfigWindow::ConfigWindow(QWidget* parent) : QDialog(parent) {
 	themeSelect->addItem(tr("Light"));
 	themeSelect->addItem(tr("Dark"));
 	themeSelect->addItem(tr("Greetings Cat"));
-	themeSelect->addItem(tr("Ice Cream and Jelly"));
+	themeSelect->addItem(tr("Cream"));
 	themeSelect->setCurrentIndex(static_cast<int>(currentTheme));
 
 	themeSelect->setGeometry(40, 40, 100, 50);
@@ -88,7 +88,7 @@ void ConfigWindow::setTheme(Theme theme) {
 			break;
 		}
 
-		case Theme::IceCreamAndJelly: {
+		case Theme::Cream: {
 			QApplication::setStyle(QStyleFactory::create("Fusion"));
 
 			QPalette p;
