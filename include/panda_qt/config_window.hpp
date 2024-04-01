@@ -16,7 +16,7 @@ class ConfigWindow : public QDialog {
 		Light = 1,
 		Dark = 2,
 		GreetingsCat = 3,
-		IceCreamAndJelly = 4,
+		Cream = 4,
 	};
 
 	Theme currentTheme;
