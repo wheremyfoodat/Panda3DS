@@ -10,6 +10,7 @@ ConfigWindow::ConfigWindow(QWidget* parent) : QDialog(parent) {
 	themeSelect->addItem(tr("Light"));
 	themeSelect->addItem(tr("Dark"));
 	themeSelect->addItem(tr("Greetings Cat"));
+	themeSelect->addItem(tr("Cream"));
 	themeSelect->setCurrentIndex(static_cast<int>(currentTheme));
 
 	themeSelect->setGeometry(40, 40, 100, 50);
@@ -83,6 +84,28 @@ void ConfigWindow::setTheme(Theme theme) {
 
 			p.setColor(QPalette::Highlight, QColor(42, 130, 218));
 			p.setColor(QPalette::HighlightedText, Qt::black);
+			qApp->setPalette(p);
+			break;
+		}
+
+		case Theme::Cream: {
+			QApplication::setStyle(QStyleFactory::create("Fusion"));
+
+			QPalette p;
+			p.setColor(QPalette::Window, QColor(255, 229, 180));
+			p.setColor(QPalette::WindowText, QColor(33, 37, 41));
+			p.setColor(QPalette::Base, QColor(255, 229, 180));
+			p.setColor(QPalette::AlternateBase, QColor(255, 229, 180));
+			p.setColor(QPalette::ToolTipBase, QColor(33, 37, 41));
+			p.setColor(QPalette::ToolTipText, QColor(33, 37, 41));
+			p.setColor(QPalette::Text, QColor(33, 37, 41));
+			p.setColor(QPalette::Button, QColor(255, 229, 180));
+			p.setColor(QPalette::ButtonText, QColor(33, 37, 41));
+			p.setColor(QPalette::BrightText, QColor(217, 113, 103));
+			p.setColor(QPalette::Link, QColor(248, 148, 150));
+
+			p.setColor(QPalette::Highlight, QColor(217, 113, 103));
+			p.setColor(QPalette::HighlightedText, QColor(63, 33, 29));
 			qApp->setPalette(p);
 			break;
 		}
