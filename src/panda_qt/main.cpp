@@ -2,6 +2,7 @@
 
 #include "panda_qt/main_window.hpp"
 #include "panda_qt/screen.hpp"
+#include "bitfield.hpp"
 
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);
