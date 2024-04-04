@@ -7,6 +7,24 @@
 
 namespace Audio {
 	class HLE_DSP : public DSPCore {
+		// The audio frame types are public in case we want to use them for unit tests
+	  public:
+		template <typename T, usize channelCount = 1>
+		using Sample = std::array<T, channelCount>;
+
+		template <typename T, usize channelCount>
+		using Frame = std::array<Sample<T, channelCount>, 160>;
+		
+		template <typename T>
+		using MonoFrame = Frame<T, 1>;
+
+		template <typename T>
+		using StereoFrame = Frame<T, 2>;
+
+		template <typename T>
+		using QuadFrame = Frame<T, 4>;
+
+	  private:
 		enum class DSPState : u32 {
 			Off,
 			On,
@@ -43,6 +61,8 @@ namespace Audio {
 		Audio::HLE::SharedMemory& readRegion() { return readRegionIndex() == 0 ? dspRam.region0 : dspRam.region1; }
 		Audio::HLE::SharedMemory& writeRegion() { return readRegionIndex() == 0 ? dspRam.region1 : dspRam.region0; }
 
+		StereoFrame<s16> generateFrame();
+		void outputFrame();
 	  public:
 		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
 		~HLE_DSP() override {}

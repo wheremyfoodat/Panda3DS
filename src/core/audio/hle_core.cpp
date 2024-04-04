@@ -82,6 +82,7 @@ namespace Audio {
 			dspService.triggerPipeEvent(DSPPipeType::Audio);
 		}
 
+		outputFrame();
 		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
 	}
 	
@@ -164,5 +165,10 @@ namespace Audio {
 		std::vector<u8> out(data.begin(), data.begin() + size);
 		data.erase(data.begin(), data.begin() + size);
 		return out;
+	}
+
+	void HLE_DSP::outputFrame() {
+		StereoFrame<s16> frame = generateFrame();
+		Helpers::panic("HLE DSP: Output frame");
 	}
 }  // namespace Audio
