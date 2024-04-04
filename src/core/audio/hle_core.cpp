@@ -13,27 +13,29 @@ namespace Audio {
 	}
 
 	void HLE_DSP::resetAudioPipe() {
-		// Hardcoded responses for now
-		// These are DSP DRAM offsets for various variables
+#define DSPOffset(var) (0x8000 + offsetof(Audio::HLE::SharedMemory, var) / 2)
+
+		// These are DSP shared memory offsets for various variables
 		// https://www.3dbrew.org/wiki/DSP_Memory_Region
 		static constexpr std::array<u16, 16> responses = {
-			0x000F,  // Number of responses
-			0xBFFF,  // Frame counter
-			0x9E92,  // Source configs
-			0x8680,  // Source statuses
-			0xA792,  // ADPCM coefficients
-			0x9430,  // DSP configs
-			0x8400,  // DSP status
-			0x8540,  // Final samples
-			0x9492,  // Intermediate mix samples
-			0x8710,  // Compressor
-			0x8410,  // Debug
-			0xA912,  // ??
-			0xAA12,  // ??
-			0xAAD2,  // ??
-			0xAC52,  // Surround sound biquad filter 1
-			0xAC5C   // Surround sound biquad filter 2
+			0x000F,                             // Number of responses
+			DSPOffset(frameCounter),            // Frame counter
+			DSPOffset(sourceConfigurations),    // Source configs
+			DSPOffset(sourceStatuses),          // Source statuses
+			DSPOffset(adpcmCoefficients),       // ADPCM coefficients
+			DSPOffset(dspConfiguration),        // DSP configs
+			DSPOffset(dspStatus),               // DSP status
+			DSPOffset(finalSamples),            // Final samples
+			DSPOffset(intermediateMixSamples),  // Intermediate mix samples
+			DSPOffset(compressor),              // Compressor
+			DSPOffset(dspDebug),                // Debug
+			DSPOffset(unknown10),               // ??
+			DSPOffset(unknown11),               // ??
+			DSPOffset(unknown12),               // ??
+			DSPOffset(unknown13),               // Surround sound biquad filter 1
+			DSPOffset(unknown14)                // Surround sound biquad filter 2
 		};
+#undef DSPOffset
 
 		std::vector<u8>& audioPipe = pipeData[DSPPipeType::Audio];
 		audioPipe.resize(responses.size() * sizeof(u16));
