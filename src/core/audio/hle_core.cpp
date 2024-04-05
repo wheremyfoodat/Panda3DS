@@ -1,5 +1,7 @@
 #include "audio/hle_core.hpp"
 
+#include <thread>
+
 #include "services/dsp.hpp"
 
 namespace Audio {
@@ -168,7 +170,28 @@ namespace Audio {
 	}
 
 	void HLE_DSP::outputFrame() {
-		StereoFrame<s16> frame = generateFrame();
-		Helpers::panic("HLE DSP: Output frame");
+		StereoFrame<s16> frame;
+		generateFrame(frame);
+
+		if (audioEnabled) {
+			// Wait until we've actually got room to push our frame
+			while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+				std::this_thread::sleep_for(std::chrono::milliseconds{1});
+			}
+
+			sampleBuffer.push(frame.data(), frame.size());
+		}
 	}
+
+	void HLE_DSP::generateFrame(StereoFrame<s16>& frame) {
+		using namespace Audio::HLE;
+		SharedMemory& read = readRegion();
+		SharedMemory& write = writeRegion();
+
+		for (int source = 0; source < sourceCount; source++) {
+			Helpers::panic("Panda");
+		}
+	}
+
+	void DSPSource::reset() {}
 }  // namespace Audio

@@ -6,6 +6,27 @@
 #include "memory.hpp"
 
 namespace Audio {
+	struct DSPSource {
+		std::array<float, 3> gain0, gain1, gain2;
+
+		// Audio buffer information
+		// https://www.3dbrew.org/wiki/DSP_Memory_Region
+		struct Buffer {
+			u32 paddr;        // Physical address of the buffer
+			u32 sampleCount;  // Total number of samples
+			u8 adpcmScale;    // ADPCM predictor/scale
+			u8 pad;           // Unknown
+
+			std::array<s16, 2> previousSamples;  // ADPCM y[n-1] and y[n-2]
+			bool adpcmDirty;
+			bool looping;
+			u16 bufferID;
+		};
+
+		void reset();
+		DSPSource() { reset(); }
+	};
+
 	class HLE_DSP : public DSPCore {
 		// The audio frame types are public in case we want to use them for unit tests
 	  public:
@@ -24,6 +45,7 @@ namespace Audio {
 		template <typename T>
 		using QuadFrame = Frame<T, 4>;
 
+		using Source = Audio::DSPSource;
 	  private:
 		enum class DSPState : u32 {
 			Off,
@@ -61,7 +83,7 @@ namespace Audio {
 		Audio::HLE::SharedMemory& readRegion() { return readRegionIndex() == 0 ? dspRam.region0 : dspRam.region1; }
 		Audio::HLE::SharedMemory& writeRegion() { return readRegionIndex() == 0 ? dspRam.region1 : dspRam.region0; }
 
-		StereoFrame<s16> generateFrame();
+		void generateFrame(StereoFrame<s16>& frame);
 		void outputFrame();
 	  public:
 		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
