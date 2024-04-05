@@ -14,6 +14,13 @@ namespace Audio {
 		};
 	}
 
+	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {
+		// Set up source indices
+		for (int i = 0; i < sources.size(); i++) {
+			sources[i].index = i;
+		}
+	}
+
 	void HLE_DSP::resetAudioPipe() {
 #define DSPOffset(var) (0x8000 + offsetof(Audio::HLE::SharedMemory, var) / 2)
 
@@ -54,6 +61,10 @@ namespace Audio {
 		loaded = false;
 		for (auto& e : pipeData) {
 			e.clear();
+		}
+
+		for (auto& source : sources) {
+			source.reset();
 		}
 
 		// Note: Reset audio pipe AFTER resetting all pipes, otherwise the new data will be yeeted
@@ -189,6 +200,7 @@ namespace Audio {
 		SharedMemory& write = writeRegion();
 
 		for (int source = 0; source < sourceCount; source++) {
+			//updateSourceConfig(sources[source]);
 			Helpers::panic("Panda");
 		}
 	}

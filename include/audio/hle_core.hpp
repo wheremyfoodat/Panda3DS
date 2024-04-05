@@ -23,6 +23,8 @@ namespace Audio {
 			u16 bufferID;
 		};
 
+		int index = 0;  // Index of the voice in [0, 23] for debugging
+
 		void reset();
 		DSPSource() { reset(); }
 	};
@@ -57,7 +59,8 @@ namespace Audio {
 		static constexpr size_t pipeCount = 8;
 		DSPState dspState;
 
-		std::array<std::vector<u8>, pipeCount> pipeData;  // The data of each pipe
+		std::array<std::vector<u8>, pipeCount> pipeData;      // The data of each pipe
+		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
 		Audio::HLE::DspMemory dspRam;
 
 		void resetAudioPipe();
@@ -86,7 +89,7 @@ namespace Audio {
 		void generateFrame(StereoFrame<s16>& frame);
 		void outputFrame();
 	  public:
-		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
+		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
 		~HLE_DSP() override {}
 
 		void reset() override;
