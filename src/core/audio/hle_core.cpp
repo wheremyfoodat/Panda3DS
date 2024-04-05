@@ -199,11 +199,56 @@ namespace Audio {
 		SharedMemory& read = readRegion();
 		SharedMemory& write = writeRegion();
 
-		for (int source = 0; source < sourceCount; source++) {
-			//updateSourceConfig(sources[source]);
-			Helpers::panic("Panda");
+		for (int i = 0; i < sourceCount; i++) {
+			// Update source configuration from the read region of shared memory
+			auto& config = read.sourceConfigurations.config[i];
+			auto& source = sources[i];
+			updateSourceConfig(source, config);
+
+			// Generate audio
+
+			// Update write region of shared memory
+			auto& status = write.sourceStatuses.status[i];
+			status.isEnabled = source.enabled;
+			status.syncCount = source.syncCount;
+			//status.lastBufferID=0,status.currentBufferID = 1; status.currentBufferIDDirty = 1;
+			//status.bufferPosition = 
 		}
 	}
 
-	void DSPSource::reset() {}
+	void HLE_DSP::updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config) {
+		// Check if the any dirty bit is set, otherwise exit early
+		if (!config.dirtyRaw) {
+			return;
+		}
+
+		if (config.enableDirty) {
+			config.enableDirty = 0;
+			source.enabled = config.enable != 0;
+
+			printf("Voice %d enable set to %d\n", source.index, source.enabled);
+		}
+
+		if (config.syncCountDirty) {
+			config.syncCountDirty = 0;
+			source.syncCount = config.syncCount;
+		}
+
+		if (config.resetFlag) {
+			config.resetFlag = 0;
+			printf("Reset voice %d\n", source.index);
+		}
+
+		if (config.partialResetFlag) {
+			config.partialResetFlag = 0;
+			printf("Partially reset voice %d\n", source.index);
+		}
+
+		config.dirtyRaw = 0;
+	}
+
+	void DSPSource::reset() {
+		enabled = false;
+		syncCount = 0;
+	}
 }  // namespace Audio

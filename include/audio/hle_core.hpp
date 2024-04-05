@@ -8,6 +8,8 @@
 namespace Audio {
 	struct DSPSource {
 		std::array<float, 3> gain0, gain1, gain2;
+		u16 syncCount;
+		bool enabled;
 
 		// Audio buffer information
 		// https://www.3dbrew.org/wiki/DSP_Memory_Region
@@ -86,6 +88,7 @@ namespace Audio {
 		Audio::HLE::SharedMemory& readRegion() { return readRegionIndex() == 0 ? dspRam.region0 : dspRam.region1; }
 		Audio::HLE::SharedMemory& writeRegion() { return readRegionIndex() == 0 ? dspRam.region1 : dspRam.region0; }
 
+		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config);
 		void generateFrame(StereoFrame<s16>& frame);
 		void outputFrame();
 	  public:
