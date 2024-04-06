@@ -1,6 +1,7 @@
 #include "audio/hle_core.hpp"
 
 #include <thread>
+#include <utility>
 
 #include "services/dsp.hpp"
 
@@ -206,6 +207,9 @@ namespace Audio {
 			updateSourceConfig(source, config);
 
 			// Generate audio
+			if (source.enabled) {
+			
+			}
 
 			// Update write region of shared memory
 			auto& status = write.sourceStatuses.status[i];
@@ -225,8 +229,6 @@ namespace Audio {
 		if (config.enableDirty) {
 			config.enableDirty = 0;
 			source.enabled = config.enable != 0;
-
-			printf("Voice %d enable set to %d\n", source.index, source.enabled);
 		}
 
 		if (config.syncCountDirty) {
@@ -236,12 +238,45 @@ namespace Audio {
 
 		if (config.resetFlag) {
 			config.resetFlag = 0;
-			printf("Reset voice %d\n", source.index);
+			source.reset();
 		}
 
 		if (config.partialResetFlag) {
 			config.partialResetFlag = 0;
-			printf("Partially reset voice %d\n", source.index);
+			source.buffers = {};
+		}
+
+		if (config.embeddedBufferDirty) {
+			config.embeddedBufferDirty = 0;
+			if (s32(config.length) >= 0) [[likely]] {
+				// TODO: Add sample format and channel count
+				Source::Buffer buffer{
+					.paddr = config.physicalAddress,
+					.sampleCount = config.length,
+					.adpcmScale = u8(config.adpcm_ps),
+					.previousSamples = {s16(config.adpcm_yn[0]), s16(config.adpcm_yn[1])},
+					.adpcmDirty = config.adpcmDirty != 0,
+					.looping = config.isLooping != 0,
+					.bufferID = config.bufferID,
+					.playPosition = config.playPosition,
+					.fromQueue = false,
+					.hasPlayedOnce = false,
+				};
+
+				source.buffers.emplace(std::move(buffer));
+			} else {
+				log("Invalid embedded buffer size for DSP voice %d\n", source.index);
+			}
+		}
+
+		if (config.partialEmbeddedBufferDirty) {
+			config.partialEmbeddedBufferDirty = 0;
+			printf("Partial embedded buffer dirty for voice %d\n", source.index);
+		}
+
+		if (config.bufferQueueDirty) {
+			config.bufferQueueDirty = 0;
+			printf("Buffer queue dirty for voice %d\n", source.index);
 		}
 
 		config.dirtyRaw = 0;
@@ -250,5 +285,7 @@ namespace Audio {
 	void DSPSource::reset() {
 		enabled = false;
 		syncCount = 0;
+
+		buffers = {};
 	}
 }  // namespace Audio

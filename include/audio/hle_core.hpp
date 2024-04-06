@@ -1,5 +1,7 @@
 #pragma once
 #include <array>
+#include <queue>
+#include <vector>
 
 #include "audio/dsp_core.hpp"
 #include "audio/dsp_shared_mem.hpp"
@@ -7,24 +9,38 @@
 
 namespace Audio {
 	struct DSPSource {
-		std::array<float, 3> gain0, gain1, gain2;
-		u16 syncCount;
-		bool enabled;
-
 		// Audio buffer information
 		// https://www.3dbrew.org/wiki/DSP_Memory_Region
 		struct Buffer {
 			u32 paddr;        // Physical address of the buffer
 			u32 sampleCount;  // Total number of samples
 			u8 adpcmScale;    // ADPCM predictor/scale
-			u8 pad;           // Unknown
+			u8 pad1;           // Unknown
 
 			std::array<s16, 2> previousSamples;  // ADPCM y[n-1] and y[n-2]
 			bool adpcmDirty;
 			bool looping;
 			u16 bufferID;
+			u8 pad2;
+
+			u32 playPosition = 0;  // Current position in the buffer
+			bool fromQueue = false;      // Is this buffer from the buffer queue or an embedded buffer?
+			bool hasPlayedOnce = false;  // Has the buffer been played at least once before?
+
+			bool operator<(const Buffer& other) const {
+				// Lower ID = Higher priority
+				// If this buffer ID is greater than the other one, then this buffer has a lower priority
+				return this->bufferID > other.bufferID;
+			}
 		};
 
+		using BufferQueue = std::priority_queue<Buffer>;
+
+		std::array<float, 3> gain0, gain1, gain2;
+		u16 syncCount;
+		bool enabled;
+
+		BufferQueue buffers;
 		int index = 0;  // Index of the voice in [0, 23] for debugging
 
 		void reset();
