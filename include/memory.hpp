@@ -19,7 +19,10 @@ namespace PhysicalAddrs {
 		VRAM = 0x18000000,
 		VRAMEnd = VRAM + 0x005FFFFF,
 		FCRAM = 0x20000000,
-		FCRAMEnd = FCRAM + 0x07FFFFFF
+		FCRAMEnd = FCRAM + 0x07FFFFFF,
+
+		DSP_RAM = 0x1FF00000,
+		DSP_RAM_End = DSP_RAM + 0x0007FFFF
 	};
 }
 

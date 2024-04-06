@@ -59,7 +59,13 @@ namespace Audio {
 	}
 
 	void HLE_DSP::reset() {
+		dspState = DSPState::Off;
 		loaded = false;
+
+		// Initialize these to some sane defaults
+		sampleFormat = SampleFormat::ADPCM;
+		sourceType = SourceType::Stereo;
+
 		for (auto& e : pipeData) {
 			e.clear();
 		}
@@ -207,16 +213,19 @@ namespace Audio {
 			updateSourceConfig(source, config);
 
 			// Generate audio
-			if (source.enabled) {
-			
+			if (source.enabled && !source.buffers.empty()) {
+				const auto& buffer = source.buffers.top();
+				const u8* data = getPointerPhys<u8>(buffer.paddr);
+
+				if (data != nullptr) {
+					// TODO
+				}
 			}
 
 			// Update write region of shared memory
 			auto& status = write.sourceStatuses.status[i];
 			status.isEnabled = source.enabled;
 			status.syncCount = source.syncCount;
-			//status.lastBufferID=0,status.currentBufferID = 1; status.currentBufferIDDirty = 1;
-			//status.bufferPosition = 
 		}
 	}
 
@@ -245,6 +254,15 @@ namespace Audio {
 			config.partialResetFlag = 0;
 			source.buffers = {};
 		}
+		
+		// TODO: Should we check bufferQueueDirty here too?
+		if (config.formatDirty || config.embeddedBufferDirty) {
+			sampleFormat = config.format;
+		}
+
+		if (config.monoOrStereoDirty || config.embeddedBufferDirty) {
+			sourceType = config.monoOrStereo;
+		}
 
 		if (config.embeddedBufferDirty) {
 			config.embeddedBufferDirty = 0;
@@ -259,6 +277,8 @@ namespace Audio {
 					.looping = config.isLooping != 0,
 					.bufferID = config.bufferID,
 					.playPosition = config.playPosition,
+					.format = sampleFormat,
+					.sourceType = sourceType,
 					.fromQueue = false,
 					.hasPlayedOnce = false,
 				};
