@@ -1,6 +1,6 @@
-#include "panda_sdl/frontend_sdl.hpp"
-
 #include <glad/gl.h>
+
+#include "panda_sdl/frontend_sdl.hpp"
 
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
@@ -23,47 +23,64 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	}
 
 	const EmulatorConfig& config = emu.getConfig();
-	// We need OpenGL for software rendering or for OpenGL if it's enabled
-	bool needOpenGL = config.rendererType == RendererType::Software;
-#ifdef PANDA3DS_ENABLE_OPENGL
-	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
-#endif
 
-	if (needOpenGL) {
-		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
-		// MacOS gets mad if we don't explicitly demand a core profile
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL);
-
-		if (window == nullptr) {
-			Helpers::panic("Window creation failed: %s", SDL_GetError());
+	switch (config.rendererType) {
+		case RendererType::Software:
+		case RendererType::OpenGL: {
+			createOpenGlWindow(config);
+			break;
 		}
-
-		glContext = SDL_GL_CreateContext(window);
-		if (glContext == nullptr) {
-			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+		case RendererType::Vulkan: {
+			createVulkanWindow(config);
+			break;
 		}
-
-		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
-			Helpers::panic("OpenGL init failed");
-		}
-
-		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
-	}
-
-#ifdef PANDA3DS_ENABLE_VULKAN
-	if (config.rendererType == RendererType::Vulkan) {
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN);
-
-		if (window == nullptr) {
-			Helpers::warn("Window creation failed: %s", SDL_GetError());
+		default: {
+			Helpers::panic("Invalid renderer type");
+			break;
 		}
 	}
-#endif
 
 	emu.initGraphicsContext(window);
+}
+
+void FrontendSDL::createOpenGlWindow(const EmulatorConfig& config) {
+#ifdef PANDA3DS_ENABLE_OPENGL
+	// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
+	// MacOS gets mad if we don't explicitly demand a core profile
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
+	window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL);
+
+	if (window == nullptr) {
+		Helpers::panic("Window creation failed: %s", SDL_GetError());
+	}
+
+	glContext = SDL_GL_CreateContext(window);
+	if (glContext == nullptr) {
+		Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+	}
+
+	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+		Helpers::panic("OpenGL init failed");
+	}
+
+	SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
+#else
+	Helpers::panic("Trying to render with opengl when not enabled");
+#endif
+}
+
+void FrontendSDL::createVulkanWindow(const EmulatorConfig& config) {
+#ifdef PANDA3DS_ENABLE_VULKAN
+	window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN);
+
+	if (window == nullptr) {
+		Helpers::panic("Window creation failed: %s", SDL_GetError());
+	}
+#else
+	Helpers::panic("Trying to render with vulkan when not enabled");
+#endif
 }
 
 bool FrontendSDL::loadROM(const std::filesystem::path& path) { return emu.loadROM(path); }
@@ -255,7 +272,8 @@ void FrontendSDL::run() {
 						}
 					}
 
-					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope rotation
+					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope
+					// rotation
 					if (holdingRightClick) {
 						// Relative motion since last mouse motion event
 						const s32 motionX = event.motion.xrel;

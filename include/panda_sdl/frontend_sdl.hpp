@@ -15,6 +15,8 @@ class FrontendSDL {
 
   public:
 	FrontendSDL();
+	void createOpenGlWindow(const EmulatorConfig& config);
+	void createVulkanWindow(const EmulatorConfig& config);
 	bool loadROM(const std::filesystem::path& path);
 	void run();
 	u32 getMapping(InputMappings::Scancode scancode) { return keyboardMappings.getMapping(scancode); }
@@ -25,7 +27,7 @@ class FrontendSDL {
 
 	int gameControllerID;
 	bool programRunning = true;
-	
+
 	// For tracking whether to update gyroscope
 	// We bind gyro to right click + mouse movement
 	bool holdingRightClick = false;
