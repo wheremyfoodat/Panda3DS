@@ -95,7 +95,7 @@ void FrontendSDL::run() {
 				case SDL_KEYDOWN: {
 					if (emu.romType == ROMType::None) break;
 
-					u32 key = getMapping(event.key.keysym.scancode);
+					u32 key = getMapping(event.key.keysym.sym);
 					if (key != HID::Keys::Null) {
 						switch (key) {
 							case HID::Keys::CirclePadRight:
@@ -138,7 +138,7 @@ void FrontendSDL::run() {
 				case SDL_KEYUP: {
 					if (emu.romType == ROMType::None) break;
 
-					u32 key = getMapping(event.key.keysym.scancode);
+					u32 key = getMapping(event.key.keysym.sym);
 					if (key != HID::Keys::Null) {
 						switch (key) {
 							// Err this is probably not ideal
