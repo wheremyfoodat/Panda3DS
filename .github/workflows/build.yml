@@ -178,3 +178,45 @@ jobs:
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+  MacOs_Build:
+   runs-on: macos-latest
+
+   steps:
+    - uses: actions/checkout@v2
+    - name: Fetch submodules
+      run: git submodule update --init --recursive
+
+    - name: Setup Vulkan SDK
+      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      with:
+        vulkan-query-version: latest
+        vulkan-use-cache: true
+        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Install bundle dependencies
+      run: brew install dylibbundler imagemagick
+
+    - name: Run bundle script
+      run: ./.github/mac-bundle.sh
+
+    - name: Sign the App
+      run: codesign --force -s - -vvvv Alber.app
+
+    - name: Zip it up
+      run: zip -r Alber Alber.app
+
+    - name: Upload MacOS App
+      uses: actions/upload-artifact@v2
+      with:
+        name: MacOS Alber App Bundle
+        path: 'Alber.zip'
