@@ -157,7 +157,15 @@ jobs:
   HTTP-Server-Build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        build_type:
+          - release
+
     steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+        
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
@@ -187,7 +195,15 @@ jobs:
   MacOs-Build:
    runs-on: macos-latest
 
+   strategy:
+      matrix:
+        build_type:
+          - release
+
    steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+        
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
@@ -229,7 +245,15 @@ jobs:
   Linux-AppImage-Build:
     runs-on: ubuntu-20.04
 
+    strategy:
+      matrix:
+        build_type:
+          - release
+
     steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+        
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
@@ -271,7 +295,15 @@ jobs:
   Linux-Build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        build_type:
+          - release
+
     steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+        
     - uses: actions/checkout@v2
     - name: Fetch submodules
       run: git submodule update --init --recursive
