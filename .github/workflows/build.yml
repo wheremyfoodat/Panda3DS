@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  android_x64:
+  android-x64:
     runs-on: ubuntu-latest
 
     strategy:
@@ -62,7 +62,7 @@ jobs:
         path: |
           ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
 
-  android_arm64:
+  android-arm64:
     runs-on: ubuntu-latest
 
     strategy:
@@ -118,7 +118,7 @@ jobs:
         path: |
           ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
           
-  windows_build:
+  windows-Build:
      runs-on: windows-latest
 
      steps:
@@ -149,7 +149,7 @@ jobs:
           name: Windows executable
           path: './build/Release/Alber.exe'
 
-  HTTP_Server_Build:
+  HTTP-Server-Build:
     runs-on: ubuntu-latest
 
     steps:
@@ -179,7 +179,7 @@ jobs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
-  MacOs_Build:
+  MacOs-Build:
    runs-on: macos-latest
 
    steps:
@@ -220,3 +220,45 @@ jobs:
       with:
         name: MacOS Alber App Bundle
         path: 'Alber.zip'
+
+  Linux-AppImage-Build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Fetch submodules
+      run: git submodule update --init --recursive
+
+    - name: Install misc packages
+      run: sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2
+
+    - name: Install newer Clang
+      run: |
+       wget https://apt.llvm.org/llvm.sh
+       chmod +x ./llvm.sh
+       sudo ./llvm.sh 17
+       
+    - name: Setup Vulkan SDK
+      run: |
+       wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+       sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-focal.list http://packages.lunarg.com/vulkan/lunarg-vulkan-focal.list
+       sudo apt update
+       sudo apt install vulkan-sdk
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Run AppImage packaging script
+      run:  ./.github/linux-appimage.sh
+
+    - name: Upload executable
+      uses: actions/upload-artifact@v2
+      with:
+        name: Linux executable
+        path: './Alber-x86_64.AppImage'
