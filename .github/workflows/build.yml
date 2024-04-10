@@ -1,4 +1,4 @@
-name: Android Build
+name: Panda 3ds CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  x64:
+  android_x64:
     runs-on: ubuntu-latest
 
     strategy:
@@ -62,7 +62,7 @@ jobs:
         path: |
           ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
 
-  arm64:
+  android_arm64:
     runs-on: ubuntu-latest
 
     strategy:
@@ -117,3 +117,34 @@ jobs:
         name: Android APKs (arm64)
         path: |
           ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
+          
+  windows:
+     runs-on: windows-latest
+
+     steps:
+      - name: Set BUILD_TYPE variable
+        run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+      - name: Fetch submodules
+        run: git submodule update --init --recursive
+
+      - name: Setup Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.0
+        with:
+          vulkan-query-version: latest
+          vulkan-use-cache: true
+          vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
+
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON
+        
+      - name: Build
+        # Build your program with the given configuration
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v2
+        with:
+          name: Windows executable
+          path: './build/Release/Alber.exe'
