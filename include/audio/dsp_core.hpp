@@ -37,7 +37,7 @@ namespace Audio {
 		MAKE_LOG_FUNCTION(log, dspLogger)
 
 	  public:
-		enum class Type { Null, Teakra };
+		enum class Type { Null, Teakra, HLE };
 		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService)
 			: mem(mem), scheduler(scheduler), dspService(dspService) {}
 		virtual ~DSPCore() {}
