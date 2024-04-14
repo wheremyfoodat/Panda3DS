@@ -108,7 +108,7 @@ namespace Audio {
 	
 	u16 HLE_DSP::recvData(u32 regId) {
 		if (regId != 0) {
-			Helpers::panic("Audio: invalid register in null frontend");
+			Helpers::panic("Audio: invalid register in HLE frontend");
 		}
 
 		return dspState == DSPState::On;
