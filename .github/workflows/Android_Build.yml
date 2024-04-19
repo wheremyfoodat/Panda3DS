@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         build_type:
-          - release
+          - debug
 
     steps:
     - name: Set BUILD_TYPE variable
