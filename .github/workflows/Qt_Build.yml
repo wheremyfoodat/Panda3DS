@@ -41,7 +41,7 @@ jobs:
     - name: Deploy
       run: |
         mkdir upload
-        move build/Release/Alber.exe upload
+        move build/Debug/Alber.exe upload
         windeployqt --dir upload upload/Alber.exe
 
     - name: Upload executable
