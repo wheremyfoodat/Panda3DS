@@ -43,4 +43,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: Windows executable
-        path: './build/Release/Alber.exe'
+        path: './build/${{ env.BUILD_TYPE }}/Alber.exe'
