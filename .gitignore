@@ -65,3 +65,4 @@ fb.bat
 *.smdh
 
 config.toml
+CMakeSettings.json

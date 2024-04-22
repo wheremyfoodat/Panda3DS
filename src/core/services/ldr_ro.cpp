@@ -437,7 +437,7 @@ public:
 			const u32 segmentID = mem.read32(segmentTable.offset + 12 * segment + SegmentTable::ID);
 			switch (segmentID) {
 				case SegmentTable::SegmentID::DATA:
-					*oldDataVaddr = segmentOffset + dataVaddr; oldDataSegmentOffset = segmentOffset; segmentOffset = dataVaddr; break;
+					*oldDataVaddr = segmentOffset + croPointer; oldDataSegmentOffset = segmentOffset; segmentOffset = dataVaddr; break;
 				case SegmentTable::SegmentID::BSS: segmentOffset = bssVaddr; break;
 				case SegmentTable::SegmentID::TEXT:
 				case SegmentTable::SegmentID::RODATA:
