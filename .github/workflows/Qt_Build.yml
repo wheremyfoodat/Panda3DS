@@ -51,7 +51,7 @@ jobs:
         path: upload
 
   MacOS:
-    runs-on: macos-latest
+    runs-on: macos-13
 
     steps:
     - uses: actions/checkout@v2

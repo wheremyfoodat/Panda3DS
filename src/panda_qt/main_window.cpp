@@ -9,6 +9,7 @@
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
+#include "services/dsp.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
 	setWindowTitle("Alber");
@@ -53,9 +54,12 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
 	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
+	auto dumpDspFirmware = toolsMenu->addAction(tr("Dump loaded DSP firmware"));
+
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
 	connect(cheatsEditorAction, &QAction::triggered, this, &MainWindow::openCheatsEditor);
+	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
@@ -238,6 +242,47 @@ void MainWindow::dumpRomFS() {
 		case RomFS::DumpingResult::NoRomFS:
 			QMessageBox::warning(this, tr("No RomFS found"), tr("No RomFS partition was found in the loaded app"));
 			break;
+	}
+}
+
+void MainWindow::dumpDspFirmware() {
+	auto file = QFileDialog::getSaveFileName(this, tr("Select file"), "", tr("DSP firmware file (*.cdc)"));
+
+	if (file.isEmpty()) {
+		return;
+	}
+	std::filesystem::path path(file.toStdU16String());
+
+	messageQueueMutex.lock();
+	auto res = emu->getServiceManager().getDSP().dumpComponent(path);
+	messageQueueMutex.unlock();
+
+	switch (res) {
+		case DSPService::ComponentDumpResult::Success: break;
+		case DSPService::ComponentDumpResult::NotLoaded: {
+			QMessageBox messageBox(
+				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"),
+				tr("The currently loaded app has not uploaded a firmware to the DSP")
+			);
+
+			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
+			button->setIcon(QIcon(":/docs/img/rsob_icon.png"));
+			messageBox.exec();
+			break;
+		}
+
+		case DSPService::ComponentDumpResult::FileFailure: {
+			QMessageBox messageBox(
+				QMessageBox::Icon::Warning, tr("Failed to open output file"),
+				tr("The currently loaded DSP firmware could not be written to the selected file. Please make sure you have permission to access this "
+				   "file")
+			);
+
+			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
+			button->setIcon(QIcon(":/docs/img/rstarstruck_icon.png"));
+			messageBox.exec();
+			break;
+		}
 	}
 }
 

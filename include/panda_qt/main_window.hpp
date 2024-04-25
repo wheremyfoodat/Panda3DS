@@ -106,6 +106,7 @@ class MainWindow : public QMainWindow {
 	void emuThreadMainLoop();
 	void selectLuaFile();
 	void selectROM();
+	void dumpDspFirmware();
 	void dumpRomFS();
 	void openLuaEditor();
 	void openCheatsEditor();

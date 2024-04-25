@@ -3,6 +3,7 @@
 #include "kernel.hpp"
 
 #include <algorithm>
+#include <fstream>
 
 namespace DSPCommands {
 	enum : u32 {
@@ -41,6 +42,8 @@ void DSPService::reset() {
 	for (DSPEvent& e : pipeEvents) {
 		e = std::nullopt;
 	}
+
+	loadedComponent.clear();
 }
 
 void DSPService::handleSyncRequest(u32 messagePointer) {
@@ -80,13 +83,14 @@ void DSPService::loadComponent(u32 messagePointer) {
 	u32 dataMask = mem.read32(messagePointer + 12);
 	u32 buffer = mem.read32(messagePointer + 20);
 
-	std::vector<u8> data(size);
+	loadedComponent.resize(size);
+
 	for (u32 i = 0; i < size; i++) {
-		data[i] = mem.read8(buffer + i);
+		loadedComponent[i] = mem.read8(buffer + i);
 	}
 
 	log("DSP::LoadComponent (size = %08X, program mask = %X, data mask = %X\n", size, programMask, dataMask);
-	dsp->loadComponent(data, programMask, dataMask);
+	dsp->loadComponent(loadedComponent, programMask, dataMask);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -260,6 +264,21 @@ void DSPService::invalidateDCache(u32 messagePointer) {
 	log("DSP::InvalidateDataCache (addr = %08X, size = %08X, process = %X)\n", address, size, process);
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+DSPService::ComponentDumpResult DSPService::dumpComponent(const std::filesystem::path& path) {
+	if (loadedComponent.empty()) {
+		return ComponentDumpResult::NotLoaded;
+	}
+
+	std::ofstream file(path, std::ios::out | std::ios::binary);
+	if (file.bad()) {
+		return ComponentDumpResult::FileFailure;
+	}
+
+	file.write((char*)&loadedComponent[0], loadedComponent.size() * sizeof(u8));
+	file.close();
+	return ComponentDumpResult::Success;
 }
 
 void DSPService::triggerPipeEvent(int index) {
