@@ -1,6 +1,9 @@
 #pragma once
 #include <array>
+#include <filesystem>
 #include <optional>
+#include <vector>
+
 #include "audio/dsp_core.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -34,9 +37,10 @@ class DSPService {
 
 	// Total number of DSP service events registered with registerInterruptEvents
 	size_t totalEventCount;
+	std::vector<u8> loadedComponent;
 
 	// Service functions
-	void convertProcessAddressFromDspDram(u32 messagePointer); // Nice function name
+	void convertProcessAddressFromDspDram(u32 messagePointer);  // Nice function name
 	void flushDataCache(u32 messagePointer);
 	void getHeadphoneStatus(u32 messagePointer);
 	void getSemaphoreEventHandle(u32 messagePointer);
@@ -51,23 +55,31 @@ class DSPService {
 	void unloadComponent(u32 messagePointer);
 	void writeProcessPipe(u32 messagePointer);
 
-public:
+  public:
 	DSPService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	void setDSPCore(Audio::DSPCore* pointer) { dsp = pointer; }
-	
+
 	// Special callback that's ran when the semaphore event is signalled
 	void onSemaphoreEventSignal() { dsp->setSemaphore(semaphoreMask); }
 
 	enum class SoundOutputMode : u8 {
 		Mono = 0,
 		Stereo = 1,
-		Surround = 2
+		Surround = 2,
+	};
+
+	enum class ComponentDumpResult : u8 {
+		Success = 0,
+		NotLoaded,
+		FileFailure,
 	};
 
 	void triggerPipeEvent(int index);
 	void triggerSemaphoreEvent();
 	void triggerInterrupt0();
 	void triggerInterrupt1();
+
+	ComponentDumpResult dumpComponent(const std::filesystem::path& path);
 };
