@@ -356,7 +356,7 @@ namespace Audio {
 
 		// Decode samples in frames. Stop when we reach sampleCount samples
 		for (uint blockIndex = 0; blockIndex < blockCount; blockIndex++) {
-			const u8 scaleAndPredictor = data[0];
+			const u8 scaleAndPredictor = *data++;
 
 			const u32 scale = 1 << u32(scaleAndPredictor & 0xF);
 			// This is referred to as 4-bit in some documentation, but I am pretty sure that's a mistake
@@ -392,9 +392,9 @@ namespace Audio {
 					return s16(output);
 				};
 
-				const u8 samples = data[sampleIndex + sizeof(u8)]; // Fetch the byte containing 2 4-bpp
-				const s32 topNibble = s32(samples) >> 4; // First sample
-				const s32 bottomNibble = s32(samples) & 0xF; // Second sample
+				const u8 samples = *data++;                   // Fetch the byte containing 2 4-bpp samples
+				const s32 topNibble = s32(samples) >> 4;      // First sample
+				const s32 bottomNibble = s32(samples) & 0xF;  // Second sample
 
 				// Decode and write first sample, then the second one
 				const s16 sample1 = decode(topNibble);
@@ -405,8 +405,6 @@ namespace Audio {
 
 				outputCount += 2;
 			}
-
-			data += blockSize;
 		}
 
 		// Store new history samples in the DSP source and return samples
