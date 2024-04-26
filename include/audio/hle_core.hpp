@@ -21,7 +21,7 @@ namespace Audio {
 			u32 paddr;        // Physical address of the buffer
 			u32 sampleCount;  // Total number of samples
 			u8 adpcmScale;    // ADPCM predictor/scale
-			u8 pad1;           // Unknown
+			u8 pad1;          // Unknown
 
 			std::array<s16, 2> previousSamples;  // ADPCM y[n-1] and y[n-2]
 			bool adpcmDirty;
@@ -59,8 +59,8 @@ namespace Audio {
 		// Where y[n] is the output sample we're generating, x[n] is the ADPCM "differential" of the current sample
 		// And coeff1/coeff2 are the coefficients from this array that are used for weighing the history samples
 		std::array<s16, 16> adpcmCoefficients;
-		s16 history1; // y[n-1], the previous output sample
-		s16 history2; // y[n-2], the previous previous output sample
+		s16 history1;  // y[n-1], the previous output sample
+		s16 history2;  // y[n-2], the previous previous output sample
 
 		SampleBuffer currentSamples;
 		int index = 0;  // Index of the voice in [0, 23] for debugging
@@ -69,7 +69,7 @@ namespace Audio {
 		// Pop a buffer from the buffer queue and return it
 		Buffer popBuffer() {
 			assert(!buffers.empty());
-			
+
 			Buffer ret = buffers.top();
 			buffers.pop();
 
@@ -87,7 +87,7 @@ namespace Audio {
 
 		template <typename T, usize channelCount>
 		using Frame = std::array<Sample<T, channelCount>, 160>;
-		
+
 		template <typename T>
 		using MonoFrame = Frame<T, 1>;
 
@@ -99,6 +99,7 @@ namespace Audio {
 
 		using Source = Audio::DSPSource;
 		using SampleBuffer = Source::SampleBuffer;
+
 	  private:
 		enum class DSPState : u32 {
 			Off,
@@ -118,7 +119,7 @@ namespace Audio {
 		SourceType sourceType = SourceType::Stereo;
 
 		void resetAudioPipe();
-		bool loaded = false; // Have we loaded a component?
+		bool loaded = false;  // Have we loaded a component?
 
 		// Get the index for the current region we'll be reading. Returns the region with the highest frame counter
 		// Accounting for whether one of the frame counters has wrapped around

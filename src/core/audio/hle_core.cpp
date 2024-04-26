@@ -107,7 +107,7 @@ namespace Audio {
 		outputFrame();
 		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
 	}
-	
+
 	u16 HLE_DSP::recvData(u32 regId) {
 		if (regId != 0) {
 			Helpers::panic("Audio: invalid register in HLE frontend");
@@ -141,14 +141,11 @@ namespace Audio {
 							// TODO: Other initialization stuff here
 							dspState = DSPState::On;
 							resetAudioPipe();
-							
+
 							dspService.triggerPipeEvent(DSPPipeType::Audio);
 							break;
 
-						case StateChange::Shutdown:
-							dspState = DSPState::Off;
-							break;
-
+						case StateChange::Shutdown: dspState = DSPState::Off; break;
 						default: Helpers::panic("Unimplemented DSP audio pipe state change %d", state);
 					}
 				}
@@ -216,11 +213,13 @@ namespace Audio {
 
 			// Generate audio
 			if (source.enabled && !source.buffers.empty()) {
+				static int aaaa = 0;
 				const auto& buffer = source.buffers.top();
 				const u8* data = getPointerPhys<u8>(buffer.paddr);
 
 				if (data != nullptr) {
 					// TODO
+					}
 				}
 			}
 
@@ -265,7 +264,7 @@ namespace Audio {
 			config.partialResetFlag = 0;
 			source.buffers = {};
 		}
-		
+
 		// TODO: Should we check bufferQueueDirty here too?
 		if (config.formatDirty || config.embeddedBufferDirty) {
 			sampleFormat = config.format;
@@ -341,14 +340,15 @@ namespace Audio {
 
 	HLE_DSP::SampleBuffer HLE_DSP::decodeADPCM(const u8* data, usize sampleCount, Source& source) {
 		static constexpr uint samplesPerBlock = 14;
-		// An ADPCM block is comprised of a single header which contains the scale and predictor value for the block, and then 14 4bpp samples (hence the / 2)
+		// An ADPCM block is comprised of a single header which contains the scale and predictor value for the block, and then 14 4bpp samples (hence
+		// the / 2)
 		static constexpr usize blockSize = sizeof(u8) + samplesPerBlock / 2;
- 
+
 		// How many ADPCM blocks we'll be consuming. It's sampleCount / samplesPerBlock, rounded up.
 		const usize blockCount = (sampleCount + (samplesPerBlock - 1)) / samplesPerBlock;
 		const usize outputSize = sampleCount + (sampleCount & 1);  // Bump the output size to a multiple of 2
 
-		usize outputCount = 0; // How many stereo samples have we output thus far?
+		usize outputCount = 0;  // How many stereo samples have we output thus far?
 		SampleBuffer decodedSamples(outputSize);
 
 		s16 history1 = source.history1;
@@ -371,8 +371,8 @@ namespace Audio {
 			// So each byte of ADPCM data ends up generating 2 stereo samples
 			for (uint sampleIndex = 0; sampleIndex < samplesPerBlock && outputCount < sampleCount; sampleIndex += 2) {
 				const auto decode = [&](s32 nibble) -> s16 {
-					static constexpr s32 ONE = 0x800; // 1.0 in S5.11 fixed point
-					static constexpr s32 HALF = ONE / 2; // 0.5 similarly
+					static constexpr s32 ONE = 0x800;     // 1.0 in S5.11 fixed point
+					static constexpr s32 HALF = ONE / 2;  // 0.5 similarly
 
 					// Sign extend our nibble from s4 to s32
 					nibble = (nibble << 28) >> 28;
