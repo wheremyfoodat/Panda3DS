@@ -363,8 +363,8 @@ namespace Audio {
 			const u32 predictor = (scaleAndPredictor >> 4) & 0x7;
 
 			// Fixed point (s5.11) coefficients for the history samples
-			const u16 weight1 = source.adpcmCoefficients[predictor * 2];
-			const u16 weight2 = source.adpcmCoefficients[predictor * 2 + 1];
+			const s32 weight1 = source.adpcmCoefficients[predictor * 2];
+			const s32 weight2 = source.adpcmCoefficients[predictor * 2 + 1];
 
 			// Decode samples in batches of 2
 			// Each 4 bit ADPCM differential corresponds to 1 mono sample which will be output from both the left and right channel
