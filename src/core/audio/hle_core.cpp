@@ -213,11 +213,13 @@ namespace Audio {
 
 			// Generate audio
 			if (source.enabled && !source.buffers.empty()) {
+				static int aaaa = 0;
 				const auto& buffer = source.buffers.top();
 				const u8* data = getPointerPhys<u8>(buffer.paddr);
 
 				if (data != nullptr) {
 					// TODO
+					}
 				}
 			}
 
