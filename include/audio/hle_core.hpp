@@ -1,6 +1,9 @@
 #pragma once
 #include <array>
+#include <cassert>
+#include <deque>
 #include <queue>
+#include <span>
 #include <vector>
 
 #include "audio/dsp_core.hpp"
@@ -18,7 +21,7 @@ namespace Audio {
 			u32 paddr;        // Physical address of the buffer
 			u32 sampleCount;  // Total number of samples
 			u8 adpcmScale;    // ADPCM predictor/scale
-			u8 pad1;           // Unknown
+			u8 pad1;          // Unknown
 
 			std::array<s16, 2> previousSamples;  // ADPCM y[n-1] and y[n-2]
 			bool adpcmDirty;
@@ -39,17 +42,40 @@ namespace Audio {
 				return this->bufferID > other.bufferID;
 			}
 		};
+		// Buffer of decoded PCM16 samples. TODO: Are there better alternatives to use over deque?
+		using SampleBuffer = std::deque<std::array<s16, 2>>;
 
 		using BufferQueue = std::priority_queue<Buffer>;
+		BufferQueue buffers;
 
 		std::array<float, 3> gain0, gain1, gain2;
 		u16 syncCount;
-		bool enabled;
+		bool enabled;  // Is the source enabled?
 
-		BufferQueue buffers;
+		// ADPCM decoding info:
+		// An array of fixed point S5.11 coefficients. These provide "weights" for the history samples
+		// The system describing how an ADPCM output sample is generated is
+		// y[n] = x[n] + 0.5 + coeff1 * y[n-1] + coeff2 * y[n-2]
+		// Where y[n] is the output sample we're generating, x[n] is the ADPCM "differential" of the current sample
+		// And coeff1/coeff2 are the coefficients from this array that are used for weighing the history samples
+		std::array<s16, 16> adpcmCoefficients;
+		s16 history1;  // y[n-1], the previous output sample
+		s16 history2;  // y[n-2], the previous previous output sample
+
+		SampleBuffer currentSamples;
 		int index = 0;  // Index of the voice in [0, 23] for debugging
 
 		void reset();
+		// Pop a buffer from the buffer queue and return it
+		Buffer popBuffer() {
+			assert(!buffers.empty());
+
+			Buffer ret = buffers.top();
+			buffers.pop();
+
+			return ret;
+		}
+
 		DSPSource() { reset(); }
 	};
 
@@ -61,7 +87,7 @@ namespace Audio {
 
 		template <typename T, usize channelCount>
 		using Frame = std::array<Sample<T, channelCount>, 160>;
-		
+
 		template <typename T>
 		using MonoFrame = Frame<T, 1>;
 
@@ -72,6 +98,8 @@ namespace Audio {
 		using QuadFrame = Frame<T, 4>;
 
 		using Source = Audio::DSPSource;
+		using SampleBuffer = Source::SampleBuffer;
+
 	  private:
 		enum class DSPState : u32 {
 			Off,
@@ -91,7 +119,7 @@ namespace Audio {
 		SourceType sourceType = SourceType::Stereo;
 
 		void resetAudioPipe();
-		bool loaded = false; // Have we loaded a component?
+		bool loaded = false;  // Have we loaded a component?
 
 		// Get the index for the current region we'll be reading. Returns the region with the highest frame counter
 		// Accounting for whether one of the frame counters has wrapped around
@@ -130,10 +158,13 @@ namespace Audio {
 			}
 		}
 
-		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config);
+		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients);
 		void generateFrame(StereoFrame<s16>& frame);
 		void outputFrame();
-		void dumpBuffer(const Source::Buffer& buffer);
+		// Decode an entire buffer worth of audio
+		void decodeBuffer(DSPSource& source);
+		SampleBuffer decodeADPCM(const u8* data, usize sampleCount, Source& source);
+
 	  public:
 		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
 		~HLE_DSP() override {}
