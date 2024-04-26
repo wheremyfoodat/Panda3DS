@@ -3,7 +3,6 @@
 #include <cassert>
 #include <deque>
 #include <queue>
-#include <span>
 #include <vector>
 
 #include "audio/dsp_core.hpp"
