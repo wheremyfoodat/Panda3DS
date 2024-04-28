@@ -217,10 +217,10 @@ static int disassembleARMThunk(lua_State* L) {
 	std::string disassembly;
 	// Convert instruction to byte array to pass to Capstone
 	std::array<u8, 4> bytes = {
-		instruction & 0xff,
-		(instruction >> 8) & 0xff,
-		(instruction >> 16) & 0xff,
-		(instruction >> 24) & 0xff,
+		u8(instruction & 0xff),
+		u8((instruction >> 8) & 0xff),
+		u8((instruction >> 16) & 0xff),
+		u8((instruction >> 24) & 0xff),
 	};
 
 	disassembler.disassemble(disassembly, pc, std::span(bytes));
