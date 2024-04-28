@@ -153,7 +153,14 @@ if(HOST_X64 OR HOST_ARM64)
 else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
+
 add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+
+set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
+set(CAPSTONE_ARM_SUPPORT ON)
+set(CAPSTONE_BUILD_MACOS_THIN ON)
+add_subdirectory(third_party/capstone)
+include_directories(third_party/capstone/include)
 
 set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
@@ -234,7 +241,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
                  include/audio/dsp_core.hpp include/audio/null_core.hpp include/audio/teakra_core.hpp
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
-                 include/audio/hle_core.hpp
+                 include/audio/hle_core.hpp include/capstone.hpp
 )
 
 cmrc_add_resource_library(
@@ -399,7 +406,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
 target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
-target_link_libraries(AlberCore PUBLIC glad)
+target_link_libraries(AlberCore PUBLIC glad capstone)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
