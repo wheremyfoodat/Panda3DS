@@ -209,7 +209,11 @@ static int getButtonThunk(lua_State* L) {
 }
 
 static int disassembleARMThunk(lua_State* L) {
-	static Common::CapstoneDisassembler disassembler(CS_ARCH_ARM, CS_MODE_ARM);
+	static Common::CapstoneDisassembler disassembler;
+	// We want the disassembler to only be fully initialized when this function is first used
+	if (!disassembler.isInitialized()) {
+		disassembler.init(CS_ARCH_ARM, CS_MODE_ARM);
+	}
 
 	const u32 pc = u32(lua_tonumber(L, 1));
 	const u32 instruction = u32(lua_tonumber(L, 2));

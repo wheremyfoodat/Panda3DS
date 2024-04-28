@@ -14,6 +14,7 @@ namespace Common {
 		bool initialized = false;
 
 	  public:
+		bool isInitialized() { return initialized; }
 		void init(cs_arch arch, cs_mode mode) { initialized = (cs_open(arch, mode, &handle) == CS_ERR_OK); }
 
 		CapstoneDisassembler() {}
