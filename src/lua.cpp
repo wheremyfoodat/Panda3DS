@@ -1,10 +1,15 @@
 #ifdef PANDA3DS_ENABLE_LUA
+#include <teakra/disassembler.h>
+
+#include <array>
+
+#include "capstone.hpp"
 #include "emulator.hpp"
 #include "lua_manager.hpp"
 
 #ifndef __ANDROID__
 extern "C" {
-	#include "luv.h"
+#include "luv.h"
 }
 #endif
 
@@ -203,6 +208,40 @@ static int getButtonThunk(lua_State* L) {
 	return 1;
 }
 
+static int disassembleARMThunk(lua_State* L) {
+	static Common::CapstoneDisassembler disassembler;
+	// We want the disassembler to only be fully initialized when this function is first used
+	if (!disassembler.isInitialized()) {
+		disassembler.init(CS_ARCH_ARM, CS_MODE_ARM);
+	}
+
+	const u32 pc = u32(lua_tonumber(L, 1));
+	const u32 instruction = u32(lua_tonumber(L, 2));
+
+	std::string disassembly;
+	// Convert instruction to byte array to pass to Capstone
+	std::array<u8, 4> bytes = {
+		u8(instruction & 0xff),
+		u8((instruction >> 8) & 0xff),
+		u8((instruction >> 16) & 0xff),
+		u8((instruction >> 24) & 0xff),
+	};
+
+	disassembler.disassemble(disassembly, pc, std::span(bytes));
+	lua_pushstring(L, disassembly.c_str());
+
+	return 1;
+}
+
+static int disassembleTeakThunk(lua_State* L) {
+	const u16 instruction = u16(lua_tonumber(L, 1));
+	const u16 expansion = u16(lua_tonumber(L, 2));
+	
+	std::string disassembly = Teakra::Disassembler::Do(instruction, expansion);
+	lua_pushstring(L, disassembly.c_str());
+	return 1;
+}
+
 // clang-format off
 static constexpr luaL_Reg functions[] = {
 	{ "__read8", read8Thunk },
@@ -214,13 +253,15 @@ static constexpr luaL_Reg functions[] = {
 	{ "__write32", write32Thunk },
 	{ "__write64", write64Thunk },
 	{ "__getAppID", getAppIDThunk },
-	{ "__pause", pauseThunk}, 
-	{ "__resume", resumeThunk},
-	{ "__reset", resetThunk},
-	{ "__loadROM", loadROMThunk},
-	{ "__getButtons", getButtonsThunk},
-	{ "__getCirclepad", getCirclepadThunk},
-	{ "__getButton", getButtonThunk},
+	{ "__pause", pauseThunk }, 
+	{ "__resume", resumeThunk },
+	{ "__reset", resetThunk },
+	{ "__loadROM", loadROMThunk },
+	{ "__getButtons", getButtonsThunk },
+	{ "__getCirclepad", getCirclepadThunk },
+	{ "__getButton", getButtonThunk },
+	{ "__disassembleARM", disassembleARMThunk },
+	{ "__disassembleTeak", disassembleTeakThunk },
 	{ nullptr, nullptr },
 };
 // clang-format on
@@ -253,6 +294,9 @@ void LuaManager::initializeThunks() {
 		getButtons = function() return GLOBALS.__getButtons() end,
 		getButton = function(button) return GLOBALS.__getButton(button) end,
 		getCirclepad = function() return GLOBALS.__getCirclepad() end,
+
+		disassembleARM = function(pc, instruction) return GLOBALS.__disassembleARM(pc, instruction) end,
+		disassembleTeak = function(opcode, exp) return GLOBALS.__disassembleTeak(opcode, exp or 0) end,
 
 		Frame = __Frame,
 		ButtonA = __ButtonA,
