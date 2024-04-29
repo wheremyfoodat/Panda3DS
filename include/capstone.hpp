@@ -1,7 +1,6 @@
 #pragma once
 #include <capstone/capstone.h>
 
-#include <cstdio>
 #include <span>
 #include <string>
 
