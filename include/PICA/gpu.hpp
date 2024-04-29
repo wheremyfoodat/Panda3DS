@@ -6,6 +6,7 @@
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_unit.hpp"
+#include "compiler_builtins.hpp"
 #include "config.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -35,6 +36,12 @@ class GPU {
 
 	std::array<vec4f, 16> immediateModeAttributes;  // Vertex attributes uploaded via immediate mode submission
 	std::array<PICA::Vertex, 3> immediateModeVertices;
+
+	// Pointers for the output registers as arranged after GPUREG_VSH_OUTMAP_MASK is applied
+	std::array<Floats::f24*, 16> vsOutputRegisters;
+	// Previous value for GPUREG_VSH_OUTMAP_MASK
+	u32 oldVsOutputMask;
+
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex;  // Index of the immediate mode attribute we're uploading
 
@@ -167,4 +174,28 @@ class GPU {
 	// We have them in the end of the struct for cache locality reasons. Tl;dr we want the more commonly used things to be packed in the start
 	// Of the struct, instead of externalRegs being in the middle
 	ExternalRegisters externalRegs;
+
+	ALWAYS_INLINE void setVsOutputMask(u32 val) {
+		val &= 0xffff;
+	
+		// Avoid recomputing this if not necessary 
+		if (oldVsOutputMask != val) [[unlikely]] {
+			oldVsOutputMask = val;
+
+			uint count = 0;
+			// See which registers are actually enabled and ignore the disabled ones
+			for (int i = 0; i < 16; i++) {
+				if (val & 1) {
+					vsOutputRegisters[count++] = &shaderUnit.vs.outputs[i][0];
+				}
+
+				val >>= 1;
+			}
+
+			// For the others, map the index to a vs output directly (TODO: What does hw actually do?)
+			for (; count < 16; count++) {
+				vsOutputRegisters[count] = &shaderUnit.vs.outputs[count][0];
+			}
+		}
+	}
 };

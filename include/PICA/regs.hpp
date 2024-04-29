@@ -143,6 +143,7 @@ namespace PICA {
 			VertexIntUniform3 = 0x2B4,
 
 			VertexShaderEntrypoint = 0x2BA,
+			VertexShaderOutputMask = 0x2BD,
 			VertexShaderTransferEnd = 0x2BF,
 			VertexFloatUniformIndex = 0x2C0,
 			VertexFloatUniformData0 = 0x2C1,

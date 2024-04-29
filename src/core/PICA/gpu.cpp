@@ -77,6 +77,9 @@ void GPU::reset() {
 
 	fixedAttrBuff.fill(0);
 
+	oldVsOutputMask = 0;
+	setVsOutputMask(0xFFFF);
+
 	for (auto& e : attributeInfo) {
 		e.offset = 0;
 		e.size = 0;
@@ -133,6 +136,8 @@ void GPU::drawArrays() {
 	if constexpr (useShaderJIT) {
 		shaderJIT.prepare(shaderUnit.vs);
 	}
+
+	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
 
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
@@ -329,7 +334,7 @@ void GPU::drawArrays() {
 
 			for (int j = 0; j < 4; j++) {  // pls unroll
 				const u32 mapping = (config >> (j * 8)) & 0x1F;
-				out.raw[mapping] = shaderUnit.vs.outputs[i][j];
+				out.raw[mapping] = vsOutputRegisters[i][j];
 			}
 		}
 	}
@@ -338,6 +343,8 @@ void GPU::drawArrays() {
 }
 
 PICA::Vertex GPU::getImmediateModeVertex() {
+	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
+
 	PICA::Vertex v;
 	const int totalAttrCount = (regs[PICA::InternalRegs::VertexShaderAttrNum] & 0xf) + 1;
 
@@ -356,7 +363,7 @@ PICA::Vertex GPU::getImmediateModeVertex() {
 
 		for (int j = 0; j < 4; j++) {  // pls unroll
 			const u32 mapping = (config >> (j * 8)) & 0x1F;
-			v.raw[mapping] = shaderUnit.vs.outputs[i][j];
+			v.raw[mapping] = vsOutputRegisters[i][j];
 		}
 	}
 
