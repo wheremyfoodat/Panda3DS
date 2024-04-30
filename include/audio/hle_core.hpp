@@ -5,6 +5,7 @@
 #include <queue>
 #include <vector>
 
+#include "audio/aac.hpp"
 #include "audio/dsp_core.hpp"
 #include "audio/dsp_shared_mem.hpp"
 #include "memory.hpp"
@@ -166,6 +167,7 @@ namespace Audio {
 			}
 		}
 
+		void handleAACRequest(const AAC::Message& request);
 		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients);
 		void generateFrame(StereoFrame<s16>& frame);
 		void generateFrame(DSPSource& source);

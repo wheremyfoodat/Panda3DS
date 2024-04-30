@@ -149,12 +149,24 @@ namespace Audio {
 				break;
 			}
 
-			case DSPPipeType::Binary:
-				Helpers::warn("Unimplemented write to binary pipe! Size: %d\n", size);
+			case DSPPipeType::Binary: {
+				log("Unimplemented write to binary pipe! Size: %d\n", size);
+
+				AAC::Message request;
+				if (size == sizeof(request)) {
+					std::array<u8, sizeof(request)> raw;
+					for (uint i = 0; i < size; i++) {
+						raw[i] = mem.read32(buffer + i);
+					}
+
+					std::memcpy(&request, raw.data(), sizeof(request));
+					handleAACRequest(request);
+				}
 
 				// This pipe and interrupt are normally used for requests like AAC decode
 				dspService.triggerPipeEvent(DSPPipeType::Binary);
 				break;
+			}
 
 			default: log("Audio::HLE_DSP: Wrote to unimplemented pipe %d\n", channel); break;
 		}
@@ -486,6 +498,37 @@ namespace Audio {
 		source.history1 = history1;
 		source.history2 = history2;
 		return decodedSamples;
+	}
+
+	void HLE_DSP::handleAACRequest(const AAC::Message& request) {
+		AAC::Message response = {};
+
+		switch (request.command) {
+			case AAC::Command::EncodeDecode:
+				// Dummy response to stop games from hanging
+				// TODO: Fix this when implementing AAC
+				response.resultCode = AAC::ResultCode::Success;
+				response.decodeResponse.channelCount = 2;
+				response.decodeResponse.sampleCount = 1024;
+				response.decodeResponse.size = 0;
+				response.decodeResponse.sampleRate = AAC::SampleRate::Rate48000;
+				break;
+
+			case AAC::Command::Init:
+			case AAC::Command::Shutdown:
+			case AAC::Command::LoadState:
+			case AAC::Command::SaveState:
+				response = request;
+				response.resultCode = AAC::ResultCode::Success;
+				break;
+				
+			default: Helpers::warn("Unknown AAC command type"); break;
+		}
+
+		// Copy response data to the binary pipe
+		auto& pipe = pipeData[DSPPipeType::Binary];
+		pipe.resize(sizeof(response));
+		std::memcpy(&pipe[0], &response, sizeof(response));
 	}
 
 	void DSPSource::reset() {
