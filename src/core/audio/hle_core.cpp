@@ -64,10 +64,6 @@ namespace Audio {
 		dspState = DSPState::Off;
 		loaded = false;
 
-		// Initialize these to some sane defaults
-		sampleFormat = SampleFormat::ADPCM;
-		sourceType = SourceType::Stereo;
-
 		for (auto& e : pipeData) {
 			e.clear();
 		}
@@ -104,6 +100,7 @@ namespace Audio {
 			dspService.triggerPipeEvent(DSPPipeType::Audio);
 		}
 
+		// TODO: Should this be called if dspState != DSPState::On?
 		outputFrame();
 		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
 	}
@@ -212,19 +209,21 @@ namespace Audio {
 			updateSourceConfig(source, config, read.adpcmCoefficients.coeff[i]);
 
 			// Generate audio
-			if (source.enabled && !source.buffers.empty()) {
-				const auto& buffer = source.buffers.top();
-				const u8* data = getPointerPhys<u8>(buffer.paddr);
-
-				if (data != nullptr) {
-					// TODO
-				}
+			if (source.enabled) {
+				generateFrame(source);
 			}
 
 			// Update write region of shared memory
 			auto& status = write.sourceStatuses.status[i];
 			status.isEnabled = source.enabled;
 			status.syncCount = source.syncCount;
+			status.currentBufferIDDirty = source.isBufferIDDirty ? 1 : 0;
+			status.currentBufferID = source.currentBufferID;
+			status.lastBufferID = source.previousBufferID;
+			// TODO: Properly update sample position
+			status.samplePosition = source.samplePosition;
+
+			source.isBufferIDDirty = false;
 		}
 	}
 
@@ -265,11 +264,11 @@ namespace Audio {
 
 		// TODO: Should we check bufferQueueDirty here too?
 		if (config.formatDirty || config.embeddedBufferDirty) {
-			sampleFormat = config.format;
+			source.sampleFormat = config.format;
 		}
 
 		if (config.monoOrStereoDirty || config.embeddedBufferDirty) {
-			sourceType = config.monoOrStereo;
+			source.sourceType = config.monoOrStereo;
 		}
 
 		if (config.embeddedBufferDirty) {
@@ -285,8 +284,8 @@ namespace Audio {
 					.looping = config.isLooping != 0,
 					.bufferID = config.bufferID,
 					.playPosition = config.playPosition,
-					.format = sampleFormat,
-					.sourceType = sourceType,
+					.format = source.sampleFormat,
+					.sourceType = source.sourceType,
 					.fromQueue = false,
 					.hasPlayedOnce = false,
 				};
@@ -327,13 +326,91 @@ namespace Audio {
 			return;
 		}
 
-		switch (buffer.format) {
-			case SampleFormat::PCM8:
-			case SampleFormat::PCM16: Helpers::warn("Unimplemented sample format!"); break;
+		source.currentBufferID = buffer.bufferID;
+		source.previousBufferID = 0;
+		// For looping buffers, this is only set for the first time we play it. Loops do not set the dirty bit.
+		source.isBufferIDDirty = !buffer.hasPlayedOnce && buffer.fromQueue;
 
-			case SampleFormat::ADPCM: source.currentSamples = decodeADPCM(data, buffer.sampleCount, source); break;
-			default: Helpers::warn("Invalid DSP sample format"); break;
+		if (buffer.hasPlayedOnce) {
+			source.samplePosition = 0;
+		} else {
+			// Mark that the buffer has already been played once, needed for looping buffers
+			buffer.hasPlayedOnce = true;
+			// Play position is only used for the initial time the buffer is played. Loops will start from the beginning of the buffer.
+			source.samplePosition = buffer.playPosition;
 		}
+
+		switch (buffer.format) {
+			case SampleFormat::PCM8: Helpers::warn("Unimplemented sample format!"); break;
+			case SampleFormat::PCM16: source.currentSamples = decodePCM16(data, buffer.sampleCount, source); break;
+			case SampleFormat::ADPCM: source.currentSamples = decodeADPCM(data, buffer.sampleCount, source); break;
+
+			default:
+				Helpers::warn("Invalid DSP sample format");
+				source.currentSamples = {};
+				break;
+		}
+
+		// If the buffer is a looping buffer, re-push it
+		if (buffer.looping) {
+			source.pushBuffer(buffer);
+		}
+	}
+
+	void HLE_DSP::generateFrame(DSPSource& source) {
+		if (source.currentSamples.empty()) {
+			// There's no audio left to play, turn the voice off
+			if (source.buffers.empty()) {
+				source.enabled = false;
+				source.isBufferIDDirty = true;
+				source.previousBufferID = source.currentBufferID;
+				source.currentBufferID = 0;
+
+				return;
+			}
+
+			decodeBuffer(source);
+		} else {
+			constexpr uint maxSampleCount = Audio::samplesInFrame;
+			uint outputCount = 0;
+
+			while (outputCount < maxSampleCount) {
+				if (source.currentSamples.empty()) {
+					if (source.buffers.empty()) {
+						break;
+					} else {
+						decodeBuffer(source);
+					}
+				}
+
+				const uint sampleCount = std::min<s32>(maxSampleCount - outputCount, source.currentSamples.size());
+				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
+				source.currentSamples.erase(source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
+
+				outputCount += sampleCount;
+			}
+		}
+	}
+
+	HLE_DSP::SampleBuffer HLE_DSP::decodePCM16(const u8* data, usize sampleCount, Source& source) {
+		SampleBuffer decodedSamples(sampleCount);
+		const s16* data16 = reinterpret_cast<const s16*>(data);
+
+		if (source.sourceType == SourceType::Stereo) {
+			for (usize i = 0; i < sampleCount; i++) {
+				const s16 left = *data16++;
+				const s16 right = *data16++;
+				decodedSamples[i] = {left, right};
+			}
+		} else {
+			// Mono
+			for (usize i = 0; i < sampleCount; i++) {
+				const s16 sample = *data16++;
+				decodedSamples[i] = {sample, sample};
+			}
+		}
+
+		return decodedSamples;
 	}
 
 	HLE_DSP::SampleBuffer HLE_DSP::decodeADPCM(const u8* data, usize sampleCount, Source& source) {
@@ -413,6 +490,15 @@ namespace Audio {
 
 	void DSPSource::reset() {
 		enabled = false;
+		isBufferIDDirty = false;
+
+		// Initialize these to some sane defaults
+		sampleFormat = SampleFormat::ADPCM;
+		sourceType = SourceType::Stereo;
+
+		samplePosition = 0;
+		previousBufferID = 0;
+		currentBufferID = 0;
 		syncCount = 0;
 
 		buffers = {};

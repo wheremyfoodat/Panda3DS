@@ -32,8 +32,8 @@ namespace Audio {
 			SampleFormat format;
 			SourceType sourceType;
 
-			bool fromQueue = false;      // Is this buffer from the buffer queue or an embedded buffer?
-			bool hasPlayedOnce = false;  // Has the buffer been played at least once before?
+			bool fromQueue = false;        // Is this buffer from the buffer queue or an embedded buffer?
+			bool hasPlayedOnce = false;    // Has the buffer been played at least once before?
 
 			bool operator<(const Buffer& other) const {
 				// Lower ID = Higher priority
@@ -47,9 +47,17 @@ namespace Audio {
 		using BufferQueue = std::priority_queue<Buffer>;
 		BufferQueue buffers;
 
+		SampleFormat sampleFormat = SampleFormat::ADPCM;
+		SourceType sourceType = SourceType::Stereo;
+
 		std::array<float, 3> gain0, gain1, gain2;
+		u32 samplePosition;  // Sample number into the current audio buffer
 		u16 syncCount;
-		bool enabled;  // Is the source enabled?
+		u16 currentBufferID;
+		u16 previousBufferID;
+
+		bool enabled;                  // Is the source enabled?
+		bool isBufferIDDirty = false;  // Did we change buffers?
 
 		// ADPCM decoding info:
 		// An array of fixed point S5.11 coefficients. These provide "weights" for the history samples
@@ -65,6 +73,10 @@ namespace Audio {
 		int index = 0;  // Index of the voice in [0, 23] for debugging
 
 		void reset();
+
+		// Push a buffer to the buffer queue
+		void pushBuffer(const Buffer& buffer) { buffers.push(buffer); }
+
 		// Pop a buffer from the buffer queue and return it
 		Buffer popBuffer() {
 			assert(!buffers.empty());
@@ -114,9 +126,6 @@ namespace Audio {
 		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
 		Audio::HLE::DspMemory dspRam;
 
-		SampleFormat sampleFormat = SampleFormat::ADPCM;
-		SourceType sourceType = SourceType::Stereo;
-
 		void resetAudioPipe();
 		bool loaded = false;  // Have we loaded a component?
 
@@ -159,9 +168,13 @@ namespace Audio {
 
 		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients);
 		void generateFrame(StereoFrame<s16>& frame);
+		void generateFrame(DSPSource& source);
 		void outputFrame();
+
 		// Decode an entire buffer worth of audio
 		void decodeBuffer(DSPSource& source);
+
+		SampleBuffer decodePCM16(const u8* data, usize sampleCount, Source& source);
 		SampleBuffer decodeADPCM(const u8* data, usize sampleCount, Source& source);
 
 	  public:
