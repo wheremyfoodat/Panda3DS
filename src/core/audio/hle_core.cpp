@@ -7,8 +7,6 @@
 
 #include "services/dsp.hpp"
 
-std::vector<Audio::HLE_DSP::Sample<s16, 2>> samplezorz = {};
-
 namespace Audio {
 	namespace DSPPipeType {
 		enum : u32 {
@@ -102,6 +100,7 @@ namespace Audio {
 			dspService.triggerPipeEvent(DSPPipeType::Audio);
 		}
 
+		// TODO: Should this be called if dspState != DSPState::On?
 		outputFrame();
 		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
 	}
@@ -212,15 +211,6 @@ namespace Audio {
 			// Generate audio
 			if (source.enabled) {
 				generateFrame(source);
-
-				if (samplezorz.size() > 160 * 60 * 60 * 3) {
-					using namespace std;
-					ofstream fout("audio_data.bin", ios::out | ios::binary);
-					fout.write((char*)&samplezorz[0], samplezorz.size() * sizeof(Sample<s16, 2>));
-					fout.close();
-
-					Helpers::panic("Bwaa");
-				}
 			}
 
 			// Update write region of shared memory
@@ -394,7 +384,7 @@ namespace Audio {
 				}
 
 				const uint sampleCount = std::min<s32>(maxSampleCount - outputCount, source.currentSamples.size());
-				samplezorz.insert(samplezorz.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
+				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
 				source.currentSamples.erase(source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
 
 				outputCount += sampleCount;
@@ -408,19 +398,15 @@ namespace Audio {
 
 		if (source.sourceType == SourceType::Stereo) {
 			for (usize i = 0; i < sampleCount; i++) {
-				s16 left = *data16++;
-				s16 right = *data16++;
-
-				if (left != 0 || right != 0) {
-					Helpers::panic("panda...");
-				}
-
+				const s16 left = *data16++;
+				const s16 right = *data16++;
 				decodedSamples[i] = {left, right};
 			}
 		} else {
 			// Mono
 			for (usize i = 0; i < sampleCount; i++) {
-				decodedSamples[i].fill(*data16++);
+				const s16 sample = *data16++;
+				decodedSamples[i] = {sample, sample};
 			}
 		}
 
