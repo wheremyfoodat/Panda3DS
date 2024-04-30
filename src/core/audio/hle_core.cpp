@@ -161,6 +161,8 @@ namespace Audio {
 
 					std::memcpy(&request, raw.data(), sizeof(request));
 					handleAACRequest(request);
+				} else {
+					Helpers::warn("Invalid size for AAC request");
 				}
 
 				// This pipe and interrupt are normally used for requests like AAC decode
