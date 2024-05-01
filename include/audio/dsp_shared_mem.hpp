@@ -294,12 +294,12 @@ namespace Audio::HLE {
 
 	struct SourceStatus {
 		struct Status {
-			u8 isEnabled;             ///< Is this channel enabled? (Doesn't have to be playing anything.)
+			u8 enabled;               ///< Is this channel enabled? (Doesn't have to be playing anything.)
 			u8 currentBufferIDDirty;  ///< Non-zero when current_buffer_id changes
 			u16_le syncCount;         ///< Is set by the DSP to the value of SourceConfiguration::sync_count
 			u32_dsp samplePosition;   ///< Number of samples into the current buffer
 			u16_le currentBufferID;   ///< Updated when a buffer finishes playing
-			u16_le lastBufferID;      ///< Updated when all buffers in the queue finish playing
+			u16_le previousBufferID;  ///< Updated when all buffers in the queue finish playing
 		};
 
 		Status status[sourceCount];

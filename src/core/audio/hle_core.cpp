@@ -229,11 +229,11 @@ namespace Audio {
 
 			// Update write region of shared memory
 			auto& status = write.sourceStatuses.status[i];
-			status.isEnabled = source.enabled;
+			status.enabled = source.enabled;
 			status.syncCount = source.syncCount;
 			status.currentBufferIDDirty = source.isBufferIDDirty ? 1 : 0;
 			status.currentBufferID = source.currentBufferID;
-			status.lastBufferID = source.previousBufferID;
+			status.previousBufferID = source.previousBufferID;
 			// TODO: Properly update sample position
 			status.samplePosition = source.samplePosition;
 
@@ -503,7 +503,7 @@ namespace Audio {
 	}
 
 	void HLE_DSP::handleAACRequest(const AAC::Message& request) {
-		AAC::Message response = {};
+		AAC::Message response;
 
 		switch (request.command) {
 			case AAC::Command::EncodeDecode:
@@ -514,6 +514,9 @@ namespace Audio {
 				response.decodeResponse.sampleCount = 1024;
 				response.decodeResponse.size = 0;
 				response.decodeResponse.sampleRate = AAC::SampleRate::Rate48000;
+
+				response.command = request.command;
+				response.mode = request.mode;
 				break;
 
 			case AAC::Command::Init:
