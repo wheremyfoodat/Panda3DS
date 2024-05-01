@@ -256,13 +256,15 @@ class PICAShader {
 
 	void uploadFloatUniform(u32 word) {
 		floatUniformBuffer[floatUniformWordCount++] = word;
-		if (floatUniformIndex >= 96) {
-			Helpers::panic("[PICA] Tried to write float uniform %d", floatUniformIndex);
-		}
 
 		if ((f32UniformTransfer && floatUniformWordCount >= 4) || (!f32UniformTransfer && floatUniformWordCount >= 3)) {
-			vec4f& uniform = floatUniforms[floatUniformIndex++];
 			floatUniformWordCount = 0;
+
+			// Check if the program tries to upload to a non-existent uniform, and empty the queue without writing in that case
+			if (floatUniformIndex >= 96) [[unlikely]] {
+				return;
+			}
+			vec4f& uniform = floatUniforms[floatUniformIndex++];
 
 			if (f32UniformTransfer) {
 				uniform[0] = f24::fromFloat32(*(float*)&floatUniformBuffer[3]);
