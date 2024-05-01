@@ -12,7 +12,7 @@ namespace Audio::AAC {
 		};
 	}
 
-	// Enum values from Citra and struct definitions based off Citra
+	// Enum values and struct definitions based off Citra
 	namespace Command {
 		enum : u16 {
 			Init = 0,          // Initialize encoder/decoder
@@ -46,12 +46,12 @@ namespace Audio::AAC {
 	}
 
 	struct DecodeResponse {
-		u32_le sampleRate = SampleRate::Rate48000;
-		u32_le channelCount = 0;
-		u32_le size = 0;
-		u32_le unknown1 = 0;
-		u32_le unknown2 = 0;
-		u32_le sampleCount = 0;
+		u32_le sampleRate;
+		u32_le channelCount;
+		u32_le size;
+		u32_le unknown1;
+		u32_le unknown2;
+		u32_le sampleCount;
 	};
 
 	struct Message {
@@ -61,7 +61,7 @@ namespace Audio::AAC {
 
 		// Info on the AAC request
 		union {
-			std::array<u8, 24> commandData = {};
+			std::array<u8, 24> commandData{};
 			DecodeResponse decodeResponse;
 		};
 	};
