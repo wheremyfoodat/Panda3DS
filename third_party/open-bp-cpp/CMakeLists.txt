@@ -14,7 +14,7 @@ project(buttplugCpp)
 # Add source to this project's executable.
 
 file(GLOB SRC_FILES    
-    "src/*.cpp"
+    "source/*.cpp"
     "include/*.h"
     "include/*.hpp"
 )
@@ -23,6 +23,7 @@ add_library(buttplugCpp STATIC ${SRC_FILES})
 
 set(USE_ZLIB FALSE)
 target_include_directories(buttplugCpp PUBLIC third_party/IXWebSocket/ixwebsocket)
+target_include_directories(buttplugCpp PUBLIC include)
 add_subdirectory(third_party/IXWebSocket)
 
 find_package(Threads REQUIRED)
