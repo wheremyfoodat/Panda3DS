@@ -22,6 +22,7 @@ file(GLOB SRC_FILES
 add_library(buttplugCpp STATIC ${SRC_FILES})
 
 set(USE_ZLIB FALSE)
+target_include_directories(buttplugCpp PUBLIC third_party/IXWebSocket/ixwebsocket)
 add_subdirectory(third_party/IXWebSocket)
 
 find_package(Threads REQUIRED)

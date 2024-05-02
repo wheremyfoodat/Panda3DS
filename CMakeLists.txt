@@ -271,6 +271,10 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
 
     add_subdirectory(third_party/libuv)
     target_link_libraries(AlberCore PRIVATE uv_a)
+
+    include_directories(third_party/open-bp-cpp/include)
+    add_subdirectory(third_party/open-bp-cpp)
+    target_link_libraries(AlberCore PRIVATE buttplugCpp)
 endif()
 
 if(ENABLE_QT_GUI)
