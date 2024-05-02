@@ -273,6 +273,7 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
     target_link_libraries(AlberCore PRIVATE uv_a)
 
     include_directories(third_party/open-bp-cpp/include)
+    include_directories(third_party/open-bp-cpp/third_party/IXWebSocket/ixwebsocket)
     add_subdirectory(third_party/open-bp-cpp)
     target_link_libraries(AlberCore PRIVATE buttplugCpp)
 endif()
