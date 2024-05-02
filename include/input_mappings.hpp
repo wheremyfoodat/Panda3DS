@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <fstream>
 #include <map>
 #include <optional>
 #include <toml.hpp>
@@ -45,7 +46,7 @@ struct InputMappings {
 		data["Mappings"] = toml::table{};
 
 		for (const auto& [scancode, key] : container) {
-			if (data["Mappings"].contains(HID::Keys::keyToName(key)) == false) {
+			if (!data["Mappings"].contains(HID::Keys::keyToName(key))) {
 				data["Mappings"][HID::Keys::keyToName(key)] = toml::array{};
 			}
 
@@ -58,8 +59,8 @@ struct InputMappings {
 
 	static std::optional<InputMappings> deserialize(const std::filesystem::path& path, const std::string& wantFrontend) {
 		toml::basic_value<toml::preserve_comments, std::map> data;
-
 		std::error_code error;
+		
 		if (!std::filesystem::exists(path, error)) {
 			if (error) {
 				Helpers::warn("Filesystem error accessing %s (error: %s)\n", path.string().c_str(), error.message().c_str());
