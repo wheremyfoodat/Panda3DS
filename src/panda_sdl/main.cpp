@@ -13,7 +13,7 @@ void callbackFunction(const mhl::Messages msg) {
 		case mhl::MessageTypes::ServerInfo: printf("Server info callback\n"); break;
 		case mhl::MessageTypes::DeviceRemoved: printf("Device Removed callback\n"); break;
 		case mhl::MessageTypes::SensorReading: printf("Sensor reading callback\n"); break;
-		default: printf("Unknown message")
+		default: printf("Unknown message");
 	}
 }
 
@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
 		std::vector<DeviceClass> myDevices = client.getDevices();
 		if (myDevices.size() > 0) {
 			client.sendScalar(myDevices[0], 0.5);
+			client.sendScalar(myDevices[1], 0.5);
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
