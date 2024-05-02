@@ -2,7 +2,10 @@
 #include <functional>
 #include <iostream>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <sstream>
+#include <vector>
 #include <queue>
 
 #include <IXWebSocket.h>
