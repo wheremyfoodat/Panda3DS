@@ -2,25 +2,16 @@
 //
 
 #include "buttplugCpp.h"
-
-
-using namespace std;
+#include <cstdio>
 
 void callbackFunction(const mhl::Messages msg) {
-	if (msg.messageType == mhl::MessageTypes::DeviceList) {
-		cout << "Device List callback" << endl;
-	}
-	if (msg.messageType == mhl::MessageTypes::DeviceAdded) {
-		cout << "Device Added callback" << endl;
-	}
-	if (msg.messageType == mhl::MessageTypes::ServerInfo) {
-		cout << "Server Info callback" << endl;
-	}
-	if (msg.messageType == mhl::MessageTypes::DeviceRemoved) {
-		cout << "Device Removed callback" << endl;
-	}
-	if (msg.messageType == mhl::MessageTypes::SensorReading) {
-		cout << "Sensor Reading callback" << endl;
+	switch (msg.messageType) {
+		case mhl::MessageTypes::DeviceList: std::printf("Device List callback\n"); break;
+		case mhl::MessageTypes::DeviceAdded: std::printf("Device List callback\n"); break;
+		case mhl::MessageTypes::ServerInfo: std::printf("Server info callback\n"); break;
+		case mhl::MessageTypes::DeviceRemoved: std::printf("Device Removed callback\n"); break;
+		case mhl::MessageTypes::SensorReading: std::printf("Sensor reading callback\n"); break;
+		default: printf("Unknown message")
 	}
 }
 
