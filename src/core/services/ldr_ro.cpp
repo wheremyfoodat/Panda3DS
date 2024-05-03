@@ -1236,7 +1236,8 @@ void LDRService::initialize(u32 messagePointer) {
 	}
 
 	// Map CRO to output address
-	mem.mirrorMapping(mapVaddr, crsPointer, size);
+	// TODO: how to handle permissions?
+	mem.mapVirtualMemory(mapVaddr, crsPointer, size >> 12, true, true, true);
 
 	CRO crs(mem, mapVaddr, false);
 
@@ -1326,7 +1327,8 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 	}
 
 	// Map CRO to output address
-	mem.mirrorMapping(mapVaddr, croPointer, size);
+	// TODO: how to handle permissions?
+	mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, true, true, true);
 
 	CRO cro(mem, mapVaddr, true);
 
@@ -1387,6 +1389,8 @@ void LDRService::unloadCRO(u32 messagePointer) {
 	if (!cro.unrebase()) {
 		Helpers::panic("Failed to unrebase CRO");
 	}
+
+	// TODO: unmap the CRO from the pagetable
 
 	kernel.clearInstructionCache();
 

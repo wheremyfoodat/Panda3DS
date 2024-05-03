@@ -4,7 +4,8 @@
 #include "cpu.hpp"
 
 Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config)
-	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config) {
+	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config),
+	  fcramManager(mem) {
 	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
 	mutexHandles.reserve(8);
 	portHandles.reserve(32);
@@ -139,6 +140,9 @@ void Kernel::reset() {
 	threadCount = 0;
 	aliveThreadCount = 0;
 
+	// TODO: These values should be derived from the memory type in an app's exheader
+	fcramManager.reset(Memory::FCRAM_SIZE, Memory::FCRAM_APPLICATION_SIZE, Memory::FCRAM_SYSTEM_SIZE, Memory::FCRAM_BASE_SIZE);
+
 	for (auto& t : threads) {
 		t.status = ThreadStatus::Dead;
 		t.waitList.clear();
@@ -265,7 +269,8 @@ void Kernel::getProcessInfo() {
 		// According to 3DBrew: Amount of private (code, data, heap) memory used by the process + total supervisor-mode
 		// stack size + page-rounded size of the external handle table
 		case 2:
-			regs[1] = mem.getUsedUserMem();
+			// TODO
+			regs[1] = 0;
 			regs[2] = 0;
 			break;
 
@@ -342,7 +347,7 @@ void Kernel::getSystemInfo() {
 			switch (subtype) {
 				// Total used memory size in the APPLICATION memory region
 				case 1:
-					regs[1] = mem.getUsedUserMem();
+					regs[1] = fcramManager.getUsedCount(FcramRegion::App);
 					regs[2] = 0;
 					break;
 

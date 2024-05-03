@@ -26,18 +26,14 @@ static constexpr u8 idleThreadCode[] = {
 // Set up an idle thread to run when no thread is able to run
 void Kernel::setupIdleThread() {
 	Thread& t = threads[idleThreadIndex];
-	constexpr u32 codeAddress = 0xBFC00000;
 
-	// Reserve some memory for the idle thread's code. We map this memory to vaddr BFC00000 which is not userland-accessible
+	// Reserve some memory for the idle thread's code. We map this memory to vaddr 3FC00000 which shouldn't be accessed by applications
 	// We only allocate 4KB (1 page) because our idle code is pretty small
-	const u32 fcramIndex = mem.allocateSysMemory(Memory::pageSize);
-	auto vaddr = mem.allocateMemory(codeAddress, fcramIndex, Memory::pageSize, true, true, false, true, false, true);
-	if (!vaddr.has_value() || vaddr.value() != codeAddress) {
-		Helpers::panic("Failed to setup idle thread");
-	}
+	constexpr u32 codeAddress = 0x3FC00000;
+	if (!mem.allocMemory(codeAddress, 1, FcramRegion::Base, true, true, false)) Helpers::panic("Failed to setup idle thread");
 	
 	// Copy idle thread code to the allocated FCRAM
-	std::memcpy(&mem.getFCRAM()[fcramIndex], idleThreadCode, sizeof(idleThreadCode));
+	mem.copyToVaddr(codeAddress, idleThreadCode, sizeof(idleThreadCode));
 
 	t.entrypoint = codeAddress;
 	t.tlsBase = 0;

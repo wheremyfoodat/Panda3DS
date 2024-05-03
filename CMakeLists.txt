@@ -175,6 +175,7 @@ set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limi
                         src/core/kernel/address_arbiter.cpp src/core/kernel/error.cpp
                         src/core/kernel/file_operations.cpp src/core/kernel/directory_operations.cpp
                         src/core/kernel/idle_thread.cpp src/core/kernel/timers.cpp
+                        src/core/kernel/fcram.cpp
 )
 set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp

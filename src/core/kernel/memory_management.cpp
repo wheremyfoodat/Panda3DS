@@ -44,6 +44,7 @@ void Kernel::controlMemory() {
 	u32 addr0 = regs[1];
 	u32 addr1 = regs[2];
 	u32 size = regs[3];
+	u32 pages = size >> 12; // Official kernel truncates nonaligned sizes
 	u32 perms = regs[4];
 
 	if (perms == MemoryPermissions::DontCare) {
@@ -60,7 +61,7 @@ void Kernel::controlMemory() {
 	if (x)
 		Helpers::panic("ControlMemory: attempted to allocate executable memory");
 
-	if (!isAligned(addr0) || !isAligned(addr1) || !isAligned(size)) {
+	if (!isAligned(addr0) || !isAligned(addr1)) {
 		Helpers::panic("ControlMemory: Unaligned parameters\nAddr0: %08X\nAddr1: %08X\nSize: %08X", addr0, addr1, size);
 	}
 
@@ -70,16 +71,23 @@ void Kernel::controlMemory() {
 
 	switch (operation & 0xFF) {
 		case Operation::Commit: {
-			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear, r, w, x, true);
-			if (!address.has_value())
-				Helpers::panic("ControlMemory: Failed to allocate memory");
+			// TODO: base this from the exheader
+			auto region = FcramRegion::App;
 
-			regs[1] = address.value();
+			u32 outAddr = 0;
+			if (linear) {
+				if (!mem.allocMemoryLinear(outAddr, addr0, pages, region, r, w, false)) Helpers::panic("ControlMemory: Failed to allocate linear memory");
+			} else {
+				if (!mem.allocMemory(addr0, pages, region, r, w, false)) Helpers::panic("ControlMemory: Failed to allocate memory");
+				outAddr = addr0;
+			}
+
+			regs[1] = outAddr;
 			break;
 		}
 
 		case Operation::Map:
-			mem.mirrorMapping(addr0, addr1, size);
+			if (!mem.mapVirtualMemory(addr0, addr1, pages, r, w, false)) Helpers::panic("ControlMemory: Failed to map memory");
 			break;
 
 		case Operation::Protect:
@@ -100,10 +108,11 @@ void Kernel::queryMemory() {
 
 	logSVC("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
 
-	const auto info = mem.queryMemory(addr);
-	regs[0] = Result::Success;
+	KernelMemoryTypes::MemoryInfo info;
+	const auto result = mem.queryMemory(info, addr);
+	regs[0] = result;
 	regs[1] = info.baseAddr;
-	regs[2] = info.size;
+	regs[2] = info.pages << 12;
 	regs[3] = info.perms;
 	regs[4] = info.state;
 	regs[5] = 0; // page flags
