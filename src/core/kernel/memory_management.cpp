@@ -30,6 +30,8 @@ namespace MemoryPermissions {
 	};
 }
 
+using namespace KernelMemoryTypes;
+
 // Returns whether "value" is aligned to a page boundary (Ie a boundary of 4096 bytes)
 static constexpr bool isAligned(u32 value) {
 	return (value & 0xFFF) == 0;
@@ -78,7 +80,7 @@ void Kernel::controlMemory() {
 			if (linear) {
 				if (!mem.allocMemoryLinear(outAddr, addr0, pages, region, r, w, false)) Helpers::panic("ControlMemory: Failed to allocate linear memory");
 			} else {
-				if (!mem.allocMemory(addr0, pages, region, r, w, false)) Helpers::panic("ControlMemory: Failed to allocate memory");
+				if (!mem.allocMemory(addr0, pages, region, r, w, false, MemoryState::Private)) Helpers::panic("ControlMemory: Failed to allocate memory");
 				outAddr = addr0;
 			}
 
@@ -87,7 +89,8 @@ void Kernel::controlMemory() {
 		}
 
 		case Operation::Map:
-			if (!mem.mapVirtualMemory(addr0, addr1, pages, r, w, false)) Helpers::panic("ControlMemory: Failed to map memory");
+			if (!mem.mapVirtualMemory(addr0, addr1, pages, r, w, false, MemoryState::Free, MemoryState::Private,
+				MemoryState::Alias, MemoryState::Aliased)) Helpers::panic("ControlMemory: Failed to map memory");
 			break;
 
 		case Operation::Protect:

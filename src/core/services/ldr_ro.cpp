@@ -141,6 +141,8 @@ static const std::string CRO_MAGIC("CRO0");
 static const std::string CRO_MAGIC_FIXED("FIXD");
 static const std::string CRR_MAGIC("CRR0");
 
+using namespace KernelMemoryTypes;
+
 class CRO {
 	Memory &mem;
 
@@ -1237,7 +1239,11 @@ void LDRService::initialize(u32 messagePointer) {
 
 	// Map CRO to output address
 	// TODO: how to handle permissions?
-	mem.mapVirtualMemory(mapVaddr, crsPointer, size >> 12, true, true, true);
+	bool succeeded = mem.mapVirtualMemory(mapVaddr, crsPointer, size >> 12, true, true, true,
+		MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode);
+	if (!succeeded) {
+		Helpers::panic("Failed to map CRS");
+	}
 
 	CRO crs(mem, mapVaddr, false);
 
@@ -1328,7 +1334,11 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 
 	// Map CRO to output address
 	// TODO: how to handle permissions?
-	mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, true, true, true);
+	bool succeeded = mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, true, true, true,
+		MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode);
+	if (!succeeded) {
+		Helpers::panic("Failed to map CRO");
+	}
 
 	CRO cro(mem, mapVaddr, true);
 

@@ -239,23 +239,14 @@ private:
 		return (addr & pageMask) == 0;
 	}
 
-	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
-	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).
-	// If the "linear" flag is on, the paddr pages must be adjacent in FCRAM
-	// This function is for interacting with the *user* portion of FCRAM mainly. For OS RAM, we use other internal functions below
-	// r, w, x: Permissions for the allocated memory
-	// adjustAddrs: If it's true paddr == 0 or vaddr == 0 tell the allocator to pick its own addresses. Used for eg svc ControlMemory
-	// isMap: Shows whether this is a reserve operation, that allocates memory and maps it to the addr space, or if it's a map operation,
-	// which just maps memory from paddr to vaddr without hassle. The latter is useful for shared memory mapping, the "map" ControlMemory, op, etc
-	// Returns the vaddr the FCRAM was mapped to or nullopt if allocation failed
-	//std::optional<u32> allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r = true, bool w = true, bool x = true,
-		//bool adjustsAddrs = false, bool isMap = false);
-
-	bool allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x);
+	bool allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x, KernelMemoryTypes::MemoryState state);
 	bool allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x);
-	bool mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x);
-	bool mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x);
+	bool mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x, KernelMemoryTypes::MemoryState state);
+	bool mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x,
+		KernelMemoryTypes::MemoryState oldDstState, KernelMemoryTypes::MemoryState oldSrcState, 
+		KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState);
 	Result::HorizonResult queryMemory(KernelMemoryTypes::MemoryInfo& out, u32 vaddr);
+	Result::HorizonResult testMemoryState(u32 vaddr, s32 pages, KernelMemoryTypes::MemoryState desiredState);
 
 	void copyToVaddr(u32 dstVaddr, const u8* srcHost, s32 size);
 
@@ -264,10 +255,6 @@ private:
 	// TODO: Find out
 	// Returns a pointer to the FCRAM block used for the memory if allocation succeeded
 	u8* mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms);
-
-	// Mirrors the page mapping for "size" bytes starting from sourceAddress, to "size" bytes in destAddress
-	// All of the above must be page-aligned.
-	// void mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size);
 
 	// Backup of the game's CXI partition info, if any
 	std::optional<NCCH> loadedCXI = std::nullopt;

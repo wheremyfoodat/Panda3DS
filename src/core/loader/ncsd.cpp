@@ -6,6 +6,8 @@
 #include "memory.hpp"
 #include "kernel/fcram.hpp"
 
+using namespace KernelMemoryTypes;
+
 bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	printf("Text address = %08X, size = %08X\n", cxi.text.address, cxi.text.size);
 	printf("Rodata address = %08X, size = %08X\n", cxi.rodata.address, cxi.rodata.size);
@@ -66,9 +68,9 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	// TODO: base this off the exheader
 	auto region = FcramRegion::App;
 
-	allocMemory(textAddr, cxi.text.pageCount, region, true, false, true);
-	allocMemory(rodataAddr, cxi.rodata.pageCount, region, true, false, false);
-	allocMemory(dataAddr, cxi.data.pageCount + (bssSize >> 12), region, true, true, false); // Merge data and BSS segments
+	allocMemory(textAddr, cxi.text.pageCount, region, true, false, true, MemoryState::Code);
+	allocMemory(rodataAddr, cxi.rodata.pageCount, region, true, false, false, MemoryState::Code);
+	allocMemory(dataAddr, cxi.data.pageCount + (bssSize >> 12), region, true, true, false, MemoryState::Private); // Merge data and BSS segments
 
 	// Copy .code file to FCRAM
 	copyToVaddr(textAddr, code.data(), textSize);

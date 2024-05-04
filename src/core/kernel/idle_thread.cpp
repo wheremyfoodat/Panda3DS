@@ -16,6 +16,8 @@ idle_thread_main:
 	b idle_thread_main
 */
 
+using namespace KernelMemoryTypes;
+
 static constexpr u8 idleThreadCode[] = {
 	0x00, 0x00, 0xA0, 0xE3,  // mov r0, #0
 	0x00, 0x10, 0xA0, 0xE3,  // mov r1, #0
@@ -30,7 +32,7 @@ void Kernel::setupIdleThread() {
 	// Reserve some memory for the idle thread's code. We map this memory to vaddr 3FC00000 which shouldn't be accessed by applications
 	// We only allocate 4KB (1 page) because our idle code is pretty small
 	constexpr u32 codeAddress = 0x3FC00000;
-	if (!mem.allocMemory(codeAddress, 1, FcramRegion::Base, true, true, false)) Helpers::panic("Failed to setup idle thread");
+	if (!mem.allocMemory(codeAddress, 1, FcramRegion::Base, true, true, false, MemoryState::Locked)) Helpers::panic("Failed to setup idle thread");
 	
 	// Copy idle thread code to the allocated FCRAM
 	mem.copyToVaddr(codeAddress, idleThreadCode, sizeof(idleThreadCode));
