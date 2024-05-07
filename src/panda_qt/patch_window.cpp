@@ -1,7 +1,9 @@
 #include "panda_qt/patch_window.hpp"
 
+#include <QAbstractButton>
 #include <QFileDialog>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <memory>
@@ -64,15 +66,20 @@ PatchWindow::PatchWindow(QWidget* parent) : QWidget(parent, Qt::Window) {
 
 	connect(applyPatchButton, &QPushButton::clicked, this, [this]() {
 		if (inputPath.empty() || patchPath.empty()) {
-			printf("Pls set paths properly");
+			displayMessage(tr("Paths not provided correctly"), tr("Please provide paths for both the input file and the patch file"));
 			return;
 		}
 
-		auto path = QFileDialog::getSaveFileName(this, tr("Select file"), QString::fromStdU16String(inputPath.u16string()), tr("All files (*.*)"));
+		// std::filesystem::path only has += and not + for reasons unknown to humanity
+		auto defaultPath = inputPath.parent_path() / inputPath.stem();
+		defaultPath += "-patched";
+		defaultPath += inputPath.extension();
+
+		auto path = QFileDialog::getSaveFileName(this, tr("Select file"), QString::fromStdU16String(defaultPath.u16string()), tr("All files (*.*)"));
 		std::filesystem::path outputPath = std::filesystem::path(path.toStdU16String());
 
 		if (outputPath.empty()) {
-			printf("Pls set paths properly");
+			displayMessage(tr("No output path"), tr("No path was provided for the output file, no patching was done"));
 			return;
 		}
 
@@ -87,7 +94,7 @@ PatchWindow::PatchWindow(QWidget* parent) : QWidget(parent, Qt::Window) {
 		} else if (extension == ".bps") {
 			patchType = Hips::PatchType::BPS;
 		} else {
-			printf("Unknown patch format\n");
+			displayMessage(tr("Unknown patch format"), tr("Unknown format for patch file. Currently IPS, UPS and BPS are supported"));
 			return;
 		}
 
@@ -96,7 +103,7 @@ PatchWindow::PatchWindow(QWidget* parent) : QWidget(parent, Qt::Window) {
 		IOFile patch(patchPath, "rb");
 
 		if (!input.isOpen() || !patch.isOpen()) {
-			printf("Failed to open input or patch file.\n");
+			displayMessage(tr("Failed to open input files"), tr("Make sure they're in a directory Panda3DS has access to"));
 			return;
 		}
 
@@ -119,5 +126,33 @@ PatchWindow::PatchWindow(QWidget* parent) : QWidget(parent, Qt::Window) {
 			IOFile output(outputPath, "wb");
 			output.writeBytes(bytes.data(), bytes.size());
 		}
+
+		switch (result) {
+			case Hips::Result::Success:
+				displayMessage(
+					tr("Patching Success"), tr("Your file was patched successfully."), QMessageBox::Icon::Information, ":/docs/img/rpog_icon.png"
+				);
+				break;
+
+			case Hips::Result::ChecksumMismatch:
+				displayMessage(
+					tr("Checksum mismatch"),
+					tr("Patch was applied successfully but a checksum mismatch was detected. The input or output files might not be correct")
+				);
+				break;
+
+			default: displayMessage(tr("Patching error"), tr("An error occured while patching")); break;
+		}
 	});
+}
+
+void PatchWindow::PatchWindow::displayMessage(const QString& title, const QString& message, QMessageBox::Icon icon, const char* iconPath) {
+	QMessageBox messageBox(icon, title, message);
+	QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
+
+	if (iconPath != nullptr) {
+		button->setIcon(QIcon(iconPath));
+	}
+
+	messageBox.exec();
 }
