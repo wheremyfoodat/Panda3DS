@@ -17,6 +17,7 @@
 #include "panda_qt/about_window.hpp"
 #include "panda_qt/cheats_window.hpp"
 #include "panda_qt/config_window.hpp"
+#include "panda_qt/patch_window.hpp"
 #include "panda_qt/screen.hpp"
 #include "panda_qt/text_editor.hpp"
 #include "services/hid.hpp"
@@ -90,13 +91,14 @@ class MainWindow : public QMainWindow {
 	std::mutex messageQueueMutex;
 	std::vector<EmulatorMessage> messageQueue;
 
+	QMenuBar* menuBar = nullptr;
 	InputMappings keyboardMappings;
 	ScreenWidget screen;
 	AboutWindow* aboutWindow;
 	ConfigWindow* configWindow;
 	CheatsWindow* cheatsEditor;
 	TextEditorWindow* luaEditor;
-	QMenuBar* menuBar = nullptr;
+	PatchWindow* patchWindow;
 
 	// We use SDL's game controller API since it's the sanest API that supports as many controllers as possible
 	SDL_GameController* gameController = nullptr;
@@ -110,6 +112,7 @@ class MainWindow : public QMainWindow {
 	void dumpRomFS();
 	void openLuaEditor();
 	void openCheatsEditor();
+	void openPatchWindow();
 	void showAboutMenu();
 	void initControllers();
 	void pollControllers();

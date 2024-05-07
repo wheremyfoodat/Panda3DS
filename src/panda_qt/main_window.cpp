@@ -54,11 +54,13 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto dumpRomFSAction = toolsMenu->addAction(tr("Dump RomFS"));
 	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
 	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
+	auto patchWindowAction = toolsMenu->addAction(tr("Open Patch Window"));
 	auto dumpDspFirmware = toolsMenu->addAction(tr("Dump loaded DSP firmware"));
 
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
 	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
 	connect(cheatsEditorAction, &QAction::triggered, this, &MainWindow::openCheatsEditor);
+	connect(patchWindowAction, &QAction::triggered, this, &MainWindow::openPatchWindow);
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
@@ -71,6 +73,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	aboutWindow = new AboutWindow(nullptr);
 	configWindow = new ConfigWindow(this);
 	cheatsEditor = new CheatsWindow(emu, {}, this);
+	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
 
 	auto args = QCoreApplication::arguments();
@@ -293,6 +296,7 @@ void MainWindow::showAboutMenu() {
 
 void MainWindow::openLuaEditor() { luaEditor->show(); }
 void MainWindow::openCheatsEditor() { cheatsEditor->show(); }
+void MainWindow::openPatchWindow() { patchWindow->show(); }
 
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {

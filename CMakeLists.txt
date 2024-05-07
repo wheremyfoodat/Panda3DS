@@ -52,6 +52,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include/kernel)
 include_directories(${FMT_INCLUDE_DIR})
 include_directories(third_party/boost/)
 include_directories(third_party/elfio/)
+include_directories(third_party/hips/include/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cryptopp/)
@@ -448,9 +449,11 @@ if(NOT BUILD_HYDRA_CORE)
 
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
-        )   
+            src/panda_qt/patch_window.cpp src/panda_qt/ellided_label.cpp
+        )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
+            include/panda_qt/patch_window.hpp include/panda_qt/ellided_label.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
