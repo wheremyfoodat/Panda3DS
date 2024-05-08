@@ -2,6 +2,7 @@
 #include <teakra/disassembler.h>
 
 #include <array>
+#include <memory>
 
 #include "capstone.hpp"
 #include "emulator.hpp"
@@ -11,6 +12,8 @@
 extern "C" {
 #include "luv.h"
 }
+
+#include "external_haptics_manager.hpp"
 #endif
 
 void LuaManager::initialize() {
@@ -242,6 +245,80 @@ static int disassembleTeakThunk(lua_State* L) {
 	return 1;
 }
 
+#ifndef __ANDROID__
+// Haptics functions
+
+namespace Haptics {
+	std::unique_ptr<ExternalHapticsManager> hapticsManager = nullptr;
+
+	static int initHapticsThunk(lua_State* L) {
+		if (hapticsManager == nullptr) {
+			hapticsManager.reset(new ExternalHapticsManager());
+		}
+
+		return 0;
+	}
+
+#define HAPTICS_THUNK(func)                \
+	static int func##Thunk(lua_State* L) { \
+		if (hapticsManager != nullptr) {   \
+			hapticsManager->func();        \
+		}                                  \
+                                           \
+		return 0;                          \
+	}
+
+	HAPTICS_THUNK(startScan)
+	HAPTICS_THUNK(stopScan)
+	HAPTICS_THUNK(connect)
+	HAPTICS_THUNK(requestDeviceList)
+	HAPTICS_THUNK(getDevices)
+	HAPTICS_THUNK(getSensors)
+	HAPTICS_THUNK(stopAllDevices)
+	#undef HAPTICS_THUNK
+
+	static int sendScalarThunk(lua_State* L) {
+		const int device = (int)lua_tonumber(L, 1);
+		const auto value = lua_tonumber(L, 2);  
+
+		if (hapticsManager != nullptr) {
+			hapticsManager->sendScalar(device, value);
+		}
+
+		return 2;
+	}
+
+	static int stopDeviceThunk(lua_State* L) {
+		const int device = (int)lua_tonumber(L, 1);
+
+		if (hapticsManager != nullptr) {
+			hapticsManager->stopDevice(device);
+		}
+
+		return 1;
+	}
+
+	// clang-format off
+	static constexpr luaL_Reg functions[] = {
+		{ "initHaptics", initHapticsThunk },
+		{ "startScan", startScanThunk },
+		{ "stopScan", stopScanThunk },
+		{ "connect", connectThunk },
+		{ "requestDeviceList", requestDeviceListThunk },
+		{ "getDevices", getDevicesThunk },
+		{ "getSensors", getSensorsThunk },
+		{ "stopAllDevices", stopAllDevicesThunk },
+		{ "sendScalar", sendScalarThunk },
+		{ "stopDevice", stopDeviceThunk },
+	};
+	// clang-format on
+
+	void registerFunctions(lua_State* L) {
+		luaL_register(L, "HAPTICS", functions);
+	}
+}  // namespace Haptics
+#endif
+
 // clang-format off
 static constexpr luaL_Reg functions[] = {
 	{ "__read8", read8Thunk },
@@ -310,6 +387,20 @@ void LuaManager::initializeThunks() {
 		ButtonLeft = __ButtonLeft,
 		ButtonRight= __ButtonRight,
 	}
+
+	Buzz = {
+		initHaptics = function() HAPTICS.initHaptics() end,
+		startScan = function() HAPTICS.startScan() end,
+		stopScan = function() HAPTICS.stopScan() end,
+		connect = function() HAPTICS.connect() end,
+		requestDeviceList = function() HAPTICS.requestDeviceList() end,
+		getDevices = function() HAPTICS.getDevices() end,
+		getSensors = function() HAPTICS.getSensors() end,
+		stopAllDevices = function() HAPTICS.stopAllDevices() end,
+
+		sendScalar = function(device, value) HAPTICS.sendScalar(device, value) end,
+		stopDevice = function(device) HAPTICS.stopDevice(device) end,
+	}
 )";
 
 	auto addIntConstant = [&]<typename T>(T x, const char* name) {
@@ -318,6 +409,8 @@ void LuaManager::initializeThunks() {
 	};
 
 	luaL_register(L, "GLOBALS", functions);
+	Haptics::registerFunctions(L);
+
 	// Add values for event enum
 	addIntConstant(LuaEvent::Frame, "__Frame");
 
