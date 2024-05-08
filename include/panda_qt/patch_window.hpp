@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <filesystem>
 
-#include "panda_qt/ellided_label.hpp"
+#include "panda_qt/elided_label.hpp"
 
 class PatchWindow final : public QWidget {
 	Q_OBJECT
