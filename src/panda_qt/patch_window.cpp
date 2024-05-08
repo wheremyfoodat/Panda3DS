@@ -20,7 +20,7 @@ PatchWindow::PatchWindow(QWidget* parent) : QWidget(parent, Qt::Window) {
 	QHBoxLayout* inputLayout = new QHBoxLayout;
 	QLabel* inputText = new QLabel(tr("Select input file"));
 	QPushButton* inputButton = new QPushButton(tr("Select"));
-	inputPathLabel = new EllidedLabel("");
+	inputPathLabel = new ElidedLabel("");
 	inputPathLabel->setFixedWidth(200);
 
 	inputLayout->addWidget(inputText);
@@ -32,7 +32,7 @@ PatchWindow::PatchWindow(QWidget* parent) : QWidget(parent, Qt::Window) {
 	QHBoxLayout* patchLayout = new QHBoxLayout;
 	QLabel* patchText = new QLabel(tr("Select patch file"));
 	QPushButton* patchButton = new QPushButton(tr("Select"));
-	patchPathLabel = new EllidedLabel("");
+	patchPathLabel = new ElidedLabel("");
 	patchPathLabel->setFixedWidth(200);
 
 	patchLayout->addWidget(patchText);

@@ -4,11 +4,11 @@
 #include <QString>
 #include <QWidget>
 
-class EllidedLabel : public QLabel {
+class ElidedLabel : public QLabel {
 	Q_OBJECT
   public:
-	explicit EllidedLabel(Qt::TextElideMode elideMode = Qt::ElideLeft, QWidget* parent = nullptr);
-	explicit EllidedLabel(QString text, Qt::TextElideMode elideMode = Qt::ElideLeft, QWidget* parent = nullptr);
+	explicit ElidedLabel(Qt::TextElideMode elideMode = Qt::ElideLeft, QWidget* parent = nullptr);
+	explicit ElidedLabel(QString text, Qt::TextElideMode elideMode = Qt::ElideLeft, QWidget* parent = nullptr);
 	void setText(QString text);
 
   protected:
