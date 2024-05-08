@@ -1,8 +1,9 @@
-#include <nlohmann/json.hpp>
 #include "helperClasses.h"
+#include "json.hpp"
+
+#include <iostream>
 #include <string>
 #include <vector>
-#include <iostream>
 
 using json = nlohmann::json;
 
