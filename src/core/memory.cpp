@@ -58,11 +58,13 @@ void Memory::reset() {
 
 	// Map DSP RAM as R/W at [0x1FF00000, 0x1FF7FFFF]
 	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize;               // Number of DSP RAM pages
-	constexpr u32 initialPage = VirtualAddrs::DSPMemStart / pageSize;  // First page of DSP RAM in the virtual address space
 
 	u32 vaddr = VirtualAddrs::DSPMemStart;
-	u32 paddr = vaddr;
-	mapPhysicalMemory(vaddr, paddr, dspRamPages, true, true, false, MemoryState::Static);
+	u32 paddr = PhysicalAddrs::DSP_RAM;
+
+	Operation op{ .newState = MemoryState::Static, .r = true, .w = true, .changeState = true, .changePerms = true };
+	changeMemoryState(vaddr, dspRamPages, op);
+	mapPhysicalMemory(vaddr, paddr, dspRamPages, true, true, false);
 
 	// Later adjusted based on ROM header when possible
 	region = Regions::USA;
@@ -285,42 +287,10 @@ std::string Memory::readString(u32 address, u32 maxSize) {
 // thanks to the New 3DS having more FCRAM
 u32 Memory::getLinearHeapVaddr() { return (kernelVersion < 0x22C) ? VirtualAddrs::LinearHeapStartOld : VirtualAddrs::LinearHeapStartNew; }
 
-bool Memory::allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x, MemoryState state) {
-	auto res = testMemoryState(vaddr, pages, MemoryState::Free);
-	if (res.isFailure()) return false;
-
-	FcramBlockList memList;
-	fcramManager.alloc(memList, pages, region, false);
-
-	bool succeeded = true;
-
-	for (auto it = memList.begin(); it != memList.end(); it++) {
-		succeeded = mapPhysicalMemory(vaddr, it->paddr, it->pages, r, w, x, state);
-		if (!succeeded) break;
-		vaddr += it->pages << 12;
-	}
-
-	assert(succeeded);
-	return succeeded;
-}
-
-bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x) {
-	if (inVaddr) Helpers::panic("inVaddr specified for linear allocation!");
-
-	FcramBlockList memList;
-	fcramManager.alloc(memList, pages, region, true);
-
-	u32 paddr = memList.begin()->paddr;
-	u32 vaddr = getLinearHeapVaddr() + paddr;
-	if (!mapPhysicalMemory(vaddr, paddr, pages, r, w, x, MemoryState::Continuous)) Helpers::panic("Failed to map linear memory!");
-
-	outVaddr = vaddr;
-	return true;
-}
-
-bool Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x, MemoryState state) {
+void Memory::changeMemoryState(u32 vaddr, s32 pages, const Operation& op) {
 	assert(!(vaddr & 0xFFF));
-	assert(!(paddr & 0xFFF));
+
+	if (!op.changePerms && !op.changeState) Helpers::panic("Invalid op passed to changeMemoryState!");
 
 	bool blockFound = false;
 
@@ -334,13 +304,12 @@ bool Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, 
 
 		if (!(reqStart >= blockStart && reqEnd <= blockEnd)) continue;
 
-		auto oldState = it->state;
-
 		// Now that the block has been found, fill it with the necessary info
+		auto oldState = it->state;
 		it->baseAddr = reqStart;
 		it->pages = pages;
-		it->perms = (r ? PERMISSION_R : 0) | (w ? PERMISSION_W : 0) | (x ? PERMISSION_X : 0);
-		it->state = state; // TODO: make this a function parameter
+		if (op.changePerms) it->perms = (op.r ? PERMISSION_R : 0) | (op.w ? PERMISSION_W : 0) | (op.x ? PERMISSION_X : 0);
+		if (op.changeState) it->state = op.newState;
 
 		// If the requested memory region is smaller than the block found, the block must be split
 		if (blockStart < reqStart) {
@@ -354,58 +323,114 @@ bool Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, 
 			memoryInfo.insert(itAfter, endBlock);
 		}
 
-		// TODO: if the current block is adjacent to blocks with the same state, merge them
-
 		blockFound = true;
 		break;
 	}
 
-	if (!blockFound) Helpers::panic("Can't map physical memory!");
+	if (!blockFound) Helpers::panic("Unable to find block in changeMemoryState!");
 
-	// Fill the paddr table as well as the host pointer tables
-	// If the memory region is free, ignore the paddr, otherwise use it
-	if (state == MemoryState::Free) {
-		for (int i = 0; i < pages; i++) {
-			u32 index = (vaddr >> 12) + i;
-			paddrTable[index] = 0;
-			readTable[index] = 0;
-			writeTable[index] = 0;
+	// Merge all blocks with the same state and permissions
+	for (auto it = memoryInfo.begin(); it != memoryInfo.end();) {
+		auto next = std::next(it);
+		if (next == memoryInfo.end()) break;
+
+		if (it->state != next->state || it->perms != next->perms) {
+			it++;
+			continue;
 		}
+
+		next->baseAddr = it->baseAddr;
+		next->pages += it->pages;
+		it = memoryInfo.erase(it);
 	}
-	else {
-		// TODO: make this a separate function
-		u8* hostPtr = nullptr;
-		if (paddr < FCRAM_SIZE) {
-			hostPtr = fcram + paddr; // FIXME
-		}
-		else if (paddr >= VirtualAddrs::DSPMemStart && paddr < VirtualAddrs::DSPMemStart + DSP_RAM_SIZE) {
-			hostPtr = dspRam + (paddr - VirtualAddrs::DSPMemStart);
-		}
+}
 
-		for (int i = 0; i < pages; i++) {
-			u32 index = (vaddr >> 12) + i;
-			paddrTable[index] = paddr + (i << 12);
-			if (r) readTable[index] = (uintptr_t)(hostPtr + (i << 12));
-			if (w) writeTable[index] = (uintptr_t)(hostPtr + (i << 12));
-		}
+void Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x) {
+	assert(!(vaddr & 0xFFF));
+	assert(!(paddr & 0xFFF));
+
+	// TODO: make this a separate function
+	u8* hostPtr = nullptr;
+	if (paddr < FCRAM_SIZE) {
+		hostPtr = fcram + paddr; // FIXME
+	}
+	else if (paddr >= VirtualAddrs::DSPMemStart && paddr < VirtualAddrs::DSPMemStart + DSP_RAM_SIZE) {
+		hostPtr = dspRam + (paddr - VirtualAddrs::DSPMemStart);
+	}
+
+	for (int i = 0; i < pages; i++) {
+		u32 index = (vaddr >> 12) + i;
+		paddrTable[index] = paddr + (i << 12);
+		if (r) readTable[index] = (uintptr_t)(hostPtr + (i << 12));
+		else readTable[index] = 0;
+
+		if (w) writeTable[index] = (uintptr_t)(hostPtr + (i << 12));
+		else writeTable[index] = 0;
+	}
+}
+
+void Memory::unmapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages) {
+	for (int i = 0; i < pages; i++) {
+		u32 index = (vaddr >> 12) + i;
+		paddrTable[index] = 0;
+		readTable[index] = 0;
+		writeTable[index] = 0;
+	}
+}
+
+bool Memory::allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x, MemoryState state) {
+	auto res = testMemoryState(vaddr, pages, MemoryState::Free);
+	if (res.isFailure()) return false;
+
+	FcramBlockList memList;
+	fcramManager.alloc(memList, pages, region, false);
+
+	for (auto it = memList.begin(); it != memList.end(); it++) {
+		Operation op{ .newState = state, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true };
+		changeMemoryState(vaddr, it->pages, op);
+		mapPhysicalMemory(vaddr, it->paddr, it->pages, r, w, x);
+		vaddr += it->pages << 12;
 	}
 
 	return true;
 }
 
+bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x) {
+	if (inVaddr) Helpers::panic("inVaddr specified for linear allocation!");
+
+	FcramBlockList memList;
+	fcramManager.alloc(memList, pages, region, true);
+
+	u32 paddr = memList.begin()->paddr;
+	u32 vaddr = getLinearHeapVaddr() + paddr;
+	Operation op{ .newState = MemoryState::Continuous, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true };
+	changeMemoryState(vaddr, pages, op);
+	mapPhysicalMemory(vaddr, paddr, pages, r, w, x);
+
+	outVaddr = vaddr;
+	return true;
+}
+
 bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x, MemoryState oldDstState, MemoryState oldSrcState,
 	MemoryState newDstState, MemoryState newSrcState) {
-	// The regions must have the specified state
+	// Check that the regions have the specified state
+	// TODO: check src perms
 	auto res = testMemoryState(srcVaddr, pages, oldSrcState);
 	if (res.isFailure()) return false;
 
 	res = testMemoryState(dstVaddr, pages, oldDstState);
 	if (res.isFailure()) return false;
 
+	// Change the virtual memory state for both regions 
+	Operation srcOp{ .newState = newSrcState, .changeState = true };
+	changeMemoryState(srcVaddr, pages, srcOp);
+
+	Operation dstOp{ .newState = newDstState, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true };
+	changeMemoryState(dstVaddr, pages, dstOp);
+
 	// Get a list of physical blocks in the source region
 	FcramBlockList physicalList;
 
-	u32 oldSrcVaddr = srcVaddr;
 	s32 srcPages = pages;
 	for (auto& alloc : memoryInfo) {
 		u32 blockStart = alloc.baseAddr;
@@ -426,15 +451,10 @@ bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, boo
 
 	if (srcPages != 0) Helpers::panic("Unable to find virtual pages to map!");
 
-	// Map each physical block
-	// FIXME: this is O(n^2)...
-	srcVaddr = oldSrcVaddr;
+	// Map or unmap each physical block
 	for (auto& block : physicalList) {
-		// TODO: how do permissions on the source side work?
-		if (!mapPhysicalMemory(srcVaddr, block.paddr, block.pages, true, true, false, newSrcState)) Helpers::panic("Failed to map src virtual memory!");
-		if (!mapPhysicalMemory(dstVaddr, block.paddr, block.pages, r, w, x, newDstState)) Helpers::panic("Failed to map dst virtual memory!");
-
-		srcVaddr += block.pages << 12;
+		if (newDstState == MemoryState::Free) unmapPhysicalMemory(dstVaddr, block.paddr, block.pages);
+		else mapPhysicalMemory(dstVaddr, block.paddr, block.pages, r, w, x);
 		dstVaddr += block.pages << 12;
 	}
 
@@ -495,10 +515,9 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 			bool w = myPerms & 0b010;
 			bool x = myPerms & 0b100;
 
-			if (!mapPhysicalMemory(vaddr, paddr, size >> 12, true, true, false, MemoryState::Shared)) {
-				Helpers::panic("Memory::mapSharedMemory: Failed to map shared memory block");
-				return nullptr;
-			}
+			Operation op{ .newState = MemoryState::Shared, .r = r, .w = x, .x = x, .changeState = true, .changePerms = true };
+			changeMemoryState(vaddr, size >> 12, op);
+			mapPhysicalMemory(vaddr, paddr, size >> 12, r, w, x);
 
 			e.mapped = true;
 			return &fcram[paddr];

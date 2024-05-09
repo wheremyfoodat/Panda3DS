@@ -106,6 +106,14 @@ class KFcram;
 enum class FcramRegion;
 
 class Memory {
+	// Used internally by changeMemoryState
+	struct Operation {
+		KernelMemoryTypes::MemoryState newState = KernelMemoryTypes::MemoryState::Free;
+		bool r = false, w = false, x = false;
+		bool changeState = false;
+		bool changePerms = false;
+	};
+
 	u8* fcram;
 	u8* dspRam;  // Provided to us by Audio
 	u8* vram;    // Provided to the memory class by the GPU class
@@ -178,6 +186,10 @@ private:
 
 	static constexpr std::array<u8, 6> MACAddress = {0x40, 0xF4, 0x07, 0xFF, 0xFF, 0xEE};
 
+	void changeMemoryState(u32 vaddr, s32 pages, const Operation& op);
+	void mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x);
+	void unmapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages);
+
   public:
 	u16 kernelVersion = 0;
 
@@ -241,7 +253,6 @@ private:
 
 	bool allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x, KernelMemoryTypes::MemoryState state);
 	bool allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x);
-	bool mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x, KernelMemoryTypes::MemoryState state);
 	bool mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x,
 		KernelMemoryTypes::MemoryState oldDstState, KernelMemoryTypes::MemoryState oldSrcState, 
 		KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState);

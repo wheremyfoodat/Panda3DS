@@ -70,7 +70,8 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 
 	allocMemory(textAddr, cxi.text.pageCount, region, true, false, true, MemoryState::Code);
 	allocMemory(rodataAddr, cxi.rodata.pageCount, region, true, false, false, MemoryState::Code);
-	allocMemory(dataAddr, cxi.data.pageCount + (bssSize >> 12), region, true, true, false, MemoryState::Private); // Merge data and BSS segments
+	allocMemory(dataAddr, cxi.data.pageCount, region, true, true, false, MemoryState::Private);
+	allocMemory(dataAddr + (cxi.data.pageCount << 12), bssSize >> 12, region, true, true, false, MemoryState::Private);
 
 	// Copy .code file to FCRAM
 	copyToVaddr(textAddr, code.data(), textSize);
