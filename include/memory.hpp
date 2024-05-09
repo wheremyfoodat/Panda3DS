@@ -102,6 +102,7 @@ namespace KernelMemoryTypes {
 	};
 }
 
+struct FcramBlock;
 class KFcram;
 enum class FcramRegion;
 
@@ -187,6 +188,7 @@ private:
 	static constexpr std::array<u8, 6> MACAddress = {0x40, 0xF4, 0x07, 0xFF, 0xFF, 0xEE};
 
 	void changeMemoryState(u32 vaddr, s32 pages, const Operation& op);
+	void queryPhysicalBlocks(std::list<FcramBlock>& outList, u32 vaddr, s32 pages);
 	void mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x);
 	void unmapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages);
 
@@ -256,6 +258,7 @@ private:
 	bool mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x,
 		KernelMemoryTypes::MemoryState oldDstState, KernelMemoryTypes::MemoryState oldSrcState, 
 		KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState);
+	void changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x);
 	Result::HorizonResult queryMemory(KernelMemoryTypes::MemoryInfo& out, u32 vaddr);
 	Result::HorizonResult testMemoryState(u32 vaddr, s32 pages, KernelMemoryTypes::MemoryState desiredState);
 

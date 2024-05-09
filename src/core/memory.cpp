@@ -346,6 +346,28 @@ void Memory::changeMemoryState(u32 vaddr, s32 pages, const Operation& op) {
 	}
 }
 
+void Memory::queryPhysicalBlocks(FcramBlockList& outList, u32 vaddr, s32 pages) {
+	s32 srcPages = pages;
+	for (auto& alloc : memoryInfo) {
+		u32 blockStart = alloc.baseAddr;
+		u32 blockEnd = alloc.end();
+
+		if (!(vaddr >= blockStart && vaddr < blockEnd)) continue;
+
+		s32 blockPaddr = paddrTable[vaddr >> 12];
+		s32 blockPages = alloc.pages - ((vaddr - blockStart) >> 12);
+		blockPages = std::min(srcPages, blockPages);
+		FcramBlock physicalBlock(blockPaddr, blockPages);
+		outList.push_back(physicalBlock);
+
+		vaddr += blockPages << 12;
+		srcPages -= blockPages;
+		if (srcPages == 0) break;
+	}
+
+	if (srcPages != 0) Helpers::panic("Unable to find virtual pages to map!");
+}
+
 void Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x) {
 	assert(!(vaddr & 0xFFF));
 	assert(!(paddr & 0xFFF));
@@ -431,26 +453,7 @@ bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, boo
 
 	// Get a list of physical blocks in the source region
 	FcramBlockList physicalList;
-
-	s32 srcPages = pages;
-	for (auto& alloc : memoryInfo) {
-		u32 blockStart = alloc.baseAddr;
-		u32 blockEnd = alloc.end();
-
-		if (!(srcVaddr >= blockStart && srcVaddr < blockEnd)) continue;
-
-		s32 blockPaddr = paddrTable[srcVaddr >> 12];
-		s32 blockPages = alloc.pages - ((srcVaddr - blockStart) >> 12);
-		blockPages = std::min(srcPages, blockPages);
-		FcramBlock physicalBlock(blockPaddr, blockPages);
-		physicalList.push_back(physicalBlock);
-
-		srcVaddr += blockPages << 12;
-		srcPages -= blockPages;
-		if (srcPages == 0) break;
-	}
-
-	if (srcPages != 0) Helpers::panic("Unable to find virtual pages to map!");
+	queryPhysicalBlocks(physicalList, srcVaddr, pages);
 
 	// Map or unmap each physical block
 	for (auto& block : physicalList) {
@@ -460,6 +463,20 @@ bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, boo
 	}
 
 	return true;
+}
+
+void Memory::changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x) {
+	Operation op{ .r = r, .w = w, .x = x, .changePerms = true };
+	changeMemoryState(vaddr, pages, op);
+
+	// Now that permissions have been changed, update the corresponding host tables
+	FcramBlockList physicalList;
+	queryPhysicalBlocks(physicalList, vaddr, pages);
+
+	for (auto& block : physicalList) {
+		mapPhysicalMemory(vaddr, block.paddr, block.pages, r, w, x);
+		vaddr += block.pages;
+	}
 }
 
 Result::HorizonResult Memory::queryMemory(MemoryInfo& out, u32 vaddr) {

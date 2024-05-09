@@ -94,7 +94,15 @@ void Kernel::controlMemory() {
 			break;
 
 		case Operation::Protect:
-			Helpers::warn("Ignoring mprotect! Hope nothing goes wrong but if the game accesses invalid memory or crashes then we prolly need to implement this\n");
+			// Official kernel has an internal state bit to indicate that the region's permissions may be changed
+			// But this should account for all cases
+			if (!mem.testMemoryState(addr0, pages, MemoryState::Private) &&
+				!mem.testMemoryState(addr0, pages, MemoryState::Alias) &&
+				!mem.testMemoryState(addr0, pages, MemoryState::Aliased) &&
+				!mem.testMemoryState(addr0, pages, MemoryState::AliasCode)) Helpers::panic("Tried to mprotect invalid region!");
+
+			mem.changePermissions(addr0, pages, r, w, false);
+			regs[1] = addr0;
 			break;
 
 		default: Helpers::warn("ControlMemory: unknown operation %X\n", operation); break;
