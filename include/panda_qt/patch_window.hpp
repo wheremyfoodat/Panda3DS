@@ -26,6 +26,6 @@ class PatchWindow final : public QWidget {
 	std::filesystem::path inputPath = "";
 	std::filesystem::path patchPath = "";
 
-	EllidedLabel* inputPathLabel = nullptr;
-	EllidedLabel* patchPathLabel = nullptr;
+	ElidedLabel* inputPathLabel = nullptr;
+	ElidedLabel* patchPathLabel = nullptr;
 };
