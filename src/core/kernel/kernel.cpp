@@ -140,9 +140,6 @@ void Kernel::reset() {
 	threadCount = 0;
 	aliveThreadCount = 0;
 
-	// TODO: These values should be derived from the memory type in an app's exheader
-	fcramManager.reset(Memory::FCRAM_SIZE, Memory::FCRAM_APPLICATION_SIZE, Memory::FCRAM_SYSTEM_SIZE, Memory::FCRAM_BASE_SIZE);
-
 	for (auto& t : threads) {
 		t.status = ThreadStatus::Dead;
 		t.waitList.clear();

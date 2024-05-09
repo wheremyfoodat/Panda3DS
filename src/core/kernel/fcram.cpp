@@ -7,6 +7,7 @@ void KFcram::Region::reset(u32 start, size_t size) {
 	freePages = pages;
 
 	Block initialBlock(pages, 0);
+	blocks.clear();
 	blocks.push_back(initialBlock);
 }
 

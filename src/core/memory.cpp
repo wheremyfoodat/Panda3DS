@@ -306,6 +306,7 @@ void Memory::changeMemoryState(u32 vaddr, s32 pages, const Operation& op) {
 
 		// Now that the block has been found, fill it with the necessary info
 		auto oldState = it->state;
+		u32 oldPerms = it->perms;
 		it->baseAddr = reqStart;
 		it->pages = pages;
 		if (op.changePerms) it->perms = (op.r ? PERMISSION_R : 0) | (op.w ? PERMISSION_W : 0) | (op.x ? PERMISSION_X : 0);
@@ -313,13 +314,13 @@ void Memory::changeMemoryState(u32 vaddr, s32 pages, const Operation& op) {
 
 		// If the requested memory region is smaller than the block found, the block must be split
 		if (blockStart < reqStart) {
-			MemoryInfo startBlock(blockStart, (reqStart - blockStart) >> 12, 0, oldState);
+			MemoryInfo startBlock(blockStart, (reqStart - blockStart) >> 12, oldPerms, oldState);
 			memoryInfo.insert(it, startBlock);
 		}
 
 		if (reqEnd < blockEnd) {
 			auto itAfter = std::next(it);
-			MemoryInfo endBlock(reqEnd, (blockEnd - reqEnd) >> 12, 0, oldState);
+			MemoryInfo endBlock(reqEnd, (blockEnd - reqEnd) >> 12, oldPerms, oldState);
 			memoryInfo.insert(itAfter, endBlock);
 		}
 
