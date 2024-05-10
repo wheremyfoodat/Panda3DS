@@ -89,8 +89,15 @@ void Kernel::controlMemory() {
 		}
 
 		case Operation::Map:
+			// Official kernel only allows Private regions to be mapped to Free regions. An Alias or Aliased region cannot be mapped again
 			if (!mem.mapVirtualMemory(addr0, addr1, pages, r, w, false, MemoryState::Free, MemoryState::Private,
 				MemoryState::Alias, MemoryState::Aliased)) Helpers::panic("ControlMemory: Failed to map memory");
+			break;
+
+		case Operation::Unmap:
+			// The same as a Map operation, except in reverse
+			if (!mem.mapVirtualMemory(addr0, addr1, pages, false, false, false, MemoryState::Alias, MemoryState::Aliased,
+				MemoryState::Free, MemoryState::Private)) Helpers::panic("ControlMemory: Failed to unmap memory");
 			break;
 
 		case Operation::Protect:

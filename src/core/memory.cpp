@@ -426,6 +426,9 @@ bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegio
 
 	u32 paddr = memList.begin()->paddr;
 	u32 vaddr = getLinearHeapVaddr() + paddr;
+	auto res = testMemoryState(vaddr, pages, MemoryState::Free);
+	if (res.isFailure()) Helpers::panic("Unable to map linear allocation (vaddr:%08X pages:%08X)", vaddr, pages);
+
 	Operation op{ .newState = MemoryState::Continuous, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true };
 	changeMemoryState(vaddr, pages, op);
 	mapPhysicalMemory(vaddr, paddr, pages, r, w, x);
