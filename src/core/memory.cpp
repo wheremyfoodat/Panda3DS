@@ -37,10 +37,10 @@ void Memory::reset() {
 		paddrTable[i] = 0;
 	}
 
-	// Map 4 KB of FCRAM for each thread
-	// TODO: the region should be taken from the exheader
-	// TODO: each thread should only have 512 bytes - an FCRAM page should account for 8 threads
-	assert(allocMemory(VirtualAddrs::TLSBase, appResourceLimits.maxThreads, FcramRegion::App, true, true, false, MemoryState::Locked));
+	// Allocate 512 bytes of TLS for each thread. Since the smallest allocatable unit is 4 KB, that means allocating one page for every 8 threads
+	// Note that TLS is always allocated in the Base region
+	s32 tlsPages = (appResourceLimits.maxThreads + 7) >> 3;
+	allocMemory(VirtualAddrs::TLSBase, tlsPages, FcramRegion::Base, true, true, false, MemoryState::Locked);
 
 	// Initialize shared memory blocks and reserve memory for them
 	for (auto& e : sharedMemBlocks) {

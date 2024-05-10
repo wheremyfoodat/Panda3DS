@@ -47,9 +47,9 @@ namespace VirtualAddrs {
 		LinearHeapStartNew = 0x30000000,
 		LinearHeapEndNew = 0x40000000,
 
-		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x1000, and so on
+		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x200, and so on
 		TLSBase = 0x1FF82000,
-		TLSSize = 0x1000,
+		TLSSize = 0x200,
 
 		VramStart = 0x1F000000,
 		VramSize = 0x00600000,
