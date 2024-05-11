@@ -27,12 +27,6 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	// Round up the size of the CXI stack size to a page (4KB) boundary, as the OS can only allocate memory this way
 	u32 stackSize = (cxi.stackSize + pageSize - 1) & -pageSize;
 
-	if (stackSize > 512_KB) {
-		// TODO: Figure out the actual max stack size
-		Helpers::warn("CXI stack size is %08X which seems way too big. Clamping to 512KB", stackSize);
-		stackSize = 512_KB;
-	}
-
 	// Allocate stack
 	if (!allocateMainThreadStack(stackSize)) {
 		// Should be unreachable
