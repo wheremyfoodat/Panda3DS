@@ -22,6 +22,7 @@ namespace CROHeader {
 		NameOffset = 0x084,
 		NextCRO = 0x088,
 		PrevCRO = 0x08C,
+		FileSize = 0x090,
 		OnUnresolved = 0x0AC,
 		CodeOffset = 0x0B0,
 		DataOffset = 0x0B8,
@@ -175,6 +176,10 @@ public:
 
 	void setPrevCRO(u32 prevCRO) {
 		mem.write32(croPointer + CROHeader::PrevCRO, prevCRO);
+	}
+
+	u32 getSize() {
+		return mem.read32(croPointer + CROHeader::FileSize);
 	}
 
 	void write32(u32 addr, u32 value) {
@@ -1400,7 +1405,12 @@ void LDRService::unloadCRO(u32 messagePointer) {
 		Helpers::panic("Failed to unrebase CRO");
 	}
 
-	// TODO: unmap the CRO from the pagetable
+	u32 size = cro.getSize();
+	bool succeeded = mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, false, false, false,
+		MemoryState::Locked, MemoryState::AliasCode, MemoryState::Free, MemoryState::Private);
+	if (!succeeded) {
+		Helpers::panic("Failed to unmap CRO");
+	}
 
 	kernel.clearInstructionCache();
 
