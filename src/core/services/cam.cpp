@@ -343,7 +343,7 @@ void CAMService::startCapture(u32 messagePointer) {
 
 	if (port.isValid()) {
 		for (int i : port.getPortIndices()) {
-			auto& event = ports[port.getSingleIndex()].receiveEvent;
+			auto& event = ports[i].receiveEvent;
 
 			// Until we properly implement cameras, immediately signal the receive event
 			if (event.has_value()) {
