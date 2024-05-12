@@ -144,6 +144,8 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		compileTEV(ret, i, regs);
 	}
 
+	applyAlphaTest(ret, regs);
+
 	ret += "fragColor = combinerOutput;\n";
 	ret += "}"; // End of main function
 	ret += "\n\n\n\n\n\n\n\n\n\n\n\n\n";
@@ -352,4 +354,26 @@ void FragmentGenerator::getAlphaOperation(std::string& shader, TexEnvConfig::Ope
 			shader += "1.0";
 			break;
 	}
+}
+
+void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs) {
+	const u32 alphaConfig = regs[InternalRegs::AlphaTestConfig];
+	// Alpha test disabled
+	if (Helpers::getBit<0>(alphaConfig) == 0) {
+		return;
+	}
+
+	const auto function = static_cast<CompareFunction>(Helpers::getBits<4, 3>(alphaConfig));
+
+	shader += "if (";
+	switch (function) {
+		case CompareFunction::Never: shader += "true"; break;
+		case CompareFunction::Always: shader += "false"; break;
+		default:
+			Helpers::warn("Unimplemented alpha test function");
+			shader += "false";
+			break;
+	}
+
+	shader += ") { discard; }\n";
 }

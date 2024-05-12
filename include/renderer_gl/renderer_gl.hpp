@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "PICA/float_types.hpp"
+#include "PICA/pica_frag_config.hpp"
 #include "PICA/pica_hash.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
@@ -20,32 +21,6 @@
 
 // More circular dependencies!
 class GPU;
-
-namespace PICA {
-	struct FragmentConfig {
-		u32 texUnitConfig;
-		u32 texEnvUpdateBuffer;
-
-		// TODO: This should probably be a uniform
-		u32 texEnvBufferColor;
-
-		// There's 6 TEV stages, and each one is configured via 5 word-sized registers
-		std::array<u32, 5 * 6> tevConfigs;
-
-		// Hash function and equality operator required by std::unordered_map
-		bool operator==(const FragmentConfig& config) const {
-			return std::memcmp(this, &config, sizeof(FragmentConfig)) == 0;
-		}
-	};
-}  // namespace PICA
-
-// Override std::hash for our fragment config class
-template <>
-struct std::hash<PICA::FragmentConfig> {
-	std::size_t operator()(const PICA::FragmentConfig& config) const noexcept {
-		return PICAHash::computeHash((const char*)&config, sizeof(config));
-	}
-};
 
 class RendererGL final : public Renderer {
 	GLStateManager gl = {};

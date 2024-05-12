@@ -796,22 +796,27 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 
 OpenGL::Program& RendererGL::getSpecializedShader() {
 	PICA::FragmentConfig fsConfig;
-	fsConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
-	fsConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
-	fsConfig.texEnvBufferColor = regs[InternalRegs::TexEnvBufferColor];
+	auto& outConfig = fsConfig.outConfig;
+	auto& texConfig = fsConfig.texConfig;
+
+	auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
+	auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
+	outConfig.alphaTestFunction = (alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
+
+	texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
+	texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
+	texConfig.texEnvBufferColor = 0;
 
 	// Set up TEV stages
-	std::memcpy(&fsConfig.tevConfigs[0 * 5], &regs[InternalRegs::TexEnv0Source], 5 * sizeof(u32));
-	std::memcpy(&fsConfig.tevConfigs[1 * 5], &regs[InternalRegs::TexEnv1Source], 5 * sizeof(u32));
-	std::memcpy(&fsConfig.tevConfigs[2 * 5], &regs[InternalRegs::TexEnv2Source], 5 * sizeof(u32));
-	std::memcpy(&fsConfig.tevConfigs[3 * 5], &regs[InternalRegs::TexEnv3Source], 5 * sizeof(u32));
-	std::memcpy(&fsConfig.tevConfigs[4 * 5], &regs[InternalRegs::TexEnv4Source], 5 * sizeof(u32));
-	std::memcpy(&fsConfig.tevConfigs[5 * 5], &regs[InternalRegs::TexEnv5Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[0 * 5], &regs[InternalRegs::TexEnv0Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[1 * 5], &regs[InternalRegs::TexEnv1Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[2 * 5], &regs[InternalRegs::TexEnv2Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[3 * 5], &regs[InternalRegs::TexEnv3Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[4 * 5], &regs[InternalRegs::TexEnv4Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[5 * 5], &regs[InternalRegs::TexEnv5Source], 5 * sizeof(u32));
 
 	OpenGL::Program& program = shaderCache[fsConfig];
 	if (!program.exists()) {
-		printf("Creating specialized shader\n");
-
 		std::string vs = fragShaderGen.getVertexShader(regs);
 		std::string fs = fragShaderGen.generate(regs);
 		std::cout << vs << "\n\n" << fs << "\n";

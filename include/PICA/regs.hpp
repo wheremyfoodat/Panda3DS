@@ -345,6 +345,17 @@ namespace PICA {
 		GeometryPrimitive = 3,
 	};
 
+	enum class CompareFunction : u32 {
+		Never = 0,
+		Always = 1,
+		Equal = 2,
+		NotEqual = 3,
+		Less = 4,
+		LessOrEqual = 5,
+		Greater = 6,
+		GreaterOrEqual = 7,
+	};
+
 	struct TexEnvConfig {
 		enum class Source : u8 {
 			PrimaryColor = 0x0,
