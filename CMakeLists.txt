@@ -192,7 +192,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
-                      src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp
+                      src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp src/core/PICA/shader_gen_glsl.cpp
 )
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
@@ -239,7 +239,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
-                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
+                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp include/PICA/shader_gen.hpp
                  include/audio/dsp_core.hpp include/audio/null_core.hpp include/audio/teakra_core.hpp
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp
