@@ -430,36 +430,36 @@ namespace OpenGL {
         glDispatchCompute(groupsX, groupsY, groupsZ);
     }
 
-    struct VertexBuffer {
-        GLuint m_handle = 0;
+	struct VertexBuffer {
+		GLuint m_handle = 0;
 
-        void create() {
-            if (m_handle == 0) {
-                glGenBuffers(1, &m_handle);
-            }
-        }
+		void create() {
+			if (m_handle == 0) {
+				glGenBuffers(1, &m_handle);
+			}
+		}
 
-        void createFixedSize(GLsizei size, GLenum usage = GL_DYNAMIC_DRAW) {
-            create();
-            bind();
-            glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
-        }
+		void createFixedSize(GLsizei size, GLenum usage = GL_DYNAMIC_DRAW) {
+			create();
+			bind();
+			glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
+		}
 
-        VertexBuffer(bool shouldCreate = false) {
-            if (shouldCreate) {
-                create();
-            }
-        }
+		VertexBuffer(bool shouldCreate = false) {
+			if (shouldCreate) {
+				create();
+			}
+		}
 
 #ifdef OPENGL_DESTRUCTORS
-        ~VertexBuffer() { free(); }
-#endif  
-        GLuint handle() const { return m_handle; }
-        bool exists() const { return m_handle != 0; }
-        void bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
-        void free() { glDeleteBuffers(1, &m_handle); }
+		~VertexBuffer() { free(); }
+#endif
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+		void bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
+		void free() { glDeleteBuffers(1, &m_handle); }
 
-        // Reallocates the buffer on every call. Prefer the sub version if possible.
+		// Reallocates the buffer on every call. Prefer the sub version if possible.
 		template <typename VertType>
 		void bufferVerts(VertType* vertices, int vertCount, GLenum usage = GL_DYNAMIC_DRAW) {
 			glBufferData(GL_ARRAY_BUFFER, sizeof(VertType) * vertCount, vertices, usage);
@@ -471,7 +471,7 @@ namespace OpenGL {
 			glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(VertType) * vertCount, vertices);
 		}
 
-        // If C++20 is available, add overloads that take std::span instead of raw pointers
+		// If C++20 is available, add overloads that take std::span instead of raw pointers
 #ifdef OPENGL_HAVE_CPP20
 		template <typename VertType>
 		void bufferVerts(std::span<const VertType> vertices, GLenum usage = GL_DYNAMIC_DRAW) {
@@ -483,6 +483,48 @@ namespace OpenGL {
 			glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(VertType) * vertices.size(), vertices.data());
 		}
 #endif
+	};
+
+	struct UniformBuffer {
+		GLuint m_handle = 0;
+
+		void create() {
+			if (m_handle == 0) {
+				glGenBuffers(1, &m_handle);
+			}
+		}
+
+		void createFixedSize(GLsizei size, GLenum usage = GL_DYNAMIC_DRAW) {
+			create();
+			bind();
+			glBufferData(GL_UNIFORM_BUFFER, size, nullptr, usage);
+		}
+
+		UniformBuffer(bool shouldCreate = false) {
+			if (shouldCreate) {
+				create();
+			}
+		}
+
+#ifdef OPENGL_DESTRUCTORS
+		~UniformBuffer() { free(); }
+#endif
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+		void bind() const { glBindBuffer(GL_UNIFORM_BUFFER, m_handle); }
+		void free() { glDeleteBuffers(1, &m_handle); }
+
+		// Reallocates the buffer on every call. Prefer the sub version if possible.
+		template <typename UniformType>
+		void buffer(const UniformType& uniformData, GLenum usage = GL_DYNAMIC_DRAW) {
+			glBufferData(GL_UNIFORM_BUFFER, sizeof(uniformData), &uniformData, usage);
+		}
+
+		// Only use if you used createFixedSize
+		template <typename UniformType>
+		void bufferSub(const UniformType& uniformData, int vertCount, GLintptr offset = 0) {
+			glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(uniformData), &uniformData);
+		}
 	};
 
     enum DepthFunc {
