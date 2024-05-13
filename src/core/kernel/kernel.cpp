@@ -266,8 +266,8 @@ void Kernel::getProcessInfo() {
 		// According to 3DBrew: Amount of private (code, data, heap) memory used by the process + total supervisor-mode
 		// stack size + page-rounded size of the external handle table
 		case 2:
-			// TODO
-			regs[1] = 0;
+			// FIXME
+			regs[1] = fcramManager.getUsedCount(FcramRegion::App);
 			regs[2] = 0;
 			break;
 
