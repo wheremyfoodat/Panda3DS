@@ -338,7 +338,7 @@ endif()
 
 if(ENABLE_VULKAN)
     find_package(
-        Vulkan 1.3.206 REQUIRED
+        Vulkan REQUIRED
         COMPONENTS glslangValidator
     )
 
