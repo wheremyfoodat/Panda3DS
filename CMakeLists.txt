@@ -339,7 +339,7 @@ endif()
 if(ENABLE_VULKAN)
     find_package(
         Vulkan REQUIRED
-        COMPONENTS glslangValidator
+        COMPONENTS glslang
     )
 
     set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
@@ -382,7 +382,7 @@ if(ENABLE_VULKAN)
         add_custom_command(
             OUTPUT ${HOST_SHADER_SPIRV}
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
-            COMMAND Vulkan::glslangValidator ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
+            COMMAND Vulkan::glslang ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
             DEPENDS ${HOST_SHADER_SOURCE}
         )
         list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
