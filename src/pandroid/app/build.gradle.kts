@@ -10,8 +10,8 @@ android {
         applicationId = "com.panda3ds.pandroid"
         minSdk = 24
         targetSdk = 33
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = getVersionCode()
+        versionName = getVersion()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -53,4 +53,26 @@ dependencies {
     implementation("androidx.preference:preference:1.2.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.google.code.gson:gson:2.10.1")
+}
+
+def getVersionName() {
+    def tag = '1.0'
+    try {
+        def process = 'git describe --tags --abbrev=0'.execute()
+        tag = process.text.trim()
+        if (tag.startsWith('v')) {
+            tag = tag.substring(1)
+        }
+    } catch (Exception e) {
+        println "Failed to get latest Git tag: ${e.message}"
+    }
+    return tag
+}
+
+def getVersionCode() {
+    def versionCode = 1
+    if (getVersionName() && getVersionName()[0].isDigit()) {
+        versionCode = getVersionName()[0].toInteger()
+    }
+    return versionCode
 }
