@@ -75,5 +75,8 @@ fun getVersionCode(): Int {
     if (tag.isNotEmpty() && tag[0].isDigit()) {
         versionCode = tag[0].toString().toInt()
     }
+    if (versionCode == 0) {
+        versionCode = 1 // return dummy version code if the version code isn't positive
+    }
     return versionCode
 }
