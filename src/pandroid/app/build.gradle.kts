@@ -55,24 +55,25 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 }
 
-def getVersionName() {
-    def tag = '1.0'
+fun getVersionName(): String {
+    var tag = "1.0"
     try {
-        def process = 'git describe --tags --abbrev=0'.execute()
-        tag = process.text.trim()
-        if (tag.startsWith('v')) {
+        val process = Runtime.getRuntime().exec("git describe --tags --abbrev=0")
+        tag = process.inputStream.bufferedReader().readText().trim()
+        if (tag.startsWith("v")) {
             tag = tag.substring(1)
         }
-    } catch (Exception e) {
-        println "Failed to get latest Git tag: ${e.message}"
+    } catch (e: Exception) {
+        println("Failed to get latest Git tag: ${e.message}")
     }
     return tag
 }
 
-def getVersionCode() {
-    def versionCode = 1
-    if (getVersionName() && getVersionName()[0].isDigit()) {
-        versionCode = getVersionName()[0].toInteger()
+fun getVersionCode(): Int {
+    var versionCode = 1
+    val tag = getVersionName()
+    if (tag.isNotEmpty() && tag[0].isDigit()) {
+        versionCode = tag[0].toString().toInt()
     }
     return versionCode
 }
