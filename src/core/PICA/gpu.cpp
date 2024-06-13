@@ -109,6 +109,7 @@ void GPU::reset() {
 	externalRegs[Framebuffer1Select] = 0;
 
 	renderer->reset();
+	renderer->setFiltering(config.textureFilter);
 }
 
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
