@@ -32,6 +32,7 @@ struct EmulatorConfig {
 	// Default ROM path to open in Qt and misc frontends
 	std::filesystem::path defaultRomPath = "";
 	std::filesystem::path filePath;
+	std::filesystem::path aesKeysPath;
 
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
