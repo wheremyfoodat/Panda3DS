@@ -4,14 +4,17 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <list>
 #include <vector>
 
 #include "config.hpp"
 #include "crypto/aes_engine.hpp"
 #include "handles.hpp"
 #include "helpers.hpp"
+#include "kernel/kernel_types.hpp"
 #include "loader/ncsd.hpp"
 #include "loader/3dsx.hpp"
+#include "result/result.hpp"
 #include "services/region_codes.hpp"
 
 namespace PhysicalAddrs {
@@ -44,9 +47,9 @@ namespace VirtualAddrs {
 		LinearHeapStartNew = 0x30000000,
 		LinearHeapEndNew = 0x40000000,
 
-		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x1000, and so on
-		TLSBase = 0xFF400000,
-		TLSSize = 0x1000,
+		// Start of TLS for first thread. Next thread's storage will be at TLSBase + 0x200, and so on
+		TLSBase = 0x1FF82000,
+		TLSSize = 0x200,
 
 		VramStart = 0x1F000000,
 		VramSize = 0x00600000,
@@ -77,17 +80,15 @@ namespace KernelMemoryTypes {
 		PERMISSION_X = 1 << 2
 	};
 	
-	// I assume this is referring to a single piece of allocated memory? If it's for pages, it makes no sense.
-	// If it's for multiple allocations, it also makes no sense
 	struct MemoryInfo {
-		u32 baseAddr; // Base process virtual address. Used as a paddr in lockedMemoryInfo instead
-		u32 size;      // Of what?
-		u32 perms;     // Is this referring to a single page or?
+		u32 baseAddr;
+		u32 pages;
+		u32 perms;
 		u32 state;
 
-		u32 end() { return baseAddr + size; }
-		MemoryInfo(u32 baseAddr, u32 size, u32 perms, u32 state) : baseAddr(baseAddr), size(size)
-			, perms(perms), state(state) {}
+		u32 end() { return baseAddr + (pages << 12); }
+		MemoryInfo() : baseAddr(0), pages(0), perms(0), state(0) {}
+		MemoryInfo(u32 baseAddr, u32 pages, u32 perms, u32 state) : baseAddr(baseAddr), pages(pages), perms(perms), state(state) {}
 	};
 
 	// Shared memory block for HID, GSP:GPU etc
@@ -101,7 +102,19 @@ namespace KernelMemoryTypes {
 	};
 }
 
+struct FcramBlock;
+class KFcram;
+enum class FcramRegion;
+
 class Memory {
+	// Used internally by changeMemoryState
+	struct Operation {
+		KernelMemoryTypes::MemoryState newState = KernelMemoryTypes::MemoryState::Free;
+		bool r = false, w = false, x = false;
+		bool changeState = false;
+		bool changePerms = false;
+	};
+
 	u8* fcram;
 	u8* dspRam;  // Provided to us by Audio
 	u8* vram;    // Provided to the memory class by the GPU class
@@ -109,11 +122,17 @@ class Memory {
 	u64& cpuTicks; // Reference to the CPU tick counter
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
+	// TODO: remove this reference when Peach's excellent page table code is moved to a better home
+	KFcram& fcramManager;
+
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
 	std::vector<uintptr_t> readTable, writeTable;
 
+	// vaddr->paddr translation table
+	std::vector<u32> paddrTable;
+
 	// This tracks our OS' memory allocations
-	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
+	std::list<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
 	std::array<SharedMemoryBlock, 5> sharedMemBlocks = {
 		SharedMemoryBlock(0, 0, KernelHandles::FontSharedMemHandle), // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
@@ -131,6 +150,9 @@ public:
 	
 	static constexpr u32 FCRAM_SIZE = u32(128_MB);
 	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(64_MB);
+	static constexpr u32 FCRAM_SYSTEM_SIZE = u32(44_MB);
+	static constexpr u32 FCRAM_BASE_SIZE = u32(20_MB);
+
 	static constexpr u32 FCRAM_PAGE_COUNT = FCRAM_SIZE / pageSize;
 	static constexpr u32 FCRAM_APPLICATION_PAGE_COUNT = FCRAM_APPLICATION_SIZE / pageSize;
 
@@ -139,8 +161,8 @@ public:
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
 private:
-	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
-	std::optional<u32> findPaddr(u32 size);
+	//std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
+	//std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
 
 	// https://www.3dbrew.org/wiki/Configuration_Memory#ENVINFO
@@ -165,12 +187,15 @@ private:
 
 	static constexpr std::array<u8, 6> MACAddress = {0x40, 0xF4, 0x07, 0xFF, 0xFF, 0xEE};
 
+	void changeMemoryState(u32 vaddr, s32 pages, const Operation& op);
+	void queryPhysicalBlocks(std::list<FcramBlock>& outList, u32 vaddr, s32 pages);
+	void mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x);
+	void unmapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages);
+
   public:
 	u16 kernelVersion = 0;
-	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
-	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
 
-	Memory(u64& cpuTicks, const EmulatorConfig& config);
+	Memory(KFcram& fcramManager, u64& cpuTicks, const EmulatorConfig& config);
 	void reset();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
@@ -195,22 +220,6 @@ private:
 
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
-
-	// Total amount of OS-only FCRAM available (Can vary depending on how much FCRAM the app requests via the cart exheader)
-	u32 totalSysFCRAM() {
-		return FCRAM_SIZE - FCRAM_APPLICATION_SIZE;
-	}
-
-	// Amount of OS-only FCRAM currently available
-	u32 remainingSysFCRAM() {
-		return totalSysFCRAM() - usedSystemMemory;
-	}
-
-	// Physical FCRAM index to the start of OS FCRAM
-	// We allocate the first part of physical FCRAM for the application, and the rest to the OS. So the index for the OS = application ram size
-	u32 sysFCRAMIndex() {
-		return FCRAM_APPLICATION_SIZE;
-	}
 
 	enum class BatteryLevel {
 		Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
@@ -244,33 +253,22 @@ private:
 		return (addr & pageMask) == 0;
 	}
 
-	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
-	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).
-	// If the "linear" flag is on, the paddr pages must be adjacent in FCRAM
-	// This function is for interacting with the *user* portion of FCRAM mainly. For OS RAM, we use other internal functions below
-	// r, w, x: Permissions for the allocated memory
-	// adjustAddrs: If it's true paddr == 0 or vaddr == 0 tell the allocator to pick its own addresses. Used for eg svc ControlMemory
-	// isMap: Shows whether this is a reserve operation, that allocates memory and maps it to the addr space, or if it's a map operation,
-	// which just maps memory from paddr to vaddr without hassle. The latter is useful for shared memory mapping, the "map" ControlMemory, op, etc
-	// Returns the vaddr the FCRAM was mapped to or nullopt if allocation failed
-	std::optional<u32> allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r = true, bool w = true, bool x = true,
-		bool adjustsAddrs = false, bool isMap = false);
-	KernelMemoryTypes::MemoryInfo queryMemory(u32 vaddr);
+	bool allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x, KernelMemoryTypes::MemoryState state);
+	bool allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x);
+	bool mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x,
+		KernelMemoryTypes::MemoryState oldDstState, KernelMemoryTypes::MemoryState oldSrcState, 
+		KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState);
+	void changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x);
+	Result::HorizonResult queryMemory(KernelMemoryTypes::MemoryInfo& out, u32 vaddr);
+	Result::HorizonResult testMemoryState(u32 vaddr, s32 pages, KernelMemoryTypes::MemoryState desiredState);
 
-	// For internal use
-	// Allocates a "size"-sized chunk of system FCRAM and returns the index of physical FCRAM used for the allocation
-	// Used for allocating things like shared memory and the like
-	u32 allocateSysMemory(u32 size);
+	void copyToVaddr(u32 dstVaddr, const u8* srcHost, s32 size);
 
 	// Map a shared memory block to virtual address vaddr with permissions "myPerms"
 	// The kernel has a second permission parameter in MapMemoryBlock but not sure what's used for
 	// TODO: Find out
 	// Returns a pointer to the FCRAM block used for the memory if allocation succeeded
 	u8* mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms);
-
-	// Mirrors the page mapping for "size" bytes starting from sourceAddress, to "size" bytes in destAddress
-	// All of the above must be page-aligned.
-	void mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size);
 
 	// Backup of the game's CXI partition info, if any
 	std::optional<NCCH> loadedCXI = std::nullopt;
@@ -283,7 +281,6 @@ private:
 	u8* getDSPMem() { return dspRam; }
 	u8* getDSPDataMem() { return &dspRam[DSP_DATA_MEMORY_OFFSET]; }
 	u8* getDSPCodeMem() { return &dspRam[DSP_CODE_MEMORY_OFFSET]; }
-	u32 getUsedUserMem() { return usedUserMemory; }
 
 	void setVRAM(u8* pointer) { vram = pointer; }
 	void setDSPMem(u8* pointer) { dspRam = pointer; }

@@ -22,6 +22,7 @@ namespace CROHeader {
 		NameOffset = 0x084,
 		NextCRO = 0x088,
 		PrevCRO = 0x08C,
+		FileSize = 0x090,
 		OnUnresolved = 0x0AC,
 		CodeOffset = 0x0B0,
 		DataOffset = 0x0B8,
@@ -141,6 +142,8 @@ static const std::string CRO_MAGIC("CRO0");
 static const std::string CRO_MAGIC_FIXED("FIXD");
 static const std::string CRR_MAGIC("CRR0");
 
+using namespace KernelMemoryTypes;
+
 class CRO {
 	Memory &mem;
 
@@ -173,6 +176,10 @@ public:
 
 	void setPrevCRO(u32 prevCRO) {
 		mem.write32(croPointer + CROHeader::PrevCRO, prevCRO);
+	}
+
+	u32 getSize() {
+		return mem.read32(croPointer + CROHeader::FileSize);
 	}
 
 	void write32(u32 addr, u32 value) {
@@ -1236,7 +1243,12 @@ void LDRService::initialize(u32 messagePointer) {
 	}
 
 	// Map CRO to output address
-	mem.mirrorMapping(mapVaddr, crsPointer, size);
+	// TODO: how to handle permissions?
+	bool succeeded = mem.mapVirtualMemory(mapVaddr, crsPointer, size >> 12, true, true, true,
+		MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode);
+	if (!succeeded) {
+		Helpers::panic("Failed to map CRS");
+	}
 
 	CRO crs(mem, mapVaddr, false);
 
@@ -1326,7 +1338,12 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 	}
 
 	// Map CRO to output address
-	mem.mirrorMapping(mapVaddr, croPointer, size);
+	// TODO: how to handle permissions?
+	bool succeeded = mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, true, true, true,
+		MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode);
+	if (!succeeded) {
+		Helpers::panic("Failed to map CRO");
+	}
 
 	CRO cro(mem, mapVaddr, true);
 
@@ -1386,6 +1403,13 @@ void LDRService::unloadCRO(u32 messagePointer) {
 
 	if (!cro.unrebase()) {
 		Helpers::panic("Failed to unrebase CRO");
+	}
+
+	u32 size = cro.getSize();
+	bool succeeded = mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, false, false, false,
+		MemoryState::Locked, MemoryState::AliasCode, MemoryState::Free, MemoryState::Private);
+	if (!succeeded) {
+		Helpers::panic("Failed to unmap CRO");
 	}
 
 	kernel.clearInstructionCache();
