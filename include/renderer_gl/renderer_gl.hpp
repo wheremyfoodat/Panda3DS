@@ -1,11 +1,17 @@
 #pragma once
 
 #include <array>
+#include <cstring>
+#include <functional>
 #include <span>
+#include <unordered_map>
 
 #include "PICA/float_types.hpp"
+#include "PICA/pica_frag_config.hpp"
+#include "PICA/pica_hash.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/shader_gen.hpp"
 #include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -25,20 +31,23 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
 
-	// TEV configuration uniform locations
-	GLint textureEnvSourceLoc = -1;
-	GLint textureEnvOperandLoc = -1;
-	GLint textureEnvCombinerLoc = -1;
-	GLint textureEnvColorLoc = -1;
-	GLint textureEnvScaleLoc = -1;
+	// Data 
+	struct {
+		// TEV configuration uniform locations
+		GLint textureEnvSourceLoc = -1;
+		GLint textureEnvOperandLoc = -1;
+		GLint textureEnvCombinerLoc = -1;
+		GLint textureEnvColorLoc = -1;
+		GLint textureEnvScaleLoc = -1;
 
-	// Uniform of PICA registers
-	GLint picaRegLoc = -1;
+		// Uniform of PICA registers
+		GLint picaRegLoc = -1;
 
-	// Depth configuration uniform locations
-	GLint depthOffsetLoc = -1;
-	GLint depthScaleLoc = -1;
-	GLint depthmapEnableLoc = -1;
+		// Depth configuration uniform locations
+		GLint depthOffsetLoc = -1;
+		GLint depthScaleLoc = -1;
+		GLint depthmapEnableLoc = -1;
+	} ubershaderData;
 
 	float oldDepthScale = -1.0;
 	float oldDepthOffset = 0.0;
@@ -47,6 +56,7 @@ class RendererGL final : public Renderer {
 	SurfaceCache<DepthBuffer, 16, true> depthBufferCache;
 	SurfaceCache<ColourBuffer, 16, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
+	bool usingUbershader = false;
 
 	// Dummy VAO/VBO for blitting the final output
 	OpenGL::VertexArray dummyVAO;
@@ -57,8 +67,13 @@ class RendererGL final : public Renderer {
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
 
+	std::unordered_map<PICA::FragmentConfig, OpenGL::Program> shaderCache;
+
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
+	OpenGL::Program& getSpecializedShader();
+
+	PICA::ShaderGen::FragmentGenerator fragShaderGen;
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();
@@ -71,7 +86,7 @@ class RendererGL final : public Renderer {
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
-		: Renderer(gpu, internalRegs, externalRegs) {}
+		: Renderer(gpu, internalRegs, externalRegs), fragShaderGen(PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL) {}
 	~RendererGL() override;
 
 	void reset() override;
