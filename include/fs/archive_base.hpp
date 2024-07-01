@@ -172,48 +172,34 @@ protected:
     Memory& mem;
 
     // Returns if a specified 3DS path in UTF16 or ASCII format is safe or not
-    // A 3DS path is considered safe if its first character is '/' which means we're not trying to access anything outside the root of the fs
-    // And if it doesn't contain enough instances of ".." (Indicating "climb up a folder" in filesystems) to let the software climb up the directory tree
-    // And access files outside of the emulator's app data folder
+    // A 3DS path is considered safe if it has IOFile::getAppData() as its parent directory
     template <u32 format>
     bool isPathSafe(const FSPath& path) {
         static_assert(format == PathType::ASCII || format == PathType::UTF16);
         using String = typename std::conditional<format == PathType::UTF16, std::u16string, std::string>::type; // String type for the path
         using Char = typename String::value_type; // Char type for the path
 
-        String pathString, dots;
+        String pathString;
         if constexpr (std::is_same<String, std::u16string>()) {
             pathString = path.utf16_string;
-            dots = u"..";
         } else {
             pathString = path.string;
-            dots = "..";
         }
 
-        // If the path string doesn't begin with / then that means it's accessing outside the FS root, which is invalid & unsafe
         if (pathString[0] != Char('/')) return false;
 
-        // Counts how many folders sans the root our file is nested under.
-        // If it's < 0 at any point of parsing, then the path is unsafe and tries to crawl outside our file sandbox.
-        // If it's 0 then this is the FS root.
-        // If it's > 0 then we're in a subdirectory of the root.
-        int level = 0;
+        // Usually std::filesystem::canonical is used, as canonical also resolves symlinks, but requires that the path exists,
+        // which isn't always the case for paths that end up in this function.
+        // lexically_normal simply removes '.' and '..' from the path
+        // Since we can make the assumption that there's no symlinks in our sandbox, we can use lexically_normal
+        std::filesystem::path pathFs = IOFile::getAppData() / pathString.substr(1); // remove the leading slash, otherwise concatenation fails
+        pathFs = pathFs.lexically_normal();
 
-        // Split the string on / characters and see how many of the substrings are ".."
-        size_t pos = 0;
-        while ((pos = pathString.find(Char('/'))) != String::npos) {
-            String token = pathString.substr(0, pos);
-            pathString.erase(0, pos + 1);
+        std::filesystem::path sandboxPath = IOFile::getAppData().lexically_normal();
 
-            if (token == dots) {
-                level--;
-                if (level < 0) return false;
-            } else {
-                level++;
-            }
-        }
+        auto [it, _] = std::mismatch(sandboxPath.begin(), sandboxPath.end(), pathFs.begin());
 
-        return true;
+        return it == sandboxPath.end();
     }
 
 public:
