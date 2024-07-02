@@ -67,7 +67,7 @@ HorizonResult SDMCArchive::deleteFile(const FSPath& path) {
 		return Result::Success;
 	}
 
-	Helpers::panic("SaveDataArchive::DeleteFile: Unknown path type");
+	Helpers::panic("SDMCArchive::DeleteFile: Unknown path type");
 	return Result::Success;
 }
 
@@ -173,7 +173,7 @@ Rust::Result<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const F
 
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
-			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
+			Helpers::panic("Unsafe path in SDMC::OpenDirectory");
 		}
 
 		fs::path p = IOFile::getAppData() / "SDMC";
