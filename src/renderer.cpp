@@ -18,7 +18,7 @@ std::optional<RendererType> Renderer::typeFromString(std::string inString) {
 		{"gl", RendererType::OpenGL},         {"ogl", RendererType::OpenGL},    {"opengl", RendererType::OpenGL},
 		{"vk", RendererType::Vulkan},         {"vulkan", RendererType::Vulkan}, {"vulcan", RendererType::Vulkan},
 		{"sw", RendererType::Software},       {"soft", RendererType::Software}, {"software", RendererType::Software},
-		{"softrast", RendererType::Software},
+		{"softrast", RendererType::Software}, {"mtl", RendererType::Metal},     {"metal", RendererType::Metal}
 	};
 
 	if (auto search = map.find(inString); search != map.end()) {
@@ -34,6 +34,7 @@ const char* Renderer::typeToString(RendererType rendererType) {
 		case RendererType::OpenGL: return "opengl";
 		case RendererType::Vulkan: return "vulkan";
 		case RendererType::Software: return "software";
+		case RendererType::Metal: return "metal";
 		default: return "Invalid";
 	}
 }

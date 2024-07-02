@@ -8,7 +8,7 @@
 class Kernel;
 
 class LDRService {
-	Handle handle = KernelHandles::LDR_RO;
+	HandleType handle = KernelHandles::LDR_RO;
 	Memory& mem;
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, ldrLogger)
@@ -22,7 +22,7 @@ class LDRService {
 	void loadCRR(u32 messagePointer);
 	void unloadCRO(u32 messagePointer);
 
-public:
+  public:
 	LDRService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

@@ -11,7 +11,8 @@
 #include "input_mappings.hpp"
 #include "services/dsp.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent)
+	: QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
@@ -90,6 +91,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		const RendererType rendererType = emu->getConfig().rendererType;
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
 		usingVk = (rendererType == RendererType::Vulkan);
+		usingMtl = (rendererType == RendererType::Metal);
 
 		if (usingGL) {
 			// Make GL context current for this thread, enable VSync
@@ -100,6 +102,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			emu->initGraphicsContext(glContext);
 		} else if (usingVk) {
 			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
+		} else if (usingMtl) {
+			Helpers::panic("Metal on Qt is currently WIP, try the SDL frontend instead!");
 		} else {
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
@@ -264,8 +268,7 @@ void MainWindow::dumpDspFirmware() {
 		case DSPService::ComponentDumpResult::Success: break;
 		case DSPService::ComponentDumpResult::NotLoaded: {
 			QMessageBox messageBox(
-				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"),
-				tr("The currently loaded app has not uploaded a firmware to the DSP")
+				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"), tr("The currently loaded app has not uploaded a firmware to the DSP")
 			);
 
 			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);

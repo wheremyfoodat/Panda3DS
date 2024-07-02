@@ -12,7 +12,7 @@
 class Kernel;
 
 class CAMService {
-	using Event = std::optional<Handle>;
+	using Event = std::optional<HandleType>;
 
 	struct Port {
 		Event bufferErrorInterruptEvent = std::nullopt;
@@ -26,7 +26,7 @@ class CAMService {
 		}
 	};
 
-	Handle handle = KernelHandles::CAM;
+	HandleType handle = KernelHandles::CAM;
 	Memory& mem;
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, camLogger)

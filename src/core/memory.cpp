@@ -119,7 +119,7 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::FirmRevision: return firm.revision;
 			case ConfigMem::FirmVersionMinor: return firm.minor;
 			case ConfigMem::FirmVersionMajor: return firm.major;
-			case ConfigMem::WifiLevel: return 0; // No wifi :(
+			case ConfigMem::WifiLevel: return 0;  // No wifi :(
 
 			case ConfigMem::WifiMac:
 			case ConfigMem::WifiMac + 1:
@@ -171,11 +171,10 @@ u32 Memory::read32(u32 vaddr) {
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case ConfigMem::SyscoreVer: return 2;
-			case 0x1FF81000: return 0;                   // TODO: Figure out what this config mem address does
+			case 0x1FF81000:
+				return 0;  // TODO: Figure out what this config mem address does
 			// Wifi MAC: First 4 bytes of MAC Address
-			case ConfigMem::WifiMac:
-				return (u32(MACAddress[3]) << 24) | (u32(MACAddress[2]) << 16) | (u32(MACAddress[1]) << 8) |
-					   MACAddress[0];
+			case ConfigMem::WifiMac: return (u32(MACAddress[3]) << 24) | (u32(MACAddress[2]) << 16) | (u32(MACAddress[1]) << 8) | MACAddress[0];
 
 			// 3D slider. Float in range 0.0 = off, 1.0 = max.
 			case ConfigMem::SliderState3D: return Helpers::bit_cast<u32, float>(0.0f);
@@ -185,7 +184,7 @@ u32 Memory::read32(u32 vaddr) {
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 					static int shutUpCounter = 0;
-					if (shutUpCounter < 5) { // Stop spamming about VRAM reads after the first 5
+					if (shutUpCounter < 5) {  // Stop spamming about VRAM reads after the first 5
 						shutUpCounter++;
 						Helpers::warn("VRAM read!\n");
 					}
@@ -440,7 +439,7 @@ MemoryInfo Memory::queryMemory(u32 vaddr) {
 	return MemoryInfo(vaddr, pageSize, 0, KernelMemoryTypes::Free);
 }
 
-u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms) {
+u8* Memory::mapSharedMemory(HandleType handle, u32 vaddr, u32 myPerms, u32 otherPerms) {
 	for (auto& e : sharedMemBlocks) {
 		if (e.handle == handle) {
 			// Virtual Console titles trigger this. TODO: Investigate how it should work

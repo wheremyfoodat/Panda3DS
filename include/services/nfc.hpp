@@ -12,7 +12,7 @@
 class Kernel;
 
 class NFCService {
-	Handle handle = KernelHandles::NFC;
+	HandleType handle = KernelHandles::NFC;
 	Memory& mem;
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, nfcLogger)
@@ -34,7 +34,7 @@ class NFCService {
 	};
 
 	// Kernel events signaled when an NFC tag goes in and out of range respectively
-	std::optional<Handle> tagInRangeEvent, tagOutOfRangeEvent;
+	std::optional<HandleType> tagInRangeEvent, tagOutOfRangeEvent;
 
 	AmiiboDevice device;
 	Old3DSAdapterStatus adapterStatus;

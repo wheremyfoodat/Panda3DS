@@ -28,10 +28,10 @@
 #include "services/mcu/mcu_hwc.hpp"
 #include "services/mic.hpp"
 #include "services/ndm.hpp"
-#include "services/nwm_uds.hpp"
 #include "services/news_u.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
+#include "services/nwm_uds.hpp"
 #include "services/ptm.hpp"
 #include "services/soc.hpp"
 #include "services/ssl.hpp"
@@ -46,15 +46,15 @@ class ServiceManager {
 	Memory& mem;
 	Kernel& kernel;
 
-	std::optional<Handle> notificationSemaphore;
+	std::optional<HandleType> notificationSemaphore;
 
 	MAKE_LOG_FUNCTION(log, srvLogger)
 
-    ACService ac;
+	ACService ac;
 	ACTService act;
-    AMService am;
+	AMService am;
 	APTService apt;
-    BOSSService boss;
+	BOSSService boss;
 	CAMService cam;
 	CECDService cecd;
 	CFGService cfg;
@@ -74,7 +74,7 @@ class ServiceManager {
 	NewsUService news_u;
 	NFCService nfc;
 	NwmUdsService nwm_uds;
-    NIMService nim;
+	NIMService nim;
 	PTMService ptm;
 	SOCService soc;
 	SSLService ssl;
@@ -97,7 +97,7 @@ class ServiceManager {
 	void handleSyncRequest(u32 messagePointer);
 
 	// Forward a SendSyncRequest IPC message to the service with the respective handle
-	void sendCommandToService(u32 messagePointer, Handle handle);
+	void sendCommandToService(u32 messagePointer, HandleType handle);
 
 	// Wrappers for communicating with certain services
 	void sendGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }

@@ -8,8 +8,8 @@
 ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config)
 	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel), cfg(mem),
 	  csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem), fs(mem, kernel, config),
-	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem, kernel), mcu_hwc(mem, config), mic(mem, kernel), nfc(mem, kernel), nim(mem), ndm(mem),
-	  news_u(mem), nwm_uds(mem, kernel), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
+	  gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem, kernel), mcu_hwc(mem, config), mic(mem, kernel), nfc(mem, kernel), nim(mem),
+	  ndm(mem), news_u(mem), nwm_uds(mem, kernel), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -68,7 +68,7 @@ namespace Commands {
 	};
 }
 
-// Handle an IPC message issued using the SendSyncRequest SVC
+// HandleType an IPC message issued using the SendSyncRequest SVC
 // The parameters are stored in thread-local storage in this format: https://www.3dbrew.org/wiki/IPC#Message_Structure
 // messagePointer: The base pointer for the IPC message
 void ServiceManager::handleSyncRequest(u32 messagePointer) {
@@ -93,7 +93,7 @@ void ServiceManager::registerClient(u32 messagePointer) {
 }
 
 // clang-format off
-static std::map<std::string, Handle> serviceMap = {
+static std::map<std::string, HandleType> serviceMap = {
 	{ "ac:u", KernelHandles::AC },
 	{ "act:a", KernelHandles::ACT },
 	{ "act:u", KernelHandles::ACT },
@@ -165,9 +165,9 @@ void ServiceManager::enableNotification(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 2));
-	mem.write32(messagePointer + 4, Result::Success); // Result code
-	mem.write32(messagePointer + 8, 0); // Translation descriptor
-	// Handle to semaphore signaled on process notification
+	mem.write32(messagePointer + 4, Result::Success);  // Result code
+	mem.write32(messagePointer + 8, 0);                // Translation descriptor
+	// HandleType to semaphore signaled on process notification
 	mem.write32(messagePointer + 12, notificationSemaphore.value());
 }
 
@@ -175,8 +175,8 @@ void ServiceManager::receiveNotification(u32 messagePointer) {
 	log("srv::ReceiveNotification() (STUBBED)\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
-	mem.write32(messagePointer + 4, Result::Success); // Result code
-	mem.write32(messagePointer + 8, 0); // Notification ID
+	mem.write32(messagePointer + 4, Result::Success);  // Result code
+	mem.write32(messagePointer + 8, 0);                // Notification ID
 }
 
 void ServiceManager::subscribe(u32 messagePointer) {
@@ -195,7 +195,7 @@ void ServiceManager::unsubscribe(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
+void ServiceManager::sendCommandToService(u32 messagePointer, HandleType handle) {
 	switch (handle) {
 		// Breaking alphabetical order a bit to place the ones I think are most common at the top
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
