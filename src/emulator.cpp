@@ -169,6 +169,8 @@ void Emulator::pollScheduler() {
 				break;
 			}
 
+			case Scheduler::EventType::SignalY2R: kernel.getServiceManager().getY2R().signalConversionDone(); break;
+
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
 				break;
