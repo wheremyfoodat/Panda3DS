@@ -408,6 +408,7 @@ if(ENABLE_METAL AND APPLE)
     set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
         src/core/renderer_mtl/renderer_mtl.cpp
         src/core/renderer_mtl/texture.cpp
+        src/core/renderer_mtl/etc1.cpp
         src/host_shaders/metal_shaders.metal
     )
 
