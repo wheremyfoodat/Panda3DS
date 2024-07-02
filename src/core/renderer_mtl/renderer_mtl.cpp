@@ -18,6 +18,7 @@ RendererMTL::~RendererMTL() {}
 
 void RendererMTL::reset() {
 	// TODO: implement
+	Helpers::warn("RendererMTL::reset not implemented");
 }
 
 void RendererMTL::display() {
@@ -177,14 +178,17 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
 	// TODO: implement
+	Helpers::warn("RendererMTL::clearBuffer not implemented");
 }
 
 void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
 	// TODO: implement
+	Helpers::warn("RendererMTL::displayTransfer not implemented");
 }
 
 void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
 	// TODO: implement
+	Helpers::warn("RendererMTL::textureCopy not implemented");
 }
 
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
@@ -211,8 +215,10 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 void RendererMTL::screenshot(const std::string& name) {
 	// TODO: implement
+	Helpers::warn("RendererMTL::screenshot not implemented");
 }
 
 void RendererMTL::deinitGraphicsContext() {
 	// TODO: implement
+	Helpers::warn("RendererMTL::deinitGraphicsContext not implemented");
 }
