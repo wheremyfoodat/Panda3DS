@@ -17,6 +17,8 @@ RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, 
 RendererMTL::~RendererMTL() {}
 
 void RendererMTL::reset() {
+    textureCache.reset();
+
 	// TODO: implement
 	Helpers::warn("RendererMTL::reset not implemented");
 }
@@ -219,6 +221,8 @@ void RendererMTL::screenshot(const std::string& name) {
 }
 
 void RendererMTL::deinitGraphicsContext() {
+    textureCache.reset();
+
 	// TODO: implement
 	Helpers::warn("RendererMTL::deinitGraphicsContext not implemented");
 }

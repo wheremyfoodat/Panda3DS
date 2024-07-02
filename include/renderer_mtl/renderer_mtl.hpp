@@ -2,6 +2,9 @@
 #include <QuartzCore/QuartzCore.hpp>
 
 #include "renderer.hpp"
+#include "texture.hpp"
+// HACK: use the OpenGL cache
+#include "../renderer_gl/surface_cache.hpp"
 
 class GPU;
 
@@ -29,6 +32,9 @@ class RendererMTL final : public Renderer {
 
 	MTL::Device* device;
 	MTL::CommandQueue* commandQueue;
+
+	// Caches
+	SurfaceCache<Metal::Texture, 256, true> textureCache;
 
 	// HACK
 	MTL::Texture* topScreenTexture;
