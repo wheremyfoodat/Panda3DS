@@ -33,6 +33,9 @@ class RendererMTL final : public Renderer {
 	// HACK
 	MTL::Texture* topScreenTexture;
 
+	// Helpers
+	MTL::SamplerState* basicSampler;
+
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
 	MTL::RenderPipelineState* drawPipeline;

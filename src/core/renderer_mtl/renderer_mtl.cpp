@@ -28,11 +28,15 @@ void RendererMTL::display() {
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
 	colorAttachment->setTexture(drawable->texture());
-	colorAttachment->setLoadAction(MTL::LoadActionClear);
-	colorAttachment->setClearColor(MTL::ClearColor{1.0f, 0.0f, 0.0f, 1.0f});
+	colorAttachment->setLoadAction(MTL::LoadActionDontCare);
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
 	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	renderCommandEncoder->setRenderPipelineState(displayPipeline);
+	renderCommandEncoder->setFragmentTexture(topScreenTexture, 0);
+	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+
 	renderCommandEncoder->endEncoding();
 
 	commandBuffer->presentDrawable(drawable);
@@ -49,8 +53,17 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	commandQueue = device->newCommandQueue();
 
 	// HACK
-	MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::texture2DDescriptor(MTL::PixelFormatRGBA8Unorm, 400, 240, false);
+	MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::alloc()->init();
+	descriptor->setTextureType(MTL::TextureType2D);
+	descriptor->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
+	descriptor->setWidth(400);
+	descriptor->setHeight(240);
+	descriptor->setUsage(MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead);
 	topScreenTexture = device->newTexture(descriptor);
+
+	// Helpers
+	MTL::SamplerDescriptor* samplerDescriptor = MTL::SamplerDescriptor::alloc()->init();
+	basicSampler = device->newSamplerState(samplerDescriptor);
 
 	// -------- Pipelines --------
 
@@ -73,8 +86,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	displayPipelineDescriptor->setVertexFunction(vertexDisplayFunction);
 	displayPipelineDescriptor->setFragmentFunction(fragmentDisplayFunction);
 	// HACK
-	auto* colorAttachment = displayPipelineDescriptor->colorAttachments()->object(0);
-	colorAttachment->setPixelFormat(topScreenTexture->pixelFormat());
+	auto* displayColorAttachment = displayPipelineDescriptor->colorAttachments()->object(0);
+	displayColorAttachment->setPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB);
 
 	error = nullptr;
 	displayPipeline = device->newRenderPipelineState(displayPipelineDescriptor, &error);
@@ -90,7 +103,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	drawPipelineDescriptor->setVertexFunction(vertexDrawFunction);
 	drawPipelineDescriptor->setFragmentFunction(fragmentDrawFunction);
 	// HACK
-	colorAttachment->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
+	auto* drawColorAttachment = drawPipelineDescriptor->colorAttachments()->object(0);
+	drawColorAttachment->setPixelFormat(topScreenTexture->pixelFormat());
 
 	// Vertex descriptor
 	// TODO: add all attributes
@@ -130,6 +144,8 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
 	createCommandBufferIfNeeded();
+
+	std::cout << "DRAWING " << vertices.size() << " VERTICES" << std::endl;
 
 	// TODO: don't begin a new render pass every time
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
