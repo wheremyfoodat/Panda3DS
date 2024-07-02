@@ -36,4 +36,13 @@ class RendererMTL final : public Renderer {
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
 	MTL::RenderPipelineState* drawPipeline;
+
+	// Active state
+	MTL::CommandBuffer* commandBuffer = nullptr;
+
+	void createCommandBufferIfNeeded() {
+		if (!commandBuffer) {
+			commandBuffer = commandQueue->commandBuffer();
+		}
+	}
 };

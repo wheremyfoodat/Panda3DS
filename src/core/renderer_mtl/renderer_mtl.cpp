@@ -1,10 +1,16 @@
 #include "renderer_mtl/renderer_mtl.hpp"
 
 #include <cmrc/cmrc.hpp>
+#include <cstddef>
 
 #include "SDL_metal.h"
 
+using namespace PICA;
+
 CMRC_DECLARE(RendererMTL);
+
+// Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
+#define VERTEX_BUFFER_BINDING_INDEX 30
 
 RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
 	: Renderer(gpu, internalRegs, externalRegs) {}
@@ -15,9 +21,9 @@ void RendererMTL::reset() {
 }
 
 void RendererMTL::display() {
-	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
+	createCommandBufferIfNeeded();
 
-	MTL::CommandBuffer* commandBuffer = commandQueue->commandBuffer();
+	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
@@ -31,6 +37,7 @@ void RendererMTL::display() {
 
 	commandBuffer->presentDrawable(drawable);
 	commandBuffer->commit();
+	commandBuffer = nullptr;
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
@@ -90,14 +97,14 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
 	MTL::VertexAttributeDescriptor* positionAttribute = vertexDescriptor->attributes()->object(0);
 	positionAttribute->setFormat(MTL::VertexFormatFloat4);
-	positionAttribute->setOffset(0);
-	positionAttribute->setBufferIndex(0);
+	positionAttribute->setOffset(offsetof(Vertex, s.positions));
+	positionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 	MTL::VertexAttributeDescriptor* colorAttribute = vertexDescriptor->attributes()->object(2);
 	colorAttribute->setFormat(MTL::VertexFormatFloat4);
-	colorAttribute->setOffset(16);
-	colorAttribute->setBufferIndex(0);
-	MTL::VertexBufferLayoutDescriptor* vertexBufferLayout = vertexDescriptor->layouts()->object(0);
-	vertexBufferLayout->setStride(32);
+	colorAttribute->setOffset(offsetof(Vertex, s.colour));
+	colorAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	MTL::VertexBufferLayoutDescriptor* vertexBufferLayout = vertexDescriptor->layouts()->object(VERTEX_BUFFER_BINDING_INDEX);
+	vertexBufferLayout->setStride(sizeof(Vertex));
 	vertexBufferLayout->setStepFunction(MTL::VertexStepFunctionPerVertex);
 	vertexBufferLayout->setStepRate(1);
 	drawPipelineDescriptor->setVertexDescriptor(vertexDescriptor);
@@ -122,7 +129,23 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 }
 
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
-	// TODO: implement
+	createCommandBufferIfNeeded();
+
+	// TODO: don't begin a new render pass every time
+	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+	colorAttachment->setTexture(topScreenTexture);
+	colorAttachment->setLoadAction(MTL::LoadActionLoad);
+	colorAttachment->setStoreAction(MTL::StoreActionStore);
+
+	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	renderCommandEncoder->setRenderPipelineState(drawPipeline);
+	renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
+
+	// TODO: respect primitive type
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(vertices.size()));
+
+	renderCommandEncoder->endEncoding();
 }
 
 void RendererMTL::screenshot(const std::string& name) {
