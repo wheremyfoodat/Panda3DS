@@ -441,7 +441,8 @@ void Y2RService::startConversion(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 
 	// Schedule Y2R conversion end event.
-	static constexpr u64 delayTicks = 60'000;
+	// The tick value is tweaked based on the minimum delay needed to get FIFA 15 to not hang due to a race condition on its title screen
+	static constexpr u64 delayTicks = 1'350'000;
 	isBusy = true;
 
 	// Remove any potential pending Y2R event and schedule a new one
