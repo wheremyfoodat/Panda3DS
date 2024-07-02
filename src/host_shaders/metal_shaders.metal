@@ -30,7 +30,9 @@ struct DrawVertexOut {
 
 vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]]) {
 	DrawVertexOut out;
-	out.position = float4(in.position.xy, 0.0, 1.0);  // HACK
+	out.position = in.position;
+	// in.position.z is in range of [-1 ... 1], convert it to [0 ... 1]
+	out.position.z = (in.position.z + 1.0) * 0.5;
 	out.color = in.color;
 
 	return out;
