@@ -90,7 +90,10 @@ vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs&
 	// Flip the y position
 	out.position.y = -out.position.y;
 	// in.position.z is in range of [-1 ... 1], convert it to [0 ... 1]
-	out.position.z = (in.position.z + 1.0) * 0.5;
+	//out.position.xyz /= out.position.w;
+	//out.position.w = 1.0;
+	// HACK
+	out.position.z = 0.5;//(in.position.z + 1.0) * 0.5;
 
 	// Color
 	out.color = in.color;
