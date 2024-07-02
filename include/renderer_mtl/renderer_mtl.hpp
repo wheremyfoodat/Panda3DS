@@ -56,5 +56,6 @@ class RendererMTL final : public Renderer {
 	}
 
 	MTL::Texture* getTexture(Metal::Texture& tex);
+	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
 	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);
 };

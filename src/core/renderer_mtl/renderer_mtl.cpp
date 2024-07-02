@@ -211,7 +211,9 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
 
 	// Bind resources
+	setupTextureEnvState(renderCommandEncoder);
 	bindTexturesToSlots(renderCommandEncoder);
+	renderCommandEncoder->setFragmentBytes(&regs[0x48], 0x200 - 0x48, 0);
 
 	// TODO: respect primitive type
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(vertices.size()));
@@ -243,6 +245,47 @@ MTL::Texture* RendererMTL::getTexture(Metal::Texture& tex) {
 
 		return newTex.texture;
 	}
+}
+
+void RendererMTL::setupTextureEnvState(MTL::RenderCommandEncoder* encoder) {
+	static constexpr std::array<u32, 6> ioBases = {
+		PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
+		PICA::InternalRegs::TexEnv3Source, PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source,
+	};
+
+	struct {
+	   u32 textureEnvSourceRegs[6];
+	   u32 textureEnvOperandRegs[6];
+	   u32 textureEnvCombinerRegs[6];
+	   u32 textureEnvScaleRegs[6];
+	} envState;
+    u32 textureEnvColourRegs[6];
+
+	for (int i = 0; i < 6; i++) {
+		const u32 ioBase = ioBases[i];
+
+		envState.textureEnvSourceRegs[i] = regs[ioBase];
+		envState.textureEnvOperandRegs[i] = regs[ioBase + 1];
+		envState.textureEnvCombinerRegs[i] = regs[ioBase + 2];
+		textureEnvColourRegs[i] = regs[ioBase + 3];
+		envState.textureEnvScaleRegs[i] = regs[ioBase + 4];
+	}
+
+	for (int i = 0; i < 6; i++) {
+	    std::cout << "textureEnvSourceRegs[" << i << "] = " << envState.textureEnvSourceRegs[i] << std::endl;
+	}
+	for (int i = 0; i < 6; i++) {
+	    std::cout << "textureEnvOperandRegs[" << i << "] = " << envState.textureEnvOperandRegs[i] << std::endl;
+	}
+	for (int i = 0; i < 6; i++) {
+	    std::cout << "textureEnvCombinerRegs[" << i << "] = " << envState.textureEnvCombinerRegs[i] << std::endl;
+	}
+	for (int i = 0; i < 6; i++) {
+	    std::cout << "textureEnvScaleRegs[" << i << "] = " << envState.textureEnvScaleRegs[i] << std::endl;
+	}
+
+	// TODO: upload textureEnvColourRegs to the vertex shader
+	encoder->setFragmentBytes(&envState, sizeof(envState), 1);
 }
 
 void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
