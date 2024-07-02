@@ -1,5 +1,7 @@
 #include "renderer_mtl/renderer_mtl.hpp"
 
+#include "SDL_metal.h"
+
 RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
 	: Renderer(gpu, internalRegs, externalRegs) {}
 RendererMTL::~RendererMTL() {}
@@ -9,11 +11,31 @@ void RendererMTL::reset() {
 }
 
 void RendererMTL::display() {
-	// TODO: implement
+	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
+
+	MTL::CommandBuffer* commandBuffer = commandQueue->commandBuffer();
+
+	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+	colorAttachment->setTexture(drawable->texture());
+	colorAttachment->setLoadAction(MTL::LoadActionClear);
+	colorAttachment->setClearColor(MTL::ClearColor{1.0f, 0.0f, 0.0f, 1.0f});
+	colorAttachment->setStoreAction(MTL::StoreActionStore);
+
+	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	renderCommandEncoder->endEncoding();
+
+	commandBuffer->presentDrawable(drawable);
+	commandBuffer->commit();
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
-	// TODO: implement
+	// TODO: what should be the type of the view?
+	void* view = SDL_Metal_CreateView(window);
+	metalLayer = (CA::MetalLayer*)SDL_Metal_GetLayer(view);
+	device = MTL::CreateSystemDefaultDevice();
+	metalLayer->setDevice(device);
+	commandQueue = device->newCommandQueue();
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
