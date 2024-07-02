@@ -36,6 +36,13 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
 	commandQueue = device->newCommandQueue();
+
+	// HACK
+	MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::texture2DDescriptor(MTL::PixelFormatRGBA8Unorm, 400, 240, false);
+	topScreenTexture = device->newTexture(descriptor);
+
+	// Pipelines
+	// TODO
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {

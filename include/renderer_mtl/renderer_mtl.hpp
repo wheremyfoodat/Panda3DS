@@ -29,4 +29,11 @@ class RendererMTL final : public Renderer {
 
 	MTL::Device* device;
 	MTL::CommandQueue* commandQueue;
+
+	// HACK
+	MTL::Texture* topScreenTexture;
+
+	// Pipelines
+	MTL::RenderPipelineState* displayPipeline;
+	MTL::RenderPipelineState* drawPipeline;
 };

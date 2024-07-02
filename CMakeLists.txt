@@ -407,7 +407,7 @@ if(ENABLE_METAL AND APPLE)
 
     set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
         src/core/renderer_mtl/renderer_mtl.cpp
-        src/host_shaders/metal_display.metal
+        src/host_shaders/metal_shaders.metal
     )
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_MTL_INCLUDE_FILES})
@@ -419,7 +419,7 @@ if(ENABLE_METAL AND APPLE)
         resources_renderer_mtl
         NAMESPACE RendererMTL
         WHENCE "src/host_shaders/"
-        "src/host_shaders/metal_display.metal"
+        "src/host_shaders/metal_shaders.metal"
     )
 
     target_sources(AlberCore PRIVATE ${RENDERER_MTL_SOURCE_FILES})
