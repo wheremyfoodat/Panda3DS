@@ -15,7 +15,7 @@ class IRUserService {
 		CirclePadPro = 1,
 	};
 
-	Handle handle = KernelHandles::IR_USER;
+	HandleType handle = KernelHandles::IR_USER;
 	Memory& mem;
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, irUserLogger)
@@ -29,7 +29,7 @@ class IRUserService {
 	void requireConnection(u32 messagePointer);
 	void sendIrnop(u32 messagePointer);
 
-	using IREvent = std::optional<Handle>;
+	using IREvent = std::optional<HandleType>;
 
 	IREvent connectionStatusEvent = std::nullopt;
 	IREvent receiveEvent = std::nullopt;

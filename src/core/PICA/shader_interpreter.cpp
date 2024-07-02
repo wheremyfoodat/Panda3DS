@@ -77,8 +77,8 @@ void PICAShader::run() {
 			default: Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
 		}
 
-		// Handle control flow statements. The ordering is important as the priority goes: LOOP > IF > CALL
-		// Handle loop
+		// HandleType control flow statements. The ordering is important as the priority goes: LOOP > IF > CALL
+		// HandleType loop
 		if (loopIndex != 0) {
 			auto& loop = loopInfo[loopIndex - 1];
 			if (pc == loop.endingPC) {  // Check if the loop needs to start over
@@ -91,7 +91,7 @@ void PICAShader::run() {
 			}
 		}
 
-		// Handle ifs
+		// HandleType ifs
 		if (ifIndex != 0) {
 			auto& info = conditionalInfo[ifIndex - 1];
 			if (pc == info.endingPC) {  // Check if the IF block ended
@@ -100,7 +100,7 @@ void PICAShader::run() {
 			}
 		}
 
-		// Handle calls
+		// HandleType calls
 		if (callIndex != 0) {
 			auto& info = callInfo[callIndex - 1];
 			if (pc == info.endingPC) {  // Check if the CALL block ended

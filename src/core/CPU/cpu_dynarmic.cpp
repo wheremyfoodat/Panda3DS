@@ -40,7 +40,7 @@ void CPU::runFrame() {
 	execute:
 		const auto exitReason = jit->Run();
 
-		// Handle any scheduler events that need handling.
+		// HandleType any scheduler events that need handling.
 		emu.pollScheduler();
 
 		if (static_cast<u32>(exitReason) != 0) [[unlikely]] {

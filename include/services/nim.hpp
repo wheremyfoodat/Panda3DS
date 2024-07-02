@@ -6,14 +6,14 @@
 #include "result/result.hpp"
 
 class NIMService {
-	Handle handle = KernelHandles::NIM;
+	HandleType handle = KernelHandles::NIM;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, nimLogger)
 
 	// Service commands
 	void initialize(u32 messagePointer);
 
-public:
+  public:
 	NIMService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

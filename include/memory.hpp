@@ -10,8 +10,8 @@
 #include "crypto/aes_engine.hpp"
 #include "handles.hpp"
 #include "helpers.hpp"
-#include "loader/ncsd.hpp"
 #include "loader/3dsx.hpp"
+#include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
 
 namespace PhysicalAddrs {
@@ -38,7 +38,7 @@ namespace VirtualAddrs {
 		DefaultStackSize = 0x4000,
 
 		NormalHeapStart = 0x08000000,
-		LinearHeapStartOld = 0x14000000, // If kernel version < 0x22C
+		LinearHeapStartOld = 0x14000000,  // If kernel version < 0x22C
 		LinearHeapEndOld = 0x1C000000,
 
 		LinearHeapStartNew = 0x30000000,
@@ -76,37 +76,36 @@ namespace KernelMemoryTypes {
 		PERMISSION_W = 1 << 1,
 		PERMISSION_X = 1 << 2
 	};
-	
+
 	// I assume this is referring to a single piece of allocated memory? If it's for pages, it makes no sense.
 	// If it's for multiple allocations, it also makes no sense
 	struct MemoryInfo {
-		u32 baseAddr; // Base process virtual address. Used as a paddr in lockedMemoryInfo instead
+		u32 baseAddr;  // Base process virtual address. Used as a paddr in lockedMemoryInfo instead
 		u32 size;      // Of what?
 		u32 perms;     // Is this referring to a single page or?
 		u32 state;
 
 		u32 end() { return baseAddr + size; }
-		MemoryInfo(u32 baseAddr, u32 size, u32 perms, u32 state) : baseAddr(baseAddr), size(size)
-			, perms(perms), state(state) {}
+		MemoryInfo(u32 baseAddr, u32 size, u32 perms, u32 state) : baseAddr(baseAddr), size(size), perms(perms), state(state) {}
 	};
 
 	// Shared memory block for HID, GSP:GPU etc
 	struct SharedMemoryBlock {
-		u32 paddr; // Physical address of this block's memory
-		u32 size; // Size of block
-		u32 handle; // The handle of the shared memory block
-		bool mapped; // Has this block been mapped at least once?
+		u32 paddr;    // Physical address of this block's memory
+		u32 size;     // Size of block
+		u32 handle;   // The handle of the shared memory block
+		bool mapped;  // Has this block been mapped at least once?
 
 		SharedMemoryBlock(u32 paddr, u32 size, u32 handle) : paddr(paddr), size(size), handle(handle), mapped(false) {}
 	};
-}
+}  // namespace KernelMemoryTypes
 
 class Memory {
 	u8* fcram;
 	u8* dspRam;  // Provided to us by Audio
 	u8* vram;    // Provided to the memory class by the GPU class
 
-	u64& cpuTicks; // Reference to the CPU tick counter
+	u64& cpuTicks;  // Reference to the CPU tick counter
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
@@ -116,19 +115,21 @@ class Memory {
 	std::vector<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
 	std::array<SharedMemoryBlock, 5> sharedMemBlocks = {
-		SharedMemoryBlock(0, 0, KernelHandles::FontSharedMemHandle), // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
-		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
-		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle),  // HID shared memory
-		SharedMemoryBlock(0, 0x3000, KernelHandles::CSNDSharedMemHandle), // CSND shared memory
+		SharedMemoryBlock(
+			0, 0, KernelHandles::FontSharedMemHandle
+		),  // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
+		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle),          // GSP shared memory
+		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle),          // HID shared memory
+		SharedMemoryBlock(0, 0x3000, KernelHandles::CSNDSharedMemHandle),         // CSND shared memory
 		SharedMemoryBlock(0, 0xE7000, KernelHandles::APTCaptureSharedMemHandle),  // APT Capture Buffer memory
- 	};
+	};
 
-public:
+  public:
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
 	static constexpr u32 pageMask = pageSize - 1;
 	static constexpr u32 totalPageCount = 1 << (32 - pageShift);
-	
+
 	static constexpr u32 FCRAM_SIZE = u32(128_MB);
 	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(64_MB);
 	static constexpr u32 FCRAM_PAGE_COUNT = FCRAM_SIZE / pageSize;
@@ -138,7 +139,7 @@ public:
 	static constexpr u32 DSP_CODE_MEMORY_OFFSET = u32(0_KB);
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
-private:
+  private:
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
@@ -147,9 +148,9 @@ private:
 	// Report a retail unit without JTAG
 	static constexpr u32 envInfo = 1;
 
-	// Stored in Configuration Memory starting @ 0x1FF80060 
+	// Stored in Configuration Memory starting @ 0x1FF80060
 	struct FirmwareInfo {
-		u8 unk; // Usually 0 according to 3DBrew
+		u8 unk;  // Usually 0 according to 3DBrew
 		u8 revision;
 		u8 minor;
 		u8 major;
@@ -167,8 +168,8 @@ private:
 
   public:
 	u16 kernelVersion = 0;
-	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
-	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
+	u32 usedUserMemory = u32(0_MB);    // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
+	u32 usedSystemMemory = u32(0_MB);  // Similar for the SYSTEM range (reserved for the syscore)
 
 	Memory(u64& cpuTicks, const EmulatorConfig& config);
 	void reset();
@@ -197,28 +198,20 @@ private:
 	u8* getFCRAM() { return fcram; }
 
 	// Total amount of OS-only FCRAM available (Can vary depending on how much FCRAM the app requests via the cart exheader)
-	u32 totalSysFCRAM() {
-		return FCRAM_SIZE - FCRAM_APPLICATION_SIZE;
-	}
+	u32 totalSysFCRAM() { return FCRAM_SIZE - FCRAM_APPLICATION_SIZE; }
 
 	// Amount of OS-only FCRAM currently available
-	u32 remainingSysFCRAM() {
-		return totalSysFCRAM() - usedSystemMemory;
-	}
+	u32 remainingSysFCRAM() { return totalSysFCRAM() - usedSystemMemory; }
 
 	// Physical FCRAM index to the start of OS FCRAM
 	// We allocate the first part of physical FCRAM for the application, and the rest to the OS. So the index for the OS = application ram size
-	u32 sysFCRAMIndex() {
-		return FCRAM_APPLICATION_SIZE;
-	}
+	u32 sysFCRAMIndex() { return FCRAM_APPLICATION_SIZE; }
 
-	enum class BatteryLevel {
-		Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
-	};
+	enum class BatteryLevel { Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars };
 	u8 getBatteryState(bool adapterConnected, bool charging, BatteryLevel batteryLevel) {
-		u8 value = static_cast<u8>(batteryLevel) << 2; // Bits 2:4 are the battery level from 0 to 5
-		if (adapterConnected) value |= 1 << 0; // Bit 0 shows if the charger is connected
-		if (charging) value |= 1 << 1; // Bit 1 shows if we're charging
+		u8 value = static_cast<u8>(batteryLevel) << 2;  // Bits 2:4 are the battery level from 0 to 5
+		if (adapterConnected) value |= 1 << 0;          // Bit 0 shows if the charger is connected
+		if (charging) value |= 1 << 1;                  // Bit 1 shows if we're charging
 
 		return value;
 	}
@@ -240,9 +233,7 @@ private:
 	}
 
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
-	static constexpr bool isAligned(u32 addr) {
-		return (addr & pageMask) == 0;
-	}
+	static constexpr bool isAligned(u32 addr) { return (addr & pageMask) == 0; }
 
 	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
 	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).
@@ -253,8 +244,9 @@ private:
 	// isMap: Shows whether this is a reserve operation, that allocates memory and maps it to the addr space, or if it's a map operation,
 	// which just maps memory from paddr to vaddr without hassle. The latter is useful for shared memory mapping, the "map" ControlMemory, op, etc
 	// Returns the vaddr the FCRAM was mapped to or nullopt if allocation failed
-	std::optional<u32> allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r = true, bool w = true, bool x = true,
-		bool adjustsAddrs = false, bool isMap = false);
+	std::optional<u32> allocateMemory(
+		u32 vaddr, u32 paddr, u32 size, bool linear, bool r = true, bool w = true, bool x = true, bool adjustsAddrs = false, bool isMap = false
+	);
 	KernelMemoryTypes::MemoryInfo queryMemory(u32 vaddr);
 
 	// For internal use
@@ -266,7 +258,7 @@ private:
 	// The kernel has a second permission parameter in MapMemoryBlock but not sure what's used for
 	// TODO: Find out
 	// Returns a pointer to the FCRAM block used for the memory if allocation succeeded
-	u8* mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms);
+	u8* mapSharedMemory(HandleType handle, u32 vaddr, u32 myPerms, u32 otherPerms);
 
 	// Mirrors the page mapping for "size" bytes starting from sourceAddress, to "size" bytes in destAddress
 	// All of the above must be page-aligned.

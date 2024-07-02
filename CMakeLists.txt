@@ -26,12 +26,13 @@ endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
-endif() 
+endif()
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
+option(ENABLE_METAL "Enable Metal rendering backend (if available)" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_TESTS "Compile unit-tests" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
@@ -224,7 +225,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/services/mic.hpp include/services/cecd.hpp include/services/ac.hpp
                  include/services/am.hpp include/services/boss.hpp include/services/frd.hpp include/services/nim.hpp
                  include/fs/archive_ext_save_data.hpp include/fs/archive_ncch.hpp include/services/mcu/mcu_hwc.hpp
-                 include/colour.hpp include/services/y2r.hpp include/services/cam.hpp include/services/ssl.hpp 
+                 include/colour.hpp include/services/y2r.hpp include/services/cam.hpp include/services/ssl.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
                  include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
                  include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp include/PICA/dynapica/shader_rec.hpp
@@ -235,7 +236,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
-                 include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
+                 include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
@@ -400,8 +401,36 @@ if(ENABLE_VULKAN)
     target_link_libraries(AlberCore PRIVATE Vulkan::Vulkan resources_renderer_vk)
 endif()
 
+if(ENABLE_METAL AND APPLE)
+    set(RENDERER_MTL_INCLUDE_FILES include/renderer_mtl/renderer_mtl.hpp
+    )
+
+    set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
+        src/core/renderer_mtl/renderer_mtl.cpp
+        src/host_shaders/metal_display.metal
+    )
+
+    set(HEADER_FILES ${HEADER_FILES} ${RENDERER_MTL_INCLUDE_FILES})
+    source_group("Source Files\\Core\\Metal Renderer" FILES ${RENDERER_MTL_SOURCE_FILES})
+
+    # TODO: compile Metal shaders to .metallib
+
+    cmrc_add_resource_library(
+        resources_renderer_mtl
+        NAMESPACE RendererMTL
+        WHENCE "src/host_shaders/"
+        "src/host_shaders/metal_display.metal"
+    )
+
+    target_sources(AlberCore PRIVATE ${RENDERER_MTL_SOURCE_FILES})
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
+    target_include_directories(AlberCore PRIVATE third_party/metal-cpp)
+    # TODO: check if all of them are needed
+    target_link_libraries(AlberCore PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
+endif()
+
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
-set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
+set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES}
     ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})

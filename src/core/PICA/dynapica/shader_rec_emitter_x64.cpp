@@ -1,12 +1,13 @@
 #if defined(PANDA3DS_DYNAPICA_SUPPORTED) && defined(PANDA3DS_X64_HOST)
 #include "PICA/dynapica/shader_rec_emitter_x64.hpp"
 
+#include <immintrin.h>
+#include <smmintrin.h>
+
 #include <algorithm>
 #include <bit>
 #include <cassert>
 #include <cstddef>
-#include <immintrin.h>
-#include <smmintrin.h>
 
 using namespace Xbyak;
 using namespace Xbyak::util;
@@ -41,9 +42,15 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	// Constants
 	align(16);
 	L(negateVector);
-	dd(0x80000000); dd(0x80000000); dd(0x80000000); dd(0x80000000); // -0.0 4 times
+	dd(0x80000000);
+	dd(0x80000000);
+	dd(0x80000000);
+	dd(0x80000000);  // -0.0 4 times
 	L(onesVector);
-	dd(0x3f800000); dd(0x3f800000); dd(0x3f800000); dd(0x3f800000); // 1.0 4 times
+	dd(0x3f800000);
+	dd(0x3f800000);
+	dd(0x3f800000);
+	dd(0x3f800000);  // 1.0 4 times
 
 	// Emit prologue first
 	align(16);
@@ -86,7 +93,7 @@ void ShaderEmitter::scanCode(const PICAShader& shaderUnit) {
 		if (isCall(instruction)) {
 			const u32 num = instruction & 0xff;
 			const u32 dest = getBits<10, 12>(instruction);
-			const u32 returnPC = num + dest; // Add them to get the return PC
+			const u32 returnPC = num + dest;  // Add them to get the return PC
 
 			returnPCs.push_back(returnPC);
 		} else if (opcode == ShaderOpcodes::EX2) {
@@ -129,23 +136,15 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 
 	switch (opcode) {
 		case ShaderOpcodes::ADD: recADD(shaderUnit, instruction); break;
-		case ShaderOpcodes::CALL:
-			recCALL(shaderUnit, instruction);
-			break;
-		case ShaderOpcodes::CALLC:
-			recCALLC(shaderUnit, instruction);
-			break;
-		case ShaderOpcodes::CALLU:
-			recCALLU(shaderUnit, instruction);
-			break;
-		case ShaderOpcodes::CMP1: case ShaderOpcodes::CMP2:
-			recCMP(shaderUnit, instruction);
-			break;
+		case ShaderOpcodes::CALL: recCALL(shaderUnit, instruction); break;
+		case ShaderOpcodes::CALLC: recCALLC(shaderUnit, instruction); break;
+		case ShaderOpcodes::CALLU: recCALLU(shaderUnit, instruction); break;
+		case ShaderOpcodes::CMP1:
+		case ShaderOpcodes::CMP2: recCMP(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
 		case ShaderOpcodes::DPH:
-		case ShaderOpcodes::DPHI:
-			recDPH(shaderUnit, instruction); break;
+		case ShaderOpcodes::DPHI: recDPH(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
 		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
@@ -176,21 +175,30 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::BREAKC: Helpers::warn("[Shader JIT] Unimplemented BREAK(C) instruction!"); break;
 
 		// We consider both MAD and MADI to be the same instruction and decode which one we actually have in recMAD
-		case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37:
-		case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3E: case 0x3F:
-			recMAD(shaderUnit, instruction);
-			break;
+		case 0x30:
+		case 0x31:
+		case 0x32:
+		case 0x33:
+		case 0x34:
+		case 0x35:
+		case 0x36:
+		case 0x37:
+		case 0x38:
+		case 0x39:
+		case 0x3A:
+		case 0x3B:
+		case 0x3C:
+		case 0x3D:
+		case 0x3E:
+		case 0x3F: recMAD(shaderUnit, instruction); break;
 
 		case ShaderOpcodes::SLT:
-		case ShaderOpcodes::SLTI:
-			recSLT(shaderUnit, instruction); break;
+		case ShaderOpcodes::SLTI: recSLT(shaderUnit, instruction); break;
 
 		case ShaderOpcodes::SGE:
-		case ShaderOpcodes::SGEI:
-			recSGE(shaderUnit, instruction); break;
+		case ShaderOpcodes::SGEI: recSGE(shaderUnit, instruction); break;
 
-		default:
-			Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
+		default: Helpers::panic("Shader JIT: Unimplemented PICA opcode %X", opcode);
 	}
 }
 
@@ -219,64 +227,64 @@ const ShaderEmitter::vec4f& ShaderEmitter::getDestRef(const PICAShader& shader, 
 // See shader.hpp header for docs on how the swizzle and negate works
 template <int sourceIndex>
 void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u32 index, u32 operandDescriptor) {
-	u32 compSwizzle; // Component swizzle pattern for the register
-	bool negate;     // If true, negate all lanes of the register
+	u32 compSwizzle;  // Component swizzle pattern for the register
+	bool negate;      // If true, negate all lanes of the register
 
-	if constexpr (sourceIndex == 1) { // SRC1
+	if constexpr (sourceIndex == 1) {  // SRC1
 		negate = (getBit<4>(operandDescriptor)) != 0;
 		compSwizzle = getBits<5, 8>(operandDescriptor);
-	}
-	else if constexpr (sourceIndex == 2) { // SRC2
+	} else if constexpr (sourceIndex == 2) {  // SRC2
 		negate = (getBit<13>(operandDescriptor)) != 0;
 		compSwizzle = getBits<14, 8>(operandDescriptor);
-	}
-	else if constexpr (sourceIndex == 3) { // SRC3
+	} else if constexpr (sourceIndex == 3) {  // SRC3
 		negate = (getBit<22>(operandDescriptor)) != 0;
 		compSwizzle = getBits<23, 8>(operandDescriptor);
 	}
 
 	// TODO: Do indexes get applied if src < 0x20?
 
-	// PICA has the swizzle descriptor inverted in comparison to x86. For the PICA, the descriptor is (lowest to highest bits) wzyx while it's xyzw for x86
-	u32 convertedSwizzle = ((compSwizzle >> 6) & 0b11) | (((compSwizzle >> 4) & 0b11) << 2) | (((compSwizzle >> 2) & 0b11) << 4) | ((compSwizzle & 0b11) << 6);
+	// PICA has the swizzle descriptor inverted in comparison to x86. For the PICA, the descriptor is (lowest to highest bits) wzyx while it's xyzw
+	// for x86
+	u32 convertedSwizzle =
+		((compSwizzle >> 6) & 0b11) | (((compSwizzle >> 4) & 0b11) << 2) | (((compSwizzle >> 2) & 0b11) << 4) | ((compSwizzle & 0b11) << 6);
 
 	switch (index) {
-		case 0: [[likely]] { // Keep src as is, no need to offset it
-			const vec4f& srcRef = getSourceRef(shader, src);
-			const uintptr_t offset = uintptr_t(&srcRef) - uintptr_t(&shader); // Calculate offset of register from start of the state struct
+		case 0:
+			[[likely]] {  // Keep src as is, no need to offset it
+				const vec4f& srcRef = getSourceRef(shader, src);
+				const uintptr_t offset = uintptr_t(&srcRef) - uintptr_t(&shader);  // Calculate offset of register from start of the state struct
 
-			if (compSwizzle == noSwizzle) // Avoid emitting swizzle if not necessary
-				movaps(dest, xword[statePointer + offset]);
-			else // Swizzle is not trivial so we need to emit a shuffle instruction
-				pshufd(dest, xword[statePointer + offset], convertedSwizzle);
+				if (compSwizzle == noSwizzle)  // Avoid emitting swizzle if not necessary
+					movaps(dest, xword[statePointer + offset]);
+				else  // Swizzle is not trivial so we need to emit a shuffle instruction
+					pshufd(dest, xword[statePointer + offset], convertedSwizzle);
 
-			// Negate the register if necessary
-			if (negate) {
-				pxor(dest, xword[rip + negateVector]);
+				// Negate the register if necessary
+				if (negate) {
+					pxor(dest, xword[rip + negateVector]);
+				}
+				return;  // Return. Rest of the function handles indexing which is not used if index == 0
 			}
-			return; // Return. Rest of the function handles indexing which is not used if index == 0
-		}
 
 		case 1: {
 			const uintptr_t addrXOffset = uintptr_t(&shader.addrRegister[0]) - uintptr_t(&shader);
-			movsxd(rax, dword[statePointer + addrXOffset]); // rax = address register x
+			movsxd(rax, dword[statePointer + addrXOffset]);  // rax = address register x
 			break;
 		}
 
 		case 2: {
 			const uintptr_t addrYOffset = uintptr_t(&shader.addrRegister[1]) - uintptr_t(&shader);
-			movsxd(rax, dword[statePointer + addrYOffset]); // rax = address register y
+			movsxd(rax, dword[statePointer + addrYOffset]);  // rax = address register y
 			break;
 		}
 
 		case 3: {
 			const uintptr_t loopCounterOffset = uintptr_t(&shader.loopCounter) - uintptr_t(&shader);
-			mov(eax, dword[statePointer + loopCounterOffset]); // rax = loop counter
+			mov(eax, dword[statePointer + loopCounterOffset]);  // rax = loop counter
 			break;
 		}
-		
-		default:
-			Helpers::panic("[ShaderJIT]: Unimplemented source index type %d", index);
+
+		default: Helpers::panic("[ShaderJIT]: Unimplemented source index type %d", index);
 	}
 
 	// Swizzle and load register into dest, from [state pointer + rcx + offset] and apply the relevant swizzle
@@ -304,7 +312,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	shl(rcx, 4);  // rcx = rax * sizeof(vec4 of floats) = rax * 16
 	swizzleAndLoadReg(inputOffset);
 	jmp(end);
-	
+
 	// If (reg < 0x1F) return tempRegisters[reg - 0x10]
 	L(maybeTemp);
 	cmp(rax, 0x20);
@@ -324,7 +332,7 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 	jmp(end);
 
 	L(unknownReg);
-	pxor(dest, dest); // Set dest to 0 if we're reading from a garbage register
+	pxor(dest, dest);  // Set dest to 0 if we're reading from a garbage register
 
 	L(end);
 	// Negate the register if necessary
@@ -335,20 +343,20 @@ void ShaderEmitter::loadRegister(Xmm dest, const PICAShader& shader, u32 src, u3
 
 void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest, u32 operandDescriptor) {
 	const vec4f& destRef = getDestRef(shader, dest);
-	const uintptr_t offset = uintptr_t(&destRef) - uintptr_t(&shader); // Calculate offset of register from start of the state struct
+	const uintptr_t offset = uintptr_t(&destRef) - uintptr_t(&shader);  // Calculate offset of register from start of the state struct
 
 	// Mask of which lanes to write
 	u32 writeMask = operandDescriptor & 0xf;
-	if (writeMask == 0xf) { // No lanes are masked, just movaps
+	if (writeMask == 0xf) {  // No lanes are masked, just movaps
 		movaps(xword[statePointer + offset], source);
-	} else if (std::popcount(writeMask) == 1) { // Only 1 register needs to be written back. This can be done with a simple shift right + movss
-		int bit = std::countr_zero(writeMask); // Get which PICA register needs to be written to (0 = w, 1 = z, etc)
+	} else if (std::popcount(writeMask) == 1) {  // Only 1 register needs to be written back. This can be done with a simple shift right + movss
+		int bit = std::countr_zero(writeMask);   // Get which PICA register needs to be written to (0 = w, 1 = z, etc)
 		size_t index = 3 - bit;
 		const uintptr_t laneOffset = offset + index * sizeof(float);
 
-		if (index == 0) { // Bottom lane, no need to shift
+		if (index == 0) {  // Bottom lane, no need to shift
 			movss(dword[statePointer + laneOffset], source);
-		} else { // Shift right by 32 * index, then write bottom lane
+		} else {  // Shift right by 32 * index, then write bottom lane
 			if (haveAVX) {
 				vpsrldq(scratch1, source, index * sizeof(float));
 			} else {
@@ -363,18 +371,17 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 		// Don't accidentally overwrite scratch1 if that is what we're writing derp
 		Xmm temp = (source == scratch1) ? scratch2 : scratch1;
 
-		movaps(temp, xword[statePointer + offset]);     // Read current value of dest
-		blendps(temp, source, adjustedMask);            // Blend with source
-		movaps(xword[statePointer + offset], temp);     // Write back
+		movaps(temp, xword[statePointer + offset]);  // Read current value of dest
+		blendps(temp, source, adjustedMask);         // Blend with source
+		movaps(xword[statePointer + offset], temp);  // Write back
 	} else {
 		// Blend algo referenced from Citra
-		const u8 selector = (((writeMask & 0b1000) ? 1 : 0) << 0) |
-			(((writeMask & 0b0100) ? 3 : 2) << 2) |
-			(((writeMask & 0b0010) ? 0 : 1) << 4) |
-			(((writeMask & 0b0001) ? 2 : 3) << 6);
-		
+		const u8 selector = (((writeMask & 0b1000) ? 1 : 0) << 0) | (((writeMask & 0b0100) ? 3 : 2) << 2) | (((writeMask & 0b0010) ? 0 : 1) << 4) |
+							(((writeMask & 0b0001) ? 2 : 3) << 6);
+
 		// Reorder instructions based on whether the source == scratch1. This is to avoid overwriting scratch1 if it's the source,
-		// While also having the memory load come first to mitigate execution hazards and give the load more time to complete before reading if possible
+		// While also having the memory load come first to mitigate execution hazards and give the load more time to complete before reading if
+		// possible
 		if (source != scratch1) {
 			movaps(scratch1, xword[statePointer + offset]);
 			movaps(scratch2, source);
@@ -382,16 +389,16 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 			movaps(scratch2, source);
 			movaps(scratch1, xword[statePointer + offset]);
 		}
-		
-		unpckhps(scratch2, scratch1); // Unpack X/Y components of source and destination
-		unpcklps(scratch1, source);   // Unpack Z/W components of source and destination
-		shufps(scratch1, scratch2, selector); // "merge-shuffle" dest and source using selecto
-		movaps(xword[statePointer + offset], scratch1); // Write back
+
+		unpckhps(scratch2, scratch1);                    // Unpack X/Y components of source and destination
+		unpcklps(scratch1, source);                      // Unpack Z/W components of source and destination
+		shufps(scratch1, scratch2, selector);            // "merge-shuffle" dest and source using selecto
+		movaps(xword[statePointer + offset], scratch1);  // Write back
 	}
 }
 
 void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) {
-	static_assert(sizeof(bool) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
+	static_assert(sizeof(bool) == 1 && sizeof(shader.cmpRegister) == 2);  // The code below relies on bool being 1 byte exactly
 	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister[0]) - uintptr_t(&shader);
 	const size_t cmpRegYOffset = cmpRegXOffset + sizeof(bool);
 
@@ -399,11 +406,12 @@ void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) 
 	const uint refY = getBit<24>(instruction);
 	const uint refX = getBit<25>(instruction);
 
-	// refX in the bottom byte, refY in the top byte. This is done for condition codes 0 and 1 which check both x and y, so we can emit a single instruction that checks both
+	// refX in the bottom byte, refY in the top byte. This is done for condition codes 0 and 1 which check both x and y, so we can emit a single
+	// instruction that checks both
 	const u16 refX_refY_merged = refX | (refY << 8);
 
 	switch (condition) {
-		case 0: // Either cmp register matches 
+		case 0:  // Either cmp register matches
 			// Z flag is 0 if at least 1 of them is set
 
 			// Check if X matches
@@ -418,20 +426,20 @@ void ShaderEmitter::checkCmpRegister(const PICAShader& shader, u32 instruction) 
 			// If either of them matches, set Z to 1, else set it to 0
 			xor_(al, 1);
 			break;
-		case 1: // Both cmp registers match
+		case 1:  // Both cmp registers match
 			cmp(word[statePointer + cmpRegXOffset], refX_refY_merged);
 			break;
-		case 2: // At least cmp.x matches
+		case 2:  // At least cmp.x matches
 			cmp(byte[statePointer + cmpRegXOffset], refX);
 			break;
-		default: // At least cmp.y matches
+		default:  // At least cmp.y matches
 			cmp(byte[statePointer + cmpRegYOffset], refY);
 			break;
 	}
 }
 
 void ShaderEmitter::checkBoolUniform(const PICAShader& shader, u32 instruction) {
-	const u32 bit = getBits<22, 4>(instruction); // Bit of the bool uniform to check
+	const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 	const uintptr_t boolUniformOffset = uintptr_t(&shader.boolUniform) - uintptr_t(&shader);
 
 	test(word[statePointer + boolUniformOffset], 1 << bit);
@@ -450,7 +458,7 @@ void ShaderEmitter::recMOV(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -460,12 +468,12 @@ void ShaderEmitter::recFLR(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
 	if (haveSSE4_1) {
 		roundps(src1_xmm, src1_xmm, _MM_FROUND_FLOOR);
 	} else {
-		cvttps2dq(src1_xmm, src1_xmm); // Truncate and convert to integer
-		cvtdq2ps(src1_xmm, src1_xmm);  // Convert from integer back to float
+		cvttps2dq(src1_xmm, src1_xmm);  // Truncate and convert to integer
+		cvtdq2ps(src1_xmm, src1_xmm);   // Convert from integer back to float
 	}
 
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
@@ -476,71 +484,69 @@ void ShaderEmitter::recMOVA(const PICAShader& shader, u32 instruction) {
 	const u32 src = getBits<12, 7>(instruction);
 	const u32 idx = getBits<19, 2>(instruction);
 
-	const bool writeX = getBit<3>(operandDescriptor); // Should we write the x component of the address register?
+	const bool writeX = getBit<3>(operandDescriptor);  // Should we write the x component of the address register?
 	const bool writeY = getBit<2>(operandDescriptor);
 
-	static_assert(sizeof(shader.addrRegister) == 2 * sizeof(s32)); // Assert that the address register is 2 s32s
+	static_assert(sizeof(shader.addrRegister) == 2 * sizeof(s32));  // Assert that the address register is 2 s32s
 	const uintptr_t addrRegisterOffset = uintptr_t(&shader.addrRegister[0]) - uintptr_t(&shader);
 	const uintptr_t addrRegisterYOffset = addrRegisterOffset + sizeof(shader.addrRegister[0]);
 
 	// If no register is being written to then it is a nop. Probably not common but whatever
 	if (!writeX && !writeY) return;
-	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
 
 	// Write both
 	if (writeX && writeY) {
-		cvttps2dq(scratch1, src1_xmm); // Convert all lanes of src1 with truncation
-		movsd(qword[statePointer + addrRegisterOffset], scratch1); // Write back bottom 2 to addr register x and ys
-	}
-	else if (writeX) {
-		cvttss2si(eax, src1_xmm); // Convert bottom lane
-		mov(dword[statePointer + addrRegisterOffset], eax); // Write it back
-	}
-	else if (writeY) {
-		psrldq(src1_xmm, sizeof(float)); // Shift y component to bottom lane
-		cvttss2si(eax, src1_xmm); // Convert bottom lane
-		mov(dword[statePointer + addrRegisterYOffset], eax); // Write it back to y component
+		cvttps2dq(scratch1, src1_xmm);                              // Convert all lanes of src1 with truncation
+		movsd(qword[statePointer + addrRegisterOffset], scratch1);  // Write back bottom 2 to addr register x and ys
+	} else if (writeX) {
+		cvttss2si(eax, src1_xmm);                            // Convert bottom lane
+		mov(dword[statePointer + addrRegisterOffset], eax);  // Write it back
+	} else if (writeY) {
+		psrldq(src1_xmm, sizeof(float));                      // Shift y component to bottom lane
+		cvttss2si(eax, src1_xmm);                             // Convert bottom lane
+		mov(dword[statePointer + addrRegisterYOffset], eax);  // Write it back to y component
 	}
 }
 
 void ShaderEmitter::recADD(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	addps(src1_xmm, src2_xmm); // Dot product between the 2 register
+	addps(src1_xmm, src2_xmm);  // Dot product between the 2 register
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	dpps(src1_xmm, src2_xmm, 0b01111111); // 3-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	dpps(src1_xmm, src2_xmm, 0b01111111);  // 3-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
 	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	dpps(src1_xmm, src2_xmm, 0b11111111); // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+	dpps(src1_xmm, src2_xmm, 0b11111111);  // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -573,7 +579,7 @@ void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
 void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -586,7 +592,7 @@ void ShaderEmitter::recMAX(const PICAShader& shader, u32 instruction) {
 void ShaderEmitter::recMIN(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -599,7 +605,7 @@ void ShaderEmitter::recMIN(const PICAShader& shader, u32 instruction) {
 void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
@@ -617,13 +623,13 @@ void ShaderEmitter::recRCP(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = operandDescriptor & 0xf;
 
-	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
-	rcpss(src1_xmm, src1_xmm); // Compute rcp approximation
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
+	rcpss(src1_xmm, src1_xmm);                                       // Compute rcp approximation
 
 	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
 	// Otherwise we do
-	if (writeMask != 0x8) {// Copy bottom lane to all lanes if we're not simply writing back x
-		shufps(src1_xmm, src1_xmm, 0); // src1_xmm = src1_xmm.xxxx
+	if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
+		shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
 	}
 
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
@@ -636,13 +642,13 @@ void ShaderEmitter::recRSQ(const PICAShader& shader, u32 instruction) {
 	const u32 dest = getBits<21, 5>(instruction);
 	const u32 writeMask = operandDescriptor & 0xf;
 
-	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor); // Load source 1 into scratch1
-	rsqrtss(src1_xmm, src1_xmm); // Compute rsqrt approximation
+	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);  // Load source 1 into scratch1
+	rsqrtss(src1_xmm, src1_xmm);                                     // Compute rsqrt approximation
 
 	// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
 	// Otherwise we do
-	if (writeMask != 0x8) {// Copy bottom lane to all lanes if we're not simply writing back x
-		shufps(src1_xmm, src1_xmm, 0); // src1_xmm = src1_xmm.xxxx
+	if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
+		shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
 	}
 
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
@@ -668,7 +674,7 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 		vfmadd213ps(src1_xmm, src2_xmm, src3_xmm);
 		storeRegister(src1_xmm, shader, dest, operandDescriptor);
 	}
-	
+
 	// If we don't have FMA3, do a multiplication and addition
 	else {
 		// Multiply src1 * src2
@@ -712,7 +718,7 @@ void ShaderEmitter::recSGE(const PICAShader& shader, u32 instruction) {
 
 	loadRegister<1>(src1_xmm, shader, src1, isSGEI ? 0 : idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, isSGEI ? idx : 0, operandDescriptor);
-	
+
 	// SSE does not have a cmpgeps instruction so we turn src1 >= src2 to src2 <= src1, result in src2
 	cmpleps(src2_xmm, src1_xmm);
 	andps(src2_xmm, xword[rip + onesVector]);
@@ -722,7 +728,7 @@ void ShaderEmitter::recSGE(const PICAShader& shader, u32 instruction) {
 void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 cmpY = getBits<21, 3>(instruction);
 	const u32 cmpX = getBits<24, 3>(instruction);
@@ -731,20 +737,10 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
 
 	// Condition codes for cmpps
-	enum : u8 {
-		CMP_EQ = 0,
-		CMP_LT = 1,
-		CMP_LE = 2,
-		CMP_UNORD = 3,
-		CMP_NEQ = 4,
-		CMP_NLT = 5,
-		CMP_NLE = 6,
-		CMP_ORD = 7,
-		CMP_TRUE = 15
-	};
+	enum : u8 { CMP_EQ = 0, CMP_LT = 1, CMP_LE = 2, CMP_UNORD = 3, CMP_NEQ = 4, CMP_NLT = 5, CMP_NLE = 6, CMP_ORD = 7, CMP_TRUE = 15 };
 
 	// Map from PICA condition codes (used as index) to x86 condition codes
-	static constexpr std::array<u8, 8> conditionCodes = { CMP_EQ, CMP_NEQ, CMP_LT, CMP_LE, CMP_LT, CMP_LE, CMP_TRUE, CMP_TRUE };
+	static constexpr std::array<u8, 8> conditionCodes = {CMP_EQ, CMP_NEQ, CMP_LT, CMP_LE, CMP_LT, CMP_LE, CMP_TRUE, CMP_TRUE};
 
 	// SSE does not offer GT or GE comparisons in the cmpps instruction, so we need to flip the left and right operands in that case and use LT/LE
 	const bool invertX = (cmpX == 4 || cmpX == 5);
@@ -757,37 +753,37 @@ void ShaderEmitter::recCMP(const PICAShader& shader, u32 instruction) {
 	const u8 compareFuncX = conditionCodes[cmpX];
 	const u8 compareFuncY = conditionCodes[cmpY];
 
-	static_assert(sizeof(shader.cmpRegister[0]) == 1 && sizeof(shader.cmpRegister) == 2); // The code below relies on bool being 1 byte exactly
+	static_assert(sizeof(shader.cmpRegister[0]) == 1 && sizeof(shader.cmpRegister) == 2);  // The code below relies on bool being 1 byte exactly
 	const size_t cmpRegXOffset = uintptr_t(&shader.cmpRegister[0]) - uintptr_t(&shader);
 	const size_t cmpRegYOffset = cmpRegXOffset + sizeof(bool);
 
 	// Cmp x and y are the same compare function, we can use a single cmp instruction
 	if (cmpX == cmpY) {
 		cmpps(lhs_x, rhs_x, compareFuncX);
-		movq(rax, lhs_x); // Move both comparison results to rax
-		test(eax, eax);   // Check bottom 32 bits first
-		setne(byte[statePointer + cmpRegXOffset]); // set cmp.x
+		movq(rax, lhs_x);                           // Move both comparison results to rax
+		test(eax, eax);                             // Check bottom 32 bits first
+		setne(byte[statePointer + cmpRegXOffset]);  // set cmp.x
 
-		shr(rax, 32);     // Check top 32 bits (shr will set the zero flag properly)
-		setne(byte[statePointer + cmpRegYOffset]); // set cmp.y
+		shr(rax, 32);                               // Check top 32 bits (shr will set the zero flag properly)
+		setne(byte[statePointer + cmpRegYOffset]);  // set cmp.y
 	} else {
 		if (haveAVX) {
-			vcmpps(scratch1, lhs_x, rhs_x, compareFuncX); // Perform comparison for X component and store result in scratch1
-			vcmpps(scratch2, lhs_y, rhs_y, compareFuncY); // Perform comparison for Y component and store result in scratch2
+			vcmpps(scratch1, lhs_x, rhs_x, compareFuncX);  // Perform comparison for X component and store result in scratch1
+			vcmpps(scratch2, lhs_y, rhs_y, compareFuncY);  // Perform comparison for Y component and store result in scratch2
 		} else {
-			movaps(scratch1, lhs_x); // Copy the left hand operands to temp registers
+			movaps(scratch1, lhs_x);  // Copy the left hand operands to temp registers
 			movaps(scratch2, lhs_y);
 
-			cmpps(scratch1, rhs_x, compareFuncX); // Perform the compares
+			cmpps(scratch1, rhs_x, compareFuncX);  // Perform the compares
 			cmpps(scratch2, rhs_y, compareFuncY);
 		}
 
-		movd(eax, scratch1); // Move results to eax for X and edx for Y
+		movd(eax, scratch1);  // Move results to eax for X and edx for Y
 		movq(rdx, scratch2);
 
-		test(eax, eax);      // Write back results with setne
+		test(eax, eax);  // Write back results with setne
 		setne(byte[statePointer + cmpRegXOffset]);
-		shr(rdx, 32);        // We want the y component for the second comparison. This shift will set zero flag to 0 if the comparison is true
+		shr(rdx, 32);  // We want the y component for the second comparison. This shift will set zero flag to 0 if the comparison is true
 		setne(byte[statePointer + cmpRegYOffset]);
 	}
 }
@@ -807,10 +803,10 @@ void ShaderEmitter::recIFC(const PICAShader& shader, u32 instruction) {
 	jnz(elseBlock, T_NEAR);
 	compileUntil(shader, dest);
 
-	if (num == 0) { // Else block is empty,
+	if (num == 0) {  // Else block is empty,
 		L(elseBlock);
-	} else { // Else block is NOT empty
-		jmp(endIf, T_NEAR); // Skip executing the else branch if the if branch was ran
+	} else {                 // Else block is NOT empty
+		jmp(endIf, T_NEAR);  // Skip executing the else branch if the if branch was ran
 		L(elseBlock);
 		compileUntil(shader, dest + num);
 		L(endIf);
@@ -832,10 +828,10 @@ void ShaderEmitter::recIFU(const PICAShader& shader, u32 instruction) {
 	jz(elseBlock, T_NEAR);
 	compileUntil(shader, dest);
 
-	if (num == 0) { // Else block is empty,
+	if (num == 0) {  // Else block is empty,
 		L(elseBlock);
-	} else { // Else block is NOT empty
-		jmp(endIf, T_NEAR); // Skip executing the else branch if the if branch was ran
+	} else {                 // Else block is NOT empty
+		jmp(endIf, T_NEAR);  // Skip executing the else branch if the if branch was ran
 		L(elseBlock);
 		compileUntil(shader, dest + num);
 		L(endIf);
@@ -888,7 +884,7 @@ void ShaderEmitter::recJMPC(const PICAShader& shader, u32 instruction) {
 }
 
 void ShaderEmitter::recJMPU(const PICAShader& shader, u32 instruction) {
-	bool jumpIfFalse = instruction & 1; // If the LSB is 0 we want to compare to true, otherwise compare to false
+	bool jumpIfFalse = instruction & 1;  // If the LSB is 0 we want to compare to true, otherwise compare to false
 	const u32 dest = getBits<10, 12>(instruction);
 
 	Label& l = instructionLabels[dest];
@@ -922,13 +918,13 @@ void ShaderEmitter::recLOOP(const PICAShader& shader, u32 instruction) {
 	// Offset of the loop register
 	const uintptr_t loopRegOffset = uintptr_t(&shader.loopCounter) - uintptr_t(&shader);
 
-	movzx(eax, byte[statePointer + uniformOffset]); // eax = loop iteration count
-	movzx(ecx, byte[statePointer + uniformOffset + sizeof(u8)]); // ecx = initial loop counter value
-	movzx(edx, byte[statePointer + uniformOffset + 2 * sizeof(u8)]); // edx = loop increment
+	movzx(eax, byte[statePointer + uniformOffset]);                   // eax = loop iteration count
+	movzx(ecx, byte[statePointer + uniformOffset + sizeof(u8)]);      // ecx = initial loop counter value
+	movzx(edx, byte[statePointer + uniformOffset + 2 * sizeof(u8)]);  // edx = loop increment
 
-	add(eax, 1); // The iteration count is actually uniform.x + 1
-	mov(dword[statePointer + loopRegOffset], ecx); // Set loop counter
-	
+	add(eax, 1);                                    // The iteration count is actually uniform.x + 1
+	mov(dword[statePointer + loopRegOffset], ecx);  // Set loop counter
+
 	// TODO: This might break if an instruction in a loop decides to yield...
 	push(rax);  // Push loop iteration counter
 	push(rdx);  // Push loop increment
@@ -957,8 +953,8 @@ void ShaderEmitter::recLG2(const PICAShader& shader, u32 instruction) {
 	const u32 writeMask = getBits<0, 4>(operandDescriptor);
 
 	loadRegister<1>(src1_xmm, shader, src, idx, operandDescriptor);
-	call(log2Func); // Result is output in src1_xmm
-	
+	call(log2Func);  // Result is output in src1_xmm
+
 	if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
 		shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
 	}
@@ -1147,7 +1143,7 @@ Xbyak::Label ShaderEmitter::emitExp2Func() {
 	align(16);
 	L(subroutine);
 
-	// Handle edge cases
+	// HandleType edge cases
 	ucomiss(src1_xmm, src1_xmm);
 	jp(retLabel);
 

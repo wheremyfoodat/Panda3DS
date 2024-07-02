@@ -232,7 +232,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						const u32 primType = getBits<8, 2>(primConfig);
 
 						// If we've reached 3 verts, issue a draw call
-						// Handle rendering depending on the primitive type
+						// HandleType rendering depending on the primitive type
 						if (immediateModeVertIndex == 3) {
 							renderer->drawVertices(PICA::PrimType::TriangleList, immediateModeVertices);
 

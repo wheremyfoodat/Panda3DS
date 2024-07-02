@@ -63,6 +63,16 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	}
 #endif
 
+#ifdef PANDA3DS_ENABLE_METAL
+	if (config.rendererType == RendererType::Metal) {
+		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_METAL);
+
+		if (window == nullptr) {
+			Helpers::warn("Window creation failed: %s", SDL_GetError());
+		}
+	}
+#endif
+
 	emu.initGraphicsContext(window);
 }
 
@@ -240,7 +250,7 @@ void FrontendSDL::run() {
 				case SDL_MOUSEMOTION: {
 					if (emu.romType == ROMType::None) break;
 
-					// Handle "dragging" across the touchscreen
+					// HandleType "dragging" across the touchscreen
 					if (hid.isTouchScreenPressed()) {
 						const s32 x = event.motion.x;
 						const s32 y = event.motion.y;

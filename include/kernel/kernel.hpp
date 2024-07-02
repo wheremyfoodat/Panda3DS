@@ -34,22 +34,22 @@ class Kernel {
 	static_assert(appResourceLimits.maxThreads <= 63, "The waitlist system is built on the premise that <= 63 threads max can be active");
 
 	std::vector<KernelObject> objects;
-	std::vector<Handle> portHandles;
-	std::vector<Handle> mutexHandles;
-	std::vector<Handle> timerHandles;
+	std::vector<HandleType> portHandles;
+	std::vector<HandleType> mutexHandles;
+	std::vector<HandleType> timerHandles;
 
 	// Thread indices, sorted by priority
 	std::vector<int> threadIndices;
 
-	Handle currentProcess;
-	Handle mainThread;
+	HandleType currentProcess;
+	HandleType mainThread;
 	int currentThreadIndex;
-	Handle srvHandle; // Handle for the special service manager port "srv:"
-	Handle errorPortHandle; // Handle for the err:f port used for displaying errors
+	HandleType srvHandle;        // HandleType for the special service manager port "srv:"
+	HandleType errorPortHandle;  // HandleType for the err:f port used for displaying errors
 
 	u32 arbiterCount;
-	u32 threadCount; // How many threads in our thread pool have been used as of now (Up to 32)
-	u32 aliveThreadCount; // How many of these threads are actually alive?
+	u32 threadCount;       // How many threads in our thread pool have been used as of now (Up to 32)
+	u32 aliveThreadCount;  // How many of these threads are actually alive?
 	ServiceManager serviceManager;
 
 	// Top 8 bits are the major version, bottom 8 are the minor version
@@ -58,29 +58,29 @@ class Kernel {
 	// Shows whether a reschedule will be need
 	bool needReschedule = false;
 
-	Handle makeArbiter();
-	Handle makeProcess(u32 id);
-	Handle makePort(const char* name);
-	Handle makeSession(Handle port);
-	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
-	Handle makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
+	HandleType makeArbiter();
+	HandleType makeProcess(u32 id);
+	HandleType makePort(const char* name);
+	HandleType makeSession(HandleType port);
+	HandleType makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status = ThreadStatus::Dormant);
+	HandleType makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
 
-public:
+  public:
 	// Needs to be public to be accessible to the APT/HID services
-	Handle makeEvent(ResetType resetType, Event::CallbackType callback = Event::CallbackType::None);
+	HandleType makeEvent(ResetType resetType, Event::CallbackType callback = Event::CallbackType::None);
 	// Needs to be public to be accessible to the APT/DSP services
-	Handle makeMutex(bool locked = false);
+	HandleType makeMutex(bool locked = false);
 	// Needs to be public to be accessible to the service manager port
-	Handle makeSemaphore(u32 initialCount, u32 maximumCount);
-	Handle makeTimer(ResetType resetType);
+	HandleType makeSemaphore(u32 initialCount, u32 maximumCount);
+	HandleType makeTimer(ResetType resetType);
 	void pollTimers();
 
 	// Signals an event, returns true on success or false if the event does not exist
-	bool signalEvent(Handle e);
+	bool signalEvent(HandleType e);
 	// Run the callback for "special" events that have callbacks
 	void runEventCallback(Event::CallbackType callback);
 
-	void clearEvent(Handle e) {
+	void clearEvent(HandleType e) {
 		KernelObject* object = getObject(e, KernelObjectType::Event);
 		if (object != nullptr) {
 			object->getData<Event>()->fired = false;
@@ -99,19 +99,19 @@ public:
 	bool shouldWaitOnObject(KernelObject* object);
 	void releaseMutex(Mutex* moo);
 	void cancelTimer(Timer* timer);
-	void signalTimer(Handle timerHandle, Timer* timer);
+	void signalTimer(HandleType timerHandle, Timer* timer);
 	u64 getWakeupTick(s64 ns);
 
 	// Wake up the thread with the highest priority out of all threads in the waitlist
 	// Returns the index of the woken up thread
 	// Do not call this function with an empty waitlist!!!
-	int wakeupOneThread(u64 waitlist, Handle handle);
-	void wakeupAllThreads(u64 waitlist, Handle handle);
+	int wakeupOneThread(u64 waitlist, HandleType handle);
+	void wakeupAllThreads(u64 waitlist, HandleType handle);
 
-	std::optional<Handle> getPortHandle(const char* name);
+	std::optional<HandleType> getPortHandle(const char* name);
 	void deleteObjectData(KernelObject& object);
 
-	KernelObject* getProcessFromPID(Handle handle);
+	KernelObject* getProcessFromPID(HandleType handle);
 	s32 getCurrentResourceValue(const KernelObject* limit, u32 resourceName);
 	u32 getMaxForResource(const KernelObject* limit, u32 resourceName);
 	u32 getTLSPointer();
@@ -178,22 +178,22 @@ public:
 	void waitSynchronizationN();
 
 	// File operations
-	void handleFileOperation(u32 messagePointer, Handle file);
-	void closeFile(u32 messagePointer, Handle file);
-	void flushFile(u32 messagePointer, Handle file);
-	void readFile(u32 messagePointer, Handle file);
-	void writeFile(u32 messagePointer, Handle file);
-	void getFileSize(u32 messagePointer, Handle file);
-	void openLinkFile(u32 messagePointer, Handle file);
-	void setFileSize(u32 messagePointer, Handle file);
-	void setFilePriority(u32 messagePointer, Handle file);
+	void handleFileOperation(u32 messagePointer, HandleType file);
+	void closeFile(u32 messagePointer, HandleType file);
+	void flushFile(u32 messagePointer, HandleType file);
+	void readFile(u32 messagePointer, HandleType file);
+	void writeFile(u32 messagePointer, HandleType file);
+	void getFileSize(u32 messagePointer, HandleType file);
+	void openLinkFile(u32 messagePointer, HandleType file);
+	void setFileSize(u32 messagePointer, HandleType file);
+	void setFilePriority(u32 messagePointer, HandleType file);
 
 	// Directory operations
-	void handleDirectoryOperation(u32 messagePointer, Handle directory);
-	void closeDirectory(u32 messagePointer, Handle directory);
-	void readDirectory(u32 messagePointer, Handle directory);
+	void handleDirectoryOperation(u32 messagePointer, HandleType directory);
+	void closeDirectory(u32 messagePointer, HandleType directory);
+	void readDirectory(u32 messagePointer, HandleType directory);
 
-public:
+  public:
 	Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config);
 	void initializeFS() { return serviceManager.initializeFS(); }
 	void setVersion(u8 major, u8 minor);
@@ -209,7 +209,7 @@ public:
 		}
 	}
 
-	Handle makeObject(KernelObjectType type) {
+	HandleType makeObject(KernelObjectType type) {
 		if (handleCounter > KernelHandles::Max) [[unlikely]] {
 			Helpers::panic("Hlep we somehow created enough kernel objects to overflow this thing");
 		}
@@ -219,12 +219,10 @@ public:
 		return handleCounter++;
 	}
 
-	std::vector<KernelObject>& getObjects() {
-		return objects;
-	}
+	std::vector<KernelObject>& getObjects() { return objects; }
 
 	// Get pointer to the object with the specified handle
-	KernelObject* getObject(Handle handle) {
+	KernelObject* getObject(HandleType handle) {
 		// Accessing an object that has not been created
 		if (handle >= objects.size()) [[unlikely]] {
 			return nullptr;
@@ -234,7 +232,7 @@ public:
 	}
 
 	// Get pointer to the object with the specified handle and type
-	KernelObject* getObject(Handle handle, KernelObjectType type) {
+	KernelObject* getObject(HandleType handle, KernelObjectType type) {
 		if (handle >= objects.size() || objects[handle].type != type) [[unlikely]] {
 			return nullptr;
 		}

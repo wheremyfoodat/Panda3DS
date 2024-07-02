@@ -119,9 +119,10 @@ class MainWindow : public QMainWindow {
 	void sendMessage(const EmulatorMessage& message);
 	void dispatchMessage(const EmulatorMessage& message);
 
-	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
+	// Tracks whether we are using an OpenGL-backed renderer, a Vulkan-backed renderer or a Metal-backed renderer
 	bool usingGL = false;
 	bool usingVk = false;
+	bool usingMtl = false;
 
 	// Variables to keep track of whether the user is controlling the 3DS analog stick with their keyboard
 	// This is done so when a gamepad is connected, we won't automatically override the 3DS analog stick settings with the gamepad's state

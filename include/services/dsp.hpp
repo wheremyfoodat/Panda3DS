@@ -14,7 +14,7 @@
 class Kernel;
 
 class DSPService {
-	Handle handle = KernelHandles::DSP;
+	HandleType handle = KernelHandles::DSP;
 	Memory& mem;
 	Kernel& kernel;
 	Audio::DSPCore* dsp = nullptr;
@@ -24,7 +24,7 @@ class DSPService {
 	static constexpr size_t pipeCount = 8;
 
 	// DSP service event handles
-	using DSPEvent = std::optional<Handle>;
+	using DSPEvent = std::optional<HandleType>;
 
 	DSPEvent semaphoreEvent;
 	DSPEvent interrupt0;

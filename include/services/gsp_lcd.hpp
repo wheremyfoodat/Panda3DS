@@ -6,13 +6,13 @@
 #include "result/result.hpp"
 
 class LCDService {
-	Handle handle = KernelHandles::LCD;
+	HandleType handle = KernelHandles::LCD;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, gspLCDLogger)
 
 	// Service commands
 
-public:
+  public:
 	LCDService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

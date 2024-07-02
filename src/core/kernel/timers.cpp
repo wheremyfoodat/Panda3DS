@@ -4,8 +4,8 @@
 #include "kernel.hpp"
 #include "scheduler.hpp"
 
-Handle Kernel::makeTimer(ResetType type) {
-	Handle ret = makeObject(KernelObjectType::Timer);
+HandleType Kernel::makeTimer(ResetType type) {
+	HandleType ret = makeObject(KernelObjectType::Timer);
 	objects[ret].data = new Timer(type);
 
 	if (type == ResetType::Pulse) {
@@ -52,11 +52,9 @@ void Kernel::pollTimers() {
 	}
 }
 
-void Kernel::cancelTimer(Timer* timer) {
-	timer->running = false;
-}
+void Kernel::cancelTimer(Timer* timer) { timer->running = false; }
 
-void Kernel::signalTimer(Handle timerHandle, Timer* timer) {
+void Kernel::signalTimer(HandleType timerHandle, Timer* timer) {
 	timer->fired = true;
 	requireReschedule();
 
@@ -94,7 +92,7 @@ void Kernel::svcCreateTimer() {
 }
 
 void Kernel::svcSetTimer() {
-	Handle handle = regs[0];
+	HandleType handle = regs[0];
 	// TODO: Is this actually s64 or u64? 3DBrew says s64, but u64 makes more sense
 	const s64 initial = s64(u64(regs[2]) | (u64(regs[3]) << 32));
 	const s64 interval = s64(u64(regs[1]) | (u64(regs[4]) << 32));
@@ -112,7 +110,7 @@ void Kernel::svcSetTimer() {
 	timer->interval = interval;
 	timer->running = true;
 	timer->fireTick = cpu.getTicks() + Scheduler::nsToCycles(initial);
-	
+
 	Scheduler& scheduler = cpu.getScheduler();
 	// Signal an event to poll timers as soon as possible
 	scheduler.removeEvent(Scheduler::EventType::UpdateTimers);
@@ -127,7 +125,7 @@ void Kernel::svcSetTimer() {
 }
 
 void Kernel::svcClearTimer() {
-	Handle handle = regs[0];
+	HandleType handle = regs[0];
 	logSVC("ClearTimer (handle = %X)\n", handle);
 	KernelObject* object = getObject(handle, KernelObjectType::Timer);
 
@@ -141,7 +139,7 @@ void Kernel::svcClearTimer() {
 }
 
 void Kernel::svcCancelTimer() {
-	Handle handle = regs[0];
+	HandleType handle = regs[0];
 	logSVC("CancelTimer (handle = %X)\n", handle);
 	KernelObject* object = getObject(handle, KernelObjectType::Timer);
 

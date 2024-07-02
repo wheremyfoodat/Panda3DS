@@ -33,8 +33,8 @@ namespace Audio {
 			SampleFormat format;
 			SourceType sourceType;
 
-			bool fromQueue = false;        // Is this buffer from the buffer queue or an embedded buffer?
-			bool hasPlayedOnce = false;    // Has the buffer been played at least once before?
+			bool fromQueue = false;      // Is this buffer from the buffer queue or an embedded buffer?
+			bool hasPlayedOnce = false;  // Has the buffer been played at least once before?
 
 			bool operator<(const Buffer& other) const {
 				// Lower ID = Higher priority
@@ -136,7 +136,7 @@ namespace Audio {
 			const auto counter0 = dspRam.region0.frameCounter;
 			const auto counter1 = dspRam.region1.frameCounter;
 
-			// Handle wraparound cases first
+			// HandleType wraparound cases first
 			if (counter0 == 0xffff && counter1 != 0xfffe) {
 				return 1;
 			} else if (counter1 == 0xffff && counter0 != 0xfffe) {

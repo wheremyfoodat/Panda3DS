@@ -33,7 +33,7 @@ void Kernel::switchThread(int newThreadIndex) {
 	std::memcpy(cpu.fprs().data(), newThread.fprs.data(), cpu.fprs().size_bytes());  // Load 32 FPRs
 	cpu.setCPSR(newThread.cpsr);                                                     // Load CPSR
 	cpu.setFPSCR(newThread.fpscr);                                                   // Load FPSCR
-	cpu.setTLSBase(newThread.tlsBase);  // Load CP15 thread-local-storage pointer register
+	cpu.setTLSBase(newThread.tlsBase);                                               // Load CP15 thread-local-storage pointer register
 
 	currentThreadIndex = newThreadIndex;
 }
@@ -42,21 +42,19 @@ void Kernel::switchThread(int newThreadIndex) {
 // The threads with higher priority (aka the ones with a lower priority value) should come first in the vector
 void Kernel::sortThreads() {
 	std::vector<int>& v = threadIndices;
-	std::sort(v.begin(), v.end(), [&](int a, int b) {
-		return threads[a].priority < threads[b].priority;
-	});
+	std::sort(v.begin(), v.end(), [&](int a, int b) { return threads[a].priority < threads[b].priority; });
 }
 
 bool Kernel::canThreadRun(const Thread& t) {
 	if (t.status == ThreadStatus::Ready) {
 		return true;
-	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1
-		|| t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
+	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny ||
+			   t.status == ThreadStatus::WaitSyncAll) {
 		// TODO: Set r0 to the correct error code on timeout for WaitSync{1/Any/All}
 		return cpu.getTicks() >= t.wakeupTick;
 	}
 
-	// Handle timeouts and stuff here
+	// HandleType timeouts and stuff here
 	return false;
 }
 
@@ -100,8 +98,8 @@ void Kernel::rescheduleThreads() {
 	// Case 1: A thread can run
 	if (newThreadIndex.has_value()) {
 		switchThread(newThreadIndex.value());
-	} 
-	
+	}
+
 	// Case 2: No other thread can run, straight to the idle thread
 	else {
 		switchThread(idleThreadIndex);
@@ -109,30 +107,30 @@ void Kernel::rescheduleThreads() {
 }
 
 // Internal OS function to spawn a thread
-Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status) {
-	int index; // Index of the created thread in the  threads array
+HandleType Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status) {
+	int index;  // Index of the created thread in the  threads array
 
-	if (threadCount < appResourceLimits.maxThreads) [[likely]] { // If we have not yet created over too many threads
+	if (threadCount < appResourceLimits.maxThreads) [[likely]] {  // If we have not yet created over too many threads
 		index = threadCount++;
-	} else if (aliveThreadCount < appResourceLimits.maxThreads) { // If we have created many threads but at least one is dead & reusable
+	} else if (aliveThreadCount < appResourceLimits.maxThreads) {  // If we have created many threads but at least one is dead & reusable
 		for (int i = 0; i < threads.size(); i++) {
 			if (threads[i].status == ThreadStatus::Dead) {
 				index = i;
 				break;
 			}
 		}
-	} else { // There is no thread we can use, we're screwed
+	} else {  // There is no thread we can use, we're screwed
 		Helpers::panic("Overflowed thread count!!");
 	}
 
 	aliveThreadCount++;
 
 	threadIndices.push_back(index);
-	Thread& t = threads[index]; // Reference to thread data
-	Handle ret = makeObject(KernelObjectType::Thread);
+	Thread& t = threads[index];  // Reference to thread data
+	HandleType ret = makeObject(KernelObjectType::Thread);
 	objects[ret].data = &t;
 
-	const bool isThumb = (entrypoint & 1) != 0; // Whether the thread starts in thumb mode or not
+	const bool isThumb = (entrypoint & 1) != 0;  // Whether the thread starts in thumb mode or not
 
 	// Set up initial thread context
 	t.gprs.fill(0);
@@ -150,7 +148,7 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, Processor
 	t.status = status;
 	t.handle = ret;
 	t.waitingAddress = 0;
-	t.threadsWaitingForTermination = 0; // Thread just spawned, no other threads waiting for it to terminate
+	t.threadsWaitingForTermination = 0;  // Thread just spawned, no other threads waiting for it to terminate
 
 	t.cpsr = CPSR::UserMode | (isThumb ? CPSR::Thumb : 0);
 	t.fpscr = FPSCR::ThreadDefault;
@@ -161,8 +159,8 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, Processor
 	return ret;
 }
 
-Handle Kernel::makeMutex(bool locked) {
-	Handle ret = makeObject(KernelObjectType::Mutex);
+HandleType Kernel::makeMutex(bool locked) {
+	HandleType ret = makeObject(KernelObjectType::Mutex);
 	objects[ret].data = new Mutex(locked, ret);
 
 	// If the mutex is initially locked, store the index of the thread that owns it and set lock count to 1
@@ -181,15 +179,15 @@ Handle Kernel::makeMutex(bool locked) {
 
 void Kernel::releaseMutex(Mutex* moo) {
 	// TODO: Assert lockCount > 0 before release, maybe. The SVC should be safe at least.
-	moo->lockCount--; // Decrement lock count
+	moo->lockCount--;  // Decrement lock count
 
 	// If the lock count reached 0 then the thread no longer owns the mootex and it can be given to a new one
 	if (moo->lockCount == 0) {
 		moo->locked = false;
 
 		if (moo->waitlist != 0) {
-			int index = wakeupOneThread(moo->waitlist, moo->handle); // Wake up one thread and get its index
-			moo->waitlist ^= (1ull << index); // Remove thread from waitlist
+			int index = wakeupOneThread(moo->waitlist, moo->handle);  // Wake up one thread and get its index
+			moo->waitlist ^= (1ull << index);                         // Remove thread from waitlist
 
 			// Have new thread acquire mutex
 			moo->locked = true;
@@ -201,8 +199,8 @@ void Kernel::releaseMutex(Mutex* moo) {
 	}
 }
 
-Handle Kernel::makeSemaphore(u32 initialCount, u32 maximumCount) {
-	Handle ret = makeObject(KernelObjectType::Semaphore);
+HandleType Kernel::makeSemaphore(u32 initialCount, u32 maximumCount) {
+	HandleType ret = makeObject(KernelObjectType::Semaphore);
 	objects[ret].data = new Semaphore(initialCount, maximumCount);
 
 	return ret;
@@ -221,7 +219,7 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 	switch (object->type) {
 		case KernelObjectType::Event: {
 			Event* e = object->getData<Event>();
-			if (e->resetType == ResetType::OneShot) { // One-shot events automatically get cleared after waking up a thread
+			if (e->resetType == ResetType::OneShot) {  // One-shot events automatically get cleared after waking up a thread
 				e->fired = false;
 			}
 			break;
@@ -245,15 +243,14 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 
 		case KernelObjectType::Semaphore: {
 			Semaphore* s = object->getData<Semaphore>();
-			if (s->availableCount <= 0) [[unlikely]] // This should be unreachable but let's check anyways
+			if (s->availableCount <= 0) [[unlikely]]  // This should be unreachable but let's check anyways
 				Helpers::panic("Tried to acquire unacquirable semaphore");
 
 			s->availableCount -= 1;
 			break;
 		}
 
-		case KernelObjectType::Thread:
-			break;
+		case KernelObjectType::Thread: break;
 
 		case KernelObjectType::Timer: {
 			Timer* timer = object->getData<Timer>();
@@ -269,36 +266,36 @@ void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 
 // Wake up one of the threads in the waitlist (the one with highest prio) and return its index
 // Must not be called with an empty waitlist
-int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
+int Kernel::wakeupOneThread(u64 waitlist, HandleType handle) {
 	if (waitlist == 0) [[unlikely]]
 		Helpers::panic("[Internal error] It shouldn't be possible to call wakeupOneThread when there's 0 threads waiting!");
 
 	// Find the waiting thread with the highest priority.
 	// We do this by first picking the first thread in the waitlist, then checking each other thread and comparing priority
-	int threadIndex = std::countr_zero(waitlist);    // Index of first thread
-	int maxPriority = threads[threadIndex].priority; // Set initial max prio to the prio of the first thread
-	waitlist ^= (1ull << threadIndex); // Remove thread from the waitlist
+	int threadIndex = std::countr_zero(waitlist);     // Index of first thread
+	int maxPriority = threads[threadIndex].priority;  // Set initial max prio to the prio of the first thread
+	waitlist ^= (1ull << threadIndex);                // Remove thread from the waitlist
 
 	while (waitlist != 0) {
-		int newThread = std::countr_zero(waitlist); // Get new thread and evaluate whether it has a higher priority
-		if (threads[newThread].priority < maxPriority) { // Low priority value means high priority
+		int newThread = std::countr_zero(waitlist);       // Get new thread and evaluate whether it has a higher priority
+		if (threads[newThread].priority < maxPriority) {  // Low priority value means high priority
 			threadIndex = newThread;
 			maxPriority = threads[newThread].priority;
 		}
 
-		waitlist ^= (1ull << threadIndex); // Remove thread from waitlist
+		waitlist ^= (1ull << threadIndex);  // Remove thread from waitlist
 	}
 
 	Thread& t = threads[threadIndex];
 	switch (t.status) {
 		case ThreadStatus::WaitSync1:
 			t.status = ThreadStatus::Ready;
-			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
+			t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
 			break;
 
 		case ThreadStatus::WaitSyncAny:
 			t.status = ThreadStatus::Ready;
-			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
+			t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
 
 			// Get the index of the event in the object's waitlist, write it to r1
 			for (size_t i = 0; i < t.waitList.size(); i++) {
@@ -309,44 +306,40 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 			}
 			break;
 
-		case ThreadStatus::WaitSyncAll:
-			Helpers::panic("WakeupOneThread: Thread on WaitSyncAll");
-			break;
+		case ThreadStatus::WaitSyncAll: Helpers::panic("WakeupOneThread: Thread on WaitSyncAll"); break;
 	}
 
 	return threadIndex;
 }
 
 // Wake up every single thread in the waitlist using a bit scanning algorithm
-void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
+void Kernel::wakeupAllThreads(u64 waitlist, HandleType handle) {
 	while (waitlist != 0) {
-		const uint index = std::countr_zero(waitlist); // Get one of the set bits to see which thread is waiting
-		waitlist ^= (1ull << index); // Remove thread from waitlist by toggling its bit
+		const uint index = std::countr_zero(waitlist);  // Get one of the set bits to see which thread is waiting
+		waitlist ^= (1ull << index);                    // Remove thread from waitlist by toggling its bit
 
 		// Get the thread we'll be signalling
 		Thread& t = threads[index];
 		switch (t.status) {
-		case ThreadStatus::WaitSync1:
-			t.status = ThreadStatus::Ready;
-			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
-			break;
+			case ThreadStatus::WaitSync1:
+				t.status = ThreadStatus::Ready;
+				t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
+				break;
 
-		case ThreadStatus::WaitSyncAny:
-			t.status = ThreadStatus::Ready;
-			t.gprs[0] = Result::Success; // The thread did not timeout, so write success to r0
+			case ThreadStatus::WaitSyncAny:
+				t.status = ThreadStatus::Ready;
+				t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
 
-			// Get the index of the event in the object's waitlist, write it to r1
-			for (size_t i = 0; i < t.waitList.size(); i++) {
-				if (t.waitList[i] == handle) {
-					t.gprs[1] = u32(i);
-					break;
+				// Get the index of the event in the object's waitlist, write it to r1
+				for (size_t i = 0; i < t.waitList.size(); i++) {
+					if (t.waitList[i] == handle) {
+						t.gprs[1] = u32(i);
+						break;
+					}
 				}
-			}
-			break;
+				break;
 
-		case ThreadStatus::WaitSyncAll:
-			Helpers::panic("WakeupAllThreads: Thread on WaitSyncAll");
-			break;
+			case ThreadStatus::WaitSyncAll: Helpers::panic("WakeupAllThreads: Thread on WaitSyncAll"); break;
 		}
 	}
 }
@@ -404,12 +397,11 @@ void Kernel::sleepThread(s64 ns) {
 void Kernel::createThread() {
 	u32 priority = regs[0];
 	u32 entrypoint = regs[1];
-	u32 arg = regs[2]; // An argument value stored in r0 of the new thread
-	u32 initialSP = regs[3] & ~7; // SP is force-aligned to 8 bytes
+	u32 arg = regs[2];             // An argument value stored in r0 of the new thread
+	u32 initialSP = regs[3] & ~7;  // SP is force-aligned to 8 bytes
 	s32 id = static_cast<s32>(regs[4]);
 
-	logSVC("CreateThread(entry = %08X, stacktop = %08X, arg = %X, priority = %X, processor ID = %d)\n", entrypoint,
-		initialSP, arg, priority, id);
+	logSVC("CreateThread(entry = %08X, stacktop = %08X, arg = %X, priority = %X, processor ID = %d)\n", entrypoint, initialSP, arg, priority, id);
 
 	if (priority > 0x3F) [[unlikely]] {
 		Helpers::panic("Created thread with bad priority value %X", priority);
@@ -429,14 +421,14 @@ void Kernel::createThread() {
 // void SleepThread(s64 nanoseconds)
 void Kernel::svcSleepThread() {
 	const s64 ns = s64(u64(regs[0]) | (u64(regs[1]) << 32));
-	//logSVC("SleepThread(ns = %lld)\n", ns);
+	// logSVC("SleepThread(ns = %lld)\n", ns);
 
 	regs[0] = Result::Success;
 	sleepThread(ns);
 }
 
 void Kernel::getThreadID() {
-	Handle handle = regs[1];
+	HandleType handle = regs[1];
 	logSVC("GetThreadID(handle = %X)\n", handle);
 
 	if (handle == KernelHandles::CurrentThread) {
@@ -456,7 +448,7 @@ void Kernel::getThreadID() {
 }
 
 void Kernel::getThreadPriority() {
-	const Handle handle = regs[1];
+	const HandleType handle = regs[1];
 	logSVC("GetThreadPriority (handle = %X)\n", handle);
 
 	if (handle == KernelHandles::CurrentThread) {
@@ -474,7 +466,7 @@ void Kernel::getThreadPriority() {
 }
 
 void Kernel::getThreadIdealProcessor() {
-	const Handle handle = regs[1];  // Thread handle
+	const HandleType handle = regs[1];  // Thread handle
 	logSVC("GetThreadIdealProcessor (handle = %X)\n", handle);
 
 	// TODO: Not documented what this is or what it does. Citra doesn't implement it at all. Return AppCore as the ideal processor for now
@@ -490,7 +482,7 @@ void Kernel::getThreadContext() {
 }
 
 void Kernel::setThreadPriority() {
-	const Handle handle = regs[0];
+	const HandleType handle = regs[0];
 	const u32 priority = regs[1];
 	logSVC("SetThreadPriority (handle = %X, priority = %X)\n", handle, priority);
 
@@ -524,9 +516,7 @@ void Kernel::getCurrentProcessorNumber() {
 	// Until we properly implement per-core schedulers, return whatever processor ID passed to svcCreateThread
 	switch (id) {
 		// TODO: This is picked from exheader
-		case ProcessorID::Default:
-			ret = static_cast<s32>(ProcessorID::AppCore);
-			break;
+		case ProcessorID::Default: ret = static_cast<s32>(ProcessorID::AppCore); break;
 
 		case ProcessorID::AllCPUs:
 			ret = static_cast<s32>(ProcessorID::AppCore);
@@ -565,8 +555,7 @@ void Kernel::exitThread() {
 
 	// Remove the index of this thread from the thread indices vector
 	for (int i = 0; i < threadIndices.size(); i++) {
-		if (threadIndices[i] == currentThreadIndex)
-			threadIndices.erase(threadIndices.begin() + i);
+		if (threadIndices[i] == currentThreadIndex) threadIndices.erase(threadIndices.begin() + i);
 	}
 
 	Thread& t = threads[currentThreadIndex];
@@ -576,9 +565,9 @@ void Kernel::exitThread() {
 	// Check if any threads are sleeping, waiting for this thread to terminate, and wake them up
 	// This is how thread joining is implemented in the kernel - you wait on a thread, like any other wait object.
 	if (t.threadsWaitingForTermination != 0) {
-		// TODO: Handle cloned handles? Not sure how those interact with wait object signalling
+		// TODO: HandleType cloned handles? Not sure how those interact with wait object signalling
 		wakeupAllThreads(t.threadsWaitingForTermination, t.handle);
-		t.threadsWaitingForTermination = 0; // No other threads waiting
+		t.threadsWaitingForTermination = 0;  // No other threads waiting
 	}
 
 	requireReschedule();
@@ -593,7 +582,7 @@ void Kernel::svcCreateMutex() {
 }
 
 void Kernel::svcReleaseMutex() {
-	const Handle handle = regs[0];
+	const HandleType handle = regs[0];
 	logSVC("ReleaseMutex (handle = %x)\n", handle);
 
 	const auto object = getObject(handle, KernelObjectType::Mutex);
@@ -619,18 +608,16 @@ void Kernel::svcCreateSemaphore() {
 	s32 maxCount = static_cast<s32>(regs[2]);
 	logSVC("CreateSemaphore (initial count = %d, max count = %d)\n", initialCount, maxCount);
 
-	if (initialCount > maxCount)
-		Helpers::panic("CreateSemaphore: Initial count higher than max count");
+	if (initialCount > maxCount) Helpers::panic("CreateSemaphore: Initial count higher than max count");
 
-	if (initialCount < 0 || maxCount < 0)
-		Helpers::panic("CreateSemaphore: Negative count value");
+	if (initialCount < 0 || maxCount < 0) Helpers::panic("CreateSemaphore: Negative count value");
 
 	regs[0] = Result::Success;
 	regs[1] = makeSemaphore(initialCount, maxCount);
 }
 
 void Kernel::svcReleaseSemaphore() {
-	const Handle handle = regs[1];
+	const HandleType handle = regs[1];
 	const s32 releaseCount = static_cast<s32>(regs[2]);
 	logSVC("ReleaseSemaphore (handle = %X, release count = %d)\n", handle, releaseCount);
 
@@ -641,12 +628,10 @@ void Kernel::svcReleaseSemaphore() {
 		return;
 	}
 
-	if (releaseCount < 0)
-		Helpers::panic("ReleaseSemaphore: Negative count");
+	if (releaseCount < 0) Helpers::panic("ReleaseSemaphore: Negative count");
 
 	Semaphore* s = object->getData<Semaphore>();
-	if (s->maximumCount - s->availableCount < releaseCount)
-		Helpers::panic("ReleaseSemaphore: Release count too high");
+	if (s->maximumCount - s->availableCount < releaseCount) Helpers::panic("ReleaseSemaphore: Release count too high");
 
 	// Write success and old available count to r0 and r1 respectively
 	regs[0] = Result::Success;
@@ -656,10 +641,10 @@ void Kernel::svcReleaseSemaphore() {
 
 	// Wake up threads one by one until the available count hits 0 or we run out of threads to wake up
 	while (s->availableCount > 0 && s->waitlist != 0) {
-		int index = wakeupOneThread(s->waitlist, handle); // Wake up highest priority thread
-		s->waitlist ^= (1ull << index); // Remove thread from waitlist
+		int index = wakeupOneThread(s->waitlist, handle);  // Wake up highest priority thread
+		s->waitlist ^= (1ull << index);                    // Remove thread from waitlist
 
-		s->availableCount--; // Decrement available count
+		s->availableCount--;  // Decrement available count
 	}
 }
 
@@ -675,25 +660,23 @@ bool Kernel::isWaitable(const KernelObject* object) {
 // Returns whether we should wait on a sync object or not
 bool Kernel::shouldWaitOnObject(KernelObject* object) {
 	switch (object->type) {
-		case KernelObjectType::Event: // We should wait on an event only if it has not been signalled
+		case KernelObjectType::Event:  // We should wait on an event only if it has not been signalled
 			return !object->getData<Event>()->fired;
 
 		case KernelObjectType::Mutex: {
-			Mutex* moo = object->getData<Mutex>(); // mooooooooooo
-			return moo->locked && moo->ownerThread != currentThreadIndex; // If the current thread owns the moo then no reason to wait
+			Mutex* moo = object->getData<Mutex>();                         // mooooooooooo
+			return moo->locked && moo->ownerThread != currentThreadIndex;  // If the current thread owns the moo then no reason to wait
 		}
 
-		case KernelObjectType::Thread: // Waiting on a thread waits until it's dead. If it's dead then no need to wait
+		case KernelObjectType::Thread:  // Waiting on a thread waits until it's dead. If it's dead then no need to wait
 			return object->getData<Thread>()->status != ThreadStatus::Dead;
 
-		case KernelObjectType::Timer: // We should wait on a timer only if it has not been signalled
+		case KernelObjectType::Timer:  // We should wait on a timer only if it has not been signalled
 			return !object->getData<Timer>()->fired;
 
-		case KernelObjectType::Semaphore: // Wait if the semaphore count <= 0
+		case KernelObjectType::Semaphore:  // Wait if the semaphore count <= 0
 			return object->getData<Semaphore>()->availableCount <= 0;
 
-		default:
-			Helpers::panic("Not sure whether to wait on object (type: %s)", object->getTypeName());
-			return true;
+		default: Helpers::panic("Not sure whether to wait on object (type: %s)", object->getTypeName()); return true;
 	}
 }

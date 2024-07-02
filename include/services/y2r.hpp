@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <optional>
+
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -10,18 +11,15 @@
 class Kernel;
 
 class Y2RService {
-	Handle handle = KernelHandles::Y2R;
+	HandleType handle = KernelHandles::Y2R;
 	Memory& mem;
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, y2rLogger)
 
-	std::optional<Handle> transferEndEvent;
+	std::optional<HandleType> transferEndEvent;
 	bool transferEndInterruptEnabled;
 
-	enum class BusyStatus : u32 {
-		NotBusy = 0,
-		Busy = 1
-	};
+	enum class BusyStatus : u32 { NotBusy = 0, Busy = 1 };
 
 	enum class InputFormat : u32 {
 		YUV422_Individual8 = 0,
@@ -31,24 +29,14 @@ class Y2RService {
 		YUV422_Batch = 4,
 	};
 
-	enum class OutputFormat : u32 {
-		RGB32 = 0,
-		RGB24 = 1,
-		RGB15 = 2,
-		RGB565 = 3
-	};
+	enum class OutputFormat : u32 { RGB32 = 0, RGB24 = 1, RGB15 = 2, RGB565 = 3 };
 
 	// Clockwise rotation
-	enum class Rotation : u32 {
-		None = 0,
-		Rotate90 = 1,
-		Rotate180 = 2,
-		Rotate270 = 3
-	};
+	enum class Rotation : u32 { None = 0, Rotate90 = 1, Rotate180 = 2, Rotate270 = 3 };
 
 	enum class BlockAlignment : u32 {
-		Line = 0, // Output buffer's pixels are arranged linearly. Used when outputting to the framebuffer.
-		Block8x8 = 1, // Output buffer's pixels are morton swizzled. Used when outputting to a GPU texture.
+		Line = 0,      // Output buffer's pixels are arranged linearly. Used when outputting to the framebuffer.
+		Block8x8 = 1,  // Output buffer's pixels are morton swizzled. Used when outputting to a GPU texture.
 	};
 
 	// https://github.com/citra-emu/citra/blob/ac9d72a95ca9a60de8d39484a14aecf489d6d016/src/core/hle/service/cam/y2r_u.cpp#L33
@@ -60,7 +48,7 @@ class Y2RService {
 		{{0x12A, 0x1CA, 0x88, 0x36, 0x21C, -0x1F04, 0x99C, -0x2421}},   // ITU_Rec709_Scaling
 	}};
 
-	CoefficientSet conversionCoefficients; // Current conversion coefficients
+	CoefficientSet conversionCoefficients;  // Current conversion coefficients
 
 	InputFormat inputFmt;
 	OutputFormat outputFmt;
@@ -113,7 +101,7 @@ class Y2RService {
 	void startConversion(u32 messagePointer);
 	void stopConversion(u32 messagePointer);
 
-public:
+  public:
 	Y2RService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

@@ -38,7 +38,7 @@ namespace HID::Keys {
 class Kernel;
 
 class HIDService {
-	Handle handle = KernelHandles::HID;
+	HandleType handle = KernelHandles::HID;
 	Memory& mem;
 	Kernel& kernel;
 	u8* sharedMem = nullptr;  // Pointer to HID shared memory
@@ -60,7 +60,7 @@ class HIDService {
 	bool gyroEnabled;
 	bool touchScreenPressed;
 
-	std::array<std::optional<Handle>, 5> events;
+	std::array<std::optional<HandleType>, 5> events;
 
 	MAKE_LOG_FUNCTION(log, hidLogger)
 
@@ -141,9 +141,7 @@ class HIDService {
 		touchScreenPressed = true;
 	}
 
-	void releaseTouchScreen() {
-		touchScreenPressed = false;
-	}
+	void releaseTouchScreen() { touchScreenPressed = false; }
 
 	bool isTouchScreenPressed() { return touchScreenPressed; }
 };

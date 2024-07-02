@@ -8,7 +8,7 @@
 
 namespace Common {
 	class CapstoneDisassembler {
-		csh handle;                       // Handle to our disassembler object
+		csh handle;                       // HandleType to our disassembler object
 		cs_insn* instructions = nullptr;  // Pointer to instruction object
 		bool initialized = false;
 

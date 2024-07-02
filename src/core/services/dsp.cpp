@@ -1,9 +1,10 @@
 #include "services/dsp.hpp"
-#include "ipc.hpp"
-#include "kernel.hpp"
 
 #include <algorithm>
 #include <fstream>
+
+#include "ipc.hpp"
+#include "kernel.hpp"
 
 namespace DSPCommands {
 	enum : u32 {
@@ -25,10 +26,7 @@ namespace DSPCommands {
 }
 
 namespace Result {
-	enum : u32 {
-		HeadphonesNotInserted = 0,
-		HeadphonesInserted = 1
-	};
+	enum : u32 { HeadphonesNotInserted = 0, HeadphonesInserted = 1 };
 }
 
 void DSPService::reset() {
@@ -74,7 +72,7 @@ void DSPService::convertProcessAddressFromDspDram(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0xC, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, converted); // Converted address
+	mem.write32(messagePointer + 8, converted);  // Converted address
 }
 
 void DSPService::loadComponent(u32 messagePointer) {
@@ -94,9 +92,9 @@ void DSPService::loadComponent(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 1); // Component loaded
+	mem.write32(messagePointer + 8, 1);  // Component loaded
 	mem.write32(messagePointer + 12, (size << 4) | 0xA);
-	mem.write32(messagePointer + 16, mem.read32(messagePointer + 20)); // Component buffer
+	mem.write32(messagePointer + 16, mem.read32(messagePointer + 20));  // Component buffer
 }
 
 void DSPService::unloadComponent(u32 messagePointer) {
@@ -121,7 +119,7 @@ void DSPService::readPipeIfPossible(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write16(messagePointer + 8, u16(data.size())); // Number of bytes read
+	mem.write16(messagePointer + 8, u16(data.size()));  // Number of bytes read
 }
 
 void DSPService::recvData(u32 messagePointer) {
@@ -153,12 +151,10 @@ DSPService::DSPEvent& DSPService::getEventRef(u32 type, u32 pipe) {
 		case 1: return interrupt1;
 
 		case 2:
-			if (pipe >= pipeCount)
-				Helpers::panic("Tried to access the event of an invalid pipe");
+			if (pipe >= pipeCount) Helpers::panic("Tried to access the event of an invalid pipe");
 			return pipeEvents[pipe];
 
-		default:
-			Helpers::panic("Unknown type for DSP::getEventRef");
+		default: Helpers::panic("Unknown type for DSP::getEventRef");
 	}
 }
 
@@ -170,8 +166,8 @@ void DSPService::registerInterruptEvents(u32 messagePointer) {
 
 	// The event handle being 0 means we're removing an event
 	if (eventHandle == 0) {
-		DSPEvent& e = getEventRef(interrupt, channel); // Get event
-		if (e.has_value()) { // Remove if it exists
+		DSPEvent& e = getEventRef(interrupt, channel);  // Get event
+		if (e.has_value()) {                            // Remove if it exists
 			totalEventCount--;
 			e = std::nullopt;
 		}
@@ -198,7 +194,7 @@ void DSPService::getHeadphoneStatus(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1F, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, Result::HeadphonesInserted); // This should be toggleable for shits and giggles
+	mem.write32(messagePointer + 8, Result::HeadphonesInserted);  // This should be toggleable for shits and giggles
 }
 
 void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
@@ -211,7 +207,7 @@ void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	// TODO: Translation descriptor here?
-	mem.write32(messagePointer + 12, semaphoreEvent.value()); // Semaphore event handle
+	mem.write32(messagePointer + 12, semaphoreEvent.value());  // Semaphore event handle
 	kernel.signalEvent(semaphoreEvent.value());
 }
 
@@ -249,7 +245,7 @@ void DSPService::writeProcessPipe(u32 messagePointer) {
 void DSPService::flushDataCache(u32 messagePointer) {
 	const u32 address = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
-	const Handle process = mem.read32(messagePointer + 16);
+	const HandleType process = mem.read32(messagePointer + 16);
 
 	log("DSP::FlushDataCache (addr = %08X, size = %08X, process = %X)\n", address, size, process);
 	mem.write32(messagePointer, IPC::responseHeader(0x13, 1, 0));
@@ -259,7 +255,7 @@ void DSPService::flushDataCache(u32 messagePointer) {
 void DSPService::invalidateDCache(u32 messagePointer) {
 	const u32 address = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
-	const Handle process = mem.read32(messagePointer + 16);
+	const HandleType process = mem.read32(messagePointer + 16);
 
 	log("DSP::InvalidateDataCache (addr = %08X, size = %08X, process = %X)\n", address, size, process);
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 0));

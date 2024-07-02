@@ -8,7 +8,7 @@
 class NDMService {
 	enum class ExclusiveState : u32 { None = 0, Infrastructure = 1, LocalComms = 2, StreetPass = 3, StreetPassData = 4 };
 
-	Handle handle = KernelHandles::NDM;
+	HandleType handle = KernelHandles::NDM;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, ndmLogger)
 
@@ -25,7 +25,7 @@ class NDMService {
 
 	ExclusiveState exclusiveState = ExclusiveState::None;
 
-public:
+  public:
 	NDMService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
