@@ -39,7 +39,35 @@ HorizonResult SDMCArchive::createFile(const FSPath& path, u64 size) {
 }
 
 HorizonResult SDMCArchive::deleteFile(const FSPath& path) {
-	Helpers::panic("[SDMC] Unimplemented DeleteFile");
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in SDMC::DeleteFile");
+		}
+
+		fs::path p = IOFile::getAppData() / "SDMC";
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (fs::is_directory(p)) {
+			Helpers::panic("SDMC::DeleteFile: Tried to delete directory");
+		}
+
+		if (!fs::is_regular_file(p)) {
+			return Result::FS::FileNotFoundAlt;
+		}
+
+		std::error_code ec;
+		bool success = fs::remove(p, ec);
+
+		// It might still be possible for fs::remove to fail, if there's eg an open handle to a file being deleted
+		// In this case, print a warning, but still return success for now
+		if (!success) {
+			Helpers::warn("SDMC::DeleteFile: fs::remove failed\n");
+		}
+
+		return Result::Success;
+	}
+
+	Helpers::panic("SaveDataArchive::DeleteFile: Unknown path type");
 	return Result::Success;
 }
 
