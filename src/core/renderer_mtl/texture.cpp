@@ -228,8 +228,14 @@ u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8>
             return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
         }
 
-        case PICA::TextureFmt::ETC1: return getTexelETC(false, u, v, size.u(), data);
-        case PICA::TextureFmt::ETC1A4: return getTexelETC(true, u, v, size.u(), data);
+        case PICA::TextureFmt::ETC1: {
+            //return getTexelETC(false, u, v, size.u(), data);
+            Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
+        }
+        case PICA::TextureFmt::ETC1A4: {
+            //return getTexelETC(true, u, v, size.u(), data);
+            Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
+        }
 
         default:
             Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
@@ -248,7 +254,8 @@ void Texture::decodeTexture(std::span<const u8> data) {
         }
     }
 
-    u32 bytesPerRow = sizeInBytes() / size.v();
+    // TODO: is this correct?
+    u32 bytesPerRow = 4 * size.u();//sizeInBytes() / size.v();
     texture->replaceRegion(MTL::Region(0, 0, size.u(), size.v()), 0, 0, decoded.data(), bytesPerRow, 0);
 }
 

@@ -54,4 +54,7 @@ class RendererMTL final : public Renderer {
 			commandBuffer = commandQueue->commandBuffer();
 		}
 	}
+
+	MTL::Texture* getTexture(Metal::Texture& tex);
+	void bindTexturesToSlots();
 };

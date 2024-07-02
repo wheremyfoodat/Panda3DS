@@ -1,3 +1,4 @@
+#include "PICA/gpu.hpp"
 #include "renderer_mtl/renderer_mtl.hpp"
 
 #include <cmrc/cmrc.hpp>
@@ -209,6 +210,9 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	renderCommandEncoder->setRenderPipelineState(drawPipeline);
 	renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
 
+	// Bind resources
+	bindTexturesToSlots();
+
 	// TODO: respect primitive type
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(vertices.size()));
 
@@ -225,4 +229,50 @@ void RendererMTL::deinitGraphicsContext() {
 
 	// TODO: implement
 	Helpers::warn("RendererMTL::deinitGraphicsContext not implemented");
+}
+
+MTL::Texture* RendererMTL::getTexture(Metal::Texture& tex) {
+	auto buffer = textureCache.find(tex);
+
+	if (buffer.has_value()) {
+		return buffer.value().get().texture;
+	} else {
+		const auto textureData = std::span{gpu.getPointerPhys<u8>(tex.location), tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
+		Metal::Texture& newTex = textureCache.add(tex);
+		newTex.decodeTexture(textureData);
+
+		return newTex.texture;
+	}
+}
+
+void RendererMTL::bindTexturesToSlots() {
+	static constexpr std::array<u32, 3> ioBases = {
+		PICA::InternalRegs::Tex0BorderColor,
+		PICA::InternalRegs::Tex1BorderColor,
+		PICA::InternalRegs::Tex2BorderColor,
+	};
+
+	for (int i = 0; i < 3; i++) {
+		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
+			continue;
+		}
+
+		const size_t ioBase = ioBases[i];
+
+		const u32 dim = regs[ioBase + 1];
+		const u32 config = regs[ioBase + 2];
+		const u32 height = dim & 0x7ff;
+		const u32 width = Helpers::getBits<16, 11>(dim);
+		const u32 addr = (regs[ioBase + 4] & 0x0FFFFFFF) << 3;
+		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
+
+		if (addr != 0) [[likely]] {
+			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+			MTL::Texture* tex = getTexture(targetTex);
+			// TODO: bind the texture
+			Helpers::warn("Wanted to bind texture %p at index %i", tex, i);
+		} else {
+			// TODO: bind a dummy texture?
+		}
+	}
 }
