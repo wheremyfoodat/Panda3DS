@@ -43,7 +43,8 @@ void RendererMTL::display() {
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
    	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
    	colorAttachment->setTexture(drawable->texture());
-   	colorAttachment->setLoadAction(MTL::LoadActionDontCare);
+   	colorAttachment->setLoadAction(MTL::LoadActionClear);
+    colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
    	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
    	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
@@ -58,11 +59,10 @@ void RendererMTL::display() {
     	const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
     	auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
 
-        if (topScreen.has_value()) {
+        if (topScreen) {
+            renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
            	renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
            	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-        } else {
-            Helpers::warn("Top screen not found");
         }
 	}
 
@@ -72,11 +72,10 @@ void RendererMTL::display() {
     	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
     	auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
 
-        if (bottomScreen.has_value()) {
+        if (bottomScreen) {
+            renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
            	renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
            	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-        } else {
-            Helpers::warn("Bottom screen not found");
         }
 	}
 
