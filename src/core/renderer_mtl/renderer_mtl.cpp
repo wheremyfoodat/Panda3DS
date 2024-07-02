@@ -209,8 +209,31 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
-	// TODO: implement
-	Helpers::warn("RendererMTL::clearBuffer not implemented");
+    createCommandBufferIfNeeded();
+
+    const auto color = colorRenderTargetCache.findFromAddress(startAddress);
+	if (color) {
+		const float r = Helpers::getBits<24, 8>(value) / 255.0f;
+		const float g = Helpers::getBits<16, 8>(value) / 255.0f;
+		const float b = Helpers::getBits<8, 8>(value) / 255.0f;
+		const float a = (value & 0xff) / 255.0f;
+
+		MTL::RenderPassDescriptor* passDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+		MTL::RenderPassColorAttachmentDescriptor* colorAttachment = passDescriptor->colorAttachments()->object(0);
+		colorAttachment->setTexture(color->get().texture);
+		colorAttachment->setClearColor(MTL::ClearColor(r, g, b, a));
+		colorAttachment->setLoadAction(MTL::LoadActionClear);
+		colorAttachment->setStoreAction(MTL::StoreActionStore);
+
+		MTL::RenderCommandEncoder* renderEncoder = commandBuffer->renderCommandEncoder(passDescriptor);
+		renderEncoder->endEncoding();
+
+		return;
+	}
+
+	// TODO: Implement depth and stencil buffers
+
+	Helpers::warn("[RendererGL::ClearBuffer] No buffer found!\n");
 }
 
 void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
