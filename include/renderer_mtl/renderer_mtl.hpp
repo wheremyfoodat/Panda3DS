@@ -35,12 +35,9 @@ class RendererMTL final : public Renderer {
 	MTL::CommandQueue* commandQueue;
 
 	// Caches
-	SurfaceCache<Metal::Texture, 16, true> colorRenderTargetCache;
-	SurfaceCache<Metal::Texture, 16, true> depthStencilRenderTargetCache;
+	SurfaceCache<Metal::RenderTarget, 16, true> colorRenderTargetCache;
+	SurfaceCache<Metal::RenderTarget, 16, true> depthStencilRenderTargetCache;
 	SurfaceCache<Metal::Texture, 256, true> textureCache;
-
-	// HACK
-	MTL::Texture* topScreenTexture;
 
 	// Helpers
 	MTL::SamplerState* basicSampler;
@@ -58,6 +55,7 @@ class RendererMTL final : public Renderer {
 		}
 	}
 
+	std::optional<Metal::RenderTarget> getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 	MTL::Texture* getTexture(Metal::Texture& tex);
 	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
 	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);

@@ -13,6 +13,15 @@ CMRC_DECLARE(RendererMTL);
 // Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
 #define VERTEX_BUFFER_BINDING_INDEX 30
 
+// HACK: redefinition...
+PICA::ColorFmt ToColorFormat(u32 format) {
+	switch (format) {
+		case 2: return PICA::ColorFmt::RGB565;
+		case 3: return PICA::ColorFmt::RGBA5551;
+		default: return static_cast<PICA::ColorFmt>(format);
+	}
+}
+
 RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
 	: Renderer(gpu, internalRegs, externalRegs) {}
 RendererMTL::~RendererMTL() {}
@@ -32,18 +41,46 @@ void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(drawable->texture());
-	colorAttachment->setLoadAction(MTL::LoadActionDontCare);
-	colorAttachment->setStoreAction(MTL::StoreActionStore);
+   	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+   	colorAttachment->setTexture(drawable->texture());
+   	colorAttachment->setLoadAction(MTL::LoadActionDontCare);
+   	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
-	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
-	renderCommandEncoder->setRenderPipelineState(displayPipeline);
-	renderCommandEncoder->setFragmentTexture(topScreenTexture, 0);
-	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+   	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+   	renderCommandEncoder->setRenderPipelineState(displayPipeline);
+   	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
 
-	renderCommandEncoder->endEncoding();
+	using namespace PICA::ExternalRegs;
+
+	// Top screen
+	{
+    	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
+    	const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
+    	auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
+
+        if (topScreen.has_value()) {
+           	renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
+           	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+        } else {
+            Helpers::warn("Top screen not found");
+        }
+	}
+
+	// Bottom screen
+	{
+    	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
+    	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
+    	auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
+
+        if (bottomScreen.has_value()) {
+           	renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
+           	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+        } else {
+            Helpers::warn("Bottom screen not found");
+        }
+	}
+
+    renderCommandEncoder->endEncoding();
 
 	commandBuffer->presentDrawable(drawable);
 	commandBuffer->commit();
@@ -57,15 +94,6 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
 	commandQueue = device->newCommandQueue();
-
-	// HACK
-	MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::alloc()->init();
-	descriptor->setTextureType(MTL::TextureType2D);
-	descriptor->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
-	descriptor->setWidth(400);
-	descriptor->setHeight(240);
-	descriptor->setUsage(MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead);
-	topScreenTexture = device->newTexture(descriptor);
 
 	// Helpers
 	MTL::SamplerDescriptor* samplerDescriptor = MTL::SamplerDescriptor::alloc()->init();
@@ -110,7 +138,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	drawPipelineDescriptor->setFragmentFunction(fragmentDrawFunction);
 	// HACK
 	auto* drawColorAttachment = drawPipelineDescriptor->colorAttachments()->object(0);
-	drawColorAttachment->setPixelFormat(topScreenTexture->pixelFormat());
+	drawColorAttachment->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
 	drawColorAttachment->setBlendingEnabled(true);
 	drawColorAttachment->setSourceRGBBlendFactor(MTL::BlendFactorSourceAlpha);
 	drawColorAttachment->setDestinationRGBBlendFactor(MTL::BlendFactorOneMinusSourceAlpha);
@@ -187,6 +215,58 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 }
 
 void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
+    createCommandBufferIfNeeded();
+
+    const u32 inputWidth = inputSize & 0xffff;
+	const u32 inputHeight = inputSize >> 16;
+	const auto inputFormat = ToColorFormat(Helpers::getBits<8, 3>(flags));
+	const auto outputFormat = ToColorFormat(Helpers::getBits<12, 3>(flags));
+	const bool verticalFlip = flags & 1;
+	const PICA::Scaling scaling = static_cast<PICA::Scaling>(Helpers::getBits<24, 2>(flags));
+
+	u32 outputWidth = outputSize & 0xffff;
+	u32 outputHeight = outputSize >> 16;
+
+	auto srcFramebuffer = getColorRenderTarget(inputAddr, inputFormat, inputWidth, outputHeight);
+	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
+
+	if (verticalFlip) {
+		std::swap(srcRect.bottom, srcRect.top);
+	}
+
+	// Apply scaling for the destination rectangle.
+	if (scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) {
+		outputWidth >>= 1;
+	}
+
+	if (scaling == PICA::Scaling::XY) {
+		outputHeight >>= 1;
+	}
+
+	auto destFramebuffer = getColorRenderTarget(outputAddr, outputFormat, outputWidth, outputHeight);
+	Math::Rect<u32> destRect = destFramebuffer->getSubRect(outputAddr, outputWidth, outputHeight);
+
+	if (inputWidth != outputWidth) {
+		// Helpers::warn("Strided display transfer is not handled correctly!\n");
+	}
+
+	// TODO: respect regions
+	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+	colorAttachment->setTexture(destFramebuffer->texture);
+	colorAttachment->setLoadAction(MTL::LoadActionClear);
+	colorAttachment->setClearColor(MTL::ClearColor{0.0, 0.0, 0.0, 1.0});
+	colorAttachment->setStoreAction(MTL::StoreActionStore);
+
+	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	renderCommandEncoder->setRenderPipelineState(displayPipeline);
+	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
+	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
+
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+
+	renderCommandEncoder->endEncoding();
+
 	// TODO: implement
 	Helpers::warn("RendererMTL::displayTransfer not implemented");
 }
@@ -199,10 +279,12 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
 	createCommandBufferIfNeeded();
 
+	MTL::Texture* renderTarget = getColorRenderTarget(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1])->texture;
+
 	// TODO: don't begin a new render pass every time
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(topScreenTexture);
+	colorAttachment->setTexture(renderTarget);
 	colorAttachment->setLoadAction(MTL::LoadActionLoad);
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
@@ -241,6 +323,25 @@ void RendererMTL::deinitGraphicsContext() {
 
 	// TODO: implement
 	Helpers::warn("RendererMTL::deinitGraphicsContext not implemented");
+}
+
+std::optional<Metal::RenderTarget> RendererMTL::getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound) {
+	// Try to find an already existing buffer that contains the provided address
+	// This is a more relaxed check compared to getColourFBO as display transfer/texcopy may refer to
+	// subrect of a surface and in case of texcopy we don't know the format of the surface.
+	auto buffer = colorRenderTargetCache.findFromAddress(addr);
+	if (buffer.has_value()) {
+		return buffer.value().get();
+	}
+
+	if (!createIfnotFound) {
+		return std::nullopt;
+	}
+
+	// Otherwise create and cache a new buffer.
+	Metal::RenderTarget sampleBuffer(device, addr, format, width, height);
+
+	return colorRenderTargetCache.add(sampleBuffer);
 }
 
 MTL::Texture* RendererMTL::getTexture(Metal::Texture& tex) {

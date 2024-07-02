@@ -17,7 +17,7 @@ struct RenderTarget {
     MTL::Device* device;
 
     u32 location;
-    PICA::TextureFmt format;
+    PICA::ColorFmt format;
     OpenGL::uvec2 size;
     bool valid;
 
@@ -28,7 +28,7 @@ struct RenderTarget {
 
     RenderTarget() : valid(false) {}
 
-    RenderTarget(MTL::Device* dev, u32 loc, PICA::TextureFmt format, u32 x, u32 y, bool valid = true)
+    RenderTarget(MTL::Device* dev, u32 loc, PICA::ColorFmt format, u32 x, u32 y, bool valid = true)
         : device(dev), location(loc), format(format), size({x, y}), valid(valid) {
 
         u64 endLoc = (u64)loc + sizeInBytes();
@@ -45,7 +45,7 @@ struct RenderTarget {
 
     // For 2 textures to "match" we only care about their locations, formats, and dimensions to match
     // For other things, such as filtering mode, etc, we can just switch the attributes of the cached texture
-    bool matches(Texture& other) {
+    bool matches(RenderTarget& other) {
         return location == other.location && format == other.format &&
             size.x() == other.size.x() && size.y() == other.size.y();
     }

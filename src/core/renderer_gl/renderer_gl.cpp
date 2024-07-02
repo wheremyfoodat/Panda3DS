@@ -515,7 +515,7 @@ void RendererGL::display() {
 	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
 	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
-	
+
 	if (bottomScreen) {
 		bottomScreen->get().texture.bind();
 		OpenGL::setViewport(40, 0, 320, 240);
