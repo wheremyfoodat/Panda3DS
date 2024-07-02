@@ -101,8 +101,12 @@ class Y2RService {
 	void startConversion(u32 messagePointer);
 	void stopConversion(u32 messagePointer);
 
-  public:
+	bool isBusy;
+
+public:
 	Y2RService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
+
+	void signalConversionDone();
 };

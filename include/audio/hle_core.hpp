@@ -176,6 +176,7 @@ namespace Audio {
 		// Decode an entire buffer worth of audio
 		void decodeBuffer(DSPSource& source);
 
+		SampleBuffer decodePCM8(const u8* data, usize sampleCount, Source& source);
 		SampleBuffer decodePCM16(const u8* data, usize sampleCount, Source& source);
 		SampleBuffer decodeADPCM(const u8* data, usize sampleCount, Source& source);
 

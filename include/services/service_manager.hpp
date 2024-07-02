@@ -109,4 +109,5 @@ class ServiceManager {
 	HIDService& getHID() { return hid; }
 	NFCService& getNFC() { return nfc; }
 	DSPService& getDSP() { return dsp; }
+	Y2RService& getY2R() { return y2r; }
 };

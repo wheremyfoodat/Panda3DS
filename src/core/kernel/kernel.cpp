@@ -398,3 +398,5 @@ std::string Kernel::getProcessName(u32 pid) {
 		Helpers::panic("Attempted to name non-current process");
 	}
 }
+
+Scheduler& Kernel::getScheduler() { return cpu.getScheduler(); }
