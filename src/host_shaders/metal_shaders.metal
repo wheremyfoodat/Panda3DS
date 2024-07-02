@@ -18,6 +18,24 @@ fragment float4 fragmentDisplay(DisplayVertexOut in [[stage_in]], texture2d<floa
 	return tex.sample(samplr, in.uv);
 }
 
+struct PicaRegs {
+    uint regs[0x200 - 0x48];
+
+    uint read(uint reg) constant {
+        return regs[reg - 0x48];
+    }
+};
+
+struct VertTEV {
+    uint textureEnvColor[6];
+};
+
+float4 abgr8888ToFloat4(uint abgr) {
+	const float scale = 1.0 / 255.0;
+
+	return scale * float4(float(abgr & 0xffu), float((abgr >> 8) & 0xffu), float((abgr >> 16) & 0xffu), float(abgr >> 24));
+}
+
 struct DrawVertexIn {
 	float4 position [[attribute(0)]];
 	float4 quaternion [[attribute(1)]];
@@ -29,15 +47,39 @@ struct DrawVertexIn {
 	float2 texCoord2 [[attribute(7)]];
 };
 
+// Metal cannot return arrays from vertex functions, this is an ugly workaround
+struct EnvColor {
+    float4 c0;
+    float4 c1;
+    float4 c2;
+    float4 c3;
+    float4 c4;
+    float4 c5;
+
+    thread float4& operator[](int i) {
+        switch (i) {
+            case 0: return c0;
+            case 1: return c1;
+            case 2: return c2;
+            case 3: return c3;
+            case 4: return c4;
+            case 5: return c5;
+            default: return c0;
+        }
+    }
+};
+
 struct DrawVertexOut {
 	float4 position [[position]];
 	float4 color;
 	float3 texCoord0;
 	float2 texCoord1;
 	float2 texCoord2;
+	EnvColor textureEnvColor [[flat]];
+	float4 textureEnvBufferColor [[flat]];
 };
 
-vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]]) {
+vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant VertTEV& tev [[buffer(1)]]) {
 	DrawVertexOut out;
 
 	// Position
@@ -58,6 +100,13 @@ vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]]) {
 	out.texCoord2 = in.texCoord2;
 	out.texCoord2.y = 1.0 - out.texCoord2.y;
 
+	// Environment
+	for (int i = 0; i < 6; i++) {
+		out.textureEnvColor[i] = abgr8888ToFloat4(tev.textureEnvColor[i]);
+	}
+
+	out.textureEnvBufferColor = abgr8888ToFloat4(picaRegs.read(0xFDu));
+
 	return out;
 }
 
@@ -67,15 +116,7 @@ struct Globals {
     bool tevUnimplementedSourceFlag = false;
 };
 
-struct PicaRegs {
-    uint regs[0x200 - 0x48];
-
-    uint read(uint reg) constant {
-        return regs[reg - 0x48];
-    }
-};
-
-struct TEV {
+struct FragTEV {
     uint textureEnvSource[6];
     uint textureEnvOperand[6];
     uint textureEnvCombiner[6];
@@ -177,7 +218,7 @@ struct TEV {
     }
 };
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant TEV& tev [[buffer(1)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]]) {
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]]) {
     // TODO: upload this as argument
     sampler samplr;
 
@@ -195,15 +236,12 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& p
 	globals.tevSources[13] = float4(0.0);  // Previous buffer
 	globals.tevSources[15] = in.color;     // Previous combiner
 
-	// TODO: uncomment
-	//float4 tevNextPreviousBuffer = v_textureEnvBufferColor;
-	// HACK
-	globals.tevNextPreviousBuffer = float4(1.0);
+	globals.tevNextPreviousBuffer = in.textureEnvBufferColor;
 	uint textureEnvUpdateBuffer = picaRegs.read(0xE0u);
 
 	for (int i = 0; i < 6; i++) {
 	    // TODO: uncomment
-		globals.tevSources[14] = float4(1.0);//v_textureEnvColor[i];  // Constant color
+		globals.tevSources[14] = in.textureEnvColor[i];  // Constant color
 		globals.tevSources[15] = tev.calculateCombiner(globals, i);
 		globals.tevSources[13] = globals.tevNextPreviousBuffer;
 

@@ -213,6 +213,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	// Bind resources
 	setupTextureEnvState(renderCommandEncoder);
 	bindTexturesToSlots(renderCommandEncoder);
+	renderCommandEncoder->setVertexBytes(&regs[0x48], 0x200 - 0x48, 0);
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], 0x200 - 0x48, 0);
 
 	// TODO: respect primitive type
@@ -271,6 +272,7 @@ void RendererMTL::setupTextureEnvState(MTL::RenderCommandEncoder* encoder) {
 		envState.textureEnvScaleRegs[i] = regs[ioBase + 4];
 	}
 
+	/*
 	for (int i = 0; i < 6; i++) {
 	    std::cout << "textureEnvSourceRegs[" << i << "] = " << envState.textureEnvSourceRegs[i] << std::endl;
 	}
@@ -283,8 +285,9 @@ void RendererMTL::setupTextureEnvState(MTL::RenderCommandEncoder* encoder) {
 	for (int i = 0; i < 6; i++) {
 	    std::cout << "textureEnvScaleRegs[" << i << "] = " << envState.textureEnvScaleRegs[i] << std::endl;
 	}
+	*/
 
-	// TODO: upload textureEnvColourRegs to the vertex shader
+	encoder->setVertexBytes(&textureEnvColourRegs, sizeof(textureEnvColourRegs), 1);
 	encoder->setFragmentBytes(&envState, sizeof(envState), 1);
 }
 
