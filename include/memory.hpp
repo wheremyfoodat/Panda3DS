@@ -10,8 +10,8 @@
 #include "crypto/aes_engine.hpp"
 #include "handles.hpp"
 #include "helpers.hpp"
-#include "loader/3dsx.hpp"
 #include "loader/ncsd.hpp"
+#include "loader/3dsx.hpp"
 #include "services/region_codes.hpp"
 
 namespace PhysicalAddrs {
@@ -38,7 +38,7 @@ namespace VirtualAddrs {
 		DefaultStackSize = 0x4000,
 
 		NormalHeapStart = 0x08000000,
-		LinearHeapStartOld = 0x14000000,  // If kernel version < 0x22C
+		LinearHeapStartOld = 0x14000000, // If kernel version < 0x22C
 		LinearHeapEndOld = 0x1C000000,
 
 		LinearHeapStartNew = 0x30000000,
@@ -80,7 +80,7 @@ namespace KernelMemoryTypes {
 	// I assume this is referring to a single piece of allocated memory? If it's for pages, it makes no sense.
 	// If it's for multiple allocations, it also makes no sense
 	struct MemoryInfo {
-		u32 baseAddr;  // Base process virtual address. Used as a paddr in lockedMemoryInfo instead
+		u32 baseAddr; // Base process virtual address. Used as a paddr in lockedMemoryInfo instead
 		u32 size;      // Of what?
 		u32 perms;     // Is this referring to a single page or?
 		u32 state;
@@ -91,10 +91,10 @@ namespace KernelMemoryTypes {
 
 	// Shared memory block for HID, GSP:GPU etc
 	struct SharedMemoryBlock {
-		u32 paddr;    // Physical address of this block's memory
-		u32 size;     // Size of block
-		u32 handle;   // The handle of the shared memory block
-		bool mapped;  // Has this block been mapped at least once?
+		u32 paddr; // Physical address of this block's memory
+		u32 size; // Size of block
+		u32 handle; // The handle of the shared memory block
+		bool mapped; // Has this block been mapped at least once?
 
 		SharedMemoryBlock(u32 paddr, u32 size, u32 handle) : paddr(paddr), size(size), handle(handle), mapped(false) {}
 	};
@@ -105,7 +105,7 @@ class Memory {
 	u8* dspRam;  // Provided to us by Audio
 	u8* vram;    // Provided to the memory class by the GPU class
 
-	u64& cpuTicks;  // Reference to the CPU tick counter
+	u64& cpuTicks; // Reference to the CPU tick counter
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
@@ -124,7 +124,7 @@ class Memory {
 		SharedMemoryBlock(0, 0xE7000, KernelHandles::APTCaptureSharedMemHandle),  // APT Capture Buffer memory
 	};
 
-  public:
+public:
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
 	static constexpr u32 pageMask = pageSize - 1;
@@ -139,7 +139,7 @@ class Memory {
 	static constexpr u32 DSP_CODE_MEMORY_OFFSET = u32(0_KB);
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
-  private:
+private:
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
@@ -150,7 +150,7 @@ class Memory {
 
 	// Stored in Configuration Memory starting @ 0x1FF80060
 	struct FirmwareInfo {
-		u8 unk;  // Usually 0 according to 3DBrew
+		u8 unk; // Usually 0 according to 3DBrew
 		u8 revision;
 		u8 minor;
 		u8 major;
@@ -168,8 +168,8 @@ class Memory {
 
   public:
 	u16 kernelVersion = 0;
-	u32 usedUserMemory = u32(0_MB);    // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
-	u32 usedSystemMemory = u32(0_MB);  // Similar for the SYSTEM range (reserved for the syscore)
+	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
+	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
 
 	Memory(u64& cpuTicks, const EmulatorConfig& config);
 	void reset();
@@ -198,20 +198,26 @@ class Memory {
 	u8* getFCRAM() { return fcram; }
 
 	// Total amount of OS-only FCRAM available (Can vary depending on how much FCRAM the app requests via the cart exheader)
-	u32 totalSysFCRAM() { return FCRAM_SIZE - FCRAM_APPLICATION_SIZE; }
+	u32 totalSysFCRAM() {
+	    return FCRAM_SIZE - FCRAM_APPLICATION_SIZE;
+	}
 
 	// Amount of OS-only FCRAM currently available
-	u32 remainingSysFCRAM() { return totalSysFCRAM() - usedSystemMemory; }
+	u32 remainingSysFCRAM() {
+	    return totalSysFCRAM() - usedSystemMemory;
+	}
 
 	// Physical FCRAM index to the start of OS FCRAM
 	// We allocate the first part of physical FCRAM for the application, and the rest to the OS. So the index for the OS = application ram size
 	u32 sysFCRAMIndex() { return FCRAM_APPLICATION_SIZE; }
 
-	enum class BatteryLevel { Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars };
+	enum class BatteryLevel {
+	    Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
+	};
 	u8 getBatteryState(bool adapterConnected, bool charging, BatteryLevel batteryLevel) {
-		u8 value = static_cast<u8>(batteryLevel) << 2;  // Bits 2:4 are the battery level from 0 to 5
-		if (adapterConnected) value |= 1 << 0;          // Bit 0 shows if the charger is connected
-		if (charging) value |= 1 << 1;                  // Bit 1 shows if we're charging
+		u8 value = static_cast<u8>(batteryLevel) << 2; // Bits 2:4 are the battery level from 0 to 5
+		if (adapterConnected) value |= 1 << 0; // Bit 0 shows if the charger is connected
+		if (charging) value |= 1 << 1; // Bit 1 shows if we're charging
 
 		return value;
 	}
@@ -233,7 +239,9 @@ class Memory {
 	}
 
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
-	static constexpr bool isAligned(u32 addr) { return (addr & pageMask) == 0; }
+	static constexpr bool isAligned(u32 addr) {
+	    return (addr & pageMask) == 0;
+	}
 
 	// Allocate "size" bytes of RAM starting from FCRAM index "paddr" (We pick it ourself if paddr == 0)
 	// And map them to virtual address "vaddr" (We also pick it ourself if vaddr == 0).

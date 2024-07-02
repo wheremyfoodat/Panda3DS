@@ -45,12 +45,12 @@ class Kernel {
 	HandleType currentProcess;
 	HandleType mainThread;
 	int currentThreadIndex;
-	HandleType srvHandle;        // HandleType for the special service manager port "srv:"
-	HandleType errorPortHandle;  // HandleType for the err:f port used for displaying errors
+	HandleType srvHandle; // Handle for the special service manager port "srv:"
+	HandleType errorPortHandle; // Handle for the err:f port used for displaying errors
 
 	u32 arbiterCount;
-	u32 threadCount;       // How many threads in our thread pool have been used as of now (Up to 32)
-	u32 aliveThreadCount;  // How many of these threads are actually alive?
+	u32 threadCount; // How many threads in our thread pool have been used as of now (Up to 32)
+	u32 aliveThreadCount; // How many of these threads are actually alive?
 	ServiceManager serviceManager;
 
 	// Top 8 bits are the major version, bottom 8 are the minor version
@@ -66,7 +66,7 @@ class Kernel {
 	HandleType makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status = ThreadStatus::Dormant);
 	HandleType makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
 
-  public:
+public:
 	// Needs to be public to be accessible to the APT/HID services
 	HandleType makeEvent(ResetType resetType, Event::CallbackType callback = Event::CallbackType::None);
 	// Needs to be public to be accessible to the APT/DSP services
@@ -88,7 +88,7 @@ class Kernel {
 		}
 	}
 
-  private:
+private:
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThread(s64 ns);
 	void sleepThreadOnArbiter(u32 waitingAddress);
@@ -194,7 +194,7 @@ class Kernel {
 	void closeDirectory(u32 messagePointer, HandleType directory);
 	void readDirectory(u32 messagePointer, HandleType directory);
 
-  public:
+public:
 	Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config);
 	void initializeFS() { return serviceManager.initializeFS(); }
 	void setVersion(u8 major, u8 minor);

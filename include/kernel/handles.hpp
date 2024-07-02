@@ -5,19 +5,19 @@ using HandleType = u32;
 
 namespace KernelHandles {
 	enum : u32 {
-		Max = 0xFFFF7FFF,  // Max handle the kernel can automagically allocate
+		Max = 0xFFFF7FFF, // Max handle the kernel can automagically allocate
 
 		// Hardcoded handles
-		CurrentThread = 0xFFFF8000,   // Used by the original kernel
-		CurrentProcess = 0xFFFF8001,  // Used by the original kernel
-		AC,                           // Something network related
-		ACT,                          // Handles NNID accounts
-		AM,                           // Application manager
-		APT,                          // App Title something service?
-		BOSS,                         // Streetpass stuff?
-		CAM,                          // Camera service
-		CECD,                         // More Streetpass stuff?
-		CFG_U,                        // CFG service (Console & region info)
+		CurrentThread = 0xFFFF8000,  // Used by the original kernel
+		CurrentProcess = 0xFFFF8001, // Used by the original kernel
+		AC,   // Something network related
+		ACT,  // Handles NNID accounts
+		AM,   // Application manager
+		APT,  // App Title something service?
+		BOSS, // Streetpass stuff?
+		CAM,  // Camera service
+		CECD, // More Streetpass stuff?
+		CFG_U,  // CFG service (Console & region info)
 		CFG_I,
 		CFG_S,     // Used by most system apps in lieu of cfg:u
 		CSND,      // Plays audio directly from PCM samples
@@ -50,10 +50,10 @@ namespace KernelHandles {
 		MinServiceHandle = AC,
 		MaxServiceHandle = Y2R,
 
-		GSPSharedMemHandle = MaxServiceHandle + 1,  // HandleType for the GSP shared memory
+		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
 		FontSharedMemHandle,
 		CSNDSharedMemHandle,
-		APTCaptureSharedMemHandle,  // Shared memory for display capture info,
+		APTCaptureSharedMemHandle, // Shared memory for display capture info,
 		HIDSharedMemHandle,
 
 		MinSharedMemHandle = GSPSharedMemHandle,
@@ -61,10 +61,14 @@ namespace KernelHandles {
 	};
 
 	// Returns whether "handle" belongs to one of the OS services
-	static constexpr bool isServiceHandle(HandleType handle) { return handle >= MinServiceHandle && handle <= MaxServiceHandle; }
+	static constexpr bool isServiceHandle(HandleType handle) {
+	    return handle >= MinServiceHandle && handle <= MaxServiceHandle;
+	}
 
 	// Returns whether "handle" belongs to one of the OS services' shared memory areas
-	static constexpr bool isSharedMemHandle(HandleType handle) { return handle >= MinSharedMemHandle && handle <= MaxSharedMemHandle; }
+	static constexpr bool isSharedMemHandle(HandleType handle) {
+	    return handle >= MinSharedMemHandle && handle <= MaxSharedMemHandle;
+	}
 
 	// Returns the name of a handle as a string based on the given handle
 	static const char* getServiceName(HandleType handle) {
@@ -106,4 +110,4 @@ namespace KernelHandles {
 			default: return "Unknown";
 		}
 	}
-}  // namespace KernelHandles
+}
