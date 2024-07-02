@@ -20,7 +20,13 @@ fragment float4 fragmentDisplay(DisplayVertexOut in [[stage_in]], texture2d<floa
 
 struct DrawVertexIn {
 	float4 position [[attribute(0)]];
+	float4 quaternion [[attribute(1)]];
 	float4 color [[attribute(2)]];
+	float2 texCoord0 [[attribute(3)]];
+	float2 texCoord1 [[attribute(4)]];
+	float texCoord0W [[attribute(5)]];
+	float3 view [[attribute(6)]];
+	float2 texCoord2 [[attribute(7)]];
 };
 
 struct DrawVertexOut {

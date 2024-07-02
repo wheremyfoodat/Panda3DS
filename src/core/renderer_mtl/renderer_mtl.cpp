@@ -106,17 +106,57 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	auto* drawColorAttachment = drawPipelineDescriptor->colorAttachments()->object(0);
 	drawColorAttachment->setPixelFormat(topScreenTexture->pixelFormat());
 
-	// Vertex descriptor
-	// TODO: add all attributes
+	// -------- Vertex descriptor --------
 	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
+
+	// Position
 	MTL::VertexAttributeDescriptor* positionAttribute = vertexDescriptor->attributes()->object(0);
 	positionAttribute->setFormat(MTL::VertexFormatFloat4);
 	positionAttribute->setOffset(offsetof(Vertex, s.positions));
 	positionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
+	// Quaternion
+	MTL::VertexAttributeDescriptor* quaternionAttribute = vertexDescriptor->attributes()->object(1);
+	quaternionAttribute->setFormat(MTL::VertexFormatFloat4);
+	quaternionAttribute->setOffset(offsetof(Vertex, s.quaternion));
+	quaternionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
+	// Color
 	MTL::VertexAttributeDescriptor* colorAttribute = vertexDescriptor->attributes()->object(2);
 	colorAttribute->setFormat(MTL::VertexFormatFloat4);
 	colorAttribute->setOffset(offsetof(Vertex, s.colour));
 	colorAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
+	// Texture coordinate 0
+	MTL::VertexAttributeDescriptor* texCoord0Attribute = vertexDescriptor->attributes()->object(3);
+	texCoord0Attribute->setFormat(MTL::VertexFormatFloat2);
+	texCoord0Attribute->setOffset(offsetof(Vertex, s.texcoord0));
+	texCoord0Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
+	// Texture coordinate 1
+	MTL::VertexAttributeDescriptor* texCoord1Attribute = vertexDescriptor->attributes()->object(4);
+	texCoord1Attribute->setFormat(MTL::VertexFormatFloat2);
+	texCoord1Attribute->setOffset(offsetof(Vertex, s.texcoord1));
+	texCoord1Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
+	// Texture coordinate 0 W
+	MTL::VertexAttributeDescriptor* texCoord0WAttribute = vertexDescriptor->attributes()->object(5);
+	texCoord0WAttribute->setFormat(MTL::VertexFormatFloat);
+	texCoord0WAttribute->setOffset(offsetof(Vertex, s.texcoord0_w));
+	texCoord0WAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
+	// View
+	MTL::VertexAttributeDescriptor* viewAttribute = vertexDescriptor->attributes()->object(6);
+	viewAttribute->setFormat(MTL::VertexFormatFloat3);
+	viewAttribute->setOffset(offsetof(Vertex, s.view));
+	viewAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
+	// Texture coordinate 2
+	MTL::VertexAttributeDescriptor* texCoord2Attribute = vertexDescriptor->attributes()->object(7);
+	texCoord2Attribute->setFormat(MTL::VertexFormatFloat2);
+	texCoord2Attribute->setOffset(offsetof(Vertex, s.texcoord2));
+	texCoord2Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+
 	MTL::VertexBufferLayoutDescriptor* vertexBufferLayout = vertexDescriptor->layouts()->object(VERTEX_BUFFER_BINDING_INDEX);
 	vertexBufferLayout->setStride(sizeof(Vertex));
 	vertexBufferLayout->setStepFunction(MTL::VertexStepFunctionPerVertex);
