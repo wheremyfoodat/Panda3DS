@@ -1,3 +1,6 @@
+#include <metal_stdlib>
+using namespace metal;
+
 struct DisplayVertexOut {
 	float4 position [[position]];
 	float2 uv;
