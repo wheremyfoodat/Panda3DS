@@ -265,9 +265,6 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 
 	renderCommandEncoder->endEncoding();
-
-	// TODO: implement
-	Helpers::warn("RendererMTL::displayTransfer not implemented");
 }
 
 void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
