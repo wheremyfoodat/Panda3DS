@@ -105,6 +105,11 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	// HACK
 	auto* drawColorAttachment = drawPipelineDescriptor->colorAttachments()->object(0);
 	drawColorAttachment->setPixelFormat(topScreenTexture->pixelFormat());
+	drawColorAttachment->setBlendingEnabled(true);
+	drawColorAttachment->setSourceRGBBlendFactor(MTL::BlendFactorSourceAlpha);
+	drawColorAttachment->setDestinationRGBBlendFactor(MTL::BlendFactorOneMinusSourceAlpha);
+	drawColorAttachment->setSourceAlphaBlendFactor(MTL::BlendFactorSourceAlpha);
+	drawColorAttachment->setDestinationAlphaBlendFactor(MTL::BlendFactorOneMinusSourceAlpha);
 
 	// -------- Vertex descriptor --------
 	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
