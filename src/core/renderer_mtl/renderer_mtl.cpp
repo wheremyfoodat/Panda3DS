@@ -118,14 +118,29 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	MTL::RenderPipelineDescriptor* displayPipelineDescriptor = MTL::RenderPipelineDescriptor::alloc()->init();
 	displayPipelineDescriptor->setVertexFunction(vertexDisplayFunction);
 	displayPipelineDescriptor->setFragmentFunction(fragmentDisplayFunction);
-	// HACK
 	auto* displayColorAttachment = displayPipelineDescriptor->colorAttachments()->object(0);
-	displayColorAttachment->setPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB);
+	displayColorAttachment->setPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm);
 
 	error = nullptr;
 	displayPipeline = device->newRenderPipelineState(displayPipelineDescriptor, &error);
 	if (error) {
 		Helpers::panic("Error creating display pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
+	}
+
+	// Blit
+	MTL::Function* vertexBlitFunction = library->newFunction(NS::String::string("vertexBlit", NS::ASCIIStringEncoding));
+	MTL::Function* fragmentBlitFunction = library->newFunction(NS::String::string("fragmentBlit", NS::ASCIIStringEncoding));
+
+	MTL::RenderPipelineDescriptor* blitPipelineDescriptor = MTL::RenderPipelineDescriptor::alloc()->init();
+	blitPipelineDescriptor->setVertexFunction(vertexBlitFunction);
+	blitPipelineDescriptor->setFragmentFunction(fragmentBlitFunction);
+	auto* blitColorAttachment = blitPipelineDescriptor->colorAttachments()->object(0);
+	blitColorAttachment->setPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm);
+
+	error = nullptr;
+	blitPipeline = device->newRenderPipelineState(blitPipelineDescriptor, &error);
+	if (error) {
+		Helpers::panic("Error creating blit pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
 	}
 
 	// Draw
@@ -135,7 +150,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	MTL::RenderPipelineDescriptor* drawPipelineDescriptor = MTL::RenderPipelineDescriptor::alloc()->init();
 	drawPipelineDescriptor->setVertexFunction(vertexDrawFunction);
 	drawPipelineDescriptor->setFragmentFunction(fragmentDrawFunction);
-	// HACK
+
 	auto* drawColorAttachment = drawPipelineDescriptor->colorAttachments()->object(0);
 	drawColorAttachment->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
 	drawColorAttachment->setBlendingEnabled(true);
@@ -281,7 +296,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
 	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
-	renderCommandEncoder->setRenderPipelineState(displayPipeline);
+	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
 	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
 

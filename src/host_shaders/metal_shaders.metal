@@ -1,21 +1,47 @@
 #include <metal_stdlib>
 using namespace metal;
 
-struct DisplayVertexOut {
+struct BasicVertexOut {
 	float4 position [[position]];
 	float2 uv;
 };
 
-vertex DisplayVertexOut vertexDisplay(uint vid [[vertex_id]]) {
-	DisplayVertexOut out;
+constant float4 displayPositions[4] = {
+    float4(-1.0, -1.0, 0.0, 1.0),
+    float4( 1.0, -1.0, 0.0, 1.0),
+    float4(-1.0,  1.0, 0.0, 1.0),
+    float4( 1.0,  1.0, 0.0, 1.0)
+};
+
+constant float2 displayTexCoord[4] = {
+    float2(0.0, 1.0),
+    float2(0.0, 0.0),
+    float2(1.0, 1.0),
+    float2(1.0, 0.0)
+};
+
+vertex BasicVertexOut vertexDisplay(uint vid [[vertex_id]]) {
+	BasicVertexOut out;
+	out.position = displayPositions[vid];
+	out.uv = displayTexCoord[vid];
+
+	return out;
+}
+
+fragment float4 fragmentDisplay(BasicVertexOut in [[stage_in]], texture2d<float> tex [[texture(0)]], sampler samplr [[sampler(0)]]) {
+	return tex.sample(samplr, in.uv);
+}
+
+vertex BasicVertexOut vertexBlit(uint vid [[vertex_id]]) {
+	BasicVertexOut out;
 	out.uv = float2((vid << 1) & 2, vid & 2);
-	out.position = float4(out.uv * 2.0f + -1.0f, 0.0f, 1.0f);
+	out.position = float4(out.uv * 2.0 - 1.0, 0.0, 1.0);
 	out.position.y = -out.position.y;
 
 	return out;
 }
 
-fragment float4 fragmentDisplay(DisplayVertexOut in [[stage_in]], texture2d<float> tex [[texture(0)]], sampler samplr [[sampler(0)]]) {
+fragment float4 fragmentBlit(BasicVertexOut in [[stage_in]], texture2d<float> tex [[texture(0)]], sampler samplr [[sampler(0)]]) {
 	return tex.sample(samplr, in.uv);
 }
 
@@ -85,8 +111,6 @@ vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs&
 
 	// Position
 	out.position = in.position;
-	// HACK: rotate the position
-	out.position.xy = -out.position.yx;
 	// Flip the y position
 	out.position.y = -out.position.y;
 	// in.position.z is in range of [-1 ... 1], convert it to [0 ... 1]

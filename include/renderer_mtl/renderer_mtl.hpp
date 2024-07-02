@@ -44,6 +44,7 @@ class RendererMTL final : public Renderer {
 
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
+	MTL::RenderPipelineState* blitPipeline;
 	MTL::RenderPipelineState* drawPipeline;
 
 	// Active state
