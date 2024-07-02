@@ -197,8 +197,6 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
 	createCommandBufferIfNeeded();
 
-	std::cout << "DRAWING " << vertices.size() << " VERTICES" << std::endl;
-
 	// TODO: don't begin a new render pass every time
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
@@ -271,21 +269,6 @@ void RendererMTL::setupTextureEnvState(MTL::RenderCommandEncoder* encoder) {
 		textureEnvColourRegs[i] = regs[ioBase + 3];
 		envState.textureEnvScaleRegs[i] = regs[ioBase + 4];
 	}
-
-	/*
-	for (int i = 0; i < 6; i++) {
-	    std::cout << "textureEnvSourceRegs[" << i << "] = " << envState.textureEnvSourceRegs[i] << std::endl;
-	}
-	for (int i = 0; i < 6; i++) {
-	    std::cout << "textureEnvOperandRegs[" << i << "] = " << envState.textureEnvOperandRegs[i] << std::endl;
-	}
-	for (int i = 0; i < 6; i++) {
-	    std::cout << "textureEnvCombinerRegs[" << i << "] = " << envState.textureEnvCombinerRegs[i] << std::endl;
-	}
-	for (int i = 0; i < 6; i++) {
-	    std::cout << "textureEnvScaleRegs[" << i << "] = " << envState.textureEnvScaleRegs[i] << std::endl;
-	}
-	*/
 
 	encoder->setVertexBytes(&textureEnvColourRegs, sizeof(textureEnvColourRegs), 1);
 	encoder->setFragmentBytes(&envState, sizeof(envState), 1);
