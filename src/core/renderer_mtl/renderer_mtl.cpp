@@ -211,7 +211,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
 
 	// Bind resources
-	bindTexturesToSlots();
+	bindTexturesToSlots(renderCommandEncoder);
 
 	// TODO: respect primitive type
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(vertices.size()));
@@ -245,7 +245,7 @@ MTL::Texture* RendererMTL::getTexture(Metal::Texture& tex) {
 	}
 }
 
-void RendererMTL::bindTexturesToSlots() {
+void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 	static constexpr std::array<u32, 3> ioBases = {
 		PICA::InternalRegs::Tex0BorderColor,
 		PICA::InternalRegs::Tex1BorderColor,
@@ -269,8 +269,7 @@ void RendererMTL::bindTexturesToSlots() {
 		if (addr != 0) [[likely]] {
 			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
 			MTL::Texture* tex = getTexture(targetTex);
-			// TODO: bind the texture
-			Helpers::warn("Wanted to bind texture %p at index %i", tex, i);
+			encoder->setFragmentTexture(tex, i);
 		} else {
 			// TODO: bind a dummy texture?
 		}
