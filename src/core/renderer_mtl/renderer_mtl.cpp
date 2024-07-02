@@ -206,7 +206,14 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
 	renderCommandEncoder->setRenderPipelineState(drawPipeline);
-	renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
+	// If size is < 4KB, use inline vertex data, otherwise use a buffer
+	if (vertices.size_bytes() < 4 * 1024) {
+	    renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
+	} else {
+	    // TODO: cache this buffer
+	    MTL::Buffer* vertexBuffer = device->newBuffer(vertices.data(), vertices.size_bytes(), MTL::ResourceStorageModeShared);
+        renderCommandEncoder->setVertexBuffer(vertexBuffer, 0, VERTEX_BUFFER_BINDING_INDEX);
+	}
 
 	// Bind resources
 	setupTextureEnvState(renderCommandEncoder);
