@@ -1,6 +1,10 @@
 #include "renderer_mtl/renderer_mtl.hpp"
 
+#include <cmrc/cmrc.hpp>
+
 #include "SDL_metal.h"
+
+CMRC_DECLARE(RendererMTL);
 
 RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
 	: Renderer(gpu, internalRegs, externalRegs) {}
@@ -42,7 +46,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	topScreenTexture = device->newTexture(descriptor);
 
 	// Pipelines
-	// TODO
+	auto mtlResources = cmrc::RendererMTL::get_filesystem();
+	auto shaderSource = mtlResources.open("metal_shaders.metal");
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
