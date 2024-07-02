@@ -12,7 +12,7 @@ void Texture::allocate() {
     descriptor->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
     descriptor->setWidth(size.u());
     descriptor->setHeight(size.v());
-    descriptor->setUsage(MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite);
+    descriptor->setUsage(MTL::TextureUsageShaderRead);
     descriptor->setStorageMode(MTL::StorageModeShared); // TODO: use private + staging buffers?
     texture = device->newTexture(descriptor);
 

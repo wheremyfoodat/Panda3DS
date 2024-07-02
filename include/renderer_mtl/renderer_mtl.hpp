@@ -3,6 +3,7 @@
 
 #include "renderer.hpp"
 #include "texture.hpp"
+#include "render_target.hpp"
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
 
@@ -34,6 +35,8 @@ class RendererMTL final : public Renderer {
 	MTL::CommandQueue* commandQueue;
 
 	// Caches
+	SurfaceCache<Metal::Texture, 16, true> colorRenderTargetCache;
+	SurfaceCache<Metal::Texture, 16, true> depthStencilRenderTargetCache;
 	SurfaceCache<Metal::Texture, 256, true> textureCache;
 
 	// HACK

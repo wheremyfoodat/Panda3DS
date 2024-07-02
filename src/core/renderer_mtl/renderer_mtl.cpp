@@ -18,6 +18,8 @@ RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, 
 RendererMTL::~RendererMTL() {}
 
 void RendererMTL::reset() {
+    colorRenderTargetCache.reset();
+    depthStencilRenderTargetCache.reset();
     textureCache.reset();
 
 	// TODO: implement
@@ -233,6 +235,8 @@ void RendererMTL::screenshot(const std::string& name) {
 }
 
 void RendererMTL::deinitGraphicsContext() {
+    colorRenderTargetCache.reset();
+    depthStencilRenderTargetCache.reset();
     textureCache.reset();
 
 	// TODO: implement
