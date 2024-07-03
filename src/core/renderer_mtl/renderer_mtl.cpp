@@ -42,7 +42,7 @@ void RendererMTL::display() {
 	colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
-	beginRenderPassIfNeeded(renderPassDescriptor, drawable->texture(), nullptr);
+	beginRenderPassIfNeeded(renderPassDescriptor, drawable->texture());
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
 
@@ -214,7 +214,7 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 		colorAttachment->setLoadAction(MTL::LoadActionClear);
 		colorAttachment->setStoreAction(MTL::StoreActionStore);
 
-		beginRenderPassIfNeeded(renderPassDescriptor, color->get().texture, nullptr);
+		beginRenderPassIfNeeded(renderPassDescriptor, color->get().texture);
 
 		return;
 	}
@@ -229,22 +229,22 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 			depthVal = (value & 0xffffff) / 16777215.0f;
 		}
 
-		if (false/*format == DepthFmt::Depth24Stencil8*/) {
-		    // TODO: clear stencil
-			//const u8 stencil = (value >> 24);
-			//gl.setStencilMask(0xff);
-			//OpenGL::setClearStencil(stencil);
-			//OpenGL::clearDepthAndStencil();
-		} else {
-    		MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-    		MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
-            depthAttachment->setTexture(depth->get().texture);
-            depthAttachment->setClearDepth(depthVal);
-            depthAttachment->setLoadAction(MTL::LoadActionClear);
-            depthAttachment->setStoreAction(MTL::StoreActionStore);
+		MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+  		MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
+        depthAttachment->setTexture(depth->get().texture);
+        depthAttachment->setClearDepth(depthVal);
+        depthAttachment->setLoadAction(MTL::LoadActionClear);
+        depthAttachment->setStoreAction(MTL::StoreActionStore);
 
-            beginRenderPassIfNeeded(renderPassDescriptor, nullptr, depth->get().texture);
+		if (format == DepthFmt::Depth24Stencil8) {
+		    MTL::RenderPassStencilAttachmentDescriptor* stencilAttachment = renderPassDescriptor->stencilAttachment();
+			stencilAttachment->setTexture(depth->get().texture);
+			stencilAttachment->setClearStencil((value >> 24) & 0xff);
+			stencilAttachment->setLoadAction(MTL::LoadActionClear);
+			stencilAttachment->setStoreAction(MTL::StoreActionStore);
 		}
+
+		beginRenderPassIfNeeded(renderPassDescriptor, nullptr, depth->get().texture);
 
 		return;
 	}
@@ -298,7 +298,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	Metal::PipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
-	beginRenderPassIfNeeded(renderPassDescriptor, destFramebuffer->texture, nullptr);
+	beginRenderPassIfNeeded(renderPassDescriptor, destFramebuffer->texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
 	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
@@ -379,6 +379,12 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
         depthAttachment->setTexture(depthStencilRenderTarget->texture);
         depthAttachment->setLoadAction(MTL::LoadActionLoad);
         depthAttachment->setStoreAction(MTL::StoreActionStore);
+        if (depthStencilRenderTarget->format == DepthFmt::Depth24Stencil8) {
+            MTL::RenderPassStencilAttachmentDescriptor* stencilAttachment = renderPassDescriptor->stencilAttachment();
+            stencilAttachment->setTexture(depthStencilRenderTarget->texture);
+            stencilAttachment->setLoadAction(MTL::LoadActionLoad);
+            stencilAttachment->setStoreAction(MTL::StoreActionStore);
+        }
     }
 
 	beginRenderPassIfNeeded(renderPassDescriptor, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr));

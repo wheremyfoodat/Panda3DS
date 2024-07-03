@@ -71,7 +71,7 @@ class RendererMTL final : public Renderer {
         }
 	}
 
-	void beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* colorTexture, MTL::Texture* depthTexture) {
+	void beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* colorTexture, MTL::Texture* depthTexture = nullptr) {
 		createCommandBufferIfNeeded();
 
 		if (!renderCommandEncoder || colorTexture != lastColorTexture || depthTexture != lastDepthTexture) {
