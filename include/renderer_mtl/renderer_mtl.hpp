@@ -52,12 +52,46 @@ class RendererMTL final : public Renderer {
 
 	// Active state
 	MTL::CommandBuffer* commandBuffer = nullptr;
+	MTL::RenderCommandEncoder* renderCommandEncoder = nullptr;
+	MTL::Texture* lastColorTexture = nullptr;
+	MTL::Texture* lastDepthTexture = nullptr;
 
 	void createCommandBufferIfNeeded() {
 		if (!commandBuffer) {
 			commandBuffer = commandQueue->commandBuffer();
 		}
 	}
+
+	void endRenderPass() {
+        if (renderCommandEncoder) {
+            renderCommandEncoder->endEncoding();
+            renderCommandEncoder = nullptr;
+        }
+	}
+
+	void beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* colorTexture, MTL::Texture* depthTexture) {
+		createCommandBufferIfNeeded();
+
+		if (!renderCommandEncoder || colorTexture != lastColorTexture || depthTexture != lastDepthTexture) {
+		    endRenderPass();
+
+            renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+
+		    lastColorTexture = colorTexture;
+            lastDepthTexture = depthTexture;
+		}
+	}
+
+	void commitCommandBuffer() {
+	   if (renderCommandEncoder) {
+            renderCommandEncoder->endEncoding();
+            renderCommandEncoder = nullptr;
+        }
+        if (commandBuffer) {
+            commandBuffer->commit();
+            commandBuffer = nullptr;
+        }
+    }
 
 	std::optional<Metal::ColorRenderTarget> getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 	Metal::DepthStencilRenderTarget& getDepthRenderTarget();

@@ -33,8 +33,6 @@ void RendererMTL::reset() {
 }
 
 void RendererMTL::display() {
-	createCommandBufferIfNeeded();
-
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
@@ -44,7 +42,7 @@ void RendererMTL::display() {
 	colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
-	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	beginRenderPassIfNeeded(renderPassDescriptor, drawable->texture(), nullptr);
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
 
@@ -76,11 +74,10 @@ void RendererMTL::display() {
 		}
 	}
 
-	renderCommandEncoder->endEncoding();
+	endRenderPass();
 
 	commandBuffer->presentDrawable(drawable);
-	commandBuffer->commit();
-	commandBuffer = nullptr;
+	commitCommandBuffer();
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
@@ -197,8 +194,6 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
-	createCommandBufferIfNeeded();
-
 	const auto color = colorRenderTargetCache.findFromAddress(startAddress);
 	if (color) {
 		const float r = Helpers::getBits<24, 8>(value) / 255.0f;
@@ -206,15 +201,14 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 		const float b = Helpers::getBits<8, 8>(value) / 255.0f;
 		const float a = (value & 0xff) / 255.0f;
 
-		MTL::RenderPassDescriptor* passDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-		MTL::RenderPassColorAttachmentDescriptor* colorAttachment = passDescriptor->colorAttachments()->object(0);
+		MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+		MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
 		colorAttachment->setTexture(color->get().texture);
 		colorAttachment->setClearColor(MTL::ClearColor(r, g, b, a));
 		colorAttachment->setLoadAction(MTL::LoadActionClear);
 		colorAttachment->setStoreAction(MTL::StoreActionStore);
 
-		MTL::RenderCommandEncoder* renderEncoder = commandBuffer->renderCommandEncoder(passDescriptor);
-		renderEncoder->endEncoding();
+		beginRenderPassIfNeeded(renderPassDescriptor, color->get().texture, nullptr);
 
 		return;
 	}
@@ -236,26 +230,23 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 			//OpenGL::setClearStencil(stencil);
 			//OpenGL::clearDepthAndStencil();
 		} else {
-    		MTL::RenderPassDescriptor* passDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-    		MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = passDescriptor->depthAttachment();
+    		MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+    		MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
             depthAttachment->setTexture(depth->get().texture);
             depthAttachment->setClearDepth(depthVal);
             depthAttachment->setLoadAction(MTL::LoadActionClear);
             depthAttachment->setStoreAction(MTL::StoreActionStore);
 
-    		MTL::RenderCommandEncoder* renderEncoder = commandBuffer->renderCommandEncoder(passDescriptor);
-    		renderEncoder->endEncoding();
+            beginRenderPassIfNeeded(renderPassDescriptor, nullptr, depth->get().texture);
 		}
 
 		return;
 	}
 
-	Helpers::warn("[RendererGL::ClearBuffer] No buffer found!\n");
+	Helpers::warn("[RendererMTL::ClearBuffer] No buffer found!\n");
 }
 
 void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
-	createCommandBufferIfNeeded();
-
 	const u32 inputWidth = inputSize & 0xffff;
 	const u32 inputHeight = inputSize >> 16;
 	const auto inputFormat = ToColorFormat(Helpers::getBits<8, 3>(flags));
@@ -301,14 +292,12 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	Metal::PipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
-	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	beginRenderPassIfNeeded(renderPassDescriptor, destFramebuffer->texture, nullptr);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
 	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
 
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-
-	renderCommandEncoder->endEncoding();
 }
 
 void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
@@ -317,8 +306,6 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 }
 
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
-	createCommandBufferIfNeeded();
-
 	// Color
 	auto colorRenderTarget = getColorRenderTarget(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
 
@@ -351,19 +338,6 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 		}
 	}
 
-	// TODO: don't begin a new render pass every time
-	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(colorRenderTarget->texture);
-	colorAttachment->setLoadAction(MTL::LoadActionLoad);
-	colorAttachment->setStoreAction(MTL::StoreActionStore);
-	if (depthStencilRenderTarget) {
-	    MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
-        depthAttachment->setTexture(depthStencilRenderTarget->texture);
-        depthAttachment->setLoadAction(MTL::LoadActionLoad);
-        depthAttachment->setStoreAction(MTL::StoreActionStore);
-	}
-
 	// -------- Pipeline --------
 	Metal::PipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
 	if (depthStencilRenderTarget) {
@@ -388,7 +362,20 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	// Depth stencil state
 	MTL::DepthStencilState* depthStencilState = depthStencilCache.get(depthStencilHash);
 
-	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	// -------- Render --------
+	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+    MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+    colorAttachment->setTexture(colorRenderTarget->texture);
+    colorAttachment->setLoadAction(MTL::LoadActionLoad);
+    colorAttachment->setStoreAction(MTL::StoreActionStore);
+    if (depthStencilRenderTarget) {
+        MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
+        depthAttachment->setTexture(depthStencilRenderTarget->texture);
+        depthAttachment->setLoadAction(MTL::LoadActionLoad);
+        depthAttachment->setStoreAction(MTL::StoreActionStore);
+    }
+
+	beginRenderPassIfNeeded(renderPassDescriptor, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr));
 	renderCommandEncoder->setRenderPipelineState(pipeline);
 	renderCommandEncoder->setDepthStencilState(depthStencilState);
 	// If size is < 4KB, use inline vertex data, otherwise use a buffer
@@ -408,8 +395,6 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	// TODO: respect primitive type
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(vertices.size()));
-
-	renderCommandEncoder->endEncoding();
 }
 
 void RendererMTL::screenshot(const std::string& name) {
