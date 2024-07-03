@@ -34,6 +34,9 @@ void RendererMTL::reset() {
 
 void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
+	if (!drawable) {
+        return;
+	}
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
