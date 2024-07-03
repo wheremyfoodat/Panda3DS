@@ -78,6 +78,9 @@ void RendererMTL::display() {
 
 	commandBuffer->presentDrawable(drawable);
 	commitCommandBuffer();
+
+	// Inform the vertex buffer cache that the frame ended
+	vertexBufferCache.endFrame();
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
@@ -191,6 +194,9 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	// Depth stencil cache
 	depthStencilCache.set(device);
+
+	// Vertex buffer cache
+	vertexBufferCache.set(device);
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -382,9 +388,8 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	if (vertices.size_bytes() < 4 * 1024) {
 		renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
 	} else {
-		// TODO: cache this buffer
-		MTL::Buffer* vertexBuffer = device->newBuffer(vertices.data(), vertices.size_bytes(), MTL::ResourceStorageModeShared);
-		renderCommandEncoder->setVertexBuffer(vertexBuffer, 0, VERTEX_BUFFER_BINDING_INDEX);
+	    Metal::BufferHandle buffer = vertexBufferCache.get(vertices);
+		renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, VERTEX_BUFFER_BINDING_INDEX);
 	}
 
 	// Bind resources

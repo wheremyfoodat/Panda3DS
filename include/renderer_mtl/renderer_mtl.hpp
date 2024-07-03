@@ -6,6 +6,7 @@
 #include "render_target.hpp"
 #include "mtl_pipeline_cache.hpp"
 #include "mtl_depth_stencil_cache.hpp"
+#include "mtl_vertex_buffer_cache.hpp"
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
 
@@ -43,6 +44,7 @@ class RendererMTL final : public Renderer {
 	Metal::PipelineCache blitPipelineCache;
 	Metal::PipelineCache drawPipelineCache;
 	Metal::DepthStencilCache depthStencilCache;
+	Metal::VertexBufferCache vertexBufferCache;
 
 	// Helpers
 	MTL::SamplerState* basicSampler;
