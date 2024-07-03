@@ -97,4 +97,17 @@ inline MTL::StencilOperation toMTLStencilOperation(u8 op) {
     return MTL::StencilOperationKeep;
 }
 
+inline MTL::PrimitiveType toMTLPrimitiveType(PrimType primType) {
+    switch (primType) {
+    case PrimType::TriangleList: return MTL::PrimitiveTypeTriangle;
+    case PrimType::TriangleStrip: return MTL::PrimitiveTypeTriangleStrip;
+    case PrimType::TriangleFan:
+        Helpers::warn("Triangle fans are not supported on Metal, using triangles instead");
+        return MTL::PrimitiveTypeTriangle;
+    case PrimType::GeometryPrimitive:
+        Helpers::warn("Geometry primitives are not yet, using triangles instead");
+        return MTL::PrimitiveTypeTriangle;
+    }
+}
+
 } // namespace PICA

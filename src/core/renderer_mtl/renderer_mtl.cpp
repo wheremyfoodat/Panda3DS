@@ -405,7 +405,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], 0x200 - 0x48, 0);
 
 	// TODO: respect primitive type
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(vertices.size()));
+	renderCommandEncoder->drawPrimitives(toMTLPrimitiveType(primType), NS::UInteger(0), NS::UInteger(vertices.size()));
 }
 
 void RendererMTL::screenshot(const std::string& name) {
