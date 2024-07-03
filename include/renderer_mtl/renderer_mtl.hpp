@@ -97,7 +97,7 @@ class RendererMTL final : public Renderer {
 
 	std::optional<Metal::ColorRenderTarget> getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 	Metal::DepthStencilRenderTarget& getDepthRenderTarget();
-	MTL::Texture* getTexture(Metal::Texture& tex);
+	Metal::Texture& getTexture(Metal::Texture& tex);
 	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
 	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);
 };

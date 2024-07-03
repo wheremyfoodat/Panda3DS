@@ -26,6 +26,7 @@ struct Texture {
     Interval<u32> range;
 
     MTL::Texture* texture = nullptr;
+    MTL::SamplerState* sampler = nullptr;
 
     Texture() : valid(false) {}
 

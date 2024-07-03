@@ -453,17 +453,17 @@ Metal::DepthStencilRenderTarget& RendererMTL::getDepthRenderTarget() {
 	}
 }
 
-MTL::Texture* RendererMTL::getTexture(Metal::Texture& tex) {
+Metal::Texture& RendererMTL::getTexture(Metal::Texture& tex) {
 	auto buffer = textureCache.find(tex);
 
 	if (buffer.has_value()) {
-		return buffer.value().get().texture;
+		return buffer.value().get();
 	} else {
 		const auto textureData = std::span{gpu.getPointerPhys<u8>(tex.location), tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
 		Metal::Texture& newTex = textureCache.add(tex);
 		newTex.decodeTexture(textureData);
 
-		return newTex.texture;
+		return newTex;
 	}
 }
 
@@ -518,8 +518,9 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 
 		if (addr != 0) [[likely]] {
 			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
-			MTL::Texture* tex = getTexture(targetTex);
-			encoder->setFragmentTexture(tex, i);
+			auto tex = getTexture(targetTex);
+			encoder->setFragmentTexture(tex.texture, i);
+			encoder->setFragmentSamplerState(tex.sampler ? tex.sampler : basicSampler, i);
 		} else {
 			// TODO: bind a dummy texture?
 		}

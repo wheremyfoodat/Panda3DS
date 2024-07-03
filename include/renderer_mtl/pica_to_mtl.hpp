@@ -110,4 +110,20 @@ inline MTL::PrimitiveType toMTLPrimitiveType(PrimType primType) {
     }
 }
 
+inline MTL::SamplerAddressMode toMTLSamplerAddressMode(u8 addrMode) {
+    switch (addrMode) {
+    case 0: return MTL::SamplerAddressModeClampToEdge;
+    case 1: return MTL::SamplerAddressModeClampToBorderColor;
+    case 2: return MTL::SamplerAddressModeRepeat;
+    case 3: return MTL::SamplerAddressModeMirrorRepeat;
+    case 4: return MTL::SamplerAddressModeClampToEdge;
+    case 5: return MTL::SamplerAddressModeClampToBorderColor;
+    case 6: return MTL::SamplerAddressModeRepeat;
+    case 7: return MTL::SamplerAddressModeRepeat;
+    default: panic("Unknown sampler address mode %u", addrMode);
+    }
+
+    return MTL::SamplerAddressModeClampToEdge;
+}
+
 } // namespace PICA

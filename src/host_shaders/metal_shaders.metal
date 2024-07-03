@@ -247,10 +247,9 @@ struct FragTEV {
     }
 };
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]]) {
-    // TODO: upload this as argument
-    sampler samplr;
-
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]],
+                             texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]],
+                             sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]]) {
     Globals globals;
     globals.tevSources[0] = in.color;
     // TODO: uncomment
@@ -259,9 +258,9 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& p
 	uint textureConfig = picaRegs.read(0x80u);
 	float2 texCoord2 = (textureConfig & (1u << 13)) != 0u ? in.texCoord1 : in.texCoord2;
 
-	if ((textureConfig & 1u) != 0u) globals.tevSources[3] = tex0.sample(samplr, in.texCoord0.xy);
-	if ((textureConfig & 2u) != 0u) globals.tevSources[4] = tex1.sample(samplr, in.texCoord1);
-	if ((textureConfig & 4u) != 0u) globals.tevSources[5] = tex2.sample(samplr, texCoord2);
+	if ((textureConfig & 1u) != 0u) globals.tevSources[3] = tex0.sample(samplr0, in.texCoord0.xy);
+	if ((textureConfig & 2u) != 0u) globals.tevSources[4] = tex1.sample(samplr1, in.texCoord1);
+	if ((textureConfig & 4u) != 0u) globals.tevSources[5] = tex2.sample(samplr2, texCoord2);
 	globals.tevSources[13] = float4(0.0);  // Previous buffer
 	globals.tevSources[15] = in.color;     // Previous combiner
 

@@ -1,4 +1,5 @@
 #include "renderer_mtl/mtl_texture.hpp"
+#include "renderer_mtl/pica_to_mtl.hpp"
 #include "colour.hpp"
 #include <array>
 
@@ -23,7 +24,22 @@ void Texture::allocate() {
 void Texture::setNewConfig(u32 cfg) {
     config = cfg;
 
-    // TODO: implement this
+    if (sampler) {
+        sampler->release();
+    }
+
+    const auto magFilter = (cfg & 0x2) != 0 ? MTL::SamplerMinMagFilterLinear : MTL::SamplerMinMagFilterNearest;
+    const auto minFilter = (cfg & 0x4) != 0 ? MTL::SamplerMinMagFilterLinear : MTL::SamplerMinMagFilterNearest;
+    const auto wrapT = PICA::toMTLSamplerAddressMode(getBits<8, 3>(cfg));
+    const auto wrapS = PICA::toMTLSamplerAddressMode(getBits<12, 3>(cfg));
+
+    MTL::SamplerDescriptor* samplerDescriptor = MTL::SamplerDescriptor::alloc()->init();
+    samplerDescriptor->setMinFilter(minFilter);
+    samplerDescriptor->setMagFilter(magFilter);
+    samplerDescriptor->setSAddressMode(wrapS);
+    samplerDescriptor->setTAddressMode(wrapT);
+
+    sampler = device->newSamplerState(samplerDescriptor);
 }
 
 void Texture::free() {
@@ -32,6 +48,9 @@ void Texture::free() {
 	if (texture) {
 		texture->release();
 	}
+	if (sampler) {
+        sampler->release();
+    }
 }
 
 u64 Texture::sizeInBytes() {
