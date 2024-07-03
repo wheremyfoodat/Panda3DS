@@ -353,9 +353,10 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
         pipelineHash.depthFmt = depthStencilRenderTarget->format;
     }
 
-	// Blending
+	// Blending and logic op
 	pipelineHash.blendEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
 
+	u8 logicOp = 3; // Copy, which doesn't do anything
 	if (pipelineHash.blendEnabled) {
     	pipelineHash.blendControl = regs[PICA::InternalRegs::BlendFunc];
         // TODO: constant color
@@ -364,6 +365,8 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
     	//const u8 g = Helpers::getBits<8, 8>(pipelineHash.constantColor);
     	//const u8 b = Helpers::getBits<16, 8>(pipelineHash.constantColor);
     	//const u8 a = Helpers::getBits<24, 8>(pipelineHash.constantColor);
+	} else {
+	    logicOp = Helpers::getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
 	}
 
 	MTL::RenderPipelineState* pipeline = drawPipelineCache.get(pipelineHash);
@@ -406,6 +409,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	bindTexturesToSlots(renderCommandEncoder);
 	renderCommandEncoder->setVertexBytes(&regs[0x48], 0x200 - 0x48, 0);
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], 0x200 - 0x48, 0);
+	renderCommandEncoder->setFragmentBytes(&logicOp, sizeof(logicOp), 2);
 
 	renderCommandEncoder->drawPrimitives(toMTLPrimitiveType(primType), NS::UInteger(0), NS::UInteger(vertices.size()));
 }

@@ -247,7 +247,51 @@ struct FragTEV {
     }
 };
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]],
+enum class LogicOp : uint8_t {
+    Clear = 0,
+    And = 1,
+    AndReverse = 2,
+    Copy = 3,
+    Set = 4,
+    CopyInverted = 5,
+    NoOp = 6,
+    Invert = 7,
+    Nand = 8,
+    Or = 9,
+    Nor = 10,
+    Xor = 11,
+    Equiv = 12,
+    AndInverted = 13,
+    OrReverse = 14,
+    OrInverted = 15
+};
+
+uint4 performLogicOpU(LogicOp logicOp, uint4 s, uint4 d) {
+    switch (logicOp) {
+    case LogicOp::Clear: return as_type<uint4>(float4(0.0));
+    case LogicOp::And: return s & d;
+    case LogicOp::AndReverse: return s & ~d;
+    case LogicOp::Copy: return s;
+    case LogicOp::Set: return as_type<uint4>(float4(1.0));
+    case LogicOp::CopyInverted: return ~s;
+    case LogicOp::NoOp: return d;
+    case LogicOp::Invert: return ~d;
+    case LogicOp::Nand: return ~(s & d);
+    case LogicOp::Or: return s | d;
+    case LogicOp::Nor: return ~(s | d);
+    case LogicOp::Xor: return s ^ d;
+    case LogicOp::Equiv: return ~(s ^ d);
+    case LogicOp::AndInverted: return ~s & d;
+    case LogicOp::OrReverse: return s | ~d;
+    case LogicOp::OrInverted: return ~s | d;
+    }
+}
+
+float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
+    return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
+}
+
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]],
                              texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]],
                              sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]]) {
     Globals globals;
@@ -284,5 +328,5 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& p
 		}
 	}
 
-	return globals.tevSources[15];
+	return performLogicOp(logicOp, globals.tevSources[15], prevColor);
 }
