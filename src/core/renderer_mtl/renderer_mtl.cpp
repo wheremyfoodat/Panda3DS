@@ -359,7 +359,7 @@ void RendererMTL::deinitGraphicsContext() {
 	Helpers::warn("RendererMTL::deinitGraphicsContext not implemented");
 }
 
-std::optional<Metal::RenderTarget> RendererMTL::getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound) {
+std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound) {
 	// Try to find an already existing buffer that contains the provided address
 	// This is a more relaxed check compared to getColourFBO as display transfer/texcopy may refer to
 	// subrect of a surface and in case of texcopy we don't know the format of the surface.
@@ -373,7 +373,7 @@ std::optional<Metal::RenderTarget> RendererMTL::getColorRenderTarget(u32 addr, P
 	}
 
 	// Otherwise create and cache a new buffer.
-	Metal::RenderTarget sampleBuffer(device, addr, format, width, height);
+	Metal::ColorRenderTarget sampleBuffer(device, addr, format, width, height);
 
 	return colorRenderTargetCache.add(sampleBuffer);
 }

@@ -2,22 +2,23 @@
 #include <array>
 #include <string>
 #include <Metal/Metal.hpp>
-#include "PICA/regs.hpp"
 #include "boost/icl/interval.hpp"
 #include "helpers.hpp"
 #include "math_util.hpp"
 #include "opengl.hpp"
+#include "pica_to_mtl.hpp"
 
 template <typename T>
 using Interval = boost::icl::right_open_interval<T>;
 
 namespace Metal {
 
+template <typename Format_t>
 struct RenderTarget {
     MTL::Device* device;
 
     u32 location;
-    PICA::ColorFmt format;
+    Format_t format;
     OpenGL::uvec2 size;
     bool valid;
 
@@ -28,9 +29,8 @@ struct RenderTarget {
 
     RenderTarget() : valid(false) {}
 
-    RenderTarget(MTL::Device* dev, u32 loc, PICA::ColorFmt format, u32 x, u32 y, bool valid = true)
+    RenderTarget(MTL::Device* dev, u32 loc, Format_t format, u32 x, u32 y, bool valid = true)
         : device(dev), location(loc), format(format), size({x, y}), valid(valid) {
-
         u64 endLoc = (u64)loc + sizeInBytes();
         // Check if start and end are valid here
         range = Interval<u32>(loc, (u32)endLoc);
@@ -51,9 +51,18 @@ struct RenderTarget {
     }
 
     void allocate() {
+        MTL::PixelFormat pixelFormat = MTL::PixelFormatInvalid;
+        if (std::is_same<Format_t, PICA::ColorFmt>::value) {
+            pixelFormat = PICA::toMTLPixelFormatColor((PICA::ColorFmt)format);
+        } else if (std::is_same<Format_t, PICA::DepthFmt>::value) {
+            pixelFormat = PICA::toMTLPixelFormatDepth((PICA::DepthFmt)format);
+        } else {
+            panic("Invalid format type");
+        }
+
         MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::alloc()->init();
         descriptor->setTextureType(MTL::TextureType2D);
-        descriptor->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
+        descriptor->setPixelFormat(pixelFormat);
         descriptor->setWidth(size.u());
         descriptor->setHeight(size.v());
         descriptor->setUsage(MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead);
@@ -73,5 +82,8 @@ struct RenderTarget {
         return (size_t)size.x() * (size_t)size.y() * PICA::sizePerPixel(format);
     }
 };
+
+typedef RenderTarget<PICA::ColorFmt> ColorRenderTarget;
+typedef RenderTarget<PICA::DepthFmt> DepthStencilRenderTarget;
 
 } // namespace Metal
