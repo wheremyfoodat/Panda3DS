@@ -116,7 +116,7 @@ vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs&
 	// in.position.z is in range of [-1 ... 1], convert it to [0 ... 1]
 	out.position.xyz /= out.position.w;
 	out.position.w = 1.0;
-	out.position.z = (out.position.z + 1.0) * 0.5;
+	out.position.z = (-out.position.z + 1.0) * 0.5;
 
 	// Color
 	out.color = in.color;

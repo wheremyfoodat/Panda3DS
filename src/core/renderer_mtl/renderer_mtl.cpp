@@ -219,7 +219,36 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 		return;
 	}
 
-	// TODO: Implement depth and stencil buffers
+	const auto depth = depthStencilRenderTargetCache.findFromAddress(startAddress);
+	if (depth) {
+		float depthVal;
+		const auto format = depth->get().format;
+		if (format == DepthFmt::Depth16) {
+			depthVal = (value & 0xffff) / 65535.0f;
+		} else {
+			depthVal = (value & 0xffffff) / 16777215.0f;
+		}
+
+		if (false/*format == DepthFmt::Depth24Stencil8*/) {
+		    // TODO: clear stencil
+			//const u8 stencil = (value >> 24);
+			//gl.setStencilMask(0xff);
+			//OpenGL::setClearStencil(stencil);
+			//OpenGL::clearDepthAndStencil();
+		} else {
+    		MTL::RenderPassDescriptor* passDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+    		MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = passDescriptor->depthAttachment();
+            depthAttachment->setTexture(depth->get().texture);
+            depthAttachment->setClearDepth(depthVal);
+            depthAttachment->setLoadAction(MTL::LoadActionClear);
+            depthAttachment->setStoreAction(MTL::StoreActionStore);
+
+    		MTL::RenderCommandEncoder* renderEncoder = commandBuffer->renderCommandEncoder(passDescriptor);
+    		renderEncoder->endEncoding();
+		}
+
+		return;
+	}
 
 	Helpers::warn("[RendererGL::ClearBuffer] No buffer found!\n");
 }
@@ -336,14 +365,18 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	}
 
 	// Pipeline
-	Metal::PipelineHash hash{colorRenderTarget->format, DepthFmt::Unknown1};
+	Metal::PipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
 	if (depthStencilRenderTarget) {
-        hash.depthFmt = depthStencilRenderTarget->format;
+        pipelineHash.depthFmt = depthStencilRenderTarget->format;
     }
-	MTL::RenderPipelineState* pipeline = drawPipelineCache.get(hash);
+	MTL::RenderPipelineState* pipeline = drawPipelineCache.get(pipelineHash);
+
+	// Depth stencil state
+	MTL::DepthStencilState* depthStencilState = depthStencilCache.get(depthStencilHash);
 
 	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
 	renderCommandEncoder->setRenderPipelineState(pipeline);
+	renderCommandEncoder->setDepthStencilState(depthStencilState);
 	// If size is < 4KB, use inline vertex data, otherwise use a buffer
 	if (vertices.size_bytes() < 4 * 1024) {
 		renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
