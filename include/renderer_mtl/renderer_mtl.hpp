@@ -4,6 +4,7 @@
 #include "renderer.hpp"
 #include "texture.hpp"
 #include "render_target.hpp"
+#include "mtl_pipeline_cache.hpp"
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
 
@@ -38,14 +39,14 @@ class RendererMTL final : public Renderer {
 	SurfaceCache<Metal::ColorRenderTarget, 16, true> colorRenderTargetCache;
 	SurfaceCache<Metal::DepthStencilRenderTarget, 16, true> depthStencilRenderTargetCache;
 	SurfaceCache<Metal::Texture, 256, true> textureCache;
+	Metal::PipelineCache blitPipelineCache;
+	Metal::PipelineCache drawPipelineCache;
 
 	// Helpers
 	MTL::SamplerState* basicSampler;
 
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
-	MTL::RenderPipelineState* blitPipeline;
-	MTL::RenderPipelineState* drawPipeline;
 
 	// Active state
 	MTL::CommandBuffer* commandBuffer = nullptr;

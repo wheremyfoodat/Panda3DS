@@ -10,9 +10,6 @@ using namespace PICA;
 
 CMRC_DECLARE(RendererMTL);
 
-// Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
-#define VERTEX_BUFFER_BINDING_INDEX 30
-
 // HACK: redefinition...
 PICA::ColorFmt ToColorFormat(u32 format) {
 	switch (format) {
@@ -131,96 +128,69 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	MTL::Function* vertexBlitFunction = library->newFunction(NS::String::string("vertexBlit", NS::ASCIIStringEncoding));
 	MTL::Function* fragmentBlitFunction = library->newFunction(NS::String::string("fragmentBlit", NS::ASCIIStringEncoding));
 
-	MTL::RenderPipelineDescriptor* blitPipelineDescriptor = MTL::RenderPipelineDescriptor::alloc()->init();
-	blitPipelineDescriptor->setVertexFunction(vertexBlitFunction);
-	blitPipelineDescriptor->setFragmentFunction(fragmentBlitFunction);
-	auto* blitColorAttachment = blitPipelineDescriptor->colorAttachments()->object(0);
-	blitColorAttachment->setPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm);
-
-	error = nullptr;
-	blitPipeline = device->newRenderPipelineState(blitPipelineDescriptor, &error);
-	if (error) {
-		Helpers::panic("Error creating blit pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
-	}
+	blitPipelineCache.set(device, vertexBlitFunction, fragmentBlitFunction, nullptr);
 
 	// Draw
 	MTL::Function* vertexDrawFunction = library->newFunction(NS::String::string("vertexDraw", NS::ASCIIStringEncoding));
 	MTL::Function* fragmentDrawFunction = library->newFunction(NS::String::string("fragmentDraw", NS::ASCIIStringEncoding));
 
-	MTL::RenderPipelineDescriptor* drawPipelineDescriptor = MTL::RenderPipelineDescriptor::alloc()->init();
-	drawPipelineDescriptor->setVertexFunction(vertexDrawFunction);
-	drawPipelineDescriptor->setFragmentFunction(fragmentDrawFunction);
-
-	auto* drawColorAttachment = drawPipelineDescriptor->colorAttachments()->object(0);
-	drawColorAttachment->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
-	drawColorAttachment->setBlendingEnabled(true);
-	drawColorAttachment->setSourceRGBBlendFactor(MTL::BlendFactorSourceAlpha);
-	drawColorAttachment->setDestinationRGBBlendFactor(MTL::BlendFactorOneMinusSourceAlpha);
-	drawColorAttachment->setSourceAlphaBlendFactor(MTL::BlendFactorSourceAlpha);
-	drawColorAttachment->setDestinationAlphaBlendFactor(MTL::BlendFactorOneMinusSourceAlpha);
-
 	// -------- Vertex descriptor --------
-	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
+   	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
 
-	// Position
-	MTL::VertexAttributeDescriptor* positionAttribute = vertexDescriptor->attributes()->object(0);
-	positionAttribute->setFormat(MTL::VertexFormatFloat4);
-	positionAttribute->setOffset(offsetof(Vertex, s.positions));
-	positionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// Position
+   	MTL::VertexAttributeDescriptor* positionAttribute = vertexDescriptor->attributes()->object(0);
+   	positionAttribute->setFormat(MTL::VertexFormatFloat4);
+   	positionAttribute->setOffset(offsetof(Vertex, s.positions));
+   	positionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	// Quaternion
-	MTL::VertexAttributeDescriptor* quaternionAttribute = vertexDescriptor->attributes()->object(1);
-	quaternionAttribute->setFormat(MTL::VertexFormatFloat4);
-	quaternionAttribute->setOffset(offsetof(Vertex, s.quaternion));
-	quaternionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// Quaternion
+   	MTL::VertexAttributeDescriptor* quaternionAttribute = vertexDescriptor->attributes()->object(1);
+   	quaternionAttribute->setFormat(MTL::VertexFormatFloat4);
+   	quaternionAttribute->setOffset(offsetof(Vertex, s.quaternion));
+   	quaternionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	// Color
-	MTL::VertexAttributeDescriptor* colorAttribute = vertexDescriptor->attributes()->object(2);
-	colorAttribute->setFormat(MTL::VertexFormatFloat4);
-	colorAttribute->setOffset(offsetof(Vertex, s.colour));
-	colorAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// Color
+   	MTL::VertexAttributeDescriptor* colorAttribute = vertexDescriptor->attributes()->object(2);
+   	colorAttribute->setFormat(MTL::VertexFormatFloat4);
+   	colorAttribute->setOffset(offsetof(Vertex, s.colour));
+   	colorAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	// Texture coordinate 0
-	MTL::VertexAttributeDescriptor* texCoord0Attribute = vertexDescriptor->attributes()->object(3);
-	texCoord0Attribute->setFormat(MTL::VertexFormatFloat2);
-	texCoord0Attribute->setOffset(offsetof(Vertex, s.texcoord0));
-	texCoord0Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// Texture coordinate 0
+   	MTL::VertexAttributeDescriptor* texCoord0Attribute = vertexDescriptor->attributes()->object(3);
+   	texCoord0Attribute->setFormat(MTL::VertexFormatFloat2);
+   	texCoord0Attribute->setOffset(offsetof(Vertex, s.texcoord0));
+   	texCoord0Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	// Texture coordinate 1
-	MTL::VertexAttributeDescriptor* texCoord1Attribute = vertexDescriptor->attributes()->object(4);
-	texCoord1Attribute->setFormat(MTL::VertexFormatFloat2);
-	texCoord1Attribute->setOffset(offsetof(Vertex, s.texcoord1));
-	texCoord1Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// Texture coordinate 1
+   	MTL::VertexAttributeDescriptor* texCoord1Attribute = vertexDescriptor->attributes()->object(4);
+   	texCoord1Attribute->setFormat(MTL::VertexFormatFloat2);
+   	texCoord1Attribute->setOffset(offsetof(Vertex, s.texcoord1));
+   	texCoord1Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	// Texture coordinate 0 W
-	MTL::VertexAttributeDescriptor* texCoord0WAttribute = vertexDescriptor->attributes()->object(5);
-	texCoord0WAttribute->setFormat(MTL::VertexFormatFloat);
-	texCoord0WAttribute->setOffset(offsetof(Vertex, s.texcoord0_w));
-	texCoord0WAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// Texture coordinate 0 W
+   	MTL::VertexAttributeDescriptor* texCoord0WAttribute = vertexDescriptor->attributes()->object(5);
+   	texCoord0WAttribute->setFormat(MTL::VertexFormatFloat);
+   	texCoord0WAttribute->setOffset(offsetof(Vertex, s.texcoord0_w));
+   	texCoord0WAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	// View
-	MTL::VertexAttributeDescriptor* viewAttribute = vertexDescriptor->attributes()->object(6);
-	viewAttribute->setFormat(MTL::VertexFormatFloat3);
-	viewAttribute->setOffset(offsetof(Vertex, s.view));
-	viewAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// View
+   	MTL::VertexAttributeDescriptor* viewAttribute = vertexDescriptor->attributes()->object(6);
+   	viewAttribute->setFormat(MTL::VertexFormatFloat3);
+   	viewAttribute->setOffset(offsetof(Vertex, s.view));
+   	viewAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	// Texture coordinate 2
-	MTL::VertexAttributeDescriptor* texCoord2Attribute = vertexDescriptor->attributes()->object(7);
-	texCoord2Attribute->setFormat(MTL::VertexFormatFloat2);
-	texCoord2Attribute->setOffset(offsetof(Vertex, s.texcoord2));
-	texCoord2Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+   	// Texture coordinate 2
+   	MTL::VertexAttributeDescriptor* texCoord2Attribute = vertexDescriptor->attributes()->object(7);
+   	texCoord2Attribute->setFormat(MTL::VertexFormatFloat2);
+   	texCoord2Attribute->setOffset(offsetof(Vertex, s.texcoord2));
+   	texCoord2Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-	MTL::VertexBufferLayoutDescriptor* vertexBufferLayout = vertexDescriptor->layouts()->object(VERTEX_BUFFER_BINDING_INDEX);
-	vertexBufferLayout->setStride(sizeof(Vertex));
-	vertexBufferLayout->setStepFunction(MTL::VertexStepFunctionPerVertex);
-	vertexBufferLayout->setStepRate(1);
-	drawPipelineDescriptor->setVertexDescriptor(vertexDescriptor);
+   	MTL::VertexBufferLayoutDescriptor* vertexBufferLayout = vertexDescriptor->layouts()->object(VERTEX_BUFFER_BINDING_INDEX);
+   	vertexBufferLayout->setStride(sizeof(Vertex));
+   	vertexBufferLayout->setStepFunction(MTL::VertexStepFunctionPerVertex);
+   	vertexBufferLayout->setStepRate(1);
 
-	error = nullptr;
-	drawPipeline = device->newRenderPipelineState(drawPipelineDescriptor, &error);
-	if (error) {
-		Helpers::panic("Error creating draw pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
-	}
+	drawPipelineCache.set(device, vertexDrawFunction, fragmentDrawFunction, vertexDescriptor);
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -295,6 +265,10 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	colorAttachment->setClearColor(MTL::ClearColor{0.0, 0.0, 0.0, 1.0});
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
+	// Pipeline
+	Metal::PipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
+	auto blitPipeline = blitPipelineCache.get(hash);
+
 	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
@@ -313,17 +287,21 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
 	createCommandBufferIfNeeded();
 
-	MTL::Texture* renderTarget = getColorRenderTarget(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1])->texture;
+	auto renderTarget = getColorRenderTarget(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
 
 	// TODO: don't begin a new render pass every time
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(renderTarget);
+	colorAttachment->setTexture(renderTarget->texture);
 	colorAttachment->setLoadAction(MTL::LoadActionLoad);
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
+	// Pipeline
+	Metal::PipelineHash hash{renderTarget->format, PICA::DepthFmt::Unknown1};
+	MTL::RenderPipelineState* pipeline = drawPipelineCache.get(hash);
+
 	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
-	renderCommandEncoder->setRenderPipelineState(drawPipeline);
+	renderCommandEncoder->setRenderPipelineState(pipeline);
 	// If size is < 4KB, use inline vertex data, otherwise use a buffer
 	if (vertices.size_bytes() < 4 * 1024) {
 	    renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
