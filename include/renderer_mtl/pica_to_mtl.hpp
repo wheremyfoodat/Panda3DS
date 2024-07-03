@@ -20,8 +20,25 @@ inline MTL::PixelFormat toMTLPixelFormatDepth(DepthFmt format) {
     case DepthFmt::Depth16: return MTL::PixelFormatDepth16Unorm;
     case DepthFmt::Unknown1: return MTL::PixelFormatInvalid;
     case DepthFmt::Depth24: return MTL::PixelFormatDepth32Float; // TODO: is this okay?
-    case DepthFmt::Depth24Stencil8: return MTL::PixelFormatDepth24Unorm_Stencil8;
+    // Apple sillicon doesn't support 24-bit depth buffers, so we use 32-bit instead
+    case DepthFmt::Depth24Stencil8: return MTL::PixelFormatDepth32Float_Stencil8;
     }
+}
+
+inline MTL::CompareFunction toMTLCompareFunc(u8 func) {
+    switch (func) {
+    case 0: return MTL::CompareFunctionNever;
+    case 1: return MTL::CompareFunctionAlways;
+    case 2: return MTL::CompareFunctionEqual;
+    case 3: return MTL::CompareFunctionNotEqual;
+    case 4: return MTL::CompareFunctionLess;
+    case 5: return MTL::CompareFunctionLessEqual;
+    case 6: return MTL::CompareFunctionGreater;
+    case 7: return MTL::CompareFunctionGreaterEqual;
+    default: panic("Unknown compare function %u", func);
+    }
+
+    return MTL::CompareFunctionAlways;
 }
 
 } // namespace PICA

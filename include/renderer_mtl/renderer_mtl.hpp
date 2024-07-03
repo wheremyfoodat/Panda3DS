@@ -5,6 +5,7 @@
 #include "texture.hpp"
 #include "render_target.hpp"
 #include "mtl_pipeline_cache.hpp"
+#include "mtl_depth_stencil_cache.hpp"
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
 
@@ -41,6 +42,7 @@ class RendererMTL final : public Renderer {
 	SurfaceCache<Metal::Texture, 256, true> textureCache;
 	Metal::PipelineCache blitPipelineCache;
 	Metal::PipelineCache drawPipelineCache;
+	Metal::DepthStencilCache depthStencilCache;
 
 	// Helpers
 	MTL::SamplerState* basicSampler;
@@ -58,6 +60,7 @@ class RendererMTL final : public Renderer {
 	}
 
 	std::optional<Metal::ColorRenderTarget> getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
+	Metal::DepthStencilRenderTarget& getDepthRenderTarget();
 	MTL::Texture* getTexture(Metal::Texture& tex);
 	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
 	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);

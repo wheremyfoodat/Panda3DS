@@ -24,9 +24,9 @@ RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, 
 RendererMTL::~RendererMTL() {}
 
 void RendererMTL::reset() {
-    colorRenderTargetCache.reset();
-    depthStencilRenderTargetCache.reset();
-    textureCache.reset();
+	colorRenderTargetCache.reset();
+	depthStencilRenderTargetCache.reset();
+	textureCache.reset();
 
 	// TODO: implement
 	Helpers::warn("RendererMTL::reset not implemented");
@@ -38,45 +38,45 @@ void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-   	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-   	colorAttachment->setTexture(drawable->texture());
-   	colorAttachment->setLoadAction(MTL::LoadActionClear);
-    colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
-   	colorAttachment->setStoreAction(MTL::StoreActionStore);
+	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+	colorAttachment->setTexture(drawable->texture());
+	colorAttachment->setLoadAction(MTL::LoadActionClear);
+	colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
+	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
-   	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
-   	renderCommandEncoder->setRenderPipelineState(displayPipeline);
-   	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
+	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+	renderCommandEncoder->setRenderPipelineState(displayPipeline);
+	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
 
 	using namespace PICA::ExternalRegs;
 
 	// Top screen
 	{
-    	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
-    	const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
-    	auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
+		const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
+		const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
+		auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
 
-        if (topScreen) {
-            renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
-           	renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
-           	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-        }
+		if (topScreen) {
+			renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
+			renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
+			renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+		}
 	}
 
 	// Bottom screen
 	{
-    	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
-    	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
-    	auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
+		const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
+		const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
+		auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
 
-        if (bottomScreen) {
-            renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
-           	renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
-           	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-        }
+		if (bottomScreen) {
+			renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
+			renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
+			renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+		}
 	}
 
-    renderCommandEncoder->endEncoding();
+	renderCommandEncoder->endEncoding();
 
 	commandBuffer->presentDrawable(drawable);
 	commandBuffer->commit();
@@ -135,68 +135,71 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	MTL::Function* fragmentDrawFunction = library->newFunction(NS::String::string("fragmentDraw", NS::ASCIIStringEncoding));
 
 	// -------- Vertex descriptor --------
-   	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
+	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
 
-   	// Position
-   	MTL::VertexAttributeDescriptor* positionAttribute = vertexDescriptor->attributes()->object(0);
-   	positionAttribute->setFormat(MTL::VertexFormatFloat4);
-   	positionAttribute->setOffset(offsetof(Vertex, s.positions));
-   	positionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// Position
+	MTL::VertexAttributeDescriptor* positionAttribute = vertexDescriptor->attributes()->object(0);
+	positionAttribute->setFormat(MTL::VertexFormatFloat4);
+	positionAttribute->setOffset(offsetof(Vertex, s.positions));
+	positionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	// Quaternion
-   	MTL::VertexAttributeDescriptor* quaternionAttribute = vertexDescriptor->attributes()->object(1);
-   	quaternionAttribute->setFormat(MTL::VertexFormatFloat4);
-   	quaternionAttribute->setOffset(offsetof(Vertex, s.quaternion));
-   	quaternionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// Quaternion
+	MTL::VertexAttributeDescriptor* quaternionAttribute = vertexDescriptor->attributes()->object(1);
+	quaternionAttribute->setFormat(MTL::VertexFormatFloat4);
+	quaternionAttribute->setOffset(offsetof(Vertex, s.quaternion));
+	quaternionAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	// Color
-   	MTL::VertexAttributeDescriptor* colorAttribute = vertexDescriptor->attributes()->object(2);
-   	colorAttribute->setFormat(MTL::VertexFormatFloat4);
-   	colorAttribute->setOffset(offsetof(Vertex, s.colour));
-   	colorAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// Color
+	MTL::VertexAttributeDescriptor* colorAttribute = vertexDescriptor->attributes()->object(2);
+	colorAttribute->setFormat(MTL::VertexFormatFloat4);
+	colorAttribute->setOffset(offsetof(Vertex, s.colour));
+	colorAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	// Texture coordinate 0
-   	MTL::VertexAttributeDescriptor* texCoord0Attribute = vertexDescriptor->attributes()->object(3);
-   	texCoord0Attribute->setFormat(MTL::VertexFormatFloat2);
-   	texCoord0Attribute->setOffset(offsetof(Vertex, s.texcoord0));
-   	texCoord0Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// Texture coordinate 0
+	MTL::VertexAttributeDescriptor* texCoord0Attribute = vertexDescriptor->attributes()->object(3);
+	texCoord0Attribute->setFormat(MTL::VertexFormatFloat2);
+	texCoord0Attribute->setOffset(offsetof(Vertex, s.texcoord0));
+	texCoord0Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	// Texture coordinate 1
-   	MTL::VertexAttributeDescriptor* texCoord1Attribute = vertexDescriptor->attributes()->object(4);
-   	texCoord1Attribute->setFormat(MTL::VertexFormatFloat2);
-   	texCoord1Attribute->setOffset(offsetof(Vertex, s.texcoord1));
-   	texCoord1Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// Texture coordinate 1
+	MTL::VertexAttributeDescriptor* texCoord1Attribute = vertexDescriptor->attributes()->object(4);
+	texCoord1Attribute->setFormat(MTL::VertexFormatFloat2);
+	texCoord1Attribute->setOffset(offsetof(Vertex, s.texcoord1));
+	texCoord1Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	// Texture coordinate 0 W
-   	MTL::VertexAttributeDescriptor* texCoord0WAttribute = vertexDescriptor->attributes()->object(5);
-   	texCoord0WAttribute->setFormat(MTL::VertexFormatFloat);
-   	texCoord0WAttribute->setOffset(offsetof(Vertex, s.texcoord0_w));
-   	texCoord0WAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// Texture coordinate 0 W
+	MTL::VertexAttributeDescriptor* texCoord0WAttribute = vertexDescriptor->attributes()->object(5);
+	texCoord0WAttribute->setFormat(MTL::VertexFormatFloat);
+	texCoord0WAttribute->setOffset(offsetof(Vertex, s.texcoord0_w));
+	texCoord0WAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	// View
-   	MTL::VertexAttributeDescriptor* viewAttribute = vertexDescriptor->attributes()->object(6);
-   	viewAttribute->setFormat(MTL::VertexFormatFloat3);
-   	viewAttribute->setOffset(offsetof(Vertex, s.view));
-   	viewAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// View
+	MTL::VertexAttributeDescriptor* viewAttribute = vertexDescriptor->attributes()->object(6);
+	viewAttribute->setFormat(MTL::VertexFormatFloat3);
+	viewAttribute->setOffset(offsetof(Vertex, s.view));
+	viewAttribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	// Texture coordinate 2
-   	MTL::VertexAttributeDescriptor* texCoord2Attribute = vertexDescriptor->attributes()->object(7);
-   	texCoord2Attribute->setFormat(MTL::VertexFormatFloat2);
-   	texCoord2Attribute->setOffset(offsetof(Vertex, s.texcoord2));
-   	texCoord2Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
+	// Texture coordinate 2
+	MTL::VertexAttributeDescriptor* texCoord2Attribute = vertexDescriptor->attributes()->object(7);
+	texCoord2Attribute->setFormat(MTL::VertexFormatFloat2);
+	texCoord2Attribute->setOffset(offsetof(Vertex, s.texcoord2));
+	texCoord2Attribute->setBufferIndex(VERTEX_BUFFER_BINDING_INDEX);
 
-   	MTL::VertexBufferLayoutDescriptor* vertexBufferLayout = vertexDescriptor->layouts()->object(VERTEX_BUFFER_BINDING_INDEX);
-   	vertexBufferLayout->setStride(sizeof(Vertex));
-   	vertexBufferLayout->setStepFunction(MTL::VertexStepFunctionPerVertex);
-   	vertexBufferLayout->setStepRate(1);
+	MTL::VertexBufferLayoutDescriptor* vertexBufferLayout = vertexDescriptor->layouts()->object(VERTEX_BUFFER_BINDING_INDEX);
+	vertexBufferLayout->setStride(sizeof(Vertex));
+	vertexBufferLayout->setStepFunction(MTL::VertexStepFunctionPerVertex);
+	vertexBufferLayout->setStepRate(1);
 
 	drawPipelineCache.set(device, vertexDrawFunction, fragmentDrawFunction, vertexDescriptor);
+
+	// Depth stencil cache
+	depthStencilCache.set(device);
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
-    createCommandBufferIfNeeded();
+	createCommandBufferIfNeeded();
 
-    const auto color = colorRenderTargetCache.findFromAddress(startAddress);
+	const auto color = colorRenderTargetCache.findFromAddress(startAddress);
 	if (color) {
 		const float r = Helpers::getBits<24, 8>(value) / 255.0f;
 		const float g = Helpers::getBits<16, 8>(value) / 255.0f;
@@ -222,9 +225,9 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 }
 
 void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
-    createCommandBufferIfNeeded();
+	createCommandBufferIfNeeded();
 
-    const u32 inputWidth = inputSize & 0xffff;
+	const u32 inputWidth = inputSize & 0xffff;
 	const u32 inputHeight = inputSize >> 16;
 	const auto inputFormat = ToColorFormat(Helpers::getBits<8, 3>(flags));
 	const auto outputFormat = ToColorFormat(Helpers::getBits<12, 3>(flags));
@@ -287,28 +290,67 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
 	createCommandBufferIfNeeded();
 
-	auto renderTarget = getColorRenderTarget(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
+	// Color
+	auto colorRenderTarget = getColorRenderTarget(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
+
+	// Depth stencil
+	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
+	const bool depthWrite = regs[PICA::InternalRegs::DepthBufferWrite];
+	const bool depthTestEnable = depthControl & 0x1;
+	const bool depthWriteEnable = Helpers::getBit<12>(depthControl);
+	const u8 depthFunc = Helpers::getBits<4, 3>(depthControl);
+	const u8 colorMask = Helpers::getBits<8, 4>(depthControl);
+	// gl.setColourMask(colorMask & 0x1, colorMask & 0x2, colorMask & 0x4, colorMask & 0x8);
+
+	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
+	const bool stencilEnable = Helpers::getBit<0>(stencilConfig);
+
+	std::optional<Metal::DepthStencilRenderTarget> depthStencilRenderTarget = std::nullopt;
+	Metal::DepthStencilHash depthStencilHash{false, 1};
+	if (depthTestEnable) {
+		depthStencilHash.depthWrite = depthWriteEnable && depthWrite;
+		depthStencilHash.depthFunc = depthFunc;
+		depthStencilRenderTarget = getDepthRenderTarget();
+	} else {
+		if (depthWriteEnable) {
+			depthStencilHash.depthWrite = true;
+			depthStencilRenderTarget = getDepthRenderTarget();
+		} else if (stencilEnable) {
+			depthStencilRenderTarget = getDepthRenderTarget();
+		}
+	}
+
+	// TODO: stencil tests
 
 	// TODO: don't begin a new render pass every time
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(renderTarget->texture);
+	colorAttachment->setTexture(colorRenderTarget->texture);
 	colorAttachment->setLoadAction(MTL::LoadActionLoad);
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
+	if (depthStencilRenderTarget) {
+	    MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
+        depthAttachment->setTexture(depthStencilRenderTarget->texture);
+        depthAttachment->setLoadAction(MTL::LoadActionLoad);
+        depthAttachment->setStoreAction(MTL::StoreActionStore);
+	}
 
 	// Pipeline
-	Metal::PipelineHash hash{renderTarget->format, PICA::DepthFmt::Unknown1};
+	Metal::PipelineHash hash{colorRenderTarget->format, DepthFmt::Unknown1};
+	if (depthStencilRenderTarget) {
+        hash.depthFmt = depthStencilRenderTarget->format;
+    }
 	MTL::RenderPipelineState* pipeline = drawPipelineCache.get(hash);
 
 	MTL::RenderCommandEncoder* renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
 	renderCommandEncoder->setRenderPipelineState(pipeline);
 	// If size is < 4KB, use inline vertex data, otherwise use a buffer
 	if (vertices.size_bytes() < 4 * 1024) {
-	    renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
+		renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
 	} else {
-	    // TODO: cache this buffer
-	    MTL::Buffer* vertexBuffer = device->newBuffer(vertices.data(), vertices.size_bytes(), MTL::ResourceStorageModeShared);
-        renderCommandEncoder->setVertexBuffer(vertexBuffer, 0, VERTEX_BUFFER_BINDING_INDEX);
+		// TODO: cache this buffer
+		MTL::Buffer* vertexBuffer = device->newBuffer(vertices.data(), vertices.size_bytes(), MTL::ResourceStorageModeShared);
+		renderCommandEncoder->setVertexBuffer(vertexBuffer, 0, VERTEX_BUFFER_BINDING_INDEX);
 	}
 
 	// Bind resources
@@ -329,15 +371,17 @@ void RendererMTL::screenshot(const std::string& name) {
 }
 
 void RendererMTL::deinitGraphicsContext() {
-    colorRenderTargetCache.reset();
-    depthStencilRenderTargetCache.reset();
-    textureCache.reset();
+	colorRenderTargetCache.reset();
+	depthStencilRenderTargetCache.reset();
+	textureCache.reset();
 
 	// TODO: implement
 	Helpers::warn("RendererMTL::deinitGraphicsContext not implemented");
 }
 
-std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound) {
+std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(
+	u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound
+) {
 	// Try to find an already existing buffer that contains the provided address
 	// This is a more relaxed check compared to getColourFBO as display transfer/texcopy may refer to
 	// subrect of a surface and in case of texcopy we don't know the format of the surface.
@@ -354,6 +398,17 @@ std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(u32 ad
 	Metal::ColorRenderTarget sampleBuffer(device, addr, format, width, height);
 
 	return colorRenderTargetCache.add(sampleBuffer);
+}
+
+Metal::DepthStencilRenderTarget& RendererMTL::getDepthRenderTarget() {
+	Metal::DepthStencilRenderTarget sampleBuffer(device, depthBufferLoc, depthBufferFormat, fbSize[0], fbSize[1]);
+	auto buffer = depthStencilRenderTargetCache.find(sampleBuffer);
+
+	if (buffer.has_value()) {
+		return buffer.value().get();
+	} else {
+		return depthStencilRenderTargetCache.add(sampleBuffer);
+	}
 }
 
 MTL::Texture* RendererMTL::getTexture(Metal::Texture& tex) {
@@ -377,12 +432,12 @@ void RendererMTL::setupTextureEnvState(MTL::RenderCommandEncoder* encoder) {
 	};
 
 	struct {
-	   u32 textureEnvSourceRegs[6];
-	   u32 textureEnvOperandRegs[6];
-	   u32 textureEnvCombinerRegs[6];
-	   u32 textureEnvScaleRegs[6];
+		u32 textureEnvSourceRegs[6];
+		u32 textureEnvOperandRegs[6];
+		u32 textureEnvCombinerRegs[6];
+		u32 textureEnvScaleRegs[6];
 	} envState;
-    u32 textureEnvColourRegs[6];
+	u32 textureEnvColourRegs[6];
 
 	for (int i = 0; i < 6; i++) {
 		const u32 ioBase = ioBases[i];
