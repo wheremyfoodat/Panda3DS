@@ -1,4 +1,4 @@
-#include "renderer_mtl/texture.hpp"
+#include "renderer_mtl/mtl_texture.hpp"
 #include "colour.hpp"
 #include <array>
 

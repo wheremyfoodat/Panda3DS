@@ -1,7 +1,7 @@
 #include <algorithm>
 #include "colour.hpp"
 #include "renderer_mtl/renderer_mtl.hpp"
-#include "renderer_mtl/texture.hpp"
+#include "renderer_mtl/mtl_texture.hpp"
 
 using namespace Helpers;
 

@@ -2,8 +2,8 @@
 #include <QuartzCore/QuartzCore.hpp>
 
 #include "renderer.hpp"
-#include "texture.hpp"
-#include "render_target.hpp"
+#include "mtl_texture.hpp"
+#include "mtl_render_target.hpp"
 #include "mtl_pipeline_cache.hpp"
 #include "mtl_depth_stencil_cache.hpp"
 #include "mtl_vertex_buffer_cache.hpp"

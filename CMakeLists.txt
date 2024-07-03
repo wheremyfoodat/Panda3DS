@@ -403,12 +403,18 @@ endif()
 
 if(ENABLE_METAL AND APPLE)
     set(RENDERER_MTL_INCLUDE_FILES include/renderer_mtl/renderer_mtl.hpp
+        include/renderer_mtl/mtl_depth_stencil_cache.hpp
+        include/renderer_mtl/mtl_pipeline_cache.hpp
+        include/renderer_mtl/mtl_render_target.hpp
+        include/renderer_mtl/mtl_texture.hpp
+        include/renderer_mtl/mtl_vertex_buffer_cache.hpp
+        include/renderer_mtl/pica_to_mtl.hpp
     )
 
     set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
         src/core/renderer_mtl/renderer_mtl.cpp
-        src/core/renderer_mtl/texture.cpp
-        src/core/renderer_mtl/etc1.cpp
+        src/core/renderer_mtl/mtl_texture.cpp
+        src/core/renderer_mtl/mtl_etc1.cpp
         src/host_shaders/metal_shaders.metal
     )
 
