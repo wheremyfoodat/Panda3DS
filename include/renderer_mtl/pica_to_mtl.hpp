@@ -41,4 +41,44 @@ inline MTL::CompareFunction toMTLCompareFunc(u8 func) {
     return MTL::CompareFunctionAlways;
 }
 
+inline MTL::BlendOperation toMTLBlendOperation(u8 op) {
+    switch (op) {
+    case 0: return MTL::BlendOperationAdd;
+    case 1: return MTL::BlendOperationSubtract;
+    case 2: return MTL::BlendOperationReverseSubtract;
+    case 3: return MTL::BlendOperationMin;
+    case 4: return MTL::BlendOperationMax;
+    case 5: return MTL::BlendOperationAdd; // Unused (same as 0)
+    case 6: return MTL::BlendOperationAdd; // Unused (same as 0)
+    case 7: return MTL::BlendOperationAdd; // Unused (same as 0)
+    default: panic("Unknown blend operation %u", op);
+    }
+
+    return MTL::BlendOperationAdd;
+}
+
+inline MTL::BlendFactor toMTLBlendFactor(u8 factor) {
+    switch (factor) {
+    case 0: return MTL::BlendFactorZero;
+    case 1: return MTL::BlendFactorOne;
+    case 2: return MTL::BlendFactorSourceColor;
+    case 3: return MTL::BlendFactorOneMinusSourceColor;
+    case 4: return MTL::BlendFactorDestinationColor;
+    case 5: return MTL::BlendFactorOneMinusDestinationColor;
+    case 6: return MTL::BlendFactorSourceAlpha;
+    case 7: return MTL::BlendFactorOneMinusSourceAlpha;
+    case 8: return MTL::BlendFactorDestinationAlpha;
+    case 9: return MTL::BlendFactorOneMinusDestinationAlpha;
+    case 10: return MTL::BlendFactorBlendColor;
+    case 11: return MTL::BlendFactorOneMinusBlendColor;
+    case 12: return MTL::BlendFactorBlendAlpha;
+    case 13: return MTL::BlendFactorOneMinusBlendAlpha;
+    case 14: return MTL::BlendFactorSourceAlphaSaturated;
+    case 15: return MTL::BlendFactorOne; // Undocumented
+    default: panic("Unknown blend factor %u", factor);
+    }
+
+    return MTL::BlendFactorOne;
+}
+
 } // namespace PICA

@@ -7,8 +7,13 @@ using namespace PICA;
 namespace Metal {
 
 struct PipelineHash {
+    // Formats
     ColorFmt colorFmt;
     DepthFmt depthFmt;
+
+    // Blending
+    bool blendEnabled;
+    u32 blendControl;
 };
 
 // Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
@@ -34,7 +39,7 @@ public:
     }
 
     MTL::RenderPipelineState* get(PipelineHash hash) {
-        u8 intHash = (u8)hash.colorFmt << 4 | (u8)hash.depthFmt;
+        u64 intHash = ((u64)hash.colorFmt << 36) | ((u64)hash.depthFmt << 33) | ((u64)hash.blendEnabled << 32) | (u64)hash.blendControl;
         auto& pipeline = pipelineCache[intHash];
         if (!pipeline) {
             MTL::RenderPipelineDescriptor* desc = MTL::RenderPipelineDescriptor::alloc()->init();
@@ -44,11 +49,24 @@ public:
 
             auto colorAttachment = desc->colorAttachments()->object(0);
             colorAttachment->setPixelFormat(toMTLPixelFormatColor(hash.colorFmt));
-            colorAttachment->setBlendingEnabled(true);
-           	colorAttachment->setSourceRGBBlendFactor(MTL::BlendFactorSourceAlpha);
-           	colorAttachment->setDestinationRGBBlendFactor(MTL::BlendFactorOneMinusSourceAlpha);
-           	colorAttachment->setSourceAlphaBlendFactor(MTL::BlendFactorSourceAlpha);
-           	colorAttachment->setDestinationAlphaBlendFactor(MTL::BlendFactorOneMinusSourceAlpha);
+            if (hash.blendEnabled) {
+                const u8 rgbEquation = hash.blendControl & 0x7;
+               	const u8 alphaEquation = Helpers::getBits<8, 3>(hash.blendControl);
+
+               	// Get blending functions
+               	const u8 rgbSourceFunc = Helpers::getBits<16, 4>(hash.blendControl);
+               	const u8 rgbDestFunc = Helpers::getBits<20, 4>(hash.blendControl);
+               	const u8 alphaSourceFunc = Helpers::getBits<24, 4>(hash.blendControl);
+               	const u8 alphaDestFunc = Helpers::getBits<28, 4>(hash.blendControl);
+
+                colorAttachment->setBlendingEnabled(true);
+                colorAttachment->setRgbBlendOperation(toMTLBlendOperation(rgbEquation));
+                colorAttachment->setAlphaBlendOperation(toMTLBlendOperation(alphaEquation));
+               	colorAttachment->setSourceRGBBlendFactor(toMTLBlendFactor(rgbSourceFunc));
+               	colorAttachment->setDestinationRGBBlendFactor(toMTLBlendFactor(rgbDestFunc));
+               	colorAttachment->setSourceAlphaBlendFactor(toMTLBlendFactor(alphaSourceFunc));
+               	colorAttachment->setDestinationAlphaBlendFactor(toMTLBlendFactor(alphaDestFunc));
+            }
 
             desc->setDepthAttachmentPixelFormat(toMTLPixelFormatDepth(hash.depthFmt));
 
@@ -72,7 +90,7 @@ public:
     }
 
 private:
-    std::unordered_map<u8, MTL::RenderPipelineState*> pipelineCache;
+    std::unordered_map<u64, MTL::RenderPipelineState*> pipelineCache;
 
     MTL::Device* device;
     MTL::Function* vertexFunction;

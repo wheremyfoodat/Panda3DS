@@ -329,6 +329,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	const bool depthWriteEnable = Helpers::getBit<12>(depthControl);
 	const u8 depthFunc = Helpers::getBits<4, 3>(depthControl);
 	const u8 colorMask = Helpers::getBits<8, 4>(depthControl);
+	// TODO: color mask
 	// gl.setColourMask(colorMask & 0x1, colorMask & 0x2, colorMask & 0x4, colorMask & 0x8);
 
 	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
@@ -364,11 +365,25 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
         depthAttachment->setStoreAction(MTL::StoreActionStore);
 	}
 
-	// Pipeline
+	// -------- Pipeline --------
 	Metal::PipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
 	if (depthStencilRenderTarget) {
         pipelineHash.depthFmt = depthStencilRenderTarget->format;
     }
+
+	// Blending
+	pipelineHash.blendEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
+
+	if (pipelineHash.blendEnabled) {
+    	pipelineHash.blendControl = regs[PICA::InternalRegs::BlendFunc];
+        // TODO: constant color
+       	//pipelineHash.constantColor = regs[PICA::InternalRegs::BlendColour];
+    	//const u8 r = pipelineHash.constantColor & 0xff;
+    	//const u8 g = Helpers::getBits<8, 8>(pipelineHash.constantColor);
+    	//const u8 b = Helpers::getBits<16, 8>(pipelineHash.constantColor);
+    	//const u8 a = Helpers::getBits<24, 8>(pipelineHash.constantColor);
+	}
+
 	MTL::RenderPipelineState* pipeline = drawPipelineCache.get(pipelineHash);
 
 	// Depth stencil state
