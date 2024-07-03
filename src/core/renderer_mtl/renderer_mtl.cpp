@@ -324,33 +324,32 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	// Depth stencil
 	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
-	const bool depthWrite = regs[PICA::InternalRegs::DepthBufferWrite];
-	const bool depthTestEnable = depthControl & 0x1;
+	const bool depthStencilWrite = regs[PICA::InternalRegs::DepthBufferWrite];
+	const bool depthEnable = depthControl & 0x1;
 	const bool depthWriteEnable = Helpers::getBit<12>(depthControl);
 	const u8 depthFunc = Helpers::getBits<4, 3>(depthControl);
 	const u8 colorMask = Helpers::getBits<8, 4>(depthControl);
 	// TODO: color mask
 	// gl.setColourMask(colorMask & 0x1, colorMask & 0x2, colorMask & 0x4, colorMask & 0x8);
 
-	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
-	const bool stencilEnable = Helpers::getBit<0>(stencilConfig);
+	Metal::DepthStencilHash depthStencilHash{false, 1};
+	depthStencilHash.stencilConfig = regs[PICA::InternalRegs::StencilTest];
+	depthStencilHash.stencilOpConfig = regs[PICA::InternalRegs::StencilOp];
+	const bool stencilEnable = Helpers::getBit<0>(depthStencilHash.stencilConfig);
 
 	std::optional<Metal::DepthStencilRenderTarget> depthStencilRenderTarget = std::nullopt;
-	Metal::DepthStencilHash depthStencilHash{false, 1};
-	if (depthTestEnable) {
-		depthStencilHash.depthWrite = depthWriteEnable && depthWrite;
+	if (depthEnable) {
+		depthStencilHash.depthStencilWrite = depthWriteEnable && depthStencilWrite;
 		depthStencilHash.depthFunc = depthFunc;
 		depthStencilRenderTarget = getDepthRenderTarget();
 	} else {
 		if (depthWriteEnable) {
-			depthStencilHash.depthWrite = true;
+			depthStencilHash.depthStencilWrite = true;
 			depthStencilRenderTarget = getDepthRenderTarget();
 		} else if (stencilEnable) {
 			depthStencilRenderTarget = getDepthRenderTarget();
 		}
 	}
-
-	// TODO: stencil tests
 
 	// TODO: don't begin a new render pass every time
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();

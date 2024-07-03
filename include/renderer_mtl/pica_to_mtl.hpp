@@ -81,4 +81,20 @@ inline MTL::BlendFactor toMTLBlendFactor(u8 factor) {
     return MTL::BlendFactorOne;
 }
 
+inline MTL::StencilOperation toMTLStencilOperation(u8 op) {
+    switch (op) {
+    case 0: return MTL::StencilOperationKeep;
+    case 1: return MTL::StencilOperationZero;
+    case 2: return MTL::StencilOperationReplace;
+    case 3: return MTL::StencilOperationIncrementClamp;
+    case 4: return MTL::StencilOperationDecrementClamp;
+    case 5: return MTL::StencilOperationInvert;
+    case 6: return MTL::StencilOperationIncrementWrap;
+    case 7: return MTL::StencilOperationDecrementWrap;
+    default: panic("Unknown stencil operation %u", op);
+    }
+
+    return MTL::StencilOperationKeep;
+}
+
 } // namespace PICA
