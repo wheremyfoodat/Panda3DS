@@ -156,12 +156,12 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 	out.position = in.position;
 	// Flip the y position
 	out.position.y = -out.position.y;
-	out.position.xyz /= out.position.w;
+	out.position.xy /= out.position.w;
 
 	// Apply depth uniforms
 	out.position.z = out.position.z * depthUniforms.depthScale + depthUniforms.depthOffset;
 	// TODO: is this correct?
-	if (!depthUniforms.depthMapEnable) { // Divide z by w if depthmap enable == 0 (ie using W-buffering)
+	if (depthUniforms.depthMapEnable) { // Divide z by w if depthmap enable == 0 (ie using W-buffering)
 		out.position.z /= out.position.w;
 	}
 
