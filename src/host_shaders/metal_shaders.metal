@@ -110,6 +110,11 @@ struct DrawVertexOut {
 	float4 textureEnvBufferColor [[flat]];
 };
 
+struct DrawVertexOutWithClip {
+    DrawVertexOut out;
+    float clipDistance [[clip_distance]] [2];
+};
+
 float3 rotateFloat3ByQuaternion(float3 v, float4 q) {
 	float3 u = q.xyz;
 	float s = q.w;
@@ -138,7 +143,7 @@ float decodeFP(uint hex, uint E, uint M) {
 	return as_type<float>(hex);
 }
 
-vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant VertTEV& tev [[buffer(1)]]) {
+vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant VertTEV& tev [[buffer(1)]]) {
 	DrawVertexOut out;
 
 	// Position
@@ -176,9 +181,20 @@ vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs&
 
 	out.textureEnvBufferColor = abgr8888ToFloat4(picaRegs.read(0xFDu));
 
-	// TODO: clipping
+	DrawVertexOutWithClip outWithClip;
+	outWithClip.out = out;
 
-	return out;
+	// Parse clipping plane registers
+	float4 clipData = float4(
+		decodeFP(picaRegs.read(0x48u) & 0xffffffu, 7u, 16u), decodeFP(picaRegs.read(0x49u) & 0xffffffu, 7u, 16u),
+		decodeFP(picaRegs.read(0x4Au) & 0xffffffu, 7u, 16u), decodeFP(picaRegs.read(0x4Bu) & 0xffffffu, 7u, 16u)
+	);
+
+	// There's also another, always-on clipping plane based on vertex z
+	outWithClip.clipDistance[0] = -in.position.z;
+	outWithClip.clipDistance[1] = dot(clipData, in.position);
+
+	return outWithClip;
 }
 
 struct Globals {
@@ -546,5 +562,38 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 
 	// TODO: depth
 
-	return performLogicOp(logicOp, globals.tevSources[15], prevColor);
+	float4 color = performLogicOp(logicOp, globals.tevSources[15], prevColor);
+
+	// Perform alpha test
+	uint alphaControl = picaRegs.read(0x104u);
+	if ((alphaControl & 1u) != 0u) {  // Check if alpha test is on
+		uint func = (alphaControl >> 4u) & 7u;
+		float reference = float((alphaControl >> 8u) & 0xffu) / 255.0;
+		float alpha = color.a;
+
+		switch (func) {
+			case 0u: discard_fragment();  // Never pass alpha test
+			case 1u: break;    // Always pass alpha test
+			case 2u:           // Pass if equal
+				if (alpha != reference) discard_fragment();
+				break;
+			case 3u:  // Pass if not equal
+				if (alpha == reference) discard_fragment();
+				break;
+			case 4u:  // Pass if less than
+				if (alpha >= reference) discard_fragment();
+				break;
+			case 5u:  // Pass if less than or equal
+				if (alpha > reference) discard_fragment();
+				break;
+			case 6u:  // Pass if greater than
+				if (alpha <= reference) discard_fragment();
+				break;
+			case 7u:  // Pass if greater than or equal
+				if (alpha < reference) discard_fragment();
+				break;
+		}
+	}
+
+	return color;
 }
