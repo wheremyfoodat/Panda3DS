@@ -369,6 +369,16 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 		}
 	}
 
+	// Depth uniforms
+	struct {
+        float depthScale;
+       	float depthOffset;
+       	bool depthMapEnable;
+	} depthUniforms;
+	depthUniforms.depthScale = Floats::f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+   	depthUniforms.depthOffset = Floats::f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+   	depthUniforms.depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
+
 	// -------- Pipeline --------
 	Metal::PipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
 	if (depthStencilRenderTarget) {
@@ -436,6 +446,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	bindTexturesToSlots(renderCommandEncoder);
 	renderCommandEncoder->setVertexBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
+	renderCommandEncoder->setVertexBytes(&depthUniforms, sizeof(depthUniforms), 2);
 	renderCommandEncoder->setFragmentBytes(&logicOp, sizeof(logicOp), 2);
 
 	renderCommandEncoder->drawPrimitives(toMTLPrimitiveType(primType), NS::UInteger(0), NS::UInteger(vertices.size()));

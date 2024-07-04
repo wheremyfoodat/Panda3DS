@@ -143,17 +143,31 @@ float decodeFP(uint hex, uint E, uint M) {
 	return as_type<float>(hex);
 }
 
-vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant VertTEV& tev [[buffer(1)]]) {
+struct DepthUniforms {
+    float depthScale;
+   	float depthOffset;
+   	bool depthMapEnable;
+};
+
+vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant VertTEV& tev [[buffer(1)]], constant DepthUniforms& depthUniforms [[buffer(2)]]) {
 	DrawVertexOut out;
 
 	// Position
 	out.position = in.position;
 	// Flip the y position
 	out.position.y = -out.position.y;
-	// in.position.z is in range of [-1 ... 1], convert it to [0 ... 1]
 	out.position.xyz /= out.position.w;
+
+	// Apply depth uniforms
+	out.position.z = out.position.z * depthUniforms.depthScale + depthUniforms.depthOffset;
+	// TODO: is this correct?
+	if (!depthUniforms.depthMapEnable) { // Divide z by w if depthmap enable == 0 (ie using W-buffering)
+		out.position.z /= out.position.w;
+	}
+
+	// in.position.z is in range of [-1, 1], convert it to [0, 1]
+	out.position.z = (out.position.z + 1.0) * 0.5;
 	out.position.w = 1.0;
-	out.position.z = (-out.position.z + 1.0) * 0.5;
 
 	// Color
 	out.color = min(abs(in.color), 1.0);
@@ -559,8 +573,6 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 			}
 		}
 	}
-
-	// TODO: depth
 
 	float4 color = performLogicOp(logicOp, globals.tevSources[15], prevColor);
 
