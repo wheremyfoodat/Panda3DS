@@ -46,8 +46,10 @@ class RendererMTL final : public Renderer {
 	Metal::DepthStencilCache depthStencilCache;
 	Metal::VertexBufferCache vertexBufferCache;
 
-	// Helpers
-	MTL::SamplerState* basicSampler;
+	// Objects
+	MTL::SamplerState* nearestSampler;
+	MTL::SamplerState* linearSampler;
+	MTL::Texture* lightLUTTextureArray;
 
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
@@ -100,4 +102,5 @@ class RendererMTL final : public Renderer {
 	Metal::Texture& getTexture(Metal::Texture& tex);
 	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
 	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);
+	void updateLightingLUT();
 };

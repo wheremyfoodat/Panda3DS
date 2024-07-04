@@ -105,7 +105,7 @@ inline MTL::PrimitiveType toMTLPrimitiveType(PrimType primType) {
         Helpers::warn("Triangle fans are not supported on Metal, using triangles instead");
         return MTL::PrimitiveTypeTriangle;
     case PrimType::GeometryPrimitive:
-        Helpers::warn("Geometry primitives are not yet, using triangles instead");
+        //Helpers::warn("Geometry primitives are not yet, using triangles instead");
         return MTL::PrimitiveTypeTriangle;
     }
 }

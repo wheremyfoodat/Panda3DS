@@ -337,13 +337,11 @@ uint4 performLogicOpU(LogicOp logicOp, uint4 s, uint4 d) {
 #define RG_LUT 5u
 #define RR_LUT 6u
 
-float lutLookup(uint lut, uint light, float value) {
+float lutLookup(texture1d_array<float> texLightingLut, sampler linearSampler, uint lut, uint light, float value) {
 	if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1;
 	if (lut == SP_LUT) lut = light + 8;
 
-	// TODO: uncomment
-	//return texLightingLut.sample(, vec2(value, lut)).r;
-	return 1.0;
+	return texLightingLut.sample(linearSampler, value, lut).r;
 }
 
 float3 regToColor(uint reg) {
@@ -354,7 +352,7 @@ float3 regToColor(uint reg) {
 }
 
 // Implements the following algorthm: https://mathb.in/26766
-void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, thread float4& primaryColor, thread float4& secondaryColor) {
+void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
 	// Quaternions describe a transformation from surface-local space to eye space.
 	// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
 	// the tangent vector is (1,0,0), and the bitangent vector is (0,1,0).
@@ -447,7 +445,7 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, thread 
 					d[c] = 1.0;
 				}
 
-				d[c] = lutLookup(uint(c), lightID, d[c] * 0.5 + 0.5) * scale;
+				d[c] = lutLookup(texLightingLut, linearSampler, uint(c), lightID, d[c] * 0.5 + 0.5) * scale;
 				if (extract_bits(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) d[c] = abs(d[c]);
 			} else {
 				d[c] = 1.0;
@@ -512,11 +510,11 @@ float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
 }
 
 fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]],
-                             texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]],
-                             sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]]) {
+                             texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture1d_array<float> texLightingLut [[texture(3)]],
+                             sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
     globals.tevSources[0] = in.color;
-	calcLighting(in, picaRegs, globals.tevSources[1], globals.tevSources[2]);
+	calcLighting(in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
 
 	uint textureConfig = picaRegs.read(0x80u);
 	float2 texCoord2 = (textureConfig & (1u << 13)) != 0u ? in.texCoord1 : in.texCoord2;

@@ -10,6 +10,8 @@ using namespace PICA;
 
 CMRC_DECLARE(RendererMTL);
 
+#define LIGHT_LUT_TEXTURE_WIDTH 256
+
 // HACK: redefinition...
 PICA::ColorFmt ToColorFormat(u32 format) {
 	switch (format) {
@@ -47,7 +49,7 @@ void RendererMTL::display() {
 
 	beginRenderPassIfNeeded(renderPassDescriptor, drawable->texture());
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
-	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
+	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
 	using namespace PICA::ExternalRegs;
 
@@ -94,9 +96,29 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	metalLayer->setDevice(device);
 	commandQueue = device->newCommandQueue();
 
-	// Helpers
+	// -------- Objects --------
+
+	// Textures
+	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();
+	textureDescriptor->setTextureType(MTL::TextureType1DArray);
+	textureDescriptor->setPixelFormat(MTL::PixelFormatR16Unorm);
+	textureDescriptor->setWidth(LIGHT_LUT_TEXTURE_WIDTH);
+	textureDescriptor->setArrayLength(Lights::LUT_Count);
+	textureDescriptor->setUsage(MTL::TextureUsageShaderRead);
+	textureDescriptor->setStorageMode(MTL::StorageModeShared);
+
+	lightLUTTextureArray = device->newTexture(textureDescriptor);
+	textureDescriptor->release();
+
+	// Samplers
 	MTL::SamplerDescriptor* samplerDescriptor = MTL::SamplerDescriptor::alloc()->init();
-	basicSampler = device->newSamplerState(samplerDescriptor);
+	nearestSampler = device->newSamplerState(samplerDescriptor);
+
+	samplerDescriptor->setMinFilter(MTL::SamplerMinMagFilterLinear);
+	samplerDescriptor->setMagFilter(MTL::SamplerMinMagFilterLinear);
+	linearSampler = device->newSamplerState(samplerDescriptor);
+
+	samplerDescriptor->release();
 
 	// -------- Pipelines --------
 
@@ -304,7 +326,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	beginRenderPassIfNeeded(renderPassDescriptor, destFramebuffer->texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
-	renderCommandEncoder->setFragmentSamplerState(basicSampler, 0);
+	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 }
@@ -404,11 +426,16 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 		renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, VERTEX_BUFFER_BINDING_INDEX);
 	}
 
+	// Update the LUT texture if necessary
+	if (gpu.lightingLUTDirty) {
+		updateLightingLUT();
+	}
+
 	// Bind resources
 	setupTextureEnvState(renderCommandEncoder);
 	bindTexturesToSlots(renderCommandEncoder);
-	renderCommandEncoder->setVertexBytes(&regs[0x48], 0x200 - 0x48, 0);
-	renderCommandEncoder->setFragmentBytes(&regs[0x48], 0x200 - 0x48, 0);
+	renderCommandEncoder->setVertexBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
+	renderCommandEncoder->setFragmentBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
 	renderCommandEncoder->setFragmentBytes(&logicOp, sizeof(logicOp), 2);
 
 	renderCommandEncoder->drawPrimitives(toMTLPrimitiveType(primType), NS::UInteger(0), NS::UInteger(vertices.size()));
@@ -527,9 +554,27 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
 			auto tex = getTexture(targetTex);
 			encoder->setFragmentTexture(tex.texture, i);
-			encoder->setFragmentSamplerState(tex.sampler ? tex.sampler : basicSampler, i);
+			encoder->setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);
 		} else {
 			// TODO: bind a dummy texture?
 		}
+	}
+
+	// LUT texture
+	encoder->setFragmentTexture(lightLUTTextureArray, 3);
+	encoder->setFragmentSamplerState(linearSampler, 3);
+}
+
+void RendererMTL::updateLightingLUT() {
+	gpu.lightingLUTDirty = false;
+	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
+
+	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
+		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
+		u16_lightinglut[i] = value * 65535 / 4095;
+	}
+
+	for (int i = 0; i < Lights::LUT_Count; i++) {
+	   lightLUTTextureArray->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
 	}
 }
