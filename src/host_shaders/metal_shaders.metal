@@ -102,9 +102,41 @@ struct DrawVertexOut {
 	float3 texCoord0;
 	float2 texCoord1;
 	float2 texCoord2;
+	float3 view;
+	float3 normal;
+	float3 tangent;
+	float3 bitangent;
 	EnvColor textureEnvColor [[flat]];
 	float4 textureEnvBufferColor [[flat]];
 };
+
+float3 rotateFloat3ByQuaternion(float3 v, float4 q) {
+	float3 u = q.xyz;
+	float s = q.w;
+
+	return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
+}
+
+// Convert an arbitrary-width floating point literal to an f32
+float decodeFP(uint hex, uint E, uint M) {
+	uint width = M + E + 1u;
+	uint bias = 128u - (1u << (E - 1u));
+	uint exponent = (hex >> M) & ((1u << E) - 1u);
+	uint mantissa = hex & ((1u << M) - 1u);
+	uint sign = (hex >> (E + M)) << 31u;
+
+	if ((hex & ((1u << (width - 1u)) - 1u)) != 0u) {
+		if (exponent == (1u << E) - 1u)
+			exponent = 255u;
+		else
+			exponent += bias;
+		hex = sign | (mantissa << (23u - M)) | (exponent << 23u);
+	} else {
+		hex = sign;
+	}
+
+	return as_type<float>(hex);
+}
 
 vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant VertTEV& tev [[buffer(1)]]) {
 	DrawVertexOut out;
@@ -119,7 +151,7 @@ vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs&
 	out.position.z = (-out.position.z + 1.0) * 0.5;
 
 	// Color
-	out.color = in.color;
+	out.color = min(abs(in.color), 1.0);
 
 	// Texture coordinates
 	out.texCoord0 = float3(in.texCoord0, in.texCoord0W);
@@ -129,12 +161,22 @@ vertex DrawVertexOut vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs&
 	out.texCoord2 = in.texCoord2;
 	out.texCoord2.y = 1.0 - out.texCoord2.y;
 
+	// View
+	out.view = in.view;
+
+	// TBN
+	out.normal = normalize(rotateFloat3ByQuaternion(float3(0.0, 0.0, 1.0), in.quaternion));
+	out.tangent = normalize(rotateFloat3ByQuaternion(float3(1.0, 0.0, 0.0), in.quaternion));
+	out.bitangent = normalize(rotateFloat3ByQuaternion(float3(0.0, 1.0, 0.0), in.quaternion));
+
 	// Environment
 	for (int i = 0; i < 6; i++) {
 		out.textureEnvColor[i] = abgr8888ToFloat4(tev.textureEnvColor[i]);
 	}
 
 	out.textureEnvBufferColor = abgr8888ToFloat4(picaRegs.read(0xFDu));
+
+	// TODO: clipping
 
 	return out;
 }
@@ -287,6 +329,184 @@ uint4 performLogicOpU(LogicOp logicOp, uint4 s, uint4 d) {
     }
 }
 
+#define D0_LUT 0u
+#define D1_LUT 1u
+#define SP_LUT 2u
+#define FR_LUT 3u
+#define RB_LUT 4u
+#define RG_LUT 5u
+#define RR_LUT 6u
+
+float lutLookup(uint lut, uint light, float value) {
+	if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1;
+	if (lut == SP_LUT) lut = light + 8;
+
+	// TODO: uncomment
+	//return texLightingLut.sample(, vec2(value, lut)).r;
+	return 1.0;
+}
+
+float3 regToColor(uint reg) {
+	// Normalization scale to convert from [0...255] to [0.0...1.0]
+	const float scale = 1.0 / 255.0;
+
+	return scale * float3(float(extract_bits(reg, 20, 8)), float(extract_bits(reg, 10, 8)), float(extract_bits(reg, 00, 8)));
+}
+
+// Implements the following algorthm: https://mathb.in/26766
+void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, thread float4& primaryColor, thread float4& secondaryColor) {
+	// Quaternions describe a transformation from surface-local space to eye space.
+	// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
+	// the tangent vector is (1,0,0), and the bitangent vector is (0,1,0).
+	float3 normal = normalize(in.normal);
+	float3 tangent = normalize(in.tangent);
+	float3 bitangent = normalize(in.bitangent);
+	float3 view = normalize(in.view);
+
+	uint GPUREG_LIGHTING_ENABLE = picaRegs.read(0x008Fu);
+	if (extract_bits(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
+		primaryColor = secondaryColor = float4(1.0);
+		return;
+	}
+
+	uint GPUREG_LIGHTING_AMBIENT = picaRegs.read(0x01C0u);
+	uint GPUREG_LIGHTING_NUM_LIGHTS = (picaRegs.read(0x01C2u) & 0x7u) + 1u;
+	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = picaRegs.read(0x01D9u);
+
+	primaryColor = float4(float3(0.0), 1.0);
+	secondaryColor = float4(float3(0.0), 1.0);
+
+	primaryColor.rgb += regToColor(GPUREG_LIGHTING_AMBIENT);
+
+	uint GPUREG_LIGHTING_LUTINPUT_ABS = picaRegs.read(0x01D0u);
+	uint GPUREG_LIGHTING_LUTINPUT_SELECT = picaRegs.read(0x01D1u);
+	uint GPUREG_LIGHTING_CONFIG0 = picaRegs.read(0x01C3u);
+	uint GPUREG_LIGHTING_CONFIG1 = picaRegs.read(0x01C4u);
+	uint GPUREG_LIGHTING_LUTINPUT_SCALE = picaRegs.read(0x01D2u);
+	float d[7];
+
+	bool errorUnimpl = false;
+
+	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
+		uint lightID = extract_bits(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
+
+		uint GPUREG_LIGHTi_SPECULAR0 = picaRegs.read(0x0140u + 0x10u * lightID);
+		uint GPUREG_LIGHTi_SPECULAR1 = picaRegs.read(0x0141u + 0x10u * lightID);
+		uint GPUREG_LIGHTi_DIFFUSE = picaRegs.read(0x0142u + 0x10u * lightID);
+		uint GPUREG_LIGHTi_AMBIENT = picaRegs.read(0x0143u + 0x10u * lightID);
+		uint GPUREG_LIGHTi_VECTOR_LOW = picaRegs.read(0x0144u + 0x10u * lightID);
+		uint GPUREG_LIGHTi_VECTOR_HIGH = picaRegs.read(0x0145u + 0x10u * lightID);
+		uint GPUREG_LIGHTi_CONFIG = picaRegs.read(0x0149u + 0x10u * lightID);
+
+		float3 lightVector = normalize(float3(
+			decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5u, 10u), decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5u, 10u),
+			decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
+		));
+
+		float3 halfVector;
+
+		// Positional Light
+		if (extract_bits(GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
+			// error_unimpl = true;
+			halfVector = normalize(normalize(lightVector + in.view) + view);
+		}
+
+		// Directional light
+		else {
+			halfVector = normalize(normalize(lightVector) + view);
+		}
+
+		for (int c = 0; c < 7; c++) {
+			if (extract_bits(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0u) {
+				uint scaleID = extract_bits(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
+				float scale = float(1u << scaleID);
+				if (scaleID >= 6u) scale /= 256.0;
+
+				uint inputID = extract_bits(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
+				if (inputID == 0u)
+					d[c] = dot(normal, halfVector);
+				else if (inputID == 1u)
+					d[c] = dot(view, halfVector);
+				else if (inputID == 2u)
+					d[c] = dot(normal, view);
+				else if (inputID == 3u)
+					d[c] = dot(lightVector, normal);
+				else if (inputID == 4u) {
+					uint GPUREG_LIGHTi_SPOTDIR_LOW = picaRegs.read(0x0146u + 0x10u * lightID);
+					uint GPUREG_LIGHTi_SPOTDIR_HIGH = picaRegs.read(0x0147u + 0x10u * lightID);
+					float3 spotLightVector = normalize(float3(
+						decodeFP(extract_bits(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1u, 11u),
+						decodeFP(extract_bits(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1u, 11u),
+						decodeFP(extract_bits(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1u, 11u)
+					));
+					d[c] = dot(-lightVector, spotLightVector);  // -L dot P (aka Spotlight aka SP);
+				} else if (inputID == 5u) {
+					d[c] = 1.0;  // TODO: cos <greek symbol> (aka CP);
+					errorUnimpl = true;
+				} else {
+					d[c] = 1.0;
+				}
+
+				d[c] = lutLookup(uint(c), lightID, d[c] * 0.5 + 0.5) * scale;
+				if (extract_bits(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) d[c] = abs(d[c]);
+			} else {
+				d[c] = 1.0;
+			}
+		}
+
+		uint lookupConfig = extract_bits(GPUREG_LIGHTi_CONFIG, 4, 4);
+		if (lookupConfig == 0u) {
+			d[D1_LUT] = 0.0;
+			d[FR_LUT] = 0.0;
+			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+		} else if (lookupConfig == 1u) {
+			d[D0_LUT] = 0.0;
+			d[D1_LUT] = 0.0;
+			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+		} else if (lookupConfig == 2u) {
+			d[FR_LUT] = 0.0;
+			d[SP_LUT] = 0.0;
+			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+		} else if (lookupConfig == 3u) {
+			d[SP_LUT] = 0.0;
+			d[RG_LUT] = d[RB_LUT] = d[RR_LUT] = 1.0;
+		} else if (lookupConfig == 4u) {
+			d[FR_LUT] = 0.0;
+		} else if (lookupConfig == 5u) {
+			d[D1_LUT] = 0.0;
+		} else if (lookupConfig == 6u) {
+			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
+		}
+
+		float distanceFactor = 1.0;  // a
+		float indirectFactor = 1.0;  // fi
+		float shadowFactor = 1.0;    // o
+
+		float NdotL = dot(normal, lightVector);  // Li dot N
+
+		// Two sided diffuse
+		if (extract_bits(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
+			NdotL = max(0.0, NdotL);
+		else
+			NdotL = abs(NdotL);
+
+		float light_factor = distanceFactor * d[SP_LUT] * indirectFactor * shadowFactor;
+
+		primaryColor.rgb += light_factor * (regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE) * NdotL);
+		secondaryColor.rgb += light_factor * (regToColor(GPUREG_LIGHTi_SPECULAR0) * d[D0_LUT] +
+											   regToColor(GPUREG_LIGHTi_SPECULAR1) * d[D1_LUT] * float3(d[RR_LUT], d[RG_LUT], d[RB_LUT]));
+	}
+	uint fresnelOutput1 = extract_bits(GPUREG_LIGHTING_CONFIG0, 2, 1);
+	uint fresnelOutput2 = extract_bits(GPUREG_LIGHTING_CONFIG0, 3, 1);
+
+	if (fresnelOutput1 == 1u) primaryColor.a = d[FR_LUT];
+	if (fresnelOutput2 == 1u) secondaryColor.a = d[FR_LUT];
+
+	if (errorUnimpl) {
+		// secondaryColor = primaryColor = float4(1.0, 0., 1.0, 1.0);
+	}
+}
+
 float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
@@ -296,8 +516,7 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
                              sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]]) {
     Globals globals;
     globals.tevSources[0] = in.color;
-    // TODO: uncomment
-	//calcLighting(tevSources[1], tevSources[2]);
+	calcLighting(in, picaRegs, globals.tevSources[1], globals.tevSources[2]);
 
 	uint textureConfig = picaRegs.read(0x80u);
 	float2 texCoord2 = (textureConfig & (1u << 13)) != 0u ? in.texCoord1 : in.texCoord2;
@@ -312,7 +531,6 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 	uint textureEnvUpdateBuffer = picaRegs.read(0xE0u);
 
 	for (int i = 0; i < 6; i++) {
-	    // TODO: uncomment
 		globals.tevSources[14] = in.textureEnvColor[i];  // Constant color
 		globals.tevSources[15] = tev.calculateCombiner(globals, i);
 		globals.tevSources[13] = globals.tevNextPreviousBuffer;
@@ -327,6 +545,8 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 			}
 		}
 	}
+
+	// TODO: depth
 
 	return performLogicOp(logicOp, globals.tevSources[15], prevColor);
 }
