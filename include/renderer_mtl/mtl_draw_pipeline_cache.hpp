@@ -6,7 +6,7 @@ using namespace PICA;
 
 namespace Metal {
 
-struct PipelineHash {
+struct DrawPipelineHash {
     // Formats
     ColorFmt colorFmt;
     DepthFmt depthFmt;
@@ -14,34 +14,51 @@ struct PipelineHash {
     // Blending
     bool blendEnabled;
     u32 blendControl;
+
+    // Specialization constants
+    bool lightingEnabled;
 };
 
 // Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
 #define VERTEX_BUFFER_BINDING_INDEX 30
 
 // This pipeline only caches the pipeline with all of its color and depth attachment variations
-class PipelineCache {
+class DrawPipelineCache {
 public:
-    PipelineCache() = default;
+    DrawPipelineCache() = default;
 
-    ~PipelineCache() {
+    ~DrawPipelineCache() {
         clear();
         vertexDescriptor->release();
         vertexFunction->release();
-        fragmentFunction->release();
     }
 
-    void set(MTL::Device* dev, MTL::Function* vert, MTL::Function* frag, MTL::VertexDescriptor* vertDesc) {
+    void set(MTL::Device* dev, MTL::Library* lib, MTL::Function* vert, MTL::VertexDescriptor* vertDesc) {
         device = dev;
+        library = lib;
         vertexFunction = vert;
-        fragmentFunction = frag;
         vertexDescriptor = vertDesc;
     }
 
-    MTL::RenderPipelineState* get(PipelineHash hash) {
-        u64 intHash = ((u64)hash.colorFmt << 36) | ((u64)hash.depthFmt << 33) | ((u64)hash.blendEnabled << 32) | (u64)hash.blendControl;
-        auto& pipeline = pipelineCache[intHash];
+    MTL::RenderPipelineState* get(DrawPipelineHash hash) {
+        u64 pipelineHash = ((u64)hash.colorFmt << 37) | ((u64)hash.depthFmt << 34) | ((u64)hash.blendEnabled << 33) | ((u64)hash.blendControl << 1) | (u64)hash.lightingEnabled;
+        auto& pipeline = pipelineCache[pipelineHash];
         if (!pipeline) {
+            u8 fragmentFunctionHash = (u8)hash.lightingEnabled;
+            auto& fragmentFunction = fragmentFunctionCache[fragmentFunctionHash];
+            if (!fragmentFunction) {
+                MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
+                constants->setConstantValue(&hash.lightingEnabled, MTL::DataTypeBool, NS::UInteger(0));
+
+                NS::Error* error = nullptr;
+                fragmentFunction = library->newFunction(NS::String::string("fragmentDraw", NS::ASCIIStringEncoding), constants, &error);
+                if (error) {
+                    Helpers::panic("Error creating draw fragment function: %s", error->description()->cString(NS::ASCIIStringEncoding));
+                }
+                constants->release();
+                fragmentFunctionCache[fragmentFunctionHash] = fragmentFunction;
+            }
+
             MTL::RenderPipelineDescriptor* desc = MTL::RenderPipelineDescriptor::alloc()->init();
             desc->setVertexFunction(vertexFunction);
             desc->setFragmentFunction(fragmentFunction);
@@ -87,14 +104,19 @@ public:
             pair.second->release();
         }
         pipelineCache.clear();
+        for (auto& pair : fragmentFunctionCache) {
+            pair.second->release();
+        }
+        fragmentFunctionCache.clear();
     }
 
 private:
     std::unordered_map<u64, MTL::RenderPipelineState*> pipelineCache;
+    std::unordered_map<u8, MTL::Function*> fragmentFunctionCache;
 
     MTL::Device* device;
+    MTL::Library* library;
     MTL::Function* vertexFunction;
-    MTL::Function* fragmentFunction;
     MTL::VertexDescriptor* vertexDescriptor;
 };
 

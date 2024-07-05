@@ -404,7 +404,8 @@ endif()
 if(ENABLE_METAL AND APPLE)
     set(RENDERER_MTL_INCLUDE_FILES include/renderer_mtl/renderer_mtl.hpp
         include/renderer_mtl/mtl_depth_stencil_cache.hpp
-        include/renderer_mtl/mtl_pipeline_cache.hpp
+        include/renderer_mtl/mtl_blit_pipeline_cache.hpp
+        include/renderer_mtl/mtl_draw_pipeline_cache.hpp
         include/renderer_mtl/mtl_render_target.hpp
         include/renderer_mtl/mtl_texture.hpp
         include/renderer_mtl/mtl_vertex_buffer_cache.hpp

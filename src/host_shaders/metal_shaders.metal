@@ -393,12 +393,6 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 	float3 bitangent = normalize(in.bitangent);
 	float3 view = normalize(in.view);
 
-	uint GPUREG_LIGHTING_ENABLE = picaRegs.read(0x008Fu);
-	if (extract_bits(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
-		primaryColor = secondaryColor = float4(1.0);
-		return;
-	}
-
 	uint GPUREG_LIGHTING_AMBIENT = picaRegs.read(0x01C0u);
 	uint GPUREG_LIGHTING_NUM_LIGHTS = (picaRegs.read(0x01C2u) & 0x7u) + 1u;
 	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = picaRegs.read(0x01D9u);
@@ -541,12 +535,20 @@ float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
 
+constant int LIGHTING_ENABLED_INDEX = 0;
+constant bool lightingEnabled [[function_constant(LIGHTING_ENABLED_INDEX)]];
+
 fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]],
                              texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture1d_array<float> texLightingLut [[texture(3)]],
                              sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
     globals.tevSources[0] = in.color;
-	calcLighting(in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
+    if (lightingEnabled) {
+        calcLighting(in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
+    } else {
+        globals.tevSources[1] = float4(0.0);
+        globals.tevSources[2] = float4(0.0);
+    }
 
 	uint textureConfig = picaRegs.read(0x80u);
 	float2 texCoord2 = (textureConfig & (1u << 13)) != 0u ? in.texCoord1 : in.texCoord2;
