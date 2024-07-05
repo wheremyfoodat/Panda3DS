@@ -149,6 +149,16 @@ struct DepthUniforms {
    	bool depthMapEnable;
 };
 
+// TODO: check this
+float transformZ(float z, float w, constant DepthUniforms& depthUniforms) {
+    z = z / w * depthUniforms.depthScale + depthUniforms.depthOffset;
+    if (!depthUniforms.depthMapEnable) {
+        z *= w;
+    }
+
+    return z * w;
+}
+
 vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant VertTEV& tev [[buffer(1)]], constant DepthUniforms& depthUniforms [[buffer(2)]]) {
 	DrawVertexOut out;
 
@@ -156,18 +166,9 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 	out.position = in.position;
 	// Flip the y position
 	out.position.y = -out.position.y;
-	out.position.xy /= out.position.w;
 
 	// Apply depth uniforms
-	out.position.z = out.position.z * depthUniforms.depthScale + depthUniforms.depthOffset;
-	// TODO: is this correct?
-	if (depthUniforms.depthMapEnable) { // Divide z by w if depthmap enable == 0 (ie using W-buffering)
-		out.position.z /= out.position.w;
-	}
-
-	// in.position.z is in range of [-1, 1], convert it to [0, 1]
-	out.position.z = (out.position.z + 1.0) * 0.5;
-	out.position.w = 1.0;
+	out.position.z = transformZ(out.position.z, out.position.w, depthUniforms);
 
 	// Color
 	out.color = min(abs(in.color), 1.0);
@@ -205,6 +206,7 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 	);
 
 	// There's also another, always-on clipping plane based on vertex z
+	// TODO: transform
 	outWithClip.clipDistance[0] = -in.position.z;
 	outWithClip.clipDistance[1] = dot(clipData, in.position);
 
