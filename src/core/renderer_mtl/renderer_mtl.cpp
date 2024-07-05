@@ -1,5 +1,6 @@
 #include "PICA/gpu.hpp"
 #include "renderer_mtl/renderer_mtl.hpp"
+#include "renderer_mtl/objc_helper.hpp"
 
 #include <cmrc/cmrc.hpp>
 #include <cstddef>
@@ -124,11 +125,11 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	// Load shaders
 	auto mtlResources = cmrc::RendererMTL::get_filesystem();
-	auto shaderSource = mtlResources.open("metal_shaders.metal");
-	std::string source(shaderSource.begin(), shaderSource.size());
-	MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
+	auto shaderSource = mtlResources.open("metal_shaders.metallib");
+	//MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
 	NS::Error* error = nullptr;
-	MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
+	MTL::Library* library = device->newLibrary(Metal::createDispatchData(shaderSource.begin(), shaderSource.size()), &error);
+	//MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
 	if (error) {
 		Helpers::panic("Error loading shaders: %s", error->description()->cString(NS::ASCIIStringEncoding));
 	}

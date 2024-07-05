@@ -409,26 +409,44 @@ if(ENABLE_METAL AND APPLE)
         include/renderer_mtl/mtl_texture.hpp
         include/renderer_mtl/mtl_vertex_buffer_cache.hpp
         include/renderer_mtl/pica_to_mtl.hpp
+        include/renderer_mtl/objc_helper.hpp
     )
 
     set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
         src/core/renderer_mtl/renderer_mtl.cpp
         src/core/renderer_mtl/mtl_texture.cpp
         src/core/renderer_mtl/mtl_etc1.cpp
+        src/core/renderer_mtl/objc_helper.mm
         src/host_shaders/metal_shaders.metal
     )
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_MTL_INCLUDE_FILES})
     source_group("Source Files\\Core\\Metal Renderer" FILES ${RENDERER_MTL_SOURCE_FILES})
 
-    # TODO: compile Metal shaders to .metallib
+    add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir
+    COMMAND xcrun -sdk macosx metal -o ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir -c ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metal
+    DEPENDS ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metal
+    VERBATIM)
+
+    add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metallib
+    COMMAND xcrun -sdk macosx metallib -o ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metallib ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir
+    DEPENDS ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir
+    VERBATIM)
+
+    add_custom_target(
+        compile_msl_shader
+        DEPENDS src/host_shaders/metal_shaders.metallib
+    )
 
     cmrc_add_resource_library(
         resources_renderer_mtl
         NAMESPACE RendererMTL
         WHENCE "src/host_shaders/"
-        "src/host_shaders/metal_shaders.metal"
+        "src/host_shaders/metal_shaders.metallib"
     )
+    add_dependencies(resources_renderer_mtl compile_msl_shader)
 
     target_sources(AlberCore PRIVATE ${RENDERER_MTL_SOURCE_FILES})
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
