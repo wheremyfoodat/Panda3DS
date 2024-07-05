@@ -102,7 +102,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();
 	textureDescriptor->setTextureType(MTL::TextureType1DArray);
-	textureDescriptor->setPixelFormat(MTL::PixelFormatR16Unorm);
+	textureDescriptor->setPixelFormat(MTL::PixelFormatR16Uint);
 	textureDescriptor->setWidth(LIGHT_LUT_TEXTURE_WIDTH);
 	textureDescriptor->setArrayLength(Lights::LUT_Count);
 	textureDescriptor->setUsage(MTL::TextureUsageShaderRead);
@@ -587,6 +587,6 @@ void RendererMTL::updateLightingLUT() {
 	}
 
 	for (int i = 0; i < Lights::LUT_Count; i++) {
-	   lightLUTTextureArray->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
+	    lightLUTTextureArray->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
 	}
 }
