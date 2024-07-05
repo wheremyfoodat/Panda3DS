@@ -385,6 +385,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
         pipelineHash.depthFmt = depthStencilRenderTarget->format;
     }
     pipelineHash.lightingEnabled = regs[0x008F] & 1;
+    pipelineHash.lightingNumLights = (regs[0x01C2] & 0x7) + 1;
 
 	// Blending and logic op
 	pipelineHash.blendEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;

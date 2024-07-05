@@ -383,6 +383,9 @@ float3 regToColor(uint reg) {
 	return scale * float3(float(extract_bits(reg, 20, 8)), float(extract_bits(reg, 10, 8)), float(extract_bits(reg, 00, 8)));
 }
 
+constant bool lightingEnabled [[function_constant(0)]];
+constant uint8_t lightingNumLights [[function_constant(1)]];
+
 // Implements the following algorthm: https://mathb.in/26766
 void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
 	// Quaternions describe a transformation from surface-local space to eye space.
@@ -394,7 +397,6 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 	float3 view = normalize(in.view);
 
 	uint GPUREG_LIGHTING_AMBIENT = picaRegs.read(0x01C0u);
-	uint GPUREG_LIGHTING_NUM_LIGHTS = (picaRegs.read(0x01C2u) & 0x7u) + 1u;
 	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = picaRegs.read(0x01D9u);
 
 	primaryColor = float4(float3(0.0), 1.0);
@@ -411,7 +413,7 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 
 	bool errorUnimpl = false;
 
-	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
+	for (uint i = 0u; i < lightingNumLights; i++) {
 		uint lightID = extract_bits(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
 
 		uint GPUREG_LIGHTi_SPECULAR0 = picaRegs.read(0x0140u + 0x10u * lightID);
@@ -534,9 +536,6 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
-
-constant int LIGHTING_ENABLED_INDEX = 0;
-constant bool lightingEnabled [[function_constant(LIGHTING_ENABLED_INDEX)]];
 
 fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]],
                              texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture1d_array<float> texLightingLut [[texture(3)]],

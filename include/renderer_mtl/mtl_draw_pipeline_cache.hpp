@@ -17,6 +17,7 @@ struct DrawPipelineHash {
 
     // Specialization constants
     bool lightingEnabled;
+    u8 lightingNumLights;
 };
 
 // Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
@@ -41,14 +42,15 @@ public:
     }
 
     MTL::RenderPipelineState* get(DrawPipelineHash hash) {
-        u64 pipelineHash = ((u64)hash.colorFmt << 37) | ((u64)hash.depthFmt << 34) | ((u64)hash.blendEnabled << 33) | ((u64)hash.blendControl << 1) | (u64)hash.lightingEnabled;
+        u8 fragmentFunctionHash = ((u8)hash.lightingEnabled << 4) | hash.lightingNumLights;
+        u64 pipelineHash = ((u64)hash.colorFmt << 44) | ((u64)hash.depthFmt << 41) | ((u64)hash.blendEnabled << 40) | ((u64)hash.blendControl << 8) | fragmentFunctionHash;
         auto& pipeline = pipelineCache[pipelineHash];
         if (!pipeline) {
-            u8 fragmentFunctionHash = (u8)hash.lightingEnabled;
             auto& fragmentFunction = fragmentFunctionCache[fragmentFunctionHash];
             if (!fragmentFunction) {
                 MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
                 constants->setConstantValue(&hash.lightingEnabled, MTL::DataTypeBool, NS::UInteger(0));
+                constants->setConstantValue(&hash.lightingNumLights, MTL::DataTypeUChar, NS::UInteger(1));
 
                 NS::Error* error = nullptr;
                 fragmentFunction = library->newFunction(NS::String::string("fragmentDraw", NS::ASCIIStringEncoding), constants, &error);
