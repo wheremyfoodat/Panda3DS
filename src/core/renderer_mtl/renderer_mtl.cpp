@@ -11,7 +11,7 @@ using namespace PICA;
 
 CMRC_DECLARE(RendererMTL);
 
-#define LIGHT_LUT_TEXTURE_WIDTH 256
+const u16 LIGHT_LUT_TEXTURE_WIDTH = 256;
 
 // HACK: redefinition...
 PICA::ColorFmt ToColorFormat(u32 format) {
@@ -20,6 +20,18 @@ PICA::ColorFmt ToColorFormat(u32 format) {
 		case 3: return PICA::ColorFmt::RGBA5551;
 		default: return static_cast<PICA::ColorFmt>(format);
 	}
+}
+
+MTL::Library* loadLibrary(MTL::Device* device, const cmrc::file& shaderSource) {
+	//MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
+	NS::Error* error = nullptr;
+	MTL::Library* library = device->newLibrary(Metal::createDispatchData(shaderSource.begin(), shaderSource.size()), &error);
+	//MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
+	if (error) {
+		Helpers::panic("Error loading shaders: %s", error->description()->cString(NS::ASCIIStringEncoding));
+	}
+
+	return library;
 }
 
 RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
@@ -105,8 +117,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	textureDescriptor->setPixelFormat(MTL::PixelFormatR16Uint);
 	textureDescriptor->setWidth(LIGHT_LUT_TEXTURE_WIDTH);
 	textureDescriptor->setArrayLength(Lights::LUT_Count);
-	textureDescriptor->setUsage(MTL::TextureUsageShaderRead);
-	textureDescriptor->setStorageMode(MTL::StorageModeShared);
+	textureDescriptor->setUsage(MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite);
+	textureDescriptor->setStorageMode(MTL::StorageModePrivate);
 
 	lightLUTTextureArray = device->newTexture(textureDescriptor);
 	textureDescriptor->release();
@@ -125,14 +137,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	// Load shaders
 	auto mtlResources = cmrc::RendererMTL::get_filesystem();
-	auto shaderSource = mtlResources.open("metal_shaders.metallib");
-	//MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
-	NS::Error* error = nullptr;
-	MTL::Library* library = device->newLibrary(Metal::createDispatchData(shaderSource.begin(), shaderSource.size()), &error);
-	//MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
-	if (error) {
-		Helpers::panic("Error loading shaders: %s", error->description()->cString(NS::ASCIIStringEncoding));
-	}
+	MTL::Library* library = loadLibrary(device, mtlResources.open("metal_shaders.metallib"));
+	MTL::Library* copyToLutTextureLibrary = loadLibrary(device, mtlResources.open("metal_copy_to_lut_texture.metallib"));
 
 	// Display
 	MTL::Function* vertexDisplayFunction = library->newFunction(NS::String::string("vertexDisplay", NS::ASCIIStringEncoding));
@@ -144,7 +150,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	auto* displayColorAttachment = displayPipelineDescriptor->colorAttachments()->object(0);
 	displayColorAttachment->setPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm);
 
-	error = nullptr;
+	NS::Error* error = nullptr;
 	displayPipeline = device->newRenderPipelineState(displayPipelineDescriptor, &error);
 	if (error) {
 		Helpers::panic("Error creating display pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
@@ -217,11 +223,37 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	drawPipelineCache.set(device, library, vertexDrawFunction, vertexDescriptor);
 
+	// Copy to LUT texture
+	MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
+    constants->setConstantValue(&LIGHT_LUT_TEXTURE_WIDTH, MTL::DataTypeUShort, NS::UInteger(0));
+
+    error = nullptr;
+    MTL::Function* vertexCopyToLutTextureFunction = copyToLutTextureLibrary->newFunction(NS::String::string("vertexCopyToLutTexture", NS::ASCIIStringEncoding), constants, &error);
+    if (error) {
+        Helpers::panic("Error creating copy_to_lut_texture vertex function: %s", error->description()->cString(NS::ASCIIStringEncoding));
+    }
+    constants->release();
+
+	MTL::RenderPipelineDescriptor* copyToLutTexturePipelineDescriptor = MTL::RenderPipelineDescriptor::alloc()->init();
+	copyToLutTexturePipelineDescriptor->setVertexFunction(vertexCopyToLutTextureFunction);
+	// Disable rasterization
+	copyToLutTexturePipelineDescriptor->setRasterizationEnabled(false);
+
+	error = nullptr;
+	copyToLutTexturePipeline = device->newRenderPipelineState(copyToLutTexturePipelineDescriptor, &error);
+	if (error) {
+		Helpers::panic("Error creating copy_to_lut_texture pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
+	}
+
 	// Depth stencil cache
 	depthStencilCache.set(device);
 
 	// Vertex buffer cache
 	vertexBufferCache.set(device);
+
+	// -------- Depth stencil state --------
+	MTL::DepthStencilDescriptor* depthStencilDescriptor = MTL::DepthStencilDescriptor::alloc()->init();
+	defaultDepthStencilState = device->newDepthStencilState(depthStencilDescriptor);
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -430,6 +462,12 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
     }
 
 	beginRenderPassIfNeeded(renderPassDescriptor, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr));
+
+	// Update the LUT texture if necessary
+	if (gpu.lightingLUTDirty) {
+		updateLightingLUT(renderCommandEncoder);
+	}
+
 	renderCommandEncoder->setRenderPipelineState(pipeline);
 	renderCommandEncoder->setDepthStencilState(depthStencilState);
 	// If size is < 4KB, use inline vertex data, otherwise use a buffer
@@ -438,11 +476,6 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	} else {
 	    Metal::BufferHandle buffer = vertexBufferCache.get(vertices);
 		renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, VERTEX_BUFFER_BINDING_INDEX);
-	}
-
-	// Update the LUT texture if necessary
-	if (gpu.lightingLUTDirty) {
-		updateLightingLUT();
 	}
 
 	// Bind resources
@@ -580,7 +613,7 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 	encoder->setFragmentSamplerState(linearSampler, 3);
 }
 
-void RendererMTL::updateLightingLUT() {
+void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.lightingLUTDirty = false;
 	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
 
@@ -589,7 +622,14 @@ void RendererMTL::updateLightingLUT() {
 		u16_lightinglut[i] = value * 65535 / 4095;
 	}
 
-	for (int i = 0; i < Lights::LUT_Count; i++) {
-	    lightLUTTextureArray->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
-	}
+	//for (int i = 0; i < Lights::LUT_Count; i++) {
+	//    lightLUTTextureArray->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
+	//}
+
+	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
+	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
+	renderCommandEncoder->setVertexTexture(lightLUTTextureArray, 0);
+	renderCommandEncoder->setVertexBytes(u16_lightinglut.data(), sizeof(u16_lightinglut), 0);
+
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), GPU::LightingLutSize);
 }

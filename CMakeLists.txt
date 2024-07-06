@@ -419,26 +419,36 @@ if(ENABLE_METAL AND APPLE)
         src/core/renderer_mtl/mtl_etc1.cpp
         src/core/renderer_mtl/objc_helper.mm
         src/host_shaders/metal_shaders.metal
+        src/host_shaders/metal_copy_to_lut_texture.metal
     )
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_MTL_INCLUDE_FILES})
     source_group("Source Files\\Core\\Metal Renderer" FILES ${RENDERER_MTL_SOURCE_FILES})
 
-    add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir
-    COMMAND xcrun -sdk macosx metal -o ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir -c ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metal
-    DEPENDS ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metal
-    VERBATIM)
+    set(RENDERER_MTL_HOST_SHADERS_SOURCES)
+    function (add_metal_shader SHADER)
+        set(SHADER_SOURCE "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metal")
+        set(SHADER_IR "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.ir")
+        set(SHADER_METALLIB "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metallib")
+        add_custom_command(
+            OUTPUT ${SHADER_IR}
+            COMMAND xcrun -sdk macosx metal -o ${SHADER_IR} -c ${SHADER_SOURCE}
+            DEPENDS ${SHADER_SOURCE}
+            VERBATIM)
+        add_custom_command(
+            OUTPUT ${SHADER_METALLIB}
+            COMMAND xcrun -sdk macosx metallib -o ${SHADER_METALLIB} ${SHADER_IR}
+            DEPENDS ${SHADER_IR}
+            VERBATIM)
+        set(RENDERER_MTL_HOST_SHADERS_SOURCES ${RENDERER_MTL_HOST_SHADERS_SOURCES} ${SHADER_METALLIB})
+    endfunction()
 
-    add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metallib
-    COMMAND xcrun -sdk macosx metallib -o ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.metallib ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir
-    DEPENDS ${CMAKE_SOURCE_DIR}/src/host_shaders/metal_shaders.ir
-    VERBATIM)
+    add_metal_shader(metal_shaders)
+    add_metal_shader(metal_copy_to_lut_texture)
 
     add_custom_target(
-        compile_msl_shader
-        DEPENDS src/host_shaders/metal_shaders.metallib
+        compile_msl_shaders
+        DEPENDS ${RENDERER_MTL_HOST_SHADERS_SOURCES}
     )
 
     cmrc_add_resource_library(
@@ -446,8 +456,9 @@ if(ENABLE_METAL AND APPLE)
         NAMESPACE RendererMTL
         WHENCE "src/host_shaders/"
         "src/host_shaders/metal_shaders.metallib"
+        "src/host_shaders/metal_copy_to_lut_texture.metallib"
     )
-    add_dependencies(resources_renderer_mtl compile_msl_shader)
+    add_dependencies(resources_renderer_mtl compile_msl_shaders)
 
     target_sources(AlberCore PRIVATE ${RENDERER_MTL_SOURCE_FILES})
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
