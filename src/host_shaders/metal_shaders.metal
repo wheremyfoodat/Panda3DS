@@ -383,6 +383,11 @@ float3 regToColor(uint reg) {
 	return scale * float3(float(extract_bits(reg, 20, 8)), float(extract_bits(reg, 10, 8)), float(extract_bits(reg, 00, 8)));
 }
 
+constant bool lightingEnabled [[function_constant(0)]];
+constant uint8_t lightingNumLights [[function_constant(1)]];
+constant uint8_t lightingConfig1 [[function_constant(2)]];
+constant uint16_t alphaControl [[function_constant(3)]];
+
 // Implements the following algorthm: https://mathb.in/26766
 void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
 	// Quaternions describe a transformation from surface-local space to eye space.
@@ -393,14 +398,7 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 	float3 bitangent = normalize(in.bitangent);
 	float3 view = normalize(in.view);
 
-	uint GPUREG_LIGHTING_ENABLE = picaRegs.read(0x008Fu);
-	if (extract_bits(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
-		primaryColor = secondaryColor = float4(1.0);
-		return;
-	}
-
 	uint GPUREG_LIGHTING_AMBIENT = picaRegs.read(0x01C0u);
-	uint GPUREG_LIGHTING_NUM_LIGHTS = (picaRegs.read(0x01C2u) & 0x7u) + 1u;
 	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = picaRegs.read(0x01D9u);
 
 	primaryColor = float4(float3(0.0), 1.0);
@@ -411,13 +409,12 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 	uint GPUREG_LIGHTING_LUTINPUT_ABS = picaRegs.read(0x01D0u);
 	uint GPUREG_LIGHTING_LUTINPUT_SELECT = picaRegs.read(0x01D1u);
 	uint GPUREG_LIGHTING_CONFIG0 = picaRegs.read(0x01C3u);
-	uint GPUREG_LIGHTING_CONFIG1 = picaRegs.read(0x01C4u);
 	uint GPUREG_LIGHTING_LUTINPUT_SCALE = picaRegs.read(0x01D2u);
 	float d[7];
 
 	bool errorUnimpl = false;
 
-	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
+	for (uint i = 0u; i < lightingNumLights + 1; i++) {
 		uint lightID = extract_bits(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
 
 		uint GPUREG_LIGHTi_SPECULAR0 = picaRegs.read(0x0140u + 0x10u * lightID);
@@ -447,7 +444,7 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 		}
 
 		for (int c = 0; c < 7; c++) {
-			if (extract_bits(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0u) {
+			if (extract_bits(lightingConfig1, c, 1) == 0u) {
 				uint scaleID = extract_bits(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
 				float scale = float(1u << scaleID);
 				if (scaleID >= 6u) scale /= 256.0;
@@ -546,7 +543,12 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
                              sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
     globals.tevSources[0] = in.color;
-	calcLighting(in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
+    if (lightingEnabled) {
+        calcLighting(in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
+    } else {
+        globals.tevSources[1] = float4(1.0);
+        globals.tevSources[2] = float4(1.0);
+    }
 
 	uint textureConfig = picaRegs.read(0x80u);
 	float2 texCoord2 = (textureConfig & (1u << 13)) != 0u ? in.texCoord1 : in.texCoord2;
@@ -579,7 +581,6 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 	float4 color = performLogicOp(logicOp, globals.tevSources[15], prevColor);
 
 	// Perform alpha test
-	uint alphaControl = picaRegs.read(0x104u);
 	if ((alphaControl & 1u) != 0u) {  // Check if alpha test is on
 		uint func = (alphaControl >> 4u) & 7u;
 		float reference = float((alphaControl >> 8u) & 0xffu) / 255.0;

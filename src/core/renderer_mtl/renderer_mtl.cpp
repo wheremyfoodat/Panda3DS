@@ -154,11 +154,10 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	MTL::Function* vertexBlitFunction = library->newFunction(NS::String::string("vertexBlit", NS::ASCIIStringEncoding));
 	MTL::Function* fragmentBlitFunction = library->newFunction(NS::String::string("fragmentBlit", NS::ASCIIStringEncoding));
 
-	blitPipelineCache.set(device, vertexBlitFunction, fragmentBlitFunction, nullptr);
+	blitPipelineCache.set(device, vertexBlitFunction, fragmentBlitFunction);
 
 	// Draw
 	MTL::Function* vertexDrawFunction = library->newFunction(NS::String::string("vertexDraw", NS::ASCIIStringEncoding));
-	MTL::Function* fragmentDrawFunction = library->newFunction(NS::String::string("fragmentDraw", NS::ASCIIStringEncoding));
 
 	// -------- Vertex descriptor --------
 	MTL::VertexDescriptor* vertexDescriptor = MTL::VertexDescriptor::alloc()->init();
@@ -216,7 +215,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	vertexBufferLayout->setStepFunction(MTL::VertexStepFunctionPerVertex);
 	vertexBufferLayout->setStepRate(1);
 
-	drawPipelineCache.set(device, vertexDrawFunction, fragmentDrawFunction, vertexDescriptor);
+	drawPipelineCache.set(device, library, vertexDrawFunction, vertexDescriptor);
 
 	// Depth stencil cache
 	depthStencilCache.set(device);
@@ -321,7 +320,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
 	// Pipeline
-	Metal::PipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
+	Metal::BlitPipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
 	beginRenderPassIfNeeded(renderPassDescriptor, destFramebuffer->texture);
@@ -381,10 +380,14 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
    	depthUniforms.depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
 	// -------- Pipeline --------
-	Metal::PipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
+	Metal::DrawPipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
 	if (depthStencilRenderTarget) {
         pipelineHash.depthFmt = depthStencilRenderTarget->format;
     }
+    pipelineHash.lightingEnabled = regs[0x008F] & 1;
+    pipelineHash.lightingNumLights = regs[0x01C2] & 0x7;
+    pipelineHash.lightingConfig1 = regs[0x01C4u] >> 16; // Last 16 bits are unused, so skip them
+    pipelineHash.alphaControl = regs[0x104];
 
 	// Blending and logic op
 	pipelineHash.blendEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
