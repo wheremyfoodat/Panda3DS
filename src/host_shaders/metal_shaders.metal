@@ -385,6 +385,7 @@ float3 regToColor(uint reg) {
 
 constant bool lightingEnabled [[function_constant(0)]];
 constant uint8_t lightingNumLights [[function_constant(1)]];
+constant uint8_t lightingConfig1 [[function_constant(2)]];
 
 // Implements the following algorthm: https://mathb.in/26766
 void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
@@ -407,7 +408,6 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 	uint GPUREG_LIGHTING_LUTINPUT_ABS = picaRegs.read(0x01D0u);
 	uint GPUREG_LIGHTING_LUTINPUT_SELECT = picaRegs.read(0x01D1u);
 	uint GPUREG_LIGHTING_CONFIG0 = picaRegs.read(0x01C3u);
-	uint GPUREG_LIGHTING_CONFIG1 = picaRegs.read(0x01C4u);
 	uint GPUREG_LIGHTING_LUTINPUT_SCALE = picaRegs.read(0x01D2u);
 	float d[7];
 
@@ -443,7 +443,7 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 		}
 
 		for (int c = 0; c < 7; c++) {
-			if (extract_bits(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0u) {
+			if (extract_bits(lightingConfig1, c, 1) == 0u) {
 				uint scaleID = extract_bits(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
 				float scale = float(1u << scaleID);
 				if (scaleID >= 6u) scale /= 256.0;
@@ -545,8 +545,8 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
     if (lightingEnabled) {
         calcLighting(in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
     } else {
-        globals.tevSources[1] = float4(0.0);
-        globals.tevSources[2] = float4(0.0);
+        globals.tevSources[1] = float4(1.0);
+        globals.tevSources[2] = float4(1.0);
     }
 
 	uint textureConfig = picaRegs.read(0x80u);

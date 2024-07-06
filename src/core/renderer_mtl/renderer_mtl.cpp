@@ -386,6 +386,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
     }
     pipelineHash.lightingEnabled = regs[0x008F] & 1;
     pipelineHash.lightingNumLights = (regs[0x01C2] & 0x7) + 1;
+    pipelineHash.lightingConfig1 = regs[0x01C4u] >> 16; // Last 16 bits are unused, so skip them
 
 	// Blending and logic op
 	pipelineHash.blendEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;

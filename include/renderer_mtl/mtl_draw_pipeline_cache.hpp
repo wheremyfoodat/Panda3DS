@@ -18,6 +18,7 @@ struct DrawPipelineHash {
     // Specialization constants
     bool lightingEnabled;
     u8 lightingNumLights;
+    u8 lightingConfig1;
 };
 
 // Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
@@ -42,8 +43,8 @@ public:
     }
 
     MTL::RenderPipelineState* get(DrawPipelineHash hash) {
-        u8 fragmentFunctionHash = ((u8)hash.lightingEnabled << 4) | hash.lightingNumLights;
-        u64 pipelineHash = ((u64)hash.colorFmt << 44) | ((u64)hash.depthFmt << 41) | ((u64)hash.blendEnabled << 40) | ((u64)hash.blendControl << 8) | fragmentFunctionHash;
+        u16 fragmentFunctionHash = ((u8)hash.lightingEnabled << 12) | (hash.lightingNumLights << 8) | hash.lightingConfig1;
+        u64 pipelineHash = ((u64)hash.colorFmt << 52) | ((u64)hash.depthFmt << 49) | ((u64)hash.blendEnabled << 48) | ((u64)hash.blendControl << 16) | fragmentFunctionHash;
         auto& pipeline = pipelineCache[pipelineHash];
         if (!pipeline) {
             auto& fragmentFunction = fragmentFunctionCache[fragmentFunctionHash];
@@ -51,6 +52,7 @@ public:
                 MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
                 constants->setConstantValue(&hash.lightingEnabled, MTL::DataTypeBool, NS::UInteger(0));
                 constants->setConstantValue(&hash.lightingNumLights, MTL::DataTypeUChar, NS::UInteger(1));
+                constants->setConstantValue(&hash.lightingConfig1, MTL::DataTypeUChar, NS::UInteger(2));
 
                 NS::Error* error = nullptr;
                 fragmentFunction = library->newFunction(NS::String::string("fragmentDraw", NS::ASCIIStringEncoding), constants, &error);
@@ -114,7 +116,7 @@ public:
 
 private:
     std::unordered_map<u64, MTL::RenderPipelineState*> pipelineCache;
-    std::unordered_map<u8, MTL::Function*> fragmentFunctionCache;
+    std::unordered_map<u16, MTL::Function*> fragmentFunctionCache;
 
     MTL::Device* device;
     MTL::Library* library;
