@@ -386,6 +386,7 @@ float3 regToColor(uint reg) {
 constant bool lightingEnabled [[function_constant(0)]];
 constant uint8_t lightingNumLights [[function_constant(1)]];
 constant uint8_t lightingConfig1 [[function_constant(2)]];
+constant uint16_t alphaControl [[function_constant(3)]];
 
 // Implements the following algorthm: https://mathb.in/26766
 void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
@@ -413,7 +414,7 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 
 	bool errorUnimpl = false;
 
-	for (uint i = 0u; i < lightingNumLights; i++) {
+	for (uint i = 0u; i < lightingNumLights + 1; i++) {
 		uint lightID = extract_bits(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
 
 		uint GPUREG_LIGHTi_SPECULAR0 = picaRegs.read(0x0140u + 0x10u * lightID);
@@ -580,7 +581,6 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 	float4 color = performLogicOp(logicOp, globals.tevSources[15], prevColor);
 
 	// Perform alpha test
-	uint alphaControl = picaRegs.read(0x104u);
 	if ((alphaControl & 1u) != 0u) {  // Check if alpha test is on
 		uint func = (alphaControl >> 4u) & 7u;
 		float reference = float((alphaControl >> 8u) & 0xffu) / 255.0;
