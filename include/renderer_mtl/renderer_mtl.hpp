@@ -51,6 +51,7 @@ class RendererMTL final : public Renderer {
 	MTL::SamplerState* nearestSampler;
 	MTL::SamplerState* linearSampler;
 	MTL::Texture* lightLUTTextureArray;
+	MTL::DepthStencilState* defaultDepthStencilState;
 
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
@@ -104,5 +105,5 @@ class RendererMTL final : public Renderer {
 	Metal::Texture& getTexture(Metal::Texture& tex);
 	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
 	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);
-	void updateLightingLUT();
+	void updateLightingLUT(MTL::RenderCommandEncoder* encoder);
 };
