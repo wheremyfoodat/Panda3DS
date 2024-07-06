@@ -328,6 +328,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	}
 
 	auto destFramebuffer = getColorRenderTarget(outputAddr, outputFormat, outputWidth, outputHeight);
+	// TODO: clear if not blitting to the whole framebuffer
 	Math::Rect<u32> destRect = destFramebuffer->getSubRect(outputAddr, outputWidth, outputHeight);
 
 	if (inputWidth != outputWidth) {
