@@ -54,6 +54,7 @@ class RendererMTL final : public Renderer {
 
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
+	MTL::RenderPipelineState* copyToLutTexturePipeline;
 
 	// Active state
 	MTL::CommandBuffer* commandBuffer = nullptr;
