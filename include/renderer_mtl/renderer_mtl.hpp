@@ -124,109 +124,60 @@ class RendererMTL final : public Renderer {
         }
     }
 
-    void clearColor(MTL::RenderPassDescriptor* renderPassDescriptor, Metal::ColorClearOp clearOp) {
+    template<typename AttachmentT, typename ClearOpT, typename GetAttachmentT, typename SetClearDataT>
+    inline void clearAttachment(MTL::RenderPassDescriptor* renderPassDescriptor, ClearOpT clearOp, GetAttachmentT getAttachment, SetClearDataT setClearData) {
         bool beginRenderPass = (renderPassDescriptor == nullptr);
         if (!renderPassDescriptor) {
             renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
         }
-		MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-		colorAttachment->setTexture(clearOp.texture);
-		colorAttachment->setClearColor(MTL::ClearColor(clearOp.r, clearOp.g, clearOp.b, clearOp.a));
-		colorAttachment->setLoadAction(MTL::LoadActionClear);
-		colorAttachment->setStoreAction(MTL::StoreActionStore);
+
+        AttachmentT* attachment = getAttachment();
+		attachment->setTexture(clearOp.texture);
+		setClearData(attachment, clearOp);
+		attachment->setLoadAction(MTL::LoadActionClear);
+		attachment->setStoreAction(MTL::StoreActionStore);
 
 		if (beginRenderPass) {
             beginRenderPassIfNeeded(renderPassDescriptor, true, clearOp.texture);
 		}
     }
 
-    bool clearColor(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture) {
-        for (int32_t i = colorClearOps.size() - 1; i >= 0; i--) {
-            if (colorClearOps[i].texture == texture) {
-                clearColor(renderPassDescriptor, colorClearOps[i]);
-                colorClearOps.erase(colorClearOps.begin() + i);
+    template<typename AttachmentT, typename ClearOpT, typename GetAttachmentT, typename SetClearDataT>
+    inline bool clearAttachment(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture, std::vector<ClearOpT>& clearOps, GetAttachmentT getAttachment, SetClearDataT setClearData) {
+        for (int32_t i = clearOps.size() - 1; i >= 0; i--) {
+            if (clearOps[i].texture == texture) {
+                clearAttachment<AttachmentT>(renderPassDescriptor, clearOps[i], getAttachment, setClearData);
+                clearOps.erase(clearOps.begin() + i);
                 return true;
             }
         }
 
         if (renderPassDescriptor) {
-            MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-    		colorAttachment->setTexture(texture);
-    		colorAttachment->setLoadAction(MTL::LoadActionLoad);
-    		colorAttachment->setStoreAction(MTL::StoreActionStore);
+            AttachmentT* attachment = getAttachment();
+    		attachment->setTexture(texture);
+    		attachment->setLoadAction(MTL::LoadActionLoad);
+    		attachment->setStoreAction(MTL::StoreActionStore);
         }
 
         return false;
     }
 
-    void clearDepth(MTL::RenderPassDescriptor* renderPassDescriptor, Metal::DepthClearOp clearOp) {
-        bool beginRenderPass = (renderPassDescriptor == nullptr);
-        if (!renderPassDescriptor) {
-            renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-        }
-        MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
-        depthAttachment->setTexture(clearOp.texture);
-        depthAttachment->setClearDepth(clearOp.depth);
-        depthAttachment->setLoadAction(MTL::LoadActionClear);
-        depthAttachment->setStoreAction(MTL::StoreActionStore);
-
-        if (beginRenderPass) {
-            beginRenderPassIfNeeded(renderPassDescriptor, true, nullptr, clearOp.texture);
-        }
+    bool clearColor(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture) {
+        return clearAttachment<MTL::RenderPassColorAttachmentDescriptor, Metal::ColorClearOp>(renderPassDescriptor, texture, colorClearOps, [&]() { return renderPassDescriptor->colorAttachments()->object(0); }, [&](auto attachment, auto& clearOp) {
+            attachment->setClearColor(MTL::ClearColor(clearOp.r, clearOp.g, clearOp.b, clearOp.a));
+        });
     }
 
     bool clearDepth(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture) {
-        for (int32_t i = depthClearOps.size() - 1; i >= 0; i--) {
-            if (depthClearOps[i].texture == texture) {
-                clearDepth(renderPassDescriptor, depthClearOps[i]);
-                depthClearOps.erase(depthClearOps.begin() + i);
-                return true;
-            }
-        }
-
-        if (renderPassDescriptor) {
-            MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
-    		depthAttachment->setTexture(texture);
-    		depthAttachment->setLoadAction(MTL::LoadActionLoad);
-    		depthAttachment->setStoreAction(MTL::StoreActionStore);
-        }
-
-        return false;
-    }
-
-    void clearStencil(MTL::RenderPassDescriptor* renderPassDescriptor, Metal::StencilClearOp clearOp) {
-        bool beginRenderPass = (renderPassDescriptor == nullptr);
-        if (!renderPassDescriptor) {
-            renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-        }
-        MTL::RenderPassStencilAttachmentDescriptor* stencilAttachment = renderPassDescriptor->stencilAttachment();
-        stencilAttachment->setTexture(clearOp.texture);
-        stencilAttachment->setClearStencil(clearOp.stencil);
-        stencilAttachment->setLoadAction(MTL::LoadActionClear);
-        stencilAttachment->setStoreAction(MTL::StoreActionStore);
-
-        if (beginRenderPass) {
-            beginRenderPassIfNeeded(renderPassDescriptor, true, nullptr, clearOp.texture);
-        }
+        return clearAttachment<MTL::RenderPassDepthAttachmentDescriptor, Metal::DepthClearOp>(renderPassDescriptor, texture, depthClearOps, [&]() { return renderPassDescriptor->depthAttachment(); }, [&](auto attachment, auto& clearOp) {
+            attachment->setClearDepth(clearOp.depth);
+        });
     }
 
     bool clearStencil(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture) {
-        for (int32_t i = stencilClearOps.size() - 1; i >= 0; i--) {
-            if (stencilClearOps[i].texture == texture) {
-                clearStencil(renderPassDescriptor, stencilClearOps[i]);
-                stencilClearOps.erase(stencilClearOps.begin() + i);
-                return true;
-            }
-        }
-
-        if (renderPassDescriptor) {
-            MTL::RenderPassStencilAttachmentDescriptor* stencilAttachment = renderPassDescriptor->stencilAttachment();
-    		stencilAttachment->setTexture(texture);
-    		stencilAttachment->setLoadAction(MTL::LoadActionLoad);
-    		stencilAttachment->setStoreAction(MTL::StoreActionStore);
-        }
-
-        return false;
+        return clearAttachment<MTL::RenderPassStencilAttachmentDescriptor, Metal::StencilClearOp>(renderPassDescriptor, texture, stencilClearOps, [&]() { return renderPassDescriptor->stencilAttachment(); }, [&](auto attachment, auto& clearOp) {
+            attachment->setClearStencil(clearOp.stencil);
+        });
     }
 
 	std::optional<Metal::ColorRenderTarget> getColorRenderTarget(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
