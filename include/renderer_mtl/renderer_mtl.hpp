@@ -88,7 +88,7 @@ class RendererMTL final : public Renderer {
 	void beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, bool doesClears, MTL::Texture* colorTexture, MTL::Texture* depthTexture = nullptr) {
 		createCommandBufferIfNeeded();
 
-		if (doesClears || !renderCommandEncoder || colorTexture != lastColorTexture || (depthTexture != lastDepthTexture || depthTexture == nullptr)) {
+		if (doesClears || !renderCommandEncoder || colorTexture != lastColorTexture || (depthTexture != lastDepthTexture && !(lastDepthTexture && !depthTexture))) {
 		    endRenderPass();
 
             renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
