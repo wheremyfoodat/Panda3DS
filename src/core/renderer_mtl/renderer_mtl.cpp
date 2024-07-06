@@ -266,7 +266,7 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 		const float b = Helpers::getBits<8, 8>(value) / 255.0f;
 		const float a = (value & 0xff) / 255.0f;
 
-		colorClearOps.push_back({color->get().texture, r, g, b, a});
+		colorClearOps[color->get().texture] = {r, g, b, a};
 
 		return;
 	}
@@ -281,11 +281,11 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 			depthVal = (value & 0xffffff) / 16777215.0f;
 		}
 
-		depthClearOps.push_back({depth->get().texture, depthVal});
+		depthClearOps[depth->get().texture] = depthVal;
 
 		if (format == DepthFmt::Depth24Stencil8) {
             const u8 stencilVal = value >> 24;
-            stencilClearOps.push_back({depth->get().texture, stencilVal});
+            stencilClearOps[depth->get().texture] = stencilVal;
 		}
 
 		return;
