@@ -53,6 +53,27 @@ void RendererMTL::display() {
         return;
 	}
 
+	using namespace PICA::ExternalRegs;
+
+	// Top screen
+	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
+	const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
+	auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
+
+	if (topScreen) {
+	    clearColor(nullptr, topScreen->get().texture);
+	}
+
+	// Bottom screen
+	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
+	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
+	auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
+
+	if (bottomScreen) {
+        clearColor(nullptr, bottomScreen->get().texture);
+	}
+
+	// -------- Draw --------
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
 	colorAttachment->setTexture(drawable->texture());
@@ -64,34 +85,18 @@ void RendererMTL::display() {
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
-	using namespace PICA::ExternalRegs;
-
 	// Top screen
-	{
-		const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
-		const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
-		auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
-
-		if (topScreen) {
-		    clearColor(nullptr, topScreen->get().texture);
-			renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
-			renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
-			renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-		}
+	if (topScreen) {
+		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
+		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	// Bottom screen
-	{
-		const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
-		const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
-		auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
-
-		if (bottomScreen) {
-            clearColor(nullptr, bottomScreen->get().texture);
-			renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
-			renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
-			renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-		}
+	if (bottomScreen) {
+		renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
+		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	endRenderPass();
