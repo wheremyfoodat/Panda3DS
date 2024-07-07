@@ -442,6 +442,7 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 	// Assume the destination surface has the same format. Unless the surfaces have the same block width,
 	// texture copy does not make sense.
 	auto destFramebuffer = getColorRenderTarget(outputAddr, srcFramebuffer->format, copyWidth, copyHeight);
+	// TODO: clear if not blitting to the whole framebuffer
 	Math::Rect<u32> destRect = destFramebuffer->getSubRect(outputAddr, copyWidth, copyHeight);
 
 	// TODO: respect regions

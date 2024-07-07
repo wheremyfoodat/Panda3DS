@@ -7,6 +7,7 @@
 #include "helpers.hpp"
 #include "math_util.hpp"
 #include "opengl.hpp"
+#include "renderer_mtl/pica_to_mtl.hpp"
 
 template <typename T>
 using Interval = boost::icl::right_open_interval<T>;
@@ -25,6 +26,7 @@ struct Texture {
     // Range of VRAM taken up by buffer
     Interval<u32> range;
 
+    PICA::PixelFormatInfo formatInfo;
     MTL::Texture* texture = nullptr;
     MTL::SamplerState* sampler = nullptr;
 
@@ -51,7 +53,9 @@ struct Texture {
     void free();
     u64 sizeInBytes();
 
-    u32 decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
+    u8 decodeTexelU8(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
+    u16 decodeTexelU16(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
+    u32 decodeTexelU32(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
 
     // Get the morton interleave offset of a texel based on its U and V values
     static u32 mortonInterleave(u32 u, u32 v);

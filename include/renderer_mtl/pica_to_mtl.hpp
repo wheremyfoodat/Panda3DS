@@ -5,13 +5,39 @@
 
 namespace PICA {
 
+struct PixelFormatInfo {
+    MTL::PixelFormat pixelFormat;
+    size_t bytesPerTexel;
+};
+
+constexpr PixelFormatInfo pixelFormatInfos[14] = {
+    {MTL::PixelFormatRGBA8Unorm, 4}, // RGBA8
+    {MTL::PixelFormatRGBA8Unorm, 4}, // RGB8
+    {MTL::PixelFormatBGR5A1Unorm, 2}, // RGBA5551
+    {MTL::PixelFormatB5G6R5Unorm, 2}, // RGB565
+    {MTL::PixelFormatABGR4Unorm, 2}, // RGBA4
+    {MTL::PixelFormatRGBA8Unorm, 4}, // IA8
+    {MTL::PixelFormatRG8Unorm, 2}, // RG8
+    {MTL::PixelFormatRGBA8Unorm, 4}, // I8
+    {MTL::PixelFormatA8Unorm, 1}, // A8
+    {MTL::PixelFormatABGR4Unorm, 2}, // IA4
+    {MTL::PixelFormatABGR4Unorm, 2}, // I4
+    {MTL::PixelFormatA8Unorm, 1}, // A4
+    {MTL::PixelFormatRGBA8Unorm, 4}, // ETC1
+    {MTL::PixelFormatRGBA8Unorm, 4}, // ETC1A4
+};
+
+inline PixelFormatInfo getPixelFormatInfo(TextureFmt format) {
+    return pixelFormatInfos[static_cast<int>(format)];
+}
+
 inline MTL::PixelFormat toMTLPixelFormatColor(ColorFmt format) {
     switch (format) {
     case ColorFmt::RGBA8: return MTL::PixelFormatRGBA8Unorm;
-    case ColorFmt::RGB8: return MTL::PixelFormatRGBA8Unorm; // TODO: return the correct format
+    case ColorFmt::RGB8: return MTL::PixelFormatRGBA8Unorm;
     case ColorFmt::RGBA5551: return MTL::PixelFormatBGR5A1Unorm;
-    case ColorFmt::RGB565: return MTL::PixelFormatB5G6R5Unorm; // TODO: check if this is correct
-    case ColorFmt::RGBA4: return MTL::PixelFormatABGR4Unorm; // TODO: check if this is correct
+    case ColorFmt::RGB565: return MTL::PixelFormatB5G6R5Unorm;
+    case ColorFmt::RGBA4: return MTL::PixelFormatABGR4Unorm;
     }
 }
 
@@ -19,7 +45,7 @@ inline MTL::PixelFormat toMTLPixelFormatDepth(DepthFmt format) {
     switch (format) {
     case DepthFmt::Depth16: return MTL::PixelFormatDepth16Unorm;
     case DepthFmt::Unknown1: return MTL::PixelFormatInvalid;
-    case DepthFmt::Depth24: return MTL::PixelFormatDepth32Float; // TODO: is this okay?
+    case DepthFmt::Depth24: return MTL::PixelFormatDepth32Float; // Metal does not support 24-bit depth formats
     // Apple sillicon doesn't support 24-bit depth buffers, so we use 32-bit instead
     case DepthFmt::Depth24Stencil8: return MTL::PixelFormatDepth32Float_Stencil8;
     }
