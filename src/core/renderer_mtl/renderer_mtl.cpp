@@ -74,6 +74,8 @@ void RendererMTL::display() {
 	}
 
 	// -------- Draw --------
+	commandBuffer->pushDebugGroup(toNSString("Display"));
+
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
 	colorAttachment->setTexture(drawable->texture());
@@ -81,6 +83,7 @@ void RendererMTL::display() {
 	colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
+	nextRenderPassName = "Display";
 	beginRenderPassIfNeeded(renderPassDescriptor, false, drawable->texture());
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
@@ -102,6 +105,9 @@ void RendererMTL::display() {
 	endRenderPass();
 
 	commandBuffer->presentDrawable(drawable);
+
+	commandBuffer->popDebugGroup();
+
 	commitCommandBuffer();
 
 	// Inform the vertex buffer cache that the frame ended
@@ -128,14 +134,17 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	textureDescriptor->setStorageMode(MTL::StorageModePrivate);
 
 	lightLUTTextureArray = device->newTexture(textureDescriptor);
+	lightLUTTextureArray->setLabel(toNSString("LUT texture"));
 	textureDescriptor->release();
 
 	// Samplers
 	MTL::SamplerDescriptor* samplerDescriptor = MTL::SamplerDescriptor::alloc()->init();
+	samplerDescriptor->setLabel(toNSString("Sampler (nearest)"));
 	nearestSampler = device->newSamplerState(samplerDescriptor);
 
 	samplerDescriptor->setMinFilter(MTL::SamplerMinMagFilterLinear);
 	samplerDescriptor->setMagFilter(MTL::SamplerMinMagFilterLinear);
+	samplerDescriptor->setLabel(toNSString("Sampler (linear)"));
 	linearSampler = device->newSamplerState(samplerDescriptor);
 
 	samplerDescriptor->release();
@@ -158,6 +167,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	displayColorAttachment->setPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm);
 
 	NS::Error* error = nullptr;
+	displayPipelineDescriptor->setLabel(toNSString("Display pipeline"));
 	displayPipeline = device->newRenderPipelineState(displayPipelineDescriptor, &error);
 	if (error) {
 		Helpers::panic("Error creating display pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
@@ -247,6 +257,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	copyToLutTexturePipelineDescriptor->setRasterizationEnabled(false);
 
 	error = nullptr;
+	copyToLutTexturePipelineDescriptor->setLabel(toNSString("Copy to LUT texture pipeline"));
 	copyToLutTexturePipeline = device->newRenderPipelineState(copyToLutTexturePipelineDescriptor, &error);
 	if (error) {
 		Helpers::panic("Error creating copy_to_lut_texture pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
@@ -260,6 +271,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	// -------- Depth stencil state --------
 	MTL::DepthStencilDescriptor* depthStencilDescriptor = MTL::DepthStencilDescriptor::alloc()->init();
+	depthStencilDescriptor->setLabel(toNSString("Default depth stencil state"));
 	defaultDepthStencilState = device->newDepthStencilState(depthStencilDescriptor);
 }
 
@@ -311,6 +323,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	u32 outputHeight = outputSize >> 16;
 
 	auto srcFramebuffer = getColorRenderTarget(inputAddr, inputFormat, inputWidth, outputHeight);
+	nextRenderPassName = "Clear before display transfer";
 	clearColor(nullptr, srcFramebuffer->texture);
 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
 
@@ -347,6 +360,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	Metal::BlitPipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
+	nextRenderPassName = "Display transfer";
 	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
@@ -407,6 +421,8 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 		Helpers::warn("RendererGL::TextureCopy failed to locate src framebuffer!\n");
 		return;
 	}
+	nextRenderPassName = "Clear before texture copy";
+	clearColor(nullptr, srcFramebuffer->texture);
 
 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, copyWidth, copyHeight);
 
@@ -427,6 +443,7 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 	Metal::BlitPipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
+	nextRenderPassName = "Texture copy";
 	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
@@ -521,6 +538,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
         }
     }
 
+    nextRenderPassName = "Draw vertices";
 	beginRenderPassIfNeeded(renderPassDescriptor, doesClear, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr));
 
 	// Update the LUT texture if necessary

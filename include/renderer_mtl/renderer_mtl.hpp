@@ -72,6 +72,9 @@ class RendererMTL final : public Renderer {
 	MTL::Texture* lastColorTexture = nullptr;
 	MTL::Texture* lastDepthTexture = nullptr;
 
+	// Debug
+	std::string nextRenderPassName;
+
 	void createCommandBufferIfNeeded() {
 		if (!commandBuffer) {
 			commandBuffer = commandQueue->commandBuffer();
@@ -92,6 +95,7 @@ class RendererMTL final : public Renderer {
 		    endRenderPass();
 
             renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+            renderCommandEncoder->setLabel(toNSString(nextRenderPassName));
 
 		    lastColorTexture = colorTexture;
             lastDepthTexture = depthTexture;

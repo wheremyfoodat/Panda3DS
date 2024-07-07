@@ -43,6 +43,7 @@ public:
             desc->setDepthAttachmentPixelFormat(toMTLPixelFormatDepth(hash.depthFmt));
 
            	NS::Error* error = nullptr;
+            desc->setLabel(toNSString("Blit pipeline"));
            	pipeline = device->newRenderPipelineState(desc, &error);
            	if (error) {
           		Helpers::panic("Error creating blit pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));

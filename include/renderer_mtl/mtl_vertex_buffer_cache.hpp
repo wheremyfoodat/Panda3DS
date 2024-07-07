@@ -26,6 +26,7 @@ public:
     void set(MTL::Device* dev) {
         device = dev;
         buffer = device->newBuffer(CACHE_BUFFER_SIZE, MTL::ResourceStorageModeShared);
+        buffer->setLabel(toNSString("Shared vertex buffer"));
     }
 
     void endFrame() {
@@ -40,6 +41,7 @@ public:
         // If the vertex buffer is too large, just create a new one
         if (ptr + vertices.size_bytes() > CACHE_BUFFER_SIZE) {
             MTL::Buffer* newBuffer = device->newBuffer(vertices.data(), vertices.size_bytes(), MTL::ResourceStorageModeShared);
+            newBuffer->setLabel(toNSString("Additional vertex buffer"));
             additionalAllocations.push_back(newBuffer);
             Helpers::warn("Vertex buffer doesn't have enough space, creating a new buffer");
 

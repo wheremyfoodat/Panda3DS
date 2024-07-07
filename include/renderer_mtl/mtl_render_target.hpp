@@ -7,6 +7,7 @@
 #include "math_util.hpp"
 #include "opengl.hpp"
 #include "pica_to_mtl.hpp"
+#include "objc_helper.hpp"
 
 template <typename T>
 using Interval = boost::icl::right_open_interval<T>;
@@ -68,6 +69,7 @@ struct RenderTarget {
         descriptor->setUsage(MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead);
         descriptor->setStorageMode(MTL::StorageModePrivate);
         texture = device->newTexture(descriptor);
+        texture->setLabel(toNSString(std::string(std::is_same<Format_t, PICA::ColorFmt>::value ? "Color" : "Depth") + " render target " + std::to_string(size.u()) + "x" + std::to_string(size.v())));
     }
 
     void free() {

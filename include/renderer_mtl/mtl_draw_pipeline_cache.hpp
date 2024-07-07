@@ -95,6 +95,7 @@ public:
             desc->setDepthAttachmentPixelFormat(toMTLPixelFormatDepth(hash.depthFmt));
 
            	NS::Error* error = nullptr;
+            desc->setLabel(toNSString("Draw pipeline"));
            	pipeline = device->newRenderPipelineState(desc, &error);
            	if (error) {
           		Helpers::panic("Error creating draw pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
