@@ -116,7 +116,7 @@ class RendererMTL final : public Renderer {
             renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
         }
 
-        AttachmentT* attachment = getAttachment();
+        AttachmentT* attachment = getAttachment(renderPassDescriptor);
 		attachment->setTexture(texture);
 		setClearData(attachment, clearData);
 		attachment->setLoadAction(MTL::LoadActionClear);
@@ -140,7 +140,7 @@ class RendererMTL final : public Renderer {
         }
 
         if (renderPassDescriptor) {
-            AttachmentT* attachment = getAttachment();
+            AttachmentT* attachment = getAttachment(renderPassDescriptor);
     		attachment->setTexture(texture);
     		attachment->setLoadAction(MTL::LoadActionLoad);
     		attachment->setStoreAction(MTL::StoreActionStore);
@@ -150,19 +150,19 @@ class RendererMTL final : public Renderer {
     }
 
     bool clearColor(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture) {
-        return clearAttachment<MTL::RenderPassColorAttachmentDescriptor, Color4>(renderPassDescriptor, texture, colorClearOps, [&]() { return renderPassDescriptor->colorAttachments()->object(0); }, [&](auto attachment, auto& color) {
+        return clearAttachment<MTL::RenderPassColorAttachmentDescriptor, Color4>(renderPassDescriptor, texture, colorClearOps, [](MTL::RenderPassDescriptor* renderPassDescriptor) { return renderPassDescriptor->colorAttachments()->object(0); }, [](auto attachment, auto& color) {
             attachment->setClearColor(MTL::ClearColor(color.r, color.g, color.b, color.a));
         });
     }
 
     bool clearDepth(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture) {
-        return clearAttachment<MTL::RenderPassDepthAttachmentDescriptor, float>(renderPassDescriptor, texture, depthClearOps, [&]() { return renderPassDescriptor->depthAttachment(); }, [&](auto attachment, auto& depth) {
+        return clearAttachment<MTL::RenderPassDepthAttachmentDescriptor, float>(renderPassDescriptor, texture, depthClearOps, [](MTL::RenderPassDescriptor* renderPassDescriptor) { return renderPassDescriptor->depthAttachment(); }, [](auto attachment, auto& depth) {
             attachment->setClearDepth(depth);
         });
     }
 
     bool clearStencil(MTL::RenderPassDescriptor* renderPassDescriptor, MTL::Texture* texture) {
-        return clearAttachment<MTL::RenderPassStencilAttachmentDescriptor, u8>(renderPassDescriptor, texture, stencilClearOps, [&]() { return renderPassDescriptor->stencilAttachment(); }, [&](auto attachment, auto& stencil) {
+        return clearAttachment<MTL::RenderPassStencilAttachmentDescriptor, u8>(renderPassDescriptor, texture, stencilClearOps, [](MTL::RenderPassDescriptor* renderPassDescriptor) { return renderPassDescriptor->stencilAttachment(); }, [](auto attachment, auto& stencil) {
             attachment->setClearStencil(stencil);
         });
     }
