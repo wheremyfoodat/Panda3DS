@@ -356,8 +356,83 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 }
 
 void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
-	// TODO: implement
-	Helpers::warn("RendererMTL::textureCopy not implemented");
+    // Texture copy size is aligned to 16 byte units
+	const u32 copySize = totalBytes & ~0xf;
+	if (copySize == 0) {
+		Helpers::warn("TextureCopy total bytes less than 16!\n");
+		return;
+	}
+
+	// The width and gap are provided in 16-byte units.
+	const u32 inputWidth = (inputSize & 0xffff) << 4;
+	const u32 inputGap = (inputSize >> 16) << 4;
+	const u32 outputWidth = (outputSize & 0xffff) << 4;
+	const u32 outputGap = (outputSize >> 16) << 4;
+
+	if (inputGap != 0 || outputGap != 0) {
+		// Helpers::warn("Strided texture copy\n");
+	}
+
+	if (inputWidth != outputWidth) {
+		Helpers::warn("Input width does not match output width, cannot accelerate texture copy!");
+		return;
+	}
+
+	// Texture copy is a raw data copy in PICA, which means no format or tiling information is provided to the engine.
+	// Depending if the target surface is linear or tiled, games set inputWidth to either the width of the texture or
+	// the width multiplied by eight (because tiles are stored linearly in memory).
+	// To properly accelerate this we must examine each surface individually. For now we assume the most common case
+	// of tiled surface with RGBA8 format. If our assumption does not hold true, we abort the texture copy as inserting
+	// that surface is not correct.
+
+	// We assume the source surface is tiled and RGBA8. inputWidth is in bytes so divide it
+	// by eight * sizePerPixel(RGBA8) to convert it to a useable width.
+	const u32 bpp = sizePerPixel(PICA::ColorFmt::RGBA8);
+	const u32 copyStride = (inputWidth + inputGap) / (8 * bpp);
+	const u32 copyWidth = inputWidth / (8 * bpp);
+
+	// inputHeight/outputHeight are typically set to zero so they cannot be used to get the height of the copy region
+	// in contrast to display transfer. Compute height manually by dividing the copy size with the copy width. The result
+	// is the number of vertical tiles so multiply that by eight to get the actual copy height.
+	u32 copyHeight;
+	if (inputWidth != 0) [[likely]] {
+		copyHeight = (copySize / inputWidth) * 8;
+	} else {
+		copyHeight = 0;
+	}
+
+	// Find the source surface.
+	auto srcFramebuffer = getColorRenderTarget(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
+	if (!srcFramebuffer) {
+		Helpers::warn("RendererGL::TextureCopy failed to locate src framebuffer!\n");
+		return;
+	}
+
+	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, copyWidth, copyHeight);
+
+	// Assume the destination surface has the same format. Unless the surfaces have the same block width,
+	// texture copy does not make sense.
+	auto destFramebuffer = getColorRenderTarget(outputAddr, srcFramebuffer->format, copyWidth, copyHeight);
+	Math::Rect<u32> destRect = destFramebuffer->getSubRect(outputAddr, copyWidth, copyHeight);
+
+	// TODO: respect regions
+	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+	colorAttachment->setTexture(destFramebuffer->texture);
+	colorAttachment->setLoadAction(MTL::LoadActionClear);
+	colorAttachment->setClearColor(MTL::ClearColor{0.0, 0.0, 0.0, 1.0});
+	colorAttachment->setStoreAction(MTL::StoreActionStore);
+
+	// Pipeline
+	Metal::BlitPipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
+	auto blitPipeline = blitPipelineCache.get(hash);
+
+	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
+	renderCommandEncoder->setRenderPipelineState(blitPipeline);
+	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
+	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
+
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 }
 
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
