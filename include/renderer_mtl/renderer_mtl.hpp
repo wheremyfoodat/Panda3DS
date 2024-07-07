@@ -103,6 +103,8 @@ class RendererMTL final : public Renderer {
 		    lastColorTexture = colorTexture;
             lastDepthTexture = depthTexture;
 		}
+
+		renderPassDescriptor->release();
 	}
 
 	void commitCommandBuffer() {

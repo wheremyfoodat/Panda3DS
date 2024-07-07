@@ -70,6 +70,7 @@ struct RenderTarget {
         descriptor->setStorageMode(MTL::StorageModePrivate);
         texture = device->newTexture(descriptor);
         texture->setLabel(toNSString(std::string(std::is_same<Format_t, PICA::ColorFmt>::value ? "Color" : "Depth") + " render target " + std::to_string(size.u()) + "x" + std::to_string(size.v())));
+        descriptor->release();
     }
 
     void free() {

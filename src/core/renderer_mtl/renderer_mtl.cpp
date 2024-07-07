@@ -86,7 +86,6 @@ void RendererMTL::display() {
 
 	nextRenderPassName = "Display";
 	beginRenderPassIfNeeded(renderPassDescriptor, false, drawable->texture());
-	renderPassDescriptor->release();
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 

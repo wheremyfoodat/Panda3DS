@@ -18,6 +18,7 @@ void Texture::allocate() {
     descriptor->setStorageMode(MTL::StorageModeShared); // TODO: use private + staging buffers?
     texture = device->newTexture(descriptor);
     texture->setLabel(toNSString("Texture " + std::to_string(size.u()) + "x" + std::to_string(size.v())));
+    descriptor->release();
 
     setNewConfig(config);
 }
@@ -43,6 +44,7 @@ void Texture::setNewConfig(u32 cfg) {
 
     samplerDescriptor->setLabel(toNSString("Sampler"));
     sampler = device->newSamplerState(samplerDescriptor);
+    samplerDescriptor->release();
 }
 
 void Texture::free() {
