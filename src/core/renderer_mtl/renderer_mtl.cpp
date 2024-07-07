@@ -53,6 +53,27 @@ void RendererMTL::display() {
         return;
 	}
 
+	using namespace PICA::ExternalRegs;
+
+	// Top screen
+	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
+	const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
+	auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
+
+	if (topScreen) {
+	    clearColor(nullptr, topScreen->get().texture);
+	}
+
+	// Bottom screen
+	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
+	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
+	auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
+
+	if (bottomScreen) {
+        clearColor(nullptr, bottomScreen->get().texture);
+	}
+
+	// -------- Draw --------
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
 	colorAttachment->setTexture(drawable->texture());
@@ -60,36 +81,22 @@ void RendererMTL::display() {
 	colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
-	beginRenderPassIfNeeded(renderPassDescriptor, drawable->texture());
+	beginRenderPassIfNeeded(renderPassDescriptor, false, drawable->texture());
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
-	using namespace PICA::ExternalRegs;
-
 	// Top screen
-	{
-		const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
-		const u32 topScreenAddr = externalRegs[topActiveFb == 0 ? Framebuffer0AFirstAddr : Framebuffer0ASecondAddr];
-		auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
-
-		if (topScreen) {
-			renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
-			renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
-			renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-		}
+	if (topScreen) {
+		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
+		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	// Bottom screen
-	{
-		const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
-		const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
-		auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
-
-		if (bottomScreen) {
-			renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
-			renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
-			renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
-		}
+	if (bottomScreen) {
+		renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
+		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	endRenderPass();
@@ -264,14 +271,7 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 		const float b = Helpers::getBits<8, 8>(value) / 255.0f;
 		const float a = (value & 0xff) / 255.0f;
 
-		MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-		MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-		colorAttachment->setTexture(color->get().texture);
-		colorAttachment->setClearColor(MTL::ClearColor(r, g, b, a));
-		colorAttachment->setLoadAction(MTL::LoadActionClear);
-		colorAttachment->setStoreAction(MTL::StoreActionStore);
-
-		beginRenderPassIfNeeded(renderPassDescriptor, color->get().texture);
+		colorClearOps[color->get().texture] = {r, g, b, a};
 
 		return;
 	}
@@ -286,22 +286,12 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 			depthVal = (value & 0xffffff) / 16777215.0f;
 		}
 
-		MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-  		MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
-        depthAttachment->setTexture(depth->get().texture);
-        depthAttachment->setClearDepth(depthVal);
-        depthAttachment->setLoadAction(MTL::LoadActionClear);
-        depthAttachment->setStoreAction(MTL::StoreActionStore);
+		depthClearOps[depth->get().texture] = depthVal;
 
 		if (format == DepthFmt::Depth24Stencil8) {
-		    MTL::RenderPassStencilAttachmentDescriptor* stencilAttachment = renderPassDescriptor->stencilAttachment();
-			stencilAttachment->setTexture(depth->get().texture);
-			stencilAttachment->setClearStencil((value >> 24) & 0xff);
-			stencilAttachment->setLoadAction(MTL::LoadActionClear);
-			stencilAttachment->setStoreAction(MTL::StoreActionStore);
+            const u8 stencilVal = value >> 24;
+            stencilClearOps[depth->get().texture] = stencilVal;
 		}
-
-		beginRenderPassIfNeeded(renderPassDescriptor, nullptr, depth->get().texture);
 
 		return;
 	}
@@ -321,6 +311,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	u32 outputHeight = outputSize >> 16;
 
 	auto srcFramebuffer = getColorRenderTarget(inputAddr, inputFormat, inputWidth, outputHeight);
+	clearColor(nullptr, srcFramebuffer->texture);
 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
 
 	if (verticalFlip) {
@@ -337,6 +328,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	}
 
 	auto destFramebuffer = getColorRenderTarget(outputAddr, outputFormat, outputWidth, outputHeight);
+	// TODO: clear if not blitting to the whole framebuffer
 	Math::Rect<u32> destRect = destFramebuffer->getSubRect(outputAddr, outputWidth, outputHeight);
 
 	if (inputWidth != outputWidth) {
@@ -355,7 +347,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	Metal::BlitPipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
-	beginRenderPassIfNeeded(renderPassDescriptor, destFramebuffer->texture);
+	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
@@ -444,24 +436,17 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	// -------- Render --------
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-    MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-    colorAttachment->setTexture(colorRenderTarget->texture);
-    colorAttachment->setLoadAction(MTL::LoadActionLoad);
-    colorAttachment->setStoreAction(MTL::StoreActionStore);
+	bool doesClear = clearColor(renderPassDescriptor, colorRenderTarget->texture);
     if (depthStencilRenderTarget) {
-        MTL::RenderPassDepthAttachmentDescriptor* depthAttachment = renderPassDescriptor->depthAttachment();
-        depthAttachment->setTexture(depthStencilRenderTarget->texture);
-        depthAttachment->setLoadAction(MTL::LoadActionLoad);
-        depthAttachment->setStoreAction(MTL::StoreActionStore);
+        if (clearDepth(renderPassDescriptor, depthStencilRenderTarget->texture))
+            doesClear = true;
         if (depthStencilRenderTarget->format == DepthFmt::Depth24Stencil8) {
-            MTL::RenderPassStencilAttachmentDescriptor* stencilAttachment = renderPassDescriptor->stencilAttachment();
-            stencilAttachment->setTexture(depthStencilRenderTarget->texture);
-            stencilAttachment->setLoadAction(MTL::LoadActionLoad);
-            stencilAttachment->setStoreAction(MTL::StoreActionStore);
+            if (clearStencil(renderPassDescriptor, depthStencilRenderTarget->texture))
+                doesClear = true;
         }
     }
 
-	beginRenderPassIfNeeded(renderPassDescriptor, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr));
+	beginRenderPassIfNeeded(renderPassDescriptor, doesClear, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr));
 
 	// Update the LUT texture if necessary
 	if (gpu.lightingLUTDirty) {
