@@ -18,7 +18,7 @@ public:
     DepthStencilCache() = default;
 
     ~DepthStencilCache() {
-        clear();
+        reset();
     }
 
     void set(MTL::Device* dev) {
@@ -70,7 +70,7 @@ public:
         return depthStencilState;
     }
 
-    void clear() {
+    void reset() {
         for (auto& pair : depthStencilCache) {
             pair.second->release();
         }

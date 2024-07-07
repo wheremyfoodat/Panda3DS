@@ -20,7 +20,7 @@ public:
     VertexBufferCache() = default;
 
     ~VertexBufferCache() {
-        clear();
+        reset();
     }
 
     void set(MTL::Device* dev) {
@@ -57,7 +57,7 @@ public:
         return BufferHandle{buffer, oldPtr};
     }
 
-    void clear() {
+    void reset() {
         endFrame();
         buffer->release();
     }

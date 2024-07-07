@@ -18,7 +18,7 @@ public:
     BlitPipelineCache() = default;
 
     ~BlitPipelineCache() {
-        clear();
+        reset();
         vertexFunction->release();
         fragmentFunction->release();
     }
@@ -55,7 +55,7 @@ public:
         return pipeline;
     }
 
-    void clear() {
+    void reset() {
         for (auto& pair : pipelineCache) {
             pair.second->release();
         }

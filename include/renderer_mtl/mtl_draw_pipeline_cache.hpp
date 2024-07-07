@@ -32,7 +32,7 @@ public:
     DrawPipelineCache() = default;
 
     ~DrawPipelineCache() {
-        clear();
+        reset();
         vertexDescriptor->release();
         vertexFunction->release();
     }
@@ -107,7 +107,7 @@ public:
         return pipeline;
     }
 
-    void clear() {
+    void reset() {
         for (auto& pair : pipelineCache) {
             pair.second->release();
         }

@@ -42,6 +42,9 @@ class RendererMTL final : public Renderer {
 	MTL::Device* device;
 	MTL::CommandQueue* commandQueue;
 
+	// Libraries
+	MTL::Library* library;
+
 	// Caches
 	SurfaceCache<Metal::ColorRenderTarget, 16, true> colorRenderTargetCache;
 	SurfaceCache<Metal::DepthStencilRenderTarget, 16, true> depthStencilRenderTargetCache;
@@ -105,10 +108,12 @@ class RendererMTL final : public Renderer {
 	void commitCommandBuffer() {
 	   if (renderCommandEncoder) {
             renderCommandEncoder->endEncoding();
+            renderCommandEncoder->release();
             renderCommandEncoder = nullptr;
         }
         if (commandBuffer) {
             commandBuffer->commit();
+            commandBuffer->release();
             commandBuffer = nullptr;
         }
     }

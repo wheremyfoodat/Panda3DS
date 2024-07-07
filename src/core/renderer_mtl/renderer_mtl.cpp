@@ -39,12 +39,13 @@ RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, 
 RendererMTL::~RendererMTL() {}
 
 void RendererMTL::reset() {
+    vertexBufferCache.reset();
+    depthStencilCache.reset();
+    drawPipelineCache.reset();
+    blitPipelineCache.reset();
+    textureCache.reset();
+    depthStencilRenderTargetCache.reset();
 	colorRenderTargetCache.reset();
-	depthStencilRenderTargetCache.reset();
-	textureCache.reset();
-
-	// TODO: implement
-	Helpers::warn("RendererMTL::reset not implemented");
 }
 
 void RendererMTL::display() {
@@ -85,6 +86,7 @@ void RendererMTL::display() {
 
 	nextRenderPassName = "Display";
 	beginRenderPassIfNeeded(renderPassDescriptor, false, drawable->texture());
+	renderPassDescriptor->release();
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
@@ -112,6 +114,9 @@ void RendererMTL::display() {
 
 	// Inform the vertex buffer cache that the frame ended
 	vertexBufferCache.endFrame();
+
+	// Release
+	drawable->release();
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
@@ -153,7 +158,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	// Load shaders
 	auto mtlResources = cmrc::RendererMTL::get_filesystem();
-	MTL::Library* library = loadLibrary(device, mtlResources.open("metal_shaders.metallib"));
+	library = loadLibrary(device, mtlResources.open("metal_shaders.metallib"));
 	MTL::Library* copyToLutTextureLibrary = loadLibrary(device, mtlResources.open("metal_copy_to_lut_texture.metallib"));
 
 	// Display
@@ -172,6 +177,9 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	if (error) {
 		Helpers::panic("Error creating display pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
 	}
+	displayPipelineDescriptor->release();
+	vertexDisplayFunction->release();
+	fragmentDisplayFunction->release();
 
 	// Blit
 	MTL::Function* vertexBlitFunction = library->newFunction(NS::String::string("vertexBlit", NS::ASCIIStringEncoding));
@@ -262,6 +270,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	if (error) {
 		Helpers::panic("Error creating copy_to_lut_texture pipeline state: %s", error->description()->cString(NS::ASCIIStringEncoding));
 	}
+	copyToLutTexturePipelineDescriptor->release();
+	vertexCopyToLutTextureFunction->release();
 
 	// Depth stencil cache
 	depthStencilCache.set(device);
@@ -273,6 +283,10 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	MTL::DepthStencilDescriptor* depthStencilDescriptor = MTL::DepthStencilDescriptor::alloc()->init();
 	depthStencilDescriptor->setLabel(toNSString("Default depth stencil state"));
 	defaultDepthStencilState = device->newDepthStencilState(depthStencilDescriptor);
+	depthStencilDescriptor->release();
+
+	// Release
+	copyToLutTextureLibrary->release();
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -573,12 +587,18 @@ void RendererMTL::screenshot(const std::string& name) {
 }
 
 void RendererMTL::deinitGraphicsContext() {
-	colorRenderTargetCache.reset();
-	depthStencilRenderTargetCache.reset();
-	textureCache.reset();
+	reset();
 
-	// TODO: implement
-	Helpers::warn("RendererMTL::deinitGraphicsContext not implemented");
+	// Release
+	copyToLutTexturePipeline->release();
+	displayPipeline->release();
+	defaultDepthStencilState->release();
+	lightLUTTextureArray->release();
+	linearSampler->release();
+	nearestSampler->release();
+	library->release();
+	commandQueue->release();
+	device->release();
 }
 
 std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(
