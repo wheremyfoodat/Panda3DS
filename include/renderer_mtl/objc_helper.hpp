@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <Metal/Metal.hpp>
 
 namespace Metal {
