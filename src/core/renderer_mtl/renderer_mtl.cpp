@@ -524,12 +524,6 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	u8 logicOp = 3; // Copy, which doesn't do anything
 	if (pipelineHash.blendEnabled) {
     	pipelineHash.blendControl = regs[PICA::InternalRegs::BlendFunc];
-        // TODO: constant color
-       	//pipelineHash.constantColor = regs[PICA::InternalRegs::BlendColour];
-    	//const u8 r = pipelineHash.constantColor & 0xff;
-    	//const u8 g = Helpers::getBits<8, 8>(pipelineHash.constantColor);
-    	//const u8 b = Helpers::getBits<16, 8>(pipelineHash.constantColor);
-    	//const u8 a = Helpers::getBits<24, 8>(pipelineHash.constantColor);
 	} else {
 	    logicOp = Helpers::getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
 	}
@@ -567,6 +561,17 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	} else {
 	    Metal::BufferHandle buffer = vertexBufferCache.get(vertices);
 		renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, VERTEX_BUFFER_BINDING_INDEX);
+	}
+
+	// Blend color
+	if (pipelineHash.blendEnabled) {
+       	u32 constantColor = regs[PICA::InternalRegs::BlendColour];
+    	const u8 r = constantColor & 0xff;
+    	const u8 g = Helpers::getBits<8, 8>(constantColor);
+    	const u8 b = Helpers::getBits<16, 8>(constantColor);
+    	const u8 a = Helpers::getBits<24, 8>(constantColor);
+
+        renderCommandEncoder->setBlendColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
 	}
 
 	// Bind resources
