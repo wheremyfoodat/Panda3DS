@@ -477,8 +477,6 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	const bool depthWriteEnable = Helpers::getBit<12>(depthControl);
 	const u8 depthFunc = Helpers::getBits<4, 3>(depthControl);
 	const u8 colorMask = Helpers::getBits<8, 4>(depthControl);
-	// TODO: color mask
-	// gl.setColourMask(colorMask & 0x1, colorMask & 0x2, colorMask & 0x4, colorMask & 0x8);
 
 	Metal::DepthStencilHash depthStencilHash{false, 1};
 	depthStencilHash.stencilConfig = regs[PICA::InternalRegs::StencilTest];
@@ -521,6 +519,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	// Blending and logic op
 	pipelineHash.blendEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
+	pipelineHash.colorWriteMask = colorMask;
 
 	u8 logicOp = 3; // Copy, which doesn't do anything
 	if (pipelineHash.blendEnabled) {

@@ -6,14 +6,16 @@ using namespace PICA;
 
 namespace Metal {
 
-struct DrawPipelineHash { // 62 bits
+struct DrawPipelineHash { // 56 bits
     // Formats
     ColorFmt colorFmt; // 3 bits
     DepthFmt depthFmt; // 3 bits
 
     // Blending
     bool blendEnabled; // 1 bit
-    u32 blendControl; // 32 bits
+    //                                 |    functions     |   aeq    |   ceq    |
+    u32 blendControl; // 22 bits (mask:  1111111111111111   00000111   00000111)
+    u8 colorWriteMask; // 4 bits
 
     // Specialization constants (23 bits)
     bool lightingEnabled; // 1 bit
@@ -46,7 +48,7 @@ public:
 
     MTL::RenderPipelineState* get(DrawPipelineHash hash) {
         u32 fragmentFunctionHash = ((u32)hash.lightingEnabled << 22) | ((u32)hash.lightingNumLights << 19) | ((u32)hash.lightingConfig1 << 12) | ((((u32)hash.alphaControl & 0b1111111100000000) >> 8) << 4) | ((((u32)hash.alphaControl & 0b01110000) >> 4) << 1) | ((u32)hash.alphaControl & 0b0001);
-        u64 pipelineHash = ((u64)hash.colorFmt << 59) | ((u64)hash.depthFmt << 56) | ((u64)hash.blendEnabled << 55) | ((u64)hash.blendControl << 23) | fragmentFunctionHash;
+        u64 pipelineHash = ((u64)hash.colorFmt << 53) | ((u64)hash.depthFmt << 50) | ((u64)hash.blendEnabled << 49) | ((u64)hash.colorWriteMask << 45) | ((((u64)hash.blendControl & 0b11111111111111110000000000000000) >> 16) << 29) | ((((u64)hash.blendControl & 0b0000011100000000) >> 8) << 26) | (((u64)hash.blendControl & 0b00000111) << 23) | fragmentFunctionHash;
         auto& pipeline = pipelineCache[pipelineHash];
         if (!pipeline) {
             auto& fragmentFunction = fragmentFunctionCache[fragmentFunctionHash];
@@ -73,6 +75,12 @@ public:
 
             auto colorAttachment = desc->colorAttachments()->object(0);
             colorAttachment->setPixelFormat(toMTLPixelFormatColor(hash.colorFmt));
+            MTL::ColorWriteMask writeMask = 0;
+            if (hash.colorWriteMask & 0x1) writeMask |= MTL::ColorWriteMaskRed;
+            if (hash.colorWriteMask & 0x2) writeMask |= MTL::ColorWriteMaskGreen;
+            if (hash.colorWriteMask & 0x4) writeMask |= MTL::ColorWriteMaskBlue;
+            if (hash.colorWriteMask & 0x8) writeMask |= MTL::ColorWriteMaskAlpha;
+            colorAttachment->setWriteMask(writeMask);
             if (hash.blendEnabled) {
                 const u8 rgbEquation = hash.blendControl & 0x7;
                	const u8 alphaEquation = Helpers::getBits<8, 3>(hash.blendControl);
