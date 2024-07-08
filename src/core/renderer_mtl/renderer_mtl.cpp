@@ -361,32 +361,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 		// Helpers::warn("Strided display transfer is not handled correctly!\n");
 	}
 
-	// TODO: respect regions
-	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(destFramebuffer->texture);
-	colorAttachment->setLoadAction(MTL::LoadActionClear);
-	colorAttachment->setClearColor(MTL::ClearColor{0.0, 0.0, 0.0, 1.0});
-	colorAttachment->setStoreAction(MTL::StoreActionStore);
-
-	// Pipeline
-	Metal::BlitPipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
-	auto blitPipeline = blitPipelineCache.get(hash);
-
-	nextRenderPassName = "Display transfer";
-	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
-	renderCommandEncoder->setRenderPipelineState(blitPipeline);
-
-	// Viewport
-	renderCommandEncoder->setViewport(MTL::Viewport{double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
-	float srcRectNDC[4] = {srcRect.left / (float)srcFramebuffer->size.u(), srcRect.bottom / (float)srcFramebuffer->size.v(), (srcRect.right - srcRect.left) / (float)srcFramebuffer->size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer->size.v()};
-
-	// Bind resources
-	renderCommandEncoder->setVertexBytes(&srcRectNDC, sizeof(srcRectNDC), 0);
-	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
-	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
-
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+	textureCopyImpl(*srcFramebuffer, *destFramebuffer, srcRect, destRect);
 }
 
 void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
@@ -452,32 +427,7 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 	// TODO: clear if not blitting to the whole framebuffer
 	Math::Rect<u32> destRect = destFramebuffer->getSubRect(outputAddr, copyWidth, copyHeight);
 
-	// TODO: respect regions
-	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(destFramebuffer->texture);
-	colorAttachment->setLoadAction(MTL::LoadActionClear);
-	colorAttachment->setClearColor(MTL::ClearColor{0.0, 0.0, 0.0, 1.0});
-	colorAttachment->setStoreAction(MTL::StoreActionStore);
-
-	// Pipeline
-	Metal::BlitPipelineHash hash{destFramebuffer->format, DepthFmt::Unknown1};
-	auto blitPipeline = blitPipelineCache.get(hash);
-
-	nextRenderPassName = "Texture copy";
-	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
-	renderCommandEncoder->setRenderPipelineState(blitPipeline);
-
-	// Viewport
-	renderCommandEncoder->setViewport(MTL::Viewport{double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
-	float srcRectNDC[4] = {srcRect.left / (float)srcFramebuffer->size.u(), srcRect.bottom / (float)srcFramebuffer->size.v(), (srcRect.right - srcRect.left) / (float)srcFramebuffer->size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer->size.v()};
-
-	// Bind resources
-	renderCommandEncoder->setVertexBytes(&srcRectNDC, sizeof(srcRectNDC), 0);
-	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
-	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
-
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+	textureCopyImpl(*srcFramebuffer, *destFramebuffer, srcRect, destRect);
 }
 
 void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) {
@@ -763,4 +713,32 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	renderCommandEncoder->setVertexBytes(u16_lightinglut.data(), sizeof(u16_lightinglut), 0);
 
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), GPU::LightingLutSize);
+}
+
+void RendererMTL::textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect, const Math::Rect<u32>& destRect) {
+	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
+	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
+	colorAttachment->setTexture(destFramebuffer.texture);
+	colorAttachment->setLoadAction(MTL::LoadActionClear);
+	colorAttachment->setClearColor(MTL::ClearColor{0.0, 0.0, 0.0, 1.0});
+	colorAttachment->setStoreAction(MTL::StoreActionStore);
+
+	// Pipeline
+	Metal::BlitPipelineHash hash{destFramebuffer.format, DepthFmt::Unknown1};
+	auto blitPipeline = blitPipelineCache.get(hash);
+
+	nextRenderPassName = "Texture copy";
+	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer.texture);
+	renderCommandEncoder->setRenderPipelineState(blitPipeline);
+
+	// Viewport
+	renderCommandEncoder->setViewport(MTL::Viewport{double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
+	float srcRectNDC[4] = {srcRect.left / (float)srcFramebuffer.size.u(), srcRect.bottom / (float)srcFramebuffer.size.v(), (srcRect.right - srcRect.left) / (float)srcFramebuffer.size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer.size.v()};
+
+	// Bind resources
+	renderCommandEncoder->setVertexBytes(&srcRectNDC, sizeof(srcRectNDC), 0);
+	renderCommandEncoder->setFragmentTexture(srcFramebuffer.texture, 0);
+	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
+
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 }
