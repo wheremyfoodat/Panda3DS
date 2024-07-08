@@ -376,6 +376,13 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 	nextRenderPassName = "Display transfer";
 	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
+
+	// Viewport
+	renderCommandEncoder->setViewport(MTL::Viewport{double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
+	float srcRectNDC[4] = {srcRect.left / (float)srcFramebuffer->size.u(), srcRect.bottom / (float)srcFramebuffer->size.v(), (srcRect.right - srcRect.left) / (float)srcFramebuffer->size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer->size.v()};
+
+	// Bind resources
+	renderCommandEncoder->setVertexBytes(&srcRectNDC, sizeof(srcRectNDC), 0);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
@@ -460,6 +467,13 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 	nextRenderPassName = "Texture copy";
 	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer->texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
+
+	// Viewport
+	renderCommandEncoder->setViewport(MTL::Viewport{double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
+	float srcRectNDC[4] = {srcRect.left / (float)srcFramebuffer->size.u(), srcRect.bottom / (float)srcFramebuffer->size.v(), (srcRect.right - srcRect.left) / (float)srcFramebuffer->size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer->size.v()};
+
+	// Bind resources
+	renderCommandEncoder->setVertexBytes(&srcRectNDC, sizeof(srcRectNDC), 0);
 	renderCommandEncoder->setFragmentTexture(srcFramebuffer->texture, 0);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
@@ -562,6 +576,15 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	    Metal::BufferHandle buffer = vertexBufferCache.get(vertices);
 		renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, VERTEX_BUFFER_BINDING_INDEX);
 	}
+
+	// Viewport
+	const u32 viewportX = regs[PICA::InternalRegs::ViewportXY] & 0x3ff;
+	const u32 viewportY = (regs[PICA::InternalRegs::ViewportXY] >> 16) & 0x3ff;
+	const u32 viewportWidth = Floats::f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0f;
+	const u32 viewportHeight = Floats::f24::fromRaw(regs[PICA::InternalRegs::ViewportHeight] & 0xffffff).toFloat32() * 2.0f;
+	const auto rect = colorRenderTarget->getSubRect(colourBufferLoc, fbSize[0], fbSize[1]);
+	MTL::Viewport viewport{double(rect.left + viewportX), double(rect.bottom + viewportY), double(viewportWidth), double(viewportHeight), 0.0, 1.0};
+	renderCommandEncoder->setViewport(viewport);
 
 	// Blend color
 	if (pipelineHash.blendEnabled) {

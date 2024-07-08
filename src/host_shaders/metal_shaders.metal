@@ -32,11 +32,17 @@ fragment float4 fragmentDisplay(BasicVertexOut in [[stage_in]], texture2d<float>
 	return tex.sample(samplr, in.uv);
 }
 
-vertex BasicVertexOut vertexBlit(uint vid [[vertex_id]]) {
+struct NDCViewport {
+    float2 offset;
+    float2 scale;
+};
+
+vertex BasicVertexOut vertexBlit(uint vid [[vertex_id]], constant NDCViewport& viewport [[buffer(0)]]) {
 	BasicVertexOut out;
 	out.uv = float2((vid << 1) & 2, vid & 2);
 	out.position = float4(out.uv * 2.0 - 1.0, 0.0, 1.0);
 	out.position.y = -out.position.y;
+	out.uv = out.uv * viewport.scale + viewport.offset;
 
 	return out;
 }
