@@ -716,19 +716,16 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 }
 
 void RendererMTL::textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect, const Math::Rect<u32>& destRect) {
+    nextRenderPassName = "Texture copy";
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(destFramebuffer.texture);
-	colorAttachment->setLoadAction(MTL::LoadActionClear);
-	colorAttachment->setClearColor(MTL::ClearColor{0.0, 0.0, 0.0, 1.0});
-	colorAttachment->setStoreAction(MTL::StoreActionStore);
+	// TODO: clearColor sets the load action to load if it didn't find any clear, but that is unnecessary if we are doing a copy to the whole texture
+	bool doesClear = clearColor(renderPassDescriptor, destFramebuffer.texture);
+	beginRenderPassIfNeeded(renderPassDescriptor, doesClear, destFramebuffer.texture);
 
 	// Pipeline
 	Metal::BlitPipelineHash hash{destFramebuffer.format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
-	nextRenderPassName = "Texture copy";
-	beginRenderPassIfNeeded(renderPassDescriptor, false, destFramebuffer.texture);
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 
 	// Viewport
