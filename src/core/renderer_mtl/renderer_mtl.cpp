@@ -574,6 +574,12 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
         renderCommandEncoder->setBlendColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
 	}
 
+	// Stencil reference
+	if (stencilEnable) {
+	    const s8 reference = s8(Helpers::getBits<16, 8>(depthStencilHash.stencilConfig)); // Signed reference value
+        renderCommandEncoder->setStencilReferenceValue(reference);
+    }
+
 	// Bind resources
 	setupTextureEnvState(renderCommandEncoder);
 	bindTexturesToSlots(renderCommandEncoder);

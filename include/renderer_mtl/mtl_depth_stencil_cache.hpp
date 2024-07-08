@@ -37,7 +37,6 @@ public:
             MTL::StencilDescriptor* stencilDesc = nullptr;
             if (stencilEnable) {
                	const u8 stencilFunc = Helpers::getBits<4, 3>(hash.stencilConfig);
-               	const s8 reference = s8(Helpers::getBits<16, 8>(hash.stencilConfig)); // Signed reference value
                	const u8 stencilRefMask = Helpers::getBits<24, 8>(hash.stencilConfig);
 
                	const u32 stencilBufferMask = hash.depthStencilWrite ? Helpers::getBits<8, 8>(hash.stencilConfig) : 0;
@@ -53,7 +52,6 @@ public:
                 stencilDesc->setStencilCompareFunction(toMTLCompareFunc(stencilFunc));
                 stencilDesc->setReadMask(stencilRefMask);
                 stencilDesc->setWriteMask(stencilBufferMask);
-                // TODO: Set reference value
 
                 desc->setFrontFaceStencil(stencilDesc);
                 desc->setBackFaceStencil(stencilDesc);
