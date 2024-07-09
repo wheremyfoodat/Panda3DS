@@ -51,8 +51,8 @@ jobs:
       with:
         name: Windows Libretro core
         path: |
-          '${{github.workspace}}/build/panda3ds_libretro.dll'
-          '${{github.workspace}}/docs/libretro/panda3ds_libretro.info'
+          ${{github.workspace}}/build/panda3ds_libretro.dll
+          ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
 
   MacOS:
     runs-on: macos-13
@@ -94,8 +94,8 @@ jobs:
       with:
         name: MacOS Libretro core
         path: |
-          '${{github.workspace}}/build/panda3ds_libretro.dylib'
-          '${{github.workspace}}/docs/libretro/panda3ds_libretro.info'
+          ${{github.workspace}}/build/panda3ds_libretro.dylib
+          ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
 
   Linux:
     runs-on: ubuntu-latest
@@ -147,8 +147,8 @@ jobs:
       with:
         name: Linux Libretro core
         path: |
-          '${{github.workspace}}/build/panda3ds_libretro.so'
-          '${{github.workspace}}/docs/libretro/panda3ds_libretro.info'
+          ${{github.workspace}}/build/panda3ds_libretro.so
+          ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
 
   Android-x64:
     runs-on: ubuntu-latest
