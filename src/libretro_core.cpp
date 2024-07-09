@@ -264,7 +264,7 @@ bool retro_load_game(const retro_game_info* game) {
 	return emulator->loadROM(game->path);
 }
 
-bool retro_load_game_special(uint type, const retro_game_info* info, size_t num) { return false; }
+bool retro_load_game_special(uint type, const retro_game_info* info, usize num) { return false; }
 
 void retro_unload_game() {
 	renderer->setFBO(0);
@@ -335,18 +335,18 @@ void retro_run() {
 
 void retro_set_controller_port_device(uint port, uint device) {}
 
-size_t retro_serialize_size() {
-	size_t size = 0;
+usize retro_serialize_size() {
+	usize size = 0;
 	return size;
 }
 
-bool retro_serialize(void* data, size_t size) { return false; }
-bool retro_unserialize(const void* data, size_t size) { return false; }
+bool retro_serialize(void* data, usize size) { return false; }
+bool retro_unserialize(const void* data, usize size) { return false; }
 
 uint retro_get_region() { return RETRO_REGION_NTSC; }
 uint retro_api_version() { return RETRO_API_VERSION; }
 
-size_t retro_get_memory_size(uint id) {
+usize retro_get_memory_size(uint id) {
 	if (id == RETRO_MEMORY_SYSTEM_RAM) {
 		return 0;
 	}
