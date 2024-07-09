@@ -13,9 +13,25 @@ static retro_input_poll_t input_poll_cb;
 static retro_input_state_t input_state_cb;
 
 static struct retro_hw_render_callback hw_render;
+static std::filesystem::path retro_save_dir;
 
-std::unique_ptr<Emulator> emulator;
+class EmulatorCore : public Emulator {
+  public:
+  EmulatorCore() : Emulator(getConfigPath()) {}
+  std::filesystem::path getConfigPath() override;
+  std::filesystem::path getAppDataRoot() override;
+};
+
+std::unique_ptr<EmulatorCore> emulator;
 RendererGL* renderer;
+
+std::filesystem::path EmulatorCore::getConfigPath() {
+  return std::filesystem::path(retro_save_dir / "config.toml");
+}
+
+std::filesystem::path EmulatorCore::getAppDataRoot() {
+  return std::filesystem::path(retro_save_dir / "Emulator Files");
+}
 
 static void* GetRenderProcAddress(const char* name) {
   return (void*)hw_render.get_proc_address(name);
@@ -232,7 +248,16 @@ void retro_init(void) {
   enum retro_pixel_format xrgb888 = RETRO_PIXEL_FORMAT_XRGB8888;
   environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &xrgb888);
 
-  emulator = std::make_unique<Emulator>();
+  char* save_dir = nullptr;
+
+  if (!environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) || save_dir == nullptr) {
+    Helpers::warn("No save directory provided by LibRetro.");
+    retro_save_dir = std::filesystem::current_path();
+  } else {
+    retro_save_dir = std::filesystem::path(save_dir);
+  }
+
+  emulator = std::make_unique<EmulatorCore>();
 }
 
 void retro_deinit(void) {
