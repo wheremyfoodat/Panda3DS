@@ -132,7 +132,7 @@ static std::string FetchVariable(std::string key, std::string def) {
 	var.key = key.c_str();
 
 	if (!envCallbacks(RETRO_ENVIRONMENT_GET_VARIABLE, &var) || var.value == nullptr) {
-		Helpers::warn("Fetching variable %s failed.", key);
+		Helpers::warn("Fetching variable %s failed.", key.c_str());
 		return def;
 	}
 
