@@ -87,7 +87,7 @@ jobs:
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON
 
     - name: Build (Again)
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} && ls -R ${{github.workspace}}/build
 
     - name: Upload Libretro core
       uses: actions/upload-artifact@v2
