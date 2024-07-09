@@ -87,7 +87,6 @@ class Emulator {
 	bool frameDone = false;
 
 	Emulator();
-	Emulator(const std::filesystem::path& configPath);
 	~Emulator();
 
 	void step();
@@ -130,10 +129,10 @@ class Emulator {
 	Renderer* getRenderer() { return gpu.getRenderer(); }
 	u64 getTicks() { return cpu.getTicks(); }
 
-	virtual std::filesystem::path getConfigPath();
-	virtual std::filesystem::path getAndroidAppPath();
+	std::filesystem::path getConfigPath();
+	std::filesystem::path getAndroidAppPath();
 	// Get the root path for the emulator's app data
-	virtual std::filesystem::path getAppDataRoot();
+	std::filesystem::path getAppDataRoot();
 
 	std::span<u8> getSMDH();
 };
