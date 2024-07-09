@@ -44,7 +44,15 @@ jobs:
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON
 
     - name: Build (Again)
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --clean-first
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Upload Libretro core
+      uses: actions/upload-artifact@v2
+      with:
+        name: Windows Libretro core
+        path: |
+          '${{github.workspace}}/build/${{ env.BUILD_TYPE }}/panda3ds_libretro.dll'
+          '${{github.workspace}}/docs/libretro/panda3ds_libretro.info'
 
   MacOS:
     runs-on: macos-13
@@ -79,7 +87,15 @@ jobs:
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON
 
     - name: Build (Again)
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --clean-first
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Upload Libretro core
+      uses: actions/upload-artifact@v2
+      with:
+        name: MacOS Libretro core
+        path: |
+          '${{github.workspace}}/build/panda3ds_libretro.dylib'
+          '${{github.workspace}}/docs/libretro/panda3ds_libretro.info'
 
   Linux:
     runs-on: ubuntu-latest
@@ -124,7 +140,15 @@ jobs:
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON
 
     - name: Build (Again)
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --clean-first
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Upload Libretro core
+      uses: actions/upload-artifact@v2
+      with:
+        name: Linux Libretro core
+        path: |
+          '${{github.workspace}}/build/panda3ds_libretro.so'
+          '${{github.workspace}}/docs/libretro/panda3ds_libretro.info'
 
   Android-x64:
     runs-on: ubuntu-latest
