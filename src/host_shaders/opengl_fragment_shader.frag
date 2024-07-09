@@ -27,7 +27,7 @@ uniform bool u_depthmapEnable;
 uniform sampler2D u_tex0;
 uniform sampler2D u_tex1;
 uniform sampler2D u_tex2;
-uniform sampler1DArray u_tex_lighting_lut;
+uniform sampler2D u_tex_lighting_lut;
 
 uniform uint u_picaRegs[0x200 - 0x48];
 
@@ -145,9 +145,9 @@ vec4 tevCalculateCombiner(int tev_id) {
 #define RR_LUT 6u
 
 float lutLookup(uint lut, uint light, float value) {
-	if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1;
-	if (lut == SP_LUT) lut = light + 8;
-	return texture(u_tex_lighting_lut, vec2(value, lut)).r;
+	if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1u;
+	if (lut == SP_LUT) lut = light + 8u;
+	return texelFetch(u_tex_lighting_lut, ivec2(int(value * 256.0), lut), 0).r;
 }
 
 vec3 regToColor(uint reg) {
