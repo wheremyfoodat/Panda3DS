@@ -17,17 +17,17 @@ static struct retro_hw_render_callback hw_render;
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
 
-static void* GetProcAddress(const char* name) {
+static void* GetRenderProcAddress(const char* name) {
   return (void*)hw_render.get_proc_address(name);
 }
 
 static void VideoResetContext(void) {
 #ifdef USING_GLES
-  if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(GetProcAddress))) {
+  if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(GetRenderProcAddress))) {
     Helpers::panic("OpenGL ES init failed");
   }
 #else
-  if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(GetProcAddress))) {
+  if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(GetRenderProcAddress))) {
     Helpers::panic("OpenGL init failed");
   }
 #endif
@@ -47,8 +47,8 @@ static bool SetHWRender(retro_hw_context_type type) {
 
   switch (type) {
   case RETRO_HW_CONTEXT_OPENGL_CORE:
-    hw_render.version_major = 3;
-    hw_render.version_minor = 3;
+    hw_render.version_major = 4;
+    hw_render.version_minor = 1;
 
     if (environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render)) {
       return true;
@@ -57,7 +57,7 @@ static bool SetHWRender(retro_hw_context_type type) {
   case RETRO_HW_CONTEXT_OPENGLES3:
   case RETRO_HW_CONTEXT_OPENGL:
     hw_render.version_major = 3;
-    hw_render.version_minor = 0;
+    hw_render.version_minor = 1;
 
     if (environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render)) {
       return true;
@@ -173,6 +173,16 @@ static void ConfigUpdate() {
   config.sdCardInserted    = FetchVariableBool("panda3ds_use_virtual_sd", true);
   config.sdWriteProtected  = FetchVariableBool("panda3ds_write_protect_virtual_sd", false);
   config.discordRpcEnabled = false;
+
+  config.save();
+}
+
+static void ConfigCheckVariables() {
+  bool updated = false;
+  environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated);
+
+  if (updated)
+    ConfigUpdate();
 }
 
 void retro_get_system_info(retro_system_info* info) {
@@ -192,7 +202,7 @@ void retro_get_system_av_info(retro_system_av_info* info) {
 
   info->geometry.aspect_ratio = 5.0 / 6.0;
   info->timing.fps            = 60.0;
-  info->timing.sample_rate    = 32000;
+  info->timing.sample_rate    = 32768;
 }
 
 void retro_set_environment(retro_environment_t cb) {
@@ -260,6 +270,8 @@ void retro_reset(void) {
 }
 
 void retro_run(void) {
+  ConfigCheckVariables();
+
   renderer->setFBO(hw_render.get_current_framebuffer());
   renderer->resetStateManager();
 
@@ -283,8 +295,8 @@ void retro_run(void) {
   float x_left = GetAxisState(RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
   float y_left = GetAxisState(RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
 
-  hid.setCirclepadX(x_left == 0 ? 0 : x_left < 0 ? -0x9C : 0x9C);
-  hid.setCirclepadY(y_left == 0 ? 0 : y_left > 0 ? -0x9C : 0x9C);
+  hid.setCirclepadX((x_left / +32767) * 0x9C);
+  hid.setCirclepadY((y_left / -32767) * 0x9C);
 
   bool touch = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
   auto pos_x = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
