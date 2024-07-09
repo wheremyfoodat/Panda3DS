@@ -51,7 +51,7 @@ jobs:
       with:
         name: Windows Libretro core
         path: |
-          '${{github.workspace}}/build/${{ env.BUILD_TYPE }}/panda3ds_libretro.dll'
+          '${{github.workspace}}/build/panda3ds_libretro.dll'
           '${{github.workspace}}/docs/libretro/panda3ds_libretro.info'
 
   MacOS:
@@ -83,7 +83,7 @@ jobs:
 
     - name: Configure CMake (Again)
       run: |
-        rm ${{github.workspace}}/build -rf
+        rm -rf ${{github.workspace}}/build
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON
 
     - name: Build (Again)
@@ -136,7 +136,7 @@ jobs:
 
     - name: Configure CMake (Again)
       run: |
-        rm ${{github.workspace}}/build -rf
+        rm -rf ${{github.workspace}}/build
         cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON
 
     - name: Build (Again)
