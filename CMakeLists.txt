@@ -40,9 +40,17 @@ option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
+option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 
 if(BUILD_HYDRA_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(BUILD_LIBRETRO_CORE)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(ENABLE_DISCORD_RPC OFF)
+    set(ENABLE_LUAJIT OFF)
+    add_compile_definitions(__LIBRETRO__)
 endif()
 
 add_library(AlberCore STATIC)
@@ -438,7 +446,7 @@ else()
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
-if(NOT BUILD_HYDRA_CORE)
+if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
     if(ENABLE_QT_GUI)
@@ -500,6 +508,15 @@ elseif(BUILD_HYDRA_CORE)
     include_directories(third_party/hydra_core/include)
     add_library(Alber SHARED src/hydra_core.cpp)
     target_link_libraries(Alber PUBLIC AlberCore)
+elseif(BUILD_LIBRETRO_CORE)
+    include_directories(third_party/libretro/include)
+    add_library(Alber SHARED src/libretro_core.cpp)
+    target_link_libraries(Alber PUBLIC AlberCore)
+
+    set_target_properties(Alber PROPERTIES
+      OUTPUT_NAME "panda3ds_libretro"
+      PREFIX ""
+    )
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
