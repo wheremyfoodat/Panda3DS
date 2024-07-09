@@ -17,7 +17,10 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
+	: Emulator(getConfigPath()) {}
+
+Emulator::Emulator(const std::filesystem::path& configPath)
+	: config(configPath), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
 	  cheats(memory, kernel.getServiceManager().getHID()), lua(*this), running(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
