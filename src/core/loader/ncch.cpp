@@ -207,8 +207,8 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 				// All files in ExeFS use the same IV, though .code uses the secondary key for decryption
 				// whereas .icon/.banner use the primary key.
 				FSInfo info = exeFS;
-				if (secondaryKey.has_value() && info.encryptionInfo.has_value()) {
-					info.encryptionInfo->normalKey = secondaryKey.value();
+				if (encrypted && secondaryKey.has_value() && info.encryptionInfo.has_value()) {
+					info.encryptionInfo->normalKey = *secondaryKey;
 				}
 
 				if (compressCode) {
