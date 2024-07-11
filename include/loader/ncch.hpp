@@ -60,6 +60,8 @@ struct NCCH {
 	CodeSetInfo text, data, rodata;
 	FSInfo partitionInfo;
 
+	std::optional<Crypto::AESKey> primaryKey, secondaryKey;
+
 	// Contents of the .code file in the ExeFS
 	std::vector<u8> codeFile;
 	// Contains of the cart's save data
