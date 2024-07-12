@@ -48,8 +48,6 @@ endif()
 
 if(BUILD_LIBRETRO_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-    set(ENABLE_DISCORD_RPC OFF)
-    set(ENABLE_LUAJIT OFF)
     add_compile_definitions(__LIBRETRO__)
 endif()
 
