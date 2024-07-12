@@ -25,13 +25,6 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
 
-	// TEV configuration uniform locations
-	GLint textureEnvSourceLoc = -1;
-	GLint textureEnvOperandLoc = -1;
-	GLint textureEnvCombinerLoc = -1;
-	GLint textureEnvColorLoc = -1;
-	GLint textureEnvScaleLoc = -1;
-
 	// Uniform of PICA registers
 	GLint picaRegLoc = -1;
 
@@ -64,7 +57,6 @@ class RendererGL final : public Renderer {
 	void setupBlending();
 	void setupStencilTest(bool stencilEnable);
 	void bindDepthBuffer();
-	void setupTextureEnvState();
 	void bindTexturesToSlots();
 	void updateLightingLUT();
 	void initGraphicsContextInternal();

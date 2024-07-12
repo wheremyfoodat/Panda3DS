@@ -59,12 +59,6 @@ void RendererGL::initGraphicsContextInternal() {
 	triangleProgram.create({vert, frag});
 	gl.useProgram(triangleProgram);
 
-	textureEnvSourceLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvSource");
-	textureEnvOperandLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvOperand");
-	textureEnvCombinerLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvCombiner");
-	textureEnvColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvColor");
-	textureEnvScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvScale");
-
 	depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
 	depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
 	depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
@@ -289,38 +283,6 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	glStencilOp(stencilOps[stencilFailOp], stencilOps[depthFailOp], stencilOps[passOp]);
 }
 
-
-void RendererGL::setupTextureEnvState() {
-	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
-
-	static constexpr std::array<u32, 6> ioBases = {
-		PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
-		PICA::InternalRegs::TexEnv3Source, PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source,
-	};
-
-	u32 textureEnvSourceRegs[6];
-	u32 textureEnvOperandRegs[6];
-	u32 textureEnvCombinerRegs[6];
-	u32 textureEnvColourRegs[6];
-	u32 textureEnvScaleRegs[6];
-
-	for (int i = 0; i < 6; i++) {
-		const u32 ioBase = ioBases[i];
-
-		textureEnvSourceRegs[i] = regs[ioBase];
-		textureEnvOperandRegs[i] = regs[ioBase + 1];
-		textureEnvCombinerRegs[i] = regs[ioBase + 2];
-		textureEnvColourRegs[i] = regs[ioBase + 3];
-		textureEnvScaleRegs[i] = regs[ioBase + 4];
-	}
-
-	glUniform1uiv(textureEnvSourceLoc, 6, textureEnvSourceRegs);
-	glUniform1uiv(textureEnvOperandLoc, 6, textureEnvOperandRegs);
-	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
-	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
-	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
-}
-
 void RendererGL::bindTexturesToSlots() {
 	static constexpr std::array<u32, 3> ioBases = {
 		PICA::InternalRegs::Tex0BorderColor,
@@ -434,7 +396,6 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		glUniform1i(depthmapEnableLoc, depthMapEnable);
 	}
 
-	setupTextureEnvState();
 	bindTexturesToSlots();
 
 	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
