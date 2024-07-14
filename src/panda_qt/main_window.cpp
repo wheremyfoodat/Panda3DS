@@ -78,7 +78,11 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
 	shaderEditor = new ShaderEditorWindow(this, "shader.glsl", "");
+
 	shaderEditor->setEnable(emu->getRenderer()->supportsShaderReload());
+	if (shaderEditor->supported) {
+		shaderEditor->setText(emu->getRenderer()->getUbershader());
+	}
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -351,6 +355,11 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getServiceManager().getHID().setTouchScreenPress(message.touchscreen.x, message.touchscreen.y);
 			break;
 		case MessageType::ReleaseTouchscreen: emu->getServiceManager().getHID().releaseTouchScreen(); break;
+
+		case MessageType::ReloadUbershader:
+			emu->getRenderer()->setUbershader(*message.string.str);
+			delete message.string.str;
+			break;
 	}
 }
 

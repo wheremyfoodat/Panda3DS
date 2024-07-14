@@ -92,6 +92,7 @@ class RendererGL final : public Renderer {
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this
 	void setFBO(uint handle) { screenFramebuffer.m_handle = handle; }
 	void resetStateManager() { gl.reset(); }
+	void initUbershader(OpenGL::Program& program);
 
 #ifdef PANDA3DS_FRONTEND_QT
 	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override { initGraphicsContextInternal(); }

@@ -43,7 +43,7 @@ ShaderEditorWindow::ShaderEditorWindow(QWidget* parent, const std::string& filen
 }
 
 void ShaderEditorWindow::setEnable(bool enable) {
-	shaderEditorSupported = enable;
+	supported = enable;
 
 	if (enable) {
 		setDisabled(false);

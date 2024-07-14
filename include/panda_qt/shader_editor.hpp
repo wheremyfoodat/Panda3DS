@@ -17,12 +17,11 @@ class ShaderEditorWindow : public QDialog {
 	Zep::IZepReplProvider replProvider;
 	static constexpr float fontSize = 14.0f;
 
-	// Whether this backend supports shader editor
-	bool shaderEditorSupported = true;
-
   public:
+	// Whether this backend supports shader editor
+	bool supported = true;
+
 	ShaderEditorWindow(QWidget* parent, const std::string& filename, const std::string& initialText);
 	void setText(const std::string& text) { zepWidget.GetEditor().GetMRUBuffer()->SetText(text); }
-
 	void setEnable(bool enable);
 };
