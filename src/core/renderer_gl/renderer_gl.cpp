@@ -813,6 +813,10 @@ void RendererGL::setUbershader(const std::string& shader) {
 	triangleProgram.create({vert, frag});
 
 	initUbershader(triangleProgram);
+
+	glUniform1f(depthScaleLoc, oldDepthScale);
+	glUniform1f(depthOffsetLoc, oldDepthOffset);
+	glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
 }
 
 void RendererGL::initUbershader(OpenGL::Program& program) {
