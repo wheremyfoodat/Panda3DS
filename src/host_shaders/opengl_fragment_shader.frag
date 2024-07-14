@@ -279,26 +279,26 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 			}
 		}
 
-		uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG, 4, 4);
+		uint lookup_config = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 4, 4);
 		if (lookup_config == 0u) {
-			d[D1_LUT] = 0.0;
-			d[FR_LUT] = 0.0;
+			d[D1_LUT] = 1.0;
+			d[FR_LUT] = 1.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
 		} else if (lookup_config == 1u) {
-			d[D0_LUT] = 0.0;
-			d[D1_LUT] = 0.0;
+			d[D0_LUT] = 1.0;
+			d[D1_LUT] = 1.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
 		} else if (lookup_config == 2u) {
-			d[FR_LUT] = 0.0;
-			d[SP_LUT] = 0.0;
+			d[FR_LUT] = 1.0;
+			d[SP_LUT] = 1.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
 		} else if (lookup_config == 3u) {
-			d[SP_LUT] = 0.0;
+			d[SP_LUT] = 1.0;
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT] = 1.0;
 		} else if (lookup_config == 4u) {
-			d[FR_LUT] = 0.0;
+			d[FR_LUT] = 1.0;
 		} else if (lookup_config == 5u) {
-			d[D1_LUT] = 0.0;
+			d[D1_LUT] = 1.0;
 		} else if (lookup_config == 6u) {
 			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
 		}

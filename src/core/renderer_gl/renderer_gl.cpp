@@ -813,3 +813,6 @@ void RendererGL::deinitGraphicsContext() {
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
 	printf("RendererGL::DeinitGraphicsContext called\n");
 }
+
+std::string RendererGL::getUbershader() { return ""; }
+void RendererGL::setUbershader(const std::string& shader) {}
