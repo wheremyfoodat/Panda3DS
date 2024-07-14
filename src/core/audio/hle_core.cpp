@@ -355,7 +355,7 @@ namespace Audio {
 		}
 
 		switch (buffer.format) {
-			case SampleFormat::PCM8: Helpers::warn("Unimplemented sample format!"); break;
+			case SampleFormat::PCM8: source.currentSamples = decodePCM8(data, buffer.sampleCount, source); break;
 			case SampleFormat::PCM16: source.currentSamples = decodePCM16(data, buffer.sampleCount, source); break;
 			case SampleFormat::ADPCM: source.currentSamples = decodeADPCM(data, buffer.sampleCount, source); break;
 
@@ -404,6 +404,26 @@ namespace Audio {
 				outputCount += sampleCount;
 			}
 		}
+	}
+
+	HLE_DSP::SampleBuffer HLE_DSP::decodePCM8(const u8* data, usize sampleCount, Source& source) {
+		SampleBuffer decodedSamples(sampleCount);
+
+		if (source.sourceType == SourceType::Stereo) {
+			for (usize i = 0; i < sampleCount; i++) {
+				const s16 left = s16(u16(*data++) << 8);
+				const s16 right = s16(u16(*data++) << 8);
+				decodedSamples[i] = {left, right};
+			}
+		} else {
+			// Mono
+			for (usize i = 0; i < sampleCount; i++) {
+				const s16 sample = s16(u16(*data++) << 8);
+				decodedSamples[i] = {sample, sample};
+			}
+		}
+
+		return decodedSamples;
 	}
 
 	HLE_DSP::SampleBuffer HLE_DSP::decodePCM16(const u8* data, usize sampleCount, Source& source) {

@@ -73,3 +73,6 @@
 [submodule "third_party/open-bp-cpp/third_party/IXWebSocket"]
 	path = third_party/open-bp-cpp/third_party/IXWebSocket
 	url = https://github.com/machinezone/IXWebSocket
+[submodule "third_party/hips"]
+	path = third_party/hips
+	url = https://github.com/wheremyfoodat/Hips

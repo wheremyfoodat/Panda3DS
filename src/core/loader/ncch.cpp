@@ -29,6 +29,9 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	smdh.clear();
 	partitionInfo = info;
 
+	primaryKey = {};
+	secondaryKey = {};
+
 	size = u64(*(u32*)&header[0x104]) * mediaUnit; // TODO: Maybe don't type pun because big endian will break
 	exheaderSize = *(u32*)&header[0x180];
 
@@ -78,11 +81,11 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		if (!primaryResult.first || !secondaryResult.first) {
 			gotCryptoKeys = false;
 		} else {
-			Crypto::AESKey primaryKey = primaryResult.second;
-			Crypto::AESKey secondaryKey = secondaryResult.second;
+			primaryKey = primaryResult.second;
+			secondaryKey = secondaryResult.second;
 
 			EncryptionInfo encryptionInfoTmp;
-			encryptionInfoTmp.normalKey = primaryKey;
+			encryptionInfoTmp.normalKey = *primaryKey;
 			encryptionInfoTmp.initialCounter.fill(0);
 
 			for (std::size_t i = 1; i <= sizeof(std::uint64_t) - 1; i++) {
@@ -94,7 +97,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 			encryptionInfoTmp.initialCounter[8] = 2;
 			exeFS.encryptionInfo = encryptionInfoTmp;
 
-			encryptionInfoTmp.normalKey = secondaryKey;
+			encryptionInfoTmp.normalKey = *secondaryKey;
 			encryptionInfoTmp.initialCounter[8] = 3;
 			romFS.encryptionInfo = encryptionInfoTmp;
 		}
@@ -201,13 +204,20 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 					Helpers::panic("Second code file in a single NCCH partition. What should this do?\n");
 				}
 
+				// All files in ExeFS use the same IV, though .code uses the secondary key for decryption
+				// whereas .icon/.banner use the primary key.
+				FSInfo info = exeFS;
+				if (encrypted && secondaryKey.has_value() && info.encryptionInfo.has_value()) {
+					info.encryptionInfo->normalKey = *secondaryKey;
+				}
+
 				if (compressCode) {
 					std::vector<u8> tmp;
 					tmp.resize(fileSize);
 
 					// A file offset of 0 means our file is located right after the ExeFS header
 					// So in the ROM, files are located at (file offset + exeFS offset + exeFS header size)
-					readFromFile(file, exeFS, tmp.data(), fileOffset + exeFSHeaderSize, fileSize);
+					readFromFile(file, info, tmp.data(), fileOffset + exeFSHeaderSize, fileSize);
 					
 					// Decompress .code file from the tmp vector to the "code" vector
 					if (!CartLZ77::decompress(codeFile, tmp)) {
@@ -216,7 +226,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 					}
 				} else {
 					codeFile.resize(fileSize);
-					readFromFile(file, exeFS, codeFile.data(), fileOffset + exeFSHeaderSize, fileSize);
+					readFromFile(file, info, codeFile.data(), fileOffset + exeFSHeaderSize, fileSize);
 				}
 			} else if (std::strcmp(name, "icon") == 0) {
 				// Parse icon file to extract region info and more in the future (logo, etc)

@@ -61,6 +61,7 @@ void Y2RService::reset() {
 	inputLineWidth = 420;
 
 	conversionCoefficients.fill(0);
+	isBusy = false;
 }
 
 void Y2RService::handleSyncRequest(u32 messagePointer) {
@@ -156,6 +157,11 @@ void Y2RService::setTransferEndInterrupt(u32 messagePointer) {
 void Y2RService::stopConversion(u32 messagePointer) {
 	log("Y2R::StopConversion\n");
 
+	if (isBusy) {
+		isBusy = false;
+		kernel.getScheduler().removeEvent(Scheduler::EventType::SignalY2R);
+	}
+
 	mem.write32(messagePointer, IPC::responseHeader(0x27, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
@@ -167,7 +173,7 @@ void Y2RService::isBusyConversion(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x28, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, static_cast<u32>(BusyStatus::NotBusy));
+	mem.write32(messagePointer + 8, static_cast<u32>(isBusy ? BusyStatus::Busy : BusyStatus::NotBusy));
 }
 
 void Y2RService::setBlockAlignment(u32 messagePointer) {
@@ -434,11 +440,15 @@ void Y2RService::startConversion(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x26, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 
-	// Make Y2R conversion end instantly.
-	// Signal the transfer end event if it's been created. TODO: Is this affected by SetTransferEndInterrupt?
-	if (transferEndEvent.has_value()) {
-		kernel.signalEvent(transferEndEvent.value());
-	}
+	// Schedule Y2R conversion end event.
+	// The tick value is tweaked based on the minimum delay needed to get FIFA 15 to not hang due to a race condition on its title screen
+	static constexpr u64 delayTicks = 1'350'000;
+	isBusy = true;
+
+	// Remove any potential pending Y2R event and schedule a new one
+	Scheduler& scheduler = kernel.getScheduler();
+	scheduler.removeEvent(Scheduler::EventType::SignalY2R);
+	scheduler.addEvent(Scheduler::EventType::SignalY2R, scheduler.currentTimestamp + delayTicks);
 }
 
 void Y2RService::isFinishedSendingYUV(u32 messagePointer) {
@@ -484,4 +494,15 @@ void Y2RService::isFinishedReceiving(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x17, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, finished ? 1 : 0);
+}
+
+void Y2RService::signalConversionDone() {
+	if (isBusy) {
+		isBusy = false;
+
+		// Signal the transfer end event if it's been created. TODO: Is this affected by SetTransferEndInterrupt?
+		if (transferEndEvent.has_value()) {
+			kernel.signalEvent(transferEndEvent.value());
+		}
+	}
 }
