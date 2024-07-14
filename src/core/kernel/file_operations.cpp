@@ -184,7 +184,8 @@ void Kernel::setFileSize(u32 messagePointer, Handle fileHandle) {
 		if (success) {
 			mem.write32(messagePointer + 4, Result::Success);
 		} else {
-			Helpers::panic("FileOp::SetFileSize failed");
+			Helpers::warn("FileOp::SetFileSize failed");
+			mem.write32(messagePointer + 4, Result::FailurePlaceholder);
 		}
 	} else {
 		Helpers::panic("Tried to set file size of file without file descriptor");
