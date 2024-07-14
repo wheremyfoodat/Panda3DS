@@ -358,12 +358,12 @@ void FragmentGenerator::getAlphaOperation(std::string& shader, TexEnvConfig::Ope
 
 void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs) {
 	const u32 alphaConfig = regs[InternalRegs::AlphaTestConfig];
+	const auto function = static_cast<CompareFunction>(Helpers::getBits<4, 3>(alphaConfig));
+
 	// Alpha test disabled
-	if (Helpers::getBit<0>(alphaConfig) == 0) {
+	if (Helpers::getBit<0>(alphaConfig) == 0 || function == CompareFunction::Always) {
 		return;
 	}
-
-	const auto function = static_cast<CompareFunction>(Helpers::getBits<4, 3>(alphaConfig));
 
 	shader += "if (";
 	switch (function) {
