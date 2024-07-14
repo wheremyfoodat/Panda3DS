@@ -61,24 +61,7 @@ void RendererGL::initGraphicsContextInternal() {
 	OpenGL::Shader vert({vertexShaderSource.begin(), vertexShaderSource.size()}, OpenGL::Vertex);
 	OpenGL::Shader frag({fragmentShaderSource.begin(), fragmentShaderSource.size()}, OpenGL::Fragment);
 	triangleProgram.create({vert, frag});
-	gl.useProgram(triangleProgram);
-
-	ubershaderData.textureEnvSourceLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvSource");
-	ubershaderData.textureEnvOperandLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvOperand");
-	ubershaderData.textureEnvCombinerLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvCombiner");
-	ubershaderData.textureEnvColorLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvColor");
-	ubershaderData.textureEnvScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_textureEnvScale");
-
-	ubershaderData.depthScaleLoc = OpenGL::uniformLocation(triangleProgram, "u_depthScale");
-	ubershaderData.depthOffsetLoc = OpenGL::uniformLocation(triangleProgram, "u_depthOffset");
-	ubershaderData.depthmapEnableLoc = OpenGL::uniformLocation(triangleProgram, "u_depthmapEnable");
-	ubershaderData.picaRegLoc = OpenGL::uniformLocation(triangleProgram, "u_picaRegs");
-
-	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
-	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex0"), 0);
-	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex1"), 1);
-	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex2"), 2);
-	glUniform1i(OpenGL::uniformLocation(triangleProgram, "u_tex_lighting_lut"), 3);
+	initUbershader(triangleProgram);
 
 	auto displayVertexShaderSource = gl_resources.open("opengl_display.vert");
 	auto displayFragmentShaderSource = gl_resources.open("opengl_display.frag");
@@ -870,4 +853,47 @@ void RendererGL::deinitGraphicsContext() {
 	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
 	printf("RendererGL::DeinitGraphicsContext called\n");
+}
+
+std::string RendererGL::getUbershader() {
+	auto gl_resources = cmrc::RendererGL::get_filesystem();
+	auto fragmentShader = gl_resources.open("opengl_fragment_shader.frag");
+
+	return std::string(fragmentShader.begin(), fragmentShader.end());
+}
+
+void RendererGL::setUbershader(const std::string& shader) {
+	auto gl_resources = cmrc::RendererGL::get_filesystem();
+	auto vertexShaderSource = gl_resources.open("opengl_vertex_shader.vert");
+
+	OpenGL::Shader vert({vertexShaderSource.begin(), vertexShaderSource.size()}, OpenGL::Vertex);
+	OpenGL::Shader frag(shader, OpenGL::Fragment);
+	triangleProgram.create({vert, frag});
+
+	initUbershader(triangleProgram);
+
+	glUniform1f(depthScaleLoc, oldDepthScale);
+	glUniform1f(depthOffsetLoc, oldDepthOffset);
+	glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
+}
+
+void RendererGL::initUbershader(OpenGL::Program& program) {
+	gl.useProgram(program);
+
+	textureEnvSourceLoc = OpenGL::uniformLocation(program, "u_textureEnvSource");
+	textureEnvOperandLoc = OpenGL::uniformLocation(program, "u_textureEnvOperand");
+	textureEnvCombinerLoc = OpenGL::uniformLocation(program, "u_textureEnvCombiner");
+	textureEnvColorLoc = OpenGL::uniformLocation(program, "u_textureEnvColor");
+	textureEnvScaleLoc = OpenGL::uniformLocation(program, "u_textureEnvScale");
+
+	depthScaleLoc = OpenGL::uniformLocation(program, "u_depthScale");
+	depthOffsetLoc = OpenGL::uniformLocation(program, "u_depthOffset");
+	depthmapEnableLoc = OpenGL::uniformLocation(program, "u_depthmapEnable");
+	picaRegLoc = OpenGL::uniformLocation(program, "u_picaRegs");
+
+	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
 }

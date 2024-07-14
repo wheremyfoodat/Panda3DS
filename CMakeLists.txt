@@ -40,9 +40,15 @@ option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
+option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 
 if(BUILD_HYDRA_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(BUILD_LIBRETRO_CORE)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    add_compile_definitions(__LIBRETRO__)
 endif()
 
 add_library(AlberCore STATIC)
@@ -338,8 +344,8 @@ endif()
 
 if(ENABLE_VULKAN)
     find_package(
-        Vulkan 1.3.206 REQUIRED
-        COMPONENTS glslangValidator
+        Vulkan REQUIRED
+        COMPONENTS glslang
     )
 
     set(RENDERER_VK_INCLUDE_FILES include/renderer_vk/renderer_vk.hpp
@@ -382,7 +388,7 @@ if(ENABLE_VULKAN)
         add_custom_command(
             OUTPUT ${HOST_SHADER_SPIRV}
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/host_shaders/"
-            COMMAND Vulkan::glslangValidator ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
+            COMMAND glslang ${RENDERER_VK_HOST_SHADERS_FLAGS} -V "${PROJECT_SOURCE_DIR}/${HOST_SHADER_SOURCE}" -o ${HOST_SHADER_SPIRV}
             DEPENDS ${HOST_SHADER_SOURCE}
         )
         list( APPEND RENDERER_VK_HOST_SHADERS_SPIRV ${HOST_SHADER_SPIRV} )
@@ -438,7 +444,7 @@ else()
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
-if(NOT BUILD_HYDRA_CORE)
+if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
     if(ENABLE_QT_GUI)
@@ -449,11 +455,11 @@ if(NOT BUILD_HYDRA_CORE)
 
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
-            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp
+            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
-            include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp
+            include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
@@ -500,6 +506,15 @@ elseif(BUILD_HYDRA_CORE)
     include_directories(third_party/hydra_core/include)
     add_library(Alber SHARED src/hydra_core.cpp)
     target_link_libraries(Alber PUBLIC AlberCore)
+elseif(BUILD_LIBRETRO_CORE)
+    include_directories(third_party/libretro/include)
+    add_library(Alber SHARED src/libretro_core.cpp)
+    target_link_libraries(Alber PUBLIC AlberCore)
+
+    set_target_properties(Alber PROPERTIES
+      OUTPUT_NAME "panda3ds_libretro"
+      PREFIX ""
+    )
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)

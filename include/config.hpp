@@ -7,7 +7,7 @@
 // Remember to initialize every field here to its default value otherwise bad things will happen
 struct EmulatorConfig {
 	// Only enable the shader JIT by default on platforms where it's completely tested
-#ifdef PANDA3DS_X64_HOST
+#if defined(PANDA3DS_X64_HOST) || defined(PANDA3DS_ARM64_HOST)
 	static constexpr bool shaderJitDefault = true;
 #else
 	static constexpr bool shaderJitDefault = false;

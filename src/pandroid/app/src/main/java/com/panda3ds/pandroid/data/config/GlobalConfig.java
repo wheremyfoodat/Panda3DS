@@ -21,7 +21,7 @@ public class GlobalConfig {
 
     public static DataModel data;
 
-    public static final Key<Boolean> KEY_SHADER_JIT = new Key<>("emu.shader_jit", false);
+    public static final Key<Boolean> KEY_SHADER_JIT = new Key<>("emu.shader_jit", true);
     public static final Key<Boolean> KEY_PICTURE_IN_PICTURE = new Key<>("app.behavior.pictureInPicture", false);
     public static final Key<Boolean> KEY_SHOW_PERFORMANCE_OVERLAY = new Key<>("dev.performanceOverlay", false);
     public static final Key<Boolean> KEY_LOGGER_SERVICE = new Key<>("dev.loggerService", false);

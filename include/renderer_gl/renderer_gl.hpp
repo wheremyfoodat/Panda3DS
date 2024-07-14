@@ -97,12 +97,17 @@ class RendererGL final : public Renderer {
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
 	void deinitGraphicsContext() override;
-	
+
+	virtual bool supportsShaderReload() override { return true; }
+	virtual std::string getUbershader() override;
+	virtual void setUbershader(const std::string& shader) override;
+
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this
 	void setFBO(uint handle) { screenFramebuffer.m_handle = handle; }
 	void resetStateManager() { gl.reset(); }
+	void initUbershader(OpenGL::Program& program);
 
 #ifdef PANDA3DS_FRONTEND_QT
 	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override { initGraphicsContextInternal(); }
