@@ -32,6 +32,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	Label negateVector;
 	// Vector value of (1.0, 1.0, 1.0, 1.0) for SLT(i)/SGE(i)
 	Label onesVector;
+	// Vector value of (0xFF, 0xFF, 0xFF, 0) for setting the w component to 0 in DP3
+	Label dp3Vector;
 
 	u32 recompilerPC = 0;  // PC the recompiler is currently recompiling @
 	u32 loopLevel = 0;     // The current loop nesting level (0 = not in a loop)
@@ -48,6 +50,9 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	Xbyak::Label emitLog2Func();
 	Xbyak::Label emitExp2Func();
 	Xbyak::util::Cpu cpuCaps;
+
+	// Emit a PICA200-compliant multiplication that handles "0 * inf = 0"
+	void emitSafeMUL(Xbyak::Xmm src1, Xbyak::Xmm src2, Xbyak::Xmm scratch);
 
 	// Compile all instructions from [current recompiler PC, end)
 	void compileUntil(const PICAShader& shaderUnit, u32 endPC);
