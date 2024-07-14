@@ -872,24 +872,24 @@ void RendererGL::setUbershader(const std::string& shader) {
 
 	initUbershader(triangleProgram);
 
-	glUniform1f(depthScaleLoc, oldDepthScale);
-	glUniform1f(depthOffsetLoc, oldDepthOffset);
-	glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
+	glUniform1f(ubershaderData.depthScaleLoc, oldDepthScale);
+	glUniform1f(ubershaderData.depthOffsetLoc, oldDepthOffset);
+	glUniform1i(ubershaderData.depthmapEnableLoc, oldDepthmapEnable);
 }
 
 void RendererGL::initUbershader(OpenGL::Program& program) {
 	gl.useProgram(program);
 
-	textureEnvSourceLoc = OpenGL::uniformLocation(program, "u_textureEnvSource");
-	textureEnvOperandLoc = OpenGL::uniformLocation(program, "u_textureEnvOperand");
-	textureEnvCombinerLoc = OpenGL::uniformLocation(program, "u_textureEnvCombiner");
-	textureEnvColorLoc = OpenGL::uniformLocation(program, "u_textureEnvColor");
-	textureEnvScaleLoc = OpenGL::uniformLocation(program, "u_textureEnvScale");
+	ubershaderData.textureEnvSourceLoc = OpenGL::uniformLocation(program, "u_textureEnvSource");
+	ubershaderData.textureEnvOperandLoc = OpenGL::uniformLocation(program, "u_textureEnvOperand");
+	ubershaderData.textureEnvCombinerLoc = OpenGL::uniformLocation(program, "u_textureEnvCombiner");
+	ubershaderData.textureEnvColorLoc = OpenGL::uniformLocation(program, "u_textureEnvColor");
+	ubershaderData.textureEnvScaleLoc = OpenGL::uniformLocation(program, "u_textureEnvScale");
 
-	depthScaleLoc = OpenGL::uniformLocation(program, "u_depthScale");
-	depthOffsetLoc = OpenGL::uniformLocation(program, "u_depthOffset");
-	depthmapEnableLoc = OpenGL::uniformLocation(program, "u_depthmapEnable");
-	picaRegLoc = OpenGL::uniformLocation(program, "u_picaRegs");
+	ubershaderData.depthScaleLoc = OpenGL::uniformLocation(program, "u_depthScale");
+	ubershaderData.depthOffsetLoc = OpenGL::uniformLocation(program, "u_depthOffset");
+	ubershaderData.depthmapEnableLoc = OpenGL::uniformLocation(program, "u_depthmapEnable");
+	ubershaderData.picaRegLoc = OpenGL::uniformLocation(program, "u_picaRegs");
 
 	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
