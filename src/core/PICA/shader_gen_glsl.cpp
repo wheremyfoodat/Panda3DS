@@ -57,7 +57,6 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 			vec4 colourAbs = abs(a_vertexColour);
 			v_colour = min(colourAbs, vec4(1.f));
 
-			// Flip y axis of UVs because OpenGL uses an inverted y for texture sampling compared to the PICA
 			v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
 			v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
 			v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
@@ -125,8 +124,8 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 	// When not initialized, source 13 is set to vec4(0.0) and 15 is set to the vertex colour
 	ret += R"(
 		void main() {
-			vec4 combinerOutput = v_colour;   // Last TEV output
-			vec4 previousBuffer = vec4(0.0);  // Previous buffer
+			vec4 combinerOutput = v_colour;
+			vec4 previousBuffer = vec4(0.0);
 			vec4 tevNextPreviousBuffer = tevBufferColor;			
 	)";
 
@@ -162,7 +161,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 
 	ret += "fragColor = combinerOutput;\n";
 	ret += "}"; // End of main function
-	ret += "\n\n\n\n\n\n\n\n\n\n";
+	ret += "\n\n\n\n\n\n\n";
 
 	return ret;
 }
@@ -188,9 +187,9 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 		shader += ";\ncolorOp3 = ";
 		getColorOperand(shader, tev.colorSource3, tev.colorOperand3, stage);
 
-		shader += ";\nvec3 outputColor" + std::to_string(stage) + " = ";
+		shader += ";\nvec3 outputColor" + std::to_string(stage) + " = clamp(";
 		getColorOperation(shader, tev.colorOp);
-		shader += ";\n";
+		shader += ", vec3(0.0), vec3(1.0));\n";
 
 		if (tev.colorOp == TexEnvConfig::Operation::Dot3RGBA) {
 			// Dot3 RGBA also writes to the alpha component so we don't need to do anything more
@@ -206,10 +205,10 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 			shader += ";\nalphaOp3 = ";
 			getAlphaOperand(shader, tev.alphaSource3, tev.alphaOperand3, stage);
 
-			shader += ";\nfloat outputAlpha" + std::to_string(stage) + " = ";
+			shader += ";\nfloat outputAlpha" + std::to_string(stage) + " = clamp(";
 			getAlphaOperation(shader, tev.alphaOp);
 			// Clamp the alpha value to [0.0, 1.0]
-			shader += ";\nclamp(outputAlpha" + std::to_string(stage) + ", 0.0, 1.0);\n";
+			shader += ", 0.0, 1.0);\n";
 		}
 
 		shader += "combinerOutput = vec4(clamp(outputColor" + std::to_string(stage) + " * " + std::to_string(tev.getColorScale()) +
@@ -356,15 +355,15 @@ void FragmentGenerator::getColorOperation(std::string& shader, TexEnvConfig::Ope
 	switch (op) {
 		case TexEnvConfig::Operation::Replace: shader += "colorOp1"; break;
 		case TexEnvConfig::Operation::Add: shader += "colorOp1 + colorOp2"; break;
-		case TexEnvConfig::Operation::AddSigned: shader += "clamp(colorOp1 + colorOp2 - 0.5, 0.0, 1.0);"; break;
+		case TexEnvConfig::Operation::AddSigned: shader += "colorOp1 + colorOp2 - vec3(0.5)"; break;
 		case TexEnvConfig::Operation::Subtract: shader += "colorOp1 - colorOp2"; break;
 		case TexEnvConfig::Operation::Modulate: shader += "colorOp1 * colorOp2"; break;
-		case TexEnvConfig::Operation::Lerp: shader += "colorOp1 * colorOp3 + colorOp2 * (vec3(1.0) - colorOp3)"; break;
+		case TexEnvConfig::Operation::Lerp: shader += "mix(colorOp2, colorOp1, colorOp3)"; break;
 
-		case TexEnvConfig::Operation::AddMultiply: shader += "min(colorOp1 + colorOp2, vec3(1.0)) * colorOp3"; break;
-		case TexEnvConfig::Operation::MultiplyAdd: shader += "colorOp1 * colorOp2 + colorOp3"; break;
+		case TexEnvConfig::Operation::AddMultiply: shader += "min(colorOp1 + colorOp2), vec3(1.0)) * colorOp3"; break;
+		case TexEnvConfig::Operation::MultiplyAdd: shader += "fma(colorOp1, colorOp2, colorOp3)"; break;
 		case TexEnvConfig::Operation::Dot3RGB:
-		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(colorOp1 - 0.5, colorOp2 - 0.5))"; break;
+		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(colorOp1 - vec3(0.5), colorOp2 - vec3(0.5)))"; break;
 		default:
 			Helpers::warn("FragmentGenerator: Unimplemented color op");
 			shader += "vec3(1.0)";
@@ -376,13 +375,13 @@ void FragmentGenerator::getAlphaOperation(std::string& shader, TexEnvConfig::Ope
 	switch (op) {
 		case TexEnvConfig::Operation::Replace: shader += "alphaOp1"; break;
 		case TexEnvConfig::Operation::Add: shader += "alphaOp1 + alphaOp2"; break;
-		case TexEnvConfig::Operation::AddSigned: shader += "clamp(alphaOp1 + alphaOp2 - 0.5, 0.0, 1.0);"; break;
+		case TexEnvConfig::Operation::AddSigned: shader += "alphaOp1 + alphaOp2 - 0.5"; break;
 		case TexEnvConfig::Operation::Subtract: shader += "alphaOp1 - alphaOp2"; break;
 		case TexEnvConfig::Operation::Modulate: shader += "alphaOp1 * alphaOp2"; break;
-		case TexEnvConfig::Operation::Lerp: shader += "alphaOp1 * alphaOp3 + alphaOp2 * (1.0 - alphaOp3)"; break;
+		case TexEnvConfig::Operation::Lerp: shader += "mix(alphaOp2, alphaOp1, alphaOp3)"; break;
 
 		case TexEnvConfig::Operation::AddMultiply: shader += "min(alphaOp1 + alphaOp2, 1.0) * alphaOp3"; break;
-		case TexEnvConfig::Operation::MultiplyAdd: shader += "alphaOp1 * alphaOp2 + alphaOp3"; break;
+		case TexEnvConfig::Operation::MultiplyAdd: shader += "fma(alphaOp1, alphaOp2, alphaOp3)"; break;
 		case TexEnvConfig::Operation::Dot3RGB:
 		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(alphaOp1 - 0.5, alphaOp2 - 0.5))"; break;
 		default:
