@@ -194,7 +194,7 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 
 		if (tev.colorOp == TexEnvConfig::Operation::Dot3RGBA) {
 			// Dot3 RGBA also writes to the alpha component so we don't need to do anything more
-			shader += "float outputAlpha" + std::to_string(stage) + " = colorOutput" + std::to_string(stage) + ".x;\n";
+			shader += "float outputAlpha" + std::to_string(stage) + " = outputColor" + std::to_string(stage) + ".x;\n";
 		} else {
 			// Get alpha operands
 			shader += "alphaOp1 = ";
