@@ -397,34 +397,41 @@ namespace OpenGL {
     };
 
     struct Program {
-        GLuint m_handle = 0;
+		GLuint m_handle = 0;
 
-        bool create(std::initializer_list<std::reference_wrapper<Shader>> shaders) {
-            m_handle = glCreateProgram();
-            for (const auto& shader : shaders) {
-                glAttachShader(m_handle, shader.get().handle());
-            }
+		bool create(std::initializer_list<std::reference_wrapper<Shader>> shaders) {
+			m_handle = glCreateProgram();
+			for (const auto& shader : shaders) {
+				glAttachShader(m_handle, shader.get().handle());
+			}
 
-            glLinkProgram(m_handle);
-            GLint success;
-            glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
+			glLinkProgram(m_handle);
+			GLint success;
+			glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
 
-            if (!success) {
-                char buf[4096];
-                glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
-                fprintf(stderr, "Failed to link program\nError: %s\n", buf);
-                glDeleteProgram(m_handle);
+			if (!success) {
+				char buf[4096];
+				glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
+				fprintf(stderr, "Failed to link program\nError: %s\n", buf);
+				glDeleteProgram(m_handle);
 
-                m_handle = 0;
-            }
+				m_handle = 0;
+			}
 
-            return m_handle != 0;
-        }
+			return m_handle != 0;
+		}
 
-        GLuint handle() const { return m_handle; }
-        bool exists() const { return m_handle != 0; }
-        void use() const { glUseProgram(m_handle); }
-    };
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+		void use() const { glUseProgram(m_handle); }
+
+		void free() {
+			if (exists()) {
+				glDeleteProgram(m_handle);
+				m_handle = 0;
+			}
+		}
+	};
 
     static void dispatchCompute(GLuint groupsX = 1, GLuint groupsY = 1, GLuint groupsZ = 1) {
         glDispatchCompute(groupsX, groupsY, groupsZ);

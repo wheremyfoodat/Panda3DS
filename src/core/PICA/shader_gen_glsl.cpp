@@ -140,9 +140,9 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		float alphaOp3 = 0.0;
 	)";
 
+	// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
+	// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
 	ret += R"(
-		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
-		// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
 		float z_over_w = gl_FragCoord.z * 2.0f - 1.0f;
 		float depth = z_over_w * depthScale + depthOffset;
 	)";
@@ -343,7 +343,7 @@ void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source sour
 		
 		// Lighting
 		case TexEnvConfig::Source::PrimaryFragmentColor:
-		case TexEnvConfig::Source::SecondaryFragmentColor: shader += "vec4(0.0, 0.0, 0.0, 1.0)"; break;
+		case TexEnvConfig::Source::SecondaryFragmentColor: shader += "vec4(1.0, 1.0, 1.0, 1.0)"; break;
 
 		default:
 			Helpers::warn("Unimplemented TEV source: %d", static_cast<int>(source));

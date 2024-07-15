@@ -23,6 +23,11 @@ void RendererGL::reset() {
 	colourBufferCache.reset();
 	textureCache.reset();
 
+	for (auto& shader : shaderCache) {
+		shader.second.program.free();
+	}
+	shaderCache.clear();
+
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
 	colourBufferFormat = PICA::ColorFmt::RGBA8;
@@ -898,6 +903,11 @@ void RendererGL::deinitGraphicsContext() {
 	textureCache.reset();
 	depthBufferCache.reset();
 	colourBufferCache.reset();
+
+	for (auto& shader : shaderCache) {
+		shader.second.program.free();
+	}
+	shaderCache.clear();
 
 	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
