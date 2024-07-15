@@ -340,6 +340,10 @@ void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source sour
 		case TexEnvConfig::Source::Previous: shader += "combinerOutput"; break;
 		case TexEnvConfig::Source::Constant: shader += "constantColors[" + std::to_string(index) + "]"; break;
 		case TexEnvConfig::Source::PreviousBuffer: shader += "previousBuffer"; break;
+		
+		// Lighting
+		case TexEnvConfig::Source::PrimaryFragmentColor:
+		case TexEnvConfig::Source::SecondaryFragmentColor: shader += "vec4(0.0, 0.0, 0.0, 1.0)"; break;
 
 		default:
 			Helpers::warn("Unimplemented TEV source: %d", static_cast<int>(source));
@@ -397,15 +401,23 @@ void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs
 		return;
 	}
 
-	shader += "if (";
+	shader += "float alphaReferenceFloat = float(alphaReference) / 255.0;\n";
+	shader += "if (!(";
 	switch (function) {
-		case CompareFunction::Never: shader += "true"; break;
-		case CompareFunction::Always: shader += "false"; break;
+		case CompareFunction::Never: shader += "false"; break;
+		case CompareFunction::Always: shader += "true"; break;
+		case CompareFunction::Equal: shader += "combinerOutput.a == alphaReferenceFloat"; break;
+		case CompareFunction::NotEqual: shader += "combinerOutput.a != alphaReferenceFloat"; break;
+		case CompareFunction::Less: shader += "combinerOutput.a < alphaReferenceFloat"; break;
+		case CompareFunction::LessOrEqual: shader += "combinerOutput.a <= alphaReferenceFloat"; break;
+		case CompareFunction::Greater: shader += "combinerOutput.a > alphaReferenceFloat"; break;
+		case CompareFunction::GreaterOrEqual: shader += "combinerOutput.a >= alphaReferenceFloat"; break;
+
 		default:
 			Helpers::warn("Unimplemented alpha test function");
 			shader += "false";
 			break;
 	}
 
-	shader += ") { discard; }\n";
+	shader += ")) { discard; }\n";
 }
