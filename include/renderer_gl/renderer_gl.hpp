@@ -67,7 +67,12 @@ class RendererGL final : public Renderer {
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
 
-	std::unordered_map<PICA::FragmentConfig, OpenGL::Program> shaderCache;
+	// Cached recompiled fragment shader
+	struct CachedProgram {
+		OpenGL::Program program;
+		uint uboBinding;
+	};
+	std::unordered_map<PICA::FragmentConfig, CachedProgram> shaderCache;
 
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);

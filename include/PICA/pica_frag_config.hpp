@@ -23,13 +23,11 @@ namespace PICA {
 		u32 texUnitConfig;
 		u32 texEnvUpdateBuffer;
 
-		// TODO: This should probably be a uniform
-		u32 texEnvBufferColor;
-
 		// There's 6 TEV stages, and each one is configured via 5 word-sized registers
 		std::array<u32, 5 * 6> tevConfigs;
 	};
 
+	// Config used for identifying unique fragment pipeline configurations
 	struct FragmentConfig {
 		OutputConfig outConfig;
 		TextureConfig texConfig;

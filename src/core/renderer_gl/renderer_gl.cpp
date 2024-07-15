@@ -5,6 +5,7 @@
 #include <cmrc/cmrc.hpp>
 
 #include "PICA/float_types.hpp"
+#include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
 #include "math_util.hpp"
@@ -413,7 +414,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 	const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
-	// Update depth uniforms
+	// Update ubershader uniforms
 	if (usingUbershader) {
 		if (oldDepthScale != depthScale) {
 			oldDepthScale = depthScale;
@@ -429,16 +430,14 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 			oldDepthmapEnable = depthMapEnable;
 			glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
 		}
-	}
 
-	setupTextureEnvState();
-	bindTexturesToSlots();
-
-	if (usingUbershader) {
 		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
 		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
 		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
 	}
+
+	setupTextureEnvState();
+	bindTexturesToSlots();
 
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT();
@@ -778,6 +777,8 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 }
 
 OpenGL::Program& RendererGL::getSpecializedShader() {
+	constexpr uint uboBlockBinding = 2;
+
 	PICA::FragmentConfig fsConfig;
 	auto& outConfig = fsConfig.outConfig;
 	auto& texConfig = fsConfig.texConfig;
@@ -788,7 +789,6 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
 	texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
-	texConfig.texEnvBufferColor = 0;
 
 	// Set up TEV stages
 	std::memcpy(&texConfig.tevConfigs[0 * 5], &regs[InternalRegs::TexEnv0Source], 5 * sizeof(u32));
@@ -798,7 +798,9 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	std::memcpy(&texConfig.tevConfigs[4 * 5], &regs[InternalRegs::TexEnv4Source], 5 * sizeof(u32));
 	std::memcpy(&texConfig.tevConfigs[5 * 5], &regs[InternalRegs::TexEnv5Source], 5 * sizeof(u32));
 
-	OpenGL::Program& program = shaderCache[fsConfig];
+	CachedProgram& programEntry = shaderCache[fsConfig];
+	OpenGL::Program& program = programEntry.program;
+
 	if (!program.exists()) {
 		std::string vs = fragShaderGen.getVertexShader(regs);
 		std::string fs = fragShaderGen.generate(regs);
@@ -814,7 +816,49 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
+
+		// Allocate memory for the program UBO
+		glGenBuffers(1, &programEntry.uboBinding);
+		glBindBuffer(GL_UNIFORM_BUFFER, programEntry.uboBinding);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
+
+		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
+		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
+		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
+		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
+		glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, programEntry.uboBinding);
 	}
+
+	// Upload uniform data to our shader's UBO
+	PICA::FragmentUniforms uniforms;
+	uniforms.alphaReference = Helpers::getBits<8, 8>(regs[InternalRegs::AlphaTestConfig]);
+
+	// Set up the texenv buffer color
+	const u32 texEnvBufferColor = regs[InternalRegs::TexEnvBufferColor];
+	uniforms.tevBufferColor[0] = float(texEnvBufferColor & 0xFF) / 255.0f;
+	uniforms.tevBufferColor[1] = float((texEnvBufferColor >> 8) & 0xFF) / 255.0f;
+	uniforms.tevBufferColor[2] = float((texEnvBufferColor >> 16) & 0xFF) / 255.0f;
+	uniforms.tevBufferColor[3] = float((texEnvBufferColor >> 24) & 0xFF) / 255.0f;
+
+	// Set up the constant color for the 6 TEV stages
+	for (int i = 0; i < 6; i++) {
+		static constexpr std::array<u32, 6> ioBases = {
+			PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
+			PICA::InternalRegs::TexEnv3Source, PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source,
+		};
+
+		auto& vec = uniforms.constantColors[i];
+		u32 base = ioBases[i];
+		u32 color = regs[base + 3];
+
+		vec[0] = float(color & 0xFF) / 255.0f;
+		vec[1] = float((color >> 8) & 0xFF) / 255.0f;
+		vec[2] = float((color >> 16) & 0xFF) / 255.0f;
+		vec[3] = float((color >> 24) & 0xFF) / 255.0f;
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, programEntry.uboBinding);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
 
 	return program;
 }

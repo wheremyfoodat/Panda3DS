@@ -38,8 +38,6 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 		out vec2 v_texcoord1;
 		out vec3 v_view;
 		out vec2 v_texcoord2;
-		flat out vec4 v_textureEnvColor[6];
-		flat out vec4 v_textureEnvBufferColor;
 
 		//out float gl_ClipDistance[2];
 
@@ -103,8 +101,6 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		in vec2 v_texcoord1;
 		in vec3 v_view;
 		in vec2 v_texcoord2;
-		flat in vec4 v_textureEnvColor[6];
-		flat in vec4 v_textureEnvBufferColor;
 
 		out vec4 fragColor;
 		uniform sampler2D u_tex0;
@@ -115,18 +111,21 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		uniform sampler1DArray u_tex_lighting_lut;
 #endif
 
-		vec4 tevSources[16];
-		vec4 tevNextPreviousBuffer;
+		layout(std140) uniform FragmentUniforms {
+			int alphaReference;
+
+			vec4 constantColors[6];
+			vec4 tevBufferColor;
+		};
 	)";
 
 	// Emit main function for fragment shader
 	// When not initialized, source 13 is set to vec4(0.0) and 15 is set to the vertex colour
 	ret += R"(
 		void main() {
-			tevSources[0] = v_colour;
-			tevSources[13] = vec4(0.0);  // Previous buffer colour 
-			tevSources[15] = v_colour;   // Previous combiner
 			vec4 combinerOutput = v_colour;   // Last TEV output
+			vec4 previousBuffer = vec4(0.0);  // Previous buffer
+			vec4 tevNextPreviousBuffer = tevBufferColor;			
 	)";
 
 	ret += R"(
@@ -148,7 +147,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 
 	ret += "fragColor = combinerOutput;\n";
 	ret += "}"; // End of main function
-	ret += "\n\n\n\n\n\n\n\n\n\n\n\n\n";
+	ret += "\n\n\n\n\n\n\n\n\n\n";
 
 	return ret;
 }
@@ -201,6 +200,22 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 		shader += "combinerOutput = vec4(clamp(outputColor" + std::to_string(stage) + " * " + std::to_string(tev.getColorScale()) +
 				  ".0, vec3(0.0), vec3(1.0)), clamp(outputAlpha" + std::to_string(stage) + " * " + std::to_string(tev.getAlphaScale()) +
 				  ".0, 0.0, 1.0));\n";
+
+		shader += "previousBuffer = tevNextPreviousBuffer;\n";
+
+		// Update the "next previous buffer" if necessary
+		const u32 textureEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
+		if (stage < 4) {
+			// Check whether to update rgb
+			if ((textureEnvUpdateBuffer & (0x100 << stage))) {
+				shader += "tevNextPreviousBuffer.rgb = combinerOutput.rgb;\n";
+			}
+
+			// And whether to update alpha
+			if ((textureEnvUpdateBuffer & (0x1000u << stage))) {
+				shader += "tevNextPreviousBuffer.a = combinerOutput.a;\n";
+			}
+		}
 	}
 }
 
@@ -308,6 +323,8 @@ void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source sour
 		}
 
 		case TexEnvConfig::Source::Previous: shader += "combinerOutput"; break;
+		case TexEnvConfig::Source::Constant: shader += "constantColors[" + std::to_string(index) + "]"; break;
+		case TexEnvConfig::Source::PreviousBuffer: shader += "previousBuffer"; break;
 
 		default:
 			Helpers::warn("Unimplemented TEV source: %d", static_cast<int>(source));
