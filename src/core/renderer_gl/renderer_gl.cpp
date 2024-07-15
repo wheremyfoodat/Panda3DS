@@ -599,7 +599,15 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
 	if (buffer.has_value()) {
 		return buffer.value().get().texture;
 	} else {
-		const auto textureData = std::span{gpu.getPointerPhys<u8>(tex.location), tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
+		// Get pointer to the texture data in 3DS memory
+		const auto textureData = std::span{gpu.getPointerPhys<u8>(tex.location), tex.sizeInBytes()};
+		// Override texture filtering if necessary by adjust the texunit config before uploading the texture
+		if (filterSetting == TextureFilter::ForceNearest) {
+			tex.config &= ~(0b110);  // Force nearest filtering
+		} else if (filterSetting == TextureFilter::ForceBilinear) {
+			tex.config |= 0b110;  // Force bilinear
+		}
+
 		Texture& newTex = textureCache.add(tex);
 		newTex.decodeTexture(textureData);
 
