@@ -16,5 +16,6 @@ namespace PICA {
 
 		alignas(16) vec4 constantColors[tevStageCount];
 		alignas(16) vec4 tevBufferColor;
+		alignas(16) vec4 clipCoords;
 	};
 }  // namespace PICA

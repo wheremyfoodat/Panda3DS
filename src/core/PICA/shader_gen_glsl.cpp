@@ -2,6 +2,18 @@
 using namespace PICA;
 using namespace PICA::ShaderGen;
 
+static constexpr const char* uniformDefinition = R"(
+	layout(std140) uniform FragmentUniforms {
+		int alphaReference;
+		float depthScale;
+		float depthOffset;
+
+		vec4 constantColors[6];
+		vec4 tevBufferColor;
+		vec4 clipCoords;
+	};
+)";
+
 std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 	std::string ret = "";
 
@@ -19,6 +31,8 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 			precision mediump float;
 		)";
 	}
+
+	ret += uniformDefinition;
 
 	ret += R"(
 		layout(location = 0) in vec4 a_coords;
@@ -39,7 +53,9 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 		out vec3 v_view;
 		out vec2 v_texcoord2;
 
-		//out float gl_ClipDistance[2];
+	#ifndef USING_GLES
+		out float gl_ClipDistance[2];
+	#endif
 
 		vec4 abgr8888ToVec4(uint abgr) {
 			const float scale = 1.0 / 255.0;
@@ -65,6 +81,11 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 			v_normal = normalize(rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), a_quaternion));
 			v_tangent = normalize(rotateVec3ByQuaternion(vec3(1.0, 0.0, 0.0), a_quaternion));
 			v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0, 1.0, 0.0), a_quaternion));
+
+		#ifndef USING_GLES
+			gl_ClipDistance[0] = -a_coords.z;
+			gl_ClipDistance[1] = dot(clipCoords, a_coords);
+		#endif
 		}
 )";
 
@@ -109,16 +130,9 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 #ifndef USING_GLES
 		uniform sampler1DArray u_tex_lighting_lut;
 #endif
-
-		layout(std140) uniform FragmentUniforms {
-			int alphaReference;
-			float depthScale;
-			float depthOffset;
-
-			vec4 constantColors[6];
-			vec4 tevBufferColor;
-		};
 	)";
+
+	ret += uniformDefinition;
 
 	// Emit main function for fragment shader
 	// When not initialized, source 13 is set to vec4(0.0) and 15 is set to the vertex colour

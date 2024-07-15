@@ -845,6 +845,13 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	uniforms.depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
 	uniforms.depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 
+	if (regs[InternalRegs::ClipEnable] & 1) {
+		uniforms.clipCoords[0] = f24::fromRaw(regs[PICA::InternalRegs::ClipData0] & 0xffffff).toFloat32();
+		uniforms.clipCoords[1] = f24::fromRaw(regs[PICA::InternalRegs::ClipData1] & 0xffffff).toFloat32();
+		uniforms.clipCoords[2] = f24::fromRaw(regs[PICA::InternalRegs::ClipData2] & 0xffffff).toFloat32();
+		uniforms.clipCoords[3] = f24::fromRaw(regs[PICA::InternalRegs::ClipData3] & 0xffffff).toFloat32();
+	}
+
 	// Set up the constant color for the 6 TEV stages
 	for (int i = 0; i < 6; i++) {
 		static constexpr std::array<u32, 6> ioBases = {
