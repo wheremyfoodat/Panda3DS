@@ -360,7 +360,7 @@ void FragmentGenerator::getColorOperation(std::string& shader, TexEnvConfig::Ope
 		case TexEnvConfig::Operation::Modulate: shader += "colorOp1 * colorOp2"; break;
 		case TexEnvConfig::Operation::Lerp: shader += "mix(colorOp2, colorOp1, colorOp3)"; break;
 
-		case TexEnvConfig::Operation::AddMultiply: shader += "min(colorOp1 + colorOp2), vec3(1.0)) * colorOp3"; break;
+		case TexEnvConfig::Operation::AddMultiply: shader += "min(colorOp1 + colorOp2, vec3(1.0)) * colorOp3"; break;
 		case TexEnvConfig::Operation::MultiplyAdd: shader += "fma(colorOp1, colorOp2, colorOp3)"; break;
 		case TexEnvConfig::Operation::Dot3RGB:
 		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(colorOp1 - vec3(0.5), colorOp2 - vec3(0.5)))"; break;
