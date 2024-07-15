@@ -410,12 +410,12 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
-	const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
-	const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
-	const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
-
 	// Update ubershader uniforms
 	if (usingUbershader) {
+		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
+
 		if (oldDepthScale != depthScale) {
 			oldDepthScale = depthScale;
 			glUniform1f(ubershaderData.depthScaleLoc, depthScale);
@@ -785,7 +785,9 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
 	auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
+
 	outConfig.alphaTestFunction = (alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
+	outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
 
 	texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
 	texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
@@ -839,6 +841,9 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	uniforms.tevBufferColor[1] = float((texEnvBufferColor >> 8) & 0xFF) / 255.0f;
 	uniforms.tevBufferColor[2] = float((texEnvBufferColor >> 16) & 0xFF) / 255.0f;
 	uniforms.tevBufferColor[3] = float((texEnvBufferColor >> 24) & 0xFF) / 255.0f;
+
+	uniforms.depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+	uniforms.depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 
 	// Set up the constant color for the 6 TEV stages
 	for (int i = 0; i < 6; i++) {

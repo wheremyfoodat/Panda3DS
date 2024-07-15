@@ -16,6 +16,7 @@ namespace PICA {
 			// Merge the enable + compare function into 1 field to avoid duplicate shaders
 			// enable == off means a CompareFunction of Always
 			BitField<0, 3, CompareFunction> alphaTestFunction;
+			BitField<4, 1, u32> depthMapEnable;
 		};
 	};
 

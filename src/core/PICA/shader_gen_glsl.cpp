@@ -113,6 +113,8 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 
 		layout(std140) uniform FragmentUniforms {
 			int alphaReference;
+			float depthScale;
+			float depthOffset;
 
 			vec4 constantColors[6];
 			vec4 tevBufferColor;
@@ -137,6 +139,19 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 		float alphaOp2 = 0.0;
 		float alphaOp3 = 0.0;
 	)";
+
+	ret += R"(
+		// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
+		// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
+		float z_over_w = gl_FragCoord.z * 2.0f - 1.0f;
+		float depth = z_over_w * depthScale + depthOffset;
+	)";
+
+	if ((regs[InternalRegs::DepthmapEnable] & 1) == 0) {
+		ret += "depth /= gl_FragCoord.w;\n";
+	}
+
+	ret += "gl_FragDepth = depth;\n";
 
 	textureConfig = regs[InternalRegs::TexUnitCfg];
 	for (int i = 0; i < 6; i++) {

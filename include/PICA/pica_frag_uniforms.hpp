@@ -11,6 +11,8 @@ namespace PICA {
 		static constexpr usize tevStageCount = 6;
 
 		s32 alphaReference;
+		float depthScale;
+		float depthOffset;
 
 		alignas(16) vec4 constantColors[tevStageCount];
 		alignas(16) vec4 tevBufferColor;
