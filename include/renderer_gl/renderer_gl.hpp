@@ -84,7 +84,7 @@ class RendererGL final : public Renderer {
 	void setupBlending();
 	void setupStencilTest(bool stencilEnable);
 	void bindDepthBuffer();
-	void setupTextureEnvState();
+	void setupUbershaderTexEnv();
 	void bindTexturesToSlots();
 	void updateLightingLUT();
 	void initGraphicsContextInternal();

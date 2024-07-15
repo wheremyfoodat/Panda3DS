@@ -282,12 +282,8 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	glStencilOp(stencilOps[stencilFailOp], stencilOps[depthFailOp], stencilOps[passOp]);
 }
 
-void RendererGL::setupTextureEnvState() {
+void RendererGL::setupUbershaderTexEnv() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
-	if (!usingUbershader) {
-		return;
-	}
-
 	static constexpr std::array<u32, 6> ioBases = {
 		PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
 		PICA::InternalRegs::TexEnv3Source, PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source,
@@ -439,9 +435,9 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
 		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
 		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
+		setupUbershaderTexEnv();
 	}
 
-	setupTextureEnvState();
 	bindTexturesToSlots();
 
 	if (gpu.lightingLUTDirty) {
@@ -811,7 +807,6 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	if (!program.exists()) {
 		std::string vs = fragShaderGen.getVertexShader(regs);
 		std::string fs = fragShaderGen.generate(regs);
-		std::cout << vs << "\n\n" << fs << "\n";
 
 		OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
