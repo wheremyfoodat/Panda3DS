@@ -398,17 +398,17 @@ void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs
 		return;
 	}
 
-	shader += "float alphaReferenceFloat = float(alphaReference) / 255.0;\n";
-	shader += "if (!(";
+	shader += "int testingAlpha = int(combinerOutput.a * 255.0);\n";
+	shader += "if (";
 	switch (function) {
-		case CompareFunction::Never: shader += "false"; break;
-		case CompareFunction::Always: shader += "true"; break;
-		case CompareFunction::Equal: shader += "combinerOutput.a == alphaReferenceFloat"; break;
-		case CompareFunction::NotEqual: shader += "combinerOutput.a != alphaReferenceFloat"; break;
-		case CompareFunction::Less: shader += "combinerOutput.a < alphaReferenceFloat"; break;
-		case CompareFunction::LessOrEqual: shader += "combinerOutput.a <= alphaReferenceFloat"; break;
-		case CompareFunction::Greater: shader += "combinerOutput.a > alphaReferenceFloat"; break;
-		case CompareFunction::GreaterOrEqual: shader += "combinerOutput.a >= alphaReferenceFloat"; break;
+		case CompareFunction::Never: shader += "true"; break;
+		case CompareFunction::Always: shader += "false"; break;
+		case CompareFunction::Equal: shader += "testingAlpha != alphaReference"; break;
+		case CompareFunction::NotEqual: shader += "testingAlpha == alphaReference"; break;
+		case CompareFunction::Less: shader += "testingAlpha >= alphaReference"; break;
+		case CompareFunction::LessOrEqual: shader += "testingAlpha > alphaReference"; break;
+		case CompareFunction::Greater: shader += "testingAlpha <= alphaReference"; break;
+		case CompareFunction::GreaterOrEqual: shader += "testingAlpha < alphaReference"; break;
 
 		default:
 			Helpers::warn("Unimplemented alpha test function");
@@ -416,5 +416,5 @@ void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs
 			break;
 	}
 
-	shader += ")) { discard; }\n";
+	shader += ") { discard; }\n";
 }
