@@ -214,21 +214,21 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 		shader += "combinerOutput = vec4(clamp(outputColor" + std::to_string(stage) + " * " + std::to_string(tev.getColorScale()) +
 				  ".0, vec3(0.0), vec3(1.0)), clamp(outputAlpha" + std::to_string(stage) + " * " + std::to_string(tev.getAlphaScale()) +
 				  ".0, 0.0, 1.0));\n";
+	}
 
-		shader += "previousBuffer = tevNextPreviousBuffer;\n";
+	shader += "previousBuffer = tevNextPreviousBuffer;\n\n";
 
-		// Update the "next previous buffer" if necessary
-		const u32 textureEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
-		if (stage < 4) {
-			// Check whether to update rgb
-			if ((textureEnvUpdateBuffer & (0x100 << stage))) {
-				shader += "tevNextPreviousBuffer.rgb = combinerOutput.rgb;\n";
-			}
+	// Update the "next previous buffer" if necessary
+	const u32 textureEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
+	if (stage < 4) {
+		// Check whether to update rgb
+		if ((textureEnvUpdateBuffer & (0x100 << stage))) {
+			shader += "tevNextPreviousBuffer.rgb = combinerOutput.rgb;\n";
+		}
 
-			// And whether to update alpha
-			if ((textureEnvUpdateBuffer & (0x1000u << stage))) {
-				shader += "tevNextPreviousBuffer.a = combinerOutput.a;\n";
-			}
+		// And whether to update alpha
+		if ((textureEnvUpdateBuffer & (0x1000u << stage))) {
+			shader += "tevNextPreviousBuffer.a = combinerOutput.a;\n";
 		}
 	}
 }
@@ -382,8 +382,6 @@ void FragmentGenerator::getAlphaOperation(std::string& shader, TexEnvConfig::Ope
 
 		case TexEnvConfig::Operation::AddMultiply: shader += "min(alphaOp1 + alphaOp2, 1.0) * alphaOp3"; break;
 		case TexEnvConfig::Operation::MultiplyAdd: shader += "fma(alphaOp1, alphaOp2, alphaOp3)"; break;
-		case TexEnvConfig::Operation::Dot3RGB:
-		case TexEnvConfig::Operation::Dot3RGBA: shader += "vec3(4.0 * dot(alphaOp1 - 0.5, alphaOp2 - 0.5))"; break;
 		default:
 			Helpers::warn("FragmentGenerator: Unimplemented alpha op");
 			shader += "1.0";
