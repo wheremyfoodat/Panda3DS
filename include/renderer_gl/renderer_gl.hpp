@@ -1,11 +1,17 @@
 #pragma once
 
 #include <array>
+#include <cstring>
+#include <functional>
 #include <span>
+#include <unordered_map>
 
 #include "PICA/float_types.hpp"
+#include "PICA/pica_frag_config.hpp"
+#include "PICA/pica_hash.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/shader_gen.hpp"
 #include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -24,21 +30,25 @@ class RendererGL final : public Renderer {
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
+	bool usingUbershader = true;
 
-	// TEV configuration uniform locations
-	GLint textureEnvSourceLoc = -1;
-	GLint textureEnvOperandLoc = -1;
-	GLint textureEnvCombinerLoc = -1;
-	GLint textureEnvColorLoc = -1;
-	GLint textureEnvScaleLoc = -1;
+	// Data 
+	struct {
+		// TEV configuration uniform locations
+		GLint textureEnvSourceLoc = -1;
+		GLint textureEnvOperandLoc = -1;
+		GLint textureEnvCombinerLoc = -1;
+		GLint textureEnvColorLoc = -1;
+		GLint textureEnvScaleLoc = -1;
 
-	// Uniform of PICA registers
-	GLint picaRegLoc = -1;
+		// Uniform of PICA registers
+		GLint picaRegLoc = -1;
 
-	// Depth configuration uniform locations
-	GLint depthOffsetLoc = -1;
-	GLint depthScaleLoc = -1;
-	GLint depthmapEnableLoc = -1;
+		// Depth configuration uniform locations
+		GLint depthOffsetLoc = -1;
+		GLint depthScaleLoc = -1;
+		GLint depthmapEnableLoc = -1;
+	} ubershaderData;
 
 	float oldDepthScale = -1.0;
 	float oldDepthOffset = 0.0;
@@ -57,21 +67,31 @@ class RendererGL final : public Renderer {
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
 
+	// Cached recompiled fragment shader
+	struct CachedProgram {
+		OpenGL::Program program;
+		uint uboBinding;
+	};
+	std::unordered_map<PICA::FragmentConfig, CachedProgram> shaderCache;
+
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
+	OpenGL::Program& getSpecializedShader();
+
+	PICA::ShaderGen::FragmentGenerator fragShaderGen;
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();
 	void setupStencilTest(bool stencilEnable);
 	void bindDepthBuffer();
-	void setupTextureEnvState();
+	void setupUbershaderTexEnv();
 	void bindTexturesToSlots();
 	void updateLightingLUT();
 	void initGraphicsContextInternal();
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
-		: Renderer(gpu, internalRegs, externalRegs) {}
+		: Renderer(gpu, internalRegs, externalRegs), fragShaderGen(PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL) {}
 	~RendererGL() override;
 
 	void reset() override;
@@ -87,6 +107,8 @@ class RendererGL final : public Renderer {
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
 
+	virtual void setUbershaderSetting(bool value) override { usingUbershader = value; }
+	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this

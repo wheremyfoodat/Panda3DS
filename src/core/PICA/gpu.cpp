@@ -110,6 +110,7 @@ void GPU::reset() {
 	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
 	externalRegs[Framebuffer1Select] = 0;
 
+	renderer->setUbershaderSetting(config.useUbershaders);
 	renderer->reset();
 }
 

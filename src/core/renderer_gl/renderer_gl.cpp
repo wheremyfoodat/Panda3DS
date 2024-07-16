@@ -5,6 +5,7 @@
 #include <cmrc/cmrc.hpp>
 
 #include "PICA/float_types.hpp"
+#include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
 #include "math_util.hpp"
@@ -22,6 +23,11 @@ void RendererGL::reset() {
 	colourBufferCache.reset();
 	textureCache.reset();
 
+	for (auto& shader : shaderCache) {
+		shader.second.program.free();
+	}
+	shaderCache.clear();
+
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
 	colourBufferFormat = PICA::ColorFmt::RGBA8;
@@ -38,12 +44,16 @@ void RendererGL::reset() {
 		oldDepthOffset = 0.0;       // Default depth offset to 0
 		oldDepthmapEnable = false;  // Enable w buffering
 
-		glUniform1f(depthScaleLoc, oldDepthScale);
-		glUniform1f(depthOffsetLoc, oldDepthOffset);
-		glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
+		glUniform1f(ubershaderData.depthScaleLoc, oldDepthScale);
+		glUniform1f(ubershaderData.depthOffsetLoc, oldDepthOffset);
+		glUniform1i(ubershaderData.depthmapEnableLoc, oldDepthmapEnable);
 
 		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
+
+#ifdef __ANDROID__
+	fragShaderGen.setTarget(PICA::ShaderGen::API::GLES, PICA::ShaderGen::Language::GLSL);
+#endif
 }
 
 void RendererGL::initGraphicsContextInternal() {
@@ -219,8 +229,8 @@ void RendererGL::setupBlending() {
 		OpenGL::setBlendColor(float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, float(a) / 255.f);
 
 		// Translate equations and funcs to their GL equivalents and set them
-		glBlendEquationSeparate(blendingEquations[rgbEquation], blendingEquations[alphaEquation]);
-		glBlendFuncSeparate(blendingFuncs[rgbSourceFunc], blendingFuncs[rgbDestFunc], blendingFuncs[alphaSourceFunc], blendingFuncs[alphaDestFunc]);
+		gl.setBlendEquation(blendingEquations[rgbEquation], blendingEquations[alphaEquation]);
+		gl.setBlendFunc(blendingFuncs[rgbSourceFunc], blendingFuncs[rgbDestFunc], blendingFuncs[alphaSourceFunc], blendingFuncs[alphaDestFunc]);
 	}
 }
 
@@ -272,10 +282,8 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	glStencilOp(stencilOps[stencilFailOp], stencilOps[depthFailOp], stencilOps[passOp]);
 }
 
-
-void RendererGL::setupTextureEnvState() {
+void RendererGL::setupUbershaderTexEnv() {
 	// TODO: Only update uniforms when the TEV config changed. Use an UBO potentially.
-
 	static constexpr std::array<u32, 6> ioBases = {
 		PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
 		PICA::InternalRegs::TexEnv3Source, PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source,
@@ -297,11 +305,11 @@ void RendererGL::setupTextureEnvState() {
 		textureEnvScaleRegs[i] = regs[ioBase + 4];
 	}
 
-	glUniform1uiv(textureEnvSourceLoc, 6, textureEnvSourceRegs);
-	glUniform1uiv(textureEnvOperandLoc, 6, textureEnvOperandRegs);
-	glUniform1uiv(textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
-	glUniform1uiv(textureEnvColorLoc, 6, textureEnvColourRegs);
-	glUniform1uiv(textureEnvScaleLoc, 6, textureEnvScaleRegs);
+	glUniform1uiv(ubershaderData.textureEnvSourceLoc, 6, textureEnvSourceRegs);
+	glUniform1uiv(ubershaderData.textureEnvOperandLoc, 6, textureEnvOperandRegs);
+	glUniform1uiv(ubershaderData.textureEnvCombinerLoc, 6, textureEnvCombinerRegs);
+	glUniform1uiv(ubershaderData.textureEnvColorLoc, 6, textureEnvColourRegs);
+	glUniform1uiv(ubershaderData.textureEnvScaleLoc, 6, textureEnvScaleRegs);
 }
 
 void RendererGL::bindTexturesToSlots() {
@@ -372,11 +380,17 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
+	if (usingUbershader) {
+		gl.useProgram(triangleProgram);
+	} else {
+		OpenGL::Program& program = getSpecializedShader();
+		gl.useProgram(program);
+	}
+
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
 	gl.bindVBO(vbo);
 	gl.bindVAO(vao);
-	gl.useProgram(triangleProgram);
 
 	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
@@ -397,32 +411,34 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
-	const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
-	const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
-	const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
+	// Update ubershader uniforms
+	if (usingUbershader) {
+		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
-	// Update depth uniforms
-	if (oldDepthScale != depthScale) {
-		oldDepthScale = depthScale;
-		glUniform1f(depthScaleLoc, depthScale);
+		if (oldDepthScale != depthScale) {
+			oldDepthScale = depthScale;
+			glUniform1f(ubershaderData.depthScaleLoc, depthScale);
+		}
+
+		if (oldDepthOffset != depthOffset) {
+			oldDepthOffset = depthOffset;
+			glUniform1f(ubershaderData.depthOffsetLoc, depthOffset);
+		}
+
+		if (oldDepthmapEnable != depthMapEnable) {
+			oldDepthmapEnable = depthMapEnable;
+			glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
+		}
+
+		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
+		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
+		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
+		setupUbershaderTexEnv();
 	}
 
-	if (oldDepthOffset != depthOffset) {
-		oldDepthOffset = depthOffset;
-		glUniform1f(depthOffsetLoc, depthOffset);
-	}
-
-	if (oldDepthmapEnable != depthMapEnable) {
-		oldDepthmapEnable = depthMapEnable;
-		glUniform1i(depthmapEnableLoc, depthMapEnable);
-	}
-
-	setupTextureEnvState();
 	bindTexturesToSlots();
-
-	// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
-	// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
-	glUniform1uiv(picaRegLoc, 0x200 - 0x48, &regs[0x48]);
 
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT();
@@ -761,6 +777,104 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 	return colourBufferCache.add(sampleBuffer);
 }
 
+OpenGL::Program& RendererGL::getSpecializedShader() {
+	constexpr uint uboBlockBinding = 2;
+
+	PICA::FragmentConfig fsConfig;
+	auto& outConfig = fsConfig.outConfig;
+	auto& texConfig = fsConfig.texConfig;
+
+	auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
+	auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
+
+	outConfig.alphaTestFunction = (alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
+	outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
+
+	texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
+	texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
+
+	// Set up TEV stages
+	std::memcpy(&texConfig.tevConfigs[0 * 5], &regs[InternalRegs::TexEnv0Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[1 * 5], &regs[InternalRegs::TexEnv1Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[2 * 5], &regs[InternalRegs::TexEnv2Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[3 * 5], &regs[InternalRegs::TexEnv3Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[4 * 5], &regs[InternalRegs::TexEnv4Source], 5 * sizeof(u32));
+	std::memcpy(&texConfig.tevConfigs[5 * 5], &regs[InternalRegs::TexEnv5Source], 5 * sizeof(u32));
+
+	CachedProgram& programEntry = shaderCache[fsConfig];
+	OpenGL::Program& program = programEntry.program;
+
+	if (!program.exists()) {
+		std::string vs = fragShaderGen.getVertexShader(regs);
+		std::string fs = fragShaderGen.generate(regs);
+
+		OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
+		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
+		program.create({vertShader, fragShader});
+		gl.useProgram(program);
+
+		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
+
+		// Allocate memory for the program UBO
+		glGenBuffers(1, &programEntry.uboBinding);
+		gl.bindUBO(programEntry.uboBinding);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
+
+		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
+		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
+		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
+		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
+		glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, programEntry.uboBinding);
+	}
+
+	// Upload uniform data to our shader's UBO
+	PICA::FragmentUniforms uniforms;
+	uniforms.alphaReference = Helpers::getBits<8, 8>(regs[InternalRegs::AlphaTestConfig]);
+
+	// Set up the texenv buffer color
+	const u32 texEnvBufferColor = regs[InternalRegs::TexEnvBufferColor];
+	uniforms.tevBufferColor[0] = float(texEnvBufferColor & 0xFF) / 255.0f;
+	uniforms.tevBufferColor[1] = float((texEnvBufferColor >> 8) & 0xFF) / 255.0f;
+	uniforms.tevBufferColor[2] = float((texEnvBufferColor >> 16) & 0xFF) / 255.0f;
+	uniforms.tevBufferColor[3] = float((texEnvBufferColor >> 24) & 0xFF) / 255.0f;
+
+	uniforms.depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+	uniforms.depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+
+	if (regs[InternalRegs::ClipEnable] & 1) {
+		uniforms.clipCoords[0] = f24::fromRaw(regs[PICA::InternalRegs::ClipData0] & 0xffffff).toFloat32();
+		uniforms.clipCoords[1] = f24::fromRaw(regs[PICA::InternalRegs::ClipData1] & 0xffffff).toFloat32();
+		uniforms.clipCoords[2] = f24::fromRaw(regs[PICA::InternalRegs::ClipData2] & 0xffffff).toFloat32();
+		uniforms.clipCoords[3] = f24::fromRaw(regs[PICA::InternalRegs::ClipData3] & 0xffffff).toFloat32();
+	}
+
+	// Set up the constant color for the 6 TEV stages
+	for (int i = 0; i < 6; i++) {
+		static constexpr std::array<u32, 6> ioBases = {
+			PICA::InternalRegs::TexEnv0Source, PICA::InternalRegs::TexEnv1Source, PICA::InternalRegs::TexEnv2Source,
+			PICA::InternalRegs::TexEnv3Source, PICA::InternalRegs::TexEnv4Source, PICA::InternalRegs::TexEnv5Source,
+		};
+
+		auto& vec = uniforms.constantColors[i];
+		u32 base = ioBases[i];
+		u32 color = regs[base + 3];
+
+		vec[0] = float(color & 0xFF) / 255.0f;
+		vec[1] = float((color >> 8) & 0xFF) / 255.0f;
+		vec[2] = float((color >> 16) & 0xFF) / 255.0f;
+		vec[3] = float((color >> 24) & 0xFF) / 255.0f;
+	}
+
+	gl.bindUBO(programEntry.uboBinding);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
+
+	return program;
+}
+
 void RendererGL::screenshot(const std::string& name) {
 	constexpr uint width = 400;
 	constexpr uint height = 2 * 240;
@@ -792,6 +906,11 @@ void RendererGL::deinitGraphicsContext() {
 	depthBufferCache.reset();
 	colourBufferCache.reset();
 
+	for (auto& shader : shaderCache) {
+		shader.second.program.free();
+	}
+	shaderCache.clear();
+
 	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
 	printf("RendererGL::DeinitGraphicsContext called\n");
@@ -814,24 +933,24 @@ void RendererGL::setUbershader(const std::string& shader) {
 
 	initUbershader(triangleProgram);
 
-	glUniform1f(depthScaleLoc, oldDepthScale);
-	glUniform1f(depthOffsetLoc, oldDepthOffset);
-	glUniform1i(depthmapEnableLoc, oldDepthmapEnable);
+	glUniform1f(ubershaderData.depthScaleLoc, oldDepthScale);
+	glUniform1f(ubershaderData.depthOffsetLoc, oldDepthOffset);
+	glUniform1i(ubershaderData.depthmapEnableLoc, oldDepthmapEnable);
 }
 
 void RendererGL::initUbershader(OpenGL::Program& program) {
 	gl.useProgram(program);
 
-	textureEnvSourceLoc = OpenGL::uniformLocation(program, "u_textureEnvSource");
-	textureEnvOperandLoc = OpenGL::uniformLocation(program, "u_textureEnvOperand");
-	textureEnvCombinerLoc = OpenGL::uniformLocation(program, "u_textureEnvCombiner");
-	textureEnvColorLoc = OpenGL::uniformLocation(program, "u_textureEnvColor");
-	textureEnvScaleLoc = OpenGL::uniformLocation(program, "u_textureEnvScale");
+	ubershaderData.textureEnvSourceLoc = OpenGL::uniformLocation(program, "u_textureEnvSource");
+	ubershaderData.textureEnvOperandLoc = OpenGL::uniformLocation(program, "u_textureEnvOperand");
+	ubershaderData.textureEnvCombinerLoc = OpenGL::uniformLocation(program, "u_textureEnvCombiner");
+	ubershaderData.textureEnvColorLoc = OpenGL::uniformLocation(program, "u_textureEnvColor");
+	ubershaderData.textureEnvScaleLoc = OpenGL::uniformLocation(program, "u_textureEnvScale");
 
-	depthScaleLoc = OpenGL::uniformLocation(program, "u_depthScale");
-	depthOffsetLoc = OpenGL::uniformLocation(program, "u_depthOffset");
-	depthmapEnableLoc = OpenGL::uniformLocation(program, "u_depthmapEnable");
-	picaRegLoc = OpenGL::uniformLocation(program, "u_picaRegs");
+	ubershaderData.depthScaleLoc = OpenGL::uniformLocation(program, "u_depthScale");
+	ubershaderData.depthOffsetLoc = OpenGL::uniformLocation(program, "u_depthOffset");
+	ubershaderData.depthmapEnableLoc = OpenGL::uniformLocation(program, "u_depthmapEnable");
+	ubershaderData.picaRegLoc = OpenGL::uniformLocation(program, "u_picaRegs");
 
 	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);

@@ -62,6 +62,7 @@ void EmulatorConfig::load() {
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
 			vsyncEnabled = toml::find_or<toml::boolean>(gpu, "EnableVSync", true);
+			useUbershaders = toml::find_or<toml::boolean>(gpu, "UseUbershaders", ubershaderDefault);
 			accurateShaderMul = toml::find_or<toml::boolean>(gpu, "AccurateShaderMultiplication", false);
 		}
 	}
@@ -123,10 +124,13 @@ void EmulatorConfig::save() {
 	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
+	
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 	data["GPU"]["EnableVSync"] = vsyncEnabled;
 	data["GPU"]["AccurateShaderMultiplication"] = accurateShaderMul;
+	data["GPU"]["UseUbershaders"] = useUbershaders;
+
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;
 
