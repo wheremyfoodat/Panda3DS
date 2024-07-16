@@ -229,8 +229,8 @@ void RendererGL::setupBlending() {
 		OpenGL::setBlendColor(float(r) / 255.f, float(g) / 255.f, float(b) / 255.f, float(a) / 255.f);
 
 		// Translate equations and funcs to their GL equivalents and set them
-		glBlendEquationSeparate(blendingEquations[rgbEquation], blendingEquations[alphaEquation]);
-		glBlendFuncSeparate(blendingFuncs[rgbSourceFunc], blendingFuncs[rgbDestFunc], blendingFuncs[alphaSourceFunc], blendingFuncs[alphaDestFunc]);
+		gl.setBlendEquation(blendingEquations[rgbEquation], blendingEquations[alphaEquation]);
+		gl.setBlendFunc(blendingFuncs[rgbSourceFunc], blendingFuncs[rgbDestFunc], blendingFuncs[alphaSourceFunc], blendingFuncs[alphaDestFunc]);
 	}
 }
 
@@ -821,7 +821,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 		// Allocate memory for the program UBO
 		glGenBuffers(1, &programEntry.uboBinding);
-		glBindBuffer(GL_UNIFORM_BUFFER, programEntry.uboBinding);
+		gl.bindUBO(programEntry.uboBinding);
 		glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
 
 		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
@@ -869,7 +869,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		vec[3] = float((color >> 24) & 0xFF) / 255.0f;
 	}
 
-	glBindBuffer(GL_UNIFORM_BUFFER, programEntry.uboBinding);
+	gl.bindUBO(programEntry.uboBinding);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
 
 	return program;
