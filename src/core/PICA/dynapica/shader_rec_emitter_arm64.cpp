@@ -488,7 +488,7 @@ void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 
 	// Now do a full DP4
 	// Do a piecewise multiplication of the vectors first
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
 		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
@@ -515,7 +515,7 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 
 	// Do a piecewise multiplication of the vectors first
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
 		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
@@ -548,7 +548,7 @@ void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
 
 	// Now perform a DP4
 	// Do a piecewise multiplication of the vectors first
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
 		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
@@ -831,7 +831,7 @@ void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
 		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
@@ -904,7 +904,7 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2Vec, shader, src2, isMADI ? 0 : idx, operandDescriptor);
 	loadRegister<3>(src3Vec, shader, src3, isMADI ? idx : 0, operandDescriptor);
 
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 		FADD(src3Vec.S4(), src3Vec.S4(), src1Vec.S4());
 	} else {
