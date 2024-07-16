@@ -272,8 +272,8 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 		}
 		case 4u: {
 			// These are ints so that bitfieldExtract sign extends for us
-			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + 0x10u * light_id));
-			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + 0x10u * light_id));
+			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + (light_id << 4u)));
+			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + (light_id << 4u)));
 
 			// These are fixed point 1.1.11 values, so we need to convert them to float
 			float x = float(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 13)) / 2047.0;
@@ -349,13 +349,13 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
 		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i) << 2, 3);
 
-		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_VECTOR_HIGH = readPicaReg(0x0145u + 0x10u * light_id);
-		GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + (light_id << 4u));
+		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + (light_id << 4u));
+		uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142u + (light_id << 4u));
+		uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143u + (light_id << 4u));
+		uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144u + (light_id << 4u));
+		uint GPUREG_LIGHTi_VECTOR_HIGH = readPicaReg(0x0145u + (light_id << 4u));
+		GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149u + (light_id << 4u));
 
 		float light_distance;
 		vec3 light_position = vec3(
@@ -400,8 +400,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 		// See: https://www.3dbrew.org/wiki/GPU/Internal_Registers#GPUREG_LIGHTi_ATTENUATION_SCALE
 		float distance_attenuation = 1.0;
 		if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 24 + int(light_id), 1) == 0u) {
-			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtract(readPicaReg(0x014Au), 0, 20);
-			uint GPUREG_LIGHTi_ATTENUATION_SCALE = bitfieldExtract(readPicaReg(0x014Bu), 0, 20);
+			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtract(readPicaReg(0x014Au + (light_id << 4u)), 0, 20);
+			uint GPUREG_LIGHTi_ATTENUATION_SCALE = bitfieldExtract(readPicaReg(0x014Bu + (light_id << 4u)), 0, 20);
 
 			float distance_attenuation_bias = decodeFP(GPUREG_LIGHTi_ATTENUATION_BIAS, 7u, 12u);
 			float distance_attenuation_scale = decodeFP(GPUREG_LIGHTi_ATTENUATION_SCALE, 7u, 12u);
