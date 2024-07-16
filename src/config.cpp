@@ -62,6 +62,7 @@ void EmulatorConfig::load() {
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
 			vsyncEnabled = toml::find_or<toml::boolean>(gpu, "EnableVSync", true);
+			accurateShaderMul = toml::find_or<toml::boolean>(gpu, "AccurateShaderMultiplication", false);
 		}
 	}
 
@@ -125,6 +126,7 @@ void EmulatorConfig::save() {
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 	data["GPU"]["EnableVSync"] = vsyncEnabled;
+	data["GPU"]["AccurateShaderMultiplication"] = accurateShaderMul;
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;
 
