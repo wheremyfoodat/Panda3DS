@@ -64,6 +64,8 @@ void GPU::reset() {
 	regs.fill(0);
 	shaderUnit.reset();
 	shaderJIT.reset();
+	shaderJIT.setAccurateMul(config.accurateShaderMul);
+
 	std::memset(vram, 0, vramSize);
 	lightingLUT.fill(0);
 	lightingLUTDirty = true;

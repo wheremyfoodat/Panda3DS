@@ -45,6 +45,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	// Shows whether the loaded shader has any log2 and exp2 instructions
 	bool codeHasLog2 = false;
 	bool codeHasExp2 = false;
+	// Whether to compile this shader using accurate, safe, non-IEEE multiplication (slow) or faster but less accurate mul
+	bool useSafeMUL = false;
 	
 	Xbyak::Label log2Func, exp2Func;
 	Xbyak::Label emitLog2Func();
@@ -130,7 +132,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	PrologueCallback prologueCb = nullptr;
 
 	// Initialize our emitter with "allocSize" bytes of RWX memory
-	ShaderEmitter() : Xbyak::CodeGenerator(allocSize) {
+	ShaderEmitter(bool useSafeMUL) : Xbyak::CodeGenerator(allocSize), useSafeMUL(useSafeMUL) {
 		cpuCaps = Xbyak::util::Cpu();
 
 		haveSSE4_1 = cpuCaps.has(Xbyak::util::Cpu::tSSE41);

@@ -12,9 +12,6 @@ using namespace Xbyak;
 using namespace Xbyak::util;
 using namespace Helpers;
 
-// TODO: Expose safe/unsafe optimizations to the user
-constexpr bool useSafeMUL = false;
-
 // The shader recompiler uses quite an odd internal ABI
 // We make use of the fact that in regular conditions, we should pretty much never be calling C++ code from recompiled shader code
 // This allows us to establish an ABI that's optimized for this sort of workflow, statically allocating volatile host registers
