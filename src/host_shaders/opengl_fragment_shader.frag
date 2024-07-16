@@ -347,7 +347,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	vec3 half_vector;
 
 	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
-		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
+		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i << 2u), 3);
 
 		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + 0x10u * light_id);
 		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + 0x10u * light_id);
