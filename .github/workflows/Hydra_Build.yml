@@ -51,7 +51,7 @@ jobs:
       with:
         name: Windows Libretro core
         path: |
-          ${{github.workspace}}/build/panda3ds_libretro.dll
+          ${{github.workspace}}/build/${{ env.BUILD_TYPE }}/panda3ds_libretro.dll
           ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
 
   MacOS:
