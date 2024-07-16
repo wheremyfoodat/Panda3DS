@@ -30,6 +30,7 @@ class RendererGL final : public Renderer {
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
+	bool usingUbershader = true;
 
 	// Data 
 	struct {
@@ -56,7 +57,6 @@ class RendererGL final : public Renderer {
 	SurfaceCache<DepthBuffer, 16, true> depthBufferCache;
 	SurfaceCache<ColourBuffer, 16, true> colourBufferCache;
 	SurfaceCache<Texture, 256, true> textureCache;
-	bool usingUbershader = false;
 
 	// Dummy VAO/VBO for blitting the final output
 	OpenGL::VertexArray dummyVAO;
@@ -107,6 +107,8 @@ class RendererGL final : public Renderer {
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
 
+	virtual void setUbershaderSetting(bool value) override { usingUbershader = value; }
+	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this

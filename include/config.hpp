@@ -13,8 +13,11 @@ struct EmulatorConfig {
 	static constexpr bool shaderJitDefault = false;
 #endif
 
+	static constexpr bool ubershaderDefault = true;
+
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
+	bool useUbershaders = ubershaderDefault;
 	bool accurateShaderMul = false;
 	RendererType rendererType = RendererType::OpenGL;
 	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Null;
