@@ -15,6 +15,7 @@ struct EmulatorConfig {
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
+	bool accurateShaderMul = false;
 	RendererType rendererType = RendererType::OpenGL;
 	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Null;
 

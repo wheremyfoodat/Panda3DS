@@ -7,9 +7,6 @@ using namespace Helpers;
 using namespace oaknut;
 using namespace oaknut::util;
 
-// TODO: Expose safe/unsafe optimizations to the user
-constexpr bool useSafeMUL = true;
-
 // Similar to the x64 recompiler, we use an odd internal ABI, which abuses the fact that we'll very rarely be calling C++ functions
 // So to avoid pushing and popping, we'll be making use of volatile registers as much as possible
 static constexpr QReg src1Vec = Q1;

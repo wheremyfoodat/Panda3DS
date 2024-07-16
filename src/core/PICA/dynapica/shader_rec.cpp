@@ -16,7 +16,7 @@ void ShaderJIT::prepare(PICAShader& shaderUnit) {
 	auto it = cache.find(hash);
 
 	if (it == cache.end()) { // Block has not been compiled yet
-		auto emitter = std::make_unique<ShaderEmitter>();
+		auto emitter = std::make_unique<ShaderEmitter>(accurateMul);
 		emitter->compile(shaderUnit);
 		// Get pointer to callbacks
 		entrypointCallback = emitter->getInstructionCallback(shaderUnit.entrypoint);
