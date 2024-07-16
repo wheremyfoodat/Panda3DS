@@ -247,12 +247,12 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 		return 1.0;
 	}
 
-	uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) * 4, 3);
+	uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) << 2, 3);
 	float scale = float(1u << scale_id);
 	if (scale_id >= 6u) scale /= 256.0;
 
 	float delta = 1.0;
-	uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) * 4, 3);
+	uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) << 2, 3);
 	switch (input_id) {
 		case 0u: {
 			delta = dot(v_normal, normalize(half_vector));
@@ -296,7 +296,7 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 	}
 
 	// 0 = enabled
-	if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 1 + 4 * int(lut_id), 1) == 0u) {
+	if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 1 + (int(lut_id) << 2), 1) == 0u) {
 		// Two sided diffuse
 		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u) {
 			delta = max(delta, 0.0);
@@ -347,7 +347,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	vec3 half_vector;
 
 	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
-		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i << 2u), 3);
+		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i) << 2, 3);
 
 		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + 0x10u * light_id);
 		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + 0x10u * light_id);
