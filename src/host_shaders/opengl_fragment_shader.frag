@@ -1,8 +1,6 @@
 #version 410 core
 
-in vec3 v_tangent;
-in vec3 v_normal;
-in vec3 v_bitangent;
+in vec4 v_quaternion;
 in vec4 v_colour;
 in vec3 v_texcoord0;
 in vec2 v_texcoord1;
@@ -37,6 +35,7 @@ uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48u]; }
 vec4 tevSources[16];
 vec4 tevNextPreviousBuffer;
 bool tevUnimplementedSourceFlag = false;
+vec3 normal;
 
 // Holds the enabled state of the lighting samples for various PICA configurations
 // As explained in https://www.3dbrew.org/wiki/GPU/Internal_Registers#GPUREG_LIGHTING_CONFIG0
@@ -255,7 +254,7 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 	uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) << 2, 3);
 	switch (input_id) {
 		case 0u: {
-			delta = dot(v_normal, normalize(half_vector));
+			delta = dot(normal, normalize(half_vector));
 			break;
 		}
 		case 1u: {
@@ -263,11 +262,11 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 			break;
 		}
 		case 2u: {
-			delta = dot(v_normal, normalize(v_view));
+			delta = dot(normal, normalize(v_view));
 			break;
 		}
 		case 3u: {
-			delta = dot(light_vector, v_normal);
+			delta = dot(light_vector, normal);
 			break;
 		}
 		case 4u: {
@@ -313,6 +312,12 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 	}
 }
 
+vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
+	vec3 u = q.xyz;
+	float s = q.w;
+	return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
+}
+
 // Implements the following algorthm: https://mathb.in/26766
 void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	error_unimpl = false;
@@ -335,6 +340,17 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	GPUREG_LIGHTING_CONFIG1 = readPicaReg(0x01C4u);
 	GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0u);
 	GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1u);
+
+	uint bump_mode = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 28, 2);
+
+	// Bump mode is ignored for now because it breaks some games ie. Toad Treasure Tracker
+	// Could be because the texture is not sampled correctly, may need the clamp/border color configurations
+	switch (bump_mode) {
+		default: {
+			normal = rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), v_quaternion);
+			break;
+		}
+	}
 
 	vec4 diffuse_sum = vec4(0.0, 0.0, 0.0, 1.0);
 	vec4 specular_sum = vec4(0.0, 0.0, 0.0, 1.0);
@@ -377,7 +393,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 		light_vector = normalize(light_vector);
 		half_vector = light_vector + normalize(v_view);
 
-		float NdotL = dot(v_normal, light_vector);  // N dot Li
+		float NdotL = dot(normal, light_vector);  // N dot Li
 
 		// Two sided diffuse
 		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
