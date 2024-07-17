@@ -39,18 +39,37 @@ vec3 normal;
 
 // Holds the enabled state of the lighting samples for various PICA configurations
 // As explained in https://www.3dbrew.org/wiki/GPU/Internal_Registers#GPUREG_LIGHTING_CONFIG0
-const bool samplerEnabled[9 * 7] = bool[9 * 7](
-	// D0     D1     SP     FR     RB     RG     RR
-	true,  false, true,  false, false, false, true,  // Configuration 0: D0, SP, RR
-	false, false, true,  true,  false, false, true,  // Configuration 1: FR, SP, RR
-	true,  true,  false, false, false, false, true,  // Configuration 2: D0, D1, RR
-	true,  true,  false, true,  false, false, false, // Configuration 3: D0, D1, FR
-	true,  true,  true,  false, true,  true,  true,  // Configuration 4: All except for FR
-	true,  false, true,  true,  true,  true,  true,  // Configuration 5: All except for D1
-	true,  true,  true,  true,  false, false, true,  // Configuration 6: All except for RB and RG
-	false, false, false, false, false, false, false, // Configuration 7: Unused
-	true,  true,  true,  true,  true,  true,  true   // Configuration 8: All
-);
+// const bool samplerEnabled[9 * 7] = bool[9 * 7](
+// 	// D0     D1     SP     FR     RB     RG     RR
+// 	true,  false, true,  false, false, false, true,  // Configuration 0: D0, SP, RR
+// 	false, false, true,  true,  false, false, true,  // Configuration 1: FR, SP, RR
+// 	true,  true,  false, false, false, false, true,  // Configuration 2: D0, D1, RR
+// 	true,  true,  false, true,  false, false, false, // Configuration 3: D0, D1, FR
+// 	true,  true,  true,  false, true,  true,  true,  // Configuration 4: All except for FR
+// 	true,  false, true,  true,  true,  true,  true,  // Configuration 5: All except for D1
+// 	true,  true,  true,  true,  false, false, true,  // Configuration 6: All except for RB and RG
+// 	false, false, false, false, false, false, false, // Configuration 7: Unused
+// 	true,  true,  true,  true,  true,  true,  true   // Configuration 8: All
+// );
+
+// The above have been condensed to two uints to save space
+// You can confirm they are the same by running the following:
+// for (int i = 0; i < 9 * 7; i++) {
+// 	unsigned arrayIndex = (i >> 5);
+// 	bool b = (samplerEnabledBitfields[arrayIndex] & (1u << (i & 31))) != 0u;
+// 	if (samplerEnabled[i] == b) {
+// 		printf("%d: happy\n", i);
+// 	} else {
+// 		printf("%d: unhappy\n", i);
+// 	}
+// }
+const uint samplerEnabledBitfields[2] = uint[2](0x7170e645u, 0x7f013fefu);
+
+bool isSamplerEnabled(uint environment_id, uint lut_id) {
+	uint index = 7 * environment_id + lut_id;
+	uint arrayIndex = (index >> 5);
+	return (samplerEnabledBitfields[arrayIndex] & (1u << (index & 31))) != 0u;
+}
 
 // OpenGL ES 1.1 reference pages for TEVs (this is what the PICA200 implements):
 // https://registry.khronos.org/OpenGL-Refpages/es1.1/xhtml/glTexEnv.xml
@@ -196,10 +215,6 @@ float decodeFP(uint hex, uint E, uint M) {
 	}
 
 	return uintBitsToFloat(hex);
-}
-
-bool isSamplerEnabled(uint environment_id, uint lut_id) {
-	return samplerEnabled[7 * environment_id + lut_id];
 }
 
 float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light_vector, vec3 half_vector) {
@@ -485,7 +500,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	secondary_color = clamp(specular_sum, vec4(0.0), vec4(1.0));
 
 	if (error_unimpl) {
-		secondary_color = primary_color = unimpl_color;
+		// secondary_color = primary_color = unimpl_color;
 	}
 }
 
