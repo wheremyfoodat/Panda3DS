@@ -173,9 +173,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 
 	applyAlphaTest(ret, regs);
 
-	ret += "fragColor = combinerOutput;\n";
-	ret += "}"; // End of main function
-	ret += "\n\n\n";
+	ret += "fragColor = combinerOutput;\n}"; // End of main function
 
 	return ret;
 }
