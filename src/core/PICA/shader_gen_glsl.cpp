@@ -3,6 +3,17 @@ using namespace PICA;
 using namespace PICA::ShaderGen;
 
 static constexpr const char* uniformDefinition = R"(
+	struct LightSource {
+		vec3 specular0;
+		vec3 specular1;
+		vec3 diffuse;
+		vec3 ambient;
+		vec3 position;
+		vec3 spotlightDirection;
+		float distanceAttenuationBias;
+		float distanceAttenuationScale;
+	};
+
 	layout(std140) uniform FragmentUniforms {
 		int alphaReference;
 		float depthScale;
@@ -11,6 +22,8 @@ static constexpr const char* uniformDefinition = R"(
 		vec4 constantColors[6];
 		vec4 tevBufferColor;
 		vec4 clipCoords;
+
+		LightSource lightSources[8];
 	};
 )";
 
@@ -128,7 +141,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 		uniform sampler2D u_tex2;
 		// GLES doesn't support sampler1DArray, as such we'll have to change how we handle lighting later
 #ifndef USING_GLES
-		uniform sampler1DArray u_tex_lighting_lut;
+		uniform sampler2D u_tex_lighting_lut;
 #endif
 	)";
 
@@ -140,8 +153,13 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 		void main() {
 			vec4 combinerOutput = v_colour;
 			vec4 previousBuffer = vec4(0.0);
-			vec4 tevNextPreviousBuffer = tevBufferColor;			
+			vec4 tevNextPreviousBuffer = tevBufferColor;	
+
+			vec4 primaryColor = vec4(0.0);
+			vec4 secondaryColor = vec4(0.0);		
 	)";
+
+	compileLights(ret, config);
 
 	ret += R"(
 		vec3 colorOp1 = vec3(0.0);
@@ -353,8 +371,8 @@ void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source sour
 		case TexEnvConfig::Source::PreviousBuffer: shader += "previousBuffer"; break;
 		
 		// Lighting
-		case TexEnvConfig::Source::PrimaryFragmentColor:
-		case TexEnvConfig::Source::SecondaryFragmentColor: shader += "vec4(1.0, 1.0, 1.0, 1.0)"; break;
+		case TexEnvConfig::Source::PrimaryFragmentColor: shader += "primaryColor"; break;
+		case TexEnvConfig::Source::SecondaryFragmentColor: shader += "secondaryColor"; break;
 
 		default:
 			Helpers::warn("Unimplemented TEV source: %d", static_cast<int>(source));
@@ -429,4 +447,12 @@ void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs
 	}
 
 	shader += ") { discard; }\n";
+}
+
+void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentConfig& config) {
+	if (!config.lighting.enable) {
+		return;
+	}
+
+
 }

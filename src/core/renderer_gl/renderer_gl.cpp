@@ -875,6 +875,10 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		vec[3] = float((color >> 24) & 0xFF) / 255.0f;
 	}
 
+	// Append lighting uniforms
+	if (fsConfig.lighting.enable) {
+	}
+
 	gl.bindUBO(programEntry.uboBinding);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
 

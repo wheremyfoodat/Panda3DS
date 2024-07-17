@@ -26,6 +26,7 @@ namespace PICA::ShaderGen {
 		void getAlphaOperation(std::string& shader, PICA::TexEnvConfig::Operation op);
 
 		void applyAlphaTest(std::string& shader, const PICARegs& regs);
+		void compileLights(std::string& shader, const PICA::FragmentConfig& config);
 
 		u32 textureConfig = 0;
 
