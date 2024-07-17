@@ -828,8 +828,8 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
 		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
 		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
-		glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, programEntry.uboBinding);
 	}
+	glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, programEntry.uboBinding);
 
 	// Upload uniform data to our shader's UBO
 	PICA::FragmentUniforms uniforms;

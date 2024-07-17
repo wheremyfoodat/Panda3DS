@@ -175,7 +175,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs) {
 
 	ret += "fragColor = combinerOutput;\n";
 	ret += "}"; // End of main function
-	ret += "\n\n\n\n\n\n\n";
+	ret += "\n\n\n";
 
 	return ret;
 }
