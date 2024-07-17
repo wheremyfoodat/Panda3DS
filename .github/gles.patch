@@ -21,7 +21,7 @@ index 990e2f80..2e7842ac 100644
  
  void main() {
 diff --git a/src/host_shaders/opengl_fragment_shader.frag b/src/host_shaders/opengl_fragment_shader.frag
-index 1b8e9751..96238000 100644
+index 23c5c4cb..a9851a8b 100644
 --- a/src/host_shaders/opengl_fragment_shader.frag
 +++ b/src/host_shaders/opengl_fragment_shader.frag
 @@ -1,4 +1,5 @@
@@ -29,13 +29,13 @@ index 1b8e9751..96238000 100644
 +#version 300 es
 +precision mediump float;
  
- in vec3 v_tangent;
- in vec3 v_normal;
-@@ -171,11 +172,17 @@ float lutLookup(uint lut, int index) {
+ in vec4 v_quaternion;
+ in vec4 v_colour;
+@@ -189,11 +190,17 @@ float lutLookup(uint lut, int index) {
  	return texelFetch(u_tex_lighting_lut, ivec2(index, lut), 0).r;
  }
  
-+// some gles versions have bitfieldExtract and complain if you redefine it, some don't and compile error, using this instead
++// some gles versions have bitfieldExtractCompat and complain if you redefine it, some don't and compile error, using this instead
 +uint bitfieldExtractCompat(uint val, int off, int size) {
 +    uint mask = uint((1 << size) - 1);
 +    return uint(val >> off) & mask;
@@ -50,7 +50,7 @@ index 1b8e9751..96238000 100644
  }
  
  // Convert an arbitrary-width floating point literal to an f32
-@@ -243,16 +250,16 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
+@@ -257,16 +264,16 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
  	// If RR is enabled but not RG or RB, the output of RR is used for the three components; Red, Green and Blue.
  	bool current_sampler_enabled = isSamplerEnabled(environment_id, lut_id); // 7 luts per environment
  
@@ -59,25 +59,25 @@ index 1b8e9751..96238000 100644
  		return 1.0;
  	}
  
--	uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) * 4, 3);
-+	uint scale_id = bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) * 4, 3);
+-	uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) << 2, 3);
++	uint scale_id = bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) << 2, 3);
  	float scale = float(1u << scale_id);
  	if (scale_id >= 6u) scale /= 256.0;
  
  	float delta = 1.0;
--	uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) * 4, 3);
-+	uint input_id = bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) * 4, 3);
+-	uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) << 2, 3);
++	uint input_id = bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) << 2, 3);
  	switch (input_id) {
  		case 0u: {
- 			delta = dot(v_normal, normalize(half_vector));
-@@ -271,14 +278,14 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
+ 			delta = dot(normal, normalize(half_vector));
+@@ -285,14 +292,14 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
  			break;
  		}
  		case 4u: {
 -			// These are ints so that bitfieldExtract sign extends for us
 +			// These are ints so that bitfieldExtractCompat sign extends for us
- 			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + 0x10u * light_id));
- 			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + 0x10u * light_id));
+ 			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + (light_id << 4u)));
+ 			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + (light_id << 4u)));
  
  			// These are fixed point 1.1.11 values, so we need to convert them to float
 -			float x = float(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 13)) / 2047.0;
@@ -89,19 +89,19 @@ index 1b8e9751..96238000 100644
  			vec3 spotlight_vector = vec3(x, y, z);
  			delta = dot(light_vector, spotlight_vector); // spotlight direction is negated so we don't negate light_vector
  			break;
-@@ -296,9 +303,9 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
+@@ -310,9 +317,9 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
  	}
  
  	// 0 = enabled
--	if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 1 + 4 * int(lut_id), 1) == 0u) {
-+	if (bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_ABS, 1 + 4 * int(lut_id), 1) == 0u) {
+-	if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 1 + (int(lut_id) << 2), 1) == 0u) {
++	if (bitfieldExtractCompat(GPUREG_LIGHTING_LUTINPUT_ABS, 1 + (int(lut_id) << 2), 1) == 0u) {
  		// Two sided diffuse
 -		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u) {
 +		if (bitfieldExtractCompat(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u) {
  			delta = max(delta, 0.0);
  		} else {
  			delta = abs(delta);
-@@ -319,7 +326,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -339,7 +346,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  	unimpl_color = vec4(1.0, 0.0, 1.0, 1.0);
  
  	uint GPUREG_LIGHTING_ENABLE = readPicaReg(0x008Fu);
@@ -110,7 +110,16 @@ index 1b8e9751..96238000 100644
  		primary_color = secondary_color = vec4(0.0);
  		return;
  	}
-@@ -339,15 +346,15 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -356,7 +363,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 	GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0u);
+ 	GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1u);
+ 
+-	uint bump_mode = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 28, 2);
++	uint bump_mode = bitfieldExtractCompat(GPUREG_LIGHTING_CONFIG0, 28, 2);
+ 
+ 	// Bump mode is ignored for now because it breaks some games ie. Toad Treasure Tracker
+ 	// Could be because the texture is not sampled correctly, may need the clamp/border color configurations
+@@ -370,15 +377,15 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  	vec4 diffuse_sum = vec4(0.0, 0.0, 0.0, 1.0);
  	vec4 specular_sum = vec4(0.0, 0.0, 0.0, 1.0);
  
@@ -124,12 +133,12 @@ index 1b8e9751..96238000 100644
  	vec3 half_vector;
  
  	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
--		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
-+		light_id = bitfieldExtractCompat(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
+-		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i) << 2, 3);
++		light_id = bitfieldExtractCompat(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i) << 2, 3);
  
- 		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + 0x10u * light_id);
- 		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + 0x10u * light_id);
-@@ -359,12 +366,12 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + (light_id << 4u));
+ 		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + (light_id << 4u));
+@@ -390,12 +397,12 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  
  		float light_distance;
  		vec3 light_position = vec3(
@@ -145,8 +154,8 @@ index 1b8e9751..96238000 100644
  			light_vector = light_position + v_view;
  		}
  
-@@ -380,14 +387,14 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
- 		float NdotL = dot(v_normal, light_vector);  // N dot Li
+@@ -411,14 +418,14 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+ 		float NdotL = dot(normal, light_vector);  // N dot Li
  
  		// Two sided diffuse
 -		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
@@ -163,20 +172,20 @@ index 1b8e9751..96238000 100644
  		if (use_geo_0 || use_geo_1) {
  			geometric_factor = dot(half_vector, half_vector);
  			geometric_factor = geometric_factor == 0.0 ? 0.0 : min(NdotL / geometric_factor, 1.0);
-@@ -399,9 +406,9 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -430,9 +437,9 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  		// fragment and the distance attenuation scale and bias to calculate where in the LUT to look up.
  		// See: https://www.3dbrew.org/wiki/GPU/Internal_Registers#GPUREG_LIGHTi_ATTENUATION_SCALE
  		float distance_attenuation = 1.0;
 -		if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 24 + int(light_id), 1) == 0u) {
--			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtract(readPicaReg(0x014Au), 0, 20);
--			uint GPUREG_LIGHTi_ATTENUATION_SCALE = bitfieldExtract(readPicaReg(0x014Bu), 0, 20);
+-			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtract(readPicaReg(0x014Au + (light_id << 4u)), 0, 20);
+-			uint GPUREG_LIGHTi_ATTENUATION_SCALE = bitfieldExtract(readPicaReg(0x014Bu + (light_id << 4u)), 0, 20);
 +		if (bitfieldExtractCompat(GPUREG_LIGHTING_CONFIG1, 24 + int(light_id), 1) == 0u) {
-+			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtractCompat(readPicaReg(0x014Au), 0, 20);
-+			uint GPUREG_LIGHTi_ATTENUATION_SCALE = bitfieldExtractCompat(readPicaReg(0x014Bu), 0, 20);
++			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtractCompat(readPicaReg(0x014Au + (light_id << 4u)), 0, 20);
++			uint GPUREG_LIGHTi_ATTENUATION_SCALE = bitfieldExtractCompat(readPicaReg(0x014Bu + (light_id << 4u)), 0, 20);
  
  			float distance_attenuation_bias = decodeFP(GPUREG_LIGHTi_ATTENUATION_BIAS, 7u, 12u);
  			float distance_attenuation_scale = decodeFP(GPUREG_LIGHTi_ATTENUATION_SCALE, 7u, 12u);
-@@ -446,8 +453,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -477,8 +484,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  		specular_sum.rgb += light_factor * clamp_factor * (specular0 + specular1);
  	}
  
@@ -188,7 +197,7 @@ index 1b8e9751..96238000 100644
  	float fresnel_factor;
  	
 diff --git a/src/host_shaders/opengl_vertex_shader.vert b/src/host_shaders/opengl_vertex_shader.vert
-index a25d7a6d..7cf40398 100644
+index 057f9a88..dc735ced 100644
 --- a/src/host_shaders/opengl_vertex_shader.vert
 +++ b/src/host_shaders/opengl_vertex_shader.vert
 @@ -1,4 +1,6 @@
@@ -199,7 +208,7 @@ index a25d7a6d..7cf40398 100644
  
  layout(location = 0) in vec4 a_coords;
  layout(location = 1) in vec4 a_quaternion;
-@@ -20,7 +22,7 @@ out vec2 v_texcoord2;
+@@ -18,7 +20,7 @@ out vec2 v_texcoord2;
  flat out vec4 v_textureEnvColor[6];
  flat out vec4 v_textureEnvBufferColor;
  
@@ -208,7 +217,7 @@ index a25d7a6d..7cf40398 100644
  
  // TEV uniforms
  uniform uint u_textureEnvColor[6];
-@@ -93,6 +95,6 @@ void main() {
+@@ -81,8 +83,8 @@ void main() {
  	);
  
  	// There's also another, always-on clipping plane based on vertex z
@@ -216,6 +225,8 @@ index a25d7a6d..7cf40398 100644
 -	gl_ClipDistance[1] = dot(clipData, a_coords);
 +	// gl_ClipDistance[0] = -a_coords.z;
 +	// gl_ClipDistance[1] = dot(clipData, a_coords);
+ 
+ 	v_quaternion = a_quaternion;
  }
 diff --git a/third_party/opengl/opengl.hpp b/third_party/opengl/opengl.hpp
 index 9997e63b..5d9d7804 100644
