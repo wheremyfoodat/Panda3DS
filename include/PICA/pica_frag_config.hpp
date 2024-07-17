@@ -24,8 +24,9 @@ namespace PICA {
 		u32 texUnitConfig;
 		u32 texEnvUpdateBuffer;
 
-		// There's 6 TEV stages, and each one is configured via 5 word-sized registers
-		std::array<u32, 5 * 6> tevConfigs;
+		// There's 6 TEV stages, and each one is configured via 4 word-sized registers
+		// (+ the constant color register, which we don't include here, otherwise we'd generate too many shaders)
+		std::array<u32, 4 * 6> tevConfigs;
 	};
 
 	// Config used for identifying unique fragment pipeline configurations

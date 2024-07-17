@@ -793,13 +793,19 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
 	texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
 
-	// Set up TEV stages
-	std::memcpy(&texConfig.tevConfigs[0 * 5], &regs[InternalRegs::TexEnv0Source], 5 * sizeof(u32));
-	std::memcpy(&texConfig.tevConfigs[1 * 5], &regs[InternalRegs::TexEnv1Source], 5 * sizeof(u32));
-	std::memcpy(&texConfig.tevConfigs[2 * 5], &regs[InternalRegs::TexEnv2Source], 5 * sizeof(u32));
-	std::memcpy(&texConfig.tevConfigs[3 * 5], &regs[InternalRegs::TexEnv3Source], 5 * sizeof(u32));
-	std::memcpy(&texConfig.tevConfigs[4 * 5], &regs[InternalRegs::TexEnv4Source], 5 * sizeof(u32));
-	std::memcpy(&texConfig.tevConfigs[5 * 5], &regs[InternalRegs::TexEnv5Source], 5 * sizeof(u32));
+	// Set up TEV stages. Annoyingly we can't just memcpy as the TEV registers are arranged like
+	// {Source, Operand, Combiner, Color, Scale} and we want to skip the color register since it's uploaded via UBO
+#define setupTevStage(stage)                                                                                    \
+	std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
+	texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 5];
+
+	setupTevStage(0);
+	setupTevStage(1);
+	setupTevStage(2);
+	setupTevStage(3);
+	setupTevStage(4);
+	setupTevStage(5);
+#undef setupTevStage
 
 	CachedProgram& programEntry = shaderCache[fsConfig];
 	OpenGL::Program& program = programEntry.program;
