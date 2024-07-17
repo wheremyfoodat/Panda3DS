@@ -780,7 +780,7 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 OpenGL::Program& RendererGL::getSpecializedShader() {
 	constexpr uint uboBlockBinding = 2;
 
-	PICA::FragmentConfig fsConfig;
+	PICA::FragmentConfig fsConfig(regs);
 	auto& outConfig = fsConfig.outConfig;
 	auto& texConfig = fsConfig.texConfig;
 
@@ -812,7 +812,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	if (!program.exists()) {
 		std::string vs = fragShaderGen.getVertexShader(regs);
-		std::string fs = fragShaderGen.generate(regs);
+		std::string fs = fragShaderGen.generate(regs, fsConfig);
 
 		OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);

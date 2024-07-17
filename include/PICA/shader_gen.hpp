@@ -2,6 +2,7 @@
 #include <string>
 
 #include "PICA/gpu.hpp"
+#include "PICA/pica_frag_config.hpp"
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
 
@@ -30,7 +31,7 @@ namespace PICA::ShaderGen {
 
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
-		std::string generate(const PICARegs& regs);
+		std::string generate(const PICARegs& regs, const PICA::FragmentConfig& config);
 		std::string getVertexShader(const PICARegs& regs);
 
 		void setTarget(API api, Language language) {

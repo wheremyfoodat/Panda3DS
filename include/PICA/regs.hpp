@@ -67,7 +67,17 @@ namespace PICA {
 			ColourBufferLoc = 0x11D,
 			FramebufferSize = 0x11E,
 
-			//LightingRegs
+
+			// Lighting registers
+			LightingEnable = 0x8F,
+			LightNumber = 0x1C2,
+			LightConfig0 = 0x1C3,
+			LightConfig1 = 0x1C4,
+			LightPermutation = 0x1D9,
+			LightLUTAbs = 0x1D0,
+			LightLUTSelect = 0x1D1,
+			LightLUTScale = 0x1D2,
+
 			LightingLUTIndex =  0x01C5,
 			LightingLUTData0 =  0x01C8,
 			LightingLUTData1 =  0x01C9,

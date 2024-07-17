@@ -92,7 +92,7 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 	return ret;
 }
 
-std::string FragmentGenerator::generate(const PICARegs& regs) {
+std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConfig& config) {
 	std::string ret = "";
 
 	switch (api) {
