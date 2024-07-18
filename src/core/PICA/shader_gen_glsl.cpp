@@ -59,9 +59,7 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 		layout(location = 6) in vec3 a_view;
 		layout(location = 7) in vec2 a_texcoord2;
 
-		out vec3 v_normal;
-		out vec3 v_tangent;
-		out vec3 v_bitangent;
+		out vec4 v_quaternion;
 		out vec4 v_colour;
 		out vec3 v_texcoord0;
 		out vec2 v_texcoord1;
@@ -77,12 +75,6 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 			return scale * vec4(float(abgr & 0xffu), float((abgr >> 8) & 0xffu), float((abgr >> 16) & 0xffu), float(abgr >> 24));
 		}
 
-		vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
-			vec3 u = q.xyz;
-			float s = q.w;
-			return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
-		}
-
 		void main() {
 			gl_Position = a_coords;
 			vec4 colourAbs = abs(a_vertexColour);
@@ -92,10 +84,7 @@ std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 			v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
 			v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
 			v_view = a_view;
-
-			v_normal = normalize(rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), a_quaternion));
-			v_tangent = normalize(rotateVec3ByQuaternion(vec3(1.0, 0.0, 0.0), a_quaternion));
-			v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0, 1.0, 0.0), a_quaternion));
+			v_quaternion = a_quaternion;
 
 		#ifndef USING_GLES
 			gl_ClipDistance[0] = -a_coords.z;
@@ -128,9 +117,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 
 	// Input and output attributes
 	ret += R"(
-		in vec3 v_tangent;
-		in vec3 v_normal;
-		in vec3 v_bitangent;
+		in vec4 v_quaternion;
 		in vec4 v_colour;
 		in vec3 v_texcoord0;
 		in vec2 v_texcoord1;
@@ -148,6 +135,15 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 	)";
 
 	ret += uniformDefinition;
+	if (config.lighting.enable) {
+		ret += R"(
+			vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
+				vec3 u = q.xyz;
+				float s = q.w;
+				return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
+			}
+		)";
+	}
 
 	// Emit main function for fragment shader
 	// When not initialized, source 13 is set to vec4(0.0) and 15 is set to the vertex colour
