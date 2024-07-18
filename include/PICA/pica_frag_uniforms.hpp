@@ -17,11 +17,12 @@ namespace PICA {
 		alignas(16) vec3 position;
 		alignas(16) vec3 spotlightDirection;
 		
-		float distAttenuationBias;
+		float distanceAttenuationBias;
 		float distanceAttenuationScale;
 	};
 
 	struct FragmentUniforms {
+		using vec3 = std::array<float, 3>;
 		using vec4 = std::array<float, 4>;
 		static constexpr usize tevStageCount = 6;
 
@@ -33,6 +34,8 @@ namespace PICA {
 		alignas(16) vec4 tevBufferColor;
 		alignas(16) vec4 clipCoords;
 
+		// Note: We upload this as a u32 and decode on GPU
+		u32 globalAmbientLight;
 		// NOTE: THIS MUST BE LAST so that if lighting is disabled we can potentially omit uploading it
 		LightUniform lightUniforms[8];
 	};

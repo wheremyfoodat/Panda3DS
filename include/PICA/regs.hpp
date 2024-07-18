@@ -67,9 +67,20 @@ namespace PICA {
 			ColourBufferLoc = 0x11D,
 			FramebufferSize = 0x11E,
 
-
 			// Lighting registers
 			LightingEnable = 0x8F,
+			Light0Specular0 = 0x140,
+			Light0Specular1 = 0x141,
+			Light0Diffuse = 0x142,
+			Light0Ambient = 0x143,
+			Light0XY = 0x144,
+			Light0Z = 0x145,
+			Light0SpotlightXY = 0x146,
+			Light0SpotlightZ = 0x147,
+			Light0AttenuationBias = 0x14A,
+			Light0AttenuationScale = 0x14B,
+
+			LightGlobalAmbient = 0x1C0,
 			LightNumber = 0x1C2,
 			LightConfig0 = 0x1C3,
 			LightConfig1 = 0x1C4,

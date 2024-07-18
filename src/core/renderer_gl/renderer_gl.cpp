@@ -877,6 +877,44 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	// Append lighting uniforms
 	if (fsConfig.lighting.enable) {
+		uniforms.globalAmbientLight = regs[InternalRegs::LightGlobalAmbient];
+		for (int i = 0; i < 8; i++) {
+			auto& light = uniforms.lightUniforms[i];
+			const u32 specular0 = regs[InternalRegs::Light0Specular0 + i * 0x10];
+			const u32 specular1 = regs[InternalRegs::Light0Specular1 + i * 0x10];
+			const u32 diffuse = regs[InternalRegs::Light0Diffuse + i * 0x10];
+			const u32 ambient = regs[InternalRegs::Light0Ambient + i * 0x10];
+			const u32 lightXY = regs[InternalRegs::Light0XY + i * 0x10];
+			const u32 lightZ = regs[InternalRegs::Light0Z + i * 0x10];
+
+			const u32 spotlightXY = regs[InternalRegs::Light0SpotlightXY + i * 0x10];
+			const u32 spotlightZ = regs[InternalRegs::Light0SpotlightZ + i * 0x10];
+			const u32 attenuationBias = regs[InternalRegs::Light0AttenuationBias + i * 0x10];
+			const u32 attenuationScale = regs[InternalRegs::Light0AttenuationScale + i * 0x10];
+
+#define lightColorToVec3(value)                         \
+	{                                                   \
+		float(Helpers::getBits<20, 8>(value)) / 255.0f, \
+		float(Helpers::getBits<10, 8>(value)) / 255.0f, \
+		float(Helpers::getBits<0, 8>(value)) / 255.0f,  \
+	}
+			light.specular0 = lightColorToVec3(specular0);
+			light.specular1 = lightColorToVec3(specular1);
+			light.diffuse = lightColorToVec3(diffuse);
+			light.ambient = lightColorToVec3(ambient);
+			light.position[0] = Floats::f16::fromRaw(u16(lightXY)).toFloat32();
+			light.position[1] = Floats::f16::fromRaw(u16(lightXY >> 16)).toFloat32();
+			light.position[2] = Floats::f16::fromRaw(u16(lightXY)).toFloat32();
+
+			// Fixed point 1.11.1 to float, without negation
+			light.spotlightDirection[0] = float(s32(spotlightXY & 0x1FFF) << 19 >> 19) / 2047.0;
+			light.spotlightDirection[1] = float(s32((spotlightXY >> 16) & 0x1FFF) << 19 >> 19) / 2047.0;
+			light.spotlightDirection[2] = float(s32(spotlightZ & 0x1FFF) << 19 >> 19) / 2047.0;
+
+			light.distanceAttenuationBias = Floats::f20::fromRaw(attenuationBias & 0xFFFFF).toFloat32();
+			light.distanceAttenuationScale = Floats::f20::fromRaw(attenuationScale & 0xFFFFF).toFloat32();
+#undef lightColorToVec3
+		}
 	}
 
 	gl.bindUBO(programEntry.uboBinding);

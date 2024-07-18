@@ -23,6 +23,8 @@ static constexpr const char* uniformDefinition = R"(
 		vec4 tevBufferColor;
 		vec4 clipCoords;
 
+		// Note: We upload this as a u32 and decode on GPU
+		uint globalAmbientLight;
 		LightSource lightSources[8];
 	};
 )";
