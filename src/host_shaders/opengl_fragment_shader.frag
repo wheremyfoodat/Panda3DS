@@ -37,32 +37,7 @@ vec4 tevNextPreviousBuffer;
 bool tevUnimplementedSourceFlag = false;
 vec3 normal;
 
-// Holds the enabled state of the lighting samples for various PICA configurations
-// As explained in https://www.3dbrew.org/wiki/GPU/Internal_Registers#GPUREG_LIGHTING_CONFIG0
-// const bool samplerEnabled[9 * 7] = bool[9 * 7](
-// 	// D0     D1     SP     FR     RB     RG     RR
-// 	true,  false, true,  false, false, false, true,  // Configuration 0: D0, SP, RR
-// 	false, false, true,  true,  false, false, true,  // Configuration 1: FR, SP, RR
-// 	true,  true,  false, false, false, false, true,  // Configuration 2: D0, D1, RR
-// 	true,  true,  false, true,  false, false, false, // Configuration 3: D0, D1, FR
-// 	true,  true,  true,  false, true,  true,  true,  // Configuration 4: All except for FR
-// 	true,  false, true,  true,  true,  true,  true,  // Configuration 5: All except for D1
-// 	true,  true,  true,  true,  false, false, true,  // Configuration 6: All except for RB and RG
-// 	false, false, false, false, false, false, false, // Configuration 7: Unused
-// 	true,  true,  true,  true,  true,  true,  true   // Configuration 8: All
-// );
-
-// The above have been condensed to two uints to save space
-// You can confirm they are the same by running the following:
-// for (int i = 0; i < 9 * 7; i++) {
-// 	unsigned arrayIndex = (i >> 5);
-// 	bool b = (samplerEnabledBitfields[arrayIndex] & (1u << (i & 31))) != 0u;
-// 	if (samplerEnabled[i] == b) {
-// 		printf("%d: happy\n", i);
-// 	} else {
-// 		printf("%d: unhappy\n", i);
-// 	}
-// }
+// See docs/lighting.md
 const uint samplerEnabledBitfields[2] = uint[2](0x7170e645u, 0x7f013fefu);
 
 bool isSamplerEnabled(uint environment_id, uint lut_id) {
@@ -219,27 +194,6 @@ float decodeFP(uint hex, uint E, uint M) {
 
 float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light_vector, vec3 half_vector) {
 	uint lut_index;
-	// lut_id is one of these values
-	// 0 	D0
-	// 1 	D1
-	// 2 	SP
-	// 3 	FR
-	// 4 	RB
-	// 5 	RG
-	// 6 	RR 
-
-	// lut_index on the other hand represents the actual index of the LUT in the texture
-	// u_tex_lighting_lut has 24 LUTs and they are used like so:
-	// 0 		D0
-	// 1 		D1
-	// 2 		is missing because SP uses LUTs 8-15
-	// 3 		FR
-	// 4 		RB
-	// 5 		RG
-	// 6 		RR
-	// 8-15 	SP0-7
-	// 16-23 	DA0-7, but this is not handled in this function as the lookup is a bit different
-
 	int bit_in_config1;
 	if (lut_id == SP_LUT) {
 		// These are the spotlight attenuation LUTs
@@ -252,9 +206,6 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 		error_unimpl = true;
 	}
 
-	// The light environment configuration controls which LUTs are available for use
-	// If a LUT is not available in the selected configuration, its value will always read a constant 1.0 regardless of the enable state in GPUREG_LIGHTING_CONFIG1
-	// If RR is enabled but not RG or RB, the output of RR is used for the three components; Red, Green and Blue.
 	bool current_sampler_enabled = isSamplerEnabled(environment_id, lut_id); // 7 luts per environment
 
 	if (!current_sampler_enabled || (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, bit_in_config1, 1) != 0u)) {
@@ -285,14 +236,23 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 			break;
 		}
 		case 4u: {
-			// These are ints so that bitfieldExtract sign extends for us
-			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + (light_id << 4u)));
-			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + (light_id << 4u)));
+			uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146u + (light_id << 4u));
+			uint GPUREG_LIGHTi_SPOTDIR_HIGH = readPicaReg(0x0147u + (light_id << 4u));
+
+			// Sign extend them. Normally bitfieldExtract would do that but it's missing on some versions
+			// of GLSL so we do it manually
+			int se_x = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 13);
+			int se_y = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 13);
+			int se_z = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 13);
+
+			if (se_x & 0x1000) se_x |= 0xffffe000;
+			if (se_y & 0x1000) se_y |= 0xffffe000;
+			if (se_z & 0x1000) se_z |= 0xffffe000;
 
 			// These are fixed point 1.1.11 values, so we need to convert them to float
-			float x = float(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 13)) / 2047.0;
-			float y = float(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 13)) / 2047.0;
-			float z = float(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 13)) / 2047.0;
+			float x = float(se_x) / 2047.0;
+			float y = float(se_y) / 2047.0;
+			float z = float(se_z) / 2047.0;
 			vec3 spotlight_vector = vec3(x, y, z);
 			delta = dot(light_vector, spotlight_vector); // spotlight direction is negated so we don't negate light_vector
 			break;
@@ -359,7 +319,6 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	uint bump_mode = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 28, 2);
 
 	// Bump mode is ignored for now because it breaks some games ie. Toad Treasure Tracker
-	// Could be because the texture is not sampled correctly, may need the clamp/border color configurations
 	switch (bump_mode) {
 		default: {
 			normal = rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), v_quaternion);
@@ -424,11 +383,6 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 			geometric_factor = geometric_factor == 0.0 ? 0.0 : min(NdotL / geometric_factor, 1.0);
 		}
 
-		// Distance attenuation is computed differently from the other factors, for example
-		// it doesn't store its scale in GPUREG_LIGHTING_LUTINPUT_SCALE and it doesn't use 
-		// GPUREG_LIGHTING_LUTINPUT_SELECT. Instead, it uses the distance from the light to the
-		// fragment and the distance attenuation scale and bias to calculate where in the LUT to look up.
-		// See: https://www.3dbrew.org/wiki/GPU/Internal_Registers#GPUREG_LIGHTi_ATTENUATION_SCALE
 		float distance_attenuation = 1.0;
 		if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 24 + int(light_id), 1) == 0u) {
 			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtract(readPicaReg(0x014Au + (light_id << 4u)), 0, 20);
