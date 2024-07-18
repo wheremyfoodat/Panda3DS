@@ -21,7 +21,7 @@ index 990e2f80..2e7842ac 100644
  
  void main() {
 diff --git a/src/host_shaders/opengl_fragment_shader.frag b/src/host_shaders/opengl_fragment_shader.frag
-index d622b97e..8aa434f2 100644
+index b4ad7ecc..98b1bd80 100644
 --- a/src/host_shaders/opengl_fragment_shader.frag
 +++ b/src/host_shaders/opengl_fragment_shader.frag
 @@ -1,4 +1,5 @@
@@ -71,8 +71,8 @@ index d622b97e..8aa434f2 100644
  		case 0u: {
  			delta = dot(normal, normalize(half_vector));
 @@ -239,11 +246,11 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
- 			uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146u + (light_id << 4u));
- 			uint GPUREG_LIGHTi_SPOTDIR_HIGH = readPicaReg(0x0147u + (light_id << 4u));
+ 			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + (light_id << 4u)));
+ 			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + (light_id << 4u)));
  
 -			// Sign extend them. Normally bitfieldExtract would do that but it's missing on some versions
 +			// Sign extend them. Normally bitfieldExtractCompat would do that but it's missing on some versions
@@ -84,8 +84,8 @@ index d622b97e..8aa434f2 100644
 +			int se_y = bitfieldExtractCompat(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 13);
 +			int se_z = bitfieldExtractCompat(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 13);
  
- 			if (se_x & 0x1000) se_x |= 0xffffe000;
- 			if (se_y & 0x1000) se_y |= 0xffffe000;
+ 			if ((se_x & 0x1000) == 0x1000) se_x |= 0xffffe000;
+ 			if ((se_y & 0x1000) == 0x1000) se_y |= 0xffffe000;
 @@ -270,9 +277,9 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
  	}
  
@@ -98,16 +98,16 @@ index d622b97e..8aa434f2 100644
  			delta = max(delta, 0.0);
  		} else {
  			delta = abs(delta);
-@@ -299,7 +306,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
- 	unimpl_color = vec4(1.0, 0.0, 1.0, 1.0);
- 
+@@ -296,7 +303,7 @@ vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
+ // Implements the following algorthm: https://mathb.in/26766
+ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  	uint GPUREG_LIGHTING_ENABLE = readPicaReg(0x008Fu);
 -	if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
 +	if (bitfieldExtractCompat(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
  		primary_color = secondary_color = vec4(0.0);
  		return;
  	}
-@@ -316,7 +323,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -313,7 +320,7 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  	GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0u);
  	GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1u);
  
@@ -116,7 +116,7 @@ index d622b97e..8aa434f2 100644
  
  	// Bump mode is ignored for now because it breaks some games ie. Toad Treasure Tracker
  	switch (bump_mode) {
-@@ -329,15 +336,15 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -326,15 +333,15 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  	vec4 diffuse_sum = vec4(0.0, 0.0, 0.0, 1.0);
  	vec4 specular_sum = vec4(0.0, 0.0, 0.0, 1.0);
  
@@ -135,7 +135,7 @@ index d622b97e..8aa434f2 100644
  
  		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + (light_id << 4u));
  		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + (light_id << 4u));
-@@ -349,12 +356,12 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -346,12 +353,12 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  
  		float light_distance;
  		vec3 light_position = vec3(
@@ -151,7 +151,7 @@ index d622b97e..8aa434f2 100644
  			light_vector = light_position + v_view;
  		}
  
-@@ -370,23 +377,23 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -367,23 +374,23 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  		float NdotL = dot(normal, light_vector);  // N dot Li
  
  		// Two sided diffuse
@@ -181,7 +181,7 @@ index d622b97e..8aa434f2 100644
  
  			float distance_attenuation_bias = decodeFP(GPUREG_LIGHTi_ATTENUATION_BIAS, 7u, 12u);
  			float distance_attenuation_scale = decodeFP(GPUREG_LIGHTi_ATTENUATION_SCALE, 7u, 12u);
-@@ -431,8 +438,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
+@@ -428,8 +435,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
  		specular_sum.rgb += light_factor * clamp_factor * (specular0 + specular1);
  	}
  
