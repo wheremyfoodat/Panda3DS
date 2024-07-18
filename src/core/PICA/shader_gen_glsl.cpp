@@ -29,6 +29,11 @@ static constexpr const char* uniformDefinition = R"(
 	};
 )";
 
+// There's actually 8 different LUTs (SP0-SP7), one for each light with different indices (8-15)
+// We use an unused LUT value for "this light source's spotlight" instead and figure out which light source to use in compileLutLookup
+// This is particularly intuitive in several places, such as checking if a LUT is enabled
+static constexpr int spotlightLutIndex = 2;
+
 std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
 	std::string ret = "";
 
@@ -546,6 +551,46 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 	)";
 }
 
-void FragmentGenerator::compileLUTLookup(std::string& shader, u32 lightIndex, u32 lutIndex, bool abs) {
+bool FragmentGenerator::isSamplerEnabled(u32 environmentID, u32 lutID) {
+	static constexpr bool samplerEnabled[9 * 7] = {
+		// D0     D1     SP     FR     RB     RG     RR
+		true,  false, true,  false, false, false, true,   // Configuration 0: D0, SP, RR
+		false, false, true,  true,  false, false, true,   // Configuration 1: FR, SP, RR
+		true,  true,  false, false, false, false, true,   // Configuration 2: D0, D1, RR
+		true,  true,  false, true,  false, false, false,  // Configuration 3: D0, D1, FR
+		true,  true,  true,  false, true,  true,  true,   // Configuration 4: All except for FR
+		true,  false, true,  true,  true,  true,  true,   // Configuration 5: All except for D1
+		true,  true,  true,  true,  false, false, true,   // Configuration 6: All except for RB and RG
+		false, false, false, false, false, false, false,  // Configuration 7: Unused
+	 	true,  true,  true,  true,  true,  true,  true,   // Configuration 8: All
+	};
+
+	return samplerEnabled[environmentID * 7 + lutID];
+}
+
+void FragmentGenerator::compileLUTLookup(
+	std::string& shader, const PICA::FragmentConfig& config, const PICARegs& regs, u32 lightIndex, u32 lutID, bool abs
+) {
+	uint lutIndex = 0;
+	int bitInConfig1 = 0;
+
+	if (lutID == spotlightLutIndex) {
+		// These are the spotlight attenuation LUTs
+		bitInConfig1 = 8 + (lightIndex & 0x7);
+		lutIndex = 8u + lightIndex;
+	} else if (lutID <= 6) {
+		bitInConfig1 = 16 + lutID;
+		lutIndex = lutID;
+	} else {
+		Helpers::warn("Shadergen: Unimplemented LUT value");
+	}
+
+	const bool samplerEnabled = isSamplerEnabled(config.lighting.config, lutID);
+	const u32 config1 = regs[InternalRegs::LightConfig1];
+
+	if (!samplerEnabled || ((config1 >> bitInConfig1) != 0)) {
+		// 1.0
+	}
+
 	// TODO
 }

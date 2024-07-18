@@ -252,7 +252,8 @@ namespace PICA {
 		enum : u32 {
 			LUT_D0 = 0,
 			LUT_D1,
-			LUT_FR,
+			// LUT 2 is not used, the emulator internally uses it for referring to the current source's spotlight in shaders
+			LUT_FR = 0x3,
 			LUT_RB,
 			LUT_RG,
 			LUT_RR,
