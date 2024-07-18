@@ -631,9 +631,9 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 	const u32 lutScale = regs[InternalRegs::LightLUTScale];
 
 	// The way these bitfields are encoded is so cursed
-	float scale = scales[(lutScale >> (4 * lutIndex)) & 0x7];
-	uint inputID = (lutSelect >> (4 * lutIndex)) & 0x7;
-	bool absEnabled = ((lutAbs >> (4 * lutIndex + 1)) & 0x1) == 0; // 0 = enabled...
+	float scale = scales[(lutScale >> (4 * lutID)) & 0x7];
+	uint inputID = (lutSelect >> (4 * lutID)) & 0x7;
+	bool absEnabled = ((lutAbs >> (4 * lutID + 1)) & 0x1) == 0; // 0 = enabled...
 	
 	switch (inputID) {
 		case 0: shader += "lut_lookup_delta = dot(normal, normalize(half_vector));\n"; break;
