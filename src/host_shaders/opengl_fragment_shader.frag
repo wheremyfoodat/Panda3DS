@@ -43,7 +43,7 @@ const uint samplerEnabledBitfields[2] = uint[2](0x7170e645u, 0x7f013fefu);
 bool isSamplerEnabled(uint environment_id, uint lut_id) {
 	uint index = 7 * environment_id + lut_id;
 	uint arrayIndex = (index >> 5);
-	return (samplerEnabledBitfields[arrayIndex] & (1u << (index & 31))) != 0u;
+	return (samplerEnabledBitfields[arrayIndex] & (1u << (index & 31u))) != 0u;
 }
 
 // OpenGL ES 1.1 reference pages for TEVs (this is what the PICA200 implements):
@@ -157,8 +157,8 @@ uint GPUREG_LIGHTING_CONFIG1;
 uint GPUREG_LIGHTING_LUTINPUT_SELECT;
 uint GPUREG_LIGHTING_LUTINPUT_SCALE;
 uint GPUREG_LIGHTING_LUTINPUT_ABS;
-bool error_unimpl;
-vec4 unimpl_color;
+bool error_unimpl = false;
+vec4 unimpl_color = vec4(1.0, 0.0, 1.0, 1.0);
 
 float lutLookup(uint lut, int index) {
 	return texelFetch(u_tex_lighting_lut, ivec2(index, lut), 0).r;
@@ -236,8 +236,8 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 			break;
 		}
 		case 4u: {
-			uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146u + (light_id << 4u));
-			uint GPUREG_LIGHTi_SPOTDIR_HIGH = readPicaReg(0x0147u + (light_id << 4u));
+			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + (light_id << 4u)));
+			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + (light_id << 4u)));
 
 			// Sign extend them. Normally bitfieldExtract would do that but it's missing on some versions
 			// of GLSL so we do it manually
@@ -245,9 +245,9 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 			int se_y = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 13);
 			int se_z = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 13);
 
-			if (se_x & 0x1000) se_x |= 0xffffe000;
-			if (se_y & 0x1000) se_y |= 0xffffe000;
-			if (se_z & 0x1000) se_z |= 0xffffe000;
+			if ((se_x & 0x1000) == 0x1000) se_x |= 0xffffe000;
+			if ((se_y & 0x1000) == 0x1000) se_y |= 0xffffe000;
+			if ((se_z & 0x1000) == 0x1000) se_z |= 0xffffe000;
 
 			// These are fixed point 1.1.11 values, so we need to convert them to float
 			float x = float(se_x) / 2047.0;
@@ -295,9 +295,6 @@ vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
 
 // Implements the following algorthm: https://mathb.in/26766
 void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
-	error_unimpl = false;
-	unimpl_color = vec4(1.0, 0.0, 1.0, 1.0);
-
 	uint GPUREG_LIGHTING_ENABLE = readPicaReg(0x008Fu);
 	if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
 		primary_color = secondary_color = vec4(0.0);
