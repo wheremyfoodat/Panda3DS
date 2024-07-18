@@ -118,7 +118,7 @@ vec4 tevCalculateCombiner(int tev_id) {
 		case 6u: result.rgb = vec3(4.0 * dot(source0.rgb - 0.5, source1.rgb - 0.5)); break;  // Dot3 RGB
 		case 7u: result = vec4(4.0 * dot(source0.rgb - 0.5, source1.rgb - 0.5)); break;      // Dot3 RGBA
 		case 8u: result.rgb = min(source0.rgb * source1.rgb + source2.rgb, 1.0); break;      // Multiply then add
-		case 9u: result.rgb = min((source0.rgb + source1.rgb) * source2.rgb, 1.0); break;    // Add then multiply
+		case 9u: result.rgb = min(source0.rgb + source1.rgb, 1.0) * source2.rgb; break;    // Add then multiply
 		default: break;
 	}
 
@@ -133,7 +133,7 @@ vec4 tevCalculateCombiner(int tev_id) {
 			case 4u: result.a = mix(source1.a, source0.a, source2.a); break;           // Interpolate
 			case 5u: result.a = max(0.0, source0.a - source1.a); break;                // Subtract
 			case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break;    // Multiply then add
-			case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break;  // Add then multiply
+			case 9u: result.a = min(source0.a + source1.a, 1.0) * source2.a; break;  // Add then multiply
 			default: break;
 		}
 	}
@@ -277,7 +277,7 @@ float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light
 		} else {
 			delta = abs(delta);
 		}
-		int index = int(clamp(floor(delta * 256.0), 0.f, 255.f));
+		int index = int(clamp(floor(delta * 255.0), 0.f, 255.f));
 		return lutLookup(lut_index, index) * scale;
 	} else {
 		// Range is [-1, 1] so we need to map it to [0, 1]
