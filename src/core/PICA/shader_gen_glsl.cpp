@@ -135,12 +135,17 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 	)";
 
 	ret += uniformDefinition;
+
 	if (config.lighting.enable) {
 		ret += R"(
 			vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
 				vec3 u = q.xyz;
 				float s = q.w;
 				return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
+			}
+
+			float lutLookup(uint lut, int index) {
+				return texelFetch(u_tex_lighting_lut, ivec2(index, lut), 0).r;
 			}
 		)";
 	}
@@ -452,5 +457,95 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 		return;
 	}
 
+	// Currently ignore bump mode
+	shader += "vec3 normal = rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), v_quaternion);\n";
+	shader += R"(
+		vec4 diffuse_sum = vec4(0.0, 0.0, 0.0, 1.0);
+		vec4 specular_sum = vec4(0.0, 0.0, 0.0, 1.0);
+		vec3 light_position, light_vector, half_vector, specular0, specular1, light_factor;
 
+		float light_distance, NdotL, geometric_factor, distance_attenuation, distance_att_delta;
+		float spotlight_attenuation, specular0_dist, specular1_dist, reflected_color;
+	)";
+
+	for (int i = 0; i < config.lighting.lightNum; i++) {
+		const auto& lightConfig = config.lighting.lights[i];
+		shader += "light_position = lightSources[" + std::to_string(i) + "].position;\n";
+
+		if (lightConfig.directional) {  // Directional lighting
+			shader += "light_vector = light_position + v_view;\n";
+		} else {  // Positional lighting
+			shader += "light_vector = light_position;\n";
+		}
+
+		shader += R"(
+			light_distance = length(light_vector);
+			light_vector = normalize(light_vector);
+			half_vector = light_vector + normalize(v_view);
+			
+			distance_attenuation = 1.0;
+			NdotL = dot(normal, light_vector);
+		)";
+
+		shader += lightConfig.twoSidedDiffuse ? "NdotL = abs(NdotL);\n" : "NdotL = max(NdotL, 0.0);\n";
+
+		if (lightConfig.geometricFactor0 || lightConfig.geometricFactor1) {
+			shader += R"(
+				geometric_factor = dot(half_vector, half_vector);
+				geometric_factor = (geometric_factor == 0.0) ? 0.0 : min(NdotL / geometric_factor, 1.0);
+			)";
+		}
+
+		if (lightConfig.distanceAttenuationEnable) {
+			shader += "distance_att_delta = clamp(light_distance * lightSources[" + std::to_string(i) + "].distanceAttenuationScale + lightSources[" +
+					  std::to_string(i) + "].distanceAttenuationBias, 0.0, 1.0);\n";
+
+			shader +=
+				"distance_attenuation = lutLookup(" + std::to_string(16 + i) + ", int(clamp(floor(distance_att_delta * 255.0), 0.0, 255.0)));\n";
+		}
+
+		// TODO: LightLutLookup stuff
+		shader += "spotlight_attenuation = 0.0; // Placeholder\n";
+		shader += "specular0_dist = 0.0; // Placeholder\n";
+		shader += "specular1_dist = 0.0; // Placeholder\n";
+		shader += "reflected_color = vec3(0.0); // Placeholder\n";
+
+		shader += "specular0 = lightSources[" + std::to_string(i) + "].specular0;\n";
+		shader += "specular0 = specular0 * specular0_dist";
+		if (lightConfig.geometricFactor0) {
+			shader += " * geometric_factor;\n";
+		} else {
+			shader += ";\n";
+		}
+
+		shader += "specular1 = lightSources[" + std::to_string(i) + "].specular1;\n";
+		shader += "specular1 = specular1 * specular1_dist * reflected_color";
+		if (lightConfig.geometricFactor1) {
+			shader += " * geometric_factor;\n";
+		} else {
+			shader += ";\n";
+		}
+
+		shader += "light_factor = distance_attenuation * spotlight_attenuation;\n";
+		
+		if (config.lighting.clampHighlights) {
+			shader += "specular_sum.rgb += light_factor * (NdotL == 0.0 ? 0.0 : 1.0) * (specular0 + specular1);\n";
+		} else {
+			shader += "specular_sum.rgb += light_factor * (specular0 + specular1);\n";
+		}
+
+		shader += "diffuse_sum.rgb += vec3(0.0); // Placeholder\n";
+	}
+
+	// TODO: Rest of the post-per-light stuff
+	shader += R"(
+		vec4 global_ambient = vec4(regToColor(GPUREG_LIGHTING_AMBIENT), 1.0);
+
+		primaryColor = clamp(global_ambient + diffuse_sum, vec4(0.0), vec4(1.0));
+		secondaryColor = clamp(specular_sum, vec4(0.0), vec4(1.0));
+	)";
+}
+
+void FragmentGenerator::compileLUTLookup(std::string& shader, u32 lightIndex, u32 lutIndex, bool abs) {
+	// TODO
 }

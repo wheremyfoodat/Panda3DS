@@ -27,6 +27,7 @@ namespace PICA::ShaderGen {
 
 		void applyAlphaTest(std::string& shader, const PICARegs& regs);
 		void compileLights(std::string& shader, const PICA::FragmentConfig& config);
+		void compileLUTLookup(std::string& shader, u32 lightIndex, u32 lutIndex, bool abs);
 
 		u32 textureConfig = 0;
 
