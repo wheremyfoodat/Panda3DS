@@ -640,7 +640,7 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 		case 1: shader += "lut_lookup_delta = dot(normalize(v_view), normalize(half_vector));\n"; break;
 		case 2: shader += "lut_lookup_delta = dot(normal, normalize(v_view));\n"; break;
 		case 3: shader += "lut_lookup_delta = dot(normal, light_vector);\n"; break;
-		case 4: shader += "lut_lookup_delta = dot(normal, lightSources[" + std ::to_string(lightIndex) + "].spotlightDirection);\n"; break;
+		case 4: shader += "lut_lookup_delta = dot(light_vector, lightSources[" + std ::to_string(lightIndex) + "].spotlightDirection);\n"; break;
 
 		default:
 			Helpers::warn("Shadergen: Unimplemented LUT select");
