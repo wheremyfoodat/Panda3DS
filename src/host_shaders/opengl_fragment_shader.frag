@@ -161,7 +161,7 @@ bool error_unimpl = false;
 vec4 unimpl_color = vec4(1.0, 0.0, 1.0, 1.0);
 
 float lutLookup(uint lut, int index) {
-	return texelFetch(u_tex_lighting_lut, ivec2(index, lut), 0).r;
+	return texelFetch(u_tex_lighting_lut, ivec2(index, int(lut)), 0).r;
 }
 
 vec3 regToColor(uint reg) {

@@ -147,11 +147,11 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 			}
 
 			float lutLookup(uint lut, int index) {
-				return texelFetch(u_tex_lighting_lut, ivec2(index, lut), 0).r;
+				return texelFetch(u_tex_lighting_lut, ivec2(index, int(lut)), 0).r;
 			}
 
 			vec3 regToColor(uint reg) {
-				return (1.0 / 255.0) * vec3(float((reg >> 20) & 0xFF), float((reg >> 10) & 0xFF), float(reg & 0xFF));
+				return (1.0 / 255.0) * vec3(float((reg >> 20u) & 0xFFu), float((reg >> 10u) & 0xFFu), float(reg & 0xFFu));
 			}
 		)";
 	}
@@ -476,7 +476,7 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 		int lut_lookup_index;
 	)";
 
-	uint lightID = 0;;
+	uint lightID = 0;
 
 	for (int i = 0; i < config.lighting.lightNum; i++) {
 		lightID = config.lighting.lights[i].num; 
