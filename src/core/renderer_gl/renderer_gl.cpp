@@ -117,7 +117,10 @@ void RendererGL::initGraphicsContextInternal() {
 	const u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
 	const u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
 
-	glGenTextures(1, &lightLUTTextureArray);
+	lightLUTTexture.create(256, Lights::LUT_Count, GL_R32F);
+	lightLUTTexture.bind();
+	lightLUTTexture.setMinFilter(OpenGL::Linear);
+	lightLUTTexture.setMagFilter(OpenGL::Linear);
 
 	auto prevTexture = OpenGL::getTex2D();
 
@@ -348,26 +351,22 @@ void RendererGL::bindTexturesToSlots() {
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+	lightLUTTexture.bind();
 	glActiveTexture(GL_TEXTURE0);
 }
 
 void RendererGL::updateLightingLUT() {
 	gpu.lightingLUTDirty = false;
-	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
+	std::array<float, GPU::LightingLutSize> lightingLut;
 
 	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
-		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
-		u16_lightinglut[i] = value * 65535 / 4095;
+		uint64_t value = gpu.lightingLUT[i] & 0xFFF;
+		lightingLut[i] = (float)(value << 4) / 65535.0f;
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
-	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	lightLUTTexture.bind();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, Lights::LUT_Count, GL_RED, GL_FLOAT, lightingLut.data());
 	glActiveTexture(GL_TEXTURE0);
 }
 

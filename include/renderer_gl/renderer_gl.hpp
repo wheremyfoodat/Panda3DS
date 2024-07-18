@@ -63,7 +63,7 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexBuffer dummyVBO;
 
 	OpenGL::Texture screenTexture;
-	GLuint lightLUTTextureArray;
+	OpenGL::Texture lightLUTTexture;
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
 
