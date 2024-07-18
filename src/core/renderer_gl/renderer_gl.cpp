@@ -903,7 +903,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 			light.ambient = lightColorToVec3(ambient);
 			light.position[0] = Floats::f16::fromRaw(u16(lightXY)).toFloat32();
 			light.position[1] = Floats::f16::fromRaw(u16(lightXY >> 16)).toFloat32();
-			light.position[2] = Floats::f16::fromRaw(u16(lightXY)).toFloat32();
+			light.position[2] = Floats::f16::fromRaw(u16(lightZ)).toFloat32();
 
 			// Fixed point 1.11.1 to float, without negation
 			light.spotlightDirection[0] = float(s32(spotlightXY & 0x1FFF) << 19 >> 19) / 2047.0;

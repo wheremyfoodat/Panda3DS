@@ -140,7 +140,7 @@ namespace PICA {
 			const u32 lutAbs = regs[InternalRegs::LightLUTAbs];
 			const u32 lutSelect = regs[InternalRegs::LightLUTSelect];
 			const u32 lutScale = regs[InternalRegs::LightLUTScale];
-			static constexpr float scales[] = {1.0f, 2.0f, 4.0f, 8.0f, 0.25f, 0.5f};
+			static constexpr float scales[] = {1.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.25f, 0.5f};
 
 			if (d0.enable) {
 				d0.absInput = Helpers::getBit<1>(lutAbs) == 0;

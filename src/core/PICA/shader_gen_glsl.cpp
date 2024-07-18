@@ -133,10 +133,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 		uniform sampler2D u_tex0;
 		uniform sampler2D u_tex1;
 		uniform sampler2D u_tex2;
-		// GLES doesn't support sampler1DArray, as such we'll have to change how we handle lighting later
-#ifndef USING_GLES
 		uniform sampler2D u_tex_lighting_lut;
-#endif
 	)";
 
 	ret += uniformDefinition;
@@ -151,6 +148,10 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 
 			float lutLookup(uint lut, int index) {
 				return texelFetch(u_tex_lighting_lut, ivec2(index, lut), 0).r;
+			}
+
+			vec3 regToColor(uint reg) {
+				return (1.0 / 255.0) * vec3(float((reg >> 20) & 0xFF), float((reg >> 10) & 0xFF), float(reg & 0xFF));
 			}
 		)";
 	}
@@ -167,7 +168,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 			vec4 secondaryColor = vec4(0.0);		
 	)";
 
-	compileLights(ret, config);
+	compileLights(ret, config, regs);
 
 	ret += R"(
 		vec3 colorOp1 = vec3(0.0);
@@ -457,7 +458,7 @@ void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs
 	shader += ") { discard; }\n";
 }
 
-void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentConfig& config) {
+void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentConfig& config, const PICARegs& regs) {
 	if (!config.lighting.enable) {
 		return;
 	}
@@ -467,15 +468,21 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 	shader += R"(
 		vec4 diffuse_sum = vec4(0.0, 0.0, 0.0, 1.0);
 		vec4 specular_sum = vec4(0.0, 0.0, 0.0, 1.0);
-		vec3 light_position, light_vector, half_vector, specular0, specular1, light_factor;
+		vec3 light_position, light_vector, half_vector, specular0, specular1, reflected_color;
 
-		float light_distance, NdotL, geometric_factor, distance_attenuation, distance_att_delta;
-		float spotlight_attenuation, specular0_dist, specular1_dist, reflected_color;
+		float light_distance, NdotL, light_factor, geometric_factor, distance_attenuation, distance_att_delta;
+		float spotlight_attenuation, specular0_dist, specular1_dist;
+		float lut_lookup_result, lut_lookup_delta;
+		int lut_lookup_index;
 	)";
 
+	uint lightID = 0;;
+
 	for (int i = 0; i < config.lighting.lightNum; i++) {
-		const auto& lightConfig = config.lighting.lights[i];
-		shader += "light_position = lightSources[" + std::to_string(i) + "].position;\n";
+		lightID = config.lighting.lights[i].num; 
+
+		const auto& lightConfig = config.lighting.lights[lightID];
+		shader += "light_position = lightSources[" + std::to_string(lightID) + "].position;\n";
 
 		if (lightConfig.directional) {  // Directional lighting
 			shader += "light_vector = light_position + v_view;\n";
@@ -502,49 +509,76 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 		}
 
 		if (lightConfig.distanceAttenuationEnable) {
-			shader += "distance_att_delta = clamp(light_distance * lightSources[" + std::to_string(i) + "].distanceAttenuationScale + lightSources[" +
-					  std::to_string(i) + "].distanceAttenuationBias, 0.0, 1.0);\n";
+			shader += "distance_att_delta = clamp(light_distance * lightSources[" + std::to_string(lightID) +
+					  "].distanceAttenuationScale + lightSources[" + std::to_string(lightID) + "].distanceAttenuationBias, 0.0, 1.0);\n";
 
-			shader +=
-				"distance_attenuation = lutLookup(" + std::to_string(16 + i) + ", int(clamp(floor(distance_att_delta * 255.0), 0.0, 255.0)));\n";
+			shader += "distance_attenuation = lutLookup(" + std::to_string(16 + lightID) +
+					  ", int(clamp(floor(distance_att_delta * 256.0), 0.0, 255.0)));\n";
 		}
 
-		// TODO: LightLutLookup stuff
-		shader += "spotlight_attenuation = 0.0; // Placeholder\n";
-		shader += "specular0_dist = 0.0; // Placeholder\n";
-		shader += "specular1_dist = 0.0; // Placeholder\n";
-		shader += "reflected_color = vec3(0.0); // Placeholder\n";
+		compileLUTLookup(shader, config, regs, lightID, spotlightLutIndex);
+		shader += "spotlight_attenuation = lut_lookup_result;\n";
 
-		shader += "specular0 = lightSources[" + std::to_string(i) + "].specular0;\n";
-		shader += "specular0 = specular0 * specular0_dist";
+		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_D0);
+		shader += "specular0_dist = lut_lookup_result;\n";
+
+		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_D1);
+		shader += "specular1_dist = lut_lookup_result;\n";
+
+		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_RR);
+		shader += "reflected_color.r = lut_lookup_result;\n";
+
+		if (isSamplerEnabled(config.lighting.config, PICA::Lights::LUT_RG)) {
+			compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_RG);
+			shader += "reflected_color.g = lut_lookup_result;\n";
+		} else {
+			shader += "reflected_color.g = reflected_color.r;\n";
+		}
+
+		if (isSamplerEnabled(config.lighting.config, PICA::Lights::LUT_RB)) {
+			compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_RB);
+			shader += "reflected_color.b = lut_lookup_result;\n";
+		} else {
+			shader += "reflected_color.b = reflected_color.r;\n";
+		}
+
+		shader += "specular0 = lightSources[" + std::to_string(lightID) + "].specular0 * specular0_dist;\n";
 		if (lightConfig.geometricFactor0) {
-			shader += " * geometric_factor;\n";
-		} else {
-			shader += ";\n";
+			shader += "specular0 *= geometric_factor;\n";
 		}
 
-		shader += "specular1 = lightSources[" + std::to_string(i) + "].specular1;\n";
-		shader += "specular1 = specular1 * specular1_dist * reflected_color";
+		shader += "specular1 = lightSources[" + std::to_string(lightID) + "].specular1 * specular1_dist * reflected_color;\n";
 		if (lightConfig.geometricFactor1) {
-			shader += " * geometric_factor;\n";
-		} else {
-			shader += ";\n";
+			shader += "specular1 *= geometric_factor;\n";
 		}
 
 		shader += "light_factor = distance_attenuation * spotlight_attenuation;\n";
-		
+
 		if (config.lighting.clampHighlights) {
 			shader += "specular_sum.rgb += light_factor * (NdotL == 0.0 ? 0.0 : 1.0) * (specular0 + specular1);\n";
 		} else {
 			shader += "specular_sum.rgb += light_factor * (specular0 + specular1);\n";
 		}
 
-		shader += "diffuse_sum.rgb += vec3(0.0); // Placeholder\n";
+		shader += "diffuse_sum.rgb += light_factor * lightSources[" + std::to_string(lightID) + "].ambient + lightSources[" +
+				  std::to_string(lightID) + "].diffuse * NdotL;\n";
 	}
 
-	// TODO: Rest of the post-per-light stuff
+	if (config.lighting.enablePrimaryAlpha || config.lighting.enableSecondaryAlpha) {
+		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_FR);
+		shader += "float fresnel_factor = lut_lookup_result;\n";
+	}
+
+	if (config.lighting.enablePrimaryAlpha) {
+		shader += "diffuse_sum.a = fresnel_factor;\n";
+	}
+
+	if (config.lighting.enableSecondaryAlpha) {
+		shader += "specular_sum.a = fresnel_factor;\n";
+	}
+
 	shader += R"(
-		vec4 global_ambient = vec4(regToColor(GPUREG_LIGHTING_AMBIENT), 1.0);
+		vec4 global_ambient = vec4(regToColor(globalAmbientLight), 1.0);
 
 		primaryColor = clamp(global_ambient + diffuse_sum, vec4(0.0), vec4(1.0));
 		secondaryColor = clamp(specular_sum, vec4(0.0), vec4(1.0));
@@ -568,9 +602,7 @@ bool FragmentGenerator::isSamplerEnabled(u32 environmentID, u32 lutID) {
 	return samplerEnabled[environmentID * 7 + lutID];
 }
 
-void FragmentGenerator::compileLUTLookup(
-	std::string& shader, const PICA::FragmentConfig& config, const PICARegs& regs, u32 lightIndex, u32 lutID, bool abs
-) {
+void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::FragmentConfig& config, const PICARegs& regs, u32 lightIndex, u32 lutID) {
 	uint lutIndex = 0;
 	int bitInConfig1 = 0;
 
@@ -588,9 +620,45 @@ void FragmentGenerator::compileLUTLookup(
 	const bool samplerEnabled = isSamplerEnabled(config.lighting.config, lutID);
 	const u32 config1 = regs[InternalRegs::LightConfig1];
 
-	if (!samplerEnabled || ((config1 >> bitInConfig1) != 0)) {
-		// 1.0
+	if (!samplerEnabled || ((config1 >> bitInConfig1) & 1)) {
+		shader += "lut_lookup_result = 1.0;\n";
+		return;
 	}
 
-	// TODO
+	static constexpr float scales[] = {1.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.25f, 0.5f};
+	const u32 lutAbs = regs[InternalRegs::LightLUTAbs];
+	const u32 lutSelect = regs[InternalRegs::LightLUTSelect];
+	const u32 lutScale = regs[InternalRegs::LightLUTScale];
+
+	// The way these bitfields are encoded is so cursed
+	float scale = scales[(lutScale >> (4 * lutIndex)) & 0x7];
+	uint inputID = (lutSelect >> (4 * lutIndex)) & 0x7;
+	bool absEnabled = ((lutAbs >> (4 * lutIndex + 1)) & 0x1) == 0; // 0 = enabled...
+	
+	switch (inputID) {
+		case 0: shader += "lut_lookup_delta = dot(normal, normalize(half_vector));\n"; break;
+		case 1: shader += "lut_lookup_delta = dot(normalize(v_view), normalize(half_vector));\n"; break;
+		case 2: shader += "lut_lookup_delta = dot(normal, normalize(v_view));\n"; break;
+		case 3: shader += "lut_lookup_delta = dot(normal, light_vector);\n"; break;
+
+		case 4: // Spotlight
+		default:
+			Helpers::warn("Shadergen: Unimplemented LUT select");
+			shader += "lut_lookup_delta = 1.0;\n";
+			break;
+	}
+
+	if (absEnabled) {
+		bool twoSidedDiffuse = config.lighting.lights[lightIndex].twoSidedDiffuse;
+		shader += twoSidedDiffuse ? "lut_lookup_delta = abs(lut_lookup_delta);\n" : "lut_lookup_delta = max(lut_lookup_delta, 0.0);\n";
+		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + ", int(clamp(floor(lut_lookup_delta * 256.0), 0.0, 255.0)));\n";
+		if (scale != 1.0) {
+			shader += "lut_lookup_result *= " + std::to_string(scale) + ";\n";
+		}
+	} else {
+		// Range is [-1, 1] so we need to map it to [0, 1]
+		shader += "lut_lookup_index = int(clamp(floor(lut_lookup_delta * 128.0), -128.f, 127.f));\n";
+		shader += "if (lut_lookup_index < 0) lut_lookup_index += 256;\n";
+		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + ", lut_lookup_index) *" + std::to_string(scale) + ";\n";
+	}
 }
