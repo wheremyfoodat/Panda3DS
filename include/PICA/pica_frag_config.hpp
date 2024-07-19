@@ -146,7 +146,7 @@ namespace PICA {
 
 			if (d0.enable) {
 				d0.absInput = Helpers::getBit<1>(lutAbs) == 0;
-				d0.type = Helpers::getBits<0, 3>(lutSelect);	
+				d0.type = Helpers::getBits<0, 3>(lutSelect);
 				d0.scale = scales[Helpers::getBits<0, 3>(lutScale)];
 			}
 
@@ -197,12 +197,12 @@ namespace PICA {
 			return std::memcmp(this, &config, sizeof(FragmentConfig)) == 0;
 		}
 
-		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs)
-		{
+		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs) {
 			auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
 			auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
 
-			outConfig.alphaTestFunction = (alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
+			outConfig.alphaTestFunction =
+				(alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
 			outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
 
 			texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
@@ -210,9 +210,9 @@ namespace PICA {
 
 			// Set up TEV stages. Annoyingly we can't just memcpy as the TEV registers are arranged like
 			// {Source, Operand, Combiner, Color, Scale} and we want to skip the color register since it's uploaded via UBO
-		#define setupTevStage(stage)                                                                                    \
-			std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
-			texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 5];
+#define setupTevStage(stage)                                                                                    \
+	std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
+	texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 5];
 
 			setupTevStage(0);
 			setupTevStage(1);
@@ -220,7 +220,7 @@ namespace PICA {
 			setupTevStage(3);
 			setupTevStage(4);
 			setupTevStage(5);
-		#undef setupTevStage
+#undef setupTevStage
 		}
 	};
 

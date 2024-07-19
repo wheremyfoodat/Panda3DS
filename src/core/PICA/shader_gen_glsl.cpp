@@ -594,23 +594,24 @@ bool FragmentGenerator::isSamplerEnabled(u32 environmentID, u32 lutID) {
 }
 
 void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::FragmentConfig& config, u32 lightIndex, u32 lutID) {
+	const LightingLUTConfig& lut = config.lighting.luts[lutID];
 	uint lutIndex = 0;
-	bool spotAttenuationEnable = true;
+	bool lutEnabled = false;
 
 	if (lutID == spotlightLutIndex) {
 		// These are the spotlight attenuation LUTs
 		lutIndex = 8u + lightIndex;
-		spotAttenuationEnable = config.lighting.lights[lightIndex].spotAttenuationEnable;
+		lutEnabled = config.lighting.lights[lightIndex].spotAttenuationEnable;
 	} else if (lutID <= 6) {
 		lutIndex = lutID;
+		lutEnabled = lut.enable;
 	} else {
 		Helpers::warn("Shadergen: Unimplemented LUT value");
 	}
 
 	const bool samplerEnabled = isSamplerEnabled(config.lighting.config, lutID);
-	const LightingLUTConfig& lut = config.lighting.luts[lutID];
 
-	if (!samplerEnabled || !lut.enable || !spotAttenuationEnable) {
+	if (!samplerEnabled || !lutEnabled) {
 		shader += "lut_lookup_result = 1.0;\n";
 		return;
 	}
