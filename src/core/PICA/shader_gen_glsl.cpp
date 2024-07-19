@@ -162,7 +162,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 		void main() {
 			vec4 combinerOutput = v_colour;
 			vec4 previousBuffer = vec4(0.0);
-			vec4 tevNextPreviousBuffer = tevBufferColor;	
+			vec4 tevNextPreviousBuffer = tevBufferColor;
 
 			vec4 primaryColor = vec4(0.0);
 			vec4 secondaryColor = vec4(0.0);
@@ -494,7 +494,7 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 			light_distance = length(light_vector);
 			light_vector = normalize(light_vector);
 			half_vector = light_vector + normalize(v_view);
-			
+
 			distance_attenuation = 1.0;
 			NdotL = dot(normal, light_vector);
 		)";
