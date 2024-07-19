@@ -21,7 +21,7 @@ index 990e2f80..2e7842ac 100644
  
  void main() {
 diff --git a/src/host_shaders/opengl_fragment_shader.frag b/src/host_shaders/opengl_fragment_shader.frag
-index b4ad7ecc..98b1bd80 100644
+index 9f369e39..b4bb19d3 100644
 --- a/src/host_shaders/opengl_fragment_shader.frag
 +++ b/src/host_shaders/opengl_fragment_shader.frag
 @@ -1,4 +1,5 @@
@@ -32,7 +32,7 @@ index b4ad7ecc..98b1bd80 100644
  in vec4 v_quaternion;
  in vec4 v_colour;
 @@ -164,11 +165,17 @@ float lutLookup(uint lut, int index) {
- 	return texelFetch(u_tex_lighting_lut, ivec2(index, lut), 0).r;
+ 	return texelFetch(u_tex_lighting_lut, ivec2(index, int(lut)), 0).r;
  }
  
 +// some gles versions have bitfieldExtractCompat and complain if you redefine it, some don't and compile error, using this instead
@@ -225,10 +225,10 @@ index 057f9a88..dc735ced 100644
  	v_quaternion = a_quaternion;
  }
 diff --git a/third_party/opengl/opengl.hpp b/third_party/opengl/opengl.hpp
-index 828fb784..a1861b77 100644
+index 4a08650a..21af37e3 100644
 --- a/third_party/opengl/opengl.hpp
 +++ b/third_party/opengl/opengl.hpp
-@@ -568,22 +568,22 @@ namespace OpenGL {
+@@ -583,22 +583,22 @@ namespace OpenGL {
  	static void disableScissor() { glDisable(GL_SCISSOR_TEST); }
  	static void enableBlend() { glEnable(GL_BLEND); }
  	static void disableBlend() { glDisable(GL_BLEND); }
