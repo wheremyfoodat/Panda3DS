@@ -6,6 +6,7 @@
 #include <span>
 #include <unordered_map>
 
+#include "async_compiler.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/pica_frag_config.hpp"
 #include "PICA/pica_hash.hpp"
@@ -21,6 +22,13 @@
 
 // More circular dependencies!
 class GPU;
+
+// Cached recompiled fragment shader
+struct CachedProgram {
+	OpenGL::Program program;
+	uint uboBinding;
+	bool ready = false;
+};
 
 class RendererGL final : public Renderer {
 	GLStateManager gl = {};
@@ -76,10 +84,14 @@ class RendererGL final : public Renderer {
 		OpenGL::Program program;
 	};
 	std::unordered_map<PICA::FragmentConfig, CachedProgram> shaderCache;
+	std::unique_ptr<AsyncCompilerState> asyncCompiler;
+
+	void startCompilationThread();
+	void stopCompilationThread();
 
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
-	OpenGL::Program& getSpecializedShader();
+	OpenGL::Program& getSpecializedShader(const PICA::FragmentConfig& fsConfig);
 
 	PICA::ShaderGen::FragmentGenerator fragShaderGen;
 

@@ -74,6 +74,7 @@ include_directories(third_party/stb)
 include_directories(third_party/opengl)
 include_directories(third_party/miniaudio)
 include_directories(third_party/mio/single_include)
+include_directories(third_party/lockfree)
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
@@ -320,14 +321,14 @@ if(ENABLE_OPENGL)
     set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
         include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
         include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
-        include/renderer_gl/gl_state.hpp
+        include/renderer_gl/gl_state.hpp include/renderer_gl/async_compiler.hpp
     )
 
     set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
         src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
-        src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.frag
-        src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
-        src/host_shaders/opengl_fragment_shader.frag
+        src/core/renderer_gl/gl_state.cpp src/core/renderer_gl/async_compiler.cpp
+        src/host_shaders/opengl_display.frag src/host_shaders/opengl_display.vert
+        src/host_shaders/opengl_vertex_shader.vert src/host_shaders/opengl_fragment_shader.frag
     )
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})

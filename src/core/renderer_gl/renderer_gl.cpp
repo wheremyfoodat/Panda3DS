@@ -6,16 +6,45 @@
 
 #include "config.hpp"
 #include "PICA/float_types.hpp"
+#include "PICA/pica_frag_config.hpp"
 #include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
 #include "math_util.hpp"
+
+#include "opengl.hpp"
+#include "renderer_gl/async_compiler.hpp"
+#include "renderer_gl/gl_state.hpp"
 
 CMRC_DECLARE(RendererGL);
 
 using namespace Floats;
 using namespace Helpers;
 using namespace PICA;
+
+namespace {
+	constexpr uint uboBlockBinding = 2;
+
+	void initializeProgramEntry(GLStateManager& gl, CachedProgram& programEntry) {
+		OpenGL::Program& program = programEntry.program;
+
+		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
+
+		// Allocate memory for the program UBO
+		glGenBuffers(1, &programEntry.uboBinding);
+		gl.bindUBO(programEntry.uboBinding);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
+
+		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
+		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
+		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
+		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
+	}
+}
 
 RendererGL::~RendererGL() {}
 
@@ -170,6 +199,12 @@ void RendererGL::initGraphicsContextInternal() {
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
 	defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
+
+	if (shaderMode == ShaderMode::Hybrid && !asyncCompiler)
+	{
+		// This will create and start the async compiler thread
+		asyncCompiler = std::make_unique<AsyncCompilerState>(fragShaderGen);
+	}
 }
 
 // The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
@@ -426,13 +461,52 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
 			usingUbershader = false;
 		}
-	}
-		
-	if (usingUbershader) {
-		gl.useProgram(triangleProgram);
 	} else {
-		OpenGL::Program& program = getSpecializedShader();
-		gl.useProgram(program);
+		PICA::FragmentConfig fsConfig(regs);
+
+		// If shaderMode is Specialized, shaderCompiled is set to true which means getSpecializedShader will
+		// compile the shader for us if it's not compiled yet
+		bool shaderCompiled = true;
+		
+		if (shaderMode == ShaderMode::Hybrid) {
+			CompiledProgram* compiledProgram;
+
+			// Pop all the queued compiled programs so they can be added to the shader cache
+			while (asyncCompiler->PopCompiledProgram(compiledProgram)) {
+				CachedProgram& programEntry = shaderCache[compiledProgram->fsConfig];
+				programEntry.ready = true;
+
+				glProgramBinary(programEntry.program.handle(), compiledProgram->binaryFormat, compiledProgram->binary.data(), compiledProgram->binary.size());
+				initializeProgramEntry(gl, programEntry);
+
+				delete compiledProgram;
+			}
+
+			bool contains = shaderCache.contains(fsConfig);
+			shaderCompiled = contains && shaderCache[fsConfig].ready;
+
+			if (!shaderCompiled) {
+				gl.useProgram(triangleProgram);
+
+				if (!contains) {
+					// Adds an empty shader to the shader cache and sets it to false
+					// This will prevent queueing the same shader multiple times
+					shaderCache[fsConfig].ready = false;
+					asyncCompiler->PushFragmentConfig(fsConfig);
+				}
+			}
+		}
+
+		if (shaderCompiled) {
+			OpenGL::Program& program = getSpecializedShader(fsConfig);
+			gl.useProgram(program);
+		} else {
+			useUbershader = true;
+		}
+	}
+
+	if (useUbershader) {
+		gl.useProgram(triangleProgram);
 	}
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
@@ -460,7 +534,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
 	// Update ubershader uniforms
-	if (usingUbershader) {
+	if (useUbershader) {
 		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
 		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
@@ -837,15 +911,16 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 	return colourBufferCache.add(sampleBuffer);
 }
 
-OpenGL::Program& RendererGL::getSpecializedShader() {
-	constexpr uint uboBlockBinding = 2;
-
-	PICA::FragmentConfig fsConfig(regs);
-
+OpenGL::Program& RendererGL::getSpecializedShader(const PICA::FragmentConfig& fsConfig) {
 	CachedProgram& programEntry = shaderCache[fsConfig];
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
+		if (shaderMode == ShaderMode::Hybrid) {
+			// If the shader mode is hybrid, we shouldn't reach this point
+			Helpers::panic("Trying to compile specialized shader from main thread in hybrid mode");
+		}
+
 		std::string fs = fragShaderGen.generate(fsConfig);
 
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
@@ -854,16 +929,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 		fragShader.free();
 
-		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
-		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
-		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
-		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
-		glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
-
-		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
-		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
-		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
-		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
+		initializeProgramEntry(gl, programEntry);
 	}
 	glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, shadergenFragmentUBO);
 
@@ -995,6 +1061,7 @@ void RendererGL::deinitGraphicsContext() {
 	depthBufferCache.reset();
 	colourBufferCache.reset();
 	clearShaderCache();
+	if (asyncCompiler) asyncCompiler->Stop();
 
 	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
@@ -1021,6 +1088,10 @@ void RendererGL::setUbershader(const std::string& shader) {
 	glUniform1f(ubershaderData.depthScaleLoc, oldDepthScale);
 	glUniform1f(ubershaderData.depthOffsetLoc, oldDepthOffset);
 	glUniform1i(ubershaderData.depthmapEnableLoc, oldDepthmapEnable);
+}
+
+void RendererGL::setShaderMode(ShaderMode mode) {
+	shaderMode = mode;
 }
 
 void RendererGL::initUbershader(OpenGL::Program& program) {
