@@ -110,17 +110,17 @@ namespace PICA {
 
 			for (int i = 0; i < totalLightCount; i++) {
 				auto& light = lights[i];
-				const u32 lightConfig = regs[InternalRegs::Light0Config + 0x10 * i];
-
 				light.num = (regs[InternalRegs::LightPermutation] >> (i * 4)) & 0x7;
+
+				const u32 lightConfig = regs[InternalRegs::Light0Config + 0x10 * light.num];
 				light.directional = Helpers::getBit<0>(lightConfig);
 				light.twoSidedDiffuse = Helpers::getBit<1>(lightConfig);
 				light.geometricFactor0 = Helpers::getBit<2>(lightConfig);
 				light.geometricFactor1 = Helpers::getBit<3>(lightConfig);
 
-				light.shadowEnable = ((config1 >> i) & 1) ^ 1;                      // This also does 0 = enabled
-				light.spotAttenuationEnable = ((config1 >> (8 + i)) & 1) ^ 1;       // Same here
-				light.distanceAttenuationEnable = ((config1 >> (24 + i)) & 1) ^ 1;  // Of course same here
+				light.shadowEnable = ((config1 >> light.num) & 1) ^ 1;                      // This also does 0 = enabled
+				light.spotAttenuationEnable = ((config1 >> (8 + light.num)) & 1) ^ 1;       // Same here
+				light.distanceAttenuationEnable = ((config1 >> (24 + light.num)) & 1) ^ 1;  // Of course same here
 			}
 
 			LightingLUTConfig& d0 = luts[Lights::LUT_D0];

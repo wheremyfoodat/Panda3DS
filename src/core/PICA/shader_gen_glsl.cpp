@@ -472,7 +472,7 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 	for (int i = 0; i < config.lighting.lightNum; i++) {
 		lightID = config.lighting.lights[i].num; 
 
-		const auto& lightConfig = config.lighting.lights[lightID];
+		const auto& lightConfig = config.lighting.lights[i];
 		shader += "light_position = lightSources[" + std::to_string(lightID) + "].position;\n";
 
 		if (lightConfig.directional) {  // Directional lighting
@@ -507,27 +507,27 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 					  ", int(clamp(floor(distance_att_delta * 256.0), 0.0, 255.0)));\n";
 		}
 
-		compileLUTLookup(shader, config, lightID, spotlightLutIndex);
+		compileLUTLookup(shader, config, i, spotlightLutIndex);
 		shader += "spotlight_attenuation = lut_lookup_result;\n";
 
-		compileLUTLookup(shader, config, lightID, PICA::Lights::LUT_D0);
+		compileLUTLookup(shader, config, i, PICA::Lights::LUT_D0);
 		shader += "specular0_dist = lut_lookup_result;\n";
 
-		compileLUTLookup(shader, config, lightID, PICA::Lights::LUT_D1);
+		compileLUTLookup(shader, config, i, PICA::Lights::LUT_D1);
 		shader += "specular1_dist = lut_lookup_result;\n";
 
-		compileLUTLookup(shader, config, lightID, PICA::Lights::LUT_RR);
+		compileLUTLookup(shader, config, i, PICA::Lights::LUT_RR);
 		shader += "reflected_color.r = lut_lookup_result;\n";
 
 		if (isSamplerEnabled(config.lighting.config, PICA::Lights::LUT_RG)) {
-			compileLUTLookup(shader, config, lightID, PICA::Lights::LUT_RG);
+			compileLUTLookup(shader, config, i, PICA::Lights::LUT_RG);
 			shader += "reflected_color.g = lut_lookup_result;\n";
 		} else {
 			shader += "reflected_color.g = reflected_color.r;\n";
 		}
 
 		if (isSamplerEnabled(config.lighting.config, PICA::Lights::LUT_RB)) {
-			compileLUTLookup(shader, config, lightID, PICA::Lights::LUT_RB);
+			compileLUTLookup(shader, config, i, PICA::Lights::LUT_RB);
 			shader += "reflected_color.b = lut_lookup_result;\n";
 		} else {
 			shader += "reflected_color.b = reflected_color.r;\n";
@@ -556,7 +556,7 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 	}
 
 	if (config.lighting.enablePrimaryAlpha || config.lighting.enableSecondaryAlpha) {
-		compileLUTLookup(shader, config, lightID, PICA::Lights::LUT_FR);
+		compileLUTLookup(shader, config, config.lighting.lightNum - 1, PICA::Lights::LUT_FR);
 		shader += "float fresnel_factor = lut_lookup_result;\n";
 	}
 
@@ -595,12 +595,13 @@ bool FragmentGenerator::isSamplerEnabled(u32 environmentID, u32 lutID) {
 
 void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::FragmentConfig& config, u32 lightIndex, u32 lutID) {
 	const LightingLUTConfig& lut = config.lighting.luts[lutID];
+	uint lightID = config.lighting.lights[lightIndex].num;
 	uint lutIndex = 0;
 	bool lutEnabled = false;
 
 	if (lutID == spotlightLutIndex) {
 		// These are the spotlight attenuation LUTs
-		lutIndex = 8u + lightIndex;
+		lutIndex = 8u + lightID;
 		lutEnabled = config.lighting.lights[lightIndex].spotAttenuationEnable;
 	} else if (lutID <= 6) {
 		lutIndex = lutID;
@@ -625,7 +626,7 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 		case 1: shader += "lut_lookup_delta = dot(normalize(v_view), normalize(half_vector));\n"; break;
 		case 2: shader += "lut_lookup_delta = dot(normal, normalize(v_view));\n"; break;
 		case 3: shader += "lut_lookup_delta = dot(normal, light_vector);\n"; break;
-		case 4: shader += "lut_lookup_delta = dot(light_vector, lightSources[" + std ::to_string(lightIndex) + "].spotlightDirection);\n"; break;
+		case 4: shader += "lut_lookup_delta = dot(light_vector, lightSources[" + std ::to_string(lightID) + "].spotlightDirection);\n"; break;
 
 		default:
 			Helpers::warn("Shadergen: Unimplemented LUT select");
