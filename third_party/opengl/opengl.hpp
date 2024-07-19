@@ -355,46 +355,57 @@ namespace OpenGL {
         }
     };
 
-    enum ShaderType {
-        Fragment = GL_FRAGMENT_SHADER,
-        Vertex = GL_VERTEX_SHADER,
-        Geometry = GL_GEOMETRY_SHADER,
-        Compute = GL_COMPUTE_SHADER,
-        TessControl = GL_TESS_CONTROL_SHADER,
-        TessEvaluation = GL_TESS_EVALUATION_SHADER
-    };
+	enum ShaderType {
+		Fragment = GL_FRAGMENT_SHADER,
+		Vertex = GL_VERTEX_SHADER,
+		Geometry = GL_GEOMETRY_SHADER,
+		Compute = GL_COMPUTE_SHADER,
+		TessControl = GL_TESS_CONTROL_SHADER,
+		TessEvaluation = GL_TESS_EVALUATION_SHADER
+	};
 
-    struct Shader {
-        GLuint m_handle = 0;
+	struct Shader {
+		GLuint m_handle = 0;
 
-        Shader() {}
-        Shader(const std::string_view source, ShaderType type) { create(source, static_cast<GLenum>(type)); }
+		Shader() {}
+		Shader(const std::string_view source, ShaderType type) { create(source, static_cast<GLenum>(type)); }
 
-        // Returns whether compilation failed or not
-        bool create(const std::string_view source, GLenum type) {
-            m_handle = glCreateShader(type);
-            const GLchar* const sources[1] = { source.data() };
+		// Returns whether compilation failed or not
+		bool create(const std::string_view source, GLenum type) {
+			m_handle = glCreateShader(type);
+			const GLchar* const sources[1] = {source.data()};
 
-            glShaderSource(m_handle, 1, sources, nullptr);
-            glCompileShader(m_handle);
+			glShaderSource(m_handle, 1, sources, nullptr);
+			glCompileShader(m_handle);
 
-            GLint success;
-            glGetShaderiv(m_handle, GL_COMPILE_STATUS, &success);
-            if (success == GL_FALSE) {
-                char buf[4096];
-                glGetShaderInfoLog(m_handle, 4096, nullptr, buf);
-                fprintf(stderr, "Failed to compile shader\nError: %s\n", buf);
-                glDeleteShader(m_handle);
+			GLint success;
+			glGetShaderiv(m_handle, GL_COMPILE_STATUS, &success);
+			if (success == GL_FALSE) {
+				char buf[4096];
+				glGetShaderInfoLog(m_handle, 4096, nullptr, buf);
+				fprintf(stderr, "Failed to compile shader\nError: %s\n", buf);
+				glDeleteShader(m_handle);
 
-                m_handle = 0;
-            }
+				m_handle = 0;
+			}
 
-            return m_handle != 0;
-        }
+			return m_handle != 0;
+		}
 
-        GLuint handle() const { return m_handle; }
-        bool exists() const { return m_handle != 0; }
-    };
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+
+		void free() {
+			if (exists()) {
+				glDeleteShader(m_handle);
+				m_handle = 0;
+			}
+		}
+
+#ifdef OPENGL_DESTRUCTORS
+		~Shader() { free(); }
+#endif
+	};
 
     struct Program {
 		GLuint m_handle = 0;
@@ -431,6 +442,10 @@ namespace OpenGL {
 				m_handle = 0;
 			}
 		}
+
+#ifdef OPENGL_DESTRUCTORS
+		~Program() { free(); }
+#endif
 	};
 
     static void dispatchCompute(GLuint groupsX = 1, GLuint groupsY = 1, GLuint groupsZ = 1) {

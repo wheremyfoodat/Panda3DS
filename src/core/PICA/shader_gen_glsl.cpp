@@ -34,7 +34,7 @@ static constexpr const char* uniformDefinition = R"(
 // This is particularly intuitive in several places, such as checking if a LUT is enabled
 static constexpr int spotlightLutIndex = 2;
 
-std::string FragmentGenerator::getVertexShader(const PICARegs& regs) {
+std::string FragmentGenerator::getDefaultVertexShader() {
 	std::string ret = "";
 
 	switch (api) {

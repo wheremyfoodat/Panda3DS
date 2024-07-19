@@ -66,6 +66,9 @@ class RendererGL final : public Renderer {
 	OpenGL::Texture lightLUTTexture;
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
+	// The "default" vertex shader to use when using specialized shaders but not PICA vertex shader -> GLSL recompilation
+	// We can compile this once and then link it with all other generated fragment shaders
+	OpenGL::Shader defaultShadergenVs;
 
 	// Cached recompiled fragment shader
 	struct CachedProgram {

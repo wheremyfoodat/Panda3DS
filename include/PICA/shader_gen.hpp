@@ -35,7 +35,7 @@ namespace PICA::ShaderGen {
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
 		std::string generate(const PICARegs& regs, const PICA::FragmentConfig& config);
-		std::string getVertexShader(const PICARegs& regs);
+		std::string getDefaultVertexShader();
 
 		void setTarget(API api, Language language) {
 			this->api = api;

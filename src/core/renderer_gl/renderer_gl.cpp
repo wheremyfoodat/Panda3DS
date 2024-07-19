@@ -162,6 +162,10 @@ void RendererGL::initGraphicsContextInternal() {
 	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 
 	reset();
+
+	// Initialize the default vertex shader used with shadergen
+	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
+	defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
 }
 
 // The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
@@ -810,12 +814,10 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
-		std::string vs = fragShaderGen.getVertexShader(regs);
 		std::string fs = fragShaderGen.generate(regs, fsConfig);
 
-		OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
-		program.create({vertShader, fragShader});
+		program.create({defaultShadergenVs, fragShader});
 		gl.useProgram(program);
 
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
