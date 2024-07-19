@@ -560,8 +560,8 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 			shader += "specular_sum.rgb += light_factor * (specular0 + specular1);\n";
 		}
 
-		shader += "diffuse_sum.rgb += light_factor * lightSources[" + std::to_string(lightID) + "].ambient + lightSources[" +
-				  std::to_string(lightID) + "].diffuse * NdotL;\n";
+		shader += "diffuse_sum.rgb += light_factor * (lightSources[" + std::to_string(lightID) + "].ambient + lightSources[" +
+				  std::to_string(lightID) + "].diffuse * NdotL);\n";
 	}
 
 	if (config.lighting.enablePrimaryAlpha || config.lighting.enableSecondaryAlpha) {
