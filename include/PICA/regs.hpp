@@ -278,6 +278,11 @@ namespace PICA {
 		};
 	}
 
+	// There's actually 8 different LUTs (SP0-SP7), one for each light with different indices (8-15)
+	// We use an unused LUT value for "this light source's spotlight" instead and figure out which light source to use in compileLutLookup
+	// This is particularly intuitive in several places, such as checking if a LUT is enabled
+	static constexpr int spotlightLutIndex = 2;
+
 	enum class TextureFmt : u32 {
 		RGBA8 = 0x0,
 		RGB8 = 0x1,

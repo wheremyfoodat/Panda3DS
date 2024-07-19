@@ -1,3 +1,5 @@
+#include "PICA/pica_frag_config.hpp"
+#include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
 using namespace PICA;
 using namespace PICA::ShaderGen;
@@ -28,11 +30,6 @@ static constexpr const char* uniformDefinition = R"(
 		LightSource lightSources[8];
 	};
 )";
-
-// There's actually 8 different LUTs (SP0-SP7), one for each light with different indices (8-15)
-// We use an unused LUT value for "this light source's spotlight" instead and figure out which light source to use in compileLutLookup
-// This is particularly intuitive in several places, such as checking if a LUT is enabled
-static constexpr int spotlightLutIndex = 2;
 
 std::string FragmentGenerator::getDefaultVertexShader() {
 	std::string ret = "";
@@ -101,7 +98,7 @@ std::string FragmentGenerator::getDefaultVertexShader() {
 	return ret;
 }
 
-std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConfig& config) {
+std::string FragmentGenerator::generate(const FragmentConfig& config) {
 	std::string ret = "";
 
 	switch (api) {
@@ -168,7 +165,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 			vec4 secondaryColor = vec4(0.0);
 	)";
 
-	compileLights(ret, config, regs);
+	compileLights(ret, config);
 
 	ret += R"(
 		vec3 colorOp1 = vec3(0.0);
@@ -187,44 +184,39 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 		float depth = z_over_w * depthScale + depthOffset;
 	)";
 
-	if ((regs[InternalRegs::DepthmapEnable] & 1) == 0) {
+	if (!config.outConfig.depthMapEnable) {
 		ret += "depth /= gl_FragCoord.w;\n";
 	}
 
 	ret += "gl_FragDepth = depth;\n";
 
-	textureConfig = regs[InternalRegs::TexUnitCfg];
 	for (int i = 0; i < 6; i++) {
-		compileTEV(ret, i, regs);
+		compileTEV(ret, i, config);
 	}
 
-	applyAlphaTest(ret, regs);
+	applyAlphaTest(ret, config);
 
 	ret += "fragColor = combinerOutput;\n}"; // End of main function
 
 	return ret;
 }
 
-void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICARegs& regs) {
-	// Base address for each TEV stage's configuration
-	static constexpr std::array<u32, 6> ioBases = {
-		InternalRegs::TexEnv0Source, InternalRegs::TexEnv1Source, InternalRegs::TexEnv2Source,
-		InternalRegs::TexEnv3Source, InternalRegs::TexEnv4Source, InternalRegs::TexEnv5Source,
-	};
+void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICA::FragmentConfig& config) {
+	const u32* tevValues = config.texConfig.tevConfigs.data() + stage * 4;
 
-	const u32 ioBase = ioBases[stage];
-	TexEnvConfig tev(regs[ioBase], regs[ioBase + 1], regs[ioBase + 2], regs[ioBase + 3], regs[ioBase + 4]);
+	// Pass a 0 to constColor here, as it doesn't matter for compilation
+	TexEnvConfig tev(tevValues[0], tevValues[1], tevValues[2], 0, tevValues[3]);
 
 	if (!tev.isPassthroughStage()) {
 		// Get color operands
 		shader += "colorOp1 = ";
-		getColorOperand(shader, tev.colorSource1, tev.colorOperand1, stage);
+		getColorOperand(shader, tev.colorSource1, tev.colorOperand1, stage, config);
 
 		shader += ";\ncolorOp2 = ";
-		getColorOperand(shader, tev.colorSource2, tev.colorOperand2, stage);
+		getColorOperand(shader, tev.colorSource2, tev.colorOperand2, stage, config);
 
 		shader += ";\ncolorOp3 = ";
-		getColorOperand(shader, tev.colorSource3, tev.colorOperand3, stage);
+		getColorOperand(shader, tev.colorSource3, tev.colorOperand3, stage, config);
 
 		shader += ";\nvec3 outputColor" + std::to_string(stage) + " = clamp(";
 		getColorOperation(shader, tev.colorOp);
@@ -236,13 +228,13 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 		} else {
 			// Get alpha operands
 			shader += "alphaOp1 = ";
-			getAlphaOperand(shader, tev.alphaSource1, tev.alphaOperand1, stage);
+			getAlphaOperand(shader, tev.alphaSource1, tev.alphaOperand1, stage, config);
 
 			shader += ";\nalphaOp2 = ";
-			getAlphaOperand(shader, tev.alphaSource2, tev.alphaOperand2, stage);
+			getAlphaOperand(shader, tev.alphaSource2, tev.alphaOperand2, stage, config);
 
 			shader += ";\nalphaOp3 = ";
-			getAlphaOperand(shader, tev.alphaSource3, tev.alphaOperand3, stage);
+			getAlphaOperand(shader, tev.alphaSource3, tev.alphaOperand3, stage, config);
 
 			shader += ";\nfloat outputAlpha" + std::to_string(stage) + " = clamp(";
 			getAlphaOperation(shader, tev.alphaOp);
@@ -258,7 +250,7 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 	shader += "previousBuffer = tevNextPreviousBuffer;\n\n";
 
 	// Update the "next previous buffer" if necessary
-	const u32 textureEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
+	const u32 textureEnvUpdateBuffer = config.texConfig.texEnvUpdateBuffer;
 	if (stage < 4) {
 		// Check whether to update rgb
 		if ((textureEnvUpdateBuffer & (0x100 << stage))) {
@@ -272,7 +264,7 @@ void FragmentGenerator::compileTEV(std::string& shader, int stage, const PICAReg
 	}
 }
 
-void FragmentGenerator::getColorOperand(std::string& shader, TexEnvConfig::Source source, TexEnvConfig::ColorOperand color, int index) {
+void FragmentGenerator::getColorOperand(std::string& shader, TexEnvConfig::Source source, TexEnvConfig::ColorOperand color, int index, const PICA::FragmentConfig& config) {
 	using OperandType = TexEnvConfig::ColorOperand;
 
 	// For inverting operands, add the 1.0 - x subtraction
@@ -284,31 +276,31 @@ void FragmentGenerator::getColorOperand(std::string& shader, TexEnvConfig::Sourc
 	switch (color) {
 		case OperandType::SourceColor:
 		case OperandType::OneMinusSourceColor:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".rgb";
 			break;
 
 		case OperandType::SourceRed:
 		case OperandType::OneMinusSourceRed:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".rrr";
 			break;
 
 		case OperandType::SourceGreen:
 		case OperandType::OneMinusSourceGreen:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".ggg";
 			break;
 
 		case OperandType::SourceBlue:
 		case OperandType::OneMinusSourceBlue:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".bbb";
 			break;
 
 		case OperandType::SourceAlpha:
 		case OperandType::OneMinusSourceAlpha:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".aaa";
 			break;
 
@@ -319,7 +311,7 @@ void FragmentGenerator::getColorOperand(std::string& shader, TexEnvConfig::Sourc
 	}
 }
 
-void FragmentGenerator::getAlphaOperand(std::string& shader, TexEnvConfig::Source source, TexEnvConfig::AlphaOperand color, int index) {
+void FragmentGenerator::getAlphaOperand(std::string& shader, TexEnvConfig::Source source, TexEnvConfig::AlphaOperand color, int index, const PICA::FragmentConfig& config) {
 	using OperandType = TexEnvConfig::AlphaOperand;
 
 	// For inverting operands, add the 1.0 - x subtraction
@@ -331,25 +323,25 @@ void FragmentGenerator::getAlphaOperand(std::string& shader, TexEnvConfig::Sourc
 	switch (color) {
 		case OperandType::SourceRed:
 		case OperandType::OneMinusSourceRed:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".r";
 			break;
 
 		case OperandType::SourceGreen:
 		case OperandType::OneMinusSourceGreen:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".g";
 			break;
 
 		case OperandType::SourceBlue:
 		case OperandType::OneMinusSourceBlue:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".b";
 			break;
 
 		case OperandType::SourceAlpha:
 		case OperandType::OneMinusSourceAlpha:
-			getSource(shader, source, index);
+			getSource(shader, source, index, config);
 			shader += ".a";
 			break;
 
@@ -360,14 +352,14 @@ void FragmentGenerator::getAlphaOperand(std::string& shader, TexEnvConfig::Sourc
 	}
 }
 
-void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source source, int index) {
+void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source source, int index, const PICA::FragmentConfig& config) {
 	switch (source) {
 		case TexEnvConfig::Source::PrimaryColor: shader += "v_colour"; break;
 		case TexEnvConfig::Source::Texture0: shader += "texture(u_tex0, v_texcoord0.xy)"; break;
 		case TexEnvConfig::Source::Texture1: shader += "texture(u_tex1, v_texcoord1)"; break;
 		case TexEnvConfig::Source::Texture2: {
 			// If bit 13 in texture config is set then we use the texcoords for texture 1, otherwise for texture 2
-			if (Helpers::getBit<13>(textureConfig)) {
+			if (Helpers::getBit<13>(config.texConfig.texUnitConfig)) {
 				shader += "texture(u_tex2, v_texcoord1)";
 			} else {
 				shader += "texture(u_tex2, v_texcoord2)";
@@ -428,12 +420,11 @@ void FragmentGenerator::getAlphaOperation(std::string& shader, TexEnvConfig::Ope
 	}
 }
 
-void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs) {
-	const u32 alphaConfig = regs[InternalRegs::AlphaTestConfig];
-	const auto function = static_cast<CompareFunction>(Helpers::getBits<4, 3>(alphaConfig));
+void FragmentGenerator::applyAlphaTest(std::string& shader, const PICA::FragmentConfig& config) {
+	const CompareFunction function = config.outConfig.alphaTestFunction;
 
 	// Alpha test disabled
-	if (Helpers::getBit<0>(alphaConfig) == 0 || function == CompareFunction::Always) {
+	if (function == CompareFunction::Always) {
 		return;
 	}
 
@@ -458,7 +449,7 @@ void FragmentGenerator::applyAlphaTest(std::string& shader, const PICARegs& regs
 	shader += ") { discard; }\n";
 }
 
-void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentConfig& config, const PICARegs& regs) {
+void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentConfig& config) {
 	if (!config.lighting.enable) {
 		return;
 	}
@@ -481,7 +472,7 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 	for (int i = 0; i < config.lighting.lightNum; i++) {
 		lightID = config.lighting.lights[i].num; 
 
-		const auto& lightConfig = config.lighting.lights[lightID];
+		const auto& lightConfig = config.lighting.lights[i];
 		shader += "light_position = lightSources[" + std::to_string(lightID) + "].position;\n";
 
 		if (lightConfig.directional) {  // Directional lighting
@@ -516,27 +507,27 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 					  ", int(clamp(floor(distance_att_delta * 256.0), 0.0, 255.0)));\n";
 		}
 
-		compileLUTLookup(shader, config, regs, lightID, spotlightLutIndex);
+		compileLUTLookup(shader, config, i, spotlightLutIndex);
 		shader += "spotlight_attenuation = lut_lookup_result;\n";
 
-		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_D0);
+		compileLUTLookup(shader, config, i, PICA::Lights::LUT_D0);
 		shader += "specular0_dist = lut_lookup_result;\n";
 
-		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_D1);
+		compileLUTLookup(shader, config, i, PICA::Lights::LUT_D1);
 		shader += "specular1_dist = lut_lookup_result;\n";
 
-		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_RR);
+		compileLUTLookup(shader, config, i, PICA::Lights::LUT_RR);
 		shader += "reflected_color.r = lut_lookup_result;\n";
 
 		if (isSamplerEnabled(config.lighting.config, PICA::Lights::LUT_RG)) {
-			compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_RG);
+			compileLUTLookup(shader, config, i, PICA::Lights::LUT_RG);
 			shader += "reflected_color.g = lut_lookup_result;\n";
 		} else {
 			shader += "reflected_color.g = reflected_color.r;\n";
 		}
 
 		if (isSamplerEnabled(config.lighting.config, PICA::Lights::LUT_RB)) {
-			compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_RB);
+			compileLUTLookup(shader, config, i, PICA::Lights::LUT_RB);
 			shader += "reflected_color.b = lut_lookup_result;\n";
 		} else {
 			shader += "reflected_color.b = reflected_color.r;\n";
@@ -565,7 +556,7 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 	}
 
 	if (config.lighting.enablePrimaryAlpha || config.lighting.enableSecondaryAlpha) {
-		compileLUTLookup(shader, config, regs, lightID, PICA::Lights::LUT_FR);
+		compileLUTLookup(shader, config, config.lighting.lightNum - 1, PICA::Lights::LUT_FR);
 		shader += "float fresnel_factor = lut_lookup_result;\n";
 	}
 
@@ -602,45 +593,40 @@ bool FragmentGenerator::isSamplerEnabled(u32 environmentID, u32 lutID) {
 	return samplerEnabled[environmentID * 7 + lutID];
 }
 
-void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::FragmentConfig& config, const PICARegs& regs, u32 lightIndex, u32 lutID) {
+void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::FragmentConfig& config, u32 lightIndex, u32 lutID) {
+	const LightingLUTConfig& lut = config.lighting.luts[lutID];
+	uint lightID = config.lighting.lights[lightIndex].num;
 	uint lutIndex = 0;
-	int bitInConfig1 = 0;
+	bool lutEnabled = false;
 
 	if (lutID == spotlightLutIndex) {
 		// These are the spotlight attenuation LUTs
-		bitInConfig1 = 8 + (lightIndex & 0x7);
-		lutIndex = 8u + lightIndex;
+		lutIndex = 8u + lightID;
+		lutEnabled = config.lighting.lights[lightIndex].spotAttenuationEnable;
 	} else if (lutID <= 6) {
-		bitInConfig1 = 16 + lutID;
 		lutIndex = lutID;
+		lutEnabled = lut.enable;
 	} else {
 		Helpers::warn("Shadergen: Unimplemented LUT value");
 	}
 
 	const bool samplerEnabled = isSamplerEnabled(config.lighting.config, lutID);
-	const u32 config1 = regs[InternalRegs::LightConfig1];
 
-	if (!samplerEnabled || ((config1 >> bitInConfig1) & 1)) {
+	if (!samplerEnabled || !lutEnabled) {
 		shader += "lut_lookup_result = 1.0;\n";
 		return;
 	}
 
-	static constexpr float scales[] = {1.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.25f, 0.5f};
-	const u32 lutAbs = regs[InternalRegs::LightLUTAbs];
-	const u32 lutSelect = regs[InternalRegs::LightLUTSelect];
-	const u32 lutScale = regs[InternalRegs::LightLUTScale];
-
-	// The way these bitfields are encoded is so cursed
-	float scale = scales[(lutScale >> (4 * lutID)) & 0x7];
-	uint inputID = (lutSelect >> (4 * lutID)) & 0x7;
-	bool absEnabled = ((lutAbs >> (4 * lutID + 1)) & 0x1) == 0; // 0 = enabled...
+	float scale = lut.scale;
+	uint inputID = lut.type;
+	bool absEnabled = lut.absInput;
 	
 	switch (inputID) {
 		case 0: shader += "lut_lookup_delta = dot(normal, normalize(half_vector));\n"; break;
 		case 1: shader += "lut_lookup_delta = dot(normalize(v_view), normalize(half_vector));\n"; break;
 		case 2: shader += "lut_lookup_delta = dot(normal, normalize(v_view));\n"; break;
 		case 3: shader += "lut_lookup_delta = dot(normal, light_vector);\n"; break;
-		case 4: shader += "lut_lookup_delta = dot(light_vector, lightSources[" + std ::to_string(lightIndex) + "].spotlightDirection);\n"; break;
+		case 4: shader += "lut_lookup_delta = dot(light_vector, lightSources[" + std ::to_string(lightID) + "].spotlightDirection);\n"; break;
 
 		default:
 			Helpers::warn("Shadergen: Unimplemented LUT select");

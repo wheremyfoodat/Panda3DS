@@ -784,37 +784,12 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	constexpr uint uboBlockBinding = 2;
 
 	PICA::FragmentConfig fsConfig(regs);
-	auto& outConfig = fsConfig.outConfig;
-	auto& texConfig = fsConfig.texConfig;
-
-	auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
-	auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
-
-	outConfig.alphaTestFunction = (alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
-	outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
-
-	texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
-	texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
-
-	// Set up TEV stages. Annoyingly we can't just memcpy as the TEV registers are arranged like
-	// {Source, Operand, Combiner, Color, Scale} and we want to skip the color register since it's uploaded via UBO
-#define setupTevStage(stage)                                                                                    \
-	std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
-	texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 5];
-
-	setupTevStage(0);
-	setupTevStage(1);
-	setupTevStage(2);
-	setupTevStage(3);
-	setupTevStage(4);
-	setupTevStage(5);
-#undef setupTevStage
 
 	CachedProgram& programEntry = shaderCache[fsConfig];
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
-		std::string fs = fragShaderGen.generate(regs, fsConfig);
+		std::string fs = fragShaderGen.generate(fsConfig);
 
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
 		program.create({defaultShadergenVs, fragShader});

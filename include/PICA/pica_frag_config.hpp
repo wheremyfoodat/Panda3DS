@@ -73,13 +73,7 @@ namespace PICA {
 			BitField<22, 2, u32> shadowSelector;
 		};
 
-		LightingLUTConfig d0{};
-		LightingLUTConfig d1{};
-		LightingLUTConfig sp{};
-		LightingLUTConfig fr{};
-		LightingLUTConfig rr{};
-		LightingLUTConfig rg{};
-		LightingLUTConfig rb{};
+		std::array<LightingLUTConfig, 7> luts{};
 
 		std::array<Light, 8> lights{};
 
@@ -116,18 +110,26 @@ namespace PICA {
 
 			for (int i = 0; i < totalLightCount; i++) {
 				auto& light = lights[i];
-				const u32 lightConfig = regs[InternalRegs::Light0Config + 0x10 * i];
-
 				light.num = (regs[InternalRegs::LightPermutation] >> (i * 4)) & 0x7;
+
+				const u32 lightConfig = regs[InternalRegs::Light0Config + 0x10 * light.num];
 				light.directional = Helpers::getBit<0>(lightConfig);
 				light.twoSidedDiffuse = Helpers::getBit<1>(lightConfig);
 				light.geometricFactor0 = Helpers::getBit<2>(lightConfig);
 				light.geometricFactor1 = Helpers::getBit<3>(lightConfig);
 
-				light.shadowEnable = ((config1 >> i) & 1) ^ 1;                      // This also does 0 = enabled
-				light.spotAttenuationEnable = ((config1 >> (8 + i)) & 1) ^ 1;       // Same here
-				light.distanceAttenuationEnable = ((config1 >> (24 + i)) & 1) ^ 1;  // Of course same here
+				light.shadowEnable = ((config1 >> light.num) & 1) ^ 1;                      // This also does 0 = enabled
+				light.spotAttenuationEnable = ((config1 >> (8 + light.num)) & 1) ^ 1;       // Same here
+				light.distanceAttenuationEnable = ((config1 >> (24 + light.num)) & 1) ^ 1;  // Of course same here
 			}
+
+			LightingLUTConfig& d0 = luts[Lights::LUT_D0];
+			LightingLUTConfig& d1 = luts[Lights::LUT_D1];
+			LightingLUTConfig& sp = luts[spotlightLutIndex];
+			LightingLUTConfig& fr = luts[Lights::LUT_FR];
+			LightingLUTConfig& rb = luts[Lights::LUT_RB];
+			LightingLUTConfig& rg = luts[Lights::LUT_RG];
+			LightingLUTConfig& rr = luts[Lights::LUT_RR];
 
 			d0.enable = Helpers::getBit<16>(config1) == 0;
 			d1.enable = Helpers::getBit<17>(config1) == 0;
@@ -144,7 +146,7 @@ namespace PICA {
 
 			if (d0.enable) {
 				d0.absInput = Helpers::getBit<1>(lutAbs) == 0;
-				d0.type = Helpers::getBits<0, 3>(lutSelect);	
+				d0.type = Helpers::getBits<0, 3>(lutSelect);
 				d0.scale = scales[Helpers::getBits<0, 3>(lutScale)];
 			}
 
@@ -195,7 +197,31 @@ namespace PICA {
 			return std::memcmp(this, &config, sizeof(FragmentConfig)) == 0;
 		}
 
-		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs) {}
+		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs) {
+			auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
+			auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
+
+			outConfig.alphaTestFunction =
+				(alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
+			outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
+
+			texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
+			texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
+
+			// Set up TEV stages. Annoyingly we can't just memcpy as the TEV registers are arranged like
+			// {Source, Operand, Combiner, Color, Scale} and we want to skip the color register since it's uploaded via UBO
+#define setupTevStage(stage)                                                                                    \
+	std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
+	texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 4];
+
+			setupTevStage(0);
+			setupTevStage(1);
+			setupTevStage(2);
+			setupTevStage(3);
+			setupTevStage(4);
+			setupTevStage(5);
+#undef setupTevStage
+		}
 	};
 
 	static_assert(
