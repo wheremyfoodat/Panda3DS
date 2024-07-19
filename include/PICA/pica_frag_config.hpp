@@ -81,6 +81,11 @@ namespace PICA {
 		LightingLUTConfig rg{};
 		LightingLUTConfig rb{};
 
+		u32 config1;
+		u32 lutAbs;
+		u32 lutScale;
+		u32 lutSelect;
+
 		std::array<Light, 8> lights{};
 
 		LightingConfig(const std::array<u32, 0x300>& regs) {
@@ -90,8 +95,12 @@ namespace PICA {
 			}
 
 			const u32 config0 = regs[InternalRegs::LightConfig0];
-			const u32 config1 = regs[InternalRegs::LightConfig1];
 			const u32 totalLightCount = Helpers::getBits<0, 3>(regs[InternalRegs::LightNumber]) + 1;
+
+			config1 = regs[InternalRegs::LightConfig1];
+			lutAbs = regs[InternalRegs::LightLUTAbs];
+			lutScale = regs[InternalRegs::LightLUTScale];
+			lutSelect = regs[InternalRegs::LightLUTSelect];
 
 			enable = 1;
 			lightNum = totalLightCount;
@@ -195,7 +204,31 @@ namespace PICA {
 			return std::memcmp(this, &config, sizeof(FragmentConfig)) == 0;
 		}
 
-		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs) {}
+		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs)
+		{
+			auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
+			auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
+
+			outConfig.alphaTestFunction = (alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
+			outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
+
+			texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
+			texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
+
+			// Set up TEV stages. Annoyingly we can't just memcpy as the TEV registers are arranged like
+			// {Source, Operand, Combiner, Color, Scale} and we want to skip the color register since it's uploaded via UBO
+		#define setupTevStage(stage)                                                                                    \
+			std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
+			texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 5];
+
+			setupTevStage(0);
+			setupTevStage(1);
+			setupTevStage(2);
+			setupTevStage(3);
+			setupTevStage(4);
+			setupTevStage(5);
+		#undef setupTevStage
+		}
 	};
 
 	static_assert(
