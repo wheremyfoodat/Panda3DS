@@ -73,7 +73,7 @@ namespace PICA {
 			BitField<22, 2, u32> shadowSelector;
 		};
 
-		LightingLUTConfig luts[7]{};
+		std::array<LightingLUTConfig, 7> luts{};
 
 		std::array<Light, 8> lights{};
 
