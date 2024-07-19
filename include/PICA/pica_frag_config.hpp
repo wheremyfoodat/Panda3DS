@@ -212,7 +212,7 @@ namespace PICA {
 			// {Source, Operand, Combiner, Color, Scale} and we want to skip the color register since it's uploaded via UBO
 #define setupTevStage(stage)                                                                                    \
 	std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
-	texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 5];
+	texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 4];
 
 			setupTevStage(0);
 			setupTevStage(1);
