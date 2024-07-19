@@ -88,8 +88,8 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 			encryptionInfoTmp.normalKey = *primaryKey;
 			encryptionInfoTmp.initialCounter.fill(0);
 
-			for (std::size_t i = 1; i <= sizeof(std::uint64_t) - 1; i++) {
-				encryptionInfoTmp.initialCounter[i] = header[0x108 + sizeof(std::uint64_t) - 1 - i];
+			for (usize i = 0; i < 8; i++) {
+				encryptionInfoTmp.initialCounter[i] = header[0x108 + 7 - i];
 			}
 			encryptionInfoTmp.initialCounter[8] = 1;
 			exheaderInfo.encryptionInfo = encryptionInfoTmp;
@@ -305,6 +305,7 @@ std::pair<bool, Crypto::AESKey> NCCH::getPrimaryKey(Crypto::AESEngine &aesEngine
 
 	if (encrypted) {
 		if (fixedCryptoKey) {
+			result.fill(0);
 			return {true, result};
 		}
 
@@ -326,6 +327,7 @@ std::pair<bool, Crypto::AESKey> NCCH::getSecondaryKey(Crypto::AESEngine &aesEngi
 	if (encrypted) {
 
 		if (fixedCryptoKey) {
+			result.fill(0);
 			return {true, result};
 		}
 
