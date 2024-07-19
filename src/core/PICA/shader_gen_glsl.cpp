@@ -485,9 +485,9 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 		shader += "light_position = lightSources[" + std::to_string(lightID) + "].position;\n";
 
 		if (lightConfig.directional) {  // Directional lighting
-			shader += "light_vector = light_position + v_view;\n";
-		} else {  // Positional lighting
 			shader += "light_vector = light_position;\n";
+		} else {  // Positional lighting
+			shader += "light_vector = light_position + v_view;\n";
 		}
 
 		shader += R"(

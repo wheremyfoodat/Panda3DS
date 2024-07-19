@@ -116,7 +116,7 @@ namespace PICA {
 
 			for (int i = 0; i < totalLightCount; i++) {
 				auto& light = lights[i];
-				const u32 lightConfig = 0x149 + 0x10 * i;
+				const u32 lightConfig = regs[InternalRegs::Light0Config + 0x10 * i];
 
 				light.num = (regs[InternalRegs::LightPermutation] >> (i * 4)) & 0x7;
 				light.directional = Helpers::getBit<0>(lightConfig);

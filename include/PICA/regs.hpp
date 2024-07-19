@@ -77,6 +77,7 @@ namespace PICA {
 			Light0Z = 0x145,
 			Light0SpotlightXY = 0x146,
 			Light0SpotlightZ = 0x147,
+			Light0Config = 0x149,
 			Light0AttenuationBias = 0x14A,
 			Light0AttenuationScale = 0x14B,
 
