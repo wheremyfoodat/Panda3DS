@@ -165,7 +165,7 @@ std::string FragmentGenerator::generate(const PICARegs& regs, const FragmentConf
 			vec4 tevNextPreviousBuffer = tevBufferColor;	
 
 			vec4 primaryColor = vec4(0.0);
-			vec4 secondaryColor = vec4(0.0);		
+			vec4 secondaryColor = vec4(0.0);
 	)";
 
 	compileLights(ret, config, regs);

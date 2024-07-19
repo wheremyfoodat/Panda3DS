@@ -13,7 +13,8 @@ struct EmulatorConfig {
 	static constexpr bool shaderJitDefault = false;
 #endif
 
-	static constexpr bool ubershaderDefault = true;
+	// For now, use specialized shaders by default
+	static constexpr bool ubershaderDefault = false;
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
