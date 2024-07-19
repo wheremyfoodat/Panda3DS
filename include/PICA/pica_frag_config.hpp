@@ -73,18 +73,7 @@ namespace PICA {
 			BitField<22, 2, u32> shadowSelector;
 		};
 
-		LightingLUTConfig d0{};
-		LightingLUTConfig d1{};
-		LightingLUTConfig sp{};
-		LightingLUTConfig fr{};
-		LightingLUTConfig rr{};
-		LightingLUTConfig rg{};
-		LightingLUTConfig rb{};
-
-		u32 config1;
-		u32 lutAbs;
-		u32 lutScale;
-		u32 lutSelect;
+		LightingLUTConfig luts[7]{};
 
 		std::array<Light, 8> lights{};
 
@@ -95,12 +84,8 @@ namespace PICA {
 			}
 
 			const u32 config0 = regs[InternalRegs::LightConfig0];
+			const u32 config1 = regs[InternalRegs::LightConfig1];
 			const u32 totalLightCount = Helpers::getBits<0, 3>(regs[InternalRegs::LightNumber]) + 1;
-
-			config1 = regs[InternalRegs::LightConfig1];
-			lutAbs = regs[InternalRegs::LightLUTAbs];
-			lutScale = regs[InternalRegs::LightLUTScale];
-			lutSelect = regs[InternalRegs::LightLUTSelect];
 
 			enable = 1;
 			lightNum = totalLightCount;
@@ -137,6 +122,14 @@ namespace PICA {
 				light.spotAttenuationEnable = ((config1 >> (8 + i)) & 1) ^ 1;       // Same here
 				light.distanceAttenuationEnable = ((config1 >> (24 + i)) & 1) ^ 1;  // Of course same here
 			}
+
+			LightingLUTConfig& d0 = luts[Lights::LUT_D0];
+			LightingLUTConfig& d1 = luts[Lights::LUT_D1];
+			LightingLUTConfig& sp = luts[spotlightLutIndex];
+			LightingLUTConfig& fr = luts[Lights::LUT_FR];
+			LightingLUTConfig& rb = luts[Lights::LUT_RB];
+			LightingLUTConfig& rg = luts[Lights::LUT_RG];
+			LightingLUTConfig& rr = luts[Lights::LUT_RR];
 
 			d0.enable = Helpers::getBit<16>(config1) == 0;
 			d1.enable = Helpers::getBit<17>(config1) == 0;

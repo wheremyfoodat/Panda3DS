@@ -1,3 +1,4 @@
+#include "PICA/pica_frag_config.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
 using namespace PICA;
@@ -29,11 +30,6 @@ static constexpr const char* uniformDefinition = R"(
 		LightSource lightSources[8];
 	};
 )";
-
-// There's actually 8 different LUTs (SP0-SP7), one for each light with different indices (8-15)
-// We use an unused LUT value for "this light source's spotlight" instead and figure out which light source to use in compileLutLookup
-// This is particularly intuitive in several places, such as checking if a LUT is enabled
-static constexpr int spotlightLutIndex = 2;
 
 std::string FragmentGenerator::getDefaultVertexShader() {
 	std::string ret = "";
@@ -613,22 +609,16 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 	}
 
 	const bool samplerEnabled = isSamplerEnabled(config.lighting.config, lutID);
-	const u32 config1 = config.lighting.config1;
+	const LightingLUTConfig& lut = config.lighting.luts[lutID];
 
-	if (!samplerEnabled || ((config1 >> bitInConfig1) & 1)) {
+	if (!samplerEnabled || !lut.enable) {
 		shader += "lut_lookup_result = 1.0;\n";
 		return;
 	}
 
-	static constexpr float scales[] = {1.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.25f, 0.5f};
-	const u32 lutAbs = config.lighting.lutAbs;
-	const u32 lutSelect = config.lighting.lutSelect;
-	const u32 lutScale = config.lighting.lutScale;
-
-	// The way these bitfields are encoded is so cursed
-	float scale = scales[(lutScale >> (4 * lutID)) & 0x7];
-	uint inputID = (lutSelect >> (4 * lutID)) & 0x7;
-	bool absEnabled = ((lutAbs >> (4 * lutID + 1)) & 0x1) == 0; // 0 = enabled...
+	float scale = lut.scale;
+	uint inputID = lut.type;
+	bool absEnabled = lut.absInput;
 	
 	switch (inputID) {
 		case 0: shader += "lut_lookup_delta = dot(normal, normalize(half_vector));\n"; break;
