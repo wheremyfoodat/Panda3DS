@@ -24,10 +24,7 @@ void RendererGL::reset() {
 	colourBufferCache.reset();
 	textureCache.reset();
 
-	for (auto& shader : shaderCache) {
-		shader.second.program.free();
-	}
-	shaderCache.clear();
+	clearShaderCache();
 
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
@@ -808,6 +805,8 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		program.create({defaultShadergenVs, fragShader});
 		gl.useProgram(program);
 
+		fragShader.free();
+
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
@@ -937,16 +936,22 @@ void RendererGL::screenshot(const std::string& name) {
 	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
 }
 
+void RendererGL::clearShaderCache() {
+	for (auto& shader : shaderCache) {
+		CachedProgram& cachedProgram = shader.second;
+		cachedProgram.program.free();
+		glDeleteBuffers(1, &cachedProgram.uboBinding);
+	}
+
+	shaderCache.clear();
+}
+
 void RendererGL::deinitGraphicsContext() {
 	// Invalidate all surface caches since they'll no longer be valid
 	textureCache.reset();
 	depthBufferCache.reset();
 	colourBufferCache.reset();
-
-	for (auto& shader : shaderCache) {
-		shader.second.program.free();
-	}
-	shaderCache.clear();
+	clearShaderCache();
 
 	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory
