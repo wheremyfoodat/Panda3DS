@@ -147,7 +147,8 @@ static void configInit() {
 	static const retro_variable values[] = {
 		{"panda3ds_use_shader_jit", "Enable shader JIT; enabled|disabled"},
 		{"panda3ds_accurate_shader_mul", "Enable accurate shader multiplication; disabled|enabled"},
-		{"panda3ds_use_ubershader", "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
+		{"panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
+																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
 		{"panda3ds_dsp_emulation", "DSP emulation; Null|HLE|LLE"},
 		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
