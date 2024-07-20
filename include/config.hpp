@@ -14,7 +14,7 @@ struct EmulatorConfig {
 #endif
 
 	// For now, use specialized shaders by default on MacOS as M1 drivers are buggy when using the ubershader, and on Android since mobile GPUs are
-	// horrible On other platforms we default to ubershader + shadergen fallback for lights
+	// horrible. On other platforms we default to ubershader + shadergen fallback for lights
 #if defined(__ANDROID__) || defined(__APPLE__)
 	static constexpr bool ubershaderDefault = false;
 #else
