@@ -30,7 +30,7 @@ class RendererGL final : public Renderer {
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
-	bool usingUbershader = true;
+	bool enableUbershader = true;
 
 	// Data 
 	struct {
@@ -110,7 +110,7 @@ class RendererGL final : public Renderer {
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
 
-	virtual void setUbershaderSetting(bool value) override { usingUbershader = value; }
+	virtual void setUbershaderSetting(bool value) override { enableUbershader = value; }
 	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 

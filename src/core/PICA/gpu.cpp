@@ -58,6 +58,10 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 			break;
 		}
 	}
+
+	if (renderer != nullptr) {
+		renderer->setConfig(&config);
+	}
 }
 
 void GPU::reset() {

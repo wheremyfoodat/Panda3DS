@@ -4,6 +4,7 @@
 
 #include <cmrc/cmrc.hpp>
 
+#include "config.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
@@ -383,6 +384,18 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
+	bool usingUbershader = enableUbershader;
+	if (usingUbershader) {
+		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
+		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
+
+		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
+		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
+		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
+			usingUbershader = false;
+		}
+	}
+		
 	if (usingUbershader) {
 		gl.useProgram(triangleProgram);
 	} else {

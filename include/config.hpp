@@ -20,6 +20,11 @@ struct EmulatorConfig {
 	bool discordRpcEnabled = false;
 	bool useUbershaders = ubershaderDefault;
 	bool accurateShaderMul = false;
+
+	// Toggles whether to force shadergen when there's more than N lights active and we're using the ubershader, for better performance
+	bool forceShadergenForLights = true;
+	int lightShadergenThreshold = 1;
+
 	RendererType rendererType = RendererType::OpenGL;
 	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Null;
 
