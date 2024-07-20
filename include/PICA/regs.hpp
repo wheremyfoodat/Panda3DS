@@ -67,7 +67,29 @@ namespace PICA {
 			ColourBufferLoc = 0x11D,
 			FramebufferSize = 0x11E,
 
-			//LightingRegs
+			// Lighting registers
+			LightingEnable = 0x8F,
+			Light0Specular0 = 0x140,
+			Light0Specular1 = 0x141,
+			Light0Diffuse = 0x142,
+			Light0Ambient = 0x143,
+			Light0XY = 0x144,
+			Light0Z = 0x145,
+			Light0SpotlightXY = 0x146,
+			Light0SpotlightZ = 0x147,
+			Light0Config = 0x149,
+			Light0AttenuationBias = 0x14A,
+			Light0AttenuationScale = 0x14B,
+
+			LightGlobalAmbient = 0x1C0,
+			LightNumber = 0x1C2,
+			LightConfig0 = 0x1C3,
+			LightConfig1 = 0x1C4,
+			LightPermutation = 0x1D9,
+			LightLUTAbs = 0x1D0,
+			LightLUTSelect = 0x1D1,
+			LightLUTScale = 0x1D2,
+
 			LightingLUTIndex =  0x01C5,
 			LightingLUTData0 =  0x01C8,
 			LightingLUTData1 =  0x01C9,
@@ -231,7 +253,8 @@ namespace PICA {
 		enum : u32 {
 			LUT_D0 = 0,
 			LUT_D1,
-			LUT_FR,
+			// LUT 2 is not used, the emulator internally uses it for referring to the current source's spotlight in shaders
+			LUT_FR = 0x3,
 			LUT_RB,
 			LUT_RG,
 			LUT_RR,
@@ -254,6 +277,11 @@ namespace PICA {
 			LUT_Count
 		};
 	}
+
+	// There's actually 8 different LUTs (SP0-SP7), one for each light with different indices (8-15)
+	// We use an unused LUT value for "this light source's spotlight" instead and figure out which light source to use in compileLutLookup
+	// This is particularly intuitive in several places, such as checking if a LUT is enabled
+	static constexpr int spotlightLutIndex = 2;
 
 	enum class TextureFmt : u32 {
 		RGBA8 = 0x0,

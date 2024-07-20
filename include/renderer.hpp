@@ -20,6 +20,7 @@ enum class RendererType : s8 {
 	Software = 3,
 };
 
+struct EmulatorConfig;
 class GPU;
 struct SDL_Window;
 
@@ -45,6 +46,8 @@ class Renderer {
 	// We initialize it to the 3DS resolution by default and the frontend can notify us if it changes via the setOutputSize function
 	u32 outputWindowWidth = 400;
 	u32 outputWindowHeight = 240 * 2;
+
+	EmulatorConfig* emulatorConfig = nullptr;
 
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
@@ -101,4 +104,6 @@ class Renderer {
 		outputWindowWidth = width;
 		outputWindowHeight = height;
 	}
+
+	void setConfig(EmulatorConfig* config) { emulatorConfig = config; }
 };

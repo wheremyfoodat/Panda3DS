@@ -4,6 +4,7 @@
 
 #include <cmrc/cmrc.hpp>
 
+#include "config.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
@@ -117,7 +118,10 @@ void RendererGL::initGraphicsContextInternal() {
 	const u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
 	const u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
 
-	glGenTextures(1, &lightLUTTextureArray);
+	lightLUTTexture.create(256, Lights::LUT_Count, GL_R32F);
+	lightLUTTexture.bind();
+	lightLUTTexture.setMinFilter(OpenGL::Linear);
+	lightLUTTexture.setMagFilter(OpenGL::Linear);
 
 	auto prevTexture = OpenGL::getTex2D();
 
@@ -159,6 +163,10 @@ void RendererGL::initGraphicsContextInternal() {
 	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 
 	reset();
+
+	// Initialize the default vertex shader used with shadergen
+	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
+	defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
 }
 
 // The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
@@ -348,26 +356,22 @@ void RendererGL::bindTexturesToSlots() {
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
+	lightLUTTexture.bind();
 	glActiveTexture(GL_TEXTURE0);
 }
 
 void RendererGL::updateLightingLUT() {
 	gpu.lightingLUTDirty = false;
-	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
+	std::array<float, GPU::LightingLutSize> lightingLut;
 
 	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
-		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
-		u16_lightinglut[i] = value * 65535 / 4095;
+		uint64_t value = gpu.lightingLUT[i] & 0xFFF;
+		lightingLut[i] = (float)(value << 4) / 65535.0f;
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_1D_ARRAY, lightLUTTextureArray);
-	glTexImage2D(GL_TEXTURE_1D_ARRAY, 0, GL_R16, 256, Lights::LUT_Count, 0, GL_RED, GL_UNSIGNED_SHORT, u16_lightinglut.data());
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_1D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	lightLUTTexture.bind();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, Lights::LUT_Count, GL_RED, GL_FLOAT, lightingLut.data());
 	glActiveTexture(GL_TEXTURE0);
 }
 
@@ -380,6 +384,18 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
+	bool usingUbershader = enableUbershader;
+	if (usingUbershader) {
+		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
+		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
+
+		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
+		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
+		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
+			usingUbershader = false;
+		}
+	}
+		
 	if (usingUbershader) {
 		gl.useProgram(triangleProgram);
 	} else {
@@ -780,43 +796,16 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 OpenGL::Program& RendererGL::getSpecializedShader() {
 	constexpr uint uboBlockBinding = 2;
 
-	PICA::FragmentConfig fsConfig;
-	auto& outConfig = fsConfig.outConfig;
-	auto& texConfig = fsConfig.texConfig;
-
-	auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
-	auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
-
-	outConfig.alphaTestFunction = (alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
-	outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
-
-	texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
-	texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];
-
-	// Set up TEV stages. Annoyingly we can't just memcpy as the TEV registers are arranged like
-	// {Source, Operand, Combiner, Color, Scale} and we want to skip the color register since it's uploaded via UBO
-#define setupTevStage(stage)                                                                                    \
-	std::memcpy(&texConfig.tevConfigs[stage * 4], &regs[InternalRegs::TexEnv##stage##Source], 3 * sizeof(u32)); \
-	texConfig.tevConfigs[stage * 4 + 3] = regs[InternalRegs::TexEnv##stage##Source + 5];
-
-	setupTevStage(0);
-	setupTevStage(1);
-	setupTevStage(2);
-	setupTevStage(3);
-	setupTevStage(4);
-	setupTevStage(5);
-#undef setupTevStage
+	PICA::FragmentConfig fsConfig(regs);
 
 	CachedProgram& programEntry = shaderCache[fsConfig];
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
-		std::string vs = fragShaderGen.getVertexShader(regs);
-		std::string fs = fragShaderGen.generate(regs);
+		std::string fs = fragShaderGen.generate(fsConfig);
 
-		OpenGL::Shader vertShader({vs.c_str(), vs.size()}, OpenGL::Vertex);
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
-		program.create({vertShader, fragShader});
+		program.create({defaultShadergenVs, fragShader});
 		gl.useProgram(program);
 
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
@@ -873,6 +862,48 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		vec[1] = float((color >> 8) & 0xFF) / 255.0f;
 		vec[2] = float((color >> 16) & 0xFF) / 255.0f;
 		vec[3] = float((color >> 24) & 0xFF) / 255.0f;
+	}
+
+	// Append lighting uniforms
+	if (fsConfig.lighting.enable) {
+		uniforms.globalAmbientLight = regs[InternalRegs::LightGlobalAmbient];
+		for (int i = 0; i < 8; i++) {
+			auto& light = uniforms.lightUniforms[i];
+			const u32 specular0 = regs[InternalRegs::Light0Specular0 + i * 0x10];
+			const u32 specular1 = regs[InternalRegs::Light0Specular1 + i * 0x10];
+			const u32 diffuse = regs[InternalRegs::Light0Diffuse + i * 0x10];
+			const u32 ambient = regs[InternalRegs::Light0Ambient + i * 0x10];
+			const u32 lightXY = regs[InternalRegs::Light0XY + i * 0x10];
+			const u32 lightZ = regs[InternalRegs::Light0Z + i * 0x10];
+
+			const u32 spotlightXY = regs[InternalRegs::Light0SpotlightXY + i * 0x10];
+			const u32 spotlightZ = regs[InternalRegs::Light0SpotlightZ + i * 0x10];
+			const u32 attenuationBias = regs[InternalRegs::Light0AttenuationBias + i * 0x10];
+			const u32 attenuationScale = regs[InternalRegs::Light0AttenuationScale + i * 0x10];
+
+#define lightColorToVec3(value)                         \
+	{                                                   \
+		float(Helpers::getBits<20, 8>(value)) / 255.0f, \
+		float(Helpers::getBits<10, 8>(value)) / 255.0f, \
+		float(Helpers::getBits<0, 8>(value)) / 255.0f,  \
+	}
+			light.specular0 = lightColorToVec3(specular0);
+			light.specular1 = lightColorToVec3(specular1);
+			light.diffuse = lightColorToVec3(diffuse);
+			light.ambient = lightColorToVec3(ambient);
+			light.position[0] = Floats::f16::fromRaw(u16(lightXY)).toFloat32();
+			light.position[1] = Floats::f16::fromRaw(u16(lightXY >> 16)).toFloat32();
+			light.position[2] = Floats::f16::fromRaw(u16(lightZ)).toFloat32();
+
+			// Fixed point 1.11.1 to float, without negation
+			light.spotlightDirection[0] = float(s32(spotlightXY & 0x1FFF) << 19 >> 19) / 2047.0;
+			light.spotlightDirection[1] = float(s32((spotlightXY >> 16) & 0x1FFF) << 19 >> 19) / 2047.0;
+			light.spotlightDirection[2] = float(s32(spotlightZ & 0x1FFF) << 19 >> 19) / 2047.0;
+
+			light.distanceAttenuationBias = Floats::f20::fromRaw(attenuationBias & 0xFFFFF).toFloat32();
+			light.distanceAttenuationScale = Floats::f20::fromRaw(attenuationScale & 0xFFFFF).toFloat32();
+#undef lightColorToVec3
+		}
 	}
 
 	gl.bindUBO(programEntry.uboBinding);

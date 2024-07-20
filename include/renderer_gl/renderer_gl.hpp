@@ -30,7 +30,7 @@ class RendererGL final : public Renderer {
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
-	bool usingUbershader = true;
+	bool enableUbershader = true;
 
 	// Data 
 	struct {
@@ -63,9 +63,12 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexBuffer dummyVBO;
 
 	OpenGL::Texture screenTexture;
-	GLuint lightLUTTextureArray;
+	OpenGL::Texture lightLUTTexture;
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
+	// The "default" vertex shader to use when using specialized shaders but not PICA vertex shader -> GLSL recompilation
+	// We can compile this once and then link it with all other generated fragment shaders
+	OpenGL::Shader defaultShadergenVs;
 
 	// Cached recompiled fragment shader
 	struct CachedProgram {
@@ -107,7 +110,7 @@ class RendererGL final : public Renderer {
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
 
-	virtual void setUbershaderSetting(bool value) override { usingUbershader = value; }
+	virtual void setUbershaderSetting(bool value) override { enableUbershader = value; }
 	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
