@@ -617,7 +617,7 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 		return;
 	}
 
-	float scale = lut.scale;
+	uint scale = lut.scale;
 	uint inputID = lut.type;
 	bool absEnabled = lut.absInput;
 	
@@ -634,17 +634,22 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 			break;
 	}
 
+	static constexpr float scales[] = {1.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.25f, 0.5f};
+
 	if (absEnabled) {
 		bool twoSidedDiffuse = config.lighting.lights[lightIndex].twoSidedDiffuse;
 		shader += twoSidedDiffuse ? "lut_lookup_delta = abs(lut_lookup_delta);\n" : "lut_lookup_delta = max(lut_lookup_delta, 0.0);\n";
 		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + ", int(clamp(floor(lut_lookup_delta * 256.0), 0.0, 255.0)));\n";
-		if (scale != 1.0) {
-			shader += "lut_lookup_result *= " + std::to_string(scale) + ";\n";
+		if (scale != 0) {
+			shader += "lut_lookup_result *= " + std::to_string(scales[scale]) + ";\n";
 		}
 	} else {
 		// Range is [-1, 1] so we need to map it to [0, 1]
 		shader += "lut_lookup_index = int(clamp(floor(lut_lookup_delta * 128.0), -128.f, 127.f));\n";
 		shader += "if (lut_lookup_index < 0) lut_lookup_index += 256;\n";
-		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + ", lut_lookup_index) *" + std::to_string(scale) + ";\n";
+		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + ", lut_lookup_index);\n";
+		if (scale != 0) {
+			shader += "lut_lookup_result *= " + std::to_string(scales[scale]) + ";\n";
+		}
 	}
 }

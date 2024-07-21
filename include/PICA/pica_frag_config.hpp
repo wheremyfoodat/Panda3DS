@@ -49,8 +49,8 @@ namespace PICA {
 			BitField<0, 1, u32> enable;
 			BitField<1, 1, u32> absInput;
 			BitField<2, 3, u32> type;
+			BitField<5, 3, u32> scale;
 		};
-		float scale;
 	};
 
 	struct LightingConfig {
@@ -142,46 +142,45 @@ namespace PICA {
 			const u32 lutAbs = regs[InternalRegs::LightLUTAbs];
 			const u32 lutSelect = regs[InternalRegs::LightLUTSelect];
 			const u32 lutScale = regs[InternalRegs::LightLUTScale];
-			static constexpr float scales[] = {1.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.25f, 0.5f};
 
 			if (d0.enable) {
 				d0.absInput = Helpers::getBit<1>(lutAbs) == 0;
 				d0.type = Helpers::getBits<0, 3>(lutSelect);
-				d0.scale = scales[Helpers::getBits<0, 3>(lutScale)];
+				d0.scale = Helpers::getBits<0, 3>(lutScale);
 			}
 
 			if (d1.enable) {
 				d1.absInput = Helpers::getBit<5>(lutAbs) == 0;
 				d1.type = Helpers::getBits<4, 3>(lutSelect);
-				d1.scale = scales[Helpers::getBits<4, 3>(lutScale)];
+				d1.scale = Helpers::getBits<4, 3>(lutScale);
 			}
 
 			sp.absInput = Helpers::getBit<9>(lutAbs) == 0;
 			sp.type = Helpers::getBits<8, 3>(lutSelect);
-			sp.scale = scales[Helpers::getBits<8, 3>(lutScale)];
+			sp.scale = Helpers::getBits<8, 3>(lutScale);
 
 			if (fr.enable) {
 				fr.absInput = Helpers::getBit<13>(lutAbs) == 0;
 				fr.type = Helpers::getBits<12, 3>(lutSelect);
-				fr.scale = scales[Helpers::getBits<12, 3>(lutScale)];
+				fr.scale = Helpers::getBits<12, 3>(lutScale);
 			}
 
 			if (rb.enable) {
 				rb.absInput = Helpers::getBit<17>(lutAbs) == 0;
 				rb.type = Helpers::getBits<16, 3>(lutSelect);
-				rb.scale = scales[Helpers::getBits<16, 3>(lutScale)];
+				rb.scale = Helpers::getBits<16, 3>(lutScale);
 			}
 
 			if (rg.enable) {
 				rg.absInput = Helpers::getBit<21>(lutAbs) == 0;
 				rg.type = Helpers::getBits<20, 3>(lutSelect);
-				rg.scale = scales[Helpers::getBits<20, 3>(lutScale)];
+				rg.scale = Helpers::getBits<20, 3>(lutScale);
 			}
 
 			if (rr.enable) {
 				rr.absInput = Helpers::getBit<25>(lutAbs) == 0;
 				rr.type = Helpers::getBits<24, 3>(lutSelect);
-				rr.scale = scales[Helpers::getBits<24, 3>(lutScale)];
+				rr.scale = Helpers::getBits<24, 3>(lutScale);
 			}
 		}
 	};
