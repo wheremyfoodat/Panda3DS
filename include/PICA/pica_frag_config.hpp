@@ -12,11 +12,11 @@
 namespace PICA {
 	struct OutputConfig {
 		union {
-			u32 raw;
+			u32 raw{};
 			// Merge the enable + compare function into 1 field to avoid duplicate shaders
 			// enable == off means a CompareFunction of Always
 			BitField<0, 3, CompareFunction> alphaTestFunction;
-			BitField<4, 1, u32> depthMapEnable;
+			BitField<3, 1, u32> depthMapEnable;
 		};
 	};
 
