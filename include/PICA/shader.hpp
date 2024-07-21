@@ -220,12 +220,8 @@ class PICAShader {
   public:
 	static constexpr size_t maxInstructionCount = 4096;
 	std::array<u32, maxInstructionCount> loadedShader;    // Currently loaded & active shader
-	std::array<u32, maxInstructionCount> bufferedShader;  // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
 
 	PICAShader(ShaderType type) : type(type) {}
-
-	// Theese functions are in the header to be inlined more easily, though with LTO I hope I'll be able to move them
-	void finalize() { std::memcpy(&loadedShader[0], &bufferedShader[0], 4096 * sizeof(u32)); }
 
 	void setBufferIndex(u32 index) { bufferIndex = index & 0xfff; }
 	void setOpDescriptorIndex(u32 index) { opDescriptorIndex = index & 0x7f; }
@@ -235,7 +231,7 @@ class PICAShader {
 			Helpers::panic("o no, shader upload overflew");
 		}
 
-		bufferedShader[bufferIndex++] = word;
+		loadedShader[bufferIndex++] = word;
 		bufferIndex &= 0xfff;
 
 		codeHashDirty = true;  // Signal the JIT if necessary that the program hash has potentially changed
