@@ -307,8 +307,8 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 	primary_color = vec4(vec3(0.0), 1.0);
 	secondary_color = vec4(vec3(0.0), 1.0);
 
-	uint GPUREG_LIGHTING_LUTINPUT_SCALE = readPicaReg(0x01D2u);
 	uint GPUREG_LIGHTING_CONFIG0 = readPicaReg(0x01C3u);
+	GPUREG_LIGHTING_LUTINPUT_SCALE = readPicaReg(0x01D2u);
 	GPUREG_LIGHTING_CONFIG1 = readPicaReg(0x01C4u);
 	GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0u);
 	GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1u);

@@ -15,6 +15,8 @@ static retro_input_state_t inputStateCallback;
 static retro_hw_render_callback hw_render;
 static std::filesystem::path savePath;
 
+static bool screenTouched;
+
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
 
@@ -314,7 +316,8 @@ void retro_run() {
 	hid.setCirclepadX((xLeft / +32767) * 0x9C);
 	hid.setCirclepadY((yLeft / -32767) * 0x9C);
 
-	bool touch = inputStateCallback(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+	bool touchScreen = false;
+
 	const int posX = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
 	const int posY = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 
@@ -324,16 +327,23 @@ void retro_run() {
 	const int offsetX = 40;
 	const int offsetY = emulator->height / 2;
 
-	const bool inScreenX = newX >= offsetX && newX < emulator->width - offsetX;
+	const bool inScreenX = newX >= offsetX && newX <= emulator->width - offsetX;
 	const bool inScreenY = newY >= offsetY && newY <= emulator->height;
 
-	if (touch && inScreenX && inScreenY) {
+	if (inScreenX && inScreenY) {
+		touchScreen |= inputStateCallback(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+		touchScreen |= inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
+	}
+
+	if (touchScreen) {
 		u16 x = static_cast<u16>(newX - offsetX);
 		u16 y = static_cast<u16>(newY - offsetY);
 
 		hid.setTouchScreenPress(x, y);
-	} else {
+		screenTouched = true;
+	} else if (screenTouched) {
 		hid.releaseTouchScreen();
+		screenTouched = false;
 	}
 
 	hid.updateInputs(emulator->getTicks());
