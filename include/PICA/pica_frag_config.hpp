@@ -235,10 +235,13 @@ namespace PICA {
 #undef setupTevStage
 
 			fogConfig.mode = (FogMode)Helpers::getBits<0, 3>(regs[InternalRegs::TexEnvUpdateBuffer]);
-			fogConfig.flipDepth = Helpers::getBit<16>(regs[InternalRegs::TexEnvUpdateBuffer]);
-			fogConfig.fogColorR = Helpers::getBits<0, 8>(regs[InternalRegs::FogColor]);
-			fogConfig.fogColorG = Helpers::getBits<8, 8>(regs[InternalRegs::FogColor]);
-			fogConfig.fogColorB = Helpers::getBits<16, 8>(regs[InternalRegs::FogColor]);
+
+			if (fogConfig.mode == FogMode::Fog) {
+				fogConfig.flipDepth = Helpers::getBit<16>(regs[InternalRegs::TexEnvUpdateBuffer]);
+				fogConfig.fogColorR = Helpers::getBits<0, 8>(regs[InternalRegs::FogColor]);
+				fogConfig.fogColorG = Helpers::getBits<8, 8>(regs[InternalRegs::FogColor]);
+				fogConfig.fogColorB = Helpers::getBits<16, 8>(regs[InternalRegs::FogColor]);
+			}
 		}
 	};
 

@@ -92,8 +92,8 @@ class GPU {
 	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
 	bool lightingLUTDirty = false;
 
-	std::array<uint32_t, 128> fogLUT;
 	bool fogLUTDirty = false;
+	std::array<uint32_t, 128> fogLUT;
 
 	GPU(Memory& mem, EmulatorConfig& config);
 	void display() { renderer->display(); }

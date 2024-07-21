@@ -143,10 +143,10 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case FogLUTData5:
 		case FogLUTData6:
 		case FogLUTData7: {
-			const uint32_t index = regs[FogLUTIndex] & 127;
+			const uint32_t index = regs[FogLUTIndex] & 0x7F;
 			fogLUT[index] = value;
 			fogLUTDirty = true;
-			regs[FogLUTIndex] = (index + 1) & 127;
+			regs[FogLUTIndex] = (index + 1) & 0x7F;
 			break;
 		}
 

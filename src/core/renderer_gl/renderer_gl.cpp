@@ -1026,7 +1026,7 @@ void RendererGL::initUbershader(OpenGL::Program& program) {
 	ubershaderData.depthmapEnableLoc = OpenGL::uniformLocation(program, "u_depthmapEnable");
 	ubershaderData.picaRegLoc = OpenGL::uniformLocation(program, "u_picaRegs");
 
-	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, light maps go in TU 3, and the fog map goes in TU 4
+	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2 and the LUTs go in TU 3
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
