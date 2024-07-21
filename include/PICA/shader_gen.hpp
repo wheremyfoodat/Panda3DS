@@ -4,15 +4,10 @@
 #include "PICA/gpu.hpp"
 #include "PICA/pica_frag_config.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/shader_gen_types.hpp"
 #include "helpers.hpp"
 
 namespace PICA::ShaderGen {
-	// Graphics API this shader is targetting
-	enum class API { GL, GLES, Vulkan };
-
-	// Shading language to use (Only GLSL for the time being)
-	enum class Language { GLSL };
-
 	class FragmentGenerator {
 		API api;
 		Language language;
