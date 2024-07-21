@@ -9,7 +9,6 @@ void ShaderUnit::reset() {
 
 void PICAShader::reset() {
 	loadedShader.fill(0);
-	bufferedShader.fill(0);
 	operandDescriptors.fill(0);
 
 	boolUniform = 0;

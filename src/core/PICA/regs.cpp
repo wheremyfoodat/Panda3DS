@@ -329,9 +329,11 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 		}
 
+		/* TODO: Find out if this actually does anything
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;
+		*/
 
 		case VertexShaderTransferIndex: shaderUnit.vs.setBufferIndex(value); break;
 
