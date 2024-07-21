@@ -531,7 +531,6 @@ void RendererGL::display() {
 	gl.disableScissor();
 	gl.disableBlend();
 	gl.disableDepth();
-	gl.disableScissor();
 	// This will work fine whether or not logic ops are enabled. We set logic op to copy instead of disabling to avoid state changes
 	gl.setLogicOp(GL_COPY);
 	gl.setColourMask(true, true, true, true);
