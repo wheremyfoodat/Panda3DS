@@ -155,7 +155,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 			}
 		}
 
-		[[maybe_unused]] const u64 saveDataSize = *(u64*)&exheader[0x1C0 + 0x0]; // Size of save data in bytes
+		saveDataSize = *(u64*)&exheader[0x1C0 + 0x0]; // Size of save data in bytes
 
 		compressCode = (exheader[0xD] & 1) != 0;
 		stackSize = *(u32*)&exheader[0x1C];
