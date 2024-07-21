@@ -396,6 +396,12 @@ namespace PICA {
 		GreaterOrEqual = 7,
 	};
 
+	enum class FogMode : u32 {
+		Disabled = 0,
+		Fog = 5,
+		Gas = 7,
+	};
+
 	struct TexEnvConfig {
 		enum class Source : u8 {
 			PrimaryColor = 0x0,
