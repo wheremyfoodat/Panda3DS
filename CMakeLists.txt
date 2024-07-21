@@ -25,7 +25,7 @@ if(APPLE)
 endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security -Wno-interference-size")
 endif() 
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
