@@ -64,8 +64,6 @@ struct NCCH {
 
 	// Contents of the .code file in the ExeFS
 	std::vector<u8> codeFile;
-	// Contains of the cart's save data
-	std::vector<u8> saveData;
 	// The cart region. Only the CXI's region matters to us. Necessary to get past region locking
 	std::optional<Regions> region = std::nullopt;
 	std::vector<u8> smdh;
