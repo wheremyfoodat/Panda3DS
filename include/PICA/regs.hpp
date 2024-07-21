@@ -51,6 +51,18 @@ namespace PICA {
 			#undef defineTexEnv
 			// clang-format on
 
+			// Fog registers
+			FogColor = 0xE1,
+			FogLUTIndex = 0xE6,
+			FogLUTData0 = 0xE8,
+			FogLUTData1 = 0xE9,
+			FogLUTData2 = 0xEA,
+			FogLUTData3 = 0xEB,
+			FogLUTData4 = 0xEC,
+			FogLUTData5 = 0xED,
+			FogLUTData6 = 0xEE,
+			FogLUTData7 = 0xEF,
+
 			// Framebuffer registers
 			ColourOperation = 0x100,
 			BlendFunc = 0x101,

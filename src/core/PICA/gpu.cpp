@@ -74,6 +74,9 @@ void GPU::reset() {
 	lightingLUT.fill(0);
 	lightingLUTDirty = true;
 
+	fogLUT.fill(0);
+	fogLUTDirty = true;
+
 	totalAttribCount = 0;
 	fixedAttribMask = 0;
 	fixedAttribIndex = 0;

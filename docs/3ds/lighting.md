@@ -56,7 +56,7 @@ lut_id is one of these values
 6 	RR 
 
 lut_index on the other hand represents the actual index of the LUT in the texture
-u_tex_lighting_lut has 24 LUTs and they are used like so:
+u_tex_luts has 24 LUTs for lighting and they are used like so:
 0 		D0
 1 		D1
 2 		is missing because SP uses LUTs 8-15

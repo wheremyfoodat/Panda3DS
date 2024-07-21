@@ -25,7 +25,7 @@ uniform bool u_depthmapEnable;
 uniform sampler2D u_tex0;
 uniform sampler2D u_tex1;
 uniform sampler2D u_tex2;
-uniform sampler2D u_tex_lighting_lut;
+uniform sampler2D u_tex_luts;
 
 uniform uint u_picaRegs[0x200 - 0x48];
 
@@ -152,6 +152,8 @@ vec4 tevCalculateCombiner(int tev_id) {
 #define RG_LUT 5u
 #define RR_LUT 6u
 
+#define FOG_INDEX 24
+
 uint GPUREG_LIGHTi_CONFIG;
 uint GPUREG_LIGHTING_CONFIG1;
 uint GPUREG_LIGHTING_LUTINPUT_SELECT;
@@ -161,7 +163,7 @@ bool error_unimpl = false;
 vec4 unimpl_color = vec4(1.0, 0.0, 1.0, 1.0);
 
 float lutLookup(uint lut, int index) {
-	return texelFetch(u_tex_lighting_lut, ivec2(index, int(lut)), 0).r;
+	return texelFetch(u_tex_luts, ivec2(index, int(lut)), 0).r;
 }
 
 vec3 regToColor(uint reg) {
@@ -494,7 +496,7 @@ void main() {
 	if (tevUnimplementedSourceFlag) {
 		// fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 	}
-	// fragColour.rg = texture(u_tex_lighting_lut,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
+	// fragColour.rg = texture(u_tex_luts,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
 
 	// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
 	// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
@@ -506,6 +508,28 @@ void main() {
 
 	// Write final fragment depth
 	gl_FragDepth = depth;
+
+	bool enable_fog = (textureEnvUpdateBuffer & 7u) == 5u;
+
+	if (enable_fog) {
+		bool flip_depth = (textureEnvUpdateBuffer & (1u << 16)) != 0u;
+		float fog_index = flip_depth ? 1.0 - depth : depth;
+		fog_index *= 128.0;
+		float clamped_index = clamp(floor(fog_index), 0.0, 127.0);
+		float delta = fog_index - clamped_index;
+		vec2 value = texelFetch(u_tex_luts, ivec2(int(clamped_index), FOG_INDEX), 0).rg;
+		float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);
+
+		uint GPUREG_FOG_COLOR = readPicaReg(0x00E1u);
+
+		// Annoyingly color is not encoded in the same way as light color
+		float r = (GPUREG_FOG_COLOR & 0xFFu) / 255.0;
+		float g = ((GPUREG_FOG_COLOR >> 8) & 0xFFu) / 255.0;
+		float b = ((GPUREG_FOG_COLOR >> 16) & 0xFFu) / 255.0;
+		vec3 fog_color = vec3(r, g, b);
+
+		fragColour.rgb = mix(fog_color, fragColour.rgb, fog_factor);
+	}
 
 	// Perform alpha test
 	uint alphaControl = readPicaReg(0x104u);

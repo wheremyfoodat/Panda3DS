@@ -130,7 +130,7 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 		uniform sampler2D u_tex0;
 		uniform sampler2D u_tex1;
 		uniform sampler2D u_tex2;
-		uniform sampler2D u_tex_lighting_lut;
+		uniform sampler2D u_tex_luts;
 	)";
 
 	ret += uniformDefinition;
@@ -144,7 +144,7 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 			}
 
 			float lutLookup(uint lut, int index) {
-				return texelFetch(u_tex_lighting_lut, ivec2(index, int(lut)), 0).r;
+				return texelFetch(u_tex_luts, ivec2(index, int(lut)), 0).r;
 			}
 
 			vec3 regToColor(uint reg) {
