@@ -63,7 +63,7 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexBuffer dummyVBO;
 
 	OpenGL::Texture screenTexture;
-	OpenGL::Texture lightLUTTexture;
+	OpenGL::Texture LUTTexture;
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
 	// The "default" vertex shader to use when using specialized shaders but not PICA vertex shader -> GLSL recompilation
@@ -90,6 +90,7 @@ class RendererGL final : public Renderer {
 	void setupUbershaderTexEnv();
 	void bindTexturesToSlots();
 	void updateLightingLUT();
+	void updateFogLUT();
 	void initGraphicsContextInternal();
 
   public:
