@@ -25,7 +25,6 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	}
 
 	codeFile.clear();
-	saveData.clear();
 	smdh.clear();
 	partitionInfo = info;
 
