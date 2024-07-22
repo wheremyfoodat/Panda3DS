@@ -94,7 +94,7 @@ class PICAShader {
 	u32 entrypoint = 0;  // Initial shader PC
 
 	// We want these registers in this order & with this alignment for uploading them directly to a UBO
-	// When emulating shaders on the GPU
+	// When emulating shaders on the GPU. Plus this alignment for float uniforms is necessary for doing SIMD in the shader->CPU recompilers.
 	alignas(16) std::array<vec4f, 96> floatUniforms;
 	alignas(16) std::array<std::array<u8, 4>, 4> intUniforms;
 	u32 boolUniform;
