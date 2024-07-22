@@ -2,6 +2,7 @@
 #include <set>
 #include <string>
 #include <tuple>
+#include <map>
 #include <vector>
 
 #include "PICA/shader.hpp"
@@ -13,6 +14,15 @@ namespace PICA::ShaderGen {
 	// Control flow analysis is partially based on
 	// https://github.com/PabloMK7/citra/blob/d0179559466ff09731d74474322ee880fbb44b00/src/video_core/shader/generator/glsl_shader_decompiler.cpp#L33
 	struct ControlFlow {
+		// A continuous range of addresses
+		struct AddressRange {
+			u32 start, end;
+			AddressRange(u32 start, u32 end) : start(start), end(end) {}
+
+			// Use lexicographic comparison for functions in order to sort them in a set
+			bool operator<(const AddressRange& other) const { return std::tie(start, end) < std::tie(other.start, other.end); }
+		};
+
 		struct Function {
 			using Labels = std::set<u32>;
 
@@ -29,20 +39,22 @@ namespace PICA::ShaderGen {
 			ExitMode exitMode = ExitMode::Unknown;
 
 			explicit Function(u32 start, u32 end) : start(start), end(end) {}
-			// Use lexicographic comparison for functions in order to sort them in a set
-			bool operator<(const Function& other) const { return std::tie(start, end) < std::tie(other.start, other.end); }
+			bool operator<(const Function& other) const { return AddressRange(start, end) < AddressRange(other.start, other.end); }
+
+			std::string getIdentifier() const { return "func_" + std::to_string(start) + "_to_" + std::to_string(end); }
+			std::string getForwardDecl() const { return "void " + getIdentifier() + "();\n"; }
+			std::string getCallStatement() const { return getIdentifier() + "()"; }
 		};
 
 		std::set<Function> functions{};
+		std::map<AddressRange, Function::ExitMode> exitMap{};
 
 		// Tells us whether analysis of the shader we're trying to compile failed, in which case we'll need to fail back to shader emulation
 		// On the CPU
 		bool analysisFailed = false;
 
-		void analyze(const PICAShader& shader, u32 entrypoint);
-
 		// This will recursively add all functions called by the function too, as analyzeFunction will call addFunction on control flow instructions
-		const Function* addFunction(u32 start, u32 end) {
+		const Function* addFunction(const PICAShader& shader, u32 start, u32 end) {
 			auto searchIterator = functions.find(Function(start, end));
 			if (searchIterator != functions.end()) {
 				return &(*searchIterator);
@@ -50,9 +62,9 @@ namespace PICA::ShaderGen {
 
 			// Add this function and analyze it if it doesn't already exist
 			Function function(start, end);
-			function.exitMode = analyzeFunction(start, end, function.outLabels);
+			function.exitMode = analyzeFunction(shader, start, end, function.outLabels);
 			
-			// This function 
+			// This function could not be fully analyzed, report failure
 			if (function.exitMode == Function::ExitMode::Unknown) {
 				analysisFailed = true;
 				return nullptr;
@@ -63,10 +75,14 @@ namespace PICA::ShaderGen {
 			return &(*it);
 		}
 
-		Function::ExitMode analyzeFunction(u32 start, u32 end, Function::Labels& labels);
+		void analyze(const PICAShader& shader, u32 entrypoint);
+		Function::ExitMode analyzeFunction(const PICAShader& shader, u32 start, u32 end, Function::Labels& labels);
 	};
 
 	class ShaderDecompiler {
+		using AddressRange = ControlFlow::AddressRange;
+		using Function = ControlFlow::Function;
+
 		ControlFlow controlFlow{};
 
 		PICAShader& shader;
@@ -74,14 +90,20 @@ namespace PICA::ShaderGen {
 		std::string decompiledShader;
 
 		u32 entrypoint;
-		u32 currentPC;
 
 		API api;
 		Language language;
 
+		void compileInstruction(u32& pc, bool& finished);
+		void compileRange(const AddressRange& range);
+		void callFunction(const Function& function);
+		const Function* findFunction(const AddressRange& range);
+
+		void writeAttributes();
+
 	  public:
 		ShaderDecompiler(PICAShader& shader, EmulatorConfig& config, u32 entrypoint, API api, Language language)
-			: shader(shader), entrypoint(entrypoint), currentPC(entrypoint), config(config), api(api), language(language), decompiledShader("") {}
+			: shader(shader), entrypoint(entrypoint), config(config), api(api), language(language), decompiledShader("") {}
 
 		std::string decompile();
 	};

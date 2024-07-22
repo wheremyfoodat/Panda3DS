@@ -1,6 +1,8 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <cstddef>
 #include <cstring>
 
 #include "PICA/float_types.hpp"
@@ -90,9 +92,12 @@ class PICAShader {
   public:
 	// These are placed close to the temp registers and co because it helps the JIT generate better code
 	u32 entrypoint = 0;  // Initial shader PC
-	u32 boolUniform;
-	std::array<std::array<u8, 4>, 4> intUniforms;
+
+	// We want these registers in this order & with this alignment for uploading them directly to a UBO
+	// When emulating shaders on the GPU
 	alignas(16) std::array<vec4f, 96> floatUniforms;
+	alignas(16) std::array<std::array<u8, 4>, 4> intUniforms;
+	u32 boolUniform;
 
 	alignas(16) std::array<vec4f, 16> fixedAttributes;  // Fixed vertex attributes
 	alignas(16) std::array<vec4f, 16> inputs;           // Attributes passed to the shader
@@ -292,3 +297,8 @@ class PICAShader {
 	Hash getCodeHash();
 	Hash getOpdescHash();
 };
+
+static_assert(
+	offsetof(PICAShader, intUniforms) == offsetof(PICAShader, floatUniforms) + 96 * sizeof(float) * 4 &&
+	offsetof(PICAShader, boolUniform) == offsetof(PICAShader, intUniforms) + 4 * sizeof(u8) * 4
+);
