@@ -135,6 +135,21 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 		}
 
+		case FogLUTData0:
+		case FogLUTData1:
+		case FogLUTData2:
+		case FogLUTData3:
+		case FogLUTData4:
+		case FogLUTData5:
+		case FogLUTData6:
+		case FogLUTData7: {
+			const uint32_t index = regs[FogLUTIndex] & 0x7F;
+			fogLUT[index] = value;
+			fogLUTDirty = true;
+			regs[FogLUTIndex] = (index + 1) & 0x7F;
+			break;
+		}
+
 		case LightingLUTData0:
 		case LightingLUTData1:
 		case LightingLUTData2:
@@ -314,9 +329,11 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 		}
 
+		/* TODO: Find out if this actually does anything
 		case VertexShaderTransferEnd:
 			if (value != 0) shaderUnit.vs.finalize();
 			break;
+		*/
 
 		case VertexShaderTransferIndex: shaderUnit.vs.setBufferIndex(value); break;
 

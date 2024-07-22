@@ -29,6 +29,18 @@ namespace PICA {
 		std::array<u32, 4 * 6> tevConfigs;
 	};
 
+	struct FogConfig {
+		union {
+			u32 raw{};
+
+			BitField<0, 3, FogMode> mode;
+			BitField<3, 1, u32> flipDepth;
+			BitField<8, 8, u32> fogColorR;
+			BitField<16, 8, u32> fogColorG;
+			BitField<24, 8, u32> fogColorB;
+		};
+	};
+
 	struct Light {
 		union {
 			u16 raw;
@@ -189,6 +201,7 @@ namespace PICA {
 	struct FragmentConfig {
 		OutputConfig outConfig;
 		TextureConfig texConfig;
+		FogConfig fogConfig;
 		LightingConfig lighting;
 
 		bool operator==(const FragmentConfig& config) const {
@@ -220,12 +233,21 @@ namespace PICA {
 			setupTevStage(4);
 			setupTevStage(5);
 #undef setupTevStage
+
+			fogConfig.mode = (FogMode)Helpers::getBits<0, 3>(regs[InternalRegs::TexEnvUpdateBuffer]);
+
+			if (fogConfig.mode == FogMode::Fog) {
+				fogConfig.flipDepth = Helpers::getBit<16>(regs[InternalRegs::TexEnvUpdateBuffer]);
+				fogConfig.fogColorR = Helpers::getBits<0, 8>(regs[InternalRegs::FogColor]);
+				fogConfig.fogColorG = Helpers::getBits<8, 8>(regs[InternalRegs::FogColor]);
+				fogConfig.fogColorB = Helpers::getBits<16, 8>(regs[InternalRegs::FogColor]);
+			}
 		}
 	};
 
 	static_assert(
 		std::has_unique_object_representations<OutputConfig>() && std::has_unique_object_representations<TextureConfig>() &&
-		std::has_unique_object_representations<Light>()
+		std::has_unique_object_representations<FogConfig>() && std::has_unique_object_representations<Light>()
 	);
 }  // namespace PICA
 

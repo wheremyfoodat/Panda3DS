@@ -115,10 +115,11 @@ void RendererGL::initGraphicsContextInternal() {
 	const u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
 	const u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
 
-	lightLUTTexture.create(256, Lights::LUT_Count, GL_R32F);
-	lightLUTTexture.bind();
-	lightLUTTexture.setMinFilter(OpenGL::Linear);
-	lightLUTTexture.setMagFilter(OpenGL::Linear);
+	// 24 rows for light, 1 for fog
+	LUTTexture.create(256, Lights::LUT_Count + 1, GL_RG32F);
+	LUTTexture.bind();
+	LUTTexture.setMinFilter(OpenGL::Linear);
+	LUTTexture.setMagFilter(OpenGL::Linear);
 
 	auto prevTexture = OpenGL::getTex2D();
 
@@ -353,22 +354,49 @@ void RendererGL::bindTexturesToSlots() {
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
-	lightLUTTexture.bind();
+	LUTTexture.bind();
 	glActiveTexture(GL_TEXTURE0);
 }
 
 void RendererGL::updateLightingLUT() {
 	gpu.lightingLUTDirty = false;
-	std::array<float, GPU::LightingLutSize> lightingLut;
+	std::array<float, GPU::LightingLutSize * 2> lightingLut;
 
-	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
-		uint64_t value = gpu.lightingLUT[i] & 0xFFF;
+	for (int i = 0; i < lightingLut.size(); i += 2) {
+		uint64_t value = gpu.lightingLUT[i >> 1] & 0xFFF;
 		lightingLut[i] = (float)(value << 4) / 65535.0f;
 	}
 
 	glActiveTexture(GL_TEXTURE0 + 3);
-	lightLUTTexture.bind();
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, Lights::LUT_Count, GL_RED, GL_FLOAT, lightingLut.data());
+	LUTTexture.bind();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, Lights::LUT_Count, GL_RG, GL_FLOAT, lightingLut.data());
+	glActiveTexture(GL_TEXTURE0);
+}
+
+void RendererGL::updateFogLUT() {
+	gpu.fogLUTDirty = false;
+
+	// Fog LUT elements are of this type:
+	// 0-12     fixed1.1.11, Difference from next element
+	// 13-23    fixed0.0.11, Value
+	// We will store them as a 128x1 RG texture with R being the value and G being the difference
+	std::array<float, 128 * 2> fogLut;
+
+	for (int i = 0; i < fogLut.size(); i += 2) {
+		const uint32_t value = gpu.fogLUT[i >> 1];
+		int32_t diff = value & 0x1fff;
+		diff = (diff << 19) >> 19;  // Sign extend the 13-bit value to 32 bits
+		const float fogDifference = float(diff) / 2048.0f;
+		const float fogValue = float((value >> 13) & 0x7ff) / 2048.0f;
+
+		fogLut[i] = fogValue;
+		fogLut[i + 1] = fogDifference;
+	}
+
+	glActiveTexture(GL_TEXTURE0 + 3);
+	LUTTexture.bind();
+	// The fog LUT exists at the end of the lighting LUT
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, Lights::LUT_Count, 128, 1, GL_RG, GL_FLOAT, fogLut.data());
 	glActiveTexture(GL_TEXTURE0);
 }
 
@@ -453,6 +481,10 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	bindTexturesToSlots();
 
+	if (gpu.fogLUTDirty) {
+		updateFogLUT();
+	}
+
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT();
 	}
@@ -499,7 +531,6 @@ void RendererGL::display() {
 	gl.disableScissor();
 	gl.disableBlend();
 	gl.disableDepth();
-	gl.disableScissor();
 	// This will work fine whether or not logic ops are enabled. We set logic op to copy instead of disabling to avoid state changes
 	gl.setLogicOp(GL_COPY);
 	gl.setColourMask(true, true, true, true);
@@ -811,7 +842,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
-		glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 
 		// Allocate memory for the program UBO
 		glGenBuffers(1, &programEntry.uboBinding);
@@ -994,9 +1025,9 @@ void RendererGL::initUbershader(OpenGL::Program& program) {
 	ubershaderData.depthmapEnableLoc = OpenGL::uniformLocation(program, "u_depthmapEnable");
 	ubershaderData.picaRegLoc = OpenGL::uniformLocation(program, "u_picaRegs");
 
-	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
+	// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2 and the LUTs go in TU 3
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
-	glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
+	glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 }

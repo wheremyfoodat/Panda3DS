@@ -130,7 +130,7 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 		uniform sampler2D u_tex0;
 		uniform sampler2D u_tex1;
 		uniform sampler2D u_tex2;
-		uniform sampler2D u_tex_lighting_lut;
+		uniform sampler2D u_tex_luts;
 	)";
 
 	ret += uniformDefinition;
@@ -144,7 +144,7 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 			}
 
 			float lutLookup(uint lut, int index) {
-				return texelFetch(u_tex_lighting_lut, ivec2(index, int(lut)), 0).r;
+				return texelFetch(u_tex_luts, ivec2(index, int(lut)), 0).r;
 			}
 
 			vec3 regToColor(uint reg) {
@@ -193,6 +193,8 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 	for (int i = 0; i < 6; i++) {
 		compileTEV(ret, i, config);
 	}
+
+	compileFog(ret, config);
 
 	applyAlphaTest(ret, config);
 
@@ -652,4 +654,27 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 			shader += "lut_lookup_result *= " + std::to_string(scales[scale]) + ";\n";
 		}
 	}
+}
+
+void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConfig& config) {
+	if (config.fogConfig.mode != FogMode::Fog) {
+		return;
+	}
+
+	float r = config.fogConfig.fogColorR / 255.0f;
+	float g = config.fogConfig.fogColorG / 255.0f;
+	float b = config.fogConfig.fogColorB / 255.0f;
+
+	if (config.fogConfig.flipDepth) {
+		shader += "float fog_index = (1.0 - depth) * 128.0;\n";
+	} else {
+		shader += "float fog_index = depth * 128.0;\n";
+	}
+
+	shader += "float clamped_index = clamp(floor(fog_index), 0.0, 127.0);";
+	shader += "float delta = fog_index - clamped_index;";
+	shader += "vec3 fog_color = vec3(" + std::to_string(r) + ", " + std::to_string(g) + ", " + std::to_string(b) + ");";
+	shader += "vec2 value = texelFetch(u_tex_luts, ivec2(int(clamped_index), 24), 0).rg;"; // fog LUT is past the light LUTs
+	shader += "float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);";
+	shader += "combinerOutput.rgb = mix(fog_color, combinerOutput.rgb, fog_factor);";
 }

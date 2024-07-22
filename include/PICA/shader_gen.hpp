@@ -24,6 +24,8 @@ namespace PICA::ShaderGen {
 		void compileLUTLookup(std::string& shader, const PICA::FragmentConfig& config, u32 lightIndex, u32 lutID);
 		bool isSamplerEnabled(u32 environmentID, u32 lutID);
 
+		void compileFog(std::string& shader, const PICA::FragmentConfig& config);
+
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
 		std::string generate(const PICA::FragmentConfig& config);
