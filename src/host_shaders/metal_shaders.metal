@@ -104,6 +104,7 @@ struct EnvColor {
 
 struct DrawVertexOut {
 	float4 position [[position]];
+	float4 quaternion;
 	float4 color;
 	float3 texCoord0;
 	float2 texCoord1;
@@ -194,6 +195,7 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 	out.normal = normalize(rotateFloat3ByQuaternion(float3(0.0, 0.0, 1.0), in.quaternion));
 	out.tangent = normalize(rotateFloat3ByQuaternion(float3(1.0, 0.0, 0.0), in.quaternion));
 	out.bitangent = normalize(rotateFloat3ByQuaternion(float3(0.0, 1.0, 0.0), in.quaternion));
+	out.quaternion = in.quaternion;
 
 	// Environment
 	for (int i = 0; i < 6; i++) {
@@ -219,11 +221,34 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 	return outWithClip;
 }
 
+constant bool lightingEnabled [[function_constant(0)]];
+constant uint8_t lightingNumLights [[function_constant(1)]];
+constant uint8_t lightingConfig1 [[function_constant(2)]];
+constant uint16_t alphaControl [[function_constant(3)]];
+
 struct Globals {
+    bool error_unimpl;
+
     float4 tevSources[16];
     float4 tevNextPreviousBuffer;
     bool tevUnimplementedSourceFlag = false;
+
+    uint GPUREG_LIGHTING_LUTINPUT_SCALE;
+	uint GPUREG_LIGHTING_LUTINPUT_ABS;
+	uint GPUREG_LIGHTING_LUTINPUT_SELECT;
+	uint GPUREG_LIGHTi_CONFIG;
+
+    float3 normal;
 };
+
+// See docs/lighting.md
+constant uint samplerEnabledBitfields[2] = {0x7170e645u, 0x7f013fefu};
+
+bool isSamplerEnabled(uint environment_id, uint lut_id) {
+	uint index = 7 * environment_id + lut_id;
+	uint arrayIndex = (index >> 5);
+	return (samplerEnabledBitfields[arrayIndex] & (1u << (index & 31u))) != 0u;
+}
 
 struct FragTEV {
     uint textureEnvSource[6];
@@ -375,11 +400,103 @@ uint4 performLogicOpU(LogicOp logicOp, uint4 s, uint4 d) {
 #define RG_LUT 5u
 #define RR_LUT 6u
 
-float lutLookup(texture1d_array<float> texLightingLut, sampler linearSampler, uint lut, uint light, float value) {
-	if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1;
-	if (lut == SP_LUT) lut = light + 8;
+float lutLookup(texture1d_array<float> texLightingLut, uint lut, uint index) {
+	return texLightingLut.read(index, lut).r;
+}
 
-	return texLightingLut.sample(linearSampler, value, lut).r;
+float lightLutLookup(thread Globals& globals, thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, uint environment_id, uint lut_id, uint light_id, float3 light_vector, float3 half_vector) {
+	uint lut_index;
+	int bit_in_config1;
+	if (lut_id == SP_LUT) {
+		// These are the spotlight attenuation LUTs
+		bit_in_config1 = 8 + int(light_id & 7u);
+		lut_index = 8u + light_id;
+	} else if (lut_id <= 6) {
+		bit_in_config1 = 16 + int(lut_id);
+		lut_index = lut_id;
+	} else {
+		globals.error_unimpl = true;
+	}
+
+	bool current_sampler_enabled = isSamplerEnabled(environment_id, lut_id); // 7 luts per environment
+
+	if (!current_sampler_enabled || (extract_bits(lightingConfig1, bit_in_config1, 1) != 0u)) {
+		return 1.0;
+	}
+
+	uint scale_id = extract_bits(globals.GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) << 2, 3);
+	float scale = float(1u << scale_id);
+	if (scale_id >= 6u) scale /= 256.0;
+
+	float delta = 1.0;
+	uint input_id = extract_bits(globals.GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) << 2, 3);
+	switch (input_id) {
+		case 0u: {
+			delta = dot(globals.normal, normalize(half_vector));
+			break;
+		}
+		case 1u: {
+			delta = dot(normalize(in.view), normalize(half_vector));
+			break;
+		}
+		case 2u: {
+			delta = dot(globals.normal, normalize(in.view));
+			break;
+		}
+		case 3u: {
+			delta = dot(light_vector, globals.normal);
+			break;
+		}
+		case 4u: {
+			int GPUREG_LIGHTi_SPOTDIR_LOW = int(picaRegs.read(0x0146u + (light_id << 4u)));
+			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(picaRegs.read(0x0147u + (light_id << 4u)));
+
+			// Sign extend them. Normally bitfieldExtract would do that but it's missing on some versions
+			// of GLSL so we do it manually
+			int se_x = extract_bits(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 13);
+			int se_y = extract_bits(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 13);
+			int se_z = extract_bits(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 13);
+
+			if ((se_x & 0x1000) == 0x1000) se_x |= 0xffffe000;
+			if ((se_y & 0x1000) == 0x1000) se_y |= 0xffffe000;
+			if ((se_z & 0x1000) == 0x1000) se_z |= 0xffffe000;
+
+			// These are fixed point 1.1.11 values, so we need to convert them to float
+			float x = float(se_x) / 2047.0;
+			float y = float(se_y) / 2047.0;
+			float z = float(se_z) / 2047.0;
+			float3 spotlight_vector = float3(x, y, z);
+			delta = dot(light_vector, spotlight_vector); // spotlight direction is negated so we don't negate light_vector
+			break;
+		}
+		case 5u: {
+			delta = 1.0;  // TODO: cos <greek symbol> (aka CP);
+			globals.error_unimpl = true;
+			break;
+		}
+		default: {
+			delta = 1.0;
+			globals.error_unimpl = true;
+			break;
+		}
+	}
+
+	// 0 = enabled
+	if (extract_bits(globals.GPUREG_LIGHTING_LUTINPUT_ABS, 1 + (int(lut_id) << 2), 1) == 0u) {
+		// Two sided diffuse
+		if (extract_bits(globals.GPUREG_LIGHTi_CONFIG, 1, 1) == 0u) {
+			delta = max(delta, 0.0);
+		} else {
+			delta = abs(delta);
+		}
+		int index = int(clamp(floor(delta * 255.0), 0.f, 255.f));
+		return lutLookup(texLightingLut, lut_index, index) * scale;
+	} else {
+		// Range is [-1, 1] so we need to map it to [0, 1]
+		int index = int(clamp(floor(delta * 128.0), -128.f, 127.f));
+		if (index < 0) index += 256;
+		return lutLookup(texLightingLut, lut_index, index) * scale;
+	}
 }
 
 float3 regToColor(uint reg) {
@@ -389,49 +506,59 @@ float3 regToColor(uint reg) {
 	return scale * float3(float(extract_bits(reg, 20, 8)), float(extract_bits(reg, 10, 8)), float(extract_bits(reg, 00, 8)));
 }
 
-constant bool lightingEnabled [[function_constant(0)]];
-constant uint8_t lightingNumLights [[function_constant(1)]];
-constant uint8_t lightingConfig1 [[function_constant(2)]];
-constant uint16_t alphaControl [[function_constant(3)]];
-
 // Implements the following algorthm: https://mathb.in/26766
-void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
+void calcLighting(thread Globals& globals, thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture1d_array<float> texLightingLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
 	// Quaternions describe a transformation from surface-local space to eye space.
 	// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
 	// the tangent vector is (1,0,0), and the bitangent vector is (0,1,0).
-	float3 normal = normalize(in.normal);
-	float3 tangent = normalize(in.tangent);
-	float3 bitangent = normalize(in.bitangent);
-	float3 view = normalize(in.view);
+	//float3 normal = normalize(in.normal);
+	//float3 tangent = normalize(in.tangent);
+	//float3 bitangent = normalize(in.bitangent);
+	//float3 view = normalize(in.view);
 
-	uint GPUREG_LIGHTING_AMBIENT = picaRegs.read(0x01C0u);
 	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = picaRegs.read(0x01D9u);
 
-	primaryColor = float4(float3(0.0), 1.0);
-	secondaryColor = float4(float3(0.0), 1.0);
+	primaryColor = float4(0.0, 0.0, 0.0, 1.0);
+	secondaryColor = float4(0.0, 0.0, 0.0, 1.0);
 
-	primaryColor.rgb += regToColor(GPUREG_LIGHTING_AMBIENT);
-
-	uint GPUREG_LIGHTING_LUTINPUT_ABS = picaRegs.read(0x01D0u);
-	uint GPUREG_LIGHTING_LUTINPUT_SELECT = picaRegs.read(0x01D1u);
 	uint GPUREG_LIGHTING_CONFIG0 = picaRegs.read(0x01C3u);
-	uint GPUREG_LIGHTING_LUTINPUT_SCALE = picaRegs.read(0x01D2u);
-	float d[7];
+	globals.GPUREG_LIGHTING_LUTINPUT_SCALE = picaRegs.read(0x01D2u);
+	globals.GPUREG_LIGHTING_LUTINPUT_ABS = picaRegs.read(0x01D0u);
+	globals.GPUREG_LIGHTING_LUTINPUT_SELECT = picaRegs.read(0x01D1u);
 
-	bool errorUnimpl = false;
+	uint bumpMode = extract_bits(GPUREG_LIGHTING_CONFIG0, 28, 2);
+
+	// Bump mode is ignored for now because it breaks some games ie. Toad Treasure Tracker
+	switch (bumpMode) {
+		default: {
+			globals.normal = rotateFloat3ByQuaternion(float3(0.0, 0.0, 1.0), in.quaternion);
+			break;
+		}
+	}
+
+	float4 diffuseSum = float4(0.0, 0.0, 0.0, 1.0);
+	float4 specularSum = float4(0.0, 0.0, 0.0, 1.0);
+
+	uint environmentId = extract_bits(GPUREG_LIGHTING_CONFIG0, 4, 4);
+	bool clampHighlights = extract_bits(GPUREG_LIGHTING_CONFIG0, 27, 1) == 1u;
+
+	uint lightId;
+	float3 lightVector = float3(0.0);
+	float3 halfVector = float3(0.0);
 
 	for (uint i = 0u; i < lightingNumLights + 1; i++) {
-		uint lightID = extract_bits(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
+		lightId = extract_bits(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i) << 2, 3);
 
-		uint GPUREG_LIGHTi_SPECULAR0 = picaRegs.read(0x0140u + 0x10u * lightID);
-		uint GPUREG_LIGHTi_SPECULAR1 = picaRegs.read(0x0141u + 0x10u * lightID);
-		uint GPUREG_LIGHTi_DIFFUSE = picaRegs.read(0x0142u + 0x10u * lightID);
-		uint GPUREG_LIGHTi_AMBIENT = picaRegs.read(0x0143u + 0x10u * lightID);
-		uint GPUREG_LIGHTi_VECTOR_LOW = picaRegs.read(0x0144u + 0x10u * lightID);
-		uint GPUREG_LIGHTi_VECTOR_HIGH = picaRegs.read(0x0145u + 0x10u * lightID);
-		uint GPUREG_LIGHTi_CONFIG = picaRegs.read(0x0149u + 0x10u * lightID);
+		uint GPUREG_LIGHTi_SPECULAR0 = picaRegs.read(0x0140u + (lightId << 4u));
+		uint GPUREG_LIGHTi_SPECULAR1 = picaRegs.read(0x0141u + (lightId << 4u));
+		uint GPUREG_LIGHTi_DIFFUSE = picaRegs.read(0x0142u + (lightId << 4u));
+		uint GPUREG_LIGHTi_AMBIENT = picaRegs.read(0x0143u + (lightId << 4u));
+		uint GPUREG_LIGHTi_VECTOR_LOW = picaRegs.read(0x0144u + (lightId << 4u));
+		uint GPUREG_LIGHTi_VECTOR_HIGH = picaRegs.read(0x0145u + (lightId << 4u));
+		globals.GPUREG_LIGHTi_CONFIG = picaRegs.read(0x0149u + (lightId << 4u));
 
-		float3 lightVector = normalize(float3(
+		float lightDistance;
+		float3 lightPosition = normalize(float3(
 			decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5u, 10u), decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5u, 10u),
 			decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
 		));
@@ -439,105 +566,104 @@ void calcLighting(thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture
 		float3 halfVector;
 
 		// Positional Light
-		if (extract_bits(GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
+		if (extract_bits(globals.GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
 			// error_unimpl = true;
-			halfVector = normalize(normalize(lightVector + in.view) + view);
+			halfVector = lightPosition + in.view;
 		}
 
 		// Directional light
 		else {
-			halfVector = normalize(normalize(lightVector) + view);
+			halfVector = lightPosition;
 		}
 
-		for (int c = 0; c < 7; c++) {
-			if (extract_bits(lightingConfig1, c, 1) == 0u) {
-				uint scaleID = extract_bits(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
-				float scale = float(1u << scaleID);
-				if (scaleID >= 6u) scale /= 256.0;
+		lightDistance = length(lightVector);
+		lightVector = normalize(lightVector);
+		halfVector = lightVector + normalize(in.view);
 
-				uint inputID = extract_bits(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
-				if (inputID == 0u)
-					d[c] = dot(normal, halfVector);
-				else if (inputID == 1u)
-					d[c] = dot(view, halfVector);
-				else if (inputID == 2u)
-					d[c] = dot(normal, view);
-				else if (inputID == 3u)
-					d[c] = dot(lightVector, normal);
-				else if (inputID == 4u) {
-					uint GPUREG_LIGHTi_SPOTDIR_LOW = picaRegs.read(0x0146u + 0x10u * lightID);
-					uint GPUREG_LIGHTi_SPOTDIR_HIGH = picaRegs.read(0x0147u + 0x10u * lightID);
-					float3 spotLightVector = normalize(float3(
-						decodeFP(extract_bits(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1u, 11u),
-						decodeFP(extract_bits(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1u, 11u),
-						decodeFP(extract_bits(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1u, 11u)
-					));
-					d[c] = dot(-lightVector, spotLightVector);  // -L dot P (aka Spotlight aka SP);
-				} else if (inputID == 5u) {
-					d[c] = 1.0;  // TODO: cos <greek symbol> (aka CP);
-					errorUnimpl = true;
-				} else {
-					d[c] = 1.0;
-				}
-
-				d[c] = lutLookup(texLightingLut, linearSampler, uint(c), lightID, d[c] * 0.5 + 0.5) * scale;
-				if (extract_bits(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) d[c] = abs(d[c]);
-			} else {
-				d[c] = 1.0;
-			}
-		}
-
-		uint lookupConfig = extract_bits(GPUREG_LIGHTi_CONFIG, 4, 4);
-		if (lookupConfig == 0u) {
-			d[D1_LUT] = 0.0;
-			d[FR_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookupConfig == 1u) {
-			d[D0_LUT] = 0.0;
-			d[D1_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookupConfig == 2u) {
-			d[FR_LUT] = 0.0;
-			d[SP_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookupConfig == 3u) {
-			d[SP_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT] = 1.0;
-		} else if (lookupConfig == 4u) {
-			d[FR_LUT] = 0.0;
-		} else if (lookupConfig == 5u) {
-			d[D1_LUT] = 0.0;
-		} else if (lookupConfig == 6u) {
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		}
-
-		float distanceFactor = 1.0;  // a
-		float indirectFactor = 1.0;  // fi
-		float shadowFactor = 1.0;    // o
-
-		float NdotL = dot(normal, lightVector);  // Li dot N
+		float NdotL = dot(globals.normal, lightVector);  // N dot Li
 
 		// Two sided diffuse
-		if (extract_bits(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
+		if (extract_bits(globals.GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
 			NdotL = max(0.0, NdotL);
 		else
 			NdotL = abs(NdotL);
 
-		float light_factor = distanceFactor * d[SP_LUT] * indirectFactor * shadowFactor;
+		float geometricFactor;
+		bool useGeo0 = extract_bits(globals.GPUREG_LIGHTi_CONFIG, 2, 1) == 1u;
+		bool useGeo1 = extract_bits(globals.GPUREG_LIGHTi_CONFIG, 3, 1) == 1u;
+		if (useGeo0 || useGeo1) {
+			geometricFactor = dot(halfVector, halfVector);
+			geometricFactor = geometricFactor == 0.0 ? 0.0 : min(NdotL / geometricFactor, 1.0);
+		}
 
-		primaryColor.rgb += light_factor * (regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE) * NdotL);
-		secondaryColor.rgb += light_factor * (regToColor(GPUREG_LIGHTi_SPECULAR0) * d[D0_LUT] +
-											   regToColor(GPUREG_LIGHTi_SPECULAR1) * d[D1_LUT] * float3(d[RR_LUT], d[RG_LUT], d[RB_LUT]));
+		float distanceAttenuation = 1.0;
+		if (extract_bits(lightingConfig1, 24 + int(lightId), 1) == 0u) {
+			uint GPUREG_LIGHTi_ATTENUATION_BIAS = extract_bits(picaRegs.read(0x014Au + (lightId << 4u)), 0, 20);
+			uint GPUREG_LIGHTi_ATTENUATION_SCALE = extract_bits(picaRegs.read(0x014Bu + (lightId << 4u)), 0, 20);
+
+			float distanceAttenuationBias = decodeFP(GPUREG_LIGHTi_ATTENUATION_BIAS, 7u, 12u);
+			float distanceAttenuationScale = decodeFP(GPUREG_LIGHTi_ATTENUATION_SCALE, 7u, 12u);
+
+			float delta = lightDistance * distanceAttenuationScale + distanceAttenuationBias;
+			delta = clamp(delta, 0.0, 1.0);
+			int index = int(clamp(floor(delta * 255.0), 0.0, 255.0));
+			distanceAttenuation = lutLookup(texLightingLut, 16u + lightId, index);
+		}
+
+		float spotlightAttenuation = lightLutLookup(globals, in, picaRegs, texLightingLut, environmentId, SP_LUT, lightId, lightVector, halfVector);
+		float specular0Distribution = lightLutLookup(globals, in, picaRegs, texLightingLut, environmentId, D0_LUT, lightId, lightVector, halfVector);
+		float specular1Distribution = lightLutLookup(globals, in, picaRegs, texLightingLut, environmentId, D1_LUT, lightId, lightVector, halfVector);
+		float3 reflectedColor;
+		reflectedColor.r = lightLutLookup(globals, in, picaRegs, texLightingLut, environmentId, RR_LUT, lightId, lightVector, halfVector);
+
+		if (isSamplerEnabled(environmentId, RG_LUT)) {
+			reflectedColor.g = lightLutLookup(globals, in, picaRegs, texLightingLut, environmentId, RG_LUT, lightId, lightVector, halfVector);
+		} else {
+			reflectedColor.g = reflectedColor.r;
+		}
+
+		if (isSamplerEnabled(environmentId, RB_LUT)) {
+			reflectedColor.b = lightLutLookup(globals, in, picaRegs, texLightingLut, environmentId, RB_LUT, lightId, lightVector, halfVector);
+		} else {
+			reflectedColor.b = reflectedColor.r;
+		}
+
+		float3 specular0 = regToColor(GPUREG_LIGHTi_SPECULAR0) * specular0Distribution;
+		float3 specular1 = regToColor(GPUREG_LIGHTi_SPECULAR1) * specular1Distribution * reflectedColor;
+
+		specular0 *= useGeo0 ? geometricFactor : 1.0;
+		specular1 *= useGeo1 ? geometricFactor : 1.0;
+
+		float clampFactor = 1.0;
+		if (clampHighlights && NdotL == 0.0) {
+			clampFactor = 0.0;
+		}
+
+		float lightFactor = distanceAttenuation * spotlightAttenuation;
+		diffuseSum.rgb += lightFactor * (regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE) * NdotL);
+		specularSum.rgb += lightFactor * clampFactor * (specular0 + specular1);
 	}
 	uint fresnelOutput1 = extract_bits(GPUREG_LIGHTING_CONFIG0, 2, 1);
 	uint fresnelOutput2 = extract_bits(GPUREG_LIGHTING_CONFIG0, 3, 1);
 
-	if (fresnelOutput1 == 1u) primaryColor.a = d[FR_LUT];
-	if (fresnelOutput2 == 1u) secondaryColor.a = d[FR_LUT];
+	float fresnelFactor;
 
-	if (errorUnimpl) {
-		// secondaryColor = primaryColor = float4(1.0, 0., 1.0, 1.0);
+	if (fresnelOutput1 == 1u || fresnelOutput2 == 1u) {
+		fresnelFactor = lightLutLookup(globals, in, picaRegs, texLightingLut, environmentId, FR_LUT, lightId, lightVector, halfVector);
 	}
+
+	if (fresnelOutput1 == 1u) {
+		diffuseSum.a = fresnelFactor;
+	}
+
+	if (fresnelOutput2 == 1u) {
+		specularSum.a = fresnelFactor;
+	}
+
+	uint GPUREG_LIGHTING_AMBIENT = picaRegs.read(0x01C0u);
+	float4 globalAmbient = float4(regToColor(GPUREG_LIGHTING_AMBIENT), 1.0);
+	primaryColor = clamp(globalAmbient + diffuseSum, 0.0, 1.0);
+	secondaryColor = clamp(specularSum, 0.0, 1.0);
 }
 
 float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
@@ -550,7 +676,7 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
     Globals globals;
     globals.tevSources[0] = in.color;
     if (lightingEnabled) {
-        calcLighting(in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
+        calcLighting(globals, in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
     } else {
         globals.tevSources[1] = float4(1.0);
         globals.tevSources[2] = float4(1.0);
@@ -585,6 +711,8 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 	}
 
 	float4 color = performLogicOp(logicOp, globals.tevSources[15], prevColor);
+
+	// TODO: fog
 
 	// Perform alpha test
 	if ((alphaControl & 1u) != 0u) {  // Check if alpha test is on
