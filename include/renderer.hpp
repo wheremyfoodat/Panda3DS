@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <span>
+#include <string>
 #include <optional>
 
 #include "PICA/pica_vertex.hpp"
@@ -19,6 +20,7 @@ enum class RendererType : s8 {
 	Software = 3,
 };
 
+struct EmulatorConfig;
 class GPU;
 struct SDL_Window;
 
@@ -45,6 +47,8 @@ class Renderer {
 	u32 outputWindowWidth = 400;
 	u32 outputWindowHeight = 240 * 2;
 
+	EmulatorConfig* emulatorConfig = nullptr;
+
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	virtual ~Renderer();
@@ -65,6 +69,15 @@ class Renderer {
 	// Some frontends and platforms may require that we delete our GL or misc context and obtain a new one for things like exclusive fullscreen
 	// This function does things like write back or cache necessary state before we delete our context
 	virtual void deinitGraphicsContext() = 0;
+
+	// Functions for hooking up the renderer core to the frontend's shader editor for editing ubershaders in real time
+	// SupportsShaderReload: Indicates whether the backend offers ubershader reload support or not
+	// GetUbershader/SetUbershader: Gets or sets the renderer's current ubershader
+	virtual bool supportsShaderReload() { return false; }
+	virtual std::string getUbershader() { return ""; }
+	virtual void setUbershader(const std::string& shader) {}
+
+	virtual void setUbershaderSetting(bool value) {}
 
 	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
 #ifdef PANDA3DS_FRONTEND_QT
@@ -91,4 +104,6 @@ class Renderer {
 		outputWindowWidth = width;
 		outputWindowHeight = height;
 	}
+
+	void setConfig(EmulatorConfig* config) { emulatorConfig = config; }
 };

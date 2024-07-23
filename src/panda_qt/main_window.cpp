@@ -55,12 +55,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto luaEditorAction = toolsMenu->addAction(tr("Open Lua Editor"));
 	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
 	auto patchWindowAction = toolsMenu->addAction(tr("Open Patch Window"));
+	auto shaderEditorAction = toolsMenu->addAction(tr("Open Shader Editor"));
 	auto dumpDspFirmware = toolsMenu->addAction(tr("Dump loaded DSP firmware"));
 
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
-	connect(luaEditorAction, &QAction::triggered, this, &MainWindow::openLuaEditor);
-	connect(cheatsEditorAction, &QAction::triggered, this, &MainWindow::openCheatsEditor);
-	connect(patchWindowAction, &QAction::triggered, this, &MainWindow::openPatchWindow);
+	connect(luaEditorAction, &QAction::triggered, this, [this]() { luaEditor->show(); });
+	connect(shaderEditorAction, &QAction::triggered, this, [this]() { shaderEditor->show(); });
+	connect(cheatsEditorAction, &QAction::triggered, this, [this]() { cheatsEditor->show(); });
+	connect(patchWindowAction, &QAction::triggered, this, [this]() { patchWindow->show(); });
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
@@ -75,6 +77,12 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	cheatsEditor = new CheatsWindow(emu, {}, this);
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
+	shaderEditor = new ShaderEditorWindow(this, "shader.glsl", "");
+
+	shaderEditor->setEnable(emu->getRenderer()->supportsShaderReload());
+	if (shaderEditor->supported) {
+		shaderEditor->setText(emu->getRenderer()->getUbershader());
+	}
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -294,10 +302,6 @@ void MainWindow::showAboutMenu() {
 	about.exec();
 }
 
-void MainWindow::openLuaEditor() { luaEditor->show(); }
-void MainWindow::openCheatsEditor() { cheatsEditor->show(); }
-void MainWindow::openPatchWindow() { patchWindow->show(); }
-
 void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 	switch (message.type) {
 		case MessageType::LoadROM:
@@ -351,6 +355,11 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getServiceManager().getHID().setTouchScreenPress(message.touchscreen.x, message.touchscreen.y);
 			break;
 		case MessageType::ReleaseTouchscreen: emu->getServiceManager().getHID().releaseTouchScreen(); break;
+
+		case MessageType::ReloadUbershader:
+			emu->getRenderer()->setUbershader(*message.string.str);
+			delete message.string.str;
+			break;
 	}
 }
 
@@ -450,6 +459,14 @@ void MainWindow::loadLuaScript(const std::string& code) {
 
 	// Make a copy of the code on the heap to send via the message queue
 	message.string.str = new std::string(code);
+	sendMessage(message);
+}
+
+void MainWindow::reloadShader(const std::string& shader) {
+	EmulatorMessage message{.type = MessageType::ReloadUbershader};
+
+	// Make a copy of the code on the heap to send via the message queue
+	message.string.str = new std::string(shader);
 	sendMessage(message);
 }
 

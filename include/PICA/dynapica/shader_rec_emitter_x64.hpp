@@ -32,6 +32,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	Label negateVector;
 	// Vector value of (1.0, 1.0, 1.0, 1.0) for SLT(i)/SGE(i)
 	Label onesVector;
+	// Vector value of (0xFF, 0xFF, 0xFF, 0) for setting the w component to 0 in DP3
+	Label dp3Vector;
 
 	u32 recompilerPC = 0;  // PC the recompiler is currently recompiling @
 	u32 loopLevel = 0;     // The current loop nesting level (0 = not in a loop)
@@ -43,11 +45,16 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	// Shows whether the loaded shader has any log2 and exp2 instructions
 	bool codeHasLog2 = false;
 	bool codeHasExp2 = false;
+	// Whether to compile this shader using accurate, safe, non-IEEE multiplication (slow) or faster but less accurate mul
+	bool useSafeMUL = false;
 	
 	Xbyak::Label log2Func, exp2Func;
 	Xbyak::Label emitLog2Func();
 	Xbyak::Label emitExp2Func();
 	Xbyak::util::Cpu cpuCaps;
+
+	// Emit a PICA200-compliant multiplication that handles "0 * inf = 0"
+	void emitSafeMUL(Xbyak::Xmm src1, Xbyak::Xmm src2, Xbyak::Xmm scratch);
 
 	// Compile all instructions from [current recompiler PC, end)
 	void compileUntil(const PICAShader& shaderUnit, u32 endPC);
@@ -125,7 +132,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	PrologueCallback prologueCb = nullptr;
 
 	// Initialize our emitter with "allocSize" bytes of RWX memory
-	ShaderEmitter() : Xbyak::CodeGenerator(allocSize) {
+	ShaderEmitter(bool useSafeMUL) : Xbyak::CodeGenerator(allocSize), useSafeMUL(useSafeMUL) {
 		cpuCaps = Xbyak::util::Cpu();
 
 		haveSSE4_1 = cpuCaps.has(Xbyak::util::Cpu::tSSE41);

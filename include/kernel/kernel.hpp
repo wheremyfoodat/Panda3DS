@@ -15,6 +15,7 @@
 #include "services/service_manager.hpp"
 
 class CPU;
+struct Scheduler;
 
 class Kernel {
 	std::span<u32, 16> regs;
@@ -243,6 +244,7 @@ public:
 	}
 
 	ServiceManager& getServiceManager() { return serviceManager; }
+	Scheduler& getScheduler();
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
 	void clearInstructionCache();

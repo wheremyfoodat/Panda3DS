@@ -28,6 +28,10 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
 endif() 
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-interference-size")
+endif() 
+
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
@@ -40,9 +44,15 @@ option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
+option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 
 if(BUILD_HYDRA_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(BUILD_LIBRETRO_CORE)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    add_compile_definitions(__LIBRETRO__)
 endif()
 
 add_library(AlberCore STATIC)
@@ -192,7 +202,8 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
-                      src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp
+                      src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp src/core/PICA/shader_gen_glsl.cpp
+                      src/core/PICA/shader_decompiler.cpp
 )
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
@@ -239,10 +250,11 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
-                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
+                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp include/PICA/shader_gen.hpp
                  include/audio/dsp_core.hpp include/audio/null_core.hpp include/audio/teakra_core.hpp
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
-                 include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp
+                 include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
+                 include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
 )
 
 cmrc_add_resource_library(
@@ -438,7 +450,7 @@ else()
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
 endif()
 
-if(NOT BUILD_HYDRA_CORE)
+if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
     if(ENABLE_QT_GUI)
@@ -449,11 +461,11 @@ if(NOT BUILD_HYDRA_CORE)
 
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
-            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp
+            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
-            include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp
+            include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
@@ -500,6 +512,15 @@ elseif(BUILD_HYDRA_CORE)
     include_directories(third_party/hydra_core/include)
     add_library(Alber SHARED src/hydra_core.cpp)
     target_link_libraries(Alber PUBLIC AlberCore)
+elseif(BUILD_LIBRETRO_CORE)
+    include_directories(third_party/libretro/include)
+    add_library(Alber SHARED src/libretro_core.cpp)
+    target_link_libraries(Alber PUBLIC AlberCore)
+
+    set_target_properties(Alber PROPERTIES
+      OUTPUT_NAME "panda3ds_libretro"
+      PREFIX ""
+    )
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
