@@ -11,13 +11,17 @@
 #include "input_mappings.hpp"
 #include "services/dsp.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
-	screen.show();
 
+	// We pass a callback to the screen widget that will be triggered every time we resize the screen
+	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	setCentralWidget(screen);
+
+	screen->show();
 	appRunning = true;
 
 	// Set our menu bar up
@@ -69,7 +73,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
 	emu = new Emulator();
-	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
+	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
@@ -101,7 +105,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 		if (usingGL) {
 			// Make GL context current for this thread, enable VSync
-			GL::Context* glContext = screen.getGLContext();
+			GL::Context* glContext = screen->getGLContext();
 			glContext->MakeCurrent();
 			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
 
@@ -145,13 +149,13 @@ void MainWindow::emuThreadMainLoop() {
 
 	// Unbind GL context if we're using GL, otherwise some setups seem to be unable to join this thread
 	if (usingGL) {
-		screen.getGLContext()->DoneCurrent();
+		screen->getGLContext()->DoneCurrent();
 	}
 }
 
 void MainWindow::swapEmuBuffer() {
 	if (usingGL) {
-		screen.getGLContext()->SwapBuffers();
+		screen->getGLContext()->SwapBuffers();
 	} else {
 		Helpers::panic("[Qt] Don't know how to swap buffers for the current rendering backend :(");
 	}
@@ -360,6 +364,15 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getRenderer()->setUbershader(*message.string.str);
 			delete message.string.str;
 			break;
+
+		case MessageType::SetScreenSize: {
+			const u32 width = message.screenSize.width;
+			const u32 height = message.screenSize.height;
+
+			emu->setOutputSize(width, height);
+			screen->resizeSurface(width, height);
+			break;
+		}
 	}
 }
 
@@ -423,13 +436,13 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 void MainWindow::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::MouseButton::LeftButton) {
 		const QPointF clickPos = event->globalPosition();
-		const QPointF widgetPos = screen.mapFromGlobal(clickPos);
+		const QPointF widgetPos = screen->mapFromGlobal(clickPos);
 
 		// Press is inside the screen area
-		if (widgetPos.x() >= 0 && widgetPos.x() < screen.width() && widgetPos.y() >= 0 && widgetPos.y() < screen.height()) {
+		if (widgetPos.x() >= 0 && widgetPos.x() < screen->width() && widgetPos.y() >= 0 && widgetPos.y() < screen->height()) {
 			// Go from widget positions to [0, 400) for x and [0, 480) for y
-			uint x = (uint)std::round(widgetPos.x() / screen.width() * 400.f);
-			uint y = (uint)std::round(widgetPos.y() / screen.height() * 480.f);
+			uint x = (uint)std::round(widgetPos.x() / screen->width() * 400.f);
+			uint y = (uint)std::round(widgetPos.y() / screen->height() * 480.f);
 
 			// Check if touch falls in the touch screen area
 			if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
@@ -479,6 +492,14 @@ void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const 
 	c->callback = callback;
 
 	message.cheat.c = c;
+	sendMessage(message);
+}
+
+void MainWindow::handleScreenResize(u32 width, u32 height) {
+	EmulatorMessage message{.type = MessageType::SetScreenSize};
+	message.screenSize.width = width;
+	message.screenSize.height = height;
+
 	sendMessage(message);
 }
 
