@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "pica_to_mtl.hpp"
 
 using namespace PICA;
@@ -76,7 +78,7 @@ public:
     }
 
 private:
-    std::unordered_map<u64, MTL::DepthStencilState*> depthStencilCache;
+    std::map<u64, MTL::DepthStencilState*> depthStencilCache;
 
     MTL::Device* device;
 };

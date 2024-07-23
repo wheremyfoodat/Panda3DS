@@ -1,10 +1,34 @@
 #pragma once
 
+#include <map>
+
 #include "pica_to_mtl.hpp"
 
 using namespace PICA;
 
 namespace Metal {
+
+struct DrawFragmentFunctionHash {
+    bool lightingEnabled; // 1 bit
+    u8 lightingNumLights; // 3 bits
+    u32 lightingConfig1; // 32 bits (TODO: check this)
+    //                                 |   ref    | func |  on  |
+    u16 alphaControl; // 12 bits (mask:  11111111   0111   0001)
+};
+
+//bool operator==(const DrawFragmentFunctionHash& l, const DrawFragmentFunctionHash& r) {
+//    return ((l.lightingEnabled == r.lightingEnabled) && (l.lightingNumLights == r.lightingNumLights) &&
+//            (l.lightingConfig1 == r.lightingConfig1) && (l.alphaControl == r.alphaControl));
+//}
+
+inline bool operator<(const DrawFragmentFunctionHash& l, const DrawFragmentFunctionHash& r) {
+    if (!l.lightingEnabled && r.lightingEnabled) return true;
+    if (l.lightingNumLights < r.lightingNumLights) return true;
+    if (l.lightingConfig1 < r.lightingConfig1) return true;
+    if (l.alphaControl < r.alphaControl) return true;
+
+    return false;
+}
 
 struct DrawPipelineHash { // 56 bits
     // Formats
@@ -17,13 +41,25 @@ struct DrawPipelineHash { // 56 bits
     u32 blendControl; // 22 bits (mask:  1111111111111111   00000111   00000111)
     u8 colorWriteMask; // 4 bits
 
-    // Specialization constants (23 bits)
-    bool lightingEnabled; // 1 bit
-    u8 lightingNumLights; // 3 bits
-    u8 lightingConfig1; // 7 bits
-    //                                 |   ref    | func |  on  |
-    u16 alphaControl; // 12 bits (mask:  11111111   0111   0001)
+    DrawFragmentFunctionHash fragHash;
 };
+
+//bool operator==(const DrawPipelineHash& l, const DrawPipelineHash& r) {
+//    return (((u32)l.colorFmt == (u32)r.colorFmt) && ((u32)l.depthFmt == (u32)r.depthFmt) &&
+//            (l.blendEnabled == r.blendEnabled) && (l.blendControl == r.blendControl) &&
+//            (l.colorWriteMask == r.colorWriteMask) && (l.fragHash == r.fragHash));
+//}
+
+inline bool operator<(const DrawPipelineHash& l, const DrawPipelineHash& r) {
+    if ((u32)l.colorFmt < (u32)r.colorFmt) return true;
+    if ((u32)l.depthFmt < (u32)r.depthFmt) return true;
+    if (!l.blendEnabled && r.blendEnabled) return true;
+    if (l.blendControl < r.blendControl) return true;
+    if (l.colorWriteMask < r.colorWriteMask) return true;
+    if (l.fragHash < r.fragHash) return true;
+
+    return false;
+}
 
 // Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
 #define VERTEX_BUFFER_BINDING_INDEX 30
@@ -47,17 +83,17 @@ public:
     }
 
     MTL::RenderPipelineState* get(DrawPipelineHash hash) {
-        u32 fragmentFunctionHash = ((u32)hash.lightingEnabled << 22) | ((u32)hash.lightingNumLights << 19) | ((u32)hash.lightingConfig1 << 12) | ((((u32)hash.alphaControl & 0b1111111100000000) >> 8) << 4) | ((((u32)hash.alphaControl & 0b01110000) >> 4) << 1) | ((u32)hash.alphaControl & 0b0001);
-        u64 pipelineHash = ((u64)hash.colorFmt << 53) | ((u64)hash.depthFmt << 50) | ((u64)hash.blendEnabled << 49) | ((u64)hash.colorWriteMask << 45) | ((((u64)hash.blendControl & 0b11111111111111110000000000000000) >> 16) << 29) | ((((u64)hash.blendControl & 0b0000011100000000) >> 8) << 26) | (((u64)hash.blendControl & 0b00000111) << 23) | fragmentFunctionHash;
-        auto& pipeline = pipelineCache[pipelineHash];
+        //u32 fragmentFunctionHash = ((u32)hash.lightingEnabled << 22) | ((u32)hash.lightingNumLights << 19) | ((u32)hash.lightingConfig1 << 12) | ((((u32)hash.alphaControl & 0b1111111100000000) >> 8) << 4) | ((((u32)hash.alphaControl & 0b01110000) >> 4) << 1) | ((u32)hash.alphaControl & 0b0001);
+        //u64 pipelineHash = ((u64)hash.colorFmt << 53) | ((u64)hash.depthFmt << 50) | ((u64)hash.blendEnabled << 49) | ((u64)hash.colorWriteMask << 45) | ((((u64)hash.blendControl & 0b11111111111111110000000000000000) >> 16) << 29) | ((((u64)hash.blendControl & 0b0000011100000000) >> 8) << 26) | (((u64)hash.blendControl & 0b00000111) << 23) | fragmentFunctionHash;
+        auto& pipeline = pipelineCache[hash];
         if (!pipeline) {
-            auto& fragmentFunction = fragmentFunctionCache[fragmentFunctionHash];
+            auto& fragmentFunction = fragmentFunctionCache[hash.fragHash];
             if (!fragmentFunction) {
                 MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
-                constants->setConstantValue(&hash.lightingEnabled, MTL::DataTypeBool, NS::UInteger(0));
-                constants->setConstantValue(&hash.lightingNumLights, MTL::DataTypeUChar, NS::UInteger(1));
-                constants->setConstantValue(&hash.lightingConfig1, MTL::DataTypeUChar, NS::UInteger(2));
-                constants->setConstantValue(&hash.alphaControl, MTL::DataTypeUShort, NS::UInteger(3));
+                constants->setConstantValue(&hash.fragHash.lightingEnabled, MTL::DataTypeBool, NS::UInteger(0));
+                constants->setConstantValue(&hash.fragHash.lightingNumLights, MTL::DataTypeUChar, NS::UInteger(1));
+                constants->setConstantValue(&hash.fragHash.lightingConfig1, MTL::DataTypeUInt, NS::UInteger(2));
+                constants->setConstantValue(&hash.fragHash.alphaControl, MTL::DataTypeUShort, NS::UInteger(3));
 
                 NS::Error* error = nullptr;
                 fragmentFunction = library->newFunction(NS::String::string("fragmentDraw", NS::ASCIIStringEncoding), constants, &error);
@@ -65,7 +101,6 @@ public:
                     Helpers::panic("Error creating draw fragment function: %s", error->description()->cString(NS::ASCIIStringEncoding));
                 }
                 constants->release();
-                fragmentFunctionCache[fragmentFunctionHash] = fragmentFunction;
             }
 
             MTL::RenderPipelineDescriptor* desc = MTL::RenderPipelineDescriptor::alloc()->init();
@@ -127,8 +162,8 @@ public:
     }
 
 private:
-    std::unordered_map<u64, MTL::RenderPipelineState*> pipelineCache;
-    std::unordered_map<u32, MTL::Function*> fragmentFunctionCache;
+    std::map<DrawPipelineHash, MTL::RenderPipelineState*> pipelineCache;
+    std::map<DrawFragmentFunctionHash, MTL::Function*> fragmentFunctionCache;
 
     MTL::Device* device;
     MTL::Library* library;

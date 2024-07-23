@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include "pica_to_mtl.hpp"
 
 using namespace PICA;

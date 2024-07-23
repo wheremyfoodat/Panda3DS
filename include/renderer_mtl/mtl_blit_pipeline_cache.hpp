@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "pica_to_mtl.hpp"
 
 using namespace PICA;
@@ -63,7 +65,7 @@ public:
     }
 
 private:
-    std::unordered_map<u8, MTL::RenderPipelineState*> pipelineCache;
+    std::map<u8, MTL::RenderPipelineState*> pipelineCache;
 
     MTL::Device* device;
     MTL::Function* vertexFunction;

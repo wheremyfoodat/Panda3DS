@@ -223,7 +223,7 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 
 constant bool lightingEnabled [[function_constant(0)]];
 constant uint8_t lightingNumLights [[function_constant(1)]];
-constant uint8_t lightingConfig1 [[function_constant(2)]];
+constant uint32_t lightingConfig1 [[function_constant(2)]];
 constant uint16_t alphaControl [[function_constant(3)]];
 
 struct Globals {
