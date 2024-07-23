@@ -92,6 +92,9 @@ class GPU {
 	// Set to false by the renderer when the lighting_lut is uploaded ot the GPU
 	bool lightingLUTDirty = false;
 
+	bool fogLUTDirty = false;
+	std::array<uint32_t, 128> fogLUT;
+
 	GPU(Memory& mem, EmulatorConfig& config);
 	void display() { renderer->display(); }
 	void screenshot(const std::string& name) { renderer->screenshot(name); }
@@ -164,7 +167,8 @@ class GPU {
 			u32 index = paddr - PhysicalAddrs::VRAM;
 			return (T*)&vram[index];
 		} else [[unlikely]] {
-			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
+			Helpers::warn("[GPU] Tried to access unknown physical address: %08X", paddr);
+			return nullptr;
 		}
 	}
 

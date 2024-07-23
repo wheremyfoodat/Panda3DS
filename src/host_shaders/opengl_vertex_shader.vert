@@ -9,9 +9,7 @@ layout(location = 5) in float a_texcoord0_w;
 layout(location = 6) in vec3 a_view;
 layout(location = 7) in vec2 a_texcoord2;
 
-out vec3 v_normal;
-out vec3 v_tangent;
-out vec3 v_bitangent;
+out vec4 v_quaternion;
 out vec4 v_colour;
 out vec3 v_texcoord0;
 out vec2 v_texcoord1;
@@ -33,12 +31,6 @@ vec4 abgr8888ToVec4(uint abgr) {
 	const float scale = 1.0 / 255.0;
 
 	return scale * vec4(float(abgr & 0xffu), float((abgr >> 8) & 0xffu), float((abgr >> 16) & 0xffu), float(abgr >> 24));
-}
-
-vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
-	vec3 u = q.xyz;
-	float s = q.w;
-	return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
 }
 
 // Convert an arbitrary-width floating point literal to an f32
@@ -73,10 +65,6 @@ void main() {
 	v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
 	v_view = a_view;
 
-	v_normal = normalize(rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), a_quaternion));
-	v_tangent = normalize(rotateVec3ByQuaternion(vec3(1.0, 0.0, 0.0), a_quaternion));
-	v_bitangent = normalize(rotateVec3ByQuaternion(vec3(0.0, 1.0, 0.0), a_quaternion));
-
 	for (int i = 0; i < 6; i++) {
 		v_textureEnvColor[i] = abgr8888ToVec4(u_textureEnvColor[i]);
 	}
@@ -95,4 +83,6 @@ void main() {
 	// There's also another, always-on clipping plane based on vertex z
 	gl_ClipDistance[0] = -a_coords.z;
 	gl_ClipDistance[1] = dot(clipData, a_coords);
+
+	v_quaternion = a_quaternion;
 }

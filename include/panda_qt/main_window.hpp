@@ -19,6 +19,7 @@
 #include "panda_qt/config_window.hpp"
 #include "panda_qt/patch_window.hpp"
 #include "panda_qt/screen.hpp"
+#include "panda_qt/shader_editor.hpp"
 #include "panda_qt/text_editor.hpp"
 #include "services/hid.hpp"
 
@@ -48,6 +49,7 @@ class MainWindow : public QMainWindow {
 		EditCheat,
 		PressTouchscreen,
 		ReleaseTouchscreen,
+		ReloadUbershader,
 	};
 
 	// Tagged union representing our message queue messages
@@ -99,6 +101,7 @@ class MainWindow : public QMainWindow {
 	CheatsWindow* cheatsEditor;
 	TextEditorWindow* luaEditor;
 	PatchWindow* patchWindow;
+	ShaderEditorWindow* shaderEditor;
 
 	// We use SDL's game controller API since it's the sanest API that supports as many controllers as possible
 	SDL_GameController* gameController = nullptr;
@@ -110,9 +113,6 @@ class MainWindow : public QMainWindow {
 	void selectROM();
 	void dumpDspFirmware();
 	void dumpRomFS();
-	void openLuaEditor();
-	void openCheatsEditor();
-	void openPatchWindow();
 	void showAboutMenu();
 	void initControllers();
 	void pollControllers();
@@ -140,5 +140,6 @@ class MainWindow : public QMainWindow {
 	void mouseReleaseEvent(QMouseEvent* event) override;
 
 	void loadLuaScript(const std::string& code);
+	void reloadShader(const std::string& shader);
 	void editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback);
 };

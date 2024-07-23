@@ -1,8 +1,6 @@
 #version 410 core
 
-in vec3 v_tangent;
-in vec3 v_normal;
-in vec3 v_bitangent;
+in vec4 v_quaternion;
 in vec4 v_colour;
 in vec3 v_texcoord0;
 in vec2 v_texcoord1;
@@ -27,7 +25,7 @@ uniform bool u_depthmapEnable;
 uniform sampler2D u_tex0;
 uniform sampler2D u_tex1;
 uniform sampler2D u_tex2;
-uniform sampler1DArray u_tex_lighting_lut;
+uniform sampler2D u_tex_luts;
 
 uniform uint u_picaRegs[0x200 - 0x48];
 
@@ -37,6 +35,16 @@ uint readPicaReg(uint reg_addr) { return u_picaRegs[reg_addr - 0x48u]; }
 vec4 tevSources[16];
 vec4 tevNextPreviousBuffer;
 bool tevUnimplementedSourceFlag = false;
+vec3 normal;
+
+// See docs/lighting.md
+const uint samplerEnabledBitfields[2] = uint[2](0x7170e645u, 0x7f013fefu);
+
+bool isSamplerEnabled(uint environment_id, uint lut_id) {
+	uint index = 7 * environment_id + lut_id;
+	uint arrayIndex = (index >> 5);
+	return (samplerEnabledBitfields[arrayIndex] & (1u << (index & 31u))) != 0u;
+}
 
 // OpenGL ES 1.1 reference pages for TEVs (this is what the PICA200 implements):
 // https://registry.khronos.org/OpenGL-Refpages/es1.1/xhtml/glTexEnv.xml
@@ -110,7 +118,7 @@ vec4 tevCalculateCombiner(int tev_id) {
 		case 6u: result.rgb = vec3(4.0 * dot(source0.rgb - 0.5, source1.rgb - 0.5)); break;  // Dot3 RGB
 		case 7u: result = vec4(4.0 * dot(source0.rgb - 0.5, source1.rgb - 0.5)); break;      // Dot3 RGBA
 		case 8u: result.rgb = min(source0.rgb * source1.rgb + source2.rgb, 1.0); break;      // Multiply then add
-		case 9u: result.rgb = min((source0.rgb + source1.rgb) * source2.rgb, 1.0); break;    // Add then multiply
+		case 9u: result.rgb = min(source0.rgb + source1.rgb, 1.0) * source2.rgb; break;    // Add then multiply
 		default: break;
 	}
 
@@ -125,7 +133,7 @@ vec4 tevCalculateCombiner(int tev_id) {
 			case 4u: result.a = mix(source1.a, source0.a, source2.a); break;           // Interpolate
 			case 5u: result.a = max(0.0, source0.a - source1.a); break;                // Subtract
 			case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break;    // Multiply then add
-			case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break;  // Add then multiply
+			case 9u: result.a = min(source0.a + source1.a, 1.0) * source2.a; break;  // Add then multiply
 			default: break;
 		}
 	}
@@ -144,10 +152,18 @@ vec4 tevCalculateCombiner(int tev_id) {
 #define RG_LUT 5u
 #define RR_LUT 6u
 
-float lutLookup(uint lut, uint light, float value) {
-	if (lut >= FR_LUT && lut <= RR_LUT) lut -= 1;
-	if (lut == SP_LUT) lut = light + 8;
-	return texture(u_tex_lighting_lut, vec2(value, lut)).r;
+#define FOG_INDEX 24
+
+uint GPUREG_LIGHTi_CONFIG;
+uint GPUREG_LIGHTING_CONFIG1;
+uint GPUREG_LIGHTING_LUTINPUT_SELECT;
+uint GPUREG_LIGHTING_LUTINPUT_SCALE;
+uint GPUREG_LIGHTING_LUTINPUT_ABS;
+bool error_unimpl = false;
+vec4 unimpl_color = vec4(1.0, 0.0, 1.0, 1.0);
+
+float lutLookup(uint lut, int index) {
+	return texelFetch(u_tex_luts, ivec2(index, int(lut)), 0).r;
 }
 
 vec3 regToColor(uint reg) {
@@ -178,136 +194,179 @@ float decodeFP(uint hex, uint E, uint M) {
 	return uintBitsToFloat(hex);
 }
 
+float lightLutLookup(uint environment_id, uint lut_id, uint light_id, vec3 light_vector, vec3 half_vector) {
+	uint lut_index;
+	int bit_in_config1;
+	if (lut_id == SP_LUT) {
+		// These are the spotlight attenuation LUTs
+		bit_in_config1 = 8 + int(light_id & 7u);
+		lut_index = 8u + light_id;
+	} else if (lut_id <= 6) {
+		bit_in_config1 = 16 + int(lut_id);
+		lut_index = lut_id;
+	} else {
+		error_unimpl = true;
+	}
+
+	bool current_sampler_enabled = isSamplerEnabled(environment_id, lut_id); // 7 luts per environment
+
+	if (!current_sampler_enabled || (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, bit_in_config1, 1) != 0u)) {
+		return 1.0;
+	}
+
+	uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, int(lut_id) << 2, 3);
+	float scale = float(1u << scale_id);
+	if (scale_id >= 6u) scale /= 256.0;
+
+	float delta = 1.0;
+	uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, int(lut_id) << 2, 3);
+	switch (input_id) {
+		case 0u: {
+			delta = dot(normal, normalize(half_vector));
+			break;
+		}
+		case 1u: {
+			delta = dot(normalize(v_view), normalize(half_vector));
+			break;
+		}
+		case 2u: {
+			delta = dot(normal, normalize(v_view));
+			break;
+		}
+		case 3u: {
+			delta = dot(light_vector, normal);
+			break;
+		}
+		case 4u: {
+			int GPUREG_LIGHTi_SPOTDIR_LOW = int(readPicaReg(0x0146u + (light_id << 4u)));
+			int GPUREG_LIGHTi_SPOTDIR_HIGH = int(readPicaReg(0x0147u + (light_id << 4u)));
+
+			// Sign extend them. Normally bitfieldExtract would do that but it's missing on some versions
+			// of GLSL so we do it manually
+			int se_x = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 13);
+			int se_y = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 13);
+			int se_z = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 13);
+
+			if ((se_x & 0x1000) == 0x1000) se_x |= 0xffffe000;
+			if ((se_y & 0x1000) == 0x1000) se_y |= 0xffffe000;
+			if ((se_z & 0x1000) == 0x1000) se_z |= 0xffffe000;
+
+			// These are fixed point 1.1.11 values, so we need to convert them to float
+			float x = float(se_x) / 2047.0;
+			float y = float(se_y) / 2047.0;
+			float z = float(se_z) / 2047.0;
+			vec3 spotlight_vector = vec3(x, y, z);
+			delta = dot(light_vector, spotlight_vector); // spotlight direction is negated so we don't negate light_vector
+			break;
+		}
+		case 5u: {
+			delta = 1.0;  // TODO: cos <greek symbol> (aka CP);
+			error_unimpl = true;
+			break;
+		}
+		default: {
+			delta = 1.0;
+			error_unimpl = true;
+			break;
+		}
+	}
+
+	// 0 = enabled
+	if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 1 + (int(lut_id) << 2), 1) == 0u) {
+		// Two sided diffuse
+		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u) {
+			delta = max(delta, 0.0);
+		} else {
+			delta = abs(delta);
+		}
+		int index = int(clamp(floor(delta * 255.0), 0.f, 255.f));
+		return lutLookup(lut_index, index) * scale;
+	} else {
+		// Range is [-1, 1] so we need to map it to [0, 1]
+		int index = int(clamp(floor(delta * 128.0), -128.f, 127.f));
+		if (index < 0) index += 256;
+		return lutLookup(lut_index, index) * scale;
+	}
+}
+
+vec3 rotateVec3ByQuaternion(vec3 v, vec4 q) {
+	vec3 u = q.xyz;
+	float s = q.w;
+	return 2.0 * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0 * s * cross(u, v);
+}
+
 // Implements the following algorthm: https://mathb.in/26766
 void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
-	// Quaternions describe a transformation from surface-local space to eye space.
-	// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
-	// the tangent vector is (1,0,0), and the bitangent vector is (0,1,0).
-	vec3 normal = normalize(v_normal);
-	vec3 tangent = normalize(v_tangent);
-	vec3 bitangent = normalize(v_bitangent);
-	vec3 view = normalize(v_view);
-
 	uint GPUREG_LIGHTING_ENABLE = readPicaReg(0x008Fu);
 	if (bitfieldExtract(GPUREG_LIGHTING_ENABLE, 0, 1) == 0u) {
-		primary_color = secondary_color = vec4(1.0);
+		primary_color = secondary_color = vec4(0.0);
 		return;
 	}
 
-	uint GPUREG_LIGHTING_AMBIENT = readPicaReg(0x01C0u);
 	uint GPUREG_LIGHTING_NUM_LIGHTS = (readPicaReg(0x01C2u) & 0x7u) + 1u;
 	uint GPUREG_LIGHTING_LIGHT_PERMUTATION = readPicaReg(0x01D9u);
 
 	primary_color = vec4(vec3(0.0), 1.0);
 	secondary_color = vec4(vec3(0.0), 1.0);
 
-	primary_color.rgb += regToColor(GPUREG_LIGHTING_AMBIENT);
-
-	uint GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0u);
-	uint GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1u);
 	uint GPUREG_LIGHTING_CONFIG0 = readPicaReg(0x01C3u);
-	uint GPUREG_LIGHTING_CONFIG1 = readPicaReg(0x01C4u);
-	uint GPUREG_LIGHTING_LUTINPUT_SCALE = readPicaReg(0x01D2u);
-	float d[7];
+	GPUREG_LIGHTING_LUTINPUT_SCALE = readPicaReg(0x01D2u);
+	GPUREG_LIGHTING_CONFIG1 = readPicaReg(0x01C4u);
+	GPUREG_LIGHTING_LUTINPUT_ABS = readPicaReg(0x01D0u);
+	GPUREG_LIGHTING_LUTINPUT_SELECT = readPicaReg(0x01D1u);
 
-	bool error_unimpl = false;
+	uint bump_mode = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 28, 2);
+
+	// Bump mode is ignored for now because it breaks some games ie. Toad Treasure Tracker
+	switch (bump_mode) {
+		default: {
+			normal = rotateVec3ByQuaternion(vec3(0.0, 0.0, 1.0), v_quaternion);
+			break;
+		}
+	}
+
+	vec4 diffuse_sum = vec4(0.0, 0.0, 0.0, 1.0);
+	vec4 specular_sum = vec4(0.0, 0.0, 0.0, 1.0);
+
+	uint environment_id = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 4, 4);
+	bool clamp_highlights = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 27, 1) == 1u;
+
+	uint light_id;
+	vec3 light_vector;
+	vec3 half_vector;
 
 	for (uint i = 0u; i < GPUREG_LIGHTING_NUM_LIGHTS; i++) {
-		uint light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i * 3u), 3);
+		light_id = bitfieldExtract(GPUREG_LIGHTING_LIGHT_PERMUTATION, int(i) << 2, 3);
 
-		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_VECTOR_HIGH = readPicaReg(0x0145u + 0x10u * light_id);
-		uint GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149u + 0x10u * light_id);
+		uint GPUREG_LIGHTi_SPECULAR0 = readPicaReg(0x0140u + (light_id << 4u));
+		uint GPUREG_LIGHTi_SPECULAR1 = readPicaReg(0x0141u + (light_id << 4u));
+		uint GPUREG_LIGHTi_DIFFUSE = readPicaReg(0x0142u + (light_id << 4u));
+		uint GPUREG_LIGHTi_AMBIENT = readPicaReg(0x0143u + (light_id << 4u));
+		uint GPUREG_LIGHTi_VECTOR_LOW = readPicaReg(0x0144u + (light_id << 4u));
+		uint GPUREG_LIGHTi_VECTOR_HIGH = readPicaReg(0x0145u + (light_id << 4u));
+		GPUREG_LIGHTi_CONFIG = readPicaReg(0x0149u + (light_id << 4u));
 
-		vec3 light_vector = normalize(vec3(
+		float light_distance;
+		vec3 light_position = vec3(
 			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5u, 10u), decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5u, 10u),
 			decodeFP(bitfieldExtract(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
-		));
-
-		vec3 half_vector;
+		);
 
 		// Positional Light
 		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
-			// error_unimpl = true;
-			half_vector = normalize(normalize(light_vector + v_view) + view);
+			light_vector = light_position + v_view;
 		}
 
 		// Directional light
 		else {
-			half_vector = normalize(normalize(light_vector) + view);
+			light_vector = light_position;
 		}
 
-		for (int c = 0; c < 7; c++) {
-			if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 16 + c, 1) == 0u) {
-				uint scale_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SCALE, c * 4, 3);
-				float scale = float(1u << scale_id);
-				if (scale_id >= 6u) scale /= 256.0;
+		light_distance = length(light_vector);
+		light_vector = normalize(light_vector);
+		half_vector = light_vector + normalize(v_view);
 
-				uint input_id = bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_SELECT, c * 4, 3);
-				if (input_id == 0u)
-					d[c] = dot(normal, half_vector);
-				else if (input_id == 1u)
-					d[c] = dot(view, half_vector);
-				else if (input_id == 2u)
-					d[c] = dot(normal, view);
-				else if (input_id == 3u)
-					d[c] = dot(light_vector, normal);
-				else if (input_id == 4u) {
-					uint GPUREG_LIGHTi_SPOTDIR_LOW = readPicaReg(0x0146u + 0x10u * light_id);
-					uint GPUREG_LIGHTi_SPOTDIR_HIGH = readPicaReg(0x0147u + 0x10u * light_id);
-					vec3 spot_light_vector = normalize(vec3(
-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 16), 1u, 11u),
-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 16), 1u, 11u),
-						decodeFP(bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 16), 1u, 11u)
-					));
-					d[c] = dot(-light_vector, spot_light_vector);  // -L dot P (aka Spotlight aka SP);
-				} else if (input_id == 5u) {
-					d[c] = 1.0;  // TODO: cos <greek symbol> (aka CP);
-					error_unimpl = true;
-				} else {
-					d[c] = 1.0;
-				}
-
-				d[c] = lutLookup(uint(c), light_id, d[c] * 0.5 + 0.5) * scale;
-				if (bitfieldExtract(GPUREG_LIGHTING_LUTINPUT_ABS, 2 * c, 1) != 0u) d[c] = abs(d[c]);
-			} else {
-				d[c] = 1.0;
-			}
-		}
-
-		uint lookup_config = bitfieldExtract(GPUREG_LIGHTi_CONFIG, 4, 4);
-		if (lookup_config == 0u) {
-			d[D1_LUT] = 0.0;
-			d[FR_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookup_config == 1u) {
-			d[D0_LUT] = 0.0;
-			d[D1_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookup_config == 2u) {
-			d[FR_LUT] = 0.0;
-			d[SP_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		} else if (lookup_config == 3u) {
-			d[SP_LUT] = 0.0;
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT] = 1.0;
-		} else if (lookup_config == 4u) {
-			d[FR_LUT] = 0.0;
-		} else if (lookup_config == 5u) {
-			d[D1_LUT] = 0.0;
-		} else if (lookup_config == 6u) {
-			d[RG_LUT] = d[RB_LUT] = d[RR_LUT];
-		}
-
-		float distance_factor = 1.0;  // a
-		float indirect_factor = 1.0;  // fi
-		float shadow_factor = 1.0;    // o
-
-		float NdotL = dot(normal, light_vector);  // Li dot N
+		float NdotL = dot(normal, light_vector);  // N dot Li
 
 		// Two sided diffuse
 		if (bitfieldExtract(GPUREG_LIGHTi_CONFIG, 1, 1) == 0u)
@@ -315,20 +374,86 @@ void calcLighting(out vec4 primary_color, out vec4 secondary_color) {
 		else
 			NdotL = abs(NdotL);
 
-		float light_factor = distance_factor * d[SP_LUT] * indirect_factor * shadow_factor;
+		float geometric_factor;
+		bool use_geo_0 = bitfieldExtract(GPUREG_LIGHTi_CONFIG, 2, 1) == 1u;
+		bool use_geo_1 = bitfieldExtract(GPUREG_LIGHTi_CONFIG, 3, 1) == 1u;
+		if (use_geo_0 || use_geo_1) {
+			geometric_factor = dot(half_vector, half_vector);
+			geometric_factor = geometric_factor == 0.0 ? 0.0 : min(NdotL / geometric_factor, 1.0);
+		}
 
-		primary_color.rgb += light_factor * (regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE) * NdotL);
-		secondary_color.rgb += light_factor * (regToColor(GPUREG_LIGHTi_SPECULAR0) * d[D0_LUT] +
-											   regToColor(GPUREG_LIGHTi_SPECULAR1) * d[D1_LUT] * vec3(d[RR_LUT], d[RG_LUT], d[RB_LUT]));
+		float distance_attenuation = 1.0;
+		if (bitfieldExtract(GPUREG_LIGHTING_CONFIG1, 24 + int(light_id), 1) == 0u) {
+			uint GPUREG_LIGHTi_ATTENUATION_BIAS = bitfieldExtract(readPicaReg(0x014Au + (light_id << 4u)), 0, 20);
+			uint GPUREG_LIGHTi_ATTENUATION_SCALE = bitfieldExtract(readPicaReg(0x014Bu + (light_id << 4u)), 0, 20);
+
+			float distance_attenuation_bias = decodeFP(GPUREG_LIGHTi_ATTENUATION_BIAS, 7u, 12u);
+			float distance_attenuation_scale = decodeFP(GPUREG_LIGHTi_ATTENUATION_SCALE, 7u, 12u);
+
+			float delta = light_distance * distance_attenuation_scale + distance_attenuation_bias;
+			delta = clamp(delta, 0.0, 1.0);
+			int index = int(clamp(floor(delta * 255.0), 0.0, 255.0));
+			distance_attenuation = lutLookup(16u + light_id, index);
+		}
+
+		float spotlight_attenuation = lightLutLookup(environment_id, SP_LUT, light_id, light_vector, half_vector);
+		float specular0_distribution = lightLutLookup(environment_id, D0_LUT, light_id, light_vector, half_vector);
+		float specular1_distribution = lightLutLookup(environment_id, D1_LUT, light_id, light_vector, half_vector);
+		vec3 reflected_color;
+		reflected_color.r = lightLutLookup(environment_id, RR_LUT, light_id, light_vector, half_vector);
+		
+		if (isSamplerEnabled(environment_id, RG_LUT)) {
+			reflected_color.g = lightLutLookup(environment_id, RG_LUT, light_id, light_vector, half_vector);
+		} else {
+			reflected_color.g = reflected_color.r;
+		}
+
+		if (isSamplerEnabled(environment_id, RB_LUT)) {
+			reflected_color.b = lightLutLookup(environment_id, RB_LUT, light_id, light_vector, half_vector);
+		} else {
+			reflected_color.b = reflected_color.r;
+		}
+
+		vec3 specular0 = regToColor(GPUREG_LIGHTi_SPECULAR0) * specular0_distribution;
+		vec3 specular1 = regToColor(GPUREG_LIGHTi_SPECULAR1) * specular1_distribution * reflected_color;
+
+		specular0 *= use_geo_0 ? geometric_factor : 1.0;
+		specular1 *= use_geo_1 ? geometric_factor : 1.0;
+
+		float clamp_factor = 1.0;
+		if (clamp_highlights && NdotL == 0.0) {
+			clamp_factor = 0.0;
+		}
+
+		float light_factor = distance_attenuation * spotlight_attenuation;
+		diffuse_sum.rgb += light_factor * (regToColor(GPUREG_LIGHTi_AMBIENT) + regToColor(GPUREG_LIGHTi_DIFFUSE) * NdotL);
+		specular_sum.rgb += light_factor * clamp_factor * (specular0 + specular1);
 	}
+
 	uint fresnel_output1 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 2, 1);
 	uint fresnel_output2 = bitfieldExtract(GPUREG_LIGHTING_CONFIG0, 3, 1);
+	// Uses parameters from the last light as Fresnel is only applied to the last light
+	float fresnel_factor;
+	
+	if (fresnel_output1 == 1u || fresnel_output2 == 1u) {
+		fresnel_factor = lightLutLookup(environment_id, FR_LUT, light_id, light_vector, half_vector);
+	}
+	
+	if (fresnel_output1 == 1u) {
+		diffuse_sum.a = fresnel_factor;
+	}
 
-	if (fresnel_output1 == 1u) primary_color.a = d[FR_LUT];
-	if (fresnel_output2 == 1u) secondary_color.a = d[FR_LUT];
+	if (fresnel_output2 == 1u) {
+		specular_sum.a = fresnel_factor;
+	}
+
+	uint GPUREG_LIGHTING_AMBIENT = readPicaReg(0x01C0u);
+	vec4 global_ambient = vec4(regToColor(GPUREG_LIGHTING_AMBIENT), 1.0);
+	primary_color = clamp(global_ambient + diffuse_sum, vec4(0.0), vec4(1.0));
+	secondary_color = clamp(specular_sum, vec4(0.0), vec4(1.0));
 
 	if (error_unimpl) {
-		// secondary_color = primary_color = vec4(1.0, 0., 1.0, 1.0);
+		// secondary_color = primary_color = unimpl_color;
 	}
 }
 
@@ -371,7 +496,7 @@ void main() {
 	if (tevUnimplementedSourceFlag) {
 		// fragColour = vec4(1.0, 0.0, 1.0, 1.0);
 	}
-	// fragColour.rg = texture(u_tex_lighting_lut,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
+	// fragColour.rg = texture(u_tex_luts,vec2(gl_FragCoord.x/200.,float(int(gl_FragCoord.y/2)%24))).rr;
 
 	// Get original depth value by converting from [near, far] = [0, 1] to [-1, 1]
 	// We do this by converting to [0, 2] first and subtracting 1 to go to [-1, 1]
@@ -383,6 +508,28 @@ void main() {
 
 	// Write final fragment depth
 	gl_FragDepth = depth;
+
+	bool enable_fog = (textureEnvUpdateBuffer & 7u) == 5u;
+
+	if (enable_fog) {
+		bool flip_depth = (textureEnvUpdateBuffer & (1u << 16)) != 0u;
+		float fog_index = flip_depth ? 1.0 - depth : depth;
+		fog_index *= 128.0;
+		float clamped_index = clamp(floor(fog_index), 0.0, 127.0);
+		float delta = fog_index - clamped_index;
+		vec2 value = texelFetch(u_tex_luts, ivec2(int(clamped_index), FOG_INDEX), 0).rg;
+		float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);
+
+		uint GPUREG_FOG_COLOR = readPicaReg(0x00E1u);
+
+		// Annoyingly color is not encoded in the same way as light color
+		float r = (GPUREG_FOG_COLOR & 0xFFu) / 255.0;
+		float g = ((GPUREG_FOG_COLOR >> 8) & 0xFFu) / 255.0;
+		float b = ((GPUREG_FOG_COLOR >> 16) & 0xFFu) / 255.0;
+		vec3 fog_color = vec3(r, g, b);
+
+		fragColour.rgb = mix(fog_color, fragColour.rgb, fog_factor);
+	}
 
 	// Perform alpha test
 	uint alphaControl = readPicaReg(0x104u);

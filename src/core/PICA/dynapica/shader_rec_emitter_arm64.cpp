@@ -7,9 +7,6 @@ using namespace Helpers;
 using namespace oaknut;
 using namespace oaknut::util;
 
-// TODO: Expose safe/unsafe optimizations to the user
-constexpr bool useSafeMUL = true;
-
 // Similar to the x64 recompiler, we use an odd internal ABI, which abuses the fact that we'll very rarely be calling C++ functions
 // So to avoid pushing and popping, we'll be making use of volatile registers as much as possible
 static constexpr QReg src1Vec = Q1;
@@ -144,8 +141,8 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		case ShaderOpcodes::CMP2: recCMP(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP3: recDP3(shaderUnit, instruction); break;
 		case ShaderOpcodes::DP4: recDP4(shaderUnit, instruction); break;
-		// case ShaderOpcodes::DPH:
-		// case ShaderOpcodes::DPHI: recDPH(shaderUnit, instruction); break;
+		case ShaderOpcodes::DPH:
+		case ShaderOpcodes::DPHI: recDPH(shaderUnit, instruction); break;
 		case ShaderOpcodes::END: recEND(shaderUnit, instruction); break;
 		case ShaderOpcodes::EX2: recEX2(shaderUnit, instruction); break;
 		case ShaderOpcodes::FLR: recFLR(shaderUnit, instruction); break;
@@ -491,7 +488,7 @@ void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 
 	// Now do a full DP4
 	// Do a piecewise multiplication of the vectors first
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
 		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
@@ -518,7 +515,40 @@ void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 
 	// Do a piecewise multiplication of the vectors first
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
+		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
+	} else {
+		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
+	}
+	FADDP(src1Vec.S4(), src1Vec.S4(), src1Vec.S4());  // Now add the adjacent components together
+	FADDP(src1Vec.toS(), src1Vec.toD().S2());         // Again for the bottom 2 lanes. Now the bottom lane contains the dot product
+
+	if (writeMask != 0x8) {                     // Copy bottom lane to all lanes if we're not simply writing back x
+		DUP(src1Vec.S4(), src1Vec.Selem()[0]);  // src1Vec = src1Vec.xxxx
+	}
+
+	storeRegister(src1Vec, shader, dest, operandDescriptor);
+}
+
+void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
+	const bool isDPHI = (instruction >> 26) == ShaderOpcodes::DPHI;
+
+	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
+	const u32 src1 = isDPHI ? getBits<14, 5>(instruction) : getBits<12, 7>(instruction);
+	const u32 src2 = isDPHI ? getBits<7, 7>(instruction) : getBits<7, 5>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+	const u32 writeMask = getBits<0, 4>(operandDescriptor);
+
+	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
+	loadRegister<1>(src1Vec, shader, src1, isDPHI ? 0 : idx, operandDescriptor);
+	loadRegister<2>(src2Vec, shader, src2, isDPHI ? idx : 0, operandDescriptor);
+	// // Attach 1.0 to the w component of src1
+	MOV(src1Vec.Selem()[3], onesVector.Selem()[0]);
+
+	// Now perform a DP4
+	// Do a piecewise multiplication of the vectors first
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
 		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
@@ -801,7 +831,7 @@ void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 	loadRegister<1>(src1Vec, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2Vec, shader, src2, 0, operandDescriptor);
 
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 	} else {
 		FMUL(src1Vec.S4(), src1Vec.S4(), src2Vec.S4());
@@ -874,7 +904,7 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2Vec, shader, src2, isMADI ? 0 : idx, operandDescriptor);
 	loadRegister<3>(src3Vec, shader, src3, isMADI ? idx : 0, operandDescriptor);
 
-	if constexpr (useSafeMUL) {
+	if (useSafeMUL) {
 		emitSafeMUL(src1Vec, src2Vec, scratch1Vec);
 		FADD(src3Vec.S4(), src3Vec.S4(), src1Vec.S4());
 	} else {

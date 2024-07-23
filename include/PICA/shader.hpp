@@ -1,6 +1,8 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <cstddef>
 #include <cstring>
 
 #include "PICA/float_types.hpp"
@@ -90,9 +92,12 @@ class PICAShader {
   public:
 	// These are placed close to the temp registers and co because it helps the JIT generate better code
 	u32 entrypoint = 0;  // Initial shader PC
-	u32 boolUniform;
-	std::array<std::array<u8, 4>, 4> intUniforms;
+
+	// We want these registers in this order & with this alignment for uploading them directly to a UBO
+	// When emulating shaders on the GPU. Plus this alignment for float uniforms is necessary for doing SIMD in the shader->CPU recompilers.
 	alignas(16) std::array<vec4f, 96> floatUniforms;
+	alignas(16) std::array<std::array<u8, 4>, 4> intUniforms;
+	u32 boolUniform;
 
 	alignas(16) std::array<vec4f, 16> fixedAttributes;  // Fixed vertex attributes
 	alignas(16) std::array<vec4f, 16> inputs;           // Attributes passed to the shader
@@ -220,12 +225,8 @@ class PICAShader {
   public:
 	static constexpr size_t maxInstructionCount = 4096;
 	std::array<u32, maxInstructionCount> loadedShader;    // Currently loaded & active shader
-	std::array<u32, maxInstructionCount> bufferedShader;  // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
 
 	PICAShader(ShaderType type) : type(type) {}
-
-	// Theese functions are in the header to be inlined more easily, though with LTO I hope I'll be able to move them
-	void finalize() { std::memcpy(&loadedShader[0], &bufferedShader[0], 4096 * sizeof(u32)); }
 
 	void setBufferIndex(u32 index) { bufferIndex = index & 0xfff; }
 	void setOpDescriptorIndex(u32 index) { opDescriptorIndex = index & 0x7f; }
@@ -235,7 +236,7 @@ class PICAShader {
 			Helpers::panic("o no, shader upload overflew");
 		}
 
-		bufferedShader[bufferIndex++] = word;
+		loadedShader[bufferIndex++] = word;
 		bufferIndex &= 0xfff;
 
 		codeHashDirty = true;  // Signal the JIT if necessary that the program hash has potentially changed
@@ -296,3 +297,8 @@ class PICAShader {
 	Hash getCodeHash();
 	Hash getOpdescHash();
 };
+
+static_assert(
+	offsetof(PICAShader, intUniforms) == offsetof(PICAShader, floatUniforms) + 96 * sizeof(float) * 4 &&
+	offsetof(PICAShader, boolUniform) == offsetof(PICAShader, intUniforms) + 4 * sizeof(u8) * 4
+);

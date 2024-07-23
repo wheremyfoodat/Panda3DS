@@ -22,8 +22,11 @@ class ShaderJIT {
 
 	ShaderCache cache;
 #endif
+	bool accurateMul = false;
 
   public:
+	void setAccurateMul(bool value) { accurateMul = value; }
+
 #ifdef PANDA3DS_SHADER_JIT_SUPPORTED
 	// Call this before starting to process a batch of vertices
 	// This will read the PICA config (uploaded shader and shader operand descriptors) and search if we've already compiled this shader
@@ -36,11 +39,11 @@ class ShaderJIT {
 	static constexpr bool isAvailable() { return true; }
 #else
 	void prepare(PICAShader& shaderUnit) {
-		Helpers::panic("Vertex Loader JIT: Tried to run ShaderJIT::Prepare on platform that does not support shader jit");
+		Helpers::panic("Shader JIT: Tried to run ShaderJIT::Prepare on platform that does not support shader jit");
 	}
 
 	void run(PICAShader& shaderUnit) {
-		Helpers::panic("Vertex Loader JIT: Tried to run ShaderJIT::Run on platform that does not support shader jit");
+		Helpers::panic("Shader JIT: Tried to run ShaderJIT::Run on platform that does not support shader jit");
 	}
 
 	// Define dummy callback. This should never be called if the shader JIT is not supported

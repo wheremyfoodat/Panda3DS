@@ -40,9 +40,13 @@ struct GLStateManager {
 	GLuint boundVAO;
 	GLuint boundVBO;
 	GLuint currentProgram;
+	GLuint boundUBO;
 
 	GLenum depthFunc;
 	GLenum logicOp;
+	GLenum blendEquationRGB, blendEquationAlpha;
+	GLenum blendFuncSourceRGB, blendFuncSourceAlpha;
+	GLenum blendFuncDestRGB, blendFuncDestAlpha;
 
 	void reset();
 	void resetBlend();
@@ -51,7 +55,7 @@ struct GLStateManager {
 	void resetColourMask();
 	void resetDepth();
 	void resetVAO();
-	void resetVBO();
+	void resetBuffers();
 	void resetProgram();
 	void resetScissor();
 	void resetStencil();
@@ -183,6 +187,13 @@ struct GLStateManager {
 		}
 	}
 
+	void bindUBO(GLuint handle) {
+		if (boundUBO != handle) {
+			boundUBO = handle;
+			glBindBuffer(GL_UNIFORM_BUFFER, boundUBO);
+		}
+	}
+
 	void bindVAO(const OpenGL::VertexArray& vao) { bindVAO(vao.handle()); }
 	void bindVBO(const OpenGL::VertexBuffer& vbo) { bindVBO(vbo.handle()); }
 	void useProgram(const OpenGL::Program& program) { useProgram(program.handle()); }
@@ -224,6 +235,41 @@ struct GLStateManager {
 	}
 
 	void setDepthFunc(OpenGL::DepthFunc func) { setDepthFunc(static_cast<GLenum>(func)); }
+
+	// Counterpart to glBlendEquationSeparate
+	void setBlendEquation(GLenum modeRGB, GLenum modeAlpha) {
+		if (blendEquationRGB != modeRGB || blendEquationAlpha != modeAlpha) {
+			blendEquationRGB = modeRGB;
+			blendEquationAlpha = modeAlpha;
+
+			glBlendEquationSeparate(modeRGB, modeAlpha);
+		}
+	}
+
+	// Counterpart to glBlendFuncSeparate
+	void setBlendFunc(GLenum sourceRGB, GLenum destRGB, GLenum sourceAlpha, GLenum destAlpha) {
+		if (blendFuncSourceRGB != sourceRGB || blendFuncDestRGB != destRGB || blendFuncSourceAlpha != sourceAlpha ||
+			blendFuncDestAlpha != destAlpha) {
+
+			blendFuncSourceRGB = sourceRGB;
+			blendFuncDestRGB = destRGB;
+			blendFuncSourceAlpha = sourceAlpha;
+			blendFuncDestAlpha = destAlpha;
+
+			glBlendFuncSeparate(sourceRGB, destRGB,sourceAlpha, destAlpha);
+		}
+	}
+
+	// Counterpart to regular glBlendEquation
+	void setBlendEquation(GLenum mode) { setBlendEquation(mode, mode); }
+
+	void setBlendEquation(OpenGL::BlendEquation modeRGB, OpenGL::BlendEquation modeAlpha) {
+		setBlendEquation(static_cast<GLenum>(modeRGB), static_cast<GLenum>(modeAlpha));
+	}
+
+	void setBlendEquation(OpenGL::BlendEquation mode) {
+		setBlendEquation(static_cast<GLenum>(mode));
+	}
 };
 
 static_assert(std::is_trivially_constructible<GLStateManager>(), "OpenGL State Manager class is not trivially constructible!");
