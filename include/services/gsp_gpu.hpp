@@ -22,6 +22,8 @@ enum class GPUInterrupt : u8 {
 class Kernel;
 
 class GPUService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::GPU;
 	Memory& mem;
 	GPU& gpu;

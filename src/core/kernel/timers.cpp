@@ -4,7 +4,7 @@
 #include "kernel.hpp"
 #include "scheduler.hpp"
 
-Handle Kernel::makeTimer(ResetType type) {
+HorizonHandle Kernel::makeTimer(ResetType type) {
 	Handle ret = makeObject(KernelObjectType::Timer);
 	objects[ret].data = new Timer(type);
 

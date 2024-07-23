@@ -47,7 +47,7 @@ enum class ProcessorID : s32 {
 struct AddressArbiter {};
 
 struct ResourceLimits {
-    Handle handle;
+    HorizonHandle handle;
 
     s32 currentCommit = 0;
 };
@@ -91,6 +91,8 @@ struct Port {
 };
 
 struct Session {
+	using Handle = HorizonHandle;
+
 	Handle portHandle;  // The port this session is subscribed to
 	Session(Handle portHandle) : portHandle(portHandle) {}
 };
@@ -109,6 +111,8 @@ enum class ThreadStatus {
 };
 
 struct Thread {
+	using Handle = HorizonHandle;
+
 	u32 initialSP;   // Initial r13 value
 	u32 entrypoint;  // Initial r15 value
 	u32 priority;
@@ -161,6 +165,8 @@ static const char* kernelObjectTypeToString(KernelObjectType t) {
 }
 
 struct Mutex {
+    using Handle = HorizonHandle;
+
     u64 waitlist;           // Refer to the getWaitlist function below for documentation
     Handle ownerThread = 0; // Index of the thread that holds the mutex if it's locked
     Handle handle; // Handle of the mutex itself
@@ -203,6 +209,8 @@ struct MemoryBlock {
 
 // Generic kernel object class
 struct KernelObject {
+	using Handle = HorizonHandle;
+
     Handle handle = 0; // A u32 the OS will use to identify objects
     void* data = nullptr;
     KernelObjectType type;

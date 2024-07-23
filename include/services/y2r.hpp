@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <optional>
+
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -10,6 +11,8 @@
 class Kernel;
 
 class Y2RService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::Y2R;
 	Memory& mem;
 	Kernel& kernel;
@@ -20,7 +23,7 @@ class Y2RService {
 
 	enum class BusyStatus : u32 {
 		NotBusy = 0,
-		Busy = 1
+		Busy = 1,
 	};
 
 	enum class InputFormat : u32 {
@@ -35,7 +38,7 @@ class Y2RService {
 		RGB32 = 0,
 		RGB24 = 1,
 		RGB15 = 2,
-		RGB565 = 3
+		RGB565 = 3,
 	};
 
 	// Clockwise rotation
@@ -43,12 +46,12 @@ class Y2RService {
 		None = 0,
 		Rotate90 = 1,
 		Rotate180 = 2,
-		Rotate270 = 3
+		Rotate270 = 3,
 	};
 
 	enum class BlockAlignment : u32 {
-		Line = 0, // Output buffer's pixels are arranged linearly. Used when outputting to the framebuffer.
-		Block8x8 = 1, // Output buffer's pixels are morton swizzled. Used when outputting to a GPU texture.
+		Line = 0,      // Output buffer's pixels are arranged linearly. Used when outputting to the framebuffer.
+		Block8x8 = 1,  // Output buffer's pixels are morton swizzled. Used when outputting to a GPU texture.
 	};
 
 	// https://github.com/citra-emu/citra/blob/ac9d72a95ca9a60de8d39484a14aecf489d6d016/src/core/hle/service/cam/y2r_u.cpp#L33
@@ -60,7 +63,7 @@ class Y2RService {
 		{{0x12A, 0x1CA, 0x88, 0x36, 0x21C, -0x1F04, 0x99C, -0x2421}},   // ITU_Rec709_Scaling
 	}};
 
-	CoefficientSet conversionCoefficients; // Current conversion coefficients
+	CoefficientSet conversionCoefficients;  // Current conversion coefficients
 
 	InputFormat inputFmt;
 	OutputFormat outputFmt;

@@ -6,6 +6,8 @@
 #include "result/result.hpp"
 
 class ACTService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::ACT;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, actLogger)
@@ -15,7 +17,7 @@ class ACTService {
 	void generateUUID(u32 messagePointer);
 	void getAccountDataBlock(u32 messagePointer);
 
-public:
+  public:
 	ACTService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

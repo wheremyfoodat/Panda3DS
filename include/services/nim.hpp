@@ -6,6 +6,8 @@
 #include "result/result.hpp"
 
 class NIMService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::NIM;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, nimLogger)
@@ -13,7 +15,7 @@ class NIMService {
 	// Service commands
 	void initialize(u32 messagePointer);
 
-public:
+  public:
 	NIMService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

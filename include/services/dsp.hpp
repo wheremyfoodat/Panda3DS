@@ -14,6 +14,8 @@
 class Kernel;
 
 class DSPService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::DSP;
 	Memory& mem;
 	Kernel& kernel;
