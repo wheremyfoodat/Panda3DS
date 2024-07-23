@@ -101,6 +101,16 @@ namespace PICA::ShaderGen {
 
 		void writeAttributes();
 
+		std::string getSource(u32 source, u32 index) const;
+		std::string getDest(u32 dest) const;
+		std::string getSwizzlePattern(u32 swizzle) const;
+		std::string getDestSwizzle(u32 destinationMask) const;
+
+		void setDest(u32 operandDescriptor, const std::string& dest, const std::string& value);
+		// Returns if the instruction uses the typical register encodings most instructions use
+		// With some exceptions like MAD/MADI, and the control flow instructions which are completely different
+		bool usesCommonEncoding(u32 instruction) const;
+
 	  public:
 		ShaderDecompiler(PICAShader& shader, EmulatorConfig& config, u32 entrypoint, API api, Language language)
 			: shader(shader), entrypoint(entrypoint), config(config), api(api), language(language), decompiledShader("") {}

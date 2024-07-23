@@ -58,6 +58,10 @@ namespace ShaderOpcodes {
 	};
 }
 
+namespace PICA::ShaderGen {
+	class ShaderDecompiler;
+};
+
 // Note: All PICA f24 vec4 registers must have the alignas(16) specifier to make them easier to access in SSE/NEON code in the JIT
 class PICAShader {
 	using f24 = Floats::f24;
@@ -135,6 +139,7 @@ class PICAShader {
 	// Add these as friend classes for the JIT so it has access to all important state
 	friend class ShaderJIT;
 	friend class ShaderEmitter;
+	friend class PICA::ShaderGen::ShaderDecompiler;
 
 	vec4f getSource(u32 source);
 	vec4f& getDest(u32 dest);
