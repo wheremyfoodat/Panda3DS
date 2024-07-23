@@ -104,6 +104,7 @@ struct EnvColor {
 
 struct DrawVertexOut {
 	float4 position [[position]];
+	float depth;
 	float4 quaternion;
 	float4 color;
 	float3 texCoord0;
@@ -176,6 +177,7 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 
 	// Apply depth uniforms
 	out.position.z = transformZ(out.position.z, out.position.w, depthUniforms);
+	out.depth = out.position.z;
 
 	// Color
 	out.color = min(abs(in.color), 1.0);
@@ -406,6 +408,8 @@ uint4 performLogicOpU(LogicOp logicOp, uint4 s, uint4 d) {
 #define RG_LUT 5u
 #define RR_LUT 6u
 
+#define FOG_INDEX 24
+
 float lutLookup(texture1d_array<float> texLightingLut, uint lut, uint index) {
 	return texLightingLut.read(index, lut).r;
 }
@@ -569,17 +573,15 @@ void calcLighting(thread Globals& globals, thread DrawVertexOut& in, constant Pi
 			decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
 		));
 
-		float3 halfVector;
-
 		// Positional Light
 		if (extract_bits(globals.GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
 			// error_unimpl = true;
-			halfVector = lightPosition + in.view;
+			lightVector = lightPosition + in.view;
 		}
 
 		// Directional light
 		else {
-			halfVector = lightPosition;
+			lightVector = lightPosition;
 		}
 
 		lightDistance = length(lightVector);
@@ -676,7 +678,7 @@ float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]],
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]], constant DepthUniforms& depthUniforms [[buffer(3)]],
                              texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture1d_array<float> texLightingLut [[texture(3)]],
                              sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
@@ -691,8 +693,8 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
     if (lightingEnabled) {
         calcLighting(globals, in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
     } else {
-        globals.tevSources[1] = float4(1.0);
-        globals.tevSources[2] = float4(1.0);
+        globals.tevSources[1] = float4(0.0);
+        globals.tevSources[2] = float4(0.0);
     }
 
 	uint textureConfig = picaRegs.read(0x80u);
@@ -723,9 +725,37 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 		}
 	}
 
-	float4 color = performLogicOp(logicOp, globals.tevSources[15], prevColor);
+	float4 color = globals.tevSources[15];
 
-	// TODO: fog
+	// Depth
+	float z_over_w = in.position.z;
+	float depth = z_over_w * depthUniforms.depthScale + depthUniforms.depthOffset;
+
+	if (!depthUniforms.depthMapEnable)  // Divide z by w if depthmap enable == 0 (ie using W-buffering)
+		depth /= in.position.w;
+
+	// Fog
+	bool enable_fog = (textureEnvUpdateBuffer & 7u) == 5u;
+
+	if (enable_fog) {
+		bool flip_depth = (textureEnvUpdateBuffer & (1u << 16)) != 0u;
+		float fog_index = flip_depth ? 1.0 - depth : depth;
+		fog_index *= 128.0;
+		float clamped_index = clamp(floor(fog_index), 0.0, 127.0);
+		float delta = fog_index - clamped_index;
+		float2 value = texLightingLut.read(uint(clamped_index), FOG_INDEX).rg;
+		float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);
+
+		uint GPUREG_FOG_COLOR = picaRegs.read(0x00E1u);
+
+		// Annoyingly color is not encoded in the same way as light color
+		float r = (GPUREG_FOG_COLOR & 0xFFu) / 255.0;
+		float g = ((GPUREG_FOG_COLOR >> 8) & 0xFFu) / 255.0;
+		float b = ((GPUREG_FOG_COLOR >> 16) & 0xFFu) / 255.0;
+		float3 fog_color = float3(r, g, b);
+
+		color.rgb = mix(fog_color, color.rgb, fog_factor);
+	}
 
 	// Perform alpha test
 	if ((alphaControl & 1u) != 0u) {  // Check if alpha test is on
@@ -757,5 +787,5 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 		}
 	}
 
-	return color;
+	return performLogicOp(logicOp, color, prevColor);
 }

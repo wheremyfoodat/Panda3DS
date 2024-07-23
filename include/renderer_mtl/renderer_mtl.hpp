@@ -184,5 +184,6 @@ class RendererMTL final : public Renderer {
 	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
 	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);
 	void updateLightingLUT(MTL::RenderCommandEncoder* encoder);
+	void updateFogLUT(MTL::RenderCommandEncoder* encoder);
 	void textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect, const Math::Rect<u32>& destRect);
 };

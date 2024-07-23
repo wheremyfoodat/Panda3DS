@@ -36,10 +36,10 @@ public:
         additionalAllocations.clear();
     }
 
-    BufferHandle get(const std::span<const PICA::Vertex>& vertices) {
+    BufferHandle get(const void* data, size_t size) {
         // If the vertex buffer is too large, just create a new one
-        if (ptr + vertices.size_bytes() > CACHE_BUFFER_SIZE) {
-            MTL::Buffer* newBuffer = device->newBuffer(vertices.data(), vertices.size_bytes(), MTL::ResourceStorageModeShared);
+        if (ptr + size > CACHE_BUFFER_SIZE) {
+            MTL::Buffer* newBuffer = device->newBuffer(data, size, MTL::ResourceStorageModeShared);
             newBuffer->setLabel(toNSString("Additional vertex buffer"));
             additionalAllocations.push_back(newBuffer);
             Helpers::warn("Vertex buffer doesn't have enough space, creating a new buffer");
@@ -48,10 +48,10 @@ public:
         }
 
         // Copy the data into the buffer
-        memcpy((char*)buffer->contents() + ptr, vertices.data(), vertices.size_bytes());
+        memcpy((char*)buffer->contents() + ptr, data, size);
 
         size_t oldPtr = ptr;
-        ptr += vertices.size_bytes();
+        ptr += size;
 
         return BufferHandle{buffer, oldPtr};
     }

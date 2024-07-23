@@ -131,9 +131,9 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();
 	textureDescriptor->setTextureType(MTL::TextureType1DArray);
-	textureDescriptor->setPixelFormat(MTL::PixelFormatR16Uint);
+	textureDescriptor->setPixelFormat(MTL::PixelFormatRG32Float);
 	textureDescriptor->setWidth(LIGHT_LUT_TEXTURE_WIDTH);
-	textureDescriptor->setArrayLength(Lights::LUT_Count);
+	textureDescriptor->setArrayLength(Lights::LUT_Count + 1);
 	textureDescriptor->setUsage(MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite);
 	textureDescriptor->setStorageMode(MTL::StorageModePrivate);
 
@@ -516,6 +516,9 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT(renderCommandEncoder);
 	}
+	if (gpu.fogLUTDirty) {
+        updateFogLUT(renderCommandEncoder);
+    }
 
 	renderCommandEncoder->setRenderPipelineState(pipeline);
 	renderCommandEncoder->setDepthStencilState(depthStencilState);
@@ -523,7 +526,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	if (vertices.size_bytes() < 4 * 1024) {
 		renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
 	} else {
-	    Metal::BufferHandle buffer = vertexBufferCache.get(vertices);
+	    Metal::BufferHandle buffer = vertexBufferCache.get(vertices.data(), vertices.size_bytes());
 		renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, VERTEX_BUFFER_BINDING_INDEX);
 	}
 
@@ -560,6 +563,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
 	renderCommandEncoder->setVertexBytes(&depthUniforms, sizeof(depthUniforms), 2);
 	renderCommandEncoder->setFragmentBytes(&logicOp, sizeof(logicOp), 2);
+	renderCommandEncoder->setFragmentBytes(&depthUniforms, sizeof(depthUniforms), 3);
 
 	renderCommandEncoder->drawPrimitives(toMTLPrimitiveType(primType), NS::UInteger(0), NS::UInteger(vertices.size()));
 }
@@ -696,11 +700,11 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 
 void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.lightingLUTDirty = false;
-	std::array<u16, GPU::LightingLutSize> u16_lightinglut;
+	std::array<float, GPU::LightingLutSize * 2> lightingLut;
 
-	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
-		uint64_t value = gpu.lightingLUT[i] & ((1 << 12) - 1);
-		u16_lightinglut[i] = value * 65535 / 4095;
+	for (int i = 0; i < gpu.lightingLUT.size(); i += 2) {
+    	uint64_t value = gpu.lightingLUT[i >> 1] & 0xFFF;
+    	lightingLut[i] = (float)(value << 4) / 65535.0f;
 	}
 
 	//for (int i = 0; i < Lights::LUT_Count; i++) {
@@ -710,9 +714,37 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
 	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
 	renderCommandEncoder->setVertexTexture(lightLUTTextureArray, 0);
-	renderCommandEncoder->setVertexBytes(u16_lightinglut.data(), sizeof(u16_lightinglut), 0);
+	Metal::BufferHandle buffer = vertexBufferCache.get(lightingLut.data(), sizeof(lightingLut));
+	renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
+	u32 arrayOffset = 0;
+	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
 
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), GPU::LightingLutSize);
+}
+
+void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
+	gpu.fogLUTDirty = false;
+	std::array<float, 128 * 2> fogLut;
+
+	for (int i = 0; i < fogLut.size(); i += 2) {
+		const uint32_t value = gpu.fogLUT[i >> 1];
+		int32_t diff = value & 0x1fff;
+		diff = (diff << 19) >> 19;  // Sign extend the 13-bit value to 32 bits
+		const float fogDifference = float(diff) / 2048.0f;
+		const float fogValue = float((value >> 13) & 0x7ff) / 2048.0f;
+
+		fogLut[i] = fogValue;
+		fogLut[i + 1] = fogDifference;
+	}
+
+	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
+	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
+	renderCommandEncoder->setVertexTexture(lightLUTTextureArray, 0);
+	renderCommandEncoder->setVertexBytes(fogLut.data(), sizeof(fogLut), 0);
+	u32 arrayOffset = (u32)Lights::LUT_Count;
+	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
+
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(128));
 }
 
 void RendererMTL::textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect, const Math::Rect<u32>& destRect) {
