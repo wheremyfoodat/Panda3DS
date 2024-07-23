@@ -167,7 +167,8 @@ class GPU {
 			u32 index = paddr - PhysicalAddrs::VRAM;
 			return (T*)&vram[index];
 		} else [[unlikely]] {
-			Helpers::panic("[GPU] Tried to access unknown physical address: %08X", paddr);
+			Helpers::warn("[GPU] Tried to access unknown physical address: %08X", paddr);
+			return nullptr;
 		}
 	}
 

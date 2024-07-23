@@ -659,7 +659,15 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
 	if (buffer.has_value()) {
 		return buffer.value().get().texture;
 	} else {
-		const auto textureData = std::span{gpu.getPointerPhys<u8>(tex.location), tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
+		const u8* startPointer = gpu.getPointerPhys<u8>(tex.location);
+		const usize sizeInBytes = tex.sizeInBytes();
+
+		if (startPointer == nullptr || (sizeInBytes > 0 && gpu.getPointerPhys<u8>(tex.location + sizeInBytes - 1) == nullptr)) [[unlikely]] {
+			Helpers::warn("Out-of-bounds texture fetch");
+			return blankTexture;
+		}
+
+		const auto textureData = std::span{startPointer, tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
 		Texture& newTex = textureCache.add(tex);
 		newTex.decodeTexture(textureData);
 
@@ -770,7 +778,8 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	if (inputWidth != 0) [[likely]] {
 		copyHeight = (copySize / inputWidth) * 8;
 	} else {
-		copyHeight = 0;
+		Helpers::warn("Zero-width texture copy");
+		return;
 	}
 
 	// Find the source surface.
