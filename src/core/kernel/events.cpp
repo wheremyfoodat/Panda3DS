@@ -12,7 +12,7 @@ const char* Kernel::resetTypeToString(u32 type) {
 	}
 }
 
-Handle Kernel::makeEvent(ResetType resetType, Event::CallbackType callback) {
+HorizonHandle Kernel::makeEvent(ResetType resetType, Event::CallbackType callback) {
 	Handle ret = makeObject(KernelObjectType::Event);
 	objects[ret].data = new Event(resetType, callback);
 	return ret;

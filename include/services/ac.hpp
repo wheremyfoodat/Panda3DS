@@ -8,6 +8,8 @@
 #include "result/result.hpp"
 
 class ACService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::AC;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, acLogger)

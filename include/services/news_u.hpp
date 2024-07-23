@@ -5,6 +5,8 @@
 #include "memory.hpp"
 
 class NewsUService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::NEWS_U;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, newsLogger)

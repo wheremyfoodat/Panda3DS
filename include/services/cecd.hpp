@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -9,6 +10,8 @@
 class Kernel;
 
 class CECDService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::CECD;
 	Memory& mem;
 	Kernel& kernel;
@@ -20,7 +23,7 @@ class CECDService {
 	void getInfoEventHandle(u32 messagePointer);
 	void openAndRead(u32 messagePointer);
 
-public:
+  public:
 	CECDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

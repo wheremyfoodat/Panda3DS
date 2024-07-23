@@ -109,7 +109,7 @@ void Kernel::rescheduleThreads() {
 }
 
 // Internal OS function to spawn a thread
-Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status) {
+HorizonHandle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status) {
 	int index; // Index of the created thread in the  threads array
 
 	if (threadCount < appResourceLimits.maxThreads) [[likely]] { // If we have not yet created over too many threads
@@ -161,7 +161,7 @@ Handle Kernel::makeThread(u32 entrypoint, u32 initialSP, u32 priority, Processor
 	return ret;
 }
 
-Handle Kernel::makeMutex(bool locked) {
+HorizonHandle Kernel::makeMutex(bool locked) {
 	Handle ret = makeObject(KernelObjectType::Mutex);
 	objects[ret].data = new Mutex(locked, ret);
 
@@ -201,7 +201,7 @@ void Kernel::releaseMutex(Mutex* moo) {
 	}
 }
 
-Handle Kernel::makeSemaphore(u32 initialCount, u32 maximumCount) {
+HorizonHandle Kernel::makeSemaphore(u32 initialCount, u32 maximumCount) {
 	Handle ret = makeObject(KernelObjectType::Semaphore);
 	objects[ret].data = new Semaphore(initialCount, maximumCount);
 

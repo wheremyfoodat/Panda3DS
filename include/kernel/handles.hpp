@@ -1,7 +1,7 @@
 #pragma once
 #include "helpers.hpp"
 
-using Handle = u32;
+using HorizonHandle = u32;
 
 namespace KernelHandles {
 	enum : u32 {
@@ -61,17 +61,17 @@ namespace KernelHandles {
 	};
 
 	// Returns whether "handle" belongs to one of the OS services
-	static constexpr bool isServiceHandle(Handle handle) {
+	static constexpr bool isServiceHandle(HorizonHandle handle) {
 		return handle >= MinServiceHandle && handle <= MaxServiceHandle;
 	}
 
 	// Returns whether "handle" belongs to one of the OS services' shared memory areas
-	static constexpr bool isSharedMemHandle(Handle handle) {
+	static constexpr bool isSharedMemHandle(HorizonHandle handle) {
 		return handle >= MinSharedMemHandle && handle <= MaxSharedMemHandle;
 	}
 
 	// Returns the name of a handle as a string based on the given handle
-	static const char* getServiceName(Handle handle) {
+	static const char* getServiceName(HorizonHandle handle) {
 		switch (handle) {
 			case AC: return "AC";
 			case ACT: return "ACT";

@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -15,6 +16,8 @@ struct FriendKey {
 static_assert(sizeof(FriendKey) == 16);
 
 class FRDService {
+	using Handle = HorizonHandle;
+
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, frdLogger)
 
@@ -51,11 +54,11 @@ class FRDService {
 	};
 	static_assert(sizeof(Profile) == 8);
 
-public:
+  public:
 	enum class Type {
-		A,    // frd:a
-		N,    // frd:n
-		U,    // frd:u
+		A,  // frd:a
+		N,  // frd:n
+		U,  // frd:u
 	};
 
 	FRDService(Memory& mem) : mem(mem) {}

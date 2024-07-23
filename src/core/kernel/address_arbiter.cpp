@@ -12,7 +12,7 @@ static const char* arbitrationTypeToString(u32 type) {
 	}
 }
 
-Handle Kernel::makeArbiter() {
+HorizonHandle Kernel::makeArbiter() {
 	if (arbiterCount >= appResourceLimits.maxAddressArbiters) {
 		Helpers::panic("Overflowed the number of address arbiters");
 	}

@@ -38,6 +38,8 @@ namespace HID::Keys {
 class Kernel;
 
 class HIDService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::HID;
 	Memory& mem;
 	Kernel& kernel;

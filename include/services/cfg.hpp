@@ -1,5 +1,6 @@
 #pragma once
 #include <cstring>
+
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
@@ -7,8 +8,10 @@
 #include "result/result.hpp"
 
 class CFGService {
+	using Handle = HorizonHandle;
+
 	Memory& mem;
-	CountryCodes country = CountryCodes::US; // Default to USA
+	CountryCodes country = CountryCodes::US;  // Default to USA
 	MAKE_LOG_FUNCTION(log, cfgLogger)
 
 	void writeStringU16(u32 pointer, const std::u16string& string);
@@ -27,12 +30,12 @@ class CFGService {
 
 	void getConfigInfo(u32 output, u32 blockID, u32 size, u32 permissionMask);
 
-public:
+  public:
 	enum class Type {
-		U, // cfg:u
-		I, // cfg:i
-		S, // cfg:s
-		NOR, // cfg:nor
+		U,    // cfg:u
+		I,    // cfg:i
+		S,    // cfg:s
+		NOR,  // cfg:nor
 	};
 
 	CFGService(Memory& mem) : mem(mem) {}

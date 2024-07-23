@@ -9,6 +9,8 @@
 class Kernel;
 
 class MICService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::MIC;
 	Memory& mem;
 	Kernel& kernel;
@@ -29,14 +31,14 @@ class MICService {
 	void unmapSharedMem(u32 messagePointer);
 	void theCaptainToadFunction(u32 messagePointer);
 
-	u8 gain = 0; // How loud our microphone input signal is
+	u8 gain = 0;  // How loud our microphone input signal is
 	bool micEnabled = false;
 	bool shouldClamp = false;
 	bool currentlySampling = false;
 
 	std::optional<Handle> eventHandle;
 
-public:
+  public:
 	MICService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

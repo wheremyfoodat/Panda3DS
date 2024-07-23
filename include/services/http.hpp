@@ -5,6 +5,8 @@
 #include "memory.hpp"
 
 class HTTPService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::HTTP;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, httpLogger)
