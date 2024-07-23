@@ -238,6 +238,12 @@ struct Globals {
 	uint GPUREG_LIGHTING_LUTINPUT_SELECT;
 	uint GPUREG_LIGHTi_CONFIG;
 
+	// HACK
+	//bool lightingEnabled;
+    //uint8_t lightingNumLights;
+    //uint32_t lightingConfig1;
+    //uint16_t alphaControl;
+
     float3 normal;
 };
 
@@ -325,7 +331,7 @@ struct FragTEV {
     		case 6u: result.rgb = float3(4.0 * dot(source0.rgb - 0.5, source1.rgb - 0.5)); break;  // Dot3 RGB
     		case 7u: result = float4(4.0 * dot(source0.rgb - 0.5, source1.rgb - 0.5)); break;      // Dot3 RGBA
     		case 8u: result.rgb = min(source0.rgb * source1.rgb + source2.rgb, 1.0); break;      // Multiply then add
-    		case 9u: result.rgb = min((source0.rgb + source1.rgb) * source2.rgb, 1.0); break;    // Add then multiply
+    		case 9u: result.rgb = min((source0.rgb + source1.rgb), 1.0) * source2.rgb; break;    // Add then multiply
     		default: break;
     	}
 
@@ -339,8 +345,8 @@ struct FragTEV {
     			case 3u: result.a = clamp(source0.a + source1.a - 0.5, 0.0, 1.0); break;   // Add signed
     			case 4u: result.a = mix(source1.a, source0.a, source2.a); break;           // Interpolate
     			case 5u: result.a = max(0.0, source0.a - source1.a); break;                // Subtract
-    			case 8u: result.a = min(1.0, source0.a * source1.a + source2.a); break;    // Multiply then add
-    			case 9u: result.a = min(1.0, (source0.a + source1.a) * source2.a); break;  // Add then multiply
+    			case 8u: result.a = min(source0.a * source1.a + source2.a, 1.0); break;    // Multiply then add
+    			case 9u: result.a = min(source0.a + source1.a, 1.0) * source2.a; break;  // Add then multiply
     			default: break;
     		}
     	}
@@ -674,6 +680,13 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
                              texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture1d_array<float> texLightingLut [[texture(3)]],
                              sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
+
+    // HACK
+    //globals.lightingEnabled = picaRegs.read(0x008Fu) != 0u;
+    //globals.lightingNumLights = picaRegs.read(0x01C2u);
+    //globals.lightingConfig1 = picaRegs.read(0x01C4u);
+    //globals.alphaControl = picaRegs.read(0x104);
+
     globals.tevSources[0] = in.color;
     if (lightingEnabled) {
         calcLighting(globals, in, picaRegs, texLightingLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
