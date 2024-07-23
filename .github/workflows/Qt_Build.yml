@@ -96,7 +96,7 @@ jobs:
         path: 'Alber.zip'
 
   Linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -105,7 +105,7 @@ jobs:
 
     - name: Install misc packages
       run: |
-       sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2 libwayland-dev
+       sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2 libwayland-dev libgl1-mesa-dev
        sudo add-apt-repository -y ppa:savoury1/qt-6-2
        sudo apt update
        sudo apt install qt6-base-dev qt6-base-private-dev
@@ -117,11 +117,11 @@ jobs:
        sudo ./llvm.sh 17
        
     - name: Setup Vulkan SDK
-      run: |
-       wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-       sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-focal.list http://packages.lunarg.com/vulkan/lunarg-vulkan-focal.list
-       sudo apt update
-       sudo apt install vulkan-sdk
+      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      with:
+        vulkan-query-version: latest
+        vulkan-use-cache: true
+        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
