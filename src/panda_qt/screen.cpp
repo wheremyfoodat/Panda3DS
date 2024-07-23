@@ -20,7 +20,7 @@
 // and https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
 
 #ifdef PANDA3DS_ENABLE_OPENGL
-ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
+ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWidget(parent), resizeCallback(resizeCallback) {
 	// Create a native window for use with our graphics API of choice
 	resize(800, 240 * 4);
 	
@@ -49,7 +49,7 @@ void ScreenWidget::resizeEvent(QResizeEvent* event) {
 	}
 
 	// This will call take care of calling resizeSurface from the emulator thread
-	static_cast<MainWindow*>(parentWidget())->handleScreenResize(surfaceWidth, surfaceHeight);
+	resizeCallback(surfaceWidth, surfaceHeight);
 }
 
 // Note: This will run on the emulator thread, we don't want any Qt calls happening there.

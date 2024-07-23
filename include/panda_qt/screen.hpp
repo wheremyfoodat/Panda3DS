@@ -1,5 +1,6 @@
 #pragma once
 #include <QWidget>
+#include <functional>
 #include <memory>
 
 #include "gl/context.h"
@@ -10,7 +11,9 @@ class ScreenWidget : public QWidget {
 	Q_OBJECT
 
   public:
-	ScreenWidget(QWidget* parent = nullptr);
+	using ResizeCallback = std::function<void(u32, u32)>;
+
+	ScreenWidget(ResizeCallback resizeCallback, QWidget* parent = nullptr);
 	void resizeEvent(QResizeEvent* event) override;
 	// Called by the emulator thread for resizing the actual GL surface, since the emulator thread owns the GL context
 	void resizeSurface(u32 width, u32 height);
@@ -28,6 +31,8 @@ class ScreenWidget : public QWidget {
 
   private:
 	std::unique_ptr<GL::Context> glContext = nullptr;
+	ResizeCallback resizeCallback;
+
 	bool createGLContext();
 
 	qreal devicePixelRatioFromScreen() const;
