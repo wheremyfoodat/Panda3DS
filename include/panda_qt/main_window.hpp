@@ -101,7 +101,7 @@ class MainWindow : public QMainWindow {
 
 	QMenuBar* menuBar = nullptr;
 	InputMappings keyboardMappings;
-	ScreenWidget screen;
+	ScreenWidget* screen;
 	AboutWindow* aboutWindow;
 	ConfigWindow* configWindow;
 	CheatsWindow* cheatsEditor;

@@ -39,7 +39,6 @@ ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
 void ScreenWidget::resizeEvent(QResizeEvent* event) {
 	previousWidth = surfaceWidth;
 	previousHeight = surfaceHeight;
-
 	QWidget::resizeEvent(event);
 
 	// Update surfaceWidth/surfaceHeight following the resize
