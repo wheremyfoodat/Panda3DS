@@ -11,11 +11,20 @@ class ScreenWidget : public QWidget {
 
   public:
 	ScreenWidget(QWidget* parent = nullptr);
+	void resizeEvent(QResizeEvent* event) override;
+	// Called by the emulator thread for resizing the actual GL surface, since the emulator thread owns the GL context
+	void resizeSurface(u32 width, u32 height);
+
 	GL::Context* getGLContext() { return glContext.get(); }
 
 	// Dimensions of our output surface
 	u32 surfaceWidth = 0;
 	u32 surfaceHeight = 0;
+	WindowInfo windowInfo;
+
+	// Cached "previous" dimensions, used when resizing our window
+	u32 previousWidth = 0;
+	u32 previousHeight = 0;
 
   private:
 	std::unique_ptr<GL::Context> glContext = nullptr;

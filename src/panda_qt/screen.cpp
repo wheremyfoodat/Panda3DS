@@ -12,6 +12,7 @@
 #include <qpa/qplatformnativeinterface.h>
 #endif
 
+#include "panda_qt/main_window.hpp"
 #include "panda_qt/screen.hpp"
 
 // OpenGL screen widget, based on https://github.com/stenzek/duckstation/blob/master/src/duckstation-qt/displaywidget.cpp
@@ -35,6 +36,31 @@ ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
 	}
 }
 
+void ScreenWidget::resizeEvent(QResizeEvent* event) {
+	previousWidth = surfaceWidth;
+	previousHeight = surfaceHeight;
+
+	QWidget::resizeEvent(event);
+
+	// Update surfaceWidth/surfaceHeight following the resize
+	std::optional<WindowInfo> windowInfo = getWindowInfo();
+	if (windowInfo) {
+		this->windowInfo = *windowInfo;
+	}
+
+	// This will call take care of calling resizeSurface from the emulator thread
+	static_cast<MainWindow*>(parentWidget())->handleScreenResize(surfaceWidth, surfaceHeight);
+}
+
+// Note: This will run on the emulator thread, we don't want any Qt calls happening there.
+void ScreenWidget::resizeSurface(u32 width, u32 height) {
+	if (previousWidth != width || previousHeight != height) {
+		if (glContext) {
+			glContext->ResizeSurface(width, height);
+		}
+	}
+}
+
 bool ScreenWidget::createGLContext() {
 	// List of GL context versions we will try. Anything 4.1+ is good
 	static constexpr std::array<GL::Context::Version, 6> versionsToTry = {
@@ -45,6 +71,8 @@ bool ScreenWidget::createGLContext() {
 
 	std::optional<WindowInfo> windowInfo = getWindowInfo();
 	if (windowInfo.has_value()) {
+		this->windowInfo = *windowInfo;
+
 		glContext = GL::Context::Create(*getWindowInfo(), versionsToTry);
 		glContext->DoneCurrent();
 	}

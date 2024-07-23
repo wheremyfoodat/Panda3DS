@@ -16,6 +16,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
+	setCentralWidget(&screen);
 	screen.show();
 
 	appRunning = true;
@@ -360,6 +361,15 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getRenderer()->setUbershader(*message.string.str);
 			delete message.string.str;
 			break;
+
+		case MessageType::SetScreenSize: {
+			const u32 width = message.screenSize.width;
+			const u32 height = message.screenSize.height;
+
+			emu->setOutputSize(width, height);
+			screen.resizeSurface(width, height);
+			break;
+		}
 	}
 }
 
@@ -479,6 +489,14 @@ void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const 
 	c->callback = callback;
 
 	message.cheat.c = c;
+	sendMessage(message);
+}
+
+void MainWindow::handleScreenResize(u32 width, u32 height) {
+	EmulatorMessage message{.type = MessageType::SetScreenSize};
+	message.screenSize.width = width;
+	message.screenSize.height = height;
+
 	sendMessage(message);
 }
 
