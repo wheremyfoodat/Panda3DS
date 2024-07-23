@@ -12,8 +12,9 @@
 #include <qpa/qplatformnativeinterface.h>
 #endif
 
-#include "panda_qt/main_window.hpp"
 #include "panda_qt/screen.hpp"
+// This comment exists because we don't want clang-format to reorder the headers here
+#include "panda_qt/main_window.hpp"
 
 // OpenGL screen widget, based on https://github.com/stenzek/duckstation/blob/master/src/duckstation-qt/displaywidget.cpp
 // and https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
