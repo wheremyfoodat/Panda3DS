@@ -10,13 +10,13 @@
 class Kernel;
 
 class NwmUdsService {
-	Handle handle = KernelHandles::NWM_UDS;
+	HandleType handle = KernelHandles::NWM_UDS;
 	Memory& mem;
 	Kernel& kernel;
 	MAKE_LOG_FUNCTION(log, nwmUdsLogger)
 
 	bool initialized = false;
-	std::optional<Handle> eventHandle = std::nullopt;
+	std::optional<HandleType> eventHandle = std::nullopt;
 
 	// Service commands
 	void initializeWithVersion(u32 messagePointer);

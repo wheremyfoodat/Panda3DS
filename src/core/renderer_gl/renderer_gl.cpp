@@ -415,12 +415,12 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
 
 		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
-		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
+		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance
 		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
 			usingUbershader = false;
 		}
 	}
-		
+
 	if (usingUbershader) {
 		gl.useProgram(triangleProgram);
 	} else {
@@ -558,7 +558,7 @@ void RendererGL::display() {
 	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
 	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
-	
+
 	if (bottomScreen) {
 		bottomScreen->get().texture.bind();
 		OpenGL::setViewport(40, 0, 320, 240);

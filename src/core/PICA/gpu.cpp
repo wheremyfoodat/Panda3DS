@@ -15,6 +15,9 @@
 #ifdef PANDA3DS_ENABLE_VULKAN
 #include "renderer_vk/renderer_vk.hpp"
 #endif
+#ifdef PANDA3DS_ENABLE_METAL
+#include "renderer_mtl/renderer_mtl.hpp"
+#endif
 
 constexpr u32 topScreenWidth = 240;
 constexpr u32 topScreenHeight = 400;
@@ -50,6 +53,12 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 #ifdef PANDA3DS_ENABLE_VULKAN
 		case RendererType::Vulkan: {
 			renderer.reset(new RendererVK(*this, regs, externalRegs));
+			break;
+		}
+#endif
+#ifdef PANDA3DS_ENABLE_METAL
+		case RendererType::Metal: {
+			renderer.reset(new RendererMTL(*this, regs, externalRegs));
 			break;
 		}
 #endif
@@ -365,7 +374,7 @@ PICA::Vertex GPU::getImmediateModeVertex() {
 
 	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
 	shaderUnit.vs.run();
-	
+
 	// Map shader outputs to fixed function properties
 	const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 	for (int i = 0; i < totalShaderOutputs; i++) {

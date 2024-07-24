@@ -8,7 +8,7 @@
 #include "result/result.hpp"
 
 class ACService {
-	Handle handle = KernelHandles::AC;
+	HandleType handle = KernelHandles::AC;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, acLogger)
 
@@ -25,7 +25,7 @@ class ACService {
 	void setClientVersion(u32 messagePointer);
 
 	bool connected = false;
-	std::optional<Handle> disconnectEvent = std::nullopt;
+	std::optional<HandleType> disconnectEvent = std::nullopt;
 
   public:
 	ACService(Memory& mem) : mem(mem) {}

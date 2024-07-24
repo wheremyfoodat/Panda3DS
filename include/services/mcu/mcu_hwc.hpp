@@ -7,7 +7,7 @@
 
 namespace MCU {
 	class HWCService {
-		Handle handle = KernelHandles::MCU_HWC;
+		HandleType handle = KernelHandles::MCU_HWC;
 		Memory& mem;
 		MAKE_LOG_FUNCTION(log, mcuLogger)
 

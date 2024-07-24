@@ -312,7 +312,7 @@ void CAMService::setReceiving(u32 messagePointer) {
 	const u32 portIndex = mem.read8(messagePointer + 8);
 	const u32 size = mem.read32(messagePointer + 12);
 	const u16 transferUnit = mem.read16(messagePointer + 16);
-	const Handle process = mem.read32(messagePointer + 24);
+	const HandleType process = mem.read32(messagePointer + 24);
 
 	const PortSelect port(portIndex);
 	log("CAM::SetReceiving (port = %d)\n", portIndex);

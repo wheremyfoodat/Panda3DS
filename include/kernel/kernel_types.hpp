@@ -7,9 +7,9 @@
 #include "result/result.hpp"
 
 enum class KernelObjectType : u8 {
-    AddressArbiter, Archive, Directory, File, MemoryBlock, Process, ResourceLimit, Session, Dummy,
-    // Bundle waitable objects together in the enum to let the compiler optimize certain checks better
-    Event, Mutex, Port, Semaphore, Timer, Thread
+	AddressArbiter, Archive, Directory, File, MemoryBlock, Process, ResourceLimit, Session, Dummy,
+	// Bundle waitable objects together in the enum to let the compiler optimize certain checks better
+	Event, Mutex, Port, Semaphore, Timer, Thread
 };
 
 enum class ResourceLimitCategory : int {
@@ -37,7 +37,7 @@ enum class ArbitrationType {
 enum class ProcessorID : s32 {
     AllCPUs = -1,
     Default = -2,
-    
+
     AppCore = 0,
     Syscore = 1,
     New3DSExtra1 = 2,
@@ -47,7 +47,7 @@ enum class ProcessorID : s32 {
 struct AddressArbiter {};
 
 struct ResourceLimits {
-    Handle handle;
+    HandleType handle;
 
     s32 currentCommit = 0;
 };
@@ -65,10 +65,11 @@ struct Event {
     // Some events (for now, only the DSP semaphore events) need to execute a callback when signalled
     // This enum stores what kind of callback they should execute
     enum class CallbackType : u32 {
-        None, DSPSemaphore,
+       	None,
+       	DSPSemaphore,
     };
 
-    u64 waitlist; // A bitfield where each bit symbolizes if the thread with thread with the corresponding index is waiting on the event
+    u64 waitlist;  // A bitfield where each bit symbolizes if the thread with thread with the corresponding index is waiting on the event
     ResetType resetType = ResetType::OneShot;
     CallbackType callback = CallbackType::None;
     bool fired = false;
@@ -81,18 +82,18 @@ struct Port {
     static constexpr u32 maxNameLen = 11;
 
     char name[maxNameLen + 1] = {};
-    bool isPublic = false; // Setting name=NULL creates a private port not accessible from svcConnectToPort.
+    bool isPublic = false;  // Setting name=NULL creates a private port not accessible from svcConnectToPort.
 
     Port(const char* name) {
-        // If the name is empty (ie the first char is the null terminator) then the port is private
-        isPublic = name[0] != '\0';
-        std::strncpy(this->name, name, maxNameLen);
+       	// If the name is empty (ie the first char is the null terminator) then the port is private
+       	isPublic = name[0] != '\0';
+       	std::strncpy(this->name, name, maxNameLen);
     }
 };
 
 struct Session {
-	Handle portHandle;  // The port this session is subscribed to
-	Session(Handle portHandle) : portHandle(portHandle) {}
+    HandleType portHandle;  // The port this session is subscribed to
+    Session(HandleType portHandle) : portHandle(portHandle) {}
 };
 
 enum class ThreadStatus {
@@ -115,14 +116,14 @@ struct Thread {
 	u32 arg;
 	ProcessorID processorID;
 	ThreadStatus status;
-	Handle handle;  // OS handle for this thread
-	int index;      // Index of the thread. 0 for the first thread, 1 for the second, and so on
+	HandleType handle;  // OS handle for this thread
+	int index;          // Index of the thread. 0 for the first thread, 1 for the second, and so on
 
 	// The waiting address for threads that are waiting on an AddressArbiter
 	u32 waitingAddress;
 
 	// For WaitSynchronization(N): A vector of objects this thread is waiting for
-	std::vector<Handle> waitList;
+	std::vector<HandleType> waitList;
 	// For WaitSynchronizationN: Shows whether the object should wait for all objects in the wait list or just one
 	bool waitAll;
 	// For WaitSynchronizationN: The "out" pointer
@@ -142,36 +143,36 @@ struct Thread {
 
 static const char* kernelObjectTypeToString(KernelObjectType t) {
     switch (t) {
-        case KernelObjectType::AddressArbiter: return "address arbiter";
-        case KernelObjectType::Archive: return "archive";
-        case KernelObjectType::Directory: return "directory";
-        case KernelObjectType::Event: return "event";
-        case KernelObjectType::File: return "file";
-        case KernelObjectType::MemoryBlock: return "memory block";
-        case KernelObjectType::Port: return "port";
-        case KernelObjectType::Process: return "process";
-        case KernelObjectType::ResourceLimit: return "resource limit";
-        case KernelObjectType::Session: return "session";
-        case KernelObjectType::Mutex: return "mutex";
-        case KernelObjectType::Semaphore: return "semaphore";
-        case KernelObjectType::Thread: return "thread";
-        case KernelObjectType::Dummy: return "dummy";
-        default: return "unknown";
+       	case KernelObjectType::AddressArbiter: return "address arbiter";
+       	case KernelObjectType::Archive: return "archive";
+       	case KernelObjectType::Directory: return "directory";
+       	case KernelObjectType::Event: return "event";
+       	case KernelObjectType::File: return "file";
+       	case KernelObjectType::MemoryBlock: return "memory block";
+       	case KernelObjectType::Port: return "port";
+       	case KernelObjectType::Process: return "process";
+       	case KernelObjectType::ResourceLimit: return "resource limit";
+       	case KernelObjectType::Session: return "session";
+       	case KernelObjectType::Mutex: return "mutex";
+       	case KernelObjectType::Semaphore: return "semaphore";
+       	case KernelObjectType::Thread: return "thread";
+       	case KernelObjectType::Dummy: return "dummy";
+       	default: return "unknown";
     }
 }
 
 struct Mutex {
-    u64 waitlist;           // Refer to the getWaitlist function below for documentation
-    Handle ownerThread = 0; // Index of the thread that holds the mutex if it's locked
-    Handle handle; // Handle of the mutex itself
-    u32 lockCount; // Number of times this mutex has been locked by its daddy. 0 = not locked
+    u64 waitlist;                // Refer to the getWaitlist function below for documentation
+    HandleType ownerThread = 0;  // Index of the thread that holds the mutex if it's locked
+    HandleType handle;           // HandleType of the mutex itself
+    u32 lockCount;               // Number of times this mutex has been locked by its daddy. 0 = not locked
     bool locked;
 
-    Mutex(bool lock, Handle handle) : locked(lock), waitlist(0), lockCount(lock ? 1 : 0), handle(handle) {}
+    Mutex(bool lock, HandleType handle) : locked(lock), waitlist(0), lockCount(lock ? 1 : 0), handle(handle) {}
 };
 
 struct Semaphore {
-    u64 waitlist; // Refer to the getWaitlist function below for documentation
+    u64 waitlist;  // Refer to the getWaitlist function below for documentation
     s32 availableCount;
     s32 maximumCount;
 
@@ -179,15 +180,15 @@ struct Semaphore {
 };
 
 struct Timer {
-	u64 waitlist;  // Refer to the getWaitlist function below for documentation
-	ResetType resetType = ResetType::OneShot;
+    u64 waitlist;  // Refer to the getWaitlist function below for documentation
+    ResetType resetType = ResetType::OneShot;
 
-	u64 fireTick;      // CPU tick the timer will be fired
-	u64 interval;      // Number of ns until the timer fires for the second and future times
-	bool fired;        // Has this timer been signalled?
-	bool running;      // Is this timer running or stopped?
+    u64 fireTick;      // CPU tick the timer will be fired
+    u64 interval;      // Number of ns until the timer fires for the second and future times
+    bool fired;        // Has this timer been signalled?
+    bool running;      // Is this timer running or stopped?
 
-	Timer(ResetType type) : resetType(type), fireTick(0), interval(0), waitlist(0), fired(false), running(false) {}
+    Timer(ResetType type) : resetType(type), fireTick(0), interval(0), waitlist(0), fired(false), running(false) {}
 };
 
 struct MemoryBlock {
@@ -197,17 +198,16 @@ struct MemoryBlock {
     u32 otherPermission = 0;
     bool mapped = false;
 
-    MemoryBlock(u32 addr, u32 size, u32 myPerm, u32 otherPerm) : addr(addr), size(size), myPermission(myPerm), otherPermission(otherPerm),
-        mapped(false) {}
+    MemoryBlock(u32 addr, u32 size, u32 myPerm, u32 otherPerm) : addr(addr), size(size), myPermission(myPerm), otherPermission(otherPerm), mapped(false) {}
 };
 
 // Generic kernel object class
 struct KernelObject {
-    Handle handle = 0; // A u32 the OS will use to identify objects
+    HandleType handle = 0;  // A u32 the OS will use to identify objects
     void* data = nullptr;
     KernelObjectType type;
 
-    KernelObject(Handle handle, KernelObjectType type) : handle(handle), type(type) {}
+    KernelObject(HandleType handle, KernelObjectType type) : handle(handle), type(type) {}
 
     // Our destructor does not free the data in order to avoid it being freed when our std::vector is expanded
     // Thus, the kernel needs to delete it when appropriate
@@ -218,28 +218,25 @@ struct KernelObject {
         return static_cast<T*>(data);
     }
 
-    const char* getTypeName() const {
-        return kernelObjectTypeToString(type);
-    }
+    const char* getTypeName() const { return kernelObjectTypeToString(type); }
 
     // Retrieves a reference to the waitlist for a specified object
-	// We return a reference because this function is only called in the kernel threading internals
-	// We want the kernel to be able to easily manage waitlists, by reading/parsing them or setting/clearing bits.
-	// As we mention in the definition of the "Event" struct, the format for wailists is very simple and made to be efficient.
-	// Each bit corresponds to a thread index and denotes whether the corresponding thread is waiting on this object
-	// For example if bit 0 of the wait list is set, then the thread with index 0 is waiting on our object
-	u64& getWaitlist() {
-		// This code is actually kinda trash but eh good enough
-		switch (type) {
-			case KernelObjectType::Event: return getData<Event>()->waitlist;
-			case KernelObjectType::Mutex: return getData<Mutex>()->waitlist;
-			case KernelObjectType::Semaphore: return getData<Mutex>()->waitlist;
-			case KernelObjectType::Thread: return getData<Thread>()->threadsWaitingForTermination;
-			case KernelObjectType::Timer: return getData<Timer>()->waitlist;
+    // We return a reference because this function is only called in the kernel threading internals
+    // We want the kernel to be able to easily manage waitlists, by reading/parsing them or setting/clearing bits.
+    // As we mention in the definition of the "Event" struct, the format for wailists is very simple and made to be efficient.
+    // Each bit corresponds to a thread index and denotes whether the corresponding thread is waiting on this object
+    // For example if bit 0 of the wait list is set, then the thread with index 0 is waiting on our object
+    u64& getWaitlist() {
+       	// This code is actually kinda trash but eh good enough
+       	switch (type) {
+      		case KernelObjectType::Event: return getData<Event>()->waitlist;
+      		case KernelObjectType::Mutex: return getData<Mutex>()->waitlist;
+      		case KernelObjectType::Semaphore: return getData<Mutex>()->waitlist;
+      		case KernelObjectType::Thread: return getData<Thread>()->threadsWaitingForTermination;
+      		case KernelObjectType::Timer: return getData<Timer>()->waitlist;
 
-			// This should be unreachable once we fully implement sync objects
-			default: [[unlikely]]
-                Helpers::panic("Called GetWaitList on kernel object without a waitlist (Type: %s)", getTypeName());
-		}
-	}
+      		// This should be unreachable once we fully implement sync objects
+      		default: [[unlikely]] Helpers::panic("Called GetWaitList on kernel object without a waitlist (Type: %s)", getTypeName());
+       	}
+    }
 };

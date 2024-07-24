@@ -21,7 +21,7 @@ void SOCService::handleSyncRequest(u32 messagePointer) {
 
 void SOCService::initializeSockets(u32 messagePointer) {
 	const u32 memoryBlockSize = mem.read32(messagePointer + 4);
-	const Handle sharedMemHandle = mem.read32(messagePointer + 20);
+	const HandleType sharedMemHandle = mem.read32(messagePointer + 20);
 	log("SOC::InitializeSockets (memory block size = %08X, shared mem handle = %08X)\n", memoryBlockSize, sharedMemHandle);
 
 	// TODO: Does double initialization return an error code?

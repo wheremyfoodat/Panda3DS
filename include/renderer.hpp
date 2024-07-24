@@ -3,6 +3,7 @@
 #include <span>
 #include <string>
 #include <optional>
+#include <span>
 
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
@@ -18,6 +19,7 @@ enum class RendererType : s8 {
 	OpenGL = 1,
 	Vulkan = 2,
 	Software = 3,
+	Metal = 4,
 };
 
 struct EmulatorConfig;

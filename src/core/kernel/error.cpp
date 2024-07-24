@@ -1,38 +1,25 @@
 #include "kernel.hpp"
 
 namespace Commands {
-	enum : u32 {
-		Throw = 0x00010800
-	};
+	enum : u32 { Throw = 0x00010800 };
 }
 
 namespace FatalErrorType {
-	enum : u32 {
-		Generic = 0,
-		Corrupted = 1,
-		CardRemoved = 2,
-		Exception = 3,
-		ResultFailure = 4,
-		Logged = 5
-	};
+	enum : u32 { Generic = 0, Corrupted = 1, CardRemoved = 2, Exception = 3, ResultFailure = 4, Logged = 5 };
 }
 
-// Handle SendSyncRequest targetting the err:f port
+// HandleType SendSyncRequest targetting the err:f port
 void Kernel::handleErrorSyncRequest(u32 messagePointer) {
 	u32 cmd = mem.read32(messagePointer);
 	switch (cmd) {
-		case Commands::Throw:
-			throwError(messagePointer);
-			break;
+		case Commands::Throw: throwError(messagePointer); break;
 
-		default:
-			Helpers::panic("Unimplemented err:f command %08X\n", cmd);
-			break;
+		default: Helpers::panic("Unimplemented err:f command %08X\n", cmd); break;
 	}
 }
 
 void Kernel::throwError(u32 messagePointer) {
-	const auto type = mem.read8(messagePointer + 4); // Fatal error type
+	const auto type = mem.read8(messagePointer + 4);  // Fatal error type
 	const u32 pc = mem.read32(messagePointer + 12);
 	const u32 pid = mem.read32(messagePointer + 16);
 	logError("Thrown fatal error @ %08X (pid = %X, type = %d)\n", pc, pid, type);

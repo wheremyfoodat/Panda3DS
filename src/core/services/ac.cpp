@@ -1,4 +1,5 @@
 #include "services/ac.hpp"
+
 #include "ipc.hpp"
 
 namespace ACCommands {
@@ -72,7 +73,7 @@ void ACService::getLastErrorCode(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0A, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Hopefully this means no error?
+	mem.write32(messagePointer + 8, 0);  // Hopefully this means no error?
 }
 
 void ACService::getConnectingInfraPriority(u32 messagePointer) {
@@ -130,7 +131,7 @@ void ACService::registerDisconnectEvent(u32 messagePointer) {
 	const u32 pidHeader = mem.read32(messagePointer + 4);
 	const u32 copyHandleHeader = mem.read32(messagePointer + 12);
 	// Event signaled when disconnecting from AC. TODO: Properly implement it.
-	const Handle eventHandle = mem.read32(messagePointer + 16);
+	const HandleType eventHandle = mem.read32(messagePointer + 16);
 
 	disconnectEvent = eventHandle;
 

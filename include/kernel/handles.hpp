@@ -1,7 +1,7 @@
 #pragma once
 #include "helpers.hpp"
 
-using Handle = u32;
+using HandleType = u32;
 
 namespace KernelHandles {
 	enum : u32 {
@@ -53,7 +53,7 @@ namespace KernelHandles {
 		GSPSharedMemHandle = MaxServiceHandle + 1, // Handle for the GSP shared memory
 		FontSharedMemHandle,
 		CSNDSharedMemHandle,
-		APTCaptureSharedMemHandle, // Shared memory for display capture info,  
+		APTCaptureSharedMemHandle, // Shared memory for display capture info,
 		HIDSharedMemHandle,
 
 		MinSharedMemHandle = GSPSharedMemHandle,
@@ -61,17 +61,17 @@ namespace KernelHandles {
 	};
 
 	// Returns whether "handle" belongs to one of the OS services
-	static constexpr bool isServiceHandle(Handle handle) {
-		return handle >= MinServiceHandle && handle <= MaxServiceHandle;
+	static constexpr bool isServiceHandle(HandleType handle) {
+	    return handle >= MinServiceHandle && handle <= MaxServiceHandle;
 	}
 
 	// Returns whether "handle" belongs to one of the OS services' shared memory areas
-	static constexpr bool isSharedMemHandle(Handle handle) {
-		return handle >= MinSharedMemHandle && handle <= MaxSharedMemHandle;
+	static constexpr bool isSharedMemHandle(HandleType handle) {
+	    return handle >= MinSharedMemHandle && handle <= MaxSharedMemHandle;
 	}
 
 	// Returns the name of a handle as a string based on the given handle
-	static const char* getServiceName(Handle handle) {
+	static const char* getServiceName(HandleType handle) {
 		switch (handle) {
 			case AC: return "AC";
 			case ACT: return "ACT";
