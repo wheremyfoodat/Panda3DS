@@ -57,7 +57,7 @@ class RendererMTL final : public Renderer {
 	// Objects
 	MTL::SamplerState* nearestSampler;
 	MTL::SamplerState* linearSampler;
-	MTL::Texture* lightLUTTextureArray;
+	MTL::Texture* lutTexture;
 	MTL::DepthStencilState* defaultDepthStencilState;
 
 	// Pipelines

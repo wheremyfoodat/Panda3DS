@@ -19,13 +19,13 @@ public:
     VertexBufferCache() = default;
 
     ~VertexBufferCache() {
-        reset();
+        endFrame();
+        buffer->release();
     }
 
     void set(MTL::Device* dev) {
         device = dev;
-        buffer = device->newBuffer(CACHE_BUFFER_SIZE, MTL::ResourceStorageModeShared);
-        buffer->setLabel(toNSString("Shared vertex buffer"));
+        create();
     }
 
     void endFrame() {
@@ -59,6 +59,7 @@ public:
     void reset() {
         endFrame();
         buffer->release();
+        create();
     }
 
 private:
@@ -67,6 +68,11 @@ private:
     std::vector<MTL::Buffer*> additionalAllocations;
 
     MTL::Device* device;
+
+    void create() {
+        buffer = device->newBuffer(CACHE_BUFFER_SIZE, MTL::ResourceStorageModeShared);
+        buffer->setLabel(toNSString("Shared vertex buffer"));
+    }
 };
 
 } // namespace Metal

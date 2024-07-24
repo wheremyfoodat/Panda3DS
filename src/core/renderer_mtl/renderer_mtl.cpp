@@ -130,15 +130,15 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();
-	textureDescriptor->setTextureType(MTL::TextureType1DArray);
-	textureDescriptor->setPixelFormat(MTL::PixelFormatRG32Float);
+	textureDescriptor->setTextureType(MTL::TextureType2D);
+	textureDescriptor->setPixelFormat(MTL::PixelFormatRGBA32Float);
 	textureDescriptor->setWidth(LIGHT_LUT_TEXTURE_WIDTH);
-	textureDescriptor->setArrayLength(Lights::LUT_Count + 1);
+	textureDescriptor->setHeight(Lights::LUT_Count + 1);
 	textureDescriptor->setUsage(MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite);
 	textureDescriptor->setStorageMode(MTL::StorageModePrivate);
 
-	lightLUTTextureArray = device->newTexture(textureDescriptor);
-	lightLUTTextureArray->setLabel(toNSString("LUT texture"));
+	lutTexture = device->newTexture(textureDescriptor);
+	lutTexture->setLabel(toNSString("LUT texture"));
 	textureDescriptor->release();
 
 	// Samplers
@@ -580,7 +580,7 @@ void RendererMTL::deinitGraphicsContext() {
 	copyToLutTexturePipeline->release();
 	displayPipeline->release();
 	defaultDepthStencilState->release();
-	lightLUTTextureArray->release();
+	lutTexture->release();
 	linearSampler->release();
 	nearestSampler->release();
 	library->release();
@@ -694,13 +694,13 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 	}
 
 	// LUT texture
-	encoder->setFragmentTexture(lightLUTTextureArray, 3);
+	encoder->setFragmentTexture(lutTexture, 3);
 	encoder->setFragmentSamplerState(linearSampler, 3);
 }
 
 void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.lightingLUTDirty = false;
-	std::array<float, GPU::LightingLutSize * 2> lightingLut;
+	std::array<float, GPU::LightingLutSize * 2> lightingLut = {0.0f};
 
 	for (int i = 0; i < gpu.lightingLUT.size(); i += 2) {
     	uint64_t value = gpu.lightingLUT[i >> 1] & 0xFFF;
@@ -708,12 +708,12 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	}
 
 	//for (int i = 0; i < Lights::LUT_Count; i++) {
-	//    lightLUTTextureArray->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
+	//    lutTexture->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
 	//}
 
 	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
 	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
-	renderCommandEncoder->setVertexTexture(lightLUTTextureArray, 0);
+	renderCommandEncoder->setVertexTexture(lutTexture, 0);
 	Metal::BufferHandle buffer = vertexBufferCache.get(lightingLut.data(), sizeof(lightingLut));
 	renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
 	u32 arrayOffset = 0;
@@ -724,7 +724,7 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.fogLUTDirty = false;
-	std::array<float, 128 * 2> fogLut;
+	std::array<float, 128 * 2> fogLut = {0.0f};
 
 	for (int i = 0; i < fogLut.size(); i += 2) {
 		const uint32_t value = gpu.fogLUT[i >> 1];
@@ -739,8 +739,9 @@ void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 
 	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
 	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
-	renderCommandEncoder->setVertexTexture(lightLUTTextureArray, 0);
-	renderCommandEncoder->setVertexBytes(fogLut.data(), sizeof(fogLut), 0);
+	renderCommandEncoder->setVertexTexture(lutTexture, 0);
+	Metal::BufferHandle buffer = vertexBufferCache.get(fogLut.data(), sizeof(fogLut));
+	renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
 	u32 arrayOffset = (u32)Lights::LUT_Count;
 	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
 

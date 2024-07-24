@@ -30,7 +30,7 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-interference-size")
-endif() 
+endif()
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
@@ -442,9 +442,10 @@ if(ENABLE_METAL AND APPLE)
         set(SHADER_SOURCE "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metal")
         set(SHADER_IR "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.ir")
         set(SHADER_METALLIB "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metallib")
+        # TODO: only include sources in debug builds
         add_custom_command(
             OUTPUT ${SHADER_IR}
-            COMMAND xcrun -sdk macosx metal -o ${SHADER_IR} -c ${SHADER_SOURCE}
+            COMMAND xcrun -sdk macosx metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
             DEPENDS ${SHADER_SOURCE}
             VERBATIM)
         add_custom_command(
