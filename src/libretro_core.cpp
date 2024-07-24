@@ -148,6 +148,8 @@ static bool FetchVariableBool(std::string key, bool def) {
 static void configInit() {
 	static const retro_variable values[] = {
 		{"panda3ds_use_shader_jit", "Enable shader JIT; enabled|disabled"},
+		{"panda3ds_accelerate_shaders",
+		 EmulatorConfig::accelerateShadersDefault ? "Run 3DS shaders on the GPU; enabled|disabled" : "Run 3DS shaders on the GPU; disabled|enabled"},
 		{"panda3ds_accurate_shader_mul", "Enable accurate shader multiplication; disabled|enabled"},
 		{"panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
 																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
@@ -179,7 +181,9 @@ static void configUpdate() {
 	config.sdCardInserted = FetchVariableBool("panda3ds_use_virtual_sd", true);
 	config.sdWriteProtected = FetchVariableBool("panda3ds_write_protect_virtual_sd", false);
 	config.accurateShaderMul = FetchVariableBool("panda3ds_accurate_shader_mul", false);
-	config.useUbershaders = FetchVariableBool("panda3ds_use_ubershader", true);
+	config.useUbershaders = FetchVariableBool("panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault);
+	config.accelerateShaders = FetchVariableBool("panda3ds_accelerate_shaders", EmulatorConfig::accelerateShadersDefault);
+
 	config.forceShadergenForLights = FetchVariableBool("panda3ds_ubershader_lighting_override", true);
 	config.lightShadergenThreshold = std::clamp(std::stoi(FetchVariable("panda3ds_ubershader_lighting_override_threshold", "1")), 1, 8);
 	config.discordRpcEnabled = false;
