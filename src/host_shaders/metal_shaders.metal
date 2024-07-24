@@ -102,27 +102,6 @@ struct EnvColor {
     }
 };
 
-struct DrawVertexOut {
-	float4 position [[position]];
-	float depth;
-	float4 quaternion;
-	float4 color;
-	float3 texCoord0;
-	float2 texCoord1;
-	float2 texCoord2;
-	float3 view;
-	float3 normal;
-	float3 tangent;
-	float3 bitangent;
-	EnvColor textureEnvColor [[flat]];
-	float4 textureEnvBufferColor [[flat]];
-};
-
-struct DrawVertexOutWithClip {
-    DrawVertexOut out;
-    float clipDistance [[clip_distance]] [2];
-};
-
 float3 rotateFloat3ByQuaternion(float3 v, float4 q) {
 	float3 u = q.xyz;
 	float s = q.w;
@@ -157,6 +136,26 @@ struct DepthUniforms {
    	bool depthMapEnable;
 };
 
+struct DrawVertexOut {
+	float4 position [[position]];
+	float4 quaternion;
+	float4 color;
+	float3 texCoord0;
+	float2 texCoord1;
+	float2 texCoord2;
+	float3 view;
+	float3 normal;
+	float3 tangent;
+	float3 bitangent;
+	EnvColor textureEnvColor [[flat]];
+	float4 textureEnvBufferColor [[flat]];
+};
+
+struct DrawVertexOutWithClip {
+    DrawVertexOut out;
+    float clipDistance [[clip_distance]] [2];
+};
+
 // TODO: check this
 float transformZ(float z, float w, constant DepthUniforms& depthUniforms) {
     z = z / w * depthUniforms.depthScale + depthUniforms.depthOffset;
@@ -177,7 +176,6 @@ vertex DrawVertexOutWithClip vertexDraw(DrawVertexIn in [[stage_in]], constant P
 
 	// Apply depth uniforms
 	out.position.z = transformZ(out.position.z, out.position.w, depthUniforms);
-	out.depth = out.position.z;
 
 	// Color
 	out.color = min(abs(in.color), 1.0);
@@ -678,7 +676,7 @@ float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]], constant DepthUniforms& depthUniforms [[buffer(3)]],
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]],
                              texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture2d<float> texLut [[texture(3)]],
                              sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
@@ -727,19 +725,12 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 
 	float4 color = globals.tevSources[15];
 
-	// Depth
-	float z_over_w = in.position.z;
-	float depth = z_over_w * depthUniforms.depthScale + depthUniforms.depthOffset;
-
-	if (!depthUniforms.depthMapEnable)  // Divide z by w if depthmap enable == 0 (ie using W-buffering)
-		depth /= in.position.w;
-
 	// Fog
 	bool enable_fog = (textureEnvUpdateBuffer & 7u) == 5u;
 
 	if (enable_fog) {
 		bool flip_depth = (textureEnvUpdateBuffer & (1u << 16)) != 0u;
-		float fog_index = flip_depth ? 1.0 - depth : depth;
+		float fog_index = flip_depth ? 1.0 - in.position.z : in.position.z;
 		fog_index *= 128.0;
 		float clamped_index = clamp(floor(fog_index), 0.0, 127.0);
 		float delta = fog_index - clamped_index;

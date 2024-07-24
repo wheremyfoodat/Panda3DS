@@ -35,8 +35,8 @@ inline MTL::PixelFormat toMTLPixelFormatColor(ColorFmt format) {
     switch (format) {
     case ColorFmt::RGBA8: return MTL::PixelFormatRGBA8Unorm;
     case ColorFmt::RGB8: return MTL::PixelFormatRGBA8Unorm;
-    case ColorFmt::RGBA5551: return MTL::PixelFormatBGR5A1Unorm;
-    case ColorFmt::RGB565: return MTL::PixelFormatB5G6R5Unorm;
+    case ColorFmt::RGBA5551: return MTL::PixelFormatRGBA8Unorm; // TODO: use MTL::PixelFormatBGR5A1Unorm?
+    case ColorFmt::RGB565: return MTL::PixelFormatRGBA8Unorm; // TODO: use MTL::PixelFormatB5G6R5Unorm?
     case ColorFmt::RGBA4: return MTL::PixelFormatABGR4Unorm;
     }
 }

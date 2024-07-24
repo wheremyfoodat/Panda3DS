@@ -58,12 +58,14 @@ public:
 
     void reset() {
         endFrame();
-        buffer->release();
-        create();
+        if (buffer) {
+            buffer->release();
+            create();
+        }
     }
 
 private:
-    MTL::Buffer* buffer;
+    MTL::Buffer* buffer = nullptr;
     size_t ptr = 0;
     std::vector<MTL::Buffer*> additionalAllocations;
 

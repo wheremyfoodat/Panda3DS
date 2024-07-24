@@ -445,7 +445,7 @@ if(ENABLE_METAL AND APPLE)
         # TODO: only include sources in debug builds
         add_custom_command(
             OUTPUT ${SHADER_IR}
-            COMMAND xcrun -sdk macosx metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
+            COMMAND xcrun -sdk macosx metal -gline-tables-only -frecord-sources -fno-fast-math -o ${SHADER_IR} -c ${SHADER_SOURCE}
             DEPENDS ${SHADER_SOURCE}
             VERBATIM)
         add_custom_command(

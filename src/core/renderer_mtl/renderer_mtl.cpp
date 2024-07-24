@@ -563,7 +563,6 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
 	renderCommandEncoder->setVertexBytes(&depthUniforms, sizeof(depthUniforms), 2);
 	renderCommandEncoder->setFragmentBytes(&logicOp, sizeof(logicOp), 2);
-	renderCommandEncoder->setFragmentBytes(&depthUniforms, sizeof(depthUniforms), 3);
 
 	renderCommandEncoder->drawPrimitives(toMTLPrimitiveType(primType), NS::UInteger(0), NS::UInteger(vertices.size()));
 }
@@ -719,7 +718,7 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	u32 arrayOffset = 0;
 	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
 
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), GPU::LightingLutSize);
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), GPU::LightingLutSize);
 }
 
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
@@ -740,12 +739,13 @@ void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
 	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
 	renderCommandEncoder->setVertexTexture(lutTexture, 0);
-	Metal::BufferHandle buffer = vertexBufferCache.get(fogLut.data(), sizeof(fogLut));
-	renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
+	//Metal::BufferHandle buffer = vertexBufferCache.get(fogLut.data(), sizeof(fogLut));
+	//renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
+	renderCommandEncoder->setVertexBytes(fogLut.data(), sizeof(fogLut), 0);
 	u32 arrayOffset = (u32)Lights::LUT_Count;
 	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
 
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(128));
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(128));
 }
 
 void RendererMTL::textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect, const Math::Rect<u32>& destRect) {
