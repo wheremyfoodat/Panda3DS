@@ -21,8 +21,10 @@ enum class RendererType : s8 {
 };
 
 struct EmulatorConfig;
-class GPU;
 struct SDL_Window;
+
+class GPU;
+class ShaderUnit;
 
 class Renderer {
   protected:
@@ -77,7 +79,10 @@ class Renderer {
 	virtual std::string getUbershader() { return ""; }
 	virtual void setUbershader(const std::string& shader) {}
 
-	virtual void setUbershaderSetting(bool value) {}
+	// This function is called on every draw call before parsing vertex data.
+	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between
+	// ubershaders and shadergen, and so on.
+	virtual void prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {}
 
 	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
 #ifdef PANDA3DS_FRONTEND_QT

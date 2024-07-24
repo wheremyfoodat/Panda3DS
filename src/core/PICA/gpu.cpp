@@ -117,13 +117,13 @@ void GPU::reset() {
 	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
 	externalRegs[Framebuffer1Select] = 0;
 
-	renderer->setUbershaderSetting(config.useUbershaders);
 	renderer->reset();
 }
 
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
+	renderer->prepareForDraw(shaderUnit, false);
 	const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
 
 	if (indexed) {

@@ -72,19 +72,17 @@ const Function* ShaderDecompiler::findFunction(const AddressRange& range) {
 
 void ShaderDecompiler::writeAttributes() {
 	decompiledShader += R"(
-		layout(location = 0) in vec4 inputs[8];
+	layout(location = 0) in vec4 inputs[8];
+	layout(std140) uniform PICAShaderUniforms {
+		vec4 uniform_float[96];
+		uvec4 uniform_int;
+		uint uniform_bool;
+	};
 
-		layout(std140) uniform PICAShaderUniforms {
-			vec4 uniform_float[96];
-			uvec4 uniform_int;
-			uint uniform_bool;
-		};
-	
-		vec4 temp_registers[16];
-		vec4 dummy_vec = vec4(0.0);
+	vec4 temp_registers[16];
+	vec4 output_registers[8];
+	vec4 dummy_vec = vec4(0.0);
 )";
-
-	decompiledShader += "\n";
 }
 
 std::string ShaderDecompiler::decompile() {

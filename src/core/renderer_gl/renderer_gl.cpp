@@ -4,11 +4,12 @@
 
 #include <cmrc/cmrc.hpp>
 
-#include "config.hpp"
 #include "PICA/float_types.hpp"
-#include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
+#include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/shader_decompiler.hpp"
+#include "config.hpp"
 #include "math_util.hpp"
 
 CMRC_DECLARE(RendererGL);
@@ -409,25 +410,6 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
-	bool usingUbershader = enableUbershader;
-	if (usingUbershader) {
-		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
-		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
-
-		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
-		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
-		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
-			usingUbershader = false;
-		}
-	}
-		
-	if (usingUbershader) {
-		gl.useProgram(triangleProgram);
-	} else {
-		OpenGL::Program& program = getSpecializedShader();
-		gl.useProgram(program);
-	}
-
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
 	gl.bindVBO(vbo);
@@ -449,38 +431,9 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const int depthFunc = getBits<4, 3>(depthControl);
 	const int colourMask = getBits<8, 4>(depthControl);
 	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
-
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
-	// Update ubershader uniforms
-	if (usingUbershader) {
-		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
-		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
-		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
-
-		if (oldDepthScale != depthScale) {
-			oldDepthScale = depthScale;
-			glUniform1f(ubershaderData.depthScaleLoc, depthScale);
-		}
-
-		if (oldDepthOffset != depthOffset) {
-			oldDepthOffset = depthOffset;
-			glUniform1f(ubershaderData.depthOffsetLoc, depthOffset);
-		}
-
-		if (oldDepthmapEnable != depthMapEnable) {
-			oldDepthmapEnable = depthMapEnable;
-			glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
-		}
-
-		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
-		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
-		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
-		setupUbershaderTexEnv();
-	}
-
 	bindTexturesToSlots();
-
 	if (gpu.fogLUTDirty) {
 		updateFogLUT();
 	}
@@ -949,6 +902,62 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
 
 	return program;
+}
+
+void RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
+	std::string vertShaderSource = PICA::ShaderGen::decompileShader(
+		shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
+	);
+	
+	OpenGL::Shader vert({vertShaderSource.c_str(), vertShaderSource.size()}, OpenGL::Vertex);
+	//triangleProgram.create({vert, frag});
+	std::cout << vertShaderSource << "\n";
+
+	bool usingUbershader = emulatorConfig->useUbershaders;
+	if (usingUbershader) {
+		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
+		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
+
+		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
+		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance
+		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
+			usingUbershader = false;
+		}
+	}
+
+	if (usingUbershader) {
+		gl.useProgram(triangleProgram);
+	} else {
+		OpenGL::Program& program = getSpecializedShader();
+		gl.useProgram(program);
+	}
+
+	// Update ubershader uniforms
+	if (usingUbershader) {
+		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
+
+		if (oldDepthScale != depthScale) {
+			oldDepthScale = depthScale;
+			glUniform1f(ubershaderData.depthScaleLoc, depthScale);
+		}
+
+		if (oldDepthOffset != depthOffset) {
+			oldDepthOffset = depthOffset;
+			glUniform1f(ubershaderData.depthOffsetLoc, depthOffset);
+		}
+
+		if (oldDepthmapEnable != depthMapEnable) {
+			oldDepthmapEnable = depthMapEnable;
+			glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
+		}
+
+		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
+		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
+		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
+		setupUbershaderTexEnv();
+	}
 }
 
 void RendererGL::screenshot(const std::string& name) {
