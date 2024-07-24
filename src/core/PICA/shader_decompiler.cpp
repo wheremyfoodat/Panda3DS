@@ -1,5 +1,7 @@
 #include "PICA/shader_decompiler.hpp"
 
+#include <fmt/format.h>
+
 #include "config.hpp"
 
 using namespace PICA;
@@ -254,14 +256,14 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 
 		switch (opcode) {
 			case ShaderOpcodes::MOV: setDest(operandDescriptor, dest, src1); break;
-			case ShaderOpcodes::ADD: setDest(operandDescriptor, dest, src1 + " + " + src2); break;
-			case ShaderOpcodes::MUL: setDest(operandDescriptor, dest, src1 + " * " + src2); break;
-			case ShaderOpcodes::MAX: setDest(operandDescriptor, dest, "max(" + src1 + ", " + src2 + ")"); break;
-			case ShaderOpcodes::MIN: setDest(operandDescriptor, dest, "min(" + src1 + ", " + src2 + ")"); break;
+			case ShaderOpcodes::ADD: setDest(operandDescriptor, dest, fmt::format("{} + {}", src1, src2)); break;
+			case ShaderOpcodes::MUL: setDest(operandDescriptor, dest, fmt::format("{} * {}", src1, src2)); break;
+			case ShaderOpcodes::MAX: setDest(operandDescriptor, dest, fmt::format("max({}, {})", src1, src2)); break;
+			case ShaderOpcodes::MIN: setDest(operandDescriptor, dest, fmt::format("min({}, {})", src1, src2)); break;
 
-			case ShaderOpcodes::DP3: setDest(operandDescriptor, dest, "vec4(dot(" + src1 + ".xyz, " + src2 + ".xyz))"); break;
-			case ShaderOpcodes::DP4: setDest(operandDescriptor, dest, "vec4(dot(" + src1 + ", " + src2 + "))"); break;
-			case ShaderOpcodes::RSQ: setDest(operandDescriptor, dest, "vec4(inversesqrt(" + src1 + ".x))"); break;
+			case ShaderOpcodes::DP3: setDest(operandDescriptor, dest, fmt::format("vec4(dot({}.xyz, {}.xyz))", src1, src2)); break;
+			case ShaderOpcodes::DP4: setDest(operandDescriptor, dest, fmt::format("vec4(dot({}, {}))", src1, src2)); break;
+			case ShaderOpcodes::RSQ: setDest(operandDescriptor, dest, fmt::format("vec4(inversesqrt({}.x))", src1)); break;
 
 			default: Helpers::panic("GLSL recompiler: Unknown common opcode: %X", opcode); break;
 		}
