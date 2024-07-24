@@ -255,10 +255,56 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 		}
 
 		switch (opcode) {
-			case ShaderOpcodes::DP4: setDest(operandDescriptor, dest, "vec4(dot(" + src1 + ", " + src2 + "))"); break;
 			case ShaderOpcodes::MOV: setDest(operandDescriptor, dest, src1); break;
+			case ShaderOpcodes::ADD: setDest(operandDescriptor, dest, src1 + " + " + src2); break;
+			case ShaderOpcodes::MUL: setDest(operandDescriptor, dest, src1 + " * " + src2); break;
+			case ShaderOpcodes::MAX: setDest(operandDescriptor, dest, "max(" + src1 + ", " + src2 + ")"); break;
+			case ShaderOpcodes::MIN: setDest(operandDescriptor, dest, "min(" + src1 + ", " + src2 + ")"); break;
+
+			case ShaderOpcodes::DP3: setDest(operandDescriptor, dest, "vec4(dot(" + src1 + ".xyz, " + src2 + ".xyz))"); break;
+			case ShaderOpcodes::DP4: setDest(operandDescriptor, dest, "vec4(dot(" + src1 + ", " + src2 + "))"); break;
+			case ShaderOpcodes::RSQ: setDest(operandDescriptor, dest, "vec4(inversesqrt(" + src1 + ".x))"); break;
+
 			default: Helpers::panic("GLSL recompiler: Unknown common opcode: %X", opcode); break;
 		}
+	} else if (opcode >= 0x30 && opcode <= 0x3F) { // MAD and MADI
+		const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
+		const bool isMADI = getBit<29>(instruction) == 0; // We detect MADI based on bit 29 of the instruction
+
+		// src1 and src2 indexes depend on whether this is one of the inverting instructions or not
+		const u32 src1Index = getBits<17, 5>(instruction);
+		const u32 src2Index = isMADI ? getBits<12, 5>(instruction) : getBits<10, 7>(instruction);
+		const u32 src3Index = isMADI ? getBits<5, 7>(instruction) : getBits<5, 5>(instruction);
+		const u32 idx = getBits<22, 2>(instruction);
+		const u32 destIndex = getBits<24, 5>(instruction);
+
+		const bool negate1 = (getBit<4>(operandDescriptor)) != 0;
+		const u32 swizzle1 = getBits<5, 8>(operandDescriptor);
+		const bool negate2 = (getBit<13>(operandDescriptor)) != 0;
+		const u32 swizzle2 = getBits<14, 8>(operandDescriptor);
+
+		const bool negate3 = (getBit<22>(operandDescriptor)) != 0;
+		const u32 swizzle3 = getBits<23, 8>(operandDescriptor);
+
+		std::string src1 = negate1 ? "-" : "";
+		src1 += getSource(src1Index, 0);
+		src1 += getSwizzlePattern(swizzle1);
+
+		std::string src2 = negate2 ? "-" : "";
+		src2 += getSource(src2Index, isMADI ? 0 : idx);
+		src2 += getSwizzlePattern(swizzle2);
+
+		std::string src3 = negate3 ? "-" : "";
+		src3 += getSource(src3Index, isMADI ? idx : 0);
+		src3 += getSwizzlePattern(swizzle3);
+
+		std::string dest = getDest(destIndex);
+
+		if (idx != 0) {
+			Helpers::panic("GLSL recompiler: Indexed instruction");
+		}
+
+		setDest(operandDescriptor, dest, src1 + " * " + src2 + " + " + src3);
 	} else {
 		switch (opcode) {
 			case ShaderOpcodes::END: finished = true; return;
