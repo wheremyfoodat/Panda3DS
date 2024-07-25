@@ -34,8 +34,10 @@ namespace PICA {
 		alignas(16) vec4 tevBufferColor;
 		alignas(16) vec4 clipCoords;
 
-		// Note: We upload this as a u32 and decode on GPU
+		// Note: We upload these as a u32 and decode on GPU.
+		// Particularly the fog colour since fog is really uncommon and it doesn't matter if we decode on GPU.
 		u32 globalAmbientLight;
+		u32 fogColor;
 		// NOTE: THIS MUST BE LAST so that if lighting is disabled we can potentially omit uploading it
 		LightUniform lightUniforms[8];
 	};

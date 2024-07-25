@@ -76,11 +76,11 @@ class RendererGL final : public Renderer {
 	// The "default" vertex shader to use when using specialized shaders but not PICA vertex shader -> GLSL recompilation
 	// We can compile this once and then link it with all other generated fragment shaders
 	OpenGL::Shader defaultShadergenVs;
+	GLuint shadergenFragmentUBO;
 
 	// Cached recompiled fragment shader
 	struct CachedProgram {
 		OpenGL::Program program;
-		uint uboBinding;
 	};
 
 	struct ShaderCache {
