@@ -696,14 +696,14 @@ out vec2 v_texcoord2;
 
 void main() {
 	pica_shader_main();
-	vec4 a_coords = output_registers[0];
-	vec4 a_vertexColour = output_registers[1];
-	vec2 a_texcoord0 = output_registers[2].xy;
-	float a_texcoord0_w = output_registers[2].w;
-	vec2 a_texcoord1 = output_registers[3].xy;
-	vec2 a_texcoord2 = output_registers[4].xy;
-	vec3 a_view = output_registers[5].xyz;
-	vec4 a_quaternion = output_registers[6];
+	vec4 a_coords = out_regs[0];
+	vec4 a_vertexColour = out_regs[1];
+	vec2 a_texcoord0 = out_regs[2].xy;
+	float a_texcoord0_w = out_regs[2].w;
+	vec2 a_texcoord1 = out_regs[3].xy;
+	vec2 a_texcoord2 = out_regs[4].xy;
+	vec3 a_view = out_regs[5].xyz;
+	vec4 a_quaternion = out_regs[6];
 
 	gl_Position = a_coords;
 	vec4 colourAbs = abs(a_vertexColour);

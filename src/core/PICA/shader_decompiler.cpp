@@ -81,8 +81,8 @@ void ShaderDecompiler::writeAttributes() {
 		uint uniform_bool;
 	};
 
-	vec4 temp_registers[16];
-	vec4 output_registers[8];
+	vec4 tmp_regs[16];
+	vec4 out_regs[8];
 	vec4 dummy_vec = vec4(0.0);
 )";
 }
@@ -141,7 +141,7 @@ std::string ShaderDecompiler::getSource(u32 source, [[maybe_unused]] u32 index) 
 	if (source < 0x10) {
 		return "inputs[" + std::to_string(source) + "]";
 	} else if (source < 0x20) {
-		return "temp_registers[" + std::to_string(source - 0x10) + "]";
+		return "tmp_regs[" + std::to_string(source - 0x10) + "]";
 	} else {
 		const usize floatIndex = (source - 0x20) & 0x7f;
 
@@ -154,9 +154,9 @@ std::string ShaderDecompiler::getSource(u32 source, [[maybe_unused]] u32 index) 
 
 std::string ShaderDecompiler::getDest(u32 dest) const {
 	if (dest < 0x10) {
-		return "output_registers[" + std::to_string(dest) + "]";
+		return "out_regs[" + std::to_string(dest) + "]";
 	} else if (dest < 0x20) {
-		return "temp_registers[" + std::to_string(dest - 0x10) + "]";
+		return "tmp_regs[" + std::to_string(dest - 0x10) + "]";
 	} else {
 		return "dummy_vec";
 	}
