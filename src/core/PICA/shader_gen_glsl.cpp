@@ -72,11 +72,6 @@ std::string FragmentGenerator::getDefaultVertexShader() {
 		out float gl_ClipDistance[2];
 	#endif
 
-		vec4 abgr8888ToVec4(uint abgr) {
-			const float scale = 1.0 / 255.0;
-			return scale * vec4(float(abgr & 0xffu), float((abgr >> 8) & 0xffu), float((abgr >> 16) & 0xffu), float(abgr >> 24));
-		}
-
 		void main() {
 			gl_Position = a_coords;
 			vec4 colourAbs = abs(a_vertexColour);
