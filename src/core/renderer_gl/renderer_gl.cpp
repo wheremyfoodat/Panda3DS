@@ -944,7 +944,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 		// If the optional is false, we have never tried to recompile the shader before. Try to recompile it and see if it works.
 		if (!shader.has_value()) {
 			// Initialize shader to a "null" shader (handle == 0)
-			*shader = OpenGL::Shader();
+			shader = OpenGL::Shader();
 
 			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
 				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL

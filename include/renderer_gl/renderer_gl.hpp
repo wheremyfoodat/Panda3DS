@@ -95,7 +95,6 @@ class RendererGL final : public Renderer {
 			for (auto& it : programCache) {
 				CachedProgram& cachedProgram = it.second;
 				cachedProgram.program.free();
-				glDeleteBuffers(1, &cachedProgram.uboBinding);
 			}
 
 			for (auto& it : vertexShaderCache) {
