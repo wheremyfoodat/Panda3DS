@@ -204,14 +204,19 @@ void MainWindow::selectLuaFile() {
 	}
 }
 
-// Cleanup when the main window closes
-MainWindow::~MainWindow() {
+// Stop emulator thread when the main window closes
+void MainWindow::closeEvent(QCloseEvent *event) {
 	appRunning = false;  // Set our running atomic to false in order to make the emulator thread stop, and join it
 
 	if (emuThread.joinable()) {
 		emuThread.join();
 	}
 
+	SDL_Quit();
+}
+
+// Cleanup when the main window closes
+MainWindow::~MainWindow() {
 	delete emu;
 	delete menuBar;
 	delete aboutWindow;
