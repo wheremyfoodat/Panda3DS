@@ -211,8 +211,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 	if (emuThread.joinable()) {
 		emuThread.join();
 	}
-
-	SDL_Quit();
 }
 
 // Cleanup when the main window closes
