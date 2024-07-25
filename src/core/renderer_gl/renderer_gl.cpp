@@ -77,6 +77,11 @@ void RendererGL::initGraphicsContextInternal() {
 	gl.useProgram(displayProgram);
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
 
+	// Allocate memory for the shadergen fragment uniform UBO
+	glGenBuffers(1, &shadergenFragmentUBO);
+	gl.bindUBO(shadergenFragmentUBO);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
+
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
 	gl.bindVBO(vbo);
 	vao.create();
@@ -853,17 +858,12 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 
-		// Allocate memory for the program UBO
-		glGenBuffers(1, &programEntry.uboBinding);
-		gl.bindUBO(programEntry.uboBinding);
-		glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
-
 		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
 		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
 		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
 		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
 	}
-	glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, programEntry.uboBinding);
+	glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, shadergenFragmentUBO);
 
 	// Upload uniform data to our shader's UBO
 	PICA::FragmentUniforms uniforms;
@@ -945,7 +945,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		}
 	}
 
-	gl.bindUBO(programEntry.uboBinding);
+	gl.bindUBO(shadergenFragmentUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
 
 	return program;
@@ -980,7 +980,6 @@ void RendererGL::clearShaderCache() {
 	for (auto& shader : shaderCache) {
 		CachedProgram& cachedProgram = shader.second;
 		cachedProgram.program.free();
-		glDeleteBuffers(1, &cachedProgram.uboBinding);
 	}
 
 	shaderCache.clear();
