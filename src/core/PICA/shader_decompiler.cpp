@@ -163,6 +163,12 @@ std::string ShaderDecompiler::getDest(u32 dest) const {
 }
 
 std::string ShaderDecompiler::getSwizzlePattern(u32 swizzle) const {
+	// If the swizzle field is this value then the swizzle pattern is .xyzw so we don't need a shuffle
+	static constexpr uint noSwizzle = 0x1B;
+	if (swizzle == noSwizzle) {
+		return "";
+	}
+
 	static constexpr std::array<char, 4> names = {'x', 'y', 'z', 'w'};
 	std::string ret(".    ");
 	
@@ -211,8 +217,10 @@ void ShaderDecompiler::setDest(u32 operandDescriptor, const std::string& dest, c
 	decompiledShader += dest + destSwizzle + " = ";
 	if (writtenLaneCount == 1) {
 		decompiledShader += "float(" + value + ");\n";
-	} else {
-		decompiledShader += "vec" + std::to_string(writtenLaneCount) + "(" + value + ");\n";
+	} else if (writtenLaneCount <= 3) { // We don't need to cast for vec4, as we guarantee the rhs will be a vec4
+		decompiledShader += fmt::format("vec{}({});\n", writtenLaneCount, value);
+	} else if (writtenLaneCount == 4) {
+		decompiledShader += fmt::format("{};\n", value);
 	}
 }
 
