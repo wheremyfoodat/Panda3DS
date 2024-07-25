@@ -13,6 +13,12 @@
 #include "memory.hpp"
 #include "renderer.hpp"
 
+enum class ShaderExecMode {
+	Interpreter,  // Interpret shaders on the CPU
+	JIT,          // Recompile shaders to CPU machine code
+	Hardware,     // Recompiler shaders to host shaders and run them on the GPU
+};
+
 class GPU {
 	static constexpr u32 regNum = 0x300;
 	static constexpr u32 extRegNum = 0x1000;
@@ -45,7 +51,7 @@ class GPU {
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex;  // Index of the immediate mode attribute we're uploading
 
-	template <bool indexed, bool useShaderJIT>
+	template <bool indexed, ShaderExecMode mode>
 	void drawArrays();
 
 	// Silly method of avoiding linking problems. TODO: Change to something less silly

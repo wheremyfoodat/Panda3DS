@@ -25,7 +25,7 @@ void RendererGL::reset() {
 	colourBufferCache.reset();
 	textureCache.reset();
 
-	clearShaderCache();
+	shaderCache.clear();
 
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
@@ -788,17 +788,23 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	PICA::FragmentConfig fsConfig(regs);
 
-	CachedProgram& programEntry = shaderCache[fsConfig];
+	OpenGL::Shader& fragShader = shaderCache.fragmentShaderCache[fsConfig];
+	if (!fragShader.exists()) {
+		std::string fs = fragShaderGen.generate(fsConfig);
+		fragShader.create({fs.c_str(), fs.size()}, OpenGL::Fragment);
+	}
+
+	// Get the handle of the current vertex shader
+	OpenGL::Shader& vertexShader = usingAcceleratedShader ? *generatedVertexShader : defaultShadergenVs;
+	// And form the key for looking up a shader program
+	const u64 programKey = (u64(vertexShader.handle()) << 32) | u64(fragShader.handle());
+
+	CachedProgram& programEntry = shaderCache.programCache[programKey];
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
-		std::string fs = fragShaderGen.generate(fsConfig);
-
-		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
-		program.create({defaultShadergenVs, fragShader});
+		program.create({vertexShader, fragShader});
 		gl.useProgram(program);
-
-		fragShader.free();
 
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
@@ -904,15 +910,8 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	return program;
 }
 
-void RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
-	std::string vertShaderSource = PICA::ShaderGen::decompileShader(
-		shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
-	);
-	
-	OpenGL::Shader vert({vertShaderSource.c_str(), vertShaderSource.size()}, OpenGL::Vertex);
-	//triangleProgram.create({vert, frag});
-	std::cout << vertShaderSource << "\n";
-
+bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
+	// First we figure out if we will be using an ubershader
 	bool usingUbershader = emulatorConfig->useUbershaders;
 	if (usingUbershader) {
 		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
@@ -922,6 +921,46 @@ void RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance
 		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
 			usingUbershader = false;
+		}
+	}
+
+	// Then we figure out if we will use hw accelerated shaders, and try to fetch our shader
+	// TODO: Ubershader support for accelerated shaders
+	usingAcceleratedShader = emulatorConfig->accelerateShaders && !isImmediateMode && !usingUbershader;
+
+	if (usingAcceleratedShader) {
+		auto shaderCodeHash = shaderUnit.vs.getCodeHash();
+		auto opdescHash = shaderUnit.vs.getOpdescHash();
+		auto vertexConfig = PICA::VertConfig{
+			.shaderHash = shaderCodeHash,
+			.opdescHash = opdescHash,
+			.entrypoint = shaderUnit.vs.entrypoint,
+			.usingUbershader = usingUbershader,
+		};
+
+		std::optional<OpenGL::Shader>& shader = shaderCache.vertexShaderCache[vertexConfig];
+		// If the optional is false, we have never tried to recompile the shader before. Try to recompile it and see if it works.
+		if (!shader.has_value()) {
+			// Initialize shader to a "null" shader (handle == 0)
+			*shader = OpenGL::Shader();
+
+			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
+				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
+			);
+			
+			// Empty source means compilation error, if the source is not empty then we convert the rcompiled PICA code into a valid shader and upload
+			// it to the GPU
+			if (!picaShaderSource.empty()) {
+				std::string vertexShaderSource = fragShaderGen.getVertexShaderAccelerated(picaShaderSource, usingUbershader);
+				shader->create({vertexShaderSource}, OpenGL::Vertex);
+			}
+		}
+
+		// Shader generation did not work out, so set usingAcceleratedShader to false
+		if (!shader->exists()) {
+			usingAcceleratedShader = false;
+		} else {
+			generatedVertexShader = &(*shader);
 		}
 	}
 
@@ -958,6 +997,8 @@ void RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
 		setupUbershaderTexEnv();
 	}
+
+	return usingAcceleratedShader;
 }
 
 void RendererGL::screenshot(const std::string& name) {
@@ -985,22 +1026,12 @@ void RendererGL::screenshot(const std::string& name) {
 	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
 }
 
-void RendererGL::clearShaderCache() {
-	for (auto& shader : shaderCache) {
-		CachedProgram& cachedProgram = shader.second;
-		cachedProgram.program.free();
-		glDeleteBuffers(1, &cachedProgram.uboBinding);
-	}
-
-	shaderCache.clear();
-}
-
 void RendererGL::deinitGraphicsContext() {
 	// Invalidate all surface caches since they'll no longer be valid
 	textureCache.reset();
 	depthBufferCache.reset();
 	colourBufferCache.reset();
-	clearShaderCache();
+	shaderCache.clear();
 
 	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory

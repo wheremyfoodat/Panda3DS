@@ -107,6 +107,11 @@ class PICAShader {
 	alignas(16) std::array<vec4f, 16> inputs;           // Attributes passed to the shader
 	alignas(16) std::array<vec4f, 16> outputs;
 	alignas(16) vec4f dummy = vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});  // Dummy register used by the JIT
+	
+	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
+	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
+	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
+	using Hash = PICAHash::HashType;
 
   protected:
 	std::array<u32, 128> operandDescriptors;
@@ -124,11 +129,6 @@ class PICAShader {
 	std::array<ConditionalInfo, 8> conditionalInfo;
 	std::array<CallInfo, 4> callInfo;
 	ShaderType type;
-
-	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
-	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
-	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
-	using Hash = PICAHash::HashType;
 
 	Hash lastCodeHash = 0;    // Last hash computed for the shader code (Used for the JIT caching mechanism)
 	Hash lastOpdescHash = 0;  // Last hash computed for the operand descriptors (Also used for the JIT)

@@ -30,6 +30,8 @@ namespace PICA::ShaderGen {
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
 		std::string generate(const PICA::FragmentConfig& config);
 		std::string getDefaultVertexShader();
+		// For when PICA shader is acceleration is enabled. Turn the PICA shader source into a proper vertex shader
+		std::string getVertexShaderAccelerated(const std::string& picaSource, bool usingUbershader);
 
 		void setTarget(API api, Language language) {
 			this->api = api;

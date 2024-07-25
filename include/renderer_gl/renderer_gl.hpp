@@ -3,11 +3,14 @@
 #include <array>
 #include <cstring>
 #include <functional>
+#include <optional>
 #include <span>
 #include <unordered_map>
+#include <utility>
 
 #include "PICA/float_types.hpp"
 #include "PICA/pica_frag_config.hpp"
+#include "PICA/pica_vert_config.hpp"
 #include "PICA/pica_hash.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
@@ -52,6 +55,11 @@ class RendererGL final : public Renderer {
 	float oldDepthScale = -1.0;
 	float oldDepthOffset = 0.0;
 	bool oldDepthmapEnable = false;
+	// Set by prepareDraw, tells us whether the current draw is using hw-accelerated shader
+	bool usingAcceleratedShader = false;
+
+	// Cached pointer to the current vertex shader when using HW accelerated shaders
+	OpenGL::Shader* generatedVertexShader = nullptr;
 
 	SurfaceCache<DepthBuffer, 16, true> depthBufferCache;
 	SurfaceCache<ColourBuffer, 16, true> colourBufferCache;
@@ -74,7 +82,38 @@ class RendererGL final : public Renderer {
 		OpenGL::Program program;
 		uint uboBinding;
 	};
-	std::unordered_map<PICA::FragmentConfig, CachedProgram> shaderCache;
+
+	struct ShaderCache {
+		std::unordered_map<PICA::VertConfig, std::optional<OpenGL::Shader>> vertexShaderCache;
+		std::unordered_map<PICA::FragmentConfig, OpenGL::Shader> fragmentShaderCache;
+
+		// Program cache indexed by GLuints for the vertex and fragment shader to use
+		// Top 32 bits are the vertex shader GLuint, bottom 32 bits are the fs GLuint
+		std::unordered_map<u64, CachedProgram> programCache;
+
+		void clear() {
+			for (auto& it : programCache) {
+				CachedProgram& cachedProgram = it.second;
+				cachedProgram.program.free();
+				glDeleteBuffers(1, &cachedProgram.uboBinding);
+			}
+
+			for (auto& it : vertexShaderCache) {
+				if (it.second.has_value()) {
+					it.second->free();
+				}
+			}
+
+			for (auto& it : fragmentShaderCache) {
+				it.second.free();
+			}
+
+			programCache.clear();
+			vertexShaderCache.clear();
+			fragmentShaderCache.clear();
+		}
+	};
+	ShaderCache shaderCache;
 
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
@@ -109,14 +148,13 @@ class RendererGL final : public Renderer {
 	virtual bool supportsShaderReload() override { return true; }
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
-	virtual void prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) override;
+	virtual bool prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) override;
 	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this
 	void setFBO(uint handle) { screenFramebuffer.m_handle = handle; }
 	void resetStateManager() { gl.reset(); }
-	void clearShaderCache();
 	void initUbershader(OpenGL::Program& program);
 
 #ifdef PANDA3DS_FRONTEND_QT

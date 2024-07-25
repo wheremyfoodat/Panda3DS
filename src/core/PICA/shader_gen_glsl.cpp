@@ -72,11 +72,6 @@ std::string FragmentGenerator::getDefaultVertexShader() {
 		out float gl_ClipDistance[2];
 	#endif
 
-		vec4 abgr8888ToVec4(uint abgr) {
-			const float scale = 1.0 / 255.0;
-			return scale * vec4(float(abgr & 0xffu), float((abgr >> 8) & 0xffu), float((abgr >> 16) & 0xffu), float(abgr >> 24));
-		}
-
 		void main() {
 			gl_Position = a_coords;
 			vec4 colourAbs = abs(a_vertexColour);
@@ -677,4 +672,58 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 	shader += "vec2 value = texelFetch(u_tex_luts, ivec2(int(clamped_index), 24), 0).rg;"; // fog LUT is past the light LUTs
 	shader += "float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);";
 	shader += "combinerOutput.rgb = mix(fog_color, combinerOutput.rgb, fog_factor);";
+}
+
+std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& picaSource, bool usingUbershader) {
+	if (usingUbershader) {
+		Helpers::panic("Unimplemented: GetVertexShaderAccelerated for ubershader");
+		return picaSource;
+	} else {
+		// TODO: Uniforms and don't hardcode fixed-function semantic indices...
+		std::string ret = picaSource;
+		if (api == API::GLES) {
+			ret += "\n#define USING_GLES\n";
+		}
+
+		ret += R"(
+out vec4 v_quaternion;
+out vec4 v_colour;
+out vec3 v_texcoord0;
+out vec2 v_texcoord1;
+out vec3 v_view;
+out vec2 v_texcoord2;
+
+#ifndef USING_GLES
+	out float gl_ClipDistance[2];
+#endif
+
+void main() {
+	pica_shader_main();
+	vec4 a_coords = output_registers[0];
+	vec4 a_vertexColour = output_registers[1];
+	vec2 a_texcoord0 = output_registers[2].xy;
+	float a_texcoord0_w = output_registers[2].w;
+	vec2 a_texcoord1 = output_registers[3].xy;
+	vec2 a_texcoord2 = output_registers[4].xy;
+	vec3 a_view = output_registers[5].xyz;
+	vec4 a_quaternion = output_registers[6];
+
+	gl_Position = a_coords;
+	vec4 colourAbs = abs(a_vertexColour);
+	v_colour = min(colourAbs, vec4(1.f));
+
+	v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
+	v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
+	v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+	v_view = a_view;
+	v_quaternion = a_quaternion;
+
+#ifndef USING_GLES
+	//gl_ClipDistance[0] = -a_coords.z;
+	//gl_ClipDistance[1] = dot(clipCoords, a_coords);
+#endif
+})";
+
+		return ret;
+	}
 }

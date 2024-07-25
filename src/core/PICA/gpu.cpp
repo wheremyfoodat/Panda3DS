@@ -123,27 +123,38 @@ void GPU::reset() {
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
-	renderer->prepareForDraw(shaderUnit, false);
-	const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
+	const bool hwShaders = renderer->prepareForDraw(shaderUnit, false);
 
-	if (indexed) {
-		if (shaderJITEnabled)
-			drawArrays<true, true>();
-		else
-			drawArrays<true, false>();
+	if (hwShaders) {
+		if (indexed) {
+			drawArrays<true, ShaderExecMode::Hardware>();
+		} else {
+			drawArrays<false, ShaderExecMode::Hardware>();
+		}
 	} else {
-		if (shaderJITEnabled)
-			drawArrays<false, true>();
-		else
-			drawArrays<false, false>();
+		const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
+
+		if (indexed) {
+			if (shaderJITEnabled) {
+				drawArrays<true, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<true, ShaderExecMode::Interpreter>();
+			}
+		} else {
+			if (shaderJITEnabled) {
+				drawArrays<false, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<false, ShaderExecMode::Interpreter>();
+			}
+		}
 	}
 }
 
 static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
 
-template <bool indexed, bool useShaderJIT>
+template <bool indexed, ShaderExecMode mode>
 void GPU::drawArrays() {
-	if constexpr (useShaderJIT) {
+	if constexpr (mode == ShaderExecMode::JIT) {
 		shaderJIT.prepare(shaderUnit.vs);
 	}
 
@@ -322,29 +333,38 @@ void GPU::drawArrays() {
 			}
 		}
 
-		// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
-		// Based on the SH_ATTRIBUTES_PERMUTATION registers.
-		// Ie it might attribute #0 to v2, #1 to v7, etc
-		for (int j = 0; j < totalAttribCount; j++) {
-			const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
-			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
-		}
+		// Running shader on the CPU instead of the GPU
+		if constexpr (mode == ShaderExecMode::Interpreter || mode == ShaderExecMode::JIT) {
+			// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
+			// Based on the SH_ATTRIBUTES_PERMUTATION registers.
+			// Ie it might map attribute #0 to v2, #1 to v7, etc
+			for (int j = 0; j < totalAttribCount; j++) {
+				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
+				std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
+			}
 
-		if constexpr (useShaderJIT) {
-			shaderJIT.run(shaderUnit.vs);
-		} else {
-			shaderUnit.vs.run();
-		}
+			if constexpr (mode == ShaderExecMode::JIT) {
+				shaderJIT.run(shaderUnit.vs);
+			} else {
+				shaderUnit.vs.run();
+			}
 
-		PICA::Vertex& out = vertices[i];
-		// Map shader outputs to fixed function properties
-		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
-		for (int i = 0; i < totalShaderOutputs; i++) {
-			const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
+			PICA::Vertex& out = vertices[i];
+			// Map shader outputs to fixed function properties
+			const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+			for (int i = 0; i < totalShaderOutputs; i++) {
+				const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
-			for (int j = 0; j < 4; j++) {  // pls unroll
-				const u32 mapping = (config >> (j * 8)) & 0x1F;
-				out.raw[mapping] = vsOutputRegisters[i][j];
+				for (int j = 0; j < 4; j++) {  // pls unroll
+					const u32 mapping = (config >> (j * 8)) & 0x1F;
+					out.raw[mapping] = vsOutputRegisters[i][j];
+				}
+			}
+		} else {  // Using hw shaders and running the shader on the CPU, just write the inputs to the attribute buffer directly
+			PICA::Vertex& out = vertices[i];
+			for (int j = 0; j < totalAttribCount; j++) {
+				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
+				std::memcpy(&out.raw[mapping], &currentAttributes[j], sizeof(vec4f));
 			}
 		}
 	}
