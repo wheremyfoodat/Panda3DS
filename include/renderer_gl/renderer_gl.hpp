@@ -31,7 +31,10 @@ class RendererGL final : public Renderer {
 	OpenGL::Program triangleProgram;
 	OpenGL::Program displayProgram;
 
-	OpenGL::VertexArray vao;
+	// VAO for when not using accelerated vertex shaders. Contains attribute declarations matching to the PICA fixed function fragment attributes
+	OpenGL::VertexArray defaultVAO;
+	// VAO for when using accelerated vertex shaders. The PICA vertex shader inputs are passed as attributes without CPU processing.
+	OpenGL::VertexArray hwShaderVAO;
 	OpenGL::VertexBuffer vbo;
 
 	// Data 

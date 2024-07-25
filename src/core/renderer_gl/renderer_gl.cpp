@@ -85,33 +85,42 @@ void RendererGL::initGraphicsContextInternal() {
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
 	gl.bindVBO(vbo);
-	vao.create();
-	gl.bindVAO(vao);
+	// Initialize the VAO used when not using hw shaders
+	defaultVAO.create();
+	gl.bindVAO(defaultVAO);
 
 	// Position (x, y, z, w) attributes
-	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
-	vao.enableAttribute(0);
+	defaultVAO.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
+	defaultVAO.enableAttribute(0);
 	// Quaternion attribute
-	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, s.quaternion));
-	vao.enableAttribute(1);
+	defaultVAO.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, s.quaternion));
+	defaultVAO.enableAttribute(1);
 	// Colour attribute
-	vao.setAttributeFloat<float>(2, 4, sizeof(Vertex), offsetof(Vertex, s.colour));
-	vao.enableAttribute(2);
+	defaultVAO.setAttributeFloat<float>(2, 4, sizeof(Vertex), offsetof(Vertex, s.colour));
+	defaultVAO.enableAttribute(2);
 	// UV 0 attribute
-	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord0));
-	vao.enableAttribute(3);
+	defaultVAO.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord0));
+	defaultVAO.enableAttribute(3);
 	// UV 1 attribute
-	vao.setAttributeFloat<float>(4, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord1));
-	vao.enableAttribute(4);
+	defaultVAO.setAttributeFloat<float>(4, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord1));
+	defaultVAO.enableAttribute(4);
 	// UV 0 W-component attribute
-	vao.setAttributeFloat<float>(5, 1, sizeof(Vertex), offsetof(Vertex, s.texcoord0_w));
-	vao.enableAttribute(5);
+	defaultVAO.setAttributeFloat<float>(5, 1, sizeof(Vertex), offsetof(Vertex, s.texcoord0_w));
+	defaultVAO.enableAttribute(5);
 	// View
-	vao.setAttributeFloat<float>(6, 3, sizeof(Vertex), offsetof(Vertex, s.view));
-	vao.enableAttribute(6);
+	defaultVAO.setAttributeFloat<float>(6, 3, sizeof(Vertex), offsetof(Vertex, s.view));
+	defaultVAO.enableAttribute(6);
 	// UV 2 attribute
-	vao.setAttributeFloat<float>(7, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord2));
-	vao.enableAttribute(7);
+	defaultVAO.setAttributeFloat<float>(7, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord2));
+	defaultVAO.enableAttribute(7);
+
+	// Initialize the VAO used for hw shaders
+	hwShaderVAO.create();
+	gl.bindVAO(hwShaderVAO);
+	for (int attr = 0; attr < 8; attr++) {
+		hwShaderVAO.setAttributeFloat<float>(attr, 4, sizeof(Vertex), attr * sizeof(float) * 4);
+		hwShaderVAO.enableAttribute(attr);
+	}
 
 	dummyVBO.create();
 	dummyVAO.create();
@@ -418,7 +427,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
 	gl.bindVBO(vbo);
-	gl.bindVAO(vao);
+	gl.bindVAO(usingAcceleratedShader ? hwShaderVAO : defaultVAO);
 
 	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {

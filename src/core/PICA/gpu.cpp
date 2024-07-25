@@ -364,7 +364,8 @@ void GPU::drawArrays() {
 			PICA::Vertex& out = vertices[i];
 			for (int j = 0; j < totalAttribCount; j++) {
 				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
-				std::memcpy(&out.raw[mapping], &currentAttributes[j], sizeof(vec4f));
+				// Multiply mapping * 4 as mapping refers to a vec4 whereas out.raw is an array of floats
+				std::memcpy(&out.raw[mapping * 4], &currentAttributes[j], sizeof(vec4f));
 			}
 		}
 	}
