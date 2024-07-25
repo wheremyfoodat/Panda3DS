@@ -27,6 +27,7 @@ static constexpr const char* uniformDefinition = R"(
 
 		// Note: We upload this as a u32 and decode on GPU
 		uint globalAmbientLight;
+		uint inFogColor;
 		LightSource lightSources[8];
 	};
 )";
@@ -656,10 +657,6 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 		return;
 	}
 
-	float r = config.fogConfig.fogColorR / 255.0f;
-	float g = config.fogConfig.fogColorG / 255.0f;
-	float b = config.fogConfig.fogColorB / 255.0f;
-
 	if (config.fogConfig.flipDepth) {
 		shader += "float fog_index = (1.0 - depth) * 128.0;\n";
 	} else {
@@ -668,7 +665,7 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 
 	shader += "float clamped_index = clamp(floor(fog_index), 0.0, 127.0);";
 	shader += "float delta = fog_index - clamped_index;";
-	shader += "vec3 fog_color = vec3(" + std::to_string(r) + ", " + std::to_string(g) + ", " + std::to_string(b) + ");";
+	shader += "vec3 fog_color = (1.0 / 255.0) * vec3(float(inFogColor & 0xffu), float((inFogColor >> 8u) & 0xffu), float((inFogColor >> 16u) & 0xffu));";
 	shader += "vec2 value = texelFetch(u_tex_luts, ivec2(int(clamped_index), 24), 0).rg;"; // fog LUT is past the light LUTs
 	shader += "float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);";
 	shader += "combinerOutput.rgb = mix(fog_color, combinerOutput.rgb, fog_factor);";

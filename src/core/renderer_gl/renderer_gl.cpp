@@ -903,6 +903,8 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		vec[3] = float((color >> 24) & 0xFF) / 255.0f;
 	}
 
+	uniforms.fogColor = regs[PICA::InternalRegs::FogColor];
+
 	// Append lighting uniforms
 	if (fsConfig.lighting.enable) {
 		uniforms.globalAmbientLight = regs[InternalRegs::LightGlobalAmbient];
