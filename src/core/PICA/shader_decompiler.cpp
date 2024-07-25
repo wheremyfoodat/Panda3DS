@@ -182,7 +182,6 @@ std::string ShaderDecompiler::getSwizzlePattern(u32 swizzle) const {
 
 std::string ShaderDecompiler::getDestSwizzle(u32 destinationMask) const {
 	std::string ret = ".";
-	
 	if (destinationMask & 0b1000) {
 		ret += "x";
 	}
@@ -214,7 +213,8 @@ void ShaderDecompiler::setDest(u32 operandDescriptor, const std::string& dest, c
 		return;
 	}
 
-	decompiledShader += dest + destSwizzle + " = ";
+	// Don't write destination swizzle if all lanes are getting written to
+	decompiledShader += fmt::format("{}{} = ", dest, writtenLaneCount == 4 ? "" : destSwizzle);
 	if (writtenLaneCount == 1) {
 		decompiledShader += "float(" + value + ");\n";
 	} else if (writtenLaneCount <= 3) { // We don't need to cast for vec4, as we guarantee the rhs will be a vec4
