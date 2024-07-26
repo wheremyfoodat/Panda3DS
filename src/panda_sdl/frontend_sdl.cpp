@@ -247,8 +247,13 @@ void FrontendSDL::run() {
 
 					// Handle "dragging" across the touchscreen
 					if (hid.isTouchScreenPressed()) {
-						const s32 x = event.motion.x;
-						const s32 y = event.motion.y;
+						if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
+							break;
+						}
+
+						// Go from window positions to [0, 400) for x and [0, 480) for y
+						const s32 x = (s32)std::round(event.motion.x * 400.f / windowWidth);
+						const s32 y = (s32)std::round(event.motion.y * 480.f / windowHeight);
 
 						// Check if touch falls in the touch screen area and register the new touch screen position
 						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
