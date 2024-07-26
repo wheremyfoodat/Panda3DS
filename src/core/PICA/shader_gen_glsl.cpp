@@ -4,6 +4,8 @@
 using namespace PICA;
 using namespace PICA::ShaderGen;
 
+// Note: We upload global ambient and fog colour as u32 and decode on the GPU
+// This shouldn't matter much for GPU performance, especially fog since it's relatively rare
 static constexpr const char* uniformDefinition = R"(
 	struct LightSource {
 		vec3 specular0;
@@ -24,8 +26,6 @@ static constexpr const char* uniformDefinition = R"(
 		vec4 constantColors[6];
 		vec4 tevBufferColor;
 		vec4 clipCoords;
-
-		// Note: We upload this as a u32 and decode on GPU
 		uint globalAmbientLight;
 		uint inFogColor;
 		LightSource lightSources[8];
