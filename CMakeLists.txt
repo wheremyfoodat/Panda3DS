@@ -502,7 +502,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         )
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
-        set(FRONTEND_HEADER_FILES "")
+        set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)

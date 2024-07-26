@@ -162,9 +162,9 @@ void FrontendSDL::run() {
 					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						// Get current window dimensions
-						int windowWidth, windowHeight;
-						SDL_GetWindowSize(window, &windowWidth, &windowHeight);
+						if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
+							break;
+						}
 
 						// Go from window positions to [0, 400) for x and [0, 480) for y
 						const s32 x = (s32)std::round(event.button.x * 400.f / windowWidth);
@@ -298,9 +298,9 @@ void FrontendSDL::run() {
 				case SDL_WINDOWEVENT: {
 					auto type = event.window.event;
 					if (type == SDL_WINDOWEVENT_RESIZED) {
-						const u32 width = event.window.data1;
-						const u32 height = event.window.data2;
-						emu.setOutputSize(width, height);
+						windowWidth = event.window.data1;
+						windowHeight = event.window.data2;
+						emu.setOutputSize(windowWidth, windowHeight);
 					}
 				}
 			}
