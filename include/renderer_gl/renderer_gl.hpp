@@ -80,6 +80,8 @@ class RendererGL final : public Renderer {
 	// We can compile this once and then link it with all other generated fragment shaders
 	OpenGL::Shader defaultShadergenVs;
 	GLuint shadergenFragmentUBO;
+	// UBO for uploading the PICA uniforms when using hw shaders
+	GLuint hwShaderUniformUBO;
 
 	// Cached recompiled fragment shader
 	struct CachedProgram {

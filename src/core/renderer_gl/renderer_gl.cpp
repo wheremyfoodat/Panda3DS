@@ -83,6 +83,11 @@ void RendererGL::initGraphicsContextInternal() {
 	gl.bindUBO(shadergenFragmentUBO);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
 
+	// Allocate memory for the accelerated vertex shader uniform UBO
+	glGenBuffers(1, &hwShaderUniformUBO);
+	gl.bindUBO(hwShaderUniformUBO);
+	glBufferData(GL_UNIFORM_BUFFER, PICAShader::totalUniformSize(), nullptr, GL_DYNAMIC_DRAW);
+
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
 	gl.bindVBO(vbo);
 	// Initialize the VAO used when not using hw shaders
@@ -798,7 +803,8 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 }
 
 OpenGL::Program& RendererGL::getSpecializedShader() {
-	constexpr uint uboBlockBinding = 2;
+	constexpr uint vsUBOBlockBinding = 1;
+	constexpr uint fsUBOBlockBinding = 2;
 
 	PICA::FragmentConfig fsConfig(regs);
 
@@ -826,12 +832,20 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 
-		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
+		// Set up the binding for our UBOs. Sadly we can't specify it in the shader like normal people,
 		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
-		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
-		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
+		uint fsUBOIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
+		glUniformBlockBinding(program.handle(), fsUBOIndex, fsUBOBlockBinding);
+
+		if (usingAcceleratedShader) {
+			uint vertexUBOIndex = glGetUniformBlockIndex(program.handle(), "PICAShaderUniforms");
+			glUniformBlockBinding(program.handle(), vertexUBOIndex, vsUBOBlockBinding);
+		}
 	}
-	glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, shadergenFragmentUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO);
+	if (usingAcceleratedShader) {
+		glBindBufferBase(GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO);
+	}
 
 	// Upload uniform data to our shader's UBO
 	PICA::FragmentUniforms uniforms;
@@ -958,7 +972,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
 				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
 			);
-			
+
 			// Empty source means compilation error, if the source is not empty then we convert the rcompiled PICA code into a valid shader and upload
 			// it to the GPU
 			if (!picaShaderSource.empty()) {
@@ -972,6 +986,8 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 			usingAcceleratedShader = false;
 		} else {
 			generatedVertexShader = &(*shader);
+			gl.bindUBO(hwShaderUniformUBO);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
 		}
 	}
 
