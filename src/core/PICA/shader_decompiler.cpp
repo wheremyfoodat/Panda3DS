@@ -65,14 +65,15 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 		return it->second;
 	}
 
+	auto setExitMode = [&it](ExitMode mode) {
+		it->second = mode;
+		return it->second;
+	};
+
 	// Make sure not to go out of bounds on the shader
 	for (u32 pc = start; pc < PICAShader::maxInstructionCount && pc != end; pc++) {
 		const u32 instruction = shader.loadedShader[pc];
 		const u32 opcode = instruction >> 26;
-		auto setExitMode = [&it](ExitMode mode) {
-			it->second = mode;
-			return it->second;
-		};
 
 		switch (opcode) {
 			case ShaderOpcodes::JMPC:
@@ -332,10 +333,8 @@ void ShaderDecompiler::setDest(u32 operandDescriptor, const std::string& dest, c
 
 	// Don't write destination swizzle if all lanes are getting written to
 	decompiledShader += fmt::format("{}{} = ", dest, writtenLaneCount == 4 ? "" : destSwizzle);
-	if (writtenLaneCount == 1) {
-		decompiledShader += "float(" + value + ");\n";
-	} else if (writtenLaneCount <= 3) { // We don't need to cast for vec4, as we guarantee the rhs will be a vec4
-		decompiledShader += fmt::format("vec{}({});\n", writtenLaneCount, value);
+	if (writtenLaneCount <= 3) {
+		decompiledShader += fmt::format("({}){};\n", value, destSwizzle);
 	} else if (writtenLaneCount == 4) {
 		decompiledShader += fmt::format("{};\n", value);
 	}
