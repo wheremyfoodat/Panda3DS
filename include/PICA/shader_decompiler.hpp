@@ -4,6 +4,7 @@
 #include <tuple>
 #include <map>
 #include <vector>
+#include <utility>
 
 #include "PICA/shader.hpp"
 #include "PICA/shader_gen_types.hpp"
@@ -95,7 +96,8 @@ namespace PICA::ShaderGen {
 		Language language;
 
 		void compileInstruction(u32& pc, bool& finished);
-		void compileRange(const AddressRange& range);
+		// Compile range "range" and returns the end PC or if we're "finished" with the program (called an END instruction)
+		std::pair<u32, bool> compileRange(const AddressRange& range);
 		void callFunction(const Function& function);
 		const Function* findFunction(const AddressRange& range);
 
@@ -105,6 +107,7 @@ namespace PICA::ShaderGen {
 		std::string getDest(u32 dest) const;
 		std::string getSwizzlePattern(u32 swizzle) const;
 		std::string getDestSwizzle(u32 destinationMask) const;
+		const char* getCondition(u32 cond, u32 refX, u32 refY);
 
 		void setDest(u32 operandDescriptor, const std::string& dest, const std::string& value);
 		// Returns if the instruction uses the typical register encodings most instructions use
