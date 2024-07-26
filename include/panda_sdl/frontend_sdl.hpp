@@ -23,6 +23,8 @@ class FrontendSDL {
 	SDL_GameController* gameController = nullptr;
 	InputMappings keyboardMappings;
 
+	u32 windowWidth = 400;
+	u32 windowHeight = 480;
 	int gameControllerID;
 	bool programRunning = true;
 	
