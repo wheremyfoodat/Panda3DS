@@ -299,6 +299,11 @@ bool Emulator::load3DSX(const std::filesystem::path& path) {
 }
 
 bool Emulator::loadELF(const std::filesystem::path& path) {
+	// We can't open a new file with this ifstream if it's associated with a file
+	if (loadedELF.is_open()) {
+		loadedELF.close();
+	}
+
 	loadedELF.open(path, std::ios_base::binary);  // Open ROM in binary mode
 	romType = ROMType::ELF;
 
