@@ -34,14 +34,14 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 		const u32 opcode = instruction >> 26;
 
 		switch (opcode) {
-			case ShaderOpcodes::JMPC: Helpers::panic("Unimplemented control flow operation (JMPC)");
-			case ShaderOpcodes::JMPU: Helpers::panic("Unimplemented control flow operation (JMPU)");
-			case ShaderOpcodes::IFU: Helpers::panic("Unimplemented control flow operation (IFU)");
-			case ShaderOpcodes::IFC: Helpers::panic("Unimplemented control flow operation (IFC)");
-			case ShaderOpcodes::CALL: Helpers::panic("Unimplemented control flow operation (CALL)");
-			case ShaderOpcodes::CALLC: Helpers::panic("Unimplemented control flow operation (CALLC)");
-			case ShaderOpcodes::CALLU: Helpers::panic("Unimplemented control flow operation (CALLU)");
-			case ShaderOpcodes::LOOP: Helpers::panic("Unimplemented control flow operation (LOOP)");
+			case ShaderOpcodes::JMPC: Helpers::panic("Unimplemented control flow operation (JMPC)"); break;
+			case ShaderOpcodes::JMPU: Helpers::panic("Unimplemented control flow operation (JMPU)"); break;
+			case ShaderOpcodes::IFU: Helpers::panic("Unimplemented control flow operation (IFU)"); break;
+			case ShaderOpcodes::IFC: Helpers::panic("Unimplemented control flow operation (IFC)"); break;
+			case ShaderOpcodes::CALL: Helpers::panic("Unimplemented control flow operation (CALL)"); break;
+			case ShaderOpcodes::CALLC: Helpers::panic("Unimplemented control flow operation (CALLC)"); break;
+			case ShaderOpcodes::CALLU: Helpers::panic("Unimplemented control flow operation (CALLU)"); break;
+			case ShaderOpcodes::LOOP: Helpers::panic("Unimplemented control flow operation (LOOP)"); break;
 			case ShaderOpcodes::END: it->second = ExitMode::AlwaysEnd; return it->second;
 
 			default: break;
