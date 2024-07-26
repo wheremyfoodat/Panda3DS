@@ -682,6 +682,8 @@ std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& pic
 			ret += "\n#define USING_GLES\n";
 		}
 
+		ret += uniformDefinition;
+
 		ret += R"(
 out vec4 v_quaternion;
 out vec4 v_colour;
@@ -716,8 +718,8 @@ void main() {
 	v_quaternion = a_quaternion;
 
 #ifndef USING_GLES
-	//gl_ClipDistance[0] = -a_coords.z;
-	//gl_ClipDistance[1] = dot(clipCoords, a_coords);
+	gl_ClipDistance[0] = -a_coords.z;
+	gl_ClipDistance[1] = dot(clipCoords, a_coords);
 #endif
 })";
 
