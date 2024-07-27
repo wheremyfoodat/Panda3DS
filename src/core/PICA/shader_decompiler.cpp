@@ -65,11 +65,6 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 		return it->second;
 	}
 
-	auto setExitMode = [&it](ExitMode mode) {
-		it->second = mode;
-		return it->second;
-	};
-
 	// Make sure not to go out of bounds on the shader
 	for (u32 pc = start; pc < PICAShader::maxInstructionCount && pc != end; pc++) {
 		const u32 instruction = shader.loadedShader[pc];
@@ -85,7 +80,8 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 				// This opens up 2 parallel paths of execution
 				auto branchTakenExit = analyzeFunction(shader, dest, end, labels);
 				auto branchNotTakenExit = analyzeFunction(shader, pc + 1, dest, labels);
-				return setExitMode(exitParallel(branchTakenExit, branchNotTakenExit));
+				it->second = exitParallel(branchTakenExit, branchNotTakenExit);
+				return it->second;
 			}
 			case ShaderOpcodes::IFU:
 			case ShaderOpcodes::IFC: {
@@ -96,7 +92,8 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 				const Function* branchTakenFunc = addFunction(shader, pc + 1, dest);
 				// Check if analysis of the branch taken func failed and return unknown if it did
 				if (analysisFailed) {
-					return setExitMode(ExitMode::Unknown);
+					it->second = ExitMode::Unknown;
+					return it->second;
 				}
 
 				// Next analyze the not taken func
@@ -105,7 +102,8 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 					const Function* branchNotTakenFunc = addFunction(shader, dest, dest + num);
 					// Check if analysis failed and return unknown if it did
 					if (analysisFailed) {
-						return setExitMode(ExitMode::Unknown);
+						it->second = ExitMode::Unknown;
+						return it->second;
 					}
 
 					branchNotTakenExitMode = branchNotTakenFunc->exitMode;
@@ -114,11 +112,13 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 				auto parallel = exitParallel(branchTakenFunc->exitMode, branchNotTakenExitMode);
 				// Both branches of the if/else end, so there's nothing after the call
 				if (parallel == ExitMode::AlwaysEnd) {
-					return setExitMode(parallel);
+					it->second = parallel;
+					return it->second;
 				} else {
 					ExitMode afterConditional = analyzeFunction(shader, pc + 1, end, labels);
 					ExitMode conditionalExitMode = exitSeries(parallel, afterConditional);
-					return setExitMode(conditionalExitMode);
+					it->second = conditionalExitMode;
+					return it->second;
 				}
 				break;
 			}
@@ -126,7 +126,7 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 			case ShaderOpcodes::CALLC: Helpers::panic("Unimplemented control flow operation (CALLC)"); break;
 			case ShaderOpcodes::CALLU: Helpers::panic("Unimplemented control flow operation (CALLU)"); break;
 			case ShaderOpcodes::LOOP: Helpers::panic("Unimplemented control flow operation (LOOP)"); break;
-			case ShaderOpcodes::END: return setExitMode(ExitMode::AlwaysEnd);
+			case ShaderOpcodes::END: it->second = ExitMode::AlwaysEnd; return it->second;
 
 			default: break;
 		}
