@@ -191,7 +191,14 @@ void ShaderDecompiler::writeAttributes() {
 	vec4 tmp_regs[16];
 	vec4 out_regs[16];
 	vec4 dummy_vec = vec4(0.0);
+	ivec3 addr_reg = ivec3(0);
 	bvec2 cmp_reg = bvec2(false);
+
+	vec4 float_uniform_indexed(int source, int offset) {
+		int clipped_offs = (offset >= -128 && offset <= 127) ? offset : 0;
+		uint index = uint(clipped_offs + source) & 127u;
+		return (index < 96u) ? uniform_float[index] : vec4(1.0);
+	}
 )";
 }
 
@@ -284,10 +291,15 @@ std::string ShaderDecompiler::getSource(u32 source, [[maybe_unused]] u32 index) 
 	} else {
 		const usize floatIndex = (source - 0x20) & 0x7f;
 
-		if (floatIndex >= 96) [[unlikely]] {
-			return "dummy_vec";
+		if (index == 0) {
+			if (floatIndex >= 96) [[unlikely]] {
+				return "dummy_vec";
+			}
+			return "uniform_float[" + std::to_string(floatIndex) + "]";
+		} else {
+			static constexpr std::array<const char*, 4> offsets = {"0", "addr_reg.x", "addr_reg.y", "addr_reg.z"};
+			return fmt::format("float_uniform_indexed({}, {})", floatIndex, offsets[index]);
 		}
-		return "uniform_float[" + std::to_string(floatIndex) + "]";
 	}
 }
 
@@ -391,14 +403,6 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 
 		std::string dest = getDest(destIndex);
 
-		if (idx != 0) {
-			Helpers::panic("GLSL recompiler: Indexed instruction");
-		}
-
-		if (invertSources) {
-			Helpers::panic("GLSL recompiler: Inverted instruction");
-		}
-
 		switch (opcode) {
 			case ShaderOpcodes::MOV: setDest(operandDescriptor, dest, src1); break;
 			case ShaderOpcodes::ADD: setDest(operandDescriptor, dest, fmt::format("{} + {}", src1, src2)); break;
@@ -444,6 +448,20 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				break;
 			}
 
+			case ShaderOpcodes::MOVA: {
+				const bool writeX = getBit<3>(operandDescriptor);  // Should we write the x component of the address register?
+				const bool writeY = getBit<2>(operandDescriptor);
+
+				if (writeX) {
+					decompiledShader += fmt::format("addr_reg.x = int({}.x);\n", src1);
+				}
+
+				if (writeY) {
+					decompiledShader += fmt::format("addr_reg.y = int({}.y);\n", src1);
+				}
+				break;
+			}
+
 			default: Helpers::panic("GLSL recompiler: Unknown common opcode: %X", opcode); break;
 		}
 	} else if (opcode >= 0x30 && opcode <= 0x3F) { // MAD and MADI
@@ -478,11 +496,6 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 		src3 += getSwizzlePattern(swizzle3);
 
 		std::string dest = getDest(destIndex);
-
-		if (idx != 0) {
-			Helpers::panic("GLSL recompiler: Indexed instruction");
-		}
-
 		setDest(operandDescriptor, dest, src1 + " * " + src2 + " + " + src3);
 	} else {
 		switch (opcode) {
@@ -493,7 +506,16 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				const uint refX = getBit<25>(instruction);
 				const char* condition = getCondition(condOp, refX, refY);
 
-				decompiledShader += fmt::format("if ({}) {{ pc = {}u; break; }}", condition, dest);
+				decompiledShader += fmt::format("if ({}) {{ pc = {}u; break; }}\n", condition, dest);
+				break;
+			}
+
+			case ShaderOpcodes::JMPU: {
+				const u32 dest = getBits<10, 12>(instruction);
+				const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
+				const u32 mask = 1u << bit;
+
+				decompiledShader += fmt::format("if ((uniform_bool & {}u) != 0u) {{ pc = {}u; break; }}\n", mask, dest);
 				break;
 			}
 
@@ -555,6 +577,7 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				decompiledShader += "return;\n";
 				finished = true;
 				return;
+
 
 			case ShaderOpcodes::NOP: break;
 			default: Helpers::panic("GLSL recompiler: Unknown opcode: %X", opcode); break;
