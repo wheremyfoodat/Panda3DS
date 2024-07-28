@@ -317,7 +317,7 @@ namespace Audio {
 
 		if (config.bufferQueueDirty) {
 			config.bufferQueueDirty = 0;
-			printf("Buffer queue dirty for voice %d\n", source.index);
+			// printf("Buffer queue dirty for voice %d\n", source.index);
 		}
 
 		config.dirtyRaw = 0;
