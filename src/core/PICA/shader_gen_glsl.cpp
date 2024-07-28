@@ -1,3 +1,7 @@
+#include <fmt/format.h>
+
+#include <utility>
+
 #include "PICA/pica_frag_config.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
@@ -673,10 +677,15 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 
 std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& picaSource, const PICA::VertConfig& vertConfig, bool usingUbershader) {
 	// First, calculate output register -> Fixed function fragment semantics based on the VAO config
+	// This array contains the mappings for the 32 fixed function semantics (8 variables, with 4 lanes each).
+	// Each entry is a pair, containing the output reg to use for this semantic (first) and which lane of that register (second)
+	std::array<std::pair<int, int>, 32> outputMappings{};
+	// Output registers adjusted according to VS_OUTPUT_MASK, which handles enabling and disabling output attributes
+	std::array<u8, 16> vsOutputRegisters;
+
 	{
 		uint count = 0;
 		u16 outputMask = vertConfig.outputMask;
-		std::array<u8, 16> vsOutputRegisters;
 
 		// See which registers are actually enabled and ignore the disabled ones
 		for (int i = 0; i < 16; i++) {
@@ -691,7 +700,37 @@ std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& pic
 		for (; count < 16; count++) {
 			vsOutputRegisters[count] = count;
 		}
+
+		for (int i = 0; i < vertConfig.outputCount; i++) {
+			const u32 config = vertConfig.outmaps[i];
+			for (int j = 0; j < 4; j++) {
+				const u32 mapping = (config >> (j * 8)) & 0x1F;
+				outputMappings[mapping] = std::make_pair(vsOutputRegisters[i], j);
+			}
+		}
 	}
+
+	auto getSemanticName = [&](u32 semanticIndex) {
+		auto [reg, lane] = outputMappings[semanticIndex];
+		return fmt::format("out_regs[{}][{}]", reg, lane);
+	};
+
+	std::string semantics = fmt::format(
+		R"(
+		vec4 a_coords = vec4({}, {}, {}, {});
+		vec4 a_quaternion = vec4({}, {}, {}, {});
+		vec4 a_vertexColour = vec4({}, {}, {}, {});
+		vec2 a_texcoord0 = vec2({}, {});
+		float a_texcoord0_w = {};
+		vec2 a_texcoord1 = vec2({}, {});
+		vec2 a_texcoord2 = vec2({}, {});
+		vec3 a_view = vec3({}, {}, {});
+	)",
+		getSemanticName(0), getSemanticName(1), getSemanticName(2), getSemanticName(3), getSemanticName(4), getSemanticName(5), getSemanticName(6),
+		getSemanticName(7), getSemanticName(8), getSemanticName(9), getSemanticName(10), getSemanticName(11), getSemanticName(12),
+		getSemanticName(13), getSemanticName(16), getSemanticName(14), getSemanticName(15), getSemanticName(22), getSemanticName(23),
+		getSemanticName(18), getSemanticName(19), getSemanticName(20)
+	);
 
 	if (usingUbershader) {
 		Helpers::panic("Unimplemented: GetVertexShaderAccelerated for ubershader");
@@ -719,15 +758,11 @@ out vec2 v_texcoord2;
 
 void main() {
 	pica_shader_main();
-	vec4 a_coords = out_regs[0];
-	vec4 a_vertexColour = out_regs[1];
-	vec2 a_texcoord0 = out_regs[2].xy;
-	float a_texcoord0_w = out_regs[2].w;
-	vec2 a_texcoord1 = out_regs[3].xy;
-	vec2 a_texcoord2 = out_regs[4].xy;
-	vec3 a_view = out_regs[2].xyz;
-	vec4 a_quaternion = out_regs[3];
-
+)";
+	// Transfer fixed function fragment registers from vertex shader output to the fragment shader
+	ret += semantics;
+	
+	ret += R"(
 	gl_Position = a_coords;
 	vec4 colourAbs = abs(a_vertexColour);
 	v_colour = min(colourAbs, vec4(1.f));
@@ -743,6 +778,7 @@ void main() {
 	gl_ClipDistance[1] = dot(clipCoords, a_coords);
 #endif
 })";
+		
 		std::cout << ret << "\n";
 		return ret;
 	}
