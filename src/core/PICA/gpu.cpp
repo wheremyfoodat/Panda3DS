@@ -174,7 +174,9 @@ void GPU::drawArrays() {
 	constexpr u32 maxAttrSizeInFloats = 16 * 4;
 	auto& vertices = vertexBuffer.vertices;
 
-	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
+	if constexpr (mode != ShaderExecMode::Hardware) {
+		setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
+	}
 
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
@@ -247,8 +249,9 @@ void GPU::drawArrays() {
 				if constexpr (mode != ShaderExecMode::Hardware) {
 					vertices[i] = vertices[cache.bufferPositions[tag]];
 				} else {
+					const u32 cachedBufferPosition = cache.bufferPositions[tag] * maxAttrSizeInFloats;
 					std::memcpy(
-						&vertexBuffer.vsInputs[i * maxAttrSizeInFloats], &vertexBuffer.vsInputs[cache.bufferPositions[tag] * maxAttrSizeInFloats],
+						&vertexBuffer.vsInputs[i * maxAttrSizeInFloats], &vertexBuffer.vsInputs[cachedBufferPosition],
 						sizeof(float) * maxAttrSizeInFloats
 					);
 				}
