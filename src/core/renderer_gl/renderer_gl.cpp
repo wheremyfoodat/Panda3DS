@@ -987,7 +987,11 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 		} else {
 			generatedVertexShader = &(*shader);
 			gl.bindUBO(hwShaderUniformUBO);
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
+
+			if (shaderUnit.vs.uniformsDirty) {
+				shaderUnit.vs.uniformsDirty = false;
+				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
+			}
 		}
 	}
 

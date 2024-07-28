@@ -301,7 +301,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		}
 
 		case VertexBoolUniform: {
-			shaderUnit.vs.boolUniform = value & 0xffff;
+			shaderUnit.vs.uploadBoolUniform(value & 0xffff);
 			break;
 		}
 

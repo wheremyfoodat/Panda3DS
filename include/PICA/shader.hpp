@@ -133,6 +133,10 @@ class PICAShader {
 	Hash lastCodeHash = 0;    // Last hash computed for the shader code (Used for the JIT caching mechanism)
 	Hash lastOpdescHash = 0;  // Last hash computed for the operand descriptors (Also used for the JIT)
 
+  public:
+	bool uniformsDirty = false;
+
+  protected:
 	bool codeHashDirty = false;
 	bool opdescHashDirty = false;
 
@@ -283,6 +287,7 @@ class PICAShader {
 				uniform[2] = f24::fromRaw(((floatUniformBuffer[0] & 0xff) << 16) | (floatUniformBuffer[1] >> 16));
 				uniform[3] = f24::fromRaw(floatUniformBuffer[0] >> 8);
 			}
+			uniformsDirty = true;
 		}
 	}
 
@@ -294,6 +299,12 @@ class PICAShader {
 		u[1] = getBits<8, 8>(word);
 		u[2] = getBits<16, 8>(word);
 		u[3] = getBits<24, 8>(word);
+		uniformsDirty = true;
+	}
+
+	void uploadBoolUniform(u32 value) {
+		boolUniform = value;
+		uniformsDirty = true;
 	}
 
 	void run();
