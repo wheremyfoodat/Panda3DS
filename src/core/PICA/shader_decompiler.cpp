@@ -452,11 +452,11 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				const bool writeX = getBit<3>(operandDescriptor);  // Should we write the x component of the address register?
 				const bool writeY = getBit<2>(operandDescriptor);
 
-				if (writeX) {
+				if (writeX && writeY) {
+					decompiledShader += fmt::format("addr_reg.xy = ivec2({}.xy);\n", src1);
+				} else if (writeX) {
 					decompiledShader += fmt::format("addr_reg.x = int({}.x);\n", src1);
-				}
-
-				if (writeY) {
+				} else if (writeY) {
 					decompiledShader += fmt::format("addr_reg.y = int({}.y);\n", src1);
 				}
 				break;
