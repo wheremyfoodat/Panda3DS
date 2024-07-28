@@ -110,7 +110,7 @@ namespace Audio {
 			Helpers::panic("Audio: invalid register in HLE frontend");
 		}
 
-		return dspState == DSPState::On;
+		return dspState != DSPState::On;
 	}
 
 	void HLE_DSP::writeProcessPipe(u32 channel, u32 size, u32 buffer) {
@@ -317,7 +317,7 @@ namespace Audio {
 
 		if (config.bufferQueueDirty) {
 			config.bufferQueueDirty = 0;
-			printf("Buffer queue dirty for voice %d\n", source.index);
+			// printf("Buffer queue dirty for voice %d\n", source.index);
 		}
 
 		config.dirtyRaw = 0;
