@@ -36,7 +36,8 @@ namespace PICA {
 			outputCount = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 			outputMask = regs[PICA::InternalRegs::VertexShaderOutputMask];
 			for (int i = 0; i < outputCount; i++) {
-				outmaps[i] = regs[PICA::InternalRegs::ShaderOutmap0 + i];
+				// Mask out unused bits
+				outmaps[i] = regs[PICA::InternalRegs::ShaderOutmap0 + i] & 0x1F1F1F1F;
 			}
 		}
 	};

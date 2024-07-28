@@ -961,8 +961,6 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 	usingAcceleratedShader = emulatorConfig->accelerateShaders && !isImmediateMode && !usingUbershader;
 
 	if (usingAcceleratedShader) {
-		auto shaderCodeHash = shaderUnit.vs.getCodeHash();
-		auto opdescHash = shaderUnit.vs.getOpdescHash();
 		PICA::VertConfig vertexConfig(shaderUnit.vs, regs, usingUbershader);
 
 		std::optional<OpenGL::Shader>& shader = shaderCache.vertexShaderCache[vertexConfig];
