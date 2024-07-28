@@ -422,6 +422,10 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 			case ShaderOpcodes::SGE:
 			case ShaderOpcodes::SGEI: setDest(operandDescriptor, dest, fmt::format("vec4(greaterThanEqual({}, {}))", src1, src2)); break;
 
+			case ShaderOpcodes::DPH:
+			case ShaderOpcodes::DPHI:
+				setDest(operandDescriptor, dest, fmt::format("vec4(dot(vec4({}.xyz, 1.0), {}))", src1, src2)); break;
+
 			case ShaderOpcodes::CMP1:
 			case ShaderOpcodes::CMP2: {
 				static constexpr std::array<const char*, 8> operators = {
