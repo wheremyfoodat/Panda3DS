@@ -717,15 +717,15 @@ std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& pic
 
 	std::string semantics = fmt::format(
 		R"(
-		vec4 a_coords = vec4({}, {}, {}, {});
-		vec4 a_quaternion = vec4({}, {}, {}, {});
-		vec4 a_vertexColour = vec4({}, {}, {}, {});
-		vec2 a_texcoord0 = vec2({}, {});
-		float a_texcoord0_w = {};
-		vec2 a_texcoord1 = vec2({}, {});
-		vec2 a_texcoord2 = vec2({}, {});
-		vec3 a_view = vec3({}, {}, {});
-	)",
+	vec4 a_coords = vec4({}, {}, {}, {});
+	vec4 a_quaternion = vec4({}, {}, {}, {});
+	vec4 a_vertexColour = vec4({}, {}, {}, {});
+	vec2 a_texcoord0 = vec2({}, {});
+	float a_texcoord0_w = {};
+	vec2 a_texcoord1 = vec2({}, {});
+	vec2 a_texcoord2 = vec2({}, {});
+	vec3 a_view = vec3({}, {}, {});
+)",
 		getSemanticName(0), getSemanticName(1), getSemanticName(2), getSemanticName(3), getSemanticName(4), getSemanticName(5), getSemanticName(6),
 		getSemanticName(7), getSemanticName(8), getSemanticName(9), getSemanticName(10), getSemanticName(11), getSemanticName(12),
 		getSemanticName(13), getSemanticName(16), getSemanticName(14), getSemanticName(15), getSemanticName(22), getSemanticName(23),

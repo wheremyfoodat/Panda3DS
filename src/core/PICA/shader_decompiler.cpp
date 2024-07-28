@@ -85,7 +85,6 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 			}
 			case ShaderOpcodes::IFU:
 			case ShaderOpcodes::IFC: {
-				Helpers::panic("IFC/IFU");
 				const u32 num = instruction & 0xff;
 				const u32 dest = getBits<10, 12>(instruction);
 
@@ -122,7 +121,29 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 				}
 				break;
 			}
-			case ShaderOpcodes::CALL: Helpers::panic("Unimplemented control flow operation (CALL)"); break;
+			case ShaderOpcodes::CALL: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+				const Function* calledFunction = addFunction(shader, dest, dest + num);
+
+				// Check if analysis of the branch taken func failed and return unknown if it did
+				if (analysisFailed) {
+					it->second = ExitMode::Unknown;
+					return it->second;
+				}
+
+				if (calledFunction->exitMode == ExitMode::AlwaysEnd) {
+					it->second = ExitMode::AlwaysEnd;
+					return it->second;
+				}
+
+				// Exit mode of the remainder of this function, after we return from the callee
+				ExitMode postCallExitMode = analyzeFunction(shader, pc + 1, end, labels);
+				ExitMode exitMode = exitSeries(postCallExitMode, calledFunction->exitMode);
+
+				it->second = exitMode;
+				return exitMode;
+			}
 			case ShaderOpcodes::CALLC: Helpers::panic("Unimplemented control flow operation (CALLC)"); break;
 			case ShaderOpcodes::CALLU: Helpers::panic("Unimplemented control flow operation (CALLU)"); break;
 			case ShaderOpcodes::LOOP: Helpers::panic("Unimplemented control flow operation (LOOP)"); break;
@@ -464,14 +485,71 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				const uint refY = getBit<24>(instruction);
 				const uint refX = getBit<25>(instruction);
 				const char* condition = getCondition(condOp, refX, refY);
-				
+
 				decompiledShader += fmt::format("if ({}) {{ pc = {}u; break; }}", condition, dest);
 				break;
 			}
+
+			case ShaderOpcodes::IFU:
+			case ShaderOpcodes::IFC: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+				const Function* conditionalFunc = findFunction(AddressRange(pc + 1, dest));
+
+				if (opcode == ShaderOpcodes::IFC) {
+					const u32 condOp = getBits<22, 2>(instruction);
+					const uint refY = getBit<24>(instruction);
+					const uint refX = getBit<25>(instruction);
+					const char* condition = getCondition(condOp, refX, refY);
+
+					decompiledShader += fmt::format("if ({}) {{", condition);
+				} else {
+					const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
+					const u32 mask = 1u << bit;
+
+					decompiledShader += fmt::format("if ((uniform_bool & {}u) != 0u) {{", mask);
+				}
+
+				callFunction(*conditionalFunc);
+				decompiledShader += "}\n";
+
+				pc = dest;
+				if (num > 0) {
+					const Function* elseFunc = findFunction(AddressRange(dest, dest + num));
+					pc = dest + num;
+
+					decompiledShader += "else { ";
+					callFunction(*elseFunc);
+					decompiledShader += "}\n";
+
+					if (conditionalFunc->exitMode == ExitMode::AlwaysEnd && elseFunc->exitMode == ExitMode::AlwaysEnd) {
+						finished = true;
+						return;
+					}
+				}
+
+				return;
+			}
+
+			case ShaderOpcodes::CALL: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+				const Function* calledFunc = findFunction(AddressRange(dest, dest + num));
+				callFunction(*calledFunc);
+
+				if (opcode == ShaderOpcodes::CALL && calledFunc->exitMode == ExitMode::AlwaysEnd) {
+					finished = true;
+					return;
+				}
+				break;
+			}
+
 			case ShaderOpcodes::END:
 				decompiledShader += "return;\n";
 				finished = true;
 				return;
+
+			case ShaderOpcodes::NOP: break;
 			default: Helpers::panic("GLSL recompiler: Unknown opcode: %X", opcode); break;
 		}
 	}

@@ -1,10 +1,12 @@
 #pragma once
+#include <fmt/format.h>
+
+#include <map>
 #include <set>
 #include <string>
 #include <tuple>
-#include <map>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "PICA/shader.hpp"
 #include "PICA/shader_gen_types.hpp"
@@ -42,9 +44,9 @@ namespace PICA::ShaderGen {
 			explicit Function(u32 start, u32 end) : start(start), end(end) {}
 			bool operator<(const Function& other) const { return AddressRange(start, end) < AddressRange(other.start, other.end); }
 
-			std::string getIdentifier() const { return "func_" + std::to_string(start) + "_to_" + std::to_string(end); }
-			std::string getForwardDecl() const { return "void " + getIdentifier() + "();\n"; }
-			std::string getCallStatement() const { return getIdentifier() + "()"; }
+			std::string getIdentifier() const { return fmt::format("fn_{}_{}", start, end); }
+			std::string getForwardDecl() const { return fmt::format("void fn_{}_{}();\n", start, end); }
+			std::string getCallStatement() const { return fmt::format("fn_{}_{}()", start, end); }
 		};
 
 		std::set<Function> functions{};
