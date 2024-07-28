@@ -3,6 +3,7 @@
 
 #include "PICA/gpu.hpp"
 #include "PICA/pica_frag_config.hpp"
+#include "PICA/pica_vert_config.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen_types.hpp"
 #include "helpers.hpp"
@@ -31,7 +32,7 @@ namespace PICA::ShaderGen {
 		std::string generate(const PICA::FragmentConfig& config);
 		std::string getDefaultVertexShader();
 		// For when PICA shader is acceleration is enabled. Turn the PICA shader source into a proper vertex shader
-		std::string getVertexShaderAccelerated(const std::string& picaSource, bool usingUbershader);
+		std::string getVertexShaderAccelerated(const std::string& picaSource, const PICA::VertConfig& vertConfig, bool usingUbershader);
 
 		void setTarget(API api, Language language) {
 			this->api = api;

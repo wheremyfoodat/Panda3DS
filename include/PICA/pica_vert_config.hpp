@@ -6,20 +6,38 @@
 
 #include "PICA/pica_hash.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/shader.hpp"
 #include "bitfield.hpp"
 #include "helpers.hpp"
 
 namespace PICA {
-	// Configuration struct used 
+	// Configuration struct used
 	struct VertConfig {
 		PICAHash::HashType shaderHash;
 		PICAHash::HashType opdescHash;
 		u32 entrypoint;
+
+		// PICA registers for configuring shader output->fragment semantic mapping
+		std::array<u32, 7> outmaps{};
+		u16 outputMask;
+		u8 outputCount;
 		bool usingUbershader;
 
 		bool operator==(const VertConfig& config) const {
 			// Hash function and equality operator required by std::unordered_map
 			return std::memcmp(this, &config, sizeof(VertConfig)) == 0;
+		}
+
+		VertConfig(PICAShader& shader, const std::array<u32, 0x300>& regs, bool usingUbershader) : usingUbershader(usingUbershader) {
+			shaderHash = shader.getCodeHash();
+			opdescHash = shader.getOpdescHash();
+			entrypoint = shader.entrypoint;
+
+			outputCount = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+			outputMask = regs[PICA::InternalRegs::VertexShaderOutputMask];
+			for (int i = 0; i < outputCount; i++) {
+				outputMask = regs[PICA::InternalRegs::ShaderOutmap0 + i];
+			}
 		}
 	};
 }  // namespace PICA

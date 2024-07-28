@@ -88,7 +88,7 @@ void RendererGL::initGraphicsContextInternal() {
 	gl.bindUBO(hwShaderUniformUBO);
 	glBufferData(GL_UNIFORM_BUFFER, PICAShader::totalUniformSize(), nullptr, GL_DYNAMIC_DRAW);
 
-	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
+	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize * 2, GL_STREAM_DRAW);
 	gl.bindVBO(vbo);
 	// Initialize the VAO used when not using hw shaders
 	defaultVAO.create();
@@ -122,8 +122,8 @@ void RendererGL::initGraphicsContextInternal() {
 	// Initialize the VAO used for hw shaders
 	hwShaderVAO.create();
 	gl.bindVAO(hwShaderVAO);
-	for (int attr = 0; attr < 8; attr++) {
-		hwShaderVAO.setAttributeFloat<float>(attr, 4, sizeof(Vertex), attr * sizeof(float) * 4);
+	for (int attr = 0; attr < 16; attr++) {
+		hwShaderVAO.setAttributeFloat<float>(attr, 4, sizeof(Vertex) * 2, attr * sizeof(float) * 4);
 		hwShaderVAO.enableAttribute(attr);
 	}
 
@@ -495,7 +495,14 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	setupStencilTest(stencilEnable);
 
-	vbo.bufferVertsSub(vertices);
+	// If we're using hardware shaders, the vertex array works completely different
+	// And instead of 8 vec4 attributes, each vertex is 16 vec4 attributes. We use a union + aliasing which is not ideal for readability.
+	if (!usingAcceleratedShader) {
+		vbo.bufferVertsSub(vertices);
+	} else {
+		glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size_bytes() * 2, vertices.data());
+	}
+
 	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 }
 
@@ -956,12 +963,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 	if (usingAcceleratedShader) {
 		auto shaderCodeHash = shaderUnit.vs.getCodeHash();
 		auto opdescHash = shaderUnit.vs.getOpdescHash();
-		auto vertexConfig = PICA::VertConfig{
-			.shaderHash = shaderCodeHash,
-			.opdescHash = opdescHash,
-			.entrypoint = shaderUnit.vs.entrypoint,
-			.usingUbershader = usingUbershader,
-		};
+		PICA::VertConfig vertexConfig(shaderUnit.vs, regs, usingUbershader);
 
 		std::optional<OpenGL::Shader>& shader = shaderCache.vertexShaderCache[vertexConfig];
 		// If the optional is false, we have never tried to recompile the shader before. Try to recompile it and see if it works.
@@ -976,7 +978,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 			// Empty source means compilation error, if the source is not empty then we convert the rcompiled PICA code into a valid shader and upload
 			// it to the GPU
 			if (!picaShaderSource.empty()) {
-				std::string vertexShaderSource = fragShaderGen.getVertexShaderAccelerated(picaShaderSource, usingUbershader);
+				std::string vertexShaderSource = fragShaderGen.getVertexShaderAccelerated(picaShaderSource, vertexConfig, usingUbershader);
 				shader->create({vertexShaderSource}, OpenGL::Vertex);
 			}
 		}

@@ -150,13 +150,29 @@ void GPU::drawArrays(bool indexed) {
 	}
 }
 
-static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
+// We need a union here, because unfortunately in CPU shaders we only need to store the vertex shader outputs in the vertex buffer,
+// which consist of 8 vec4 attributes, while with GPU shaders we need to pass all the vertex shader inputs to the GPU, which consist
+// of 16 vec4 attributes
+union PICAVertexBuffer {
+	// Used with CPU shaders
+	std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
+	// Used with GPU shaders. We can have up to 16 attributes per vertex, each attribute with 4 floats
+	std::array<float, Renderer::vertexBufferSize * 16 * 4> vsInputs;
+
+	PICAVertexBuffer() {}
+};
+
+static PICAVertexBuffer vertexBuffer;
 
 template <bool indexed, ShaderExecMode mode>
 void GPU::drawArrays() {
 	if constexpr (mode == ShaderExecMode::JIT) {
 		shaderJIT.prepare(shaderUnit.vs);
 	}
+
+	// We can have up to 16 attributes, each one consisting of 4 floats
+	constexpr u32 maxAttrSizeInFloats = 16 * 4;
+	auto& vertices = vertexBuffer.vertices;
 
 	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
 
@@ -228,7 +244,14 @@ void GPU::drawArrays() {
 			size_t tag = vertexIndex % vertexCacheSize;
 			// Cache hit
 			if (cache.validBits[tag] && cache.ids[tag] == vertexIndex) {
-				vertices[i] = vertices[cache.bufferPositions[tag]];
+				if constexpr (mode != ShaderExecMode::Hardware) {
+					vertices[i] = vertices[cache.bufferPositions[tag]];
+				} else {
+					std::memcpy(
+						&vertexBuffer.vsInputs[i * maxAttrSizeInFloats], &vertexBuffer.vsInputs[cache.bufferPositions[tag] * maxAttrSizeInFloats],
+						sizeof(float) * maxAttrSizeInFloats
+					);
+				}
 				continue;
 			}
 
@@ -361,11 +384,11 @@ void GPU::drawArrays() {
 				}
 			}
 		} else {  // Using hw shaders and running the shader on the CPU, just write the inputs to the attribute buffer directly
-			PICA::Vertex& out = vertices[i];
+			float* out = &vertexBuffer.vsInputs[i * maxAttrSizeInFloats];
 			for (int j = 0; j < totalAttribCount; j++) {
 				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
-				// Multiply mapping * 4 as mapping refers to a vec4 whereas out.raw is an array of floats
-				std::memcpy(&out.raw[mapping * 4], &currentAttributes[j], sizeof(vec4f));
+				// Multiply mapping * 4 as mapping refers to a vec4 whereas out is an array of floats
+				std::memcpy(&out[mapping * 4], &currentAttributes[j], sizeof(vec4f));
 			}
 		}
 	}

@@ -160,7 +160,7 @@ const Function* ShaderDecompiler::findFunction(const AddressRange& range) {
 
 void ShaderDecompiler::writeAttributes() {
 	decompiledShader += R"(
-	layout(location = 0) in vec4 inputs[8];
+	layout(location = 0) in vec4 inputs[16];
 	layout(std140) uniform PICAShaderUniforms {
 		vec4 uniform_float[96];
 		uvec4 uniform_int;
@@ -168,7 +168,7 @@ void ShaderDecompiler::writeAttributes() {
 	};
 
 	vec4 tmp_regs[16];
-	vec4 out_regs[8];
+	vec4 out_regs[16];
 	vec4 dummy_vec = vec4(0.0);
 	bvec2 cmp_reg = bvec2(false);
 )";

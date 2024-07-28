@@ -671,7 +671,28 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 	shader += "combinerOutput.rgb = mix(fog_color, combinerOutput.rgb, fog_factor);";
 }
 
-std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& picaSource, bool usingUbershader) {
+std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& picaSource, const PICA::VertConfig& vertConfig, bool usingUbershader) {
+	// First, calculate output register -> Fixed function fragment semantics based on the VAO config
+	{
+		uint count = 0;
+		u16 outputMask = vertConfig.outputMask;
+		std::array<u8, 16> vsOutputRegisters;
+
+		// See which registers are actually enabled and ignore the disabled ones
+		for (int i = 0; i < 16; i++) {
+			if (outputMask & 1) {
+				vsOutputRegisters[count++] = i;
+			}
+
+			outputMask >>= 1;
+		}
+
+		// For the others, map the index to a vs output directly (TODO: What does hw actually do?)
+		for (; count < 16; count++) {
+			vsOutputRegisters[count] = count;
+		}
+	}
+
 	if (usingUbershader) {
 		Helpers::panic("Unimplemented: GetVertexShaderAccelerated for ubershader");
 		return picaSource;
@@ -704,8 +725,8 @@ void main() {
 	float a_texcoord0_w = out_regs[2].w;
 	vec2 a_texcoord1 = out_regs[3].xy;
 	vec2 a_texcoord2 = out_regs[4].xy;
-	vec3 a_view = out_regs[5].xyz;
-	vec4 a_quaternion = out_regs[6];
+	vec3 a_view = out_regs[2].xyz;
+	vec4 a_quaternion = out_regs[3];
 
 	gl_Position = a_coords;
 	vec4 colourAbs = abs(a_vertexColour);
@@ -722,7 +743,7 @@ void main() {
 	gl_ClipDistance[1] = dot(clipCoords, a_coords);
 #endif
 })";
-
+		std::cout << ret << "\n";
 		return ret;
 	}
 }
