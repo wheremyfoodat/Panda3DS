@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cassert>
 #include <cstring>
 #include <type_traits>
 #include <unordered_map>
@@ -23,6 +24,10 @@ namespace PICA {
 		u8 outputCount;
 		bool usingUbershader;
 
+		// Pad to 56 bytes so that the compiler won't insert unnecessary padding, which in turn will affect our unordered_map lookup
+		// As the padding will get hashed and memcmp'd...
+		u32 pad{};
+
 		bool operator==(const VertConfig& config) const {
 			// Hash function and equality operator required by std::unordered_map
 			return std::memcmp(this, &config, sizeof(VertConfig)) == 0;
@@ -42,6 +47,8 @@ namespace PICA {
 		}
 	};
 }  // namespace PICA
+
+static_assert(sizeof(PICA::VertConfig) == 56);
 
 // Override std::hash for our vertex config class
 template <>
