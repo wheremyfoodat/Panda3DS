@@ -292,6 +292,9 @@ namespace Audio {
 		}
 
 		if (config.embeddedBufferDirty) {
+			// Annoyingly, and only for embedded buffer, whether we use config.playPosition depends on the relevant dirty bit
+			const u32 playPosition = config.playPositionDirty ? config.playPosition : 0;
+
 			config.embeddedBufferDirty = 0;
 			if (s32(config.length) >= 0) [[likely]] {
 				// TODO: Add sample format and channel count
@@ -303,7 +306,7 @@ namespace Audio {
 					.adpcmDirty = config.adpcmDirty != 0,
 					.looping = config.isLooping != 0,
 					.bufferID = config.bufferID,
-					.playPosition = config.playPosition,
+					.playPosition = playPosition,
 					.format = source.sampleFormat,
 					.sourceType = source.sourceType,
 					.fromQueue = false,
