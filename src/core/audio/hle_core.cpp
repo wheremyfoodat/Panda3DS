@@ -253,6 +253,17 @@ namespace Audio {
 			return;
 		}
 
+		// The reset flags take priority, as you can reset a source and set it up to be played again at the same time
+		if (config.resetFlag) {
+			config.resetFlag = 0;
+			source.reset();
+		}
+
+		if (config.partialResetFlag) {
+			config.partialResetFlag = 0;
+			source.buffers = {};
+		}
+
 		if (config.enableDirty) {
 			config.enableDirty = 0;
 			source.enabled = config.enable != 0;
@@ -270,16 +281,6 @@ namespace Audio {
 				adpcmCoefficients, adpcmCoefficients + source.adpcmCoefficients.size(), source.adpcmCoefficients.begin(),
 				[](const s16_le& input) -> s16 { return s16(input); }
 			);
-		}
-
-		if (config.resetFlag) {
-			config.resetFlag = 0;
-			source.reset();
-		}
-
-		if (config.partialResetFlag) {
-			config.partialResetFlag = 0;
-			source.buffers = {};
 		}
 
 		// TODO: Should we check bufferQueueDirty here too?
