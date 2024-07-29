@@ -220,7 +220,7 @@ namespace Audio {
 		// TODO: Properly implement mixers
 		// The DSP checks the DSP configuration dirty bits on every frame, applies them, and clears them
 		read.dspConfiguration.dirtyRaw = 0;
-		// read.dspConfiguration.dirtyRaw2 = 0;
+		read.dspConfiguration.dirtyRaw2 = 0;
 
 		for (int i = 0; i < sourceCount; i++) {
 			// Update source configuration from the read region of shared memory
@@ -322,8 +322,40 @@ namespace Audio {
 		}
 
 		if (config.bufferQueueDirty) {
-			config.bufferQueueDirty = 0;
 			// printf("Buffer queue dirty for voice %d\n", source.index);
+
+			u16 dirtyBuffers = config.buffersDirty;
+			config.bufferQueueDirty = 0;
+			config.buffersDirty = 0;
+
+			for (int i = 0; i < 4; i++) {
+				bool dirty = ((dirtyBuffers >> i) & 1) != 0;
+				if (dirty) {
+					const auto& buffer = config.buffers[i];
+
+					if (s32(buffer.length) >= 0) [[likely]] {
+						// TODO: Add sample format and channel count
+						Source::Buffer newBuffer{
+							.paddr = buffer.physicalAddress,
+							.sampleCount = buffer.length,
+							.adpcmScale = u8(buffer.adpcmScale),
+							.previousSamples = {s16(buffer.adpcm_yn[0]), s16(buffer.adpcm_yn[1])},
+							.adpcmDirty = buffer.adpcmDirty != 0,
+							.looping = buffer.isLooping != 0,
+							.bufferID = buffer.bufferID,
+							.playPosition = 0,
+							.format = source.sampleFormat,
+							.sourceType = source.sourceType,
+							.fromQueue = true,
+							.hasPlayedOnce = false,
+						};
+
+						source.buffers.emplace(std::move(newBuffer));
+					} else {
+						printf("Buffer queue dirty: Invalid buffer size for DSP voice %d\n", source.index);
+					}
+				}
+			}
 		}
 
 		config.dirtyRaw = 0;
@@ -371,16 +403,16 @@ namespace Audio {
 				break;
 		}
 
+		// If the buffer is a looping buffer, re-push it
+		if (buffer.looping) {
+			source.pushBuffer(buffer);
+		}
+
 		// We're skipping the first samplePosition samples, so remove them from the buffer so as not to consume them later
 		if (source.samplePosition > 0) {
 			auto start = source.currentSamples.begin();
 			auto end = std::next(start, source.samplePosition);
 			source.currentSamples.erase(start, end);
-		}
-
-		// If the buffer is a looping buffer, re-push it
-		if (buffer.looping) {
-			source.pushBuffer(buffer);
 		}
 	}
 
