@@ -216,6 +216,11 @@ namespace Audio {
 		SharedMemory& read = readRegion();
 		SharedMemory& write = writeRegion();
 
+		// TODO: Properly implement mixers
+		// The DSP checks the DSP configuration dirty bits on every frame, applies them, and clears them
+		read.dspConfiguration.dirtyRaw = 0;
+		// read.dspConfiguration.dirtyRaw2 = 0;
+
 		for (int i = 0; i < sourceCount; i++) {
 			// Update source configuration from the read region of shared memory
 			auto& config = read.sourceConfigurations.config[i];
@@ -401,6 +406,7 @@ namespace Audio {
 				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
 				source.currentSamples.erase(source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
 
+				source.samplePosition += sampleCount;
 				outputCount += sampleCount;
 			}
 		}

@@ -142,7 +142,7 @@ namespace Audio {
 			} else if (counter1 == 0xffff && counter0 != 0xfffe) {
 				return 0;
 			} else {
-				return counter0 > counter1 ? 0 : 0;
+				return counter0 > counter1 ? 0 : 1;
 			}
 		}
 
