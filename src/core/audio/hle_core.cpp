@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <thread>
 #include <utility>
 
@@ -368,6 +369,13 @@ namespace Audio {
 				Helpers::warn("Invalid DSP sample format");
 				source.currentSamples = {};
 				break;
+		}
+
+		// We're skipping the first samplePosition samples, so remove them from the buffer so as not to consume them later
+		if (source.samplePosition > 0) {
+			auto start = source.currentSamples.begin();
+			auto end = std::next(start, source.samplePosition);
+			source.currentSamples.erase(start, end);
 		}
 
 		// If the buffer is a looping buffer, re-push it
