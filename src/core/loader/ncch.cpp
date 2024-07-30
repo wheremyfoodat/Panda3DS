@@ -91,6 +91,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 				std::memcpy(secondaryKeyY.data(), hash.data(), secondaryKeyY.size());
 			} else {
 				Helpers::warn("Couldn't find a seed value for this title. Make sure you have a seeddb.bin file alongside your aes_keys.txt");
+				gotCryptoKeys = false;
 			}
 		}
 
