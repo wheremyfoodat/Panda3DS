@@ -102,7 +102,6 @@ namespace Crypto {
 
 		std::vector<Seed> seeds;
 		IOFile seedDatabase;
-		bool seedsLoaded = false;
 
 		constexpr void updateNormalKey(usize slotId) {
 			if (m_generator.has_value() && hasKeyX(slotId) && hasKeyY(slotId)) {
