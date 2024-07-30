@@ -21,6 +21,20 @@ enum class RendererType : s8 {
 };
 
 struct EmulatorConfig;
+enum class ShaderMode {
+	Specialized = 1,
+	Ubershader = 2,
+	Hybrid = 3,
+};
+
+// For now, use specialized shaders by default on MacOS as M1 drivers are buggy when using the ubershader, and on Android since mobile GPUs are
+// horrible. On other platforms we default to ubershader + shadergen fallback for lights
+#if defined(__ANDROID__) || defined(__APPLE__)
+	static constexpr ShaderMode defaultShaderMode = ShaderMode::Specialized;
+#else
+	static constexpr ShaderMode defaultShaderMode = ShaderMode::Ubershader;
+#endif
+
 class GPU;
 struct SDL_Window;
 
@@ -56,6 +70,8 @@ class Renderer {
 	static constexpr u32 vertexBufferSize = 0x10000;
 	static std::optional<RendererType> typeFromString(std::string inString);
 	static const char* typeToString(RendererType rendererType);
+	static std::optional<ShaderMode> shaderModeFromString(std::string inString);
+	static const char* shaderModeToString(ShaderMode shaderMode);
 
 	virtual void reset() = 0;
 	virtual void display() = 0;                                                              // Display the 3DS screen contents to the window
@@ -77,7 +93,7 @@ class Renderer {
 	virtual std::string getUbershader() { return ""; }
 	virtual void setUbershader(const std::string& shader) {}
 
-	virtual void setUbershaderSetting(bool value) {}
+	virtual void setShaderMode(ShaderMode shaderMode) {}
 
 	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
 #ifdef PANDA3DS_FRONTEND_QT
