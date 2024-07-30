@@ -6,6 +6,7 @@
 #include <string>
 
 #include "helpers.hpp"
+#include "renderer.hpp"
 #include "toml.hpp"
 
 // Largely based on https://github.com/nba-emu/NanoBoyAdvance/blob/master/src/platform/core/src/config.cpp
@@ -60,9 +61,18 @@ void EmulatorConfig::load() {
 				rendererType = RendererType::OpenGL;
 			}
 
+			auto shaderModeName = toml::find_or<std::string>(gpu, "ShaderMode", Renderer::shaderModeToString(defaultShaderMode));
+			auto configShaderMode = Renderer::shaderModeFromString(shaderModeName);
+
+			if (configShaderMode.has_value()) {
+				shaderMode = configShaderMode.value();
+			} else {
+				Helpers::warn("Invalid shader mode specified: %s\n", shaderModeName.c_str());
+				shaderMode = defaultShaderMode;
+			}
+
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
 			vsyncEnabled = toml::find_or<toml::boolean>(gpu, "EnableVSync", true);
-			useUbershaders = toml::find_or<toml::boolean>(gpu, "UseUbershaders", ubershaderDefault);
 			accurateShaderMul = toml::find_or<toml::boolean>(gpu, "AccurateShaderMultiplication", false);
 
 			forceShadergenForLights = toml::find_or<toml::boolean>(gpu, "ForceShadergenForLighting", true);
@@ -132,7 +142,7 @@ void EmulatorConfig::save() {
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 	data["GPU"]["EnableVSync"] = vsyncEnabled;
 	data["GPU"]["AccurateShaderMultiplication"] = accurateShaderMul;
-	data["GPU"]["UseUbershaders"] = useUbershaders;
+	data["GPU"]["ShaderMode"] = std::string(Renderer::shaderModeToString(shaderMode));
 	data["GPU"]["ForceShadergenForLighting"] = forceShadergenForLights;
 	data["GPU"]["ShadergenLightThreshold"] = lightShadergenThreshold;
 

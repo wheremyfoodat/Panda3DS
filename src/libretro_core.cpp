@@ -5,6 +5,7 @@
 
 #include <emulator.hpp>
 #include <renderer_gl/renderer_gl.hpp>
+#include "renderer.hpp"
 
 static retro_environment_t envCallbacks;
 static retro_video_refresh_t videoCallbacks;
@@ -179,9 +180,10 @@ static void configUpdate() {
 	config.sdCardInserted = FetchVariableBool("panda3ds_use_virtual_sd", true);
 	config.sdWriteProtected = FetchVariableBool("panda3ds_write_protect_virtual_sd", false);
 	config.accurateShaderMul = FetchVariableBool("panda3ds_accurate_shader_mul", false);
-	config.useUbershaders = FetchVariableBool("panda3ds_use_ubershader", true);
 	config.forceShadergenForLights = FetchVariableBool("panda3ds_ubershader_lighting_override", true);
 	config.lightShadergenThreshold = std::clamp(std::stoi(FetchVariable("panda3ds_ubershader_lighting_override_threshold", "1")), 1, 8);
+	// TODO: be able to use hybrid mode
+	config.shaderMode = FetchVariableBool("panda3ds_use_ubershader", defaultShaderMode == ShaderMode::Ubershader) ? ShaderMode::Ubershader : ShaderMode::Specialized;
 	config.discordRpcEnabled = false;
 
 	config.save();
