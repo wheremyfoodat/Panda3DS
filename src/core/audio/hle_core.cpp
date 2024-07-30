@@ -342,7 +342,7 @@ namespace Audio {
 						Source::Buffer newBuffer{
 							.paddr = buffer.physicalAddress,
 							.sampleCount = buffer.length,
-							.adpcmScale = u8(buffer.adpcmScale),
+							.adpcmScale = u8(buffer.adpcm_ps),
 							.previousSamples = {s16(buffer.adpcm_yn[0]), s16(buffer.adpcm_yn[1])},
 							.adpcmDirty = buffer.adpcmDirty != 0,
 							.looping = buffer.isLooping != 0,
