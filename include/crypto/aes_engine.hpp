@@ -1,20 +1,29 @@
 #pragma once
 
 #include <array>
-#include <cstring>
-#include <cstdint>
 #include <climits>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <optional>
+#include <vector>
 
 #include "helpers.hpp"
+#include "io_file.hpp"
+#include "swap.hpp"
 
 namespace Crypto {
-	constexpr std::size_t AesKeySize = 0x10;
+	constexpr usize AesKeySize = 0x10;
 	using AESKey = std::array<u8, AesKeySize>;
 
-	template <std::size_t N>
-	static std::array<u8, N> rolArray(const std::array<u8, N>& value, std::size_t bits) {
+	struct Seed {
+		u64_le titleID;
+		AESKey seed;
+		std::array<u8, 8> pad;
+	};
+
+	template <usize N>
+	static std::array<u8, N> rolArray(const std::array<u8, N>& value, usize bits) {
 		const auto bitWidth = N * CHAR_BIT;
 
 		bits %= bitWidth;
@@ -24,18 +33,18 @@ namespace Crypto {
 
 		std::array<u8, N> result;
 
-		for (std::size_t i = 0; i < N; i++) {
+		for (usize i = 0; i < N; i++) {
 			result[i] = ((value[(i + byteShift) % N] << bitShift) | (value[(i + byteShift + 1) % N] >> (CHAR_BIT - bitShift))) & UINT8_MAX;
 		}
 
 		return result;
 	}
 
-	template <std::size_t N>
+	template <usize N>
 	static std::array<u8, N> addArray(const std::array<u8, N>& a, const std::array<u8, N>& b) {
 		std::array<u8, N> result;
-		std::size_t sum = 0;
-		std::size_t carry = 0;
+		usize sum = 0;
+		usize carry = 0;
 
 		for (std::int64_t i = N - 1; i >= 0; i--) {
 			sum = a[i] + b[i] + carry;
@@ -46,11 +55,11 @@ namespace Crypto {
 		return result;
 	}
 
-	template <std::size_t N>
+	template <usize N>
 	static std::array<u8, N> xorArray(const std::array<u8, N>& a, const std::array<u8, N>& b) {
 		std::array<u8, N> result;
 
-		for (std::size_t i = 0; i < N; i++) {
+		for (usize i = 0; i < N; i++) {
 			result[i] = a[i] ^ b[i];
 		}
 
@@ -63,7 +72,7 @@ namespace Crypto {
 		}
 
 		AESKey rawKey;
-		for (std::size_t i = 0; i < rawKey.size(); i++) {
+		for (usize i = 0; i < rawKey.size(); i++) {
 			rawKey[i] = static_cast<u8>(std::stoi(hex.substr(i * 2, 2), 0, 16));
 		}
 
@@ -76,7 +85,7 @@ namespace Crypto {
 		std::optional<AESKey> normalKey = std::nullopt;
 	};
 
-	enum KeySlotId : std::size_t {
+	enum KeySlotId : usize {
 		NCCHKey0 = 0x2C,
 		NCCHKey1 = 0x25,
 		NCCHKey2 = 0x18,
@@ -84,14 +93,17 @@ namespace Crypto {
 	};
 
 	class AESEngine {
-	private:
-		constexpr static std::size_t AesKeySlotCount = 0x40;
+	  private:
+		constexpr static usize AesKeySlotCount = 0x40;
 
 		std::optional<AESKey> m_generator = std::nullopt;
 		std::array<AESKeySlot, AesKeySlotCount> m_slots;
 		bool keysLoaded = false;
 
-		constexpr void updateNormalKey(std::size_t slotId) {
+		std::vector<Seed> seeds;
+		IOFile seedDatabase;
+
+		constexpr void updateNormalKey(usize slotId) {
 			if (m_generator.has_value() && hasKeyX(slotId) && hasKeyY(slotId)) {
 				auto& keySlot = m_slots.at(slotId);
 				AESKey keyX = keySlot.keyX.value();
@@ -101,13 +113,17 @@ namespace Crypto {
 			}
 		}
 
-	public:
+	  public:
 		AESEngine() {}
 		void loadKeys(const std::filesystem::path& path);
+		void setSeedPath(const std::filesystem::path& path);
+		// Returns true on success, false on failure
+		bool loadSeeds();
+
 		bool haveKeys() { return keysLoaded; }
 		bool haveGenerator() { return m_generator.has_value(); }
 
-		constexpr bool hasKeyX(std::size_t slotId) {
+		constexpr bool hasKeyX(usize slotId) {
 			if (slotId >= AesKeySlotCount) {
 				return false;
 			}
@@ -115,18 +131,16 @@ namespace Crypto {
 			return m_slots.at(slotId).keyX.has_value();
 		}
 
-		constexpr AESKey getKeyX(std::size_t slotId) {
-			return m_slots.at(slotId).keyX.value_or(AESKey{});
-		}
+		constexpr AESKey getKeyX(usize slotId) { return m_slots.at(slotId).keyX.value_or(AESKey{}); }
 
-		constexpr void setKeyX(std::size_t slotId, const AESKey &key) {
+		constexpr void setKeyX(usize slotId, const AESKey& key) {
 			if (slotId < AesKeySlotCount) {
 				m_slots.at(slotId).keyX = key;
 				updateNormalKey(slotId);
 			}
 		}
 
-		constexpr bool hasKeyY(std::size_t slotId) {
+		constexpr bool hasKeyY(usize slotId) {
 			if (slotId >= AesKeySlotCount) {
 				return false;
 			}
@@ -134,18 +148,16 @@ namespace Crypto {
 			return m_slots.at(slotId).keyY.has_value();
 		}
 
-		constexpr AESKey getKeyY(std::size_t slotId) {
-			return m_slots.at(slotId).keyY.value_or(AESKey{});
-		}
+		constexpr AESKey getKeyY(usize slotId) { return m_slots.at(slotId).keyY.value_or(AESKey{}); }
 
-		constexpr void setKeyY(std::size_t slotId, const AESKey &key) {
+		constexpr void setKeyY(usize slotId, const AESKey& key) {
 			if (slotId < AesKeySlotCount) {
 				m_slots.at(slotId).keyY = key;
 				updateNormalKey(slotId);
 			}
 		}
 
-		constexpr bool hasNormalKey(std::size_t slotId) {
+		constexpr bool hasNormalKey(usize slotId) {
 			if (slotId >= AesKeySlotCount) {
 				return false;
 			}
@@ -153,14 +165,14 @@ namespace Crypto {
 			return m_slots.at(slotId).normalKey.has_value();
 		}
 
-		constexpr AESKey getNormalKey(std::size_t slotId) {
-			return m_slots.at(slotId).normalKey.value_or(AESKey{});
-		}
+		constexpr AESKey getNormalKey(usize slotId) { return m_slots.at(slotId).normalKey.value_or(AESKey{}); }
 
-		constexpr void setNormalKey(std::size_t slotId, const AESKey &key) {
+		constexpr void setNormalKey(usize slotId, const AESKey& key) {
 			if (slotId < AesKeySlotCount) {
 				m_slots.at(slotId).normalKey = key;
 			}
 		}
+
+		std::optional<AESKey> getSeedFromDB(u64 titleID);
 	};
-}
+}  // namespace Crypto
