@@ -18,6 +18,10 @@ JavaVM* jvm = nullptr;
 jclass alberClass;
 jmethodID alberClassOpenDocument;
 
+EGLSurface eglSurface = EGL_NO_SURFACE;
+EGLDisplay eglDisplay = EGL_NO_DISPLAY;
+int eglVersion = 0;
+
 #define AlberFunction(type, name) JNIEXPORT type JNICALL Java_com_panda3ds_pandroid_AlberDriver_##name
 
 void throwException(JNIEnv* env, const char* message) {
@@ -69,6 +73,10 @@ AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(eglGetProcAddress))) {
 		return throwException(env, "Failed to load OpenGL ES 2.0");
 	}
+
+	eglDisplay = eglGetCurrentDisplay();
+	eglSurface = eglGetCurrentSurface(EGL_DRAW);
+	eglQueryContext(eglDisplay, eglGetCurrentContext(), EGL_CONTEXT_CLIENT_VERSION, &eglVersion);
 
 	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "OpenGL ES %d.%d", GLVersion.major, GLVersion.minor);
 	emulator->initGraphicsContext(nullptr);
@@ -139,4 +147,29 @@ int AndroidUtils::openDocument(const char* path, const char* perms) {
     env->DeleteLocalRef(jmode);
 
     return (int)result;
+}
+
+namespace AsyncCompiler {
+	void createContext(void* userdata) {
+		EGLint attribList[] = {
+			EGL_CONTEXT_CLIENT_VERSION, eglVersion,
+			EGL_NONE
+		};
+
+		EGLContext threadContext = eglCreateContext(eglDisplay, eglSurface, EGL_NO_CONTEXT, attribList);
+		if (threadContext == EGL_NO_CONTEXT) {
+			throwException(jniEnv(), "Failed to create EGL context");
+		}
+
+		if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, threadContext)) {
+			throwException(jniEnv(), "Failed to make EGL context current");
+		}
+
+		__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "Async compiler started, version: %s", glGetString(GL_VERSION));
+	}
+
+	void destroyContext(void* userdata, void* context) {
+		eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+		eglDestroyContext(eglDisplay, (EGLContext)context);
+	}
 }

@@ -4,9 +4,8 @@
 #include "glad/gl.h"
 #include "opengl.hpp"
 
-namespace Frontend::AsyncCompiler {
+namespace AsyncCompiler {
     void* createContext(void* userdata);
-    void makeCurrent(void* userdata, void* context);
     void destroyContext(void* userdata, void* context);
 }
 
@@ -40,9 +39,12 @@ bool AsyncCompilerState::PopCompiledProgram(CompiledProgram*& program)
 }
 
 void AsyncCompilerState::Start() {
-    void* context = Frontend::AsyncCompiler::createContext(contextCreationUserdata);
-    shaderCompilationThread = std::thread([this, context]() {
-        Frontend::AsyncCompiler::makeCurrent(contextCreationUserdata, context);
+    shaderCompilationThread = std::thread([this]() {
+        void* context = AsyncCompiler::createContext(contextCreationUserdata);
+        if (!context) {
+            Helpers::panic("Failed to create async compiler context");
+        }
+
         printf("Async compiler started, version: %s\n", glGetString(GL_VERSION));
         std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
 	    defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
@@ -85,7 +87,7 @@ void AsyncCompilerState::Start() {
             std::this_thread::yield();
         }
 
-        Frontend::AsyncCompiler::destroyContext(contextCreationUserdata, context);
+        AsyncCompiler::destroyContext(contextCreationUserdata, context);
     });
 }
 

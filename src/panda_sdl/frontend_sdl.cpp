@@ -344,27 +344,18 @@ void FrontendSDL::run() {
 	}
 }
 
-namespace Frontend::AsyncCompiler {
+namespace AsyncCompiler {
 	void* createContext(void* userdata) {
 		SDL_Window* window = static_cast<SDL_Window*>(userdata);
-		SDL_GLContext previousContext = SDL_GL_GetCurrentContext();
-		SDL_GLContext context = SDL_GL_CreateContext(window); // this sets it as current :(
-		SDL_GL_MakeCurrent(window, previousContext);
+
+		// SDL_GL_CreateContext also makes it the current context
+		SDL_GLContext context = SDL_GL_CreateContext(window);
 
 		if (context == nullptr) {
 			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
 		}
 
 		return context;
-	}
-
-	void makeCurrent(void* userdata, void* context) {
-		SDL_Window* window = static_cast<SDL_Window*>(userdata);
-		int result = SDL_GL_MakeCurrent(window, context);
-
-		if (result < 0) {
-			Helpers::panic("OpenGL context make current failed: %s", SDL_GetError());
-		}
 	}
 
 	void destroyContext(void* userdata, void* context) {
