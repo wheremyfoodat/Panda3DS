@@ -146,7 +146,24 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 			}
 			case ShaderOpcodes::CALLC: Helpers::panic("Unimplemented control flow operation (CALLC)"); break;
 			case ShaderOpcodes::CALLU: Helpers::panic("Unimplemented control flow operation (CALLU)"); break;
-			case ShaderOpcodes::LOOP: Helpers::panic("Unimplemented control flow operation (LOOP)"); break;
+			case ShaderOpcodes::LOOP: {
+				u32 dest = getBits<10, 12>(instruction);
+				const Function* loopFunction = addFunction(shader, pc + 1, dest + 1);
+				if (analysisFailed) {
+					it->second = ExitMode::Unknown;
+					return it->second;
+				}
+
+				if (loopFunction->exitMode == ExitMode::AlwaysEnd) {
+					it->second = ExitMode::AlwaysEnd;
+					return it->second;
+				}
+
+				ExitMode afterLoop = analyzeFunction(shader, dest + 1, end, labels);
+				ExitMode exitMode = exitSeries(afterLoop, loopFunction->exitMode);
+				it->second = exitMode;
+				return it->second;
+			}
 			case ShaderOpcodes::END: it->second = ExitMode::AlwaysEnd; return it->second;
 
 			default: break;
@@ -577,11 +594,34 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				break;
 			}
 
+			case ShaderOpcodes::LOOP: {
+				const u32 dest = getBits<10, 12>(instruction);
+				const u32 uniformIndex = getBits<22, 2>(instruction);
+
+				// loop counter = uniform.y
+				decompiledShader += fmt::format("addr_reg.z = int((uniform_int[{}] >> 16u) & 0xFFu);\n", uniformIndex);
+				decompiledShader += fmt::format(
+					"for (uint loopCtr{} = 0u; loopCtr{} <= ((uniform_int[{}] >> 24) & 0xFFu); loopCtr{}++, addr_reg.z += int((uniform_int[{}] >> "
+					"8u) & 0xFFu)) {{\n",
+					pc, pc, uniformIndex, pc, uniformIndex
+				);
+
+				AddressRange range(pc + 1, dest + 1);
+				const Function* func = findFunction(range);
+				callFunction(*func);
+				decompiledShader += "}\n";
+
+				if (func->exitMode == ExitMode::AlwaysEnd) {
+					finished = true;
+					return;
+				}
+				break;
+			}
+
 			case ShaderOpcodes::END:
 				decompiledShader += "return;\n";
 				finished = true;
 				return;
-
 
 			case ShaderOpcodes::NOP: break;
 			default: Helpers::panic("GLSL recompiler: Unknown opcode: %X", opcode); break;
