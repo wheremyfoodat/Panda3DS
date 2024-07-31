@@ -27,6 +27,7 @@ namespace {
 
 	void initializeProgramEntry(GLStateManager& gl, CachedProgram& programEntry) {
 		OpenGL::Program& program = programEntry.program;
+		program.use();
 
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
@@ -477,7 +478,6 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 			programEntry.ready = true;
 
 			programEntry.program.createFromBinary(compiledProgram->binary, compiledProgram->binaryFormat);
-			programEntry.program.use();
 			initializeProgramEntry(gl, programEntry);
 
 			delete compiledProgram;
@@ -492,6 +492,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		} else if (!shaderCache[fsConfig].ready) {
 			usingUbershader = true;
 		}
+		usingUbershader = true;
 	}
 
 	if (usingUbershader) {
@@ -917,8 +918,6 @@ OpenGL::Program& RendererGL::getSpecializedShader(const PICA::FragmentConfig& fs
 
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
 		program.create({defaultShadergenVs, fragShader});
-		gl.useProgram(program);
-
 		fragShader.free();
 
 		initializeProgramEntry(gl, programEntry);

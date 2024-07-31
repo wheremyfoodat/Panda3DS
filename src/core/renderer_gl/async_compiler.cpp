@@ -82,8 +82,7 @@ void AsyncCompilerState::Start() {
                 }
             }
 
-            // Sleep for a bit to avoid excessive CPU usage
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::yield();
         }
 
         Frontend::AsyncCompiler::destroyContext(contextCreationUserdata, context);
