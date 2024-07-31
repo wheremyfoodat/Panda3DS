@@ -4,8 +4,14 @@
 #include "glad/gl.h"
 #include "opengl.hpp"
 
-AsyncCompilerState::AsyncCompilerState(PICA::ShaderGen::FragmentGenerator& fragShaderGenRef)
-    : fragShaderGen(fragShaderGenRef)
+namespace Frontend::AsyncCompiler {
+    void* createContext(void* userdata);
+    void makeCurrent(void* userdata, void* context);
+    void destroyContext(void* userdata, void* context);
+}
+
+AsyncCompilerState::AsyncCompilerState(PICA::ShaderGen::FragmentGenerator& fragShaderGenRef, void* contextCreationUserdata)
+    : fragShaderGen(fragShaderGenRef), contextCreationUserdata(contextCreationUserdata)
 {
     Start();
 }
@@ -33,14 +39,11 @@ bool AsyncCompilerState::PopCompiledProgram(CompiledProgram*& program)
     return hasItem;
 }
 
-void AsyncCompilerState::createGLContext() {
-    // TODO: do me
-}
-
 void AsyncCompilerState::Start() {
-    shaderCompilationThread = std::thread([this]() {
-        createGLContext();
-
+    void* context = Frontend::AsyncCompiler::createContext(contextCreationUserdata);
+    shaderCompilationThread = std::thread([this, context]() {
+        Frontend::AsyncCompiler::makeCurrent(contextCreationUserdata, context);
+        printf("Async compiler started, version: %s\n", glGetString(GL_VERSION));
         std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
 	    defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
         
@@ -83,7 +86,7 @@ void AsyncCompilerState::Start() {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
-        destroyGLContext();
+        Frontend::AsyncCompiler::destroyContext(contextCreationUserdata, context);
     });
 }
 

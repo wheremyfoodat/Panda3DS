@@ -40,7 +40,8 @@ namespace PICA
 struct AsyncCompilerState
 {
     // The constructor will start the thread that will compile the shaders and create an OpenGL context
-    explicit AsyncCompilerState(PICA::ShaderGen::FragmentGenerator& fragShaderGen);
+    // contextCreationUserdata is frontend specific, for example for SDL it's an SDL_Window*
+    explicit AsyncCompilerState(PICA::ShaderGen::FragmentGenerator& fragShaderGen, void* contextCreationUserdata);
 
     // The destructor will first set the stop flag and join the thread (which will wait until it exits)
     // and then clean up the queues
@@ -60,9 +61,6 @@ struct AsyncCompilerState
     // Manually stops the thread
     void Stop();
 private:
-    void createGLContext();
-    void destroyGLContext();
-
     PICA::ShaderGen::FragmentGenerator& fragShaderGen;
 
     OpenGL::Shader defaultShadergenVs;
@@ -72,4 +70,6 @@ private:
 	lockfree::spsc::Queue<CompiledProgram*, maxInFlightShaderCount> compiledQueue;
 	std::atomic_bool running = false;
 	std::thread shaderCompilationThread;
+
+    void* contextCreationUserdata;
 };

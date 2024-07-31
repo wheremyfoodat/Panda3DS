@@ -26,7 +26,7 @@ class GPU;
 // Cached recompiled fragment shader
 struct CachedProgram {
 	OpenGL::Program program;
-	uint uboBinding;
+	GLuint uboBinding = 0;
 	bool ready = false;
 };
 
@@ -79,10 +79,7 @@ class RendererGL final : public Renderer {
 	OpenGL::Shader defaultShadergenVs;
 	GLuint shadergenFragmentUBO;
 
-	// Cached recompiled fragment shader
-	struct CachedProgram {
-		OpenGL::Program program;
-	};
+	void* contextCreationUserdata = nullptr;
 	std::unordered_map<PICA::FragmentConfig, CachedProgram> shaderCache;
 	std::unique_ptr<AsyncCompilerState> asyncCompiler;
 

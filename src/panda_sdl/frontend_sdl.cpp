@@ -1,6 +1,7 @@
 #include "panda_sdl/frontend_sdl.hpp"
 
 #include <glad/gl.h>
+#include "SDL_video.h"
 
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
@@ -340,5 +341,33 @@ void FrontendSDL::run() {
 		// kernel.evalReschedule();
 
 		SDL_GL_SwapWindow(window);
+	}
+}
+
+namespace Frontend::AsyncCompiler {
+	void* createContext(void* userdata) {
+		SDL_Window* window = static_cast<SDL_Window*>(userdata);
+		SDL_GLContext previousContext = SDL_GL_GetCurrentContext();
+		SDL_GLContext context = SDL_GL_CreateContext(window); // this sets it as current :(
+		SDL_GL_MakeCurrent(window, previousContext);
+
+		if (context == nullptr) {
+			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+		}
+
+		return context;
+	}
+
+	void makeCurrent(void* userdata, void* context) {
+		SDL_Window* window = static_cast<SDL_Window*>(userdata);
+		int result = SDL_GL_MakeCurrent(window, context);
+
+		if (result < 0) {
+			Helpers::panic("OpenGL context make current failed: %s", SDL_GetError());
+		}
+	}
+
+	void destroyContext(void* userdata, void* context) {
+		SDL_GL_DeleteContext(static_cast<SDL_GLContext>(context));
 	}
 }

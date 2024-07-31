@@ -202,14 +202,19 @@ void RendererGL::initGraphicsContextInternal() {
 
 	if (shaderMode == ShaderMode::Hybrid && !asyncCompiler)
 	{
-		// This will create and start the async compiler thread
-		asyncCompiler = std::make_unique<AsyncCompilerState>(fragShaderGen);
+		if (contextCreationUserdata == nullptr) {
+			Helpers::warn("No context creation userdata provided for some reason");
+			shaderMode = defaultShaderMode;
+		} else {
+			// This will create and start the async compiler thread
+			asyncCompiler = std::make_unique<AsyncCompilerState>(fragShaderGen, contextCreationUserdata);
+		}
 	}
 }
 
 // The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
 // So we just call initGraphicsContextInternal for both
-void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { initGraphicsContextInternal(); }
+void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { contextCreationUserdata = window; initGraphicsContextInternal(); }
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
@@ -449,6 +454,8 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
+	PICA::FragmentConfig fsConfig(regs);
+
 	bool usingUbershader = false;
 	if (shaderMode == ShaderMode::Ubershader) {
 		usingUbershader = true;
@@ -461,52 +468,36 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
 			usingUbershader = false;
 		}
-	} else {
-		PICA::FragmentConfig fsConfig(regs);
+	} else if (shaderMode == ShaderMode::Hybrid) {
+		CompiledProgram* compiledProgram;
 
-		// If shaderMode is Specialized, shaderCompiled is set to true which means getSpecializedShader will
-		// compile the shader for us if it's not compiled yet
-		bool shaderCompiled = true;
-		
-		if (shaderMode == ShaderMode::Hybrid) {
-			CompiledProgram* compiledProgram;
+		// Pop all the queued compiled programs so they can be added to the shader cache
+		while (asyncCompiler->PopCompiledProgram(compiledProgram)) {
+			CachedProgram& programEntry = shaderCache[compiledProgram->fsConfig];
+			programEntry.ready = true;
 
-			// Pop all the queued compiled programs so they can be added to the shader cache
-			while (asyncCompiler->PopCompiledProgram(compiledProgram)) {
-				CachedProgram& programEntry = shaderCache[compiledProgram->fsConfig];
-				programEntry.ready = true;
+			programEntry.program.createFromBinary(compiledProgram->binary, compiledProgram->binaryFormat);
+			initializeProgramEntry(gl, programEntry);
 
-				glProgramBinary(programEntry.program.handle(), compiledProgram->binaryFormat, compiledProgram->binary.data(), compiledProgram->binary.size());
-				initializeProgramEntry(gl, programEntry);
-
-				delete compiledProgram;
-			}
-
-			bool contains = shaderCache.contains(fsConfig);
-			shaderCompiled = contains && shaderCache[fsConfig].ready;
-
-			if (!shaderCompiled) {
-				gl.useProgram(triangleProgram);
-
-				if (!contains) {
-					// Adds an empty shader to the shader cache and sets it to false
-					// This will prevent queueing the same shader multiple times
-					shaderCache[fsConfig].ready = false;
-					asyncCompiler->PushFragmentConfig(fsConfig);
-				}
-			}
+			delete compiledProgram;
 		}
 
-		if (shaderCompiled) {
-			OpenGL::Program& program = getSpecializedShader(fsConfig);
-			gl.useProgram(program);
-		} else {
-			useUbershader = true;
+		bool contains = shaderCache.contains(fsConfig);
+
+		if (!contains) {
+			asyncCompiler->PushFragmentConfig(fsConfig);
+			shaderCache[fsConfig] = {};
+			usingUbershader = true;
+		} else if (!shaderCache[fsConfig].ready) {
+			usingUbershader = true;
 		}
 	}
 
-	if (useUbershader) {
+	if (usingUbershader) {
 		gl.useProgram(triangleProgram);
+	} else {
+		OpenGL::Program& program = getSpecializedShader(fsConfig);
+		gl.useProgram(program);
 	}
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
@@ -534,7 +525,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
 	// Update ubershader uniforms
-	if (useUbershader) {
+	if (usingUbershader) {
 		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
 		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
@@ -1088,10 +1079,6 @@ void RendererGL::setUbershader(const std::string& shader) {
 	glUniform1f(ubershaderData.depthScaleLoc, oldDepthScale);
 	glUniform1f(ubershaderData.depthOffsetLoc, oldDepthOffset);
 	glUniform1i(ubershaderData.depthmapEnableLoc, oldDepthmapEnable);
-}
-
-void RendererGL::setShaderMode(ShaderMode mode) {
-	shaderMode = mode;
 }
 
 void RendererGL::initUbershader(OpenGL::Program& program) {
