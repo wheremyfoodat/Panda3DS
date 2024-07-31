@@ -450,50 +450,62 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
-	PICA::FragmentConfig fsConfig(regs);
-
 	bool usingUbershader = false;
-	if (shaderMode == ShaderMode::Ubershader) {
-		usingUbershader = true;
+	switch (shaderMode) {
+		case ShaderMode::Ubershader: {
+			const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
+			const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
 
-		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
-		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
-
-		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
-		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
-		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
-			usingUbershader = false;
+			// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
+			// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
+			if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
+				PICA::FragmentConfig fsConfig(regs);
+				OpenGL::Program& program = getSpecializedShader(fsConfig);
+				gl.useProgram(program);
+			} else {
+				gl.useProgram(triangleProgram);
+				usingUbershader = true;
+			}
+			break;
 		}
-	} else if (shaderMode == ShaderMode::Hybrid) {
-		CompiledProgram* compiledProgram;
+		case ShaderMode::Hybrid: {
+			CompiledProgram* compiledProgram;
 
-		// Pop all the queued compiled programs so they can be added to the shader cache
-		while (asyncCompiler->PopCompiledProgram(compiledProgram)) {
-			CachedProgram& programEntry = shaderCache[compiledProgram->fsConfig];
-			programEntry.ready = true;
+			// Pop all the queued compiled programs so they can be added to the shader cache
+			while (asyncCompiler->PopCompiledProgram(compiledProgram)) {
+				CachedProgram& programEntry = shaderCache[compiledProgram->fsConfig];
+				programEntry.ready = true;
 
-			programEntry.program.createFromBinary(compiledProgram->binary, compiledProgram->binaryFormat);
-			initializeProgramEntry(gl, programEntry);
+				programEntry.program.createFromBinary(compiledProgram->binary, compiledProgram->binaryFormat);
+				initializeProgramEntry(gl, programEntry);
 
-			delete compiledProgram;
+				delete compiledProgram;
+			}
+
+			PICA::FragmentConfig fsConfig(regs);
+			bool contains = shaderCache.contains(fsConfig);
+
+			if (!contains) {
+				asyncCompiler->PushFragmentConfig(fsConfig);
+				shaderCache[fsConfig] = {};
+				gl.useProgram(triangleProgram);
+				usingUbershader = true;
+			} else if (!shaderCache[fsConfig].ready) {
+				// The shader is still compiling, so we use the ubershader
+				gl.useProgram(triangleProgram);
+				usingUbershader = true;
+			} else {
+				OpenGL::Program& program = getSpecializedShader(fsConfig);
+				gl.useProgram(program);
+			}
+			break;
 		}
-
-		bool contains = shaderCache.contains(fsConfig);
-
-		if (!contains) {
-			asyncCompiler->PushFragmentConfig(fsConfig);
-			shaderCache[fsConfig] = {};
-			usingUbershader = true;
-		} else if (!shaderCache[fsConfig].ready) {
-			usingUbershader = true;
+		case ShaderMode::Specialized: {
+			PICA::FragmentConfig fsConfig(regs);
+			OpenGL::Program& program = getSpecializedShader(fsConfig);
+			gl.useProgram(program);
+			break;
 		}
-	}
-
-	if (usingUbershader) {
-		gl.useProgram(triangleProgram);
-	} else {
-		OpenGL::Program& program = getSpecializedShader(fsConfig);
-		gl.useProgram(program);
 	}
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
