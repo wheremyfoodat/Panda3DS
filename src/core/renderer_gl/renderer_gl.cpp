@@ -32,7 +32,7 @@ namespace {
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
-		glUniform1i(OpenGL::uniformLocation(program, "u_tex_lighting_lut"), 3);
+		glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 
 		// Allocate memory for the program UBO
 		glGenBuffers(1, &programEntry.uboBinding);
@@ -477,6 +477,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 			programEntry.ready = true;
 
 			programEntry.program.createFromBinary(compiledProgram->binary, compiledProgram->binaryFormat);
+			programEntry.program.use();
 			initializeProgramEntry(gl, programEntry);
 
 			delete compiledProgram;
