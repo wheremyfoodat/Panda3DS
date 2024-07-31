@@ -492,7 +492,6 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		} else if (!shaderCache[fsConfig].ready) {
 			usingUbershader = true;
 		}
-		usingUbershader = true;
 	}
 
 	if (usingUbershader) {
