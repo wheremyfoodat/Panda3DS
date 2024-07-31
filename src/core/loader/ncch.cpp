@@ -1,12 +1,15 @@
+#include "loader/ncch.hpp"
+
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
-#include <cstring>
-#include <vector>
-#include "loader/lz77.hpp"
-#include "loader/ncch.hpp"
-#include "memory.hpp"
+#include <cryptopp/sha.h>
 
+#include <cstring>
 #include <iostream>
+#include <vector>
+
+#include "loader/lz77.hpp"
+#include "memory.hpp"
 
 bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSInfo &info) {
     // 0x200 bytes for the NCCH header
@@ -70,8 +73,26 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		if (!seedCrypto) {
 			secondaryKeyY = primaryKeyY;
 		} else {
-			Helpers::warn("Seed crypto is not supported");
-			gotCryptoKeys = false;
+			// In seed crypto mode, the secondary key is computed through a SHA256 hash of the primary key and a title-specific seed, which we fetch
+			// from seeddb.bin
+			std::optional<Crypto::AESKey> seedOptional = aesEngine.getSeedFromDB(programID);
+			if (seedOptional.has_value()) {
+				auto seed = *seedOptional;
+				
+				CryptoPP::SHA256 shaEngine;
+				std::array<u8, 32> data;
+				std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
+
+				std::memcpy(&data[0], primaryKeyY.data(), primaryKeyY.size());
+				std::memcpy(&data[16], seed.data(), seed.size());
+				shaEngine.CalculateDigest(hash.data(), data.data(), data.size());
+				// Note that SHA256 will produce a 256-bit hash, while we only need 128 bits cause this is an AES key
+				// So the latter 16 bytes of the SHA256 are thrown out.
+				std::memcpy(secondaryKeyY.data(), hash.data(), secondaryKeyY.size());
+			} else {
+				Helpers::warn("Couldn't find a seed value for this title. Make sure you have a seeddb.bin file alongside your aes_keys.txt");
+				gotCryptoKeys = false;
+			}
 		}
 
 		auto primaryResult = getPrimaryKey(aesEngine, primaryKeyY);

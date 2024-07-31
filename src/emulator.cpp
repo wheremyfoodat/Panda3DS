@@ -220,6 +220,8 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	const std::filesystem::path appDataPath = getAppDataRoot();
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
 	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
+	const std::filesystem::path seedDBPath = appDataPath / "sysdata" / "seeddb.bin";
+
 	IOFile::setAppDataDir(dataPath);
 
 	// Open the text file containing our AES keys if it exists. We use the std::filesystem::exists overload that takes an error code param to
@@ -227,6 +229,10 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	std::error_code ec;
 	if (std::filesystem::exists(aesKeysPath, ec) && !ec) {
 		aesEngine.loadKeys(aesKeysPath);
+	}
+
+	if (std::filesystem::exists(seedDBPath, ec) && !ec) {
+		aesEngine.setSeedPath(seedDBPath);
 	}
 
 	kernel.initializeFS();

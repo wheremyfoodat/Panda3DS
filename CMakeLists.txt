@@ -55,6 +55,11 @@ if(BUILD_LIBRETRO_CORE)
     add_compile_definitions(__LIBRETRO__)
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND ENABLE_USER_BUILD)
+    # Disable stack buffer overflow checks in user builds
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GS-")
+endif() 
+
 add_library(AlberCore STATIC)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
