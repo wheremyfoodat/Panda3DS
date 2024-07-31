@@ -26,7 +26,6 @@ class GPU;
 // Cached recompiled fragment shader
 struct CachedProgram {
 	OpenGL::Program program {};
-	GLuint uboBinding = 0;
 	bool ready = false;
 };
 

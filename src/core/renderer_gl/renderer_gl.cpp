@@ -23,22 +23,17 @@ using namespace Helpers;
 using namespace PICA;
 
 namespace {
-	constexpr uint uboBlockBinding = 2;
+	static constexpr uint uboBlockBinding = 2;
 
 	void initializeProgramEntry(GLStateManager& gl, CachedProgram& programEntry) {
 		OpenGL::Program& program = programEntry.program;
-		program.use();
+		gl.useProgram(program);
 
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
-
-		// Allocate memory for the program UBO
-		glGenBuffers(1, &programEntry.uboBinding);
-		gl.bindUBO(programEntry.uboBinding);
-		glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
 
 		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
 		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
