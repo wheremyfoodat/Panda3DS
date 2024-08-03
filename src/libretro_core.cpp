@@ -386,7 +386,7 @@ void retro_cheat_set(uint index, bool enabled, const char* code) {
 	std::string cheatCode = std::regex_replace(code, std::regex("[^0-9a-fA-F]"), "");
 	std::vector<u8> bytes;
 
-	for (size_t i = 0; i < cheatCode.size(); i += 2) {
+	for (usize i = 0; i < cheatCode.size(); i += 2) {
 		std::string hex = cheatCode.substr(i, 2);
 		bytes.push_back((u8)std::stoul(hex, nullptr, 16));
 	}
