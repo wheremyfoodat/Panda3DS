@@ -17,6 +17,8 @@ static retro_hw_render_callback hw_render;
 static std::filesystem::path savePath;
 
 static std::string touchScreenMode;
+static bool renderTouchScreen;
+
 static bool screenTouched;
 static int lastMouseX;
 static int lastMouseY;
@@ -171,6 +173,7 @@ static void configInit() {
 		{"panda3ds_ubershader_lighting_override", "Force shadergen when rendering lights; enabled|disabled"},
 		{"panda3ds_ubershader_lighting_override_threshold", "Light threshold for forcing shadergen; 1|2|3|4|5|6|7|8"},
 		{"panda3ds_touchscreen_mode", "Touchscreen touch mode; Auto|Pointer|Joystick|None"},
+		{"panda3ds_render_touchscreen", "Render touchscreen pointer; enabled|disabled"},
 		{nullptr, nullptr},
 	};
 
@@ -196,6 +199,7 @@ static void configUpdate() {
 	config.discordRpcEnabled = false;
 
 	touchScreenMode = FetchVariable("panda3ds_touchscreen_mode", "Auto");
+	renderTouchScreen = FetchVariableBool("panda3ds_render_touchscreen", true);
 
 	config.save();
 }
@@ -206,6 +210,12 @@ static void ConfigCheckVariables() {
 
 	if (updated) {
 		configUpdate();
+	}
+}
+
+static void renderTouchScreenPointer() {
+	if (renderTouchScreen) {
+		// TODO: Render pointer on screen
 	}
 }
 
@@ -378,6 +388,8 @@ void retro_run() {
 
 	touchX = std::clamp(pointerX, 0, (int)(emulator->width - (offsetX * 2)));
 	touchY = std::clamp(pointerY, 0, (int)(emulator->height - offsetY));
+
+	renderTouchScreenPointer();
 
 	if (touchScreen) {
 		u16 x = static_cast<u16>(touchX);
