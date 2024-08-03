@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <cstdio>
+#include <regex>
 
 #include <libretro.h>
 
@@ -381,5 +382,24 @@ void* retro_get_memory_data(uint id) {
 	return nullptr;
 }
 
-void retro_cheat_set(uint index, bool enabled, const char* code) {}
-void retro_cheat_reset() {}
+void retro_cheat_set(uint index, bool enabled, const char* code) {
+	std::string cheatCode = std::regex_replace(code, std::regex("[^0-9a-fA-F]"), "");
+	std::vector<u8> bytes;
+
+	for (size_t i = 0; i < cheatCode.size(); i += 2) {
+		std::string hex = cheatCode.substr(i, 2);
+		bytes.push_back((u8)std::stoul(hex, nullptr, 16));
+	}
+
+	u32 id = emulator->getCheats().addCheat(bytes.data(), bytes.size());
+
+	if (enabled) {
+		emulator->getCheats().enableCheat(id);
+	} else {
+		emulator->getCheats().disableCheat(id);
+	}
+}
+
+void retro_cheat_reset() {
+	emulator->getCheats().reset();
+}
