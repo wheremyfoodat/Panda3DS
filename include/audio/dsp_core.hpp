@@ -43,7 +43,7 @@ namespace Audio {
 		virtual ~DSPCore() {}
 
 		virtual void reset() = 0;
-		virtual void runAudioFrame() = 0;
+		virtual void runAudioFrame(u64 eventTimestamp) = 0;
 		virtual u8* getDspMemory() = 0;
 
 		virtual u16 recvData(u32 regId) = 0;

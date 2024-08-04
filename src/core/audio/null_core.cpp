@@ -74,7 +74,7 @@ namespace Audio {
 		scheduler.removeEvent(Scheduler::EventType::RunDSP);
 	}
 
-	void NullDSP::runAudioFrame() {
+	void NullDSP::runAudioFrame(u64 eventTimestamp) {
 		// Signal audio pipe when an audio frame is done
 		if (dspState == DSPState::On) [[likely]] {
 			dspService.triggerPipeEvent(DSPPipeType::Audio);

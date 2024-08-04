@@ -167,7 +167,7 @@ void Emulator::pollScheduler() {
 
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
 			case Scheduler::EventType::RunDSP: {
-				dsp->runAudioFrame();
+				dsp->runAudioFrame(time);
 				break;
 			}
 
