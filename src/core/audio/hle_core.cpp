@@ -95,7 +95,7 @@ namespace Audio {
 		scheduler.removeEvent(Scheduler::EventType::RunDSP);
 	}
 
-	void HLE_DSP::runAudioFrame() {
+	void HLE_DSP::runAudioFrame(u64 eventTimestamp) {
 		// Signal audio pipe when an audio frame is done
 		if (dspState == DSPState::On) [[likely]] {
 			dspService.triggerPipeEvent(DSPPipeType::Audio);
@@ -103,7 +103,10 @@ namespace Audio {
 
 		// TODO: Should this be called if dspState != DSPState::On?
 		outputFrame();
-		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
+
+		// How many cycles we were late
+		const u64 cycleDrift = scheduler.currentTimestamp - eventTimestamp;
+		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame - cycleDrift);
 	}
 
 	u16 HLE_DSP::recvData(u32 regId) {
@@ -237,10 +240,9 @@ namespace Audio {
 			auto& status = write.sourceStatuses.status[i];
 			status.enabled = source.enabled;
 			status.syncCount = source.syncCount;
-			status.currentBufferIDDirty = source.isBufferIDDirty ? 1 : 0;
+			status.currentBufferIDDirty = (source.isBufferIDDirty ? 1 : 0);
 			status.currentBufferID = source.currentBufferID;
 			status.previousBufferID = source.previousBufferID;
-			// TODO: Properly update sample position
 			status.samplePosition = source.samplePosition;
 
 			source.isBufferIDDirty = false;
@@ -290,6 +292,10 @@ namespace Audio {
 
 		if (config.monoOrStereoDirty || config.embeddedBufferDirty) {
 			source.sourceType = config.monoOrStereo;
+		}
+
+		if (config.rateMultiplierDirty) {
+			source.rateMultiplier = (config.rateMultiplier > 0.f) ? config.rateMultiplier : 1.f;
 		}
 
 		if (config.embeddedBufferDirty) {
@@ -434,7 +440,7 @@ namespace Audio {
 
 			decodeBuffer(source);
 		} else {
-			constexpr uint maxSampleCount = Audio::samplesInFrame;
+			uint maxSampleCount = uint(float(Audio::samplesInFrame) * source.rateMultiplier);
 			uint outputCount = 0;
 
 			while (outputCount < maxSampleCount) {
@@ -447,9 +453,9 @@ namespace Audio {
 				}
 
 				const uint sampleCount = std::min<s32>(maxSampleCount - outputCount, source.currentSamples.size());
-				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
-				source.currentSamples.erase(source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
 
+				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
+				source.currentSamples.erase(source.currentSamples.begin(), std::next(source.currentSamples.begin(), sampleCount));
 				source.samplePosition += sampleCount;
 				outputCount += sampleCount;
 			}
@@ -618,6 +624,7 @@ namespace Audio {
 		previousBufferID = 0;
 		currentBufferID = 0;
 		syncCount = 0;
+		rateMultiplier = 1.f;
 
 		buffers = {};
 	}
