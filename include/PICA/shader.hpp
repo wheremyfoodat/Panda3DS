@@ -23,7 +23,7 @@ namespace ShaderOpcodes {
 		DST = 0x04,
 		EX2 = 0x05,
 		LG2 = 0x06,
-		LIT = 0x07,
+		LITP = 0x07,
 		MUL = 0x08,
 		SGE = 0x09,
 		SLT = 0x0A,
@@ -165,6 +165,7 @@ class PICAShader {
 	void jmpc(u32 instruction);
 	void jmpu(u32 instruction);
 	void lg2(u32 instruction);
+	void litp(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
 	void madi(u32 instruction);
