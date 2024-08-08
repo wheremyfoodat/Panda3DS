@@ -206,6 +206,24 @@ namespace PICA {
 			return std::memcmp(this, &config, sizeof(FragmentConfig)) == 0;
 		}
 
+		FragmentConfig& operator=(const FragmentConfig& config) {
+			// BitField copy constructor is deleted for reasons, so we have to do this manually
+			outConfig.raw = config.outConfig.raw;
+			texConfig = config.texConfig;
+			fogConfig.raw = config.fogConfig.raw;
+			lighting.raw = config.lighting.raw;
+			for (int i = 0; i < 7; i++) {
+				lighting.luts[i].raw = config.lighting.luts[i].raw;
+			}
+			for (int i = 0; i < 8; i++) {
+				lighting.lights[i].raw = config.lighting.lights[i].raw;
+			}
+
+			// If this fails you probably added a new field to the struct and forgot to update the copy constructor
+			static_assert(sizeof(FragmentConfig) == sizeof(outConfig.raw) + sizeof(texConfig) + sizeof(fogConfig.raw) + sizeof(lighting.raw) + 7 * sizeof(LightingLUTConfig) + 8 * sizeof(Light));
+			return *this;
+		}
+
 		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs) {
 			auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
 			auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);

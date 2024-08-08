@@ -23,6 +23,15 @@
 // More circular dependencies!
 class GPU;
 
+// Cached recompiled fragment shader
+struct CachedProgram {
+	OpenGL::Program program;
+	std::atomic_bool compiling = false;
+	bool needsInitialization = true;
+};
+
+struct AsyncCompilerThread;
+
 class RendererGL final : public Renderer {
 	GLStateManager gl = {};
 
@@ -72,11 +81,9 @@ class RendererGL final : public Renderer {
 	OpenGL::Shader defaultShadergenVs;
 	GLuint shadergenFragmentUBO;
 
-	// Cached recompiled fragment shader
-	struct CachedProgram {
-		OpenGL::Program program;
-	};
 	std::unordered_map<PICA::FragmentConfig, CachedProgram> shaderCache;
+
+	AsyncCompilerThread* asyncCompiler = nullptr;
 
 	OpenGL::Framebuffer getColourFBO();
 	OpenGL::Texture getTexture(Texture& tex);
@@ -101,7 +108,6 @@ class RendererGL final : public Renderer {
 
 	void reset() override;
 	void display() override;                                                              // Display the 3DS screen contents to the window
-	void initGraphicsContext(SDL_Window* window) override;                                // Initialize graphics context
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
@@ -123,7 +129,9 @@ class RendererGL final : public Renderer {
 	void initUbershader(OpenGL::Program& program);
 
 #ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override { initGraphicsContextInternal(); }
+	virtual void initGraphicsContext(GL::Context* context) override;
+#elif defined(PANDA3DS_FRONTEND_SDL)
+	virtual void initGraphicsContext(SDL_Window* window) override;
 #endif
 
 	// Take a screenshot of the screen and store it in a file
