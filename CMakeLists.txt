@@ -302,7 +302,7 @@ if(ENABLE_QT_GUI)
         set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
     else()
         set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_wayland.cpp
-        third_party/duckstation/gl/context_egl_x11.cpp third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+        third_party/duckstation/gl/context_egl_x11.cpp third_party/duckstation/gl/x11_window.cpp)
     endif()
 endif()
 

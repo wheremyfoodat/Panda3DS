@@ -173,18 +173,23 @@ void RendererGL::initGraphicsContextInternal() {
 	defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
 }
 
-#ifdef PANDA3DS_FRONTEND_QT
-	void RendererGL::initGraphicsContext(GL::Context* context)
-#elif defined(PANDA3DS_FRONTEND_SDL)
-	void RendererGL::initGraphicsContext(SDL_Window* context)
-#endif
-{
+void RendererGL::initGraphicsContext(SDL_Window* context) {
 	if (shaderMode == ShaderMode::Hybrid) {
 		asyncCompiler = new AsyncCompilerThread(fragShaderGen, context);
 	}
 
 	initGraphicsContextInternal();
 }
+
+#ifdef PANDA3DS_FRONTEND_QT
+void RendererGL::initGraphicsContext(GL::Context* context) {
+	if (shaderMode == ShaderMode::Hybrid) {
+		asyncCompiler = new AsyncCompilerThread(fragShaderGen, context);
+	}
+
+	initGraphicsContextInternal();
+}
+#endif
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {

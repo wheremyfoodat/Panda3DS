@@ -6,8 +6,10 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <memory>
 
 #include "cheats.hpp"
+#include "gl/context.h"
 #include "input_mappings.hpp"
 #include "services/dsp.hpp"
 
@@ -599,5 +601,34 @@ void MainWindow::pollControllers() {
 				break;
 			}
 		}
+	}
+}
+
+namespace AsyncCompiler {
+	void* createContext(void* mainContext) {
+		GL::Context* glContext = static_cast<GL::Context*>(mainContext);
+
+		// Unlike the SDL function, this doesn't make it current so we don't
+		// need to call MakeCurrent on the mainContext
+		WindowInfo wi = glContext->GetWindowInfo();
+		wi.type = WindowInfo::Type::Surfaceless;
+
+		std::unique_ptr<GL::Context>* newContext = new std::unique_ptr<GL::Context>(glContext->CreateSharedContext(wi));
+
+		if (newContext->get() == nullptr) {
+			Helpers::panic("Failed to create shared GL context");
+		}
+
+		return newContext;
+	}
+
+	void makeCurrent(void* mainContext, void* context) {
+		std::unique_ptr<GL::Context>* glContext = static_cast<std::unique_ptr<GL::Context>*>(context);
+		(*glContext)->MakeCurrent();
+	}
+
+	void destroyContext(void* context) {
+		std::unique_ptr<GL::Context>* glContext = static_cast<std::unique_ptr<GL::Context>*>(context);
+		delete glContext;
 	}
 }

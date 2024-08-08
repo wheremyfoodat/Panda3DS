@@ -140,3 +140,16 @@ int AndroidUtils::openDocument(const char* path, const char* perms) {
 
     return (int)result;
 }
+
+namespace AsyncCompiler {
+	void* createContext(void* mainContext) {
+		throwException(jniEnv(), "AsyncCompiler not supported on Android, how did you manage to enable this?");
+		return nullptr;
+	}
+
+	void makeCurrent(void* mainContext, void* context) {
+	}
+
+	void destroyContext(void* context) {
+	}
+}
