@@ -20,6 +20,12 @@ enum class RendererType : s8 {
 	Software = 3,
 };
 
+enum class ShaderMode {
+	Specialized,
+	Ubershader,
+	Hybrid,
+};
+
 struct EmulatorConfig;
 class GPU;
 struct SDL_Window;
@@ -56,6 +62,8 @@ class Renderer {
 	static constexpr u32 vertexBufferSize = 0x10000;
 	static std::optional<RendererType> typeFromString(std::string inString);
 	static const char* typeToString(RendererType rendererType);
+	static std::optional<ShaderMode> shaderModeFromString(std::string inString);
+	static const char* shaderModeToString(ShaderMode shaderMode);
 
 	virtual void reset() = 0;
 	virtual void display() = 0;                                                              // Display the 3DS screen contents to the window
@@ -77,7 +85,7 @@ class Renderer {
 	virtual std::string getUbershader() { return ""; }
 	virtual void setUbershader(const std::string& shader) {}
 
-	virtual void setUbershaderSetting(bool value) {}
+	virtual void setShaderMode(ShaderMode shaderMode) {}
 
 	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
 #ifdef PANDA3DS_FRONTEND_QT

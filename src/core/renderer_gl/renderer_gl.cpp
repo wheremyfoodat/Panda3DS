@@ -414,7 +414,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
-	bool usingUbershader = enableUbershader;
+	bool usingUbershader = shaderMode == ShaderMode::Ubershader;
 	if (usingUbershader) {
 		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
 		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;

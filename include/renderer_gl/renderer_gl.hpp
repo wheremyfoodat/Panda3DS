@@ -6,6 +6,7 @@
 #include <span>
 #include <unordered_map>
 
+#include "config.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/pica_frag_config.hpp"
 #include "PICA/pica_hash.hpp"
@@ -30,7 +31,7 @@ class RendererGL final : public Renderer {
 
 	OpenGL::VertexArray vao;
 	OpenGL::VertexBuffer vbo;
-	bool enableUbershader = true;
+	ShaderMode shaderMode = EmulatorConfig::defaultShaderMode;
 
 	// Data 
 	struct {
@@ -111,7 +112,7 @@ class RendererGL final : public Renderer {
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
 
-	virtual void setUbershaderSetting(bool value) override { enableUbershader = value; }
+	virtual void setShaderMode(ShaderMode mode) override { shaderMode = mode; }
 	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
