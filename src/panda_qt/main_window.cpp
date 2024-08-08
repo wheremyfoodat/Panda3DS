@@ -606,29 +606,29 @@ void MainWindow::pollControllers() {
 
 namespace AsyncCompiler {
 	void* createContext(void* mainContext) {
-		GL::Context* glContext = static_cast<GL::Context*>(mainContext);
+		GL::Context* glContext = (GL::Context*)mainContext;
 
 		// Unlike the SDL function, this doesn't make it current so we don't
 		// need to call MakeCurrent on the mainContext
 		WindowInfo wi = glContext->GetWindowInfo();
 		wi.type = WindowInfo::Type::Surfaceless;
 
-		std::unique_ptr<GL::Context>* newContext = new std::unique_ptr<GL::Context>(glContext->CreateSharedContext(wi));
+		std::unique_ptr<GL::Context> iLoveBeingForcedToUseRAII = glContext->CreateSharedContext(wi);
 
-		if (newContext->get() == nullptr) {
+		if (!iLoveBeingForcedToUseRAII) {
 			Helpers::panic("Failed to create shared GL context");
 		}
 
-		return newContext;
+		return iLoveBeingForcedToUseRAII.release();
 	}
 
-	void makeCurrent(void* mainContext, void* context) {
-		std::unique_ptr<GL::Context>* glContext = static_cast<std::unique_ptr<GL::Context>*>(context);
-		(*glContext)->MakeCurrent();
+	void makeCurrent(void* unused, void* context) {
+		GL::Context* glContext = (GL::Context*)context;
+		glContext->MakeCurrent();
 	}
 
 	void destroyContext(void* context) {
-		std::unique_ptr<GL::Context>* glContext = static_cast<std::unique_ptr<GL::Context>*>(context);
+		GL::Context* glContext = (GL::Context*)context;
 		delete glContext;
 	}
 }  // namespace AsyncCompiler
