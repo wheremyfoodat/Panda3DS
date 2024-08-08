@@ -1,11 +1,10 @@
-#include <stdexcept>
-#include <cstdio>
-#include <regex>
-
 #include <libretro.h>
 
+#include <cstdio>
 #include <emulator.hpp>
+#include <regex>
 #include <renderer_gl/renderer_gl.hpp>
+#include <stdexcept>
 
 static retro_environment_t envCallbacks;
 static retro_video_refresh_t videoCallbacks;
@@ -21,17 +20,11 @@ static bool screenTouched;
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
 
-std::filesystem::path Emulator::getConfigPath() {
-	return std::filesystem::path(savePath / "config.toml");
-}
+std::filesystem::path Emulator::getConfigPath() { return std::filesystem::path(savePath / "config.toml"); }
 
-std::filesystem::path Emulator::getAppDataRoot() {
-	return std::filesystem::path(savePath / "Emulator Files");
-}
+std::filesystem::path Emulator::getAppDataRoot() { return std::filesystem::path(savePath / "Emulator Files"); }
 
-static void* GetGLProcAddress(const char* name) {
-	return (void*)hw_render.get_proc_address(name);
-}
+static void* GetGLProcAddress(const char* name) { return (void*)hw_render.get_proc_address(name); }
 
 static void VideoResetContext() {
 #ifdef USING_GLES
@@ -47,9 +40,7 @@ static void VideoResetContext() {
 	emulator->initGraphicsContext(nullptr);
 }
 
-static void VideoDestroyContext() {
-  emulator->deinitGraphicsContext();
-}
+static void VideoDestroyContext() { emulator->deinitGraphicsContext(); }
 
 static bool SetHWRender(retro_hw_context_type type) {
 	hw_render.context_type = type;
@@ -142,16 +133,14 @@ static std::string FetchVariable(std::string key, std::string def) {
 	return std::string(var.value);
 }
 
-static bool FetchVariableBool(std::string key, bool def) {
-	return FetchVariable(key, def ? "enabled" : "disabled") == "enabled";
-}
+static bool FetchVariableBool(std::string key, bool def) { return FetchVariable(key, def ? "enabled" : "disabled") == "enabled"; }
 
 static void configInit() {
 	static const retro_variable values[] = {
 		{"panda3ds_use_shader_jit", "Enable shader JIT; enabled|disabled"},
 		{"panda3ds_accurate_shader_mul", "Enable accurate shader multiplication; disabled|enabled"},
 		{"panda3ds_use_ubershader", defaultShaderMode == ShaderMode::Ubershader ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
-																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
+																				: "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
 		{"panda3ds_dsp_emulation", "DSP emulation; Null|HLE|LLE"},
 		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
@@ -180,7 +169,9 @@ static void configUpdate() {
 	config.sdCardInserted = FetchVariableBool("panda3ds_use_virtual_sd", true);
 	config.sdWriteProtected = FetchVariableBool("panda3ds_write_protect_virtual_sd", false);
 	config.accurateShaderMul = FetchVariableBool("panda3ds_accurate_shader_mul", false);
-	config.shaderMode = FetchVariableBool("panda3ds_use_ubershader", EmulatorConfig::defaultShaderMode == ShaderMode::Ubershader) ? ShaderMode::Ubershader : ShaderMode::Specialized;
+	config.shaderMode = FetchVariableBool("panda3ds_use_ubershader", EmulatorConfig::defaultShaderMode == ShaderMode::Ubershader)
+							? ShaderMode::Ubershader
+							: ShaderMode::Specialized;
 	config.forceShadergenForLights = FetchVariableBool("panda3ds_ubershader_lighting_override", true);
 	config.lightShadergenThreshold = std::clamp(std::stoi(FetchVariable("panda3ds_ubershader_lighting_override_threshold", "1")), 1, 8);
 	config.discordRpcEnabled = false;
@@ -217,27 +208,17 @@ void retro_get_system_av_info(retro_system_av_info* info) {
 	info->timing.sample_rate = 32768;
 }
 
-void retro_set_environment(retro_environment_t cb) {
-	envCallbacks = cb;
-}
+void retro_set_environment(retro_environment_t cb) { envCallbacks = cb; }
 
-void retro_set_video_refresh(retro_video_refresh_t cb) {
-	videoCallbacks = cb;
-}
+void retro_set_video_refresh(retro_video_refresh_t cb) { videoCallbacks = cb; }
 
-void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb) {
-	audioBatchCallback = cb;
-}
+void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb) { audioBatchCallback = cb; }
 
 void retro_set_audio_sample(retro_audio_sample_t cb) {}
 
-void retro_set_input_poll(retro_input_poll_t cb) {
-	inputPollCallback = cb;
-}
+void retro_set_input_poll(retro_input_poll_t cb) { inputPollCallback = cb; }
 
-void retro_set_input_state(retro_input_state_t cb) {
-	inputStateCallback = cb;
-}
+void retro_set_input_state(retro_input_state_t cb) { inputStateCallback = cb; }
 
 void retro_init() {
 	enum retro_pixel_format xrgb888 = RETRO_PIXEL_FORMAT_XRGB8888;
@@ -255,9 +236,7 @@ void retro_init() {
 	emulator = std::make_unique<Emulator>();
 }
 
-void retro_deinit() {
-	emulator = nullptr;
-}
+void retro_deinit() { emulator = nullptr; }
 
 bool retro_load_game(const retro_game_info* game) {
 	configInit();
@@ -283,9 +262,7 @@ void retro_unload_game() {
 	renderer = nullptr;
 }
 
-void retro_reset() {
-	emulator->reset(Emulator::ReloadOption::Reload);
-}
+void retro_reset() { emulator->reset(Emulator::ReloadOption::Reload); }
 
 void retro_run() {
 	ConfigCheckVariables();
@@ -400,6 +377,4 @@ void retro_cheat_set(uint index, bool enabled, const char* code) {
 	}
 }
 
-void retro_cheat_reset() {
-	emulator->getCheats().reset();
-}
+void retro_cheat_reset() { emulator->getCheats().reset(); }

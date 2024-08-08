@@ -631,4 +631,4 @@ namespace AsyncCompiler {
 		std::unique_ptr<GL::Context>* glContext = static_cast<std::unique_ptr<GL::Context>*>(context);
 		delete glContext;
 	}
-}
+}  // namespace AsyncCompiler

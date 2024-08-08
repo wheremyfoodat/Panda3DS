@@ -43,9 +43,13 @@ std::optional<ShaderMode> Renderer::shaderModeFromString(std::string inString) {
 	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
 
 	static const std::unordered_map<std::string, ShaderMode> map = {
-		{"specialized", ShaderMode::Specialized},    {"special", ShaderMode::Specialized},
-		{"ubershader", ShaderMode::Ubershader},      {"uber", ShaderMode::Ubershader},
-		{"hybrid", ShaderMode::Hybrid},              {"threaded", ShaderMode::Hybrid},             {"i hate opengl context creation", ShaderMode::Hybrid},
+		{"specialized", ShaderMode::Specialized},
+		{"special", ShaderMode::Specialized},
+		{"ubershader", ShaderMode::Ubershader},
+		{"uber", ShaderMode::Ubershader},
+		{"hybrid", ShaderMode::Hybrid},
+		{"threaded", ShaderMode::Hybrid},
+		{"i hate opengl context creation", ShaderMode::Hybrid},
 	};
 
 	if (auto search = map.find(inString); search != map.end()) {

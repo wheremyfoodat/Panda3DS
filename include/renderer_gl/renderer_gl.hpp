@@ -6,13 +6,13 @@
 #include <span>
 #include <unordered_map>
 
-#include "config.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/pica_frag_config.hpp"
 #include "PICA/pica_hash.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
+#include "config.hpp"
 #include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -42,7 +42,7 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexBuffer vbo;
 	ShaderMode shaderMode = EmulatorConfig::defaultShaderMode;
 
-	// Data 
+	// Data
 	struct {
 		// TEV configuration uniform locations
 		GLint textureEnvSourceLoc = -1;
@@ -112,7 +112,7 @@ class RendererGL final : public Renderer {
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
-	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
+	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;  // Draw the given vertices
 	void deinitGraphicsContext() override;
 
 	virtual bool supportsShaderReload() override { return true; }
@@ -120,7 +120,7 @@ class RendererGL final : public Renderer {
 	virtual void setUbershader(const std::string& shader) override;
 
 	virtual void setShaderMode(ShaderMode mode) override { shaderMode = mode; }
-	
+
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this

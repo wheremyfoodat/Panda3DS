@@ -115,7 +115,7 @@ namespace PICA {
 			bumpSelector = Helpers::getBits<22, 2>(config0);
 			clampHighlights = Helpers::getBit<27>(config0);
 			bumpMode = Helpers::getBits<28, 2>(config0);
-			bumpRenorm = Helpers::getBit<30>(config0) ^ 1; // 0 = enable so flip it with xor
+			bumpRenorm = Helpers::getBit<30>(config0) ^ 1;  // 0 = enable so flip it with xor
 
 			for (int i = 0; i < totalLightCount; i++) {
 				auto& light = lights[i];
@@ -220,7 +220,10 @@ namespace PICA {
 			}
 
 			// If this fails you probably added a new field to the struct and forgot to update the copy constructor
-			static_assert(sizeof(FragmentConfig) == sizeof(outConfig.raw) + sizeof(texConfig) + sizeof(fogConfig.raw) + sizeof(lighting.raw) + 7 * sizeof(LightingLUTConfig) + 8 * sizeof(Light));
+			static_assert(
+				sizeof(FragmentConfig) == sizeof(outConfig.raw) + sizeof(texConfig) + sizeof(fogConfig.raw) + sizeof(lighting.raw) +
+											  7 * sizeof(LightingLUTConfig) + 8 * sizeof(Light)
+			);
 			return *this;
 		}
 
