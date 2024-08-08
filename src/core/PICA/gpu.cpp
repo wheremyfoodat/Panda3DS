@@ -117,37 +117,66 @@ void GPU::reset() {
 	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
 	externalRegs[Framebuffer1Select] = 0;
 
-	renderer->setUbershaderSetting(config.useUbershaders);
 	renderer->reset();
 }
 
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
-	const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
+	const bool hwShaders = renderer->prepareForDraw(shaderUnit, false);
 
-	if (indexed) {
-		if (shaderJITEnabled)
-			drawArrays<true, true>();
-		else
-			drawArrays<true, false>();
+	if (hwShaders) {
+		if (indexed) {
+			drawArrays<true, ShaderExecMode::Hardware>();
+		} else {
+			drawArrays<false, ShaderExecMode::Hardware>();
+		}
 	} else {
-		if (shaderJITEnabled)
-			drawArrays<false, true>();
-		else
-			drawArrays<false, false>();
+		const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
+
+		if (indexed) {
+			if (shaderJITEnabled) {
+				drawArrays<true, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<true, ShaderExecMode::Interpreter>();
+			}
+		} else {
+			if (shaderJITEnabled) {
+				drawArrays<false, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<false, ShaderExecMode::Interpreter>();
+			}
+		}
 	}
 }
 
-static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
+// We need a union here, because unfortunately in CPU shaders we only need to store the vertex shader outputs in the vertex buffer,
+// which consist of 8 vec4 attributes, while with GPU shaders we need to pass all the vertex shader inputs to the GPU, which consist
+// of 16 vec4 attributes
+union PICAVertexBuffer {
+	// Used with CPU shaders
+	std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
+	// Used with GPU shaders. We can have up to 16 attributes per vertex, each attribute with 4 floats
+	std::array<float, Renderer::vertexBufferSize * 16 * 4> vsInputs;
 
-template <bool indexed, bool useShaderJIT>
+	PICAVertexBuffer() {}
+};
+
+static PICAVertexBuffer vertexBuffer;
+
+template <bool indexed, ShaderExecMode mode>
 void GPU::drawArrays() {
-	if constexpr (useShaderJIT) {
+	if constexpr (mode == ShaderExecMode::JIT) {
 		shaderJIT.prepare(shaderUnit.vs);
 	}
 
-	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
+	// We can have up to 16 attributes, each one consisting of 4 floats
+	constexpr u32 maxAttrSizeInFloats = 16 * 4;
+	auto& vertices = vertexBuffer.vertices;
+
+	if constexpr (mode != ShaderExecMode::Hardware) {
+		setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
+	}
 
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
@@ -217,7 +246,15 @@ void GPU::drawArrays() {
 			size_t tag = vertexIndex % vertexCacheSize;
 			// Cache hit
 			if (cache.validBits[tag] && cache.ids[tag] == vertexIndex) {
-				vertices[i] = vertices[cache.bufferPositions[tag]];
+				if constexpr (mode != ShaderExecMode::Hardware) {
+					vertices[i] = vertices[cache.bufferPositions[tag]];
+				} else {
+					const u32 cachedBufferPosition = cache.bufferPositions[tag] * maxAttrSizeInFloats;
+					std::memcpy(
+						&vertexBuffer.vsInputs[i * maxAttrSizeInFloats], &vertexBuffer.vsInputs[cachedBufferPosition],
+						sizeof(float) * maxAttrSizeInFloats
+					);
+				}
 				continue;
 			}
 
@@ -322,29 +359,39 @@ void GPU::drawArrays() {
 			}
 		}
 
-		// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
-		// Based on the SH_ATTRIBUTES_PERMUTATION registers.
-		// Ie it might attribute #0 to v2, #1 to v7, etc
-		for (int j = 0; j < totalAttribCount; j++) {
-			const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
-			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
-		}
+		// Running shader on the CPU instead of the GPU
+		if constexpr (mode == ShaderExecMode::Interpreter || mode == ShaderExecMode::JIT) {
+			// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
+			// Based on the SH_ATTRIBUTES_PERMUTATION registers.
+			// Ie it might map attribute #0 to v2, #1 to v7, etc
+			for (int j = 0; j < totalAttribCount; j++) {
+				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
+				std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
+			}
 
-		if constexpr (useShaderJIT) {
-			shaderJIT.run(shaderUnit.vs);
-		} else {
-			shaderUnit.vs.run();
-		}
+			if constexpr (mode == ShaderExecMode::JIT) {
+				shaderJIT.run(shaderUnit.vs);
+			} else {
+				shaderUnit.vs.run();
+			}
 
-		PICA::Vertex& out = vertices[i];
-		// Map shader outputs to fixed function properties
-		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
-		for (int i = 0; i < totalShaderOutputs; i++) {
-			const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
+			PICA::Vertex& out = vertices[i];
+			// Map shader outputs to fixed function properties
+			const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+			for (int i = 0; i < totalShaderOutputs; i++) {
+				const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
-			for (int j = 0; j < 4; j++) {  // pls unroll
-				const u32 mapping = (config >> (j * 8)) & 0x1F;
-				out.raw[mapping] = vsOutputRegisters[i][j];
+				for (int j = 0; j < 4; j++) {  // pls unroll
+					const u32 mapping = (config >> (j * 8)) & 0x1F;
+					out.raw[mapping] = vsOutputRegisters[i][j];
+				}
+			}
+		} else {  // Using hw shaders and running the shader on the CPU, just write the inputs to the attribute buffer directly
+			float* out = &vertexBuffer.vsInputs[i * maxAttrSizeInFloats];
+			for (int j = 0; j < totalAttribCount; j++) {
+				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
+				// Multiply mapping * 4 as mapping refers to a vec4 whereas out is an array of floats
+				std::memcpy(&out[mapping * 4], &currentAttributes[j], sizeof(vec4f));
 			}
 		}
 	}

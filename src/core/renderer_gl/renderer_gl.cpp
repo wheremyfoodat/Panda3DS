@@ -4,11 +4,12 @@
 
 #include <cmrc/cmrc.hpp>
 
-#include "config.hpp"
 #include "PICA/float_types.hpp"
-#include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
+#include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/regs.hpp"
+#include "PICA/shader_decompiler.hpp"
+#include "config.hpp"
 #include "math_util.hpp"
 
 CMRC_DECLARE(RendererGL);
@@ -24,7 +25,7 @@ void RendererGL::reset() {
 	colourBufferCache.reset();
 	textureCache.reset();
 
-	clearShaderCache();
+	shaderCache.clear();
 
 	// Init the colour/depth buffer settings to some random defaults on reset
 	colourBufferLoc = 0;
@@ -82,35 +83,49 @@ void RendererGL::initGraphicsContextInternal() {
 	gl.bindUBO(shadergenFragmentUBO);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
 
-	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize, GL_STREAM_DRAW);
+	// Allocate memory for the accelerated vertex shader uniform UBO
+	glGenBuffers(1, &hwShaderUniformUBO);
+	gl.bindUBO(hwShaderUniformUBO);
+	glBufferData(GL_UNIFORM_BUFFER, PICAShader::totalUniformSize(), nullptr, GL_DYNAMIC_DRAW);
+
+	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize * 2, GL_STREAM_DRAW);
 	gl.bindVBO(vbo);
-	vao.create();
-	gl.bindVAO(vao);
+	// Initialize the VAO used when not using hw shaders
+	defaultVAO.create();
+	gl.bindVAO(defaultVAO);
 
 	// Position (x, y, z, w) attributes
-	vao.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
-	vao.enableAttribute(0);
+	defaultVAO.setAttributeFloat<float>(0, 4, sizeof(Vertex), offsetof(Vertex, s.positions));
+	defaultVAO.enableAttribute(0);
 	// Quaternion attribute
-	vao.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, s.quaternion));
-	vao.enableAttribute(1);
+	defaultVAO.setAttributeFloat<float>(1, 4, sizeof(Vertex), offsetof(Vertex, s.quaternion));
+	defaultVAO.enableAttribute(1);
 	// Colour attribute
-	vao.setAttributeFloat<float>(2, 4, sizeof(Vertex), offsetof(Vertex, s.colour));
-	vao.enableAttribute(2);
+	defaultVAO.setAttributeFloat<float>(2, 4, sizeof(Vertex), offsetof(Vertex, s.colour));
+	defaultVAO.enableAttribute(2);
 	// UV 0 attribute
-	vao.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord0));
-	vao.enableAttribute(3);
+	defaultVAO.setAttributeFloat<float>(3, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord0));
+	defaultVAO.enableAttribute(3);
 	// UV 1 attribute
-	vao.setAttributeFloat<float>(4, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord1));
-	vao.enableAttribute(4);
+	defaultVAO.setAttributeFloat<float>(4, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord1));
+	defaultVAO.enableAttribute(4);
 	// UV 0 W-component attribute
-	vao.setAttributeFloat<float>(5, 1, sizeof(Vertex), offsetof(Vertex, s.texcoord0_w));
-	vao.enableAttribute(5);
+	defaultVAO.setAttributeFloat<float>(5, 1, sizeof(Vertex), offsetof(Vertex, s.texcoord0_w));
+	defaultVAO.enableAttribute(5);
 	// View
-	vao.setAttributeFloat<float>(6, 3, sizeof(Vertex), offsetof(Vertex, s.view));
-	vao.enableAttribute(6);
+	defaultVAO.setAttributeFloat<float>(6, 3, sizeof(Vertex), offsetof(Vertex, s.view));
+	defaultVAO.enableAttribute(6);
 	// UV 2 attribute
-	vao.setAttributeFloat<float>(7, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord2));
-	vao.enableAttribute(7);
+	defaultVAO.setAttributeFloat<float>(7, 2, sizeof(Vertex), offsetof(Vertex, s.texcoord2));
+	defaultVAO.enableAttribute(7);
+
+	// Initialize the VAO used for hw shaders
+	hwShaderVAO.create();
+	gl.bindVAO(hwShaderVAO);
+	for (int attr = 0; attr < 16; attr++) {
+		hwShaderVAO.setAttributeFloat<float>(attr, 4, sizeof(Vertex) * 2, attr * sizeof(float) * 4);
+		hwShaderVAO.enableAttribute(attr);
+	}
 
 	dummyVBO.create();
 	dummyVAO.create();
@@ -414,29 +429,10 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
-	bool usingUbershader = enableUbershader;
-	if (usingUbershader) {
-		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
-		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
-
-		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
-		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
-		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
-			usingUbershader = false;
-		}
-	}
-		
-	if (usingUbershader) {
-		gl.useProgram(triangleProgram);
-	} else {
-		OpenGL::Program& program = getSpecializedShader();
-		gl.useProgram(program);
-	}
-
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
 	gl.bindVBO(vbo);
-	gl.bindVAO(vao);
+	gl.bindVAO(usingAcceleratedShader ? hwShaderVAO : defaultVAO);
 
 	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
@@ -454,38 +450,9 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const int depthFunc = getBits<4, 3>(depthControl);
 	const int colourMask = getBits<8, 4>(depthControl);
 	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
-
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
-	// Update ubershader uniforms
-	if (usingUbershader) {
-		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
-		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
-		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
-
-		if (oldDepthScale != depthScale) {
-			oldDepthScale = depthScale;
-			glUniform1f(ubershaderData.depthScaleLoc, depthScale);
-		}
-
-		if (oldDepthOffset != depthOffset) {
-			oldDepthOffset = depthOffset;
-			glUniform1f(ubershaderData.depthOffsetLoc, depthOffset);
-		}
-
-		if (oldDepthmapEnable != depthMapEnable) {
-			oldDepthmapEnable = depthMapEnable;
-			glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
-		}
-
-		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
-		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
-		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
-		setupUbershaderTexEnv();
-	}
-
 	bindTexturesToSlots();
-
 	if (gpu.fogLUTDirty) {
 		updateFogLUT();
 	}
@@ -528,7 +495,14 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	setupStencilTest(stencilEnable);
 
-	vbo.bufferVertsSub(vertices);
+	// If we're using hardware shaders, the vertex array works completely different
+	// And instead of 8 vec4 attributes, each vertex is 16 vec4 attributes. We use a union + aliasing which is not ideal for readability.
+	if (!usingAcceleratedShader) {
+		vbo.bufferVertsSub(vertices);
+	} else {
+		glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size_bytes() * 2, vertices.data());
+	}
+
 	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 }
 
@@ -836,21 +810,28 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 }
 
 OpenGL::Program& RendererGL::getSpecializedShader() {
-	constexpr uint uboBlockBinding = 2;
+	constexpr uint vsUBOBlockBinding = 1;
+	constexpr uint fsUBOBlockBinding = 2;
 
 	PICA::FragmentConfig fsConfig(regs);
 
-	CachedProgram& programEntry = shaderCache[fsConfig];
+	OpenGL::Shader& fragShader = shaderCache.fragmentShaderCache[fsConfig];
+	if (!fragShader.exists()) {
+		std::string fs = fragShaderGen.generate(fsConfig);
+		fragShader.create({fs.c_str(), fs.size()}, OpenGL::Fragment);
+	}
+
+	// Get the handle of the current vertex shader
+	OpenGL::Shader& vertexShader = usingAcceleratedShader ? *generatedVertexShader : defaultShadergenVs;
+	// And form the key for looking up a shader program
+	const u64 programKey = (u64(vertexShader.handle()) << 32) | u64(fragShader.handle());
+
+	CachedProgram& programEntry = shaderCache.programCache[programKey];
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
-		std::string fs = fragShaderGen.generate(fsConfig);
-
-		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
-		program.create({defaultShadergenVs, fragShader});
+		program.create({vertexShader, fragShader});
 		gl.useProgram(program);
-
-		fragShader.free();
 
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
@@ -858,12 +839,20 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 
-		// Set up the binding for our UBO. Sadly we can't specify it in the shader like normal people,
+		// Set up the binding for our UBOs. Sadly we can't specify it in the shader like normal people,
 		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
-		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
-		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
+		uint fsUBOIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
+		glUniformBlockBinding(program.handle(), fsUBOIndex, fsUBOBlockBinding);
+
+		if (usingAcceleratedShader) {
+			uint vertexUBOIndex = glGetUniformBlockIndex(program.handle(), "PICAShaderUniforms");
+			glUniformBlockBinding(program.handle(), vertexUBOIndex, vsUBOBlockBinding);
+		}
 	}
-	glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, shadergenFragmentUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO);
+	if (usingAcceleratedShader) {
+		glBindBufferBase(GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO);
+	}
 
 	// Upload uniform data to our shader's UBO
 	PICA::FragmentUniforms uniforms;
@@ -953,6 +942,96 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	return program;
 }
 
+bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
+	// First we figure out if we will be using an ubershader
+	bool usingUbershader = emulatorConfig->useUbershaders;
+	if (usingUbershader) {
+		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
+		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
+
+		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
+		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance
+		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
+			usingUbershader = false;
+		}
+	}
+
+	// Then we figure out if we will use hw accelerated shaders, and try to fetch our shader
+	// TODO: Ubershader support for accelerated shaders
+	usingAcceleratedShader = emulatorConfig->accelerateShaders && !isImmediateMode && !usingUbershader;
+
+	if (usingAcceleratedShader) {
+		PICA::VertConfig vertexConfig(shaderUnit.vs, regs, usingUbershader);
+
+		std::optional<OpenGL::Shader>& shader = shaderCache.vertexShaderCache[vertexConfig];
+		// If the optional is false, we have never tried to recompile the shader before. Try to recompile it and see if it works.
+		if (!shader.has_value()) {
+			// Initialize shader to a "null" shader (handle == 0)
+			shader = OpenGL::Shader();
+
+			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
+				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
+			);
+
+			// Empty source means compilation error, if the source is not empty then we convert the rcompiled PICA code into a valid shader and upload
+			// it to the GPU
+			if (!picaShaderSource.empty()) {
+				std::string vertexShaderSource = fragShaderGen.getVertexShaderAccelerated(picaShaderSource, vertexConfig, usingUbershader);
+				shader->create({vertexShaderSource}, OpenGL::Vertex);
+			}
+		}
+
+		// Shader generation did not work out, so set usingAcceleratedShader to false
+		if (!shader->exists()) {
+			usingAcceleratedShader = false;
+		} else {
+			generatedVertexShader = &(*shader);
+			gl.bindUBO(hwShaderUniformUBO);
+
+			if (shaderUnit.vs.uniformsDirty) {
+				shaderUnit.vs.uniformsDirty = false;
+				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
+			}
+		}
+	}
+
+	if (usingUbershader) {
+		gl.useProgram(triangleProgram);
+	} else {
+		OpenGL::Program& program = getSpecializedShader();
+		gl.useProgram(program);
+	}
+
+	// Update ubershader uniforms
+	if (usingUbershader) {
+		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
+		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
+
+		if (oldDepthScale != depthScale) {
+			oldDepthScale = depthScale;
+			glUniform1f(ubershaderData.depthScaleLoc, depthScale);
+		}
+
+		if (oldDepthOffset != depthOffset) {
+			oldDepthOffset = depthOffset;
+			glUniform1f(ubershaderData.depthOffsetLoc, depthOffset);
+		}
+
+		if (oldDepthmapEnable != depthMapEnable) {
+			oldDepthmapEnable = depthMapEnable;
+			glUniform1i(ubershaderData.depthmapEnableLoc, depthMapEnable);
+		}
+
+		// Upload PICA Registers as a single uniform. The shader needs access to the rasterizer registers (for depth, starting from index 0x48)
+		// The texturing and the fragment lighting registers. Therefore we upload them all in one go to avoid multiple slow uniform updates
+		glUniform1uiv(ubershaderData.picaRegLoc, 0x200 - 0x48, &regs[0x48]);
+		setupUbershaderTexEnv();
+	}
+
+	return usingAcceleratedShader;
+}
+
 void RendererGL::screenshot(const std::string& name) {
 	constexpr uint width = 400;
 	constexpr uint height = 2 * 240;
@@ -978,21 +1057,12 @@ void RendererGL::screenshot(const std::string& name) {
 	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
 }
 
-void RendererGL::clearShaderCache() {
-	for (auto& shader : shaderCache) {
-		CachedProgram& cachedProgram = shader.second;
-		cachedProgram.program.free();
-	}
-
-	shaderCache.clear();
-}
-
 void RendererGL::deinitGraphicsContext() {
 	// Invalidate all surface caches since they'll no longer be valid
 	textureCache.reset();
 	depthBufferCache.reset();
 	colourBufferCache.reset();
-	clearShaderCache();
+	shaderCache.clear();
 
 	// All other GL objects should be invalidated automatically and be recreated by the next call to initGraphicsContext
 	// TODO: Make it so that depth and colour buffers get written back to 3DS memory

@@ -34,4 +34,5 @@ void PICAShader::reset() {
 
 	codeHashDirty = true;
 	opdescHashDirty = true;
+	uniformsDirty = true;
 }

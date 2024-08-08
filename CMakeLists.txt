@@ -98,6 +98,7 @@ if (NOT ANDROID)
     target_link_libraries(AlberCore PUBLIC SDL2-static)
 endif()
 
+add_subdirectory(third_party/fmt)
 add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
@@ -260,6 +261,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
+                 include/PICA/pica_vert_config.hpp
 )
 
 cmrc_add_resource_library(
@@ -424,7 +426,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
 target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
-target_link_libraries(AlberCore PUBLIC glad capstone)
+target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
