@@ -35,7 +35,11 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
-		SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+		
+		if (config.shaderMode == ShaderMode::Hybrid) {
+			SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+		}
+		
 		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
@@ -45,6 +49,16 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		glContext = SDL_GL_CreateContext(window);
 		if (glContext == nullptr) {
 			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+		}
+
+		if (config.shaderMode == ShaderMode::Hybrid) {
+			// As per the wiki you should check the value after creating the context
+			// as it can differ from the requested value
+			int sharingEnabled;
+			SDL_GL_GetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, &sharingEnabled);
+			if (!sharingEnabled) {
+				Helpers::panic("OpenGL context sharing not enabled");
+			}
 		}
 
 		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
@@ -350,23 +364,13 @@ namespace AsyncCompiler {
 
 		// SDL_GL_CreateContext also makes it the current context so we need to switch back after creation
 		SDL_GLContext currentContext = SDL_GL_GetCurrentContext();
-
 		SDL_GLContext glContext = SDL_GL_CreateContext(sdlWindow);
 
 		if (glContext == nullptr) {
 			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
 		}
 
-		// As per the wiki you should check the value after creating the context
-		// as it can differ from the requested value
-		int sharingEnabled;
-		SDL_GL_GetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, &sharingEnabled);
-		if (!sharingEnabled) {
-			Helpers::panic("OpenGL context sharing not enabled");
-		}
-
 		SDL_GL_MakeCurrent(sdlWindow, currentContext);
-
 		return glContext;
 	}
 

@@ -429,54 +429,38 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
-	bool usingUbershader;
-	switch (shaderMode) {
-		case ShaderMode::Ubershader: {
-			const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
-			const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
+	if (shaderMode == ShaderMode::Ubershader) {
+		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
+		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
 
-			// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
-			// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
-			if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
-				usingUbershader = false;
-			} else {
-				usingUbershader = true;
-			}
-			break;
+		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
+		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
+		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
+			OpenGL::Program& program = getSpecializedShader();
+			gl.useProgram(program);
+		} else {
+			gl.useProgram(triangleProgram);
 		}
-
-		case ShaderMode::Specialized: {
-			usingUbershader = false;
-			break;
-		}
-
-		case ShaderMode::Hybrid: {
-			PICA::FragmentConfig fsConfig(regs); // TODO: introduce code duplication to make sure this constructor/lookup isn't done too many times
-			auto cachedProgram = shaderCache.find(fsConfig);
-			if (cachedProgram == shaderCache.end()) {
-				CachedProgram& program = shaderCache[fsConfig];
-				program.compiling.store(true);
-				asyncCompiler->PushFragmentConfig(fsConfig, &program);
-				usingUbershader = true;
-			} else if (cachedProgram->second.compiling.load(std::memory_order_relaxed)) {
-				usingUbershader = true;
-			} else {
-				usingUbershader = false;
-			}
-			break;
-		}
-
-		default: {
-			Helpers::panic("Invalid shader mode");
-			break;
-		}
-	}
-		
-	if (usingUbershader) {
-		gl.useProgram(triangleProgram);
-	} else {
+	} else if (shaderMode == ShaderMode::Specialized) {
 		OpenGL::Program& program = getSpecializedShader();
 		gl.useProgram(program);
+	} else if (shaderMode == ShaderMode::Hybrid) {
+		PICA::FragmentConfig fsConfig(regs);
+		auto cachedProgram = shaderCache.find(fsConfig);
+
+		if (cachedProgram == shaderCache.end()) {
+			CachedProgram& program = shaderCache[fsConfig];
+			program.compiling.store(true);
+			asyncCompiler->PushFragmentConfig(fsConfig, &program);
+			gl.useProgram(triangleProgram);
+		} else if (cachedProgram->second.compiling.load(std::memory_order_relaxed)) {
+			gl.useProgram(triangleProgram);
+		} else {
+			OpenGL::Program& program = getSpecializedShader();
+			gl.useProgram(program);
+		}
+	} else {
+		Helpers::panic("Invalid shader mode");
 	}
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
@@ -504,7 +488,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
 	// Update ubershader uniforms
-	if (usingUbershader) {
+	if (gl.currentProgram == triangleProgram.handle()) {
 		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
 		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
@@ -890,7 +874,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
-		if (shaderMode == ShaderMode::Hybrid) {
+		if (shaderMode == ShaderMode::Hybrid) [[unlikely]] {
 			Helpers::panic("Compiling shaders in main thread, this should never happen");
 		}
 
@@ -1032,7 +1016,7 @@ void RendererGL::screenshot(const std::string& name) {
 }
 
 void RendererGL::clearShaderCache() {
-	if (asyncCompiler && shaderMode == ShaderMode::Hybrid) {
+	if (asyncCompiler != nullptr && shaderMode == ShaderMode::Hybrid) {
 		// May contain objects that are still in use, so we need to clear them first
 		asyncCompiler->Finish();
 	}

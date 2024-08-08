@@ -30,7 +30,7 @@ AsyncCompilerThread::AsyncCompilerThread(PICA::ShaderGen::FragmentGenerator& fra
 				fragShader.free();
 			}
 
-			hasWork.clear();
+			hasWork.store(false);
 			std::this_thread::yield();
 		}
 
@@ -57,19 +57,16 @@ void AsyncCompilerThread::PushFragmentConfig(const PICA::FragmentConfig& config,
 
 	if (!pushed) {
 		Helpers::warn("AsyncCompilerThread: Queue full, spinning");
-	} else {
-		return;
-	}
 
-	while (!pushed) {
-		pushed = programQueue.Push(newProgram);
+		while (!pushed) {
+			pushed = programQueue.Push(newProgram);
+		}
 	}
 }
 
 void AsyncCompilerThread::Finish() {
-	hasWork.test_and_set();
+	hasWork.store(true);
 
 	// Wait for the compiler thread to finish any outstanding work
-	while (hasWork.test_and_set()) {
-	}
+	while (hasWork.load()) {}
 }

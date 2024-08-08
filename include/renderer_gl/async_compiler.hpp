@@ -45,6 +45,6 @@ struct AsyncCompilerThread {
 	std::array<CompilingProgram*, preallocatedProgramsSize> preallocatedPrograms;
 	lockfree::spsc::Queue<CompilingProgram*, preallocatedProgramsSize - 1> programQueue;
 	std::atomic_bool running;
-	std::atomic_flag hasWork = ATOMIC_FLAG_INIT;
+	std::atomic_bool hasWork;
 	std::thread thread;
 };
