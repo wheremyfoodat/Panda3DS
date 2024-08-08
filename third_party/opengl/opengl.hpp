@@ -432,24 +432,24 @@ namespace OpenGL {
 			return m_handle != 0;
 		}
 
-        bool createFromBinary(const uint8_t* binary, size_t size, GLenum format) {
-            m_handle = glCreateProgram();
-            glProgramBinary(m_handle, format, binary, size);
+		bool createFromBinary(const uint8_t* binary, size_t size, GLenum format) {
+			m_handle = glCreateProgram();
+			glProgramBinary(m_handle, format, binary, size);
 
-            GLint success;
-            glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
+			GLint success;
+			glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
 
-            if (!success) {
-                char buf[4096];
-                glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
-                fprintf(stderr, "Failed to link program\nError: %s\n", buf);
-                glDeleteProgram(m_handle);
+			if (!success) {
+				char buf[4096];
+				glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
+				fprintf(stderr, "Failed to link program\nError: %s\n", buf);
+				glDeleteProgram(m_handle);
 
-                m_handle = 0;
-            }
+				m_handle = 0;
+			}
 
-            return m_handle != 0;
-        }
+			return m_handle != 0;
+		}
 
 		GLuint handle() const { return m_handle; }
 		bool exists() const { return m_handle != 0; }
