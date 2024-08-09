@@ -16,7 +16,15 @@ static retro_input_state_t inputStateCallback;
 static retro_hw_render_callback hw_render;
 static std::filesystem::path savePath;
 
+static std::string touchScreenMode;
+static bool renderTouchScreen;
+
 static bool screenTouched;
+static int lastMouseX;
+static int lastMouseY;
+
+static int touchX = 0;
+static int touchY = 0;
 
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
@@ -122,8 +130,11 @@ static void inputInit() {
 		{0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L"},
 		{0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "X"},
 		{0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Y"},
+		{0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Screen Touch"},
 		{0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Circle Pad X"},
 		{0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Circle Pad Y"},
+		{0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Pointer X"},
+		{0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Pointer Y"},
 		{0},
 	};
 
@@ -161,6 +172,8 @@ static void configInit() {
 		{"panda3ds_use_charger", "Charger plugged; enabled|disabled"},
 		{"panda3ds_ubershader_lighting_override", "Force shadergen when rendering lights; enabled|disabled"},
 		{"panda3ds_ubershader_lighting_override_threshold", "Light threshold for forcing shadergen; 1|2|3|4|5|6|7|8"},
+		{"panda3ds_touchscreen_mode", "Touchscreen touch mode; Auto|Pointer|Joystick|None"},
+		{"panda3ds_render_touchscreen", "Render touchscreen pointer; enabled|disabled"},
 		{nullptr, nullptr},
 	};
 
@@ -185,6 +198,9 @@ static void configUpdate() {
 	config.lightShadergenThreshold = std::clamp(std::stoi(FetchVariable("panda3ds_ubershader_lighting_override_threshold", "1")), 1, 8);
 	config.discordRpcEnabled = false;
 
+	touchScreenMode = FetchVariable("panda3ds_touchscreen_mode", "Auto");
+	renderTouchScreen = FetchVariableBool("panda3ds_render_touchscreen", true);
+
 	config.save();
 }
 
@@ -194,6 +210,12 @@ static void ConfigCheckVariables() {
 
 	if (updated) {
 		configUpdate();
+	}
+}
+
+static void renderTouchScreenPointer() {
+	if (renderTouchScreen) {
+		// TODO: Render pointer on screen
 	}
 }
 
@@ -319,26 +341,59 @@ void retro_run() {
 
 	bool touchScreen = false;
 
-	const int posX = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
-	const int posY = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
-
-	const int newX = static_cast<int>((posX + 0x7fff) / (float)(0x7fff * 2) * emulator->width);
-	const int newY = static_cast<int>((posY + 0x7fff) / (float)(0x7fff * 2) * emulator->height);
+	int pointerX = touchX;
+	int pointerY = touchY;
 
 	const int offsetX = 40;
 	const int offsetY = emulator->height / 2;
 
-	const bool inScreenX = newX >= offsetX && newX <= emulator->width - offsetX;
-	const bool inScreenY = newY >= offsetY && newY <= emulator->height;
+	if (touchScreenMode == "Pointer" || touchScreenMode == "Auto") {
+		const int posX = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
+		const int posY = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 
-	if (inScreenX && inScreenY) {
-		touchScreen |= inputStateCallback(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-		touchScreen |= inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
+		const int newX = static_cast<int>((posX + 0x7fff) / (float)(0x7fff * 2) * emulator->width);
+		const int newY = static_cast<int>((posY + 0x7fff) / (float)(0x7fff * 2) * emulator->height);
+
+		const bool inScreenX = newX >= offsetX && newX <= emulator->width - offsetX;
+		const bool inScreenY = newY >= offsetY && newY <= emulator->height;
+
+		if (inScreenX && inScreenY) {
+			touchScreen |= inputStateCallback(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+			touchScreen |= inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
+		}
+
+		if ((posX != 0 || posY != 0) && (lastMouseX != newX || lastMouseY != newY)) {
+			lastMouseX = newX;
+			lastMouseY = newY;
+
+			pointerX = newX - offsetX;
+			pointerY = newY - offsetY;
+		}
 	}
 
+	if (touchScreenMode == "Joystick" || touchScreenMode == "Auto") {
+		const float speedX = (emulator->width / 60.0);
+		const float speedY = (emulator->height / 2 / 60.0);
+
+		const float moveX = GetAxisState(RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
+		const float moveY = GetAxisState(RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y);
+
+		touchScreen |= GetButtonState(RETRO_DEVICE_ID_JOYPAD_R3);
+
+		if (moveX != 0 || moveY != 0) {
+			pointerX = touchX + static_cast<int>((moveX / 32767) * speedX);
+			pointerY = touchY + static_cast<int>((moveY / 32767) * speedY);
+		}
+	}
+
+	touchX = std::clamp(pointerX, 0, (int)(emulator->width - (offsetX * 2)));
+	touchY = std::clamp(pointerY, 0, (int)(emulator->height - offsetY));
+
+	renderTouchScreenPointer();
+
 	if (touchScreen) {
-		u16 x = static_cast<u16>(newX - offsetX);
-		u16 y = static_cast<u16>(newY - offsetY);
+		u16 x = static_cast<u16>(touchX);
+		u16 y = static_cast<u16>(touchY);
 
 		hid.setTouchScreenPress(x, y);
 		screenTouched = true;
