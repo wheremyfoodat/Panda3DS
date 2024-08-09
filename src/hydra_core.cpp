@@ -169,6 +169,5 @@ namespace AsyncCompiler {
 	}
 
 	void makeCurrent(void* mainContext, void* context) {}
-
 	void destroyContext(void* context) {}
 }  // namespace AsyncCompiler
