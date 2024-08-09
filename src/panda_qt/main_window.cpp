@@ -6,8 +6,10 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <memory>
 
 #include "cheats.hpp"
+#include "gl/context.h"
 #include "input_mappings.hpp"
 #include "services/dsp.hpp"
 
@@ -601,3 +603,32 @@ void MainWindow::pollControllers() {
 		}
 	}
 }
+
+namespace AsyncCompiler {
+	void* createContext(void* mainContext) {
+		GL::Context* glContext = (GL::Context*)mainContext;
+
+		// Unlike the SDL function, this doesn't make it current so we don't
+		// need to call MakeCurrent on the mainContext
+		WindowInfo wi = glContext->GetWindowInfo();
+		wi.type = WindowInfo::Type::Surfaceless;
+
+		std::unique_ptr<GL::Context> iLoveBeingForcedToUseRAII = glContext->CreateSharedContext(wi);
+
+		if (!iLoveBeingForcedToUseRAII) {
+			Helpers::panic("Failed to create shared GL context");
+		}
+
+		return iLoveBeingForcedToUseRAII.release();
+	}
+
+	void makeCurrent(void* unused, void* context) {
+		GL::Context* glContext = (GL::Context*)context;
+		glContext->MakeCurrent();
+	}
+
+	void destroyContext(void* context) {
+		GL::Context* glContext = (GL::Context*)context;
+		delete glContext;
+	}
+}  // namespace AsyncCompiler

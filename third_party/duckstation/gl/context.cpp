@@ -74,14 +74,7 @@ std::unique_ptr<GL::Context> Context::Create(const WindowInfo& wi, const Version
   context = ContextAGL::Create(wi, versions_to_try, num_versions_to_try);
 #else
   if (wi.type == WindowInfo::Type::X11)
-  {
-    const char* use_egl_x11 = std::getenv("USE_EGL_X11");
-    if (use_egl_x11 && std::strcmp(use_egl_x11, "1") == 0)
-      context = ContextEGLX11::Create(wi, versions_to_try, num_versions_to_try);
-    else
-      context = ContextGLX::Create(wi, versions_to_try, num_versions_to_try);
-  }
-
+    context = ContextEGLX11::Create(wi, versions_to_try, num_versions_to_try);
 #ifdef WAYLAND_ENABLED
   if (wi.type == WindowInfo::Type::Wayland)
     context = ContextEGLWayland::Create(wi, versions_to_try, num_versions_to_try);

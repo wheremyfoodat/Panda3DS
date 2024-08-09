@@ -162,3 +162,13 @@ HC_API const char* getInfo(hydra::InfoType type) {
 		default: return nullptr;
 	}
 }
+
+namespace AsyncCompiler {
+	void* createContext(void* mainContext) {
+		return nullptr;
+	}
+
+	void makeCurrent(void* mainContext, void* context) {}
+
+	void destroyContext(void* context) {}
+}  // namespace AsyncCompiler

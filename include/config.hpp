@@ -13,17 +13,17 @@ struct EmulatorConfig {
 	static constexpr bool shaderJitDefault = false;
 #endif
 
-	// For now, use specialized shaders by default on MacOS as M1 drivers are buggy when using the ubershader, and on Android since mobile GPUs are
-	// horrible. On other platforms we default to ubershader + shadergen fallback for lights
+// For now, use specialized shaders by default on MacOS as M1 drivers are buggy when using the ubershader, and on Android since mobile GPUs are
+// horrible. On other platforms we default to ubershader + shadergen fallback for lights
 #if defined(__ANDROID__) || defined(__APPLE__)
-	static constexpr bool ubershaderDefault = false;
+	static constexpr ShaderMode defaultShaderMode = ShaderMode::Specialized;
 #else
-	static constexpr bool ubershaderDefault = true;
+	static constexpr ShaderMode defaultShaderMode = ShaderMode::Ubershader;
 #endif
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool discordRpcEnabled = false;
-	bool useUbershaders = ubershaderDefault;
+	ShaderMode shaderMode = defaultShaderMode;
 	bool accurateShaderMul = false;
 
 	// Toggles whether to force shadergen when there's more than N lights active and we're using the ubershader, for better performance

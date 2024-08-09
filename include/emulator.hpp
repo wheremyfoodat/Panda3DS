@@ -55,7 +55,7 @@ class Emulator {
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
-	bool running = false;         // Is the emulator running a game?
+	bool running = false;  // Is the emulator running a game?
 
   private:
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
@@ -109,7 +109,7 @@ class Emulator {
 
 #ifdef PANDA3DS_FRONTEND_QT
 	// For passing the GL context from Qt to the renderer
-	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
+	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(glContext); }
 #else
 	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
 #endif
