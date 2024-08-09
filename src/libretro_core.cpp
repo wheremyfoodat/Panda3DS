@@ -405,3 +405,13 @@ void retro_cheat_set(uint index, bool enabled, const char* code) {
 void retro_cheat_reset() {
 	emulator->getCheats().reset();
 }
+
+namespace AsyncCompiler {
+	void* createContext(void* mainContext) {
+		return nullptr;
+	}
+
+	void makeCurrent(void* mainContext, void* context) {}
+
+	void destroyContext(void* context) {}
+}  // namespace AsyncCompiler
