@@ -4,10 +4,10 @@
 
 #include <stdexcept>
 
+#include "android_utils.hpp"
 #include "emulator.hpp"
 #include "renderer_gl/renderer_gl.hpp"
 #include "services/hid.hpp"
-#include "android_utils.hpp"
 
 std::unique_ptr<Emulator> emulator = nullptr;
 HIDService* hidService = nullptr;
@@ -40,17 +40,17 @@ JNIEnv* jniEnv() {
 extern "C" {
 
 #define MAKE_SETTING(functionName, type, settingName) \
-AlberFunction(void, functionName) (JNIEnv* env, jobject obj, type value) { emulator->getConfig().settingName = value; }
+	AlberFunction(void, functionName)(JNIEnv * env, jobject obj, type value) { emulator->getConfig().settingName = value; }
 
 MAKE_SETTING(setShaderJitEnabled, jboolean, shaderJitEnabled)
 
 #undef MAKE_SETTING
 
 AlberFunction(void, Setup)(JNIEnv* env, jobject obj) {
-    env->GetJavaVM(&jvm);
+	env->GetJavaVM(&jvm);
 
-    alberClass = (jclass)env->NewGlobalRef((jclass)env->FindClass("com/panda3ds/pandroid/AlberDriver"));
-    alberClassOpenDocument = env->GetStaticMethodID(alberClass, "openDocument", "(Ljava/lang/String;Ljava/lang/String;)I");
+	alberClass = (jclass)env->NewGlobalRef((jclass)env->FindClass("com/panda3ds/pandroid/AlberDriver"));
+	alberClassOpenDocument = env->GetStaticMethodID(alberClass, "openDocument", "(Ljava/lang/String;Ljava/lang/String;)I");
 }
 
 AlberFunction(void, Pause)(JNIEnv* env, jobject obj) { emulator->pause(); }
@@ -128,15 +128,15 @@ AlberFunction(jbyteArray, GetSmdh)(JNIEnv* env, jobject obj) {
 #undef AlberFunction
 
 int AndroidUtils::openDocument(const char* path, const char* perms) {
-    auto env = jniEnv();
+	auto env = jniEnv();
 
-    jstring uri = env->NewStringUTF(path);
-    jstring jmode = env->NewStringUTF(perms);
+	jstring uri = env->NewStringUTF(path);
+	jstring jmode = env->NewStringUTF(perms);
 
-    jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
+	jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
 
-    env->DeleteLocalRef(uri);
-    env->DeleteLocalRef(jmode);
+	env->DeleteLocalRef(uri);
+	env->DeleteLocalRef(jmode);
 
-    return (int)result;
+	return (int)result;
 }

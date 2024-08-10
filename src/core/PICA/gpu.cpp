@@ -117,7 +117,7 @@ void GPU::reset() {
 	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
 	externalRegs[Framebuffer1Select] = 0;
 
-	renderer->setUbershaderSetting(config.useUbershaders);
+	renderer->setShaderMode(config.shaderMode);
 	renderer->reset();
 }
 
@@ -365,7 +365,7 @@ PICA::Vertex GPU::getImmediateModeVertex() {
 
 	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
 	shaderUnit.vs.run();
-	
+
 	// Map shader outputs to fixed function properties
 	const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 	for (int i = 0; i < totalShaderOutputs; i++) {

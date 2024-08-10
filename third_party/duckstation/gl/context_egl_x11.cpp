@@ -20,6 +20,7 @@ std::unique_ptr<Context> ContextEGLX11::CreateSharedContext(const WindowInfo& wi
 {
   std::unique_ptr<ContextEGLX11> context = std::make_unique<ContextEGLX11>(wi);
   context->m_display = m_display;
+  context->m_supports_surfaceless = m_supports_surfaceless;
 
   if (!context->CreateContextAndSurface(m_version, m_context, false))
     return nullptr;

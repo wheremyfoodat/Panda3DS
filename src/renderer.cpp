@@ -37,3 +37,33 @@ const char* Renderer::typeToString(RendererType rendererType) {
 		default: return "Invalid";
 	}
 }
+
+std::optional<ShaderMode> Renderer::shaderModeFromString(std::string inString) {
+	// Transform to lower-case to make the setting case-insensitive
+	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
+
+	static const std::unordered_map<std::string, ShaderMode> map = {
+		{"specialized", ShaderMode::Specialized},
+		{"special", ShaderMode::Specialized},
+		{"ubershader", ShaderMode::Ubershader},
+		{"uber", ShaderMode::Ubershader},
+		{"hybrid", ShaderMode::Hybrid},
+		{"threaded", ShaderMode::Hybrid},
+		{"i hate opengl context creation", ShaderMode::Hybrid},
+	};
+
+	if (auto search = map.find(inString); search != map.end()) {
+		return search->second;
+	}
+
+	return std::nullopt;
+}
+
+const char* Renderer::shaderModeToString(ShaderMode shaderMode) {
+	switch (shaderMode) {
+		case ShaderMode::Specialized: return "specialized";
+		case ShaderMode::Ubershader: return "ubershader";
+		case ShaderMode::Hybrid: return "hybrid";
+		default: return "Invalid";
+	}
+}

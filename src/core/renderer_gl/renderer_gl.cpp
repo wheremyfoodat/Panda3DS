@@ -9,6 +9,7 @@
 #include "PICA/pica_frag_uniforms.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/regs.hpp"
+#include "renderer_gl/async_compiler.hpp"
 #include "math_util.hpp"
 
 CMRC_DECLARE(RendererGL);
@@ -172,9 +173,23 @@ void RendererGL::initGraphicsContextInternal() {
 	defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
 }
 
-// The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
-// So we just call initGraphicsContextInternal for both
-void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { initGraphicsContextInternal(); }
+void RendererGL::initGraphicsContext(SDL_Window* context) {
+	if (shaderMode == ShaderMode::Hybrid) {
+		asyncCompiler = new AsyncCompilerThread(fragShaderGen, context);
+	}
+
+	initGraphicsContextInternal();
+}
+
+#ifdef PANDA3DS_FRONTEND_QT
+void RendererGL::initGraphicsContext(GL::Context* context) {
+	if (shaderMode == ShaderMode::Hybrid) {
+		asyncCompiler = new AsyncCompilerThread(fragShaderGen, context);
+	}
+
+	initGraphicsContextInternal();
+}
+#endif
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
@@ -414,23 +429,38 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::Triangle,
 	};
 
-	bool usingUbershader = enableUbershader;
-	if (usingUbershader) {
+	if (shaderMode == ShaderMode::Ubershader) {
 		const bool lightsEnabled = (regs[InternalRegs::LightingEnable] & 1) != 0;
 		const uint lightCount = (regs[InternalRegs::LightNumber] & 0x7) + 1;
 
 		// Emulating lights in the ubershader is incredibly slow, so we've got an option to render draws using moret han N lights via shadergen
 		// This way we generate fewer shaders overall than with full shadergen, but don't tank performance 
 		if (emulatorConfig->forceShadergenForLights && lightsEnabled && lightCount >= emulatorConfig->lightShadergenThreshold) {
-			usingUbershader = false;
+			OpenGL::Program& program = getSpecializedShader();
+			gl.useProgram(program);
+		} else {
+			gl.useProgram(triangleProgram);
 		}
-	}
-		
-	if (usingUbershader) {
-		gl.useProgram(triangleProgram);
-	} else {
+	} else if (shaderMode == ShaderMode::Specialized) {
 		OpenGL::Program& program = getSpecializedShader();
 		gl.useProgram(program);
+	} else if (shaderMode == ShaderMode::Hybrid) {
+		PICA::FragmentConfig fsConfig(regs);
+		auto cachedProgram = shaderCache.find(fsConfig);
+
+		if (cachedProgram == shaderCache.end()) {
+			CachedProgram& program = shaderCache[fsConfig];
+			program.compiling.store(true);
+			asyncCompiler->PushFragmentConfig(fsConfig, &program);
+			gl.useProgram(triangleProgram);
+		} else if (cachedProgram->second.compiling.load(std::memory_order_relaxed)) {
+			gl.useProgram(triangleProgram);
+		} else {
+			OpenGL::Program& program = getSpecializedShader();
+			gl.useProgram(program);
+		}
+	} else {
+		Helpers::panic("Invalid shader mode");
 	}
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
@@ -458,7 +488,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
 
 	// Update ubershader uniforms
-	if (usingUbershader) {
+	if (gl.currentProgram == triangleProgram.handle()) {
 		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
 		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
@@ -844,14 +874,20 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	OpenGL::Program& program = programEntry.program;
 
 	if (!program.exists()) {
+		if (shaderMode == ShaderMode::Hybrid) [[unlikely]] {
+			Helpers::panic("Compiling shaders in main thread, this should never happen");
+		}
+
 		std::string fs = fragShaderGen.generate(fsConfig);
 
 		OpenGL::Shader fragShader({fs.c_str(), fs.size()}, OpenGL::Fragment);
 		program.create({defaultShadergenVs, fragShader});
-		gl.useProgram(program);
 
 		fragShader.free();
+	}
 
+	if (programEntry.needsInitialization) {
+		gl.useProgram(program);
 		// Init sampler objects. Texture 0 goes in texture unit 0, texture 1 in TU 1, texture 2 in TU 2, and the light maps go in TU 3
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex0"), 0);
 		glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
@@ -862,6 +898,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		// As it's an OpenGL 4.2 feature that MacOS doesn't support...
 		uint uboIndex = glGetUniformBlockIndex(program.handle(), "FragmentUniforms");
 		glUniformBlockBinding(program.handle(), uboIndex, uboBlockBinding);
+		programEntry.needsInitialization = false;
 	}
 	glBindBufferBase(GL_UNIFORM_BUFFER, uboBlockBinding, shadergenFragmentUBO);
 
@@ -979,6 +1016,11 @@ void RendererGL::screenshot(const std::string& name) {
 }
 
 void RendererGL::clearShaderCache() {
+	if (asyncCompiler != nullptr && shaderMode == ShaderMode::Hybrid) {
+		// May contain objects that are still in use, so we need to clear them first
+		asyncCompiler->Finish();
+	}
+
 	for (auto& shader : shaderCache) {
 		CachedProgram& cachedProgram = shader.second;
 		cachedProgram.program.free();
