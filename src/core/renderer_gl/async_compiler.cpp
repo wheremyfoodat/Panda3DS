@@ -31,7 +31,7 @@ AsyncCompilerThread::AsyncCompilerThread(PICA::ShaderGen::FragmentGenerator& fra
 			}
 
 			hasWork.store(false);
-			std::this_thread::yield();
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 
 		AsyncCompiler::destroyContext(context);
