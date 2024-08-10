@@ -19,6 +19,17 @@ static void* GetProcAddressCallback(const char* name)
 }
 
 namespace GL {
+static bool ReloadWGL(HDC dc)
+{
+  if (!gladLoadWGL(dc))
+  {
+    Log_ErrorPrint("Loading GLAD WGL functions failed");
+    return false;
+  }
+
+  return true;
+}
+
 ContextWGL::ContextWGL(const WindowInfo& wi) : Context(wi) {}
 
 ContextWGL::~ContextWGL()

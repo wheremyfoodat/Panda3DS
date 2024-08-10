@@ -19,6 +19,14 @@ public:
   /// Prevents the function from being invoked when we go out of scope.
   ALWAYS_INLINE void Cancel() { m_func.reset(); }
 
+  /// Runs the destructor function now instead of when we go out of scope.
+  ALWAYS_INLINE void Run() {
+	  if (!m_func.has_value()) return;
+
+	  m_func.value()();
+	  m_func.reset();
+  }
+
   /// Explicitly fires the function.
   ALWAYS_INLINE void Invoke()
   {
