@@ -93,7 +93,7 @@ set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT BUILD_LIBRETRO_CORE)
     add_subdirectory(third_party/SDL2)
     target_link_libraries(AlberCore PUBLIC SDL2-static)
 endif()
@@ -520,17 +520,17 @@ elseif(BUILD_HYDRA_CORE)
     target_link_libraries(Alber PUBLIC AlberCore)
 elseif(BUILD_LIBRETRO_CORE)
     include_directories(third_party/libretro/include)
-    add_library(Alber SHARED src/libretro_core.cpp)
-    target_link_libraries(Alber PUBLIC AlberCore)
-
-    set_target_properties(Alber PROPERTIES
-      OUTPUT_NAME "panda3ds_libretro"
-      PREFIX ""
-    )
+    add_library(panda3ds_libretro SHARED src/libretro_core.cpp)
+    target_link_libraries(panda3ds_libretro PUBLIC AlberCore)
+    set_target_properties(panda3ds_libretro PROPERTIES PREFIX "")
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
-    set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    if (NOT BUILD_LIBRETRO_CORE)
+        set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        set_target_properties(panda3ds_libretro PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
 endif()
 
 if(ENABLE_TESTS)
