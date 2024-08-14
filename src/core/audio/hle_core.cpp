@@ -627,5 +627,6 @@ namespace Audio {
 		rateMultiplier = 1.f;
 
 		buffers = {};
+		currentSamples.clear();
 	}
 }  // namespace Audio
