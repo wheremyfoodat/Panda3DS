@@ -37,4 +37,6 @@ class FrontendSDL {
 	// And so the user can still use the keyboard to control the analog
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
+
+	void setupControllerSensors(SDL_GameController* controller);
 };
