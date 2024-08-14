@@ -289,7 +289,7 @@ void FrontendSDL::run() {
 									
 				case SDL_CONTROLLERSENSORUPDATE: {
 					if (event.csensor.sensor == SDL_SENSOR_GYRO) {
-						glm::vec3 rotation = Gyro::SDL::convertRotation({
+						auto rotation = Gyro::SDL::convertRotation({
 							event.csensor.data[0],
 							event.csensor.data[1],
 							event.csensor.data[2],

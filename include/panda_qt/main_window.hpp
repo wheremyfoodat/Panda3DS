@@ -122,6 +122,7 @@ class MainWindow : public QMainWindow {
 	void showAboutMenu();
 	void initControllers();
 	void pollControllers();
+	void setupControllerSensors(SDL_GameController* controller);
 	void sendMessage(const EmulatorMessage& message);
 	void dispatchMessage(const EmulatorMessage& message);
 
