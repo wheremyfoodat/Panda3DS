@@ -9,6 +9,7 @@
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
+#include "sdl_gyro.hpp"
 #include "services/dsp.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
@@ -521,6 +522,8 @@ void MainWindow::initControllers() {
 			SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
 			gameControllerID = SDL_JoystickInstanceID(stick);
 		}
+
+		setupControllerSensors(gameController);
 	}
 }
 
@@ -558,6 +561,8 @@ void MainWindow::pollControllers() {
 				if (gameController == nullptr) {
 					gameController = SDL_GameControllerOpen(event.cdevice.which);
 					gameControllerID = event.cdevice.which;
+
+					setupControllerSensors(gameController);
 				}
 				break;
 
@@ -598,6 +603,29 @@ void MainWindow::pollControllers() {
 				}
 				break;
 			}
+
+			case SDL_CONTROLLERSENSORUPDATE: {
+				if (event.csensor.sensor == SDL_SENSOR_GYRO) {
+					auto rotation = Gyro::SDL::convertRotation({
+						event.csensor.data[0],
+						event.csensor.data[1],
+						event.csensor.data[2],
+					});
+
+					hid.setPitch(s16(rotation.x));
+					hid.setRoll(s16(rotation.y));
+					hid.setYaw(s16(rotation.z));
+				}
+				break;
+			}
 		}
+	}
+}
+
+void MainWindow::setupControllerSensors(SDL_GameController* controller) {
+	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;
+
+	if (haveGyro) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_GYRO, SDL_TRUE);
 	}
 }

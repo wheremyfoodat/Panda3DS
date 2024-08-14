@@ -2,6 +2,8 @@
 
 #include <glad/gl.h>
 
+#include "sdl_gyro.hpp"
+
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
@@ -20,6 +22,8 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 			SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
 			gameControllerID = SDL_JoystickInstanceID(stick);
 		}
+
+		setupControllerSensors(gameController);
 	}
 
 	const EmulatorConfig& config = emu.getConfig();
@@ -200,6 +204,8 @@ void FrontendSDL::run() {
 					if (gameController == nullptr) {
 						gameController = SDL_GameControllerOpen(event.cdevice.which);
 						gameControllerID = event.cdevice.which;
+
+						setupControllerSensors(gameController);
 					}
 					break;
 
@@ -280,6 +286,21 @@ void FrontendSDL::run() {
 					}
 					break;
 				}
+									
+				case SDL_CONTROLLERSENSORUPDATE: {
+					if (event.csensor.sensor == SDL_SENSOR_GYRO) {
+						auto rotation = Gyro::SDL::convertRotation({
+							event.csensor.data[0],
+							event.csensor.data[1],
+							event.csensor.data[2],
+						});
+
+						hid.setPitch(s16(rotation.x));
+						hid.setRoll(s16(rotation.y));
+						hid.setYaw(s16(rotation.z));
+					}
+					break;
+				}
 
 				case SDL_DROPFILE: {
 					char* droppedDir = event.drop.file;
@@ -340,5 +361,13 @@ void FrontendSDL::run() {
 		// kernel.evalReschedule();
 
 		SDL_GL_SwapWindow(window);
+	}
+}
+
+void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
+	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;
+
+	if (haveGyro) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_GYRO, SDL_TRUE);
 	}
 }
