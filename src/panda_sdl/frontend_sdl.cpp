@@ -298,6 +298,8 @@ void FrontendSDL::run() {
 						hid.setPitch(s16(rotation.x));
 						hid.setRoll(s16(rotation.y));
 						hid.setYaw(s16(rotation.z));
+					} else if (event.csensor.sensor == SDL_SENSOR_ACCEL) {
+						hid.setAccel(s16(event.csensor.data[0]), s16(-event.csensor.data[1]), s16(event.csensor.data[2]));
 					}
 					break;
 				}
@@ -366,8 +368,13 @@ void FrontendSDL::run() {
 
 void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
 	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;
+	bool haveAccelerometer = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL) == SDL_TRUE;
 
 	if (haveGyro) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_GYRO, SDL_TRUE);
+	}
+
+	if (haveAccelerometer) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
 	}
 }
