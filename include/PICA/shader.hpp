@@ -23,7 +23,7 @@ namespace ShaderOpcodes {
 		DST = 0x04,
 		EX2 = 0x05,
 		LG2 = 0x06,
-		LIT = 0x07,
+		LITP = 0x07,
 		MUL = 0x08,
 		SGE = 0x09,
 		SLT = 0x0A,
@@ -57,6 +57,10 @@ namespace ShaderOpcodes {
 		MAD = 0x38  // Everything between 0x38-0x3F is a MAD but fuck it
 	};
 }
+
+namespace PICA::ShaderGen {
+	class ShaderDecompiler;
+};
 
 // Note: All PICA f24 vec4 registers must have the alignas(16) specifier to make them easier to access in SSE/NEON code in the JIT
 class PICAShader {
@@ -135,6 +139,7 @@ class PICAShader {
 	// Add these as friend classes for the JIT so it has access to all important state
 	friend class ShaderJIT;
 	friend class ShaderEmitter;
+	friend class PICA::ShaderGen::ShaderDecompiler;
 
 	vec4f getSource(u32 source);
 	vec4f& getDest(u32 dest);
@@ -156,6 +161,7 @@ class PICAShader {
 	void jmpc(u32 instruction);
 	void jmpu(u32 instruction);
 	void lg2(u32 instruction);
+	void litp(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
 	void madi(u32 instruction);

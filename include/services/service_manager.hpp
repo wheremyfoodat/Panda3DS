@@ -42,6 +42,8 @@ struct EmulatorConfig;
 class Kernel;
 
 class ServiceManager {
+	using Handle = HorizonHandle;
+
 	std::span<u32, 16> regs;
 	Memory& mem;
 	Kernel& kernel;

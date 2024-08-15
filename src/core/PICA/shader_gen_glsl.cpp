@@ -4,6 +4,8 @@
 using namespace PICA;
 using namespace PICA::ShaderGen;
 
+// Note: We upload global ambient and fog colour as u32 and decode on the GPU
+// This shouldn't matter much for GPU performance, especially fog since it's relatively rare
 static constexpr const char* uniformDefinition = R"(
 	struct LightSource {
 		vec3 specular0;
@@ -24,9 +26,8 @@ static constexpr const char* uniformDefinition = R"(
 		vec4 constantColors[6];
 		vec4 tevBufferColor;
 		vec4 clipCoords;
-
-		// Note: We upload this as a u32 and decode on GPU
 		uint globalAmbientLight;
+		uint inFogColor;
 		LightSource lightSources[8];
 	};
 )";
@@ -71,11 +72,6 @@ std::string FragmentGenerator::getDefaultVertexShader() {
 	#ifndef USING_GLES
 		out float gl_ClipDistance[2];
 	#endif
-
-		vec4 abgr8888ToVec4(uint abgr) {
-			const float scale = 1.0 / 255.0;
-			return scale * vec4(float(abgr & 0xffu), float((abgr >> 8) & 0xffu), float((abgr >> 16) & 0xffu), float(abgr >> 24));
-		}
 
 		void main() {
 			gl_Position = a_coords;
@@ -661,10 +657,6 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 		return;
 	}
 
-	float r = config.fogConfig.fogColorR / 255.0f;
-	float g = config.fogConfig.fogColorG / 255.0f;
-	float b = config.fogConfig.fogColorB / 255.0f;
-
 	if (config.fogConfig.flipDepth) {
 		shader += "float fog_index = (1.0 - depth) * 128.0;\n";
 	} else {
@@ -673,7 +665,7 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 
 	shader += "float clamped_index = clamp(floor(fog_index), 0.0, 127.0);";
 	shader += "float delta = fog_index - clamped_index;";
-	shader += "vec3 fog_color = vec3(" + std::to_string(r) + ", " + std::to_string(g) + ", " + std::to_string(b) + ");";
+	shader += "vec3 fog_color = (1.0 / 255.0) * vec3(float(inFogColor & 0xffu), float((inFogColor >> 8u) & 0xffu), float((inFogColor >> 16u) & 0xffu));";
 	shader += "vec2 value = texelFetch(u_tex_luts, ivec2(int(clamped_index), 24), 0).rg;"; // fog LUT is past the light LUTs
 	shader += "float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);";
 	shader += "combinerOutput.rgb = mix(fog_color, combinerOutput.rgb, fog_factor);";

@@ -11,6 +11,8 @@
 class Kernel;
 
 class IRUserService {
+	using Handle = HorizonHandle;
+
 	enum class DeviceID : u8 {
 		CirclePadPro = 1,
 	};

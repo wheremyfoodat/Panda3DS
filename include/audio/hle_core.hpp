@@ -42,6 +42,7 @@ namespace Audio {
 				return this->bufferID > other.bufferID;
 			}
 		};
+
 		// Buffer of decoded PCM16 samples. TODO: Are there better alternatives to use over deque?
 		using SampleBuffer = std::deque<std::array<s16, 2>>;
 
@@ -53,6 +54,7 @@ namespace Audio {
 
 		std::array<float, 3> gain0, gain1, gain2;
 		u32 samplePosition;  // Sample number into the current audio buffer
+		float rateMultiplier;
 		u16 syncCount;
 		u16 currentBufferID;
 		u16 previousBufferID;
@@ -142,7 +144,7 @@ namespace Audio {
 			} else if (counter1 == 0xffff && counter0 != 0xfffe) {
 				return 0;
 			} else {
-				return counter0 > counter1 ? 0 : 0;
+				return (counter0 > counter1) ? 0 : 1;
 			}
 		}
 
@@ -185,7 +187,7 @@ namespace Audio {
 		~HLE_DSP() override {}
 
 		void reset() override;
-		void runAudioFrame() override;
+		void runAudioFrame(u64 eventTimestamp) override;
 
 		u8* getDspMemory() override { return dspRam.rawMemory.data(); }
 

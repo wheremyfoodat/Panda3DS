@@ -12,6 +12,8 @@
 class Kernel;
 
 class NFCService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::NFC;
 	Memory& mem;
 	Kernel& kernel;

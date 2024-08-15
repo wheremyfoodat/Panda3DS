@@ -12,6 +12,7 @@
 class Kernel;
 
 class CAMService {
+	using Handle = HorizonHandle;
 	using Event = std::optional<Handle>;
 
 	struct Port {

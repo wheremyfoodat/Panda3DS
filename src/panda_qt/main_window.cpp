@@ -9,15 +9,20 @@
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
+#include "sdl_gyro.hpp"
 #include "services/dsp.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
-	screen.show();
 
+	// We pass a callback to the screen widget that will be triggered every time we resize the screen
+	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	setCentralWidget(screen);
+
+	screen->show();
 	appRunning = true;
 
 	// Set our menu bar up
@@ -69,7 +74,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
 	emu = new Emulator();
-	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
+	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
@@ -101,7 +106,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 		if (usingGL) {
 			// Make GL context current for this thread, enable VSync
-			GL::Context* glContext = screen.getGLContext();
+			GL::Context* glContext = screen->getGLContext();
 			glContext->MakeCurrent();
 			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
 
@@ -145,13 +150,13 @@ void MainWindow::emuThreadMainLoop() {
 
 	// Unbind GL context if we're using GL, otherwise some setups seem to be unable to join this thread
 	if (usingGL) {
-		screen.getGLContext()->DoneCurrent();
+		screen->getGLContext()->DoneCurrent();
 	}
 }
 
 void MainWindow::swapEmuBuffer() {
 	if (usingGL) {
-		screen.getGLContext()->SwapBuffers();
+		screen->getGLContext()->SwapBuffers();
 	} else {
 		Helpers::panic("[Qt] Don't know how to swap buffers for the current rendering backend :(");
 	}
@@ -200,14 +205,17 @@ void MainWindow::selectLuaFile() {
 	}
 }
 
-// Cleanup when the main window closes
-MainWindow::~MainWindow() {
+// Stop emulator thread when the main window closes
+void MainWindow::closeEvent(QCloseEvent *event) {
 	appRunning = false;  // Set our running atomic to false in order to make the emulator thread stop, and join it
 
 	if (emuThread.joinable()) {
 		emuThread.join();
 	}
+}
 
+// Cleanup when the main window closes
+MainWindow::~MainWindow() {
 	delete emu;
 	delete menuBar;
 	delete aboutWindow;
@@ -360,6 +368,15 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getRenderer()->setUbershader(*message.string.str);
 			delete message.string.str;
 			break;
+
+		case MessageType::SetScreenSize: {
+			const u32 width = message.screenSize.width;
+			const u32 height = message.screenSize.height;
+
+			emu->setOutputSize(width, height);
+			screen->resizeSurface(width, height);
+			break;
+		}
 	}
 }
 
@@ -423,13 +440,13 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 void MainWindow::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::MouseButton::LeftButton) {
 		const QPointF clickPos = event->globalPosition();
-		const QPointF widgetPos = screen.mapFromGlobal(clickPos);
+		const QPointF widgetPos = screen->mapFromGlobal(clickPos);
 
 		// Press is inside the screen area
-		if (widgetPos.x() >= 0 && widgetPos.x() < screen.width() && widgetPos.y() >= 0 && widgetPos.y() < screen.height()) {
+		if (widgetPos.x() >= 0 && widgetPos.x() < screen->width() && widgetPos.y() >= 0 && widgetPos.y() < screen->height()) {
 			// Go from widget positions to [0, 400) for x and [0, 480) for y
-			uint x = (uint)std::round(widgetPos.x() / screen.width() * 400.f);
-			uint y = (uint)std::round(widgetPos.y() / screen.height() * 480.f);
+			uint x = (uint)std::round(widgetPos.x() / screen->width() * 400.f);
+			uint y = (uint)std::round(widgetPos.y() / screen->height() * 480.f);
 
 			// Check if touch falls in the touch screen area
 			if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
@@ -482,6 +499,14 @@ void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const 
 	sendMessage(message);
 }
 
+void MainWindow::handleScreenResize(u32 width, u32 height) {
+	EmulatorMessage message{.type = MessageType::SetScreenSize};
+	message.screenSize.width = width;
+	message.screenSize.height = height;
+
+	sendMessage(message);
+}
+
 void MainWindow::initControllers() {
 	// Make SDL use consistent positional button mapping
 	SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
@@ -497,6 +522,8 @@ void MainWindow::initControllers() {
 			SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
 			gameControllerID = SDL_JoystickInstanceID(stick);
 		}
+
+		setupControllerSensors(gameController);
 	}
 }
 
@@ -534,6 +561,8 @@ void MainWindow::pollControllers() {
 				if (gameController == nullptr) {
 					gameController = SDL_GameControllerOpen(event.cdevice.which);
 					gameControllerID = event.cdevice.which;
+
+					setupControllerSensors(gameController);
 				}
 				break;
 
@@ -574,6 +603,29 @@ void MainWindow::pollControllers() {
 				}
 				break;
 			}
+
+			case SDL_CONTROLLERSENSORUPDATE: {
+				if (event.csensor.sensor == SDL_SENSOR_GYRO) {
+					auto rotation = Gyro::SDL::convertRotation({
+						event.csensor.data[0],
+						event.csensor.data[1],
+						event.csensor.data[2],
+					});
+
+					hid.setPitch(s16(rotation.x));
+					hid.setRoll(s16(rotation.y));
+					hid.setYaw(s16(rotation.z));
+				}
+				break;
+			}
 		}
+	}
+}
+
+void MainWindow::setupControllerSensors(SDL_GameController* controller) {
+	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;
+
+	if (haveGyro) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_GYRO, SDL_TRUE);
 	}
 }

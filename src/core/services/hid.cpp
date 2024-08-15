@@ -103,7 +103,6 @@ void HIDService::getGyroscopeLowCalibrateParam(u32 messagePointer) {
 void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 	log("HID::GetGyroscopeLowRawToDpsCoefficient\n");
 
-	constexpr float gyroscopeCoeff = 14.375f; // Same as retail 3DS
 	mem.write32(messagePointer, IPC::responseHeader(0x15, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, Helpers::bit_cast<u32, float>(gyroscopeCoeff));

@@ -55,6 +55,11 @@ if(BUILD_LIBRETRO_CORE)
     add_compile_definitions(__LIBRETRO__)
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND ENABLE_USER_BUILD)
+    # Disable stack buffer overflow checks in user builds
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GS-")
+endif() 
+
 add_library(AlberCore STATIC)
 
 include_directories(${PROJECT_SOURCE_DIR}/include/)
@@ -255,6 +260,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
+                 include/sdl_gyro.hpp
 )
 
 cmrc_add_resource_library(
@@ -502,7 +508,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         )
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
-        set(FRONTEND_HEADER_FILES "")
+        set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)

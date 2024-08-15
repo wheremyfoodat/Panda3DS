@@ -38,6 +38,8 @@ namespace HID::Keys {
 class Kernel;
 
 class HIDService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::HID;
 	Memory& mem;
 	Kernel& kernel;
@@ -86,6 +88,8 @@ class HIDService {
 	}
 
   public:
+	static constexpr float gyroscopeCoeff = 14.375f;  // Same as retail 3DS
+
 	HIDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

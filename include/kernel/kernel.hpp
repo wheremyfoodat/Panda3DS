@@ -18,6 +18,8 @@ class CPU;
 struct Scheduler;
 
 class Kernel {
+	using Handle = HorizonHandle;
+
 	std::span<u32, 16> regs;
 	CPU& cpu;
 	Memory& mem;

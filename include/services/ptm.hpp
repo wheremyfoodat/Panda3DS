@@ -22,7 +22,7 @@ class PTMService {
 	void getStepHistoryAll(u32 messagePointer);
 	void getTotalStepCount(u32 messagePointer);
 
-public:
+  public:
 	enum class Type {
 		U,     // ptm:u
 		SYSM,  // ptm:sysm

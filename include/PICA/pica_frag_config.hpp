@@ -35,9 +35,6 @@ namespace PICA {
 
 			BitField<0, 3, FogMode> mode;
 			BitField<3, 1, u32> flipDepth;
-			BitField<8, 8, u32> fogColorR;
-			BitField<16, 8, u32> fogColorG;
-			BitField<24, 8, u32> fogColorB;
 		};
 	};
 
@@ -238,9 +235,6 @@ namespace PICA {
 
 			if (fogConfig.mode == FogMode::Fog) {
 				fogConfig.flipDepth = Helpers::getBit<16>(regs[InternalRegs::TexEnvUpdateBuffer]);
-				fogConfig.fogColorR = Helpers::getBits<0, 8>(regs[InternalRegs::FogColor]);
-				fogConfig.fogColorG = Helpers::getBits<8, 8>(regs[InternalRegs::FogColor]);
-				fogConfig.fogColorB = Helpers::getBits<16, 8>(regs[InternalRegs::FogColor]);
 			}
 		}
 	};

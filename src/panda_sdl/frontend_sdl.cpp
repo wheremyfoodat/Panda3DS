@@ -2,6 +2,8 @@
 
 #include <glad/gl.h>
 
+#include "sdl_gyro.hpp"
+
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
@@ -20,6 +22,8 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 			SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
 			gameControllerID = SDL_JoystickInstanceID(stick);
 		}
+
+		setupControllerSensors(gameController);
 	}
 
 	const EmulatorConfig& config = emu.getConfig();
@@ -35,7 +39,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL);
+		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::panic("Window creation failed: %s", SDL_GetError());
@@ -55,7 +59,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN);
+		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::warn("Window creation failed: %s", SDL_GetError());
@@ -162,8 +166,13 @@ void FrontendSDL::run() {
 					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						const s32 x = event.button.x;
-						const s32 y = event.button.y;
+						if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
+							break;
+						}
+
+						// Go from window positions to [0, 400) for x and [0, 480) for y
+						const s32 x = (s32)std::round(event.button.x * 400.f / windowWidth);
+						const s32 y = (s32)std::round(event.button.y * 480.f / windowHeight);
 
 						// Check if touch falls in the touch screen area
 						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
@@ -195,6 +204,8 @@ void FrontendSDL::run() {
 					if (gameController == nullptr) {
 						gameController = SDL_GameControllerOpen(event.cdevice.which);
 						gameControllerID = event.cdevice.which;
+
+						setupControllerSensors(gameController);
 					}
 					break;
 
@@ -242,8 +253,13 @@ void FrontendSDL::run() {
 
 					// Handle "dragging" across the touchscreen
 					if (hid.isTouchScreenPressed()) {
-						const s32 x = event.motion.x;
-						const s32 y = event.motion.y;
+						if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
+							break;
+						}
+
+						// Go from window positions to [0, 400) for x and [0, 480) for y
+						const s32 x = (s32)std::round(event.motion.x * 400.f / windowWidth);
+						const s32 y = (s32)std::round(event.motion.y * 480.f / windowHeight);
 
 						// Check if touch falls in the touch screen area and register the new touch screen position
 						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
@@ -270,6 +286,21 @@ void FrontendSDL::run() {
 					}
 					break;
 				}
+									
+				case SDL_CONTROLLERSENSORUPDATE: {
+					if (event.csensor.sensor == SDL_SENSOR_GYRO) {
+						auto rotation = Gyro::SDL::convertRotation({
+							event.csensor.data[0],
+							event.csensor.data[1],
+							event.csensor.data[2],
+						});
+
+						hid.setPitch(s16(rotation.x));
+						hid.setRoll(s16(rotation.y));
+						hid.setYaw(s16(rotation.z));
+					}
+					break;
+				}
 
 				case SDL_DROPFILE: {
 					char* droppedDir = event.drop.file;
@@ -288,6 +319,15 @@ void FrontendSDL::run() {
 						SDL_free(droppedDir);
 					}
 					break;
+				}
+
+				case SDL_WINDOWEVENT: {
+					auto type = event.window.event;
+					if (type == SDL_WINDOWEVENT_RESIZED) {
+						windowWidth = event.window.data1;
+						windowHeight = event.window.data2;
+						emu.setOutputSize(windowWidth, windowHeight);
+					}
 				}
 			}
 		}
@@ -321,5 +361,13 @@ void FrontendSDL::run() {
 		// kernel.evalReschedule();
 
 		SDL_GL_SwapWindow(window);
+	}
+}
+
+void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
+	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;
+
+	if (haveGyro) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_GYRO, SDL_TRUE);
 	}
 }

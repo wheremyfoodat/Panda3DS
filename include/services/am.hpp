@@ -6,6 +6,8 @@
 #include "result/result.hpp"
 
 class AMService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::AM;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, amLogger)
@@ -15,7 +17,7 @@ class AMService {
 	void getPatchTitleInfo(u32 messagePointer);
 	void listTitleInfo(u32 messagePointer);
 
-public:
+  public:
 	AMService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
