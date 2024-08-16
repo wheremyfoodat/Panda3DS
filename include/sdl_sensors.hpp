@@ -1,8 +1,10 @@
 #pragma once
 
+#include <cmath>
 #include <glm/glm.hpp>
 #include <numbers>
 
+#include "helpers.hpp"
 #include "services/hid.hpp"
 
 namespace Sensors::SDL {
@@ -27,4 +29,4 @@ namespace Sensors::SDL {
 
 		return glm::vec3(x, y, z);
 	}
-}  // namespace Gyro::SDL
+}  // namespace Sensors::SDL
