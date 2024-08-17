@@ -93,7 +93,7 @@ set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 
-if (NOT ANDROID AND NOT BUILD_LIBRETRO_CORE)
+if (NOT ANDROID)
     add_subdirectory(third_party/SDL2)
     target_link_libraries(AlberCore PUBLIC SDL2-static)
 endif()
