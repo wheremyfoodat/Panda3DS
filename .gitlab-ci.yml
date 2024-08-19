@@ -1,0 +1,130 @@
+# DESCRIPTION: GitLab CI/CD for libRetro (NOT FOR GitLab-proper)
+
+##############################################################################
+################################# BOILERPLATE ################################
+##############################################################################
+
+# Core definitions
+.core-defs:
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    CORENAME: panda3ds
+    CORE_ARGS: -DBUILD_LIBRETRO_CORE=ON -DENABLE_USER_BUILD=ON -DENABLE_VULKAN=OFF -DENABLE_LUAJIT=OFF -DENABLE_DISCORD_RPC=OFF
+
+# Inclusion templates, required for the build to work
+
+include:
+  ################################## DESKTOPS ################################
+  # Linux
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/linux-cmake.yml'
+
+  # Windows
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/windows-cmake-mingw.yml'
+
+  # MacOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: 'osx-cmake-x86.yml'
+
+  # MacOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: 'osx-cmake-arm64.yml'
+
+  ################################## CELLULAR ################################
+  # Android
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/android-cmake.yml'
+
+  # iOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/ios-cmake.yml'
+
+# Stages for building
+stages:
+  - build-prepare
+  - build-static
+  - build-shared
+
+##############################################################################
+#################################### STAGES ##################################
+##############################################################################
+#
+################################### DESKTOPS #################################
+# Linux 64-bit
+libretro-build-linux-x64:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:latest
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    - sudo apt-get update -qy
+    - sudo apt-get install -qy software-properties-common
+    - sudo add-apt-repository -y ppa:savoury1/build-tools
+    - sudo add-apt-repository -y ppa:savoury1/gcc-defaults-12
+    - sudo apt-get update -qy
+    - sudo apt-get install -qy cmake gcc-12 g++-12
+  variables:
+    CC: /usr/bin/gcc-12
+    CXX: /usr/bin/g++-12
+  extends:
+    - .libretro-linux-cmake-x86_64
+    - .core-defs
+
+# Windows 64-bit
+libretro-build-windows-x64:
+  extends:
+    - .libretro-windows-cmake-x86_64
+    - .core-defs
+
+# MacOS 64-bit
+libretro-build-osx-x64:
+  tags:
+    - mac-apple-silicon
+  variables:
+    CORE_ARGS: -DBUILD_LIBRETRO_CORE=ON -DENABLE_USER_BUILD=ON -DENABLE_VULKAN=OFF -DENABLE_LUAJIT=OFF -DENABLE_DISCORD_RPC=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCRYPTOPP_AMD64=1
+  extends:
+    - .libretro-osx-cmake-x86
+    - .core-defs
+
+# MacOS arm 64-bit
+libretro-build-osx-arm64:
+  tags:
+    - mac-apple-silicon
+  extends:
+    - .libretro-osx-cmake-arm64
+    - .core-defs
+
+################################### CELLULAR #################################
+# Android ARMv7a
+#android-armeabi-v7a:
+#  extends:
+#    - .libretro-android-cmake-armeabi-v7a
+#    - .core-defs
+
+# Android ARMv8a
+# android-arm64-v8a:
+#   extends:
+#     - .libretro-android-cmake-arm64-v8a
+#     - .core-defs
+
+# Android 64-bit x86
+# android-x86_64:
+#   extends:
+#     - .libretro-android-cmake-x86_64
+#     - .core-defs
+
+# Android 32-bit x86
+# android-x86:
+#   extends:
+#     - .libretro-android-cmake-x86
+#     - .core-defs
+
+# iOS
+# libretro-build-ios-arm64:
+#   extends:
+#     - .libretro-ios-cmake-arm64
+#     - .core-defs
+#   variables:
+#     CORE_ARGS: -DBUILD_LIBRETRO_CORE=ON -DBUILD_PLAY=OFF -DENABLE_AMAZON_S3=off -DBUILD_TESTS=OFF -DCMAKE_TOOLCHAIN_FILE=deps/Dependencies/cmake-ios/ios.cmake -DTARGET_IOS=ON
+#     LIBNAME: ${CORENAME}_libretro_ios.dylib
+
+################################### CONSOLES #################################

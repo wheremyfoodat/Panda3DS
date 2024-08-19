@@ -372,7 +372,7 @@ uint retro_api_version() { return RETRO_API_VERSION; }
 
 usize retro_get_memory_size(uint id) {
 	if (id == RETRO_MEMORY_SYSTEM_RAM) {
-		return 0;
+		return Memory::FCRAM_SIZE;
 	}
 
 	return 0;
@@ -380,7 +380,7 @@ usize retro_get_memory_size(uint id) {
 
 void* retro_get_memory_data(uint id) {
 	if (id == RETRO_MEMORY_SYSTEM_RAM) {
-		return 0;
+		return emulator->getMemory().getFCRAM();
 	}
 
 	return nullptr;

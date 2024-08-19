@@ -261,7 +261,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
-                 include/PICA/pica_vert_config.hpp
+                 include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp
 )
 
 cmrc_add_resource_library(
@@ -521,17 +521,17 @@ elseif(BUILD_HYDRA_CORE)
     target_link_libraries(Alber PUBLIC AlberCore)
 elseif(BUILD_LIBRETRO_CORE)
     include_directories(third_party/libretro/include)
-    add_library(Alber SHARED src/libretro_core.cpp)
-    target_link_libraries(Alber PUBLIC AlberCore)
-
-    set_target_properties(Alber PROPERTIES
-      OUTPUT_NAME "panda3ds_libretro"
-      PREFIX ""
-    )
+    add_library(panda3ds_libretro SHARED src/libretro_core.cpp)
+    target_link_libraries(panda3ds_libretro PUBLIC AlberCore)
+    set_target_properties(panda3ds_libretro PROPERTIES PREFIX "")
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
-    set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    if (NOT BUILD_LIBRETRO_CORE)
+        set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        set_target_properties(panda3ds_libretro PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
 endif()
 
 if(ENABLE_TESTS)

@@ -1,6 +1,6 @@
 #include "emulator.hpp"
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__LIBRETRO__)
 #include <SDL_filesystem.h>
 #endif
 
