@@ -45,7 +45,10 @@ namespace PICA::ShaderGen {
 			bool operator<(const Function& other) const { return AddressRange(start, end) < AddressRange(other.start, other.end); }
 
 			std::string getIdentifier() const { return fmt::format("fn_{}_{}", start, end); }
-			std::string getForwardDecl() const { return fmt::format("void fn_{}_{}();\n", start, end); }
+			// To handle weird control flow, we have to return from each function a bool that indicates whether or not the shader reached an end
+			// instruction and should thus terminate. This is necessary for games like Rayman and Gravity Falls, which have "END" instructions called
+			// from within functions deep in the callstack
+			std::string getForwardDecl() const { return fmt::format("bool fn_{}_{}();\n", start, end); }
 			std::string getCallStatement() const { return fmt::format("fn_{}_{}()", start, end); }
 		};
 
