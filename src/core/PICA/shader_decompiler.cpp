@@ -452,6 +452,8 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 			case ShaderOpcodes::FLR: setDest(operandDescriptor, dest, fmt::format("floor({})", src1)); break;
 			case ShaderOpcodes::RSQ: setDest(operandDescriptor, dest, fmt::format("vec4(inversesqrt({}.x))", src1)); break;
 			case ShaderOpcodes::RCP: setDest(operandDescriptor, dest, fmt::format("vec4(1.0 / {}.x)", src1)); break;
+			case ShaderOpcodes::LG2: setDest(operandDescriptor, dest, fmt::format("vec4(log2({}.x))", src1)); break;
+			case ShaderOpcodes::EX2: setDest(operandDescriptor, dest, fmt::format("vec4(exp2({}.x))", src1)); break;
 
 			case ShaderOpcodes::SLT:
 			case ShaderOpcodes::SLTI: setDest(operandDescriptor, dest, fmt::format("vec4(lessThan({}, {}))", src1, src2)); break;
