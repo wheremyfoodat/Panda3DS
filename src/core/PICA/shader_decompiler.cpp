@@ -591,8 +591,9 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				const u32 dest = getBits<10, 12>(instruction);
 				const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
 				const u32 mask = 1u << bit;
+				const u32 test = (instruction & 1) ^ 1;  // If the LSB is 0 we jump if bit = 1, otherwise 0
 
-				decompiledShader += fmt::format("if ((uniform_bool & {}u) != 0u) {{ pc = {}u; break; }}\n", mask, dest);
+				decompiledShader += fmt::format("if ((uniform_bool & {}u) {} 0u) {{ pc = {}u; break; }}\n", mask, (test != 0) ? "!=" : "==", dest);
 				break;
 			}
 
