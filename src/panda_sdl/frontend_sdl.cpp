@@ -1,4 +1,5 @@
 #include "panda_sdl/frontend_sdl.hpp"
+#include "version.hpp"
 
 #include <glad/gl.h>
 
@@ -32,6 +33,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 #ifdef PANDA3DS_ENABLE_OPENGL
 	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
 #endif
+	char* windowTitle = "Alber - " PANDA3DS_VERSION;
 
 	if (needOpenGL) {
 		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
@@ -39,7 +41,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::panic("Window creation failed: %s", SDL_GetError());
@@ -59,7 +61,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::warn("Window creation failed: %s", SDL_GetError());

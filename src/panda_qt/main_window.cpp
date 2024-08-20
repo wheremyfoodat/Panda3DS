@@ -7,13 +7,14 @@
 #include <cstdio>
 #include <fstream>
 
+#include "version.hpp"
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 #include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
-	setWindowTitle("Alber");
+	setWindowTitle("Alber - " PANDA3DS_VERSION);
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
