@@ -523,10 +523,10 @@ void main() {
 		uint GPUREG_FOG_COLOR = readPicaReg(0x00E1u);
 
 		// Annoyingly color is not encoded in the same way as light color
-		float r = (GPUREG_FOG_COLOR & 0xFFu) / 255.0;
-		float g = ((GPUREG_FOG_COLOR >> 8) & 0xFFu) / 255.0;
-		float b = ((GPUREG_FOG_COLOR >> 16) & 0xFFu) / 255.0;
-		vec3 fog_color = vec3(r, g, b);
+		float r = float(GPUREG_FOG_COLOR & 0xFFu);
+		float g = float((GPUREG_FOG_COLOR >> 8u) & 0xFFu);
+		float b = float((GPUREG_FOG_COLOR >> 16u) & 0xFFu);
+		vec3 fog_color = (1.0 / 255.0) * vec3(r, g, b);
 
 		fragColour.rgb = mix(fog_color, fragColour.rgb, fog_factor);
 	}
