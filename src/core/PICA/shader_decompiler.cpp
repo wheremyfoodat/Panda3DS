@@ -270,10 +270,11 @@ std::string ShaderDecompiler::decompile() {
 		decompiledShader += func.getForwardDecl();
 	}
 
-	decompiledShader += "bool pica_shader_main() {\n";
+	decompiledShader += "void pica_shader_main() {\n";
 	AddressRange mainFunctionRange(entrypoint, PICAShader::maxInstructionCount);
-	callFunction(*findFunction(mainFunctionRange));
-	decompiledShader += "return true;\n}\n";
+	auto mainFunc = findFunction(mainFunctionRange);
+
+	decompiledShader += mainFunc->getCallStatement() + ";\n}\n";
 
 	for (const Function& func : controlFlow.functions) {
 		if (func.outLabels.empty()) {
