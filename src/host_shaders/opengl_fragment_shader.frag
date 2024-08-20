@@ -524,8 +524,8 @@ void main() {
 
 		// Annoyingly color is not encoded in the same way as light color
 		float r = float(GPUREG_FOG_COLOR & 0xFFu);
-		float g = float((GPUREG_FOG_COLOR >> 8) & 0xFFu);
-		float b = float((GPUREG_FOG_COLOR >> 16) & 0xFFu);
+		float g = float((GPUREG_FOG_COLOR >> 8u) & 0xFFu);
+		float b = float((GPUREG_FOG_COLOR >> 16u) & 0xFFu);
 		vec3 fog_color = (1.0 / 255.0) * vec3(r, g, b);
 
 		fragColour.rgb = mix(fog_color, fragColour.rgb, fog_factor);
