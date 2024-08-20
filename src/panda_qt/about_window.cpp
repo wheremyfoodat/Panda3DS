@@ -1,4 +1,5 @@
 #include "panda_qt/about_window.hpp"
+#include "version.hpp"
 
 #include <QLabel>
 #include <QTextEdit>
@@ -17,6 +18,8 @@ AboutWindow::AboutWindow(QWidget* parent) : QDialog(parent) {
 		QStringLiteral(R"(
 <p style='font-size:38pt; font-weight:400;'>Panda3DS</p>
 
+<p style='font-size:18pt;'>v%VERSION_STRING%</p>
+
 <p>
 %ABOUT_PANDA3DS%<br>
 <a href='https://panda3ds.com/'>%SUPPORT%</a><br>
@@ -26,6 +29,7 @@ AboutWindow::AboutWindow(QWidget* parent) : QDialog(parent) {
 <a>%AUTHORS%</a>
 </p>
 )")
+			.replace(QStringLiteral("%VERSION_STRING%"), PANDA3DS_VERSION)
 			.replace(QStringLiteral("%ABOUT_PANDA3DS%"), tr("Panda3DS is a free and open source Nintendo 3DS emulator, for Windows, MacOS and Linux"))
 			.replace(QStringLiteral("%SUPPORT%"), tr("Visit panda3ds.com for help with Panda3DS and links to our official support sites."))
 			.replace(

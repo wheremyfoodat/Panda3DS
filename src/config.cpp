@@ -41,6 +41,9 @@ void EmulatorConfig::load() {
 			discordRpcEnabled = toml::find_or<toml::boolean>(general, "EnableDiscordRPC", false);
 			usePortableBuild = toml::find_or<toml::boolean>(general, "UsePortableBuild", false);
 			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
+
+			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
+			appVersionOnWindow = toml::find_or<toml::boolean>(general, "AppVersionOnWindow", false);
 		}
 	}
 
@@ -127,6 +130,8 @@ void EmulatorConfig::save() {
 	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
+	data["General"]["PrintAppVersion"] = printAppVersion;
+	data["General"]["AppVersionOnWindow"] = appVersionOnWindow;
 	
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
