@@ -14,7 +14,7 @@
 #include "services/dsp.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
-	setWindowTitle("Alber - " PANDA3DS_VERSION);
+	setWindowTitle("Alber");
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
@@ -97,6 +97,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			// For some reason just .c_str() doesn't show the proper path
 			Helpers::warn("Failed to load ROM file: %s", romPath.string().c_str());
 		}
+	}
+
+	if (emu->getConfig().appVersionOnWindow) {
+		setWindowTitle("Alber v" PANDA3DS_VERSION);
+	}
+
+	if (emu->getConfig().printAppVersion) {
+		printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
 	}
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work

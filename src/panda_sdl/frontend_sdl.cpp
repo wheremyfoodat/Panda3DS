@@ -33,7 +33,11 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 #ifdef PANDA3DS_ENABLE_OPENGL
 	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
 #endif
-	char* windowTitle = "Alber - " PANDA3DS_VERSION;
+
+	const char* windowTitle = config.appVersionOnWindow ? ("Alber v" PANDA3DS_VERSION) : "Alber";
+	if (config.printAppVersion) {
+		printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
+	}
 
 	if (needOpenGL) {
 		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
