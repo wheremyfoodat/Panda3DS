@@ -4,6 +4,7 @@
 
 #include <libretro.h>
 
+#include <version.hpp>
 #include <emulator.hpp>
 #include <renderer_gl/renderer_gl.hpp>
 
@@ -204,7 +205,7 @@ static void ConfigCheckVariables() {
 void retro_get_system_info(retro_system_info* info) {
 	info->need_fullpath = true;
 	info->valid_extensions = "3ds|3dsx|elf|axf|cci|cxi|app";
-	info->library_version = "0.8";
+	info->library_version = PANDA3DS_VERSION;
 	info->library_name = "Panda3DS";
 	info->block_extract = true;
 }

@@ -43,6 +43,7 @@ option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
+option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 
@@ -59,6 +60,37 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND ENABLE_USER_BUILD)
     # Disable stack buffer overflow checks in user builds
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GS-")
 endif() 
+
+# Generate versioning files
+find_package(Git)
+set(PANDA3DS_VERSION "0.8")
+
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/include/version.hpp.in)
+    file(WRITE ${CMAKE_BINARY_DIR}/include/version.hpp.in "#define PANDA3DS_VERSION \"\${PANDA3DS_VERSION}\"")
+endif()
+
+if(GIT_FOUND AND ENABLE_GIT_VERSIONING)
+    execute_process(
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
+        OUTPUT_VARIABLE PANDA3DS_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    execute_process(
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags
+        OUTPUT_VARIABLE git_version_tag OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT PANDA3DS_VERSION STREQUAL git_version_tag)
+      execute_process(
+          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --always --abbrev=7
+          OUTPUT_VARIABLE git_version_rev OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      set(PANDA3DS_VERSION "${PANDA3DS_VERSION}.${git_version_rev}")
+      unset(git_version_rev)
+    endif()
+    string(REGEX REPLACE "^v" "" PANDA3DS_VERSION "${PANDA3DS_VERSION}")
+    unset(git_version_tag)
+endif()
+configure_file(${CMAKE_BINARY_DIR}/include/version.hpp.in ${CMAKE_BINARY_DIR}/include/version.hpp)
+include_directories(${CMAKE_BINARY_DIR}/include/)
 
 add_library(AlberCore STATIC)
 
