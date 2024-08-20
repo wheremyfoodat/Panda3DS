@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 
+#include "PICA/draw_acceleration.hpp"
 #include "PICA/dynapica/shader_rec.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/pica_vertex.hpp"
@@ -87,6 +88,7 @@ class GPU {
 	std::unique_ptr<Renderer> renderer;
 	PICA::Vertex getImmediateModeVertex();
 
+	void getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed);
   public:
 	// 256 entries per LUT with each LUT as its own row forming a 2D image 256 * LUT_COUNT
 	// Encoded in PICA native format

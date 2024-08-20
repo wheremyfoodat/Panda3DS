@@ -123,7 +123,15 @@ void GPU::reset() {
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
-	const bool hwShaders = renderer->prepareForDraw(shaderUnit, false);
+	PICA::DrawAcceleration accel;
+
+	if (config.accelerateShaders) {
+		// If we are potentially going to use hw shaders, gather necessary to do vertex fetch, index buffering, etc on the GPU
+		// This includes parsing which vertices to upload, getting pointers to the index buffer data & vertex data, and so on 
+		getAcceleratedDrawInfo(accel, indexed);
+	}
+
+	const bool hwShaders = renderer->prepareForDraw(shaderUnit, &accel, false);
 
 	if (hwShaders) {
 		if (indexed) {

@@ -1,9 +1,10 @@
 #pragma once
 #include <array>
+#include <optional>
 #include <span>
 #include <string>
-#include <optional>
 
+#include "PICA/draw_acceleration.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
@@ -83,7 +84,7 @@ class Renderer {
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between
 	// ubershaders and shadergen, and so on.
 	// Returns whether this draw is eligible for using hardware-accelerated shaders or if shaders should run on the CPU
-	virtual bool prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) { return false; }
+	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel, bool isImmediateMode) { return false; }
 
 	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
 #ifdef PANDA3DS_FRONTEND_QT

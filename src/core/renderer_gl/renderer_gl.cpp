@@ -942,7 +942,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	return program;
 }
 
-bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
+bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel, bool isImmediateMode) {
 	// First we figure out if we will be using an ubershader
 	bool usingUbershader = emulatorConfig->useUbershaders;
 	if (usingUbershader) {
@@ -993,6 +993,8 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) {
 				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
 			}
 		}
+
+		accelerateVertexUpload(shaderUnit, accel);
 	}
 
 	if (usingUbershader) {
@@ -1110,4 +1112,8 @@ void RendererGL::initUbershader(OpenGL::Program& program) {
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex1"), 1);
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex2"), 2);
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
+}
+
+void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) {
+
 }

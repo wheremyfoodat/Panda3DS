@@ -135,6 +135,8 @@ class RendererGL final : public Renderer {
 	void updateFogLUT();
 	void initGraphicsContextInternal();
 
+	void accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel);
+
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
 		: Renderer(gpu, internalRegs, externalRegs), fragShaderGen(PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL) {}
@@ -152,7 +154,7 @@ class RendererGL final : public Renderer {
 	virtual bool supportsShaderReload() override { return true; }
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
-	virtual bool prepareForDraw(ShaderUnit& shaderUnit, bool isImmediateMode) override;
+	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel, bool isImmediateMode) override;
 	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
