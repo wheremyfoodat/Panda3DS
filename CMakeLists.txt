@@ -198,7 +198,7 @@ endif()
 if(ENABLE_RENDERDOC_API)
     find_package(RenderDoc 1.6.0 MODULE REQUIRED)
     add_library(renderdoc INTERFACE)
-    target_include_directories(renderdoc SYSTEM INTERFACE ./renderdoc)
+    target_include_directories(renderdoc SYSTEM INTERFACE third_party/renderdoc)
     add_library(RenderDoc::API ALIAS renderdoc)
 
     add_compile_definitions(PANDA3DS_ENABLE_RENDERDOC)
