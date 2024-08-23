@@ -70,6 +70,7 @@ void EmulatorConfig::load() {
 
 			forceShadergenForLights = toml::find_or<toml::boolean>(gpu, "ForceShadergenForLighting", true);
 			lightShadergenThreshold = toml::find_or<toml::integer>(gpu, "ShadergenLightThreshold", 1);
+			enableRenderdoc = toml::find_or<toml::boolean>(gpu, "EnableRenderdoc", false);
 		}
 	}
 
@@ -140,6 +141,7 @@ void EmulatorConfig::save() {
 	data["GPU"]["UseUbershaders"] = useUbershaders;
 	data["GPU"]["ForceShadergenForLighting"] = forceShadergenForLights;
 	data["GPU"]["ShadergenLightThreshold"] = lightShadergenThreshold;
+	data["GPU"]["EnableRenderdoc"] = enableRenderdoc;
 
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;

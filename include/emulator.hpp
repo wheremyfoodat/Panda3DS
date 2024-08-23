@@ -135,4 +135,7 @@ class Emulator {
 	std::filesystem::path getAppDataRoot();
 
 	std::span<u8> getSMDH();
+
+  private:
+	void loadRenderdoc();
 };
