@@ -201,6 +201,7 @@ if(ENABLE_RENDERDOC_API)
     target_include_directories(renderdoc SYSTEM INTERFACE third_party/renderdoc)
     add_library(RenderDoc::API ALIAS renderdoc)
 
+    target_link_libraries(AlberCore PUBLIC RenderDoc::API)
     add_compile_definitions(PANDA3DS_ENABLE_RENDERDOC)
 endif()
 
