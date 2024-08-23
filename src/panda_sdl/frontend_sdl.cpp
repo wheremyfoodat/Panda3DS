@@ -1,9 +1,10 @@
 #include "panda_sdl/frontend_sdl.hpp"
-#include "version.hpp"
 
 #include <glad/gl.h>
 
+#include "renderdoc.hpp"
 #include "sdl_sensors.hpp"
+#include "version.hpp"
 
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
@@ -138,6 +139,14 @@ void FrontendSDL::run() {
 							// Use F5 as a reset button
 							case SDLK_F5: {
 								emu.reset(Emulator::ReloadOption::Reload);
+								break;
+							}
+
+							case SDLK_F11: {
+								if constexpr (Renderdoc::isSupported()) {
+									Renderdoc::triggerCapture();
+								}
+
 								break;
 							}
 						}
