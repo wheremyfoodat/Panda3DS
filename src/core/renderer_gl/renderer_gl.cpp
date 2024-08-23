@@ -1115,5 +1115,15 @@ void RendererGL::initUbershader(OpenGL::Program& program) {
 }
 
 void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) {
+	u32 buffer = 0;  // Vertex buffer index for non-fixed attributes
+	u32 attrCount = 0;
 
+	const u32 totalAttribCount = accel->totalAttribCount;
+
+	static constexpr GLenum attributeFormats[4] = {
+		GL_BYTE,           // 0: Signed byte
+		GL_UNSIGNED_BYTE,  // 1: Unsigned byte
+		GL_SHORT,          // 2: Short
+		GL_FLOAT,          // 3: Float
+	};
 }
