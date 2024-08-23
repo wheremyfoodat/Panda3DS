@@ -19,6 +19,7 @@ endif()
 
 project(Alber)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if(APPLE)
     enable_language(OBJC)
@@ -46,6 +47,7 @@ option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses 
 option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
+option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 
 if(BUILD_HYDRA_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -134,6 +136,7 @@ add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
 include_directories(third_party/glm)
+include_directories(third_party/renderdoc)
 
 add_subdirectory(third_party/cmrc)
 
@@ -192,6 +195,11 @@ else()
     set(HOST_ARM64 FALSE)
 endif()
 
+if(ENABLE_RENDERDOC_API)
+    find_package(RenderDoc 1.6.0 MODULE REQUIRED)
+    add_compile_definitions(PANDA3DS_ENABLE_RENDERDOC)
+endif()
+
 if(HOST_X64 OR HOST_ARM64)
     set(DYNARMIC_TESTS OFF)
     #set(DYNARMIC_NO_BUNDLED_FMT ON)
@@ -214,7 +222,7 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp src/renderdoc.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -292,7 +300,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
-                 include/sdl_sensors.hpp
+                 include/sdl_sensors.hpp include/renderdoc.hpp
 )
 
 cmrc_add_resource_library(
