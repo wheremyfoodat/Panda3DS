@@ -78,6 +78,14 @@ void RendererGL::initGraphicsContextInternal() {
 	gl.useProgram(displayProgram);
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
 
+	// Create stream buffers for vertex, index and uniform buffers
+	// TODO: Remove buffers from GL state tracking as the StreamBuffer implementation bypasses the state tracker.
+	static constexpr usize hwIndexBufferSize = 2_MB;
+	static constexpr usize hwVertexBufferSize = 16_MB;
+
+	hwIndexBuffer = StreamBuffer::Create(GL_ELEMENT_ARRAY_BUFFER, hwIndexBufferSize);
+	hwVertexBuffer = StreamBuffer::Create(GL_ARRAY_BUFFER, hwVertexBufferSize);
+
 	// Allocate memory for the shadergen fragment uniform UBO
 	glGenBuffers(1, &shadergenFragmentUBO);
 	gl.bindUBO(shadergenFragmentUBO);

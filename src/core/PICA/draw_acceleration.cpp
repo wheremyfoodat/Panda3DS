@@ -82,6 +82,8 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 					// Align attribute address up to a 4 byte boundary
 					attributeOffset = (attributeOffset + 3) & -4;
 					attributeOffset += (index - 11) << 2;
+
+					attr.data = nullptr;
 					continue;
 				}
 

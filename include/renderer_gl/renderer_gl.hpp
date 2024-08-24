@@ -3,6 +3,7 @@
 #include <array>
 #include <cstring>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <span>
 #include <unordered_map>
@@ -10,11 +11,12 @@
 
 #include "PICA/float_types.hpp"
 #include "PICA/pica_frag_config.hpp"
-#include "PICA/pica_vert_config.hpp"
 #include "PICA/pica_hash.hpp"
+#include "PICA/pica_vert_config.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
+#include "gl/stream_buffer.h"
 #include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -82,6 +84,10 @@ class RendererGL final : public Renderer {
 	GLuint shadergenFragmentUBO;
 	// UBO for uploading the PICA uniforms when using hw shaders
 	GLuint hwShaderUniformUBO;
+
+	using StreamBuffer = OpenGLStreamBuffer;
+	std::unique_ptr<StreamBuffer> hwVertexBuffer;
+	std::unique_ptr<StreamBuffer> hwIndexBuffer;
 
 	// Cached recompiled fragment shader
 	struct CachedProgram {

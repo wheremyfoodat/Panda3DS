@@ -138,6 +138,7 @@ include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
 include_directories(third_party/glm)
 include_directories(third_party/renderdoc)
+include_directories(third_party/duckstation)
 
 add_subdirectory(third_party/cmrc)
 
@@ -302,6 +303,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
+                 include/align.hpp
 )
 
 cmrc_add_resource_library(
@@ -334,7 +336,6 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
 endif()
 
 if(ENABLE_QT_GUI)
-    include_directories(third_party/duckstation)
     set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
 
     if(APPLE)
@@ -376,6 +377,8 @@ if(ENABLE_OPENGL)
         src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
         src/host_shaders/opengl_fragment_shader.frag
     )
+
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/stream_buffer.cpp)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
     source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
