@@ -1126,4 +1126,12 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 		GL_SHORT,          // 2: Short
 		GL_FLOAT,          // 3: Float
 	};
+
+	for (int i = 0; i < totalAttribCount; i++) {
+		const auto& attrib = accel->attributeInfo[i];
+		printf(
+			"%s attribute starting from offset %d with a size of %d components\n", attrib.fixed ? "Fixed" : "Variable", (!attrib.fixed) ? attrib.offset : 0,
+			!attrib.fixed ? attrib.componentCount : 4
+		);
+	}
 }

@@ -9,6 +9,7 @@ namespace PICA {
 		static constexpr u32 maxAttribCount = 12;
 
 		struct AttributeInfo {
+			u8* data;
 			u32 offset;
 
 			u8 type;

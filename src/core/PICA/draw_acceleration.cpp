@@ -50,15 +50,15 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 	}
 
 	const u64 vertexCfg = u64(regs[PICA::InternalRegs::AttribFormatLow]) | (u64(regs[PICA::InternalRegs::AttribFormatHigh]) << 32);
-	int buffer = 0;
+	u32 buffer = 0;
+	u32 attrCount = 0;
 	accel.vertexDataSize = 0;
 
-	for (int attrCount = 0; attrCount < totalAttribCount; attrCount++) {
-		auto& attr = accel.attributeInfo[attrCount];
-		attr.fixed = (fixedAttribMask & (1 << attrCount)) != 0;
+	while (attrCount < totalAttribCount) {
+		bool fixedAttrib = (fixedAttribMask & (1 << attrCount)) != 0;
 
 		// Variable attribute attribute
-		if (!attr.fixed) {
+		if (!fixedAttrib) {
 			auto& attrData = attributeInfo[buffer];  // Get information for this attribute
 			u64 attrCfg = attrData.getConfigFull();  // Get config1 | (config2 << 32)
 			u32 attributeOffset = attrData.offset;
@@ -72,6 +72,8 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 
 			for (int i = 0; i < attrData.componentCount; i++) {
 				uint index = (attrCfg >> (i * 4)) & 0xf;  // Get index of attribute in vertexCfg
+				auto& attr = accel.attributeInfo[attrCount];
+				attr.fixed = false;
 
 				// Vertex attributes used as padding
 				// 12, 13, 14 and 15 are equivalent to 4, 8, 12 and 16 bytes of padding respectively
@@ -83,26 +85,39 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 					continue;
 				}
 
-				u32 attribInfo = (vertexCfg >> (index * 4)) & 0xf;
-				u32 attribType = attribInfo & 0x3;  //  Type of attribute(sbyte/ubyte/short/float)
-				u32 size = (attribInfo >> 2) + 1;   // Total number of components
+				const u32 attribInfo = (vertexCfg >> (index * 4)) & 0xf;
+				const u32 attribType = attribInfo & 0x3;  //  Type of attribute (sbyte/ubyte/short/float)
+				const u32 size = (attribInfo >> 2) + 1;   // Total number of components
 			
 				attr.componentCount = size;
 				attr.offset = attributeOffset;
 				attr.type = attribType;
 
+				// Get a pointer to the data where this attribute is stored
+				const u32 attrAddress = vertexBase + attr.offset + (accel.minimumIndex * attrData.size);
+				attr.data = getPointerPhys<u8>(attrAddress);
+
 				// Size of each component based on the attribute type
 				static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
 				attributeOffset += size * sizePerComponent[attribType];
+
+				attrCount += 1;
 			}
 
-			buffer++;
+			buffer += 1;
 		} else {
 			vec4f& fixedAttr = shaderUnit.vs.fixedAttributes[attrCount];
+			auto& attr = accel.attributeInfo[attrCount];
+
+			attr.fixed = true;
+			// Set the data pointer to nullptr in order to catch any potential bugs
+			attr.data = nullptr;
 
 			for (int i = 0; i < 4; i++) {
 				attr.fixedValue[i] = fixedAttr[i].toFloat32();
 			}
+
+			attrCount += 1;
 		}
 	}
 
