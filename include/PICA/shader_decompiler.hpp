@@ -99,6 +99,7 @@ namespace PICA::ShaderGen {
 
 		API api;
 		Language language;
+		bool compilationError = false;
 
 		void compileInstruction(u32& pc, bool& finished);
 		// Compile range "range" and returns the end PC or if we're "finished" with the program (called an END instruction)

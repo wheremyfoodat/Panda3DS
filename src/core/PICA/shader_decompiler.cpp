@@ -247,6 +247,7 @@ std::string ShaderDecompiler::decompile() {
 		return "";
 	}
 
+	compilationError = false;
 	decompiledShader = "";
 
 	switch (api) {
@@ -322,6 +323,13 @@ std::string ShaderDecompiler::decompile() {
 			decompiledShader += "return false;\n";
 			decompiledShader += "}\n";
 		}
+	}
+
+	// We allow some leeway for "compilation errors" in addition to control flow errors, in cases where eg an unimplemented instruction
+	// or an instruction that we can't emulate in GLSL is found in the instruction stream. Just like control flow errors, these return an empty string
+	// and the renderer core will decide to use CPU shaders instead
+	if (compilationError) [[unlikely]] {
+		return "";
 	}
 
 	return decompiledShader;
@@ -707,7 +715,11 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				return;
 
 			case ShaderOpcodes::NOP: break;
-			default: Helpers::panic("GLSL recompiler: Unknown opcode: %X", opcode); break;
+
+			default:
+				Helpers::warn("GLSL recompiler: Unknown opcode: %X. Falling back to CPU shaders", opcode);
+				compilationError = true;
+				break;
 		}
 	}
 
