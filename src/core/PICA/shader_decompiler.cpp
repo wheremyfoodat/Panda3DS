@@ -546,7 +546,10 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				break;
 			}
 
-			default: Helpers::panic("GLSL recompiler: Unknown common opcode: %X", opcode); break;
+			default:
+				Helpers::warn("GLSL recompiler: Unknown common opcode: %02X. Falling back to CPU shaders", opcode);
+				compilationError = true;
+				break;
 		}
 	} else if (opcode >= 0x30 && opcode <= 0x3F) { // MAD and MADI
 		const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
@@ -717,7 +720,7 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 			case ShaderOpcodes::NOP: break;
 
 			default:
-				Helpers::warn("GLSL recompiler: Unknown opcode: %X. Falling back to CPU shaders", opcode);
+				Helpers::warn("GLSL recompiler: Unknown opcode: %02X. Falling back to CPU shaders", opcode);
 				compilationError = true;
 				break;
 		}
