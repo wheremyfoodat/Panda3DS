@@ -11,15 +11,16 @@ namespace PICA {
 		struct AttributeInfo {
 			u8* data;
 			u32 offset;
+			u32 size;
 
 			u8 type;
 			u8 componentCount;
 			bool fixed;
+			bool isPadding;
 
 			std::array<float, 4> fixedValue;  // For fixed attributes
 		};
 
-		u8* vertexBuffer;
 		u8* indexBuffer;
 
 		// Minimum and maximum index in the index buffer for a draw call
@@ -31,5 +32,6 @@ namespace PICA {
 
 		bool canBeAccelerated;
 		bool indexed;
+		bool useShortIndices;
 	};
 }  // namespace PICA

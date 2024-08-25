@@ -12,7 +12,6 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 	const u32 vertexBase = ((regs[PICA::InternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
 	const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg];  // Total # of vertices to transfer
 
-	accel.vertexBuffer = getPointerPhys<u8>(vertexBase);
 	if (indexed) {
 		u32 indexBufferConfig = regs[PICA::InternalRegs::IndexBufferConfig];
 		u32 indexBufferPointer = vertexBase + (indexBufferConfig & 0xfffffff);
@@ -22,11 +21,12 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 		u16 maximumIndex = 0;
 
 		// Check whether the index buffer uses u16 indices or u8
-		bool shortIndex = Helpers::getBit<31>(indexBufferConfig);  // Indicates whether vert indices are 16-bit or 8-bit
+		accel.useShortIndices = Helpers::getBit<31>(indexBufferConfig);  // Indicates whether vert indices are 16-bit or 8-bit
 
 		// Calculate the minimum and maximum indices used in the index buffer, so we'll only upload them
-		if (shortIndex) {
+		if (accel.useShortIndices) {
 			u16* indexBuffer16 = reinterpret_cast<u16*>(indexBuffer);
+
 			for (int i = 0; i < vertexCount; i++) {
 				u16 index = indexBuffer16[i];
 				minimumIndex = std::min(minimumIndex, index);
@@ -84,6 +84,7 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 					attributeOffset += (index - 11) << 2;
 
 					attr.data = nullptr;
+					attr.isPadding = true;
 					continue;
 				}
 
@@ -91,18 +92,19 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 				const u32 attribType = attribInfo & 0x3;  //  Type of attribute (sbyte/ubyte/short/float)
 				const u32 size = (attribInfo >> 2) + 1;   // Total number of components
 			
+				// Size of each component based on the attribute type
+				static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
+
 				attr.componentCount = size;
 				attr.offset = attributeOffset;
+				attr.size = size * sizePerComponent[attribType];
 				attr.type = attribType;
+				attr.isPadding = false;
+				attributeOffset += attr.size;
 
 				// Get a pointer to the data where this attribute is stored
 				const u32 attrAddress = vertexBase + attr.offset + (accel.minimumIndex * attrData.size);
 				attr.data = getPointerPhys<u8>(attrAddress);
-
-				// Size of each component based on the attribute type
-				static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
-				attributeOffset += size * sizePerComponent[attribType];
-
 				attrCount += 1;
 			}
 
@@ -114,6 +116,7 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 			attr.fixed = true;
 			// Set the data pointer to nullptr in order to catch any potential bugs
 			attr.data = nullptr;
+			attr.isPadding = false;
 
 			for (int i = 0; i < 4; i++) {
 				attr.fixedValue[i] = fixedAttr[i].toFloat32();

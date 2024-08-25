@@ -97,7 +97,7 @@ void RendererGL::initGraphicsContextInternal() {
 	glBufferData(GL_UNIFORM_BUFFER, PICAShader::totalUniformSize(), nullptr, GL_DYNAMIC_DRAW);
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize * 2, GL_STREAM_DRAW);
-	gl.bindVBO(vbo);
+	vbo.bind();
 	// Initialize the VAO used when not using hw shaders
 	defaultVAO.create();
 	gl.bindVAO(defaultVAO);
@@ -439,7 +439,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
-	gl.bindVBO(vbo);
+	vbo.bind();
 	gl.bindVAO(usingAcceleratedShader ? hwShaderVAO : defaultVAO);
 
 	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
@@ -1135,11 +1135,37 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 		GL_FLOAT,          // 3: Float
 	};
 
+	const u32 vertexCount = accel->maximumIndex - accel->minimumIndex + 1;
+
+	// Update index buffer if necessary
+	if (accel->indexed) {
+		const bool shortIndex = accel->useShortIndices;
+		const usize indexBufferSize = usize(vertexCount) * (shortIndex ? sizeof(u16) : sizeof(u8));
+
+		auto indexBufferRes = hwIndexBuffer->Map(4, indexBufferSize);
+		std::memcpy(indexBufferRes.pointer, accel->indexBuffer, indexBufferSize);
+		hwIndexBuffer->Unmap(indexBufferSize);
+	}
+
+	auto vertexBufferRes = hwVertexBuffer->Map(4, accel->vertexDataSize);
+	u8* vertexData = static_cast<u8*>(vertexBufferRes.pointer);
+
 	for (int i = 0; i < totalAttribCount; i++) {
 		const auto& attrib = accel->attributeInfo[i];
-		printf(
-			"%s attribute starting from offset %d with a size of %d components\n", attrib.fixed ? "Fixed" : "Variable", (!attrib.fixed) ? attrib.offset : 0,
-			!attrib.fixed ? attrib.componentCount : 4
-		);
+		
+		if (attrib.fixed) {
+			Helpers::panic("Fixed attribute!");
+		} else {
+			if (attrib.isPadding) {
+				continue;
+			}
+
+			const u32 attributeSize = attrib.size * vertexCount;
+
+			std::memcpy(vertexData, attrib.data, attributeSize);
+			vertexData += attributeSize;
+		}
 	}
+
+	hwVertexBuffer->Unmap(accel->vertexDataSize);
 }
