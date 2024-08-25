@@ -18,7 +18,7 @@ void ControlFlow::analyze(const PICAShader& shader, u32 entrypoint) {
 	analysisFailed = false;
 
 	const Function* function = addFunction(shader, entrypoint, PICAShader::maxInstructionCount);
-	if (function == nullptr) {
+	if (function == nullptr || function->exitMode != ExitMode::AlwaysEnd) {
 		analysisFailed = true;
 	}
 }
@@ -83,6 +83,7 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 				it->second = exitParallel(branchTakenExit, branchNotTakenExit);
 				return it->second;
 			}
+
 			case ShaderOpcodes::IFU:
 			case ShaderOpcodes::IFC: {
 				const u32 num = instruction & 0xff;
@@ -114,7 +115,7 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 					it->second = parallel;
 					return it->second;
 				} else {
-					ExitMode afterConditional = analyzeFunction(shader, pc + 1, end, labels);
+					ExitMode afterConditional = analyzeFunction(shader, dest + num, end, labels);
 					ExitMode conditionalExitMode = exitSeries(parallel, afterConditional);
 					it->second = conditionalExitMode;
 					return it->second;
@@ -139,7 +140,7 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 
 				// Exit mode of the remainder of this function, after we return from the callee
 				const ExitMode postCallExitMode = analyzeFunction(shader, pc + 1, end, labels);
-				const ExitMode exitMode = exitSeries(postCallExitMode, calledFunction->exitMode);
+				const ExitMode exitMode = exitSeries(calledFunction->exitMode, postCallExitMode);
 
 				it->second = exitMode;
 				return exitMode;
@@ -179,7 +180,7 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 				}
 
 				const ExitMode afterLoop = analyzeFunction(shader, dest + 1, end, labels);
-				const ExitMode exitMode = exitSeries(afterLoop, loopFunction->exitMode);
+				const ExitMode exitMode = exitSeries(loopFunction->exitMode, afterLoop);
 				it->second = exitMode;
 				return it->second;
 			}
@@ -190,7 +191,8 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 	}
 
 	// A function without control flow instructions will always reach its "return point" and return
-	return ExitMode::AlwaysReturn;
+	it->second = ExitMode::AlwaysReturn;
+	return it->second;
 }
 
 std::pair<u32, bool> ShaderDecompiler::compileRange(const AddressRange& range) {
