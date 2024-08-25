@@ -160,7 +160,7 @@ class RendererGL final : public Renderer {
 	virtual bool supportsShaderReload() override { return true; }
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
-	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel, bool isImmediateMode) override;
+	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) override;
 	
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 

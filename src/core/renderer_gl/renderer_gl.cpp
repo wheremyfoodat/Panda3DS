@@ -950,7 +950,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	return program;
 }
 
-bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel, bool isImmediateMode) {
+bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) {
 	// First we figure out if we will be using an ubershader
 	bool usingUbershader = emulatorConfig->useUbershaders;
 	if (usingUbershader) {
@@ -966,7 +966,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 
 	// Then we figure out if we will use hw accelerated shaders, and try to fetch our shader
 	// TODO: Ubershader support for accelerated shaders
-	usingAcceleratedShader = emulatorConfig->accelerateShaders && !isImmediateMode && !usingUbershader;
+	usingAcceleratedShader = emulatorConfig->accelerateShaders && !usingUbershader && accel != nullptr && accel->canBeAccelerated;
 
 	if (usingAcceleratedShader) {
 		PICA::VertConfig vertexConfig(shaderUnit.vs, regs, usingUbershader);
@@ -1000,9 +1000,10 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 				shaderUnit.vs.uniformsDirty = false;
 				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
 			}
-		}
 
-		accelerateVertexUpload(shaderUnit, accel);
+			// Upload vertex data and index buffer data to our GPU
+			accelerateVertexUpload(shaderUnit, accel);
+		}
 	}
 
 	if (usingUbershader) {

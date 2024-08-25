@@ -131,7 +131,7 @@ void GPU::drawArrays(bool indexed) {
 		getAcceleratedDrawInfo(accel, indexed);
 	}
 
-	const bool hwShaders = renderer->prepareForDraw(shaderUnit, &accel, false);
+	const bool hwShaders = renderer->prepareForDraw(shaderUnit, &accel);
 
 	if (hwShaders) {
 		if (indexed) {
