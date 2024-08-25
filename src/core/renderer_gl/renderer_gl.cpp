@@ -129,11 +129,6 @@ void RendererGL::initGraphicsContextInternal() {
 
 	// Initialize the VAO used for hw shaders
 	hwShaderVAO.create();
-	gl.bindVAO(hwShaderVAO);
-	for (int attr = 0; attr < 16; attr++) {
-		hwShaderVAO.setAttributeFloat<float>(attr, 4, sizeof(Vertex) * 2, attr * sizeof(float) * 4);
-		hwShaderVAO.enableAttribute(attr);
-	}
 
 	dummyVBO.create();
 	dummyVAO.create();
@@ -439,8 +434,14 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
-	vbo.bind();
-	gl.bindVAO(usingAcceleratedShader ? hwShaderVAO : defaultVAO);
+
+	if (usingAcceleratedShader) {
+		hwVertexBuffer->Bind();
+		gl.bindVAO(hwShaderVAO);
+	} else {
+		vbo.bind();
+		gl.bindVAO(defaultVAO);
+	}
 
 	gl.enableClipPlane(0);  // Clipping plane 0 is always enabled
 	if (regs[PICA::InternalRegs::ClipEnable] & 1) {
@@ -503,15 +504,19 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	setupStencilTest(stencilEnable);
 
-	// If we're using hardware shaders, the vertex array works completely different
-	// And instead of 8 vec4 attributes, each vertex is 16 vec4 attributes. We use a union + aliasing which is not ideal for readability.
 	if (!usingAcceleratedShader) {
 		vbo.bufferVertsSub(vertices);
+		OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 	} else {
-		glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size_bytes() * 2, vertices.data());
+		if (performIndexedRender) {
+			// When doing indexed rendering, bind the IBO and use glDrawRangeElementsBaseVertex to issue the indexed draw
+			hwIndexBuffer->Bind();
+			//glDrawRangeElementsBaseVertex();
+		} else {
+			// When doing non-indexed rendering, just use glDrawArrays
+			OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
+		}
 	}
-
-	OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 }
 
 void RendererGL::display() {
@@ -1003,6 +1008,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 
 			// Upload vertex data and index buffer data to our GPU
 			accelerateVertexUpload(shaderUnit, accel);
+			performIndexedRender = accel->indexed;
 		}
 	}
 
@@ -1149,7 +1155,9 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 	}
 
 	auto vertexBufferRes = hwVertexBuffer->Map(4, accel->vertexDataSize);
+
 	u8* vertexData = static_cast<u8*>(vertexBufferRes.pointer);
+	gl.bindVAO(hwShaderVAO);
 
 	for (int i = 0; i < totalAttribCount; i++) {
 		const auto& attrib = accel->attributeInfo[i];
@@ -1161,9 +1169,13 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 				continue;
 			}
 
-			const u32 attributeSize = attrib.size * vertexCount;
+			glVertexAttribPointer(i, attrib.componentCount, attributeFormats[attrib.type], GL_FALSE, attrib.stride, reinterpret_cast<GLvoid*>(vertexBufferRes.buffer_offset + attrib.offset));
+			// TODO: Disable unused attributes as well
+			hwShaderVAO.enableAttribute(i);
 
+			const u32 attributeSize = attrib.size * vertexCount;
 			std::memcpy(vertexData, attrib.data, attributeSize);
+			
 			vertexData += attributeSize;
 		}
 	}

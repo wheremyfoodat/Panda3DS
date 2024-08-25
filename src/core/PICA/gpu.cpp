@@ -120,6 +120,8 @@ void GPU::reset() {
 	renderer->reset();
 }
 
+static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
+
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
@@ -134,11 +136,13 @@ void GPU::drawArrays(bool indexed) {
 	const bool hwShaders = renderer->prepareForDraw(shaderUnit, &accel);
 
 	if (hwShaders) {
-		if (indexed) {
-			drawArrays<true, ShaderExecMode::Hardware>();
-		} else {
-			drawArrays<false, ShaderExecMode::Hardware>();
-		}
+		// Hardware shaders have their own accelerated code path for draws, so they skip everything here
+		const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(regs[PICA::InternalRegs::PrimitiveConfig]));
+		// Total # of vertices to render
+		const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg];
+
+		// Note: In the hardware shader path the vertices span shouldn't actually be used as the rasterizer will perform its own attribute fetching
+		renderer->drawVertices(primType, std::span(vertices).first(vertexCount));
 	} else {
 		const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
 
@@ -158,33 +162,17 @@ void GPU::drawArrays(bool indexed) {
 	}
 }
 
-// We need a union here, because unfortunately in CPU shaders we only need to store the vertex shader outputs in the vertex buffer,
-// which consist of 8 vec4 attributes, while with GPU shaders we need to pass all the vertex shader inputs to the GPU, which consist
-// of 16 vec4 attributes
-union PICAVertexBuffer {
-	// Used with CPU shaders
-	std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
-	// Used with GPU shaders. We can have up to 16 attributes per vertex, each attribute with 4 floats
-	std::array<float, Renderer::vertexBufferSize * 16 * 4> vsInputs;
-
-	PICAVertexBuffer() {}
-};
-
-static PICAVertexBuffer vertexBuffer;
-
 template <bool indexed, ShaderExecMode mode>
 void GPU::drawArrays() {
 	if constexpr (mode == ShaderExecMode::JIT) {
 		shaderJIT.prepare(shaderUnit.vs);
+	} else if constexpr (mode == ShaderExecMode::Hardware) {
+		// Hardware shaders have their own accelerated code path for draws, so they're not meant to take this path
+		Helpers::panic("GPU::DrawArrays: Hardware shaders shouldn't take this path!");
 	}
 
 	// We can have up to 16 attributes, each one consisting of 4 floats
 	constexpr u32 maxAttrSizeInFloats = 16 * 4;
-	auto& vertices = vertexBuffer.vertices;
-
-	if constexpr (mode != ShaderExecMode::Hardware) {
-		setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
-	}
 
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
@@ -257,15 +245,7 @@ void GPU::drawArrays() {
 			size_t tag = vertexIndex % vertexCacheSize;
 			// Cache hit
 			if (cache.validBits[tag] && cache.ids[tag] == vertexIndex) {
-				if constexpr (mode != ShaderExecMode::Hardware) {
-					vertices[i] = vertices[cache.bufferPositions[tag]];
-				} else {
-					const u32 cachedBufferPosition = cache.bufferPositions[tag] * maxAttrSizeInFloats;
-					std::memcpy(
-						&vertexBuffer.vsInputs[i * maxAttrSizeInFloats], &vertexBuffer.vsInputs[cachedBufferPosition],
-						sizeof(float) * maxAttrSizeInFloats
-					);
-				}
+				vertices[i] = vertices[cache.bufferPositions[tag]];
 				continue;
 			}
 
@@ -370,39 +350,29 @@ void GPU::drawArrays() {
 			}
 		}
 
-		// Running shader on the CPU instead of the GPU
-		if constexpr (mode == ShaderExecMode::Interpreter || mode == ShaderExecMode::JIT) {
-			// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
-			// Based on the SH_ATTRIBUTES_PERMUTATION registers.
-			// Ie it might map attribute #0 to v2, #1 to v7, etc
-			for (int j = 0; j < totalAttribCount; j++) {
-				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
-				std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
-			}
+		// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
+		// Based on the SH_ATTRIBUTES_PERMUTATION registers.
+		// Ie it might map attribute #0 to v2, #1 to v7, etc
+		for (int j = 0; j < totalAttribCount; j++) {
+			const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
+			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
+		}
 
-			if constexpr (mode == ShaderExecMode::JIT) {
-				shaderJIT.run(shaderUnit.vs);
-			} else {
-				shaderUnit.vs.run();
-			}
+		if constexpr (mode == ShaderExecMode::JIT) {
+			shaderJIT.run(shaderUnit.vs);
+		} else {
+			shaderUnit.vs.run();
+		}
 
-			PICA::Vertex& out = vertices[i];
-			// Map shader outputs to fixed function properties
-			const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
-			for (int i = 0; i < totalShaderOutputs; i++) {
-				const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
+		PICA::Vertex& out = vertices[i];
+		// Map shader outputs to fixed function properties
+		const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+		for (int i = 0; i < totalShaderOutputs; i++) {
+			const u32 config = regs[PICA::InternalRegs::ShaderOutmap0 + i];
 
-				for (int j = 0; j < 4; j++) {  // pls unroll
-					const u32 mapping = (config >> (j * 8)) & 0x1F;
-					out.raw[mapping] = vsOutputRegisters[i][j];
-				}
-			}
-		} else {  // Using hw shaders and running the shader on the CPU, just write the inputs to the attribute buffer directly
-			float* out = &vertexBuffer.vsInputs[i * maxAttrSizeInFloats];
-			for (int j = 0; j < totalAttribCount; j++) {
-				const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
-				// Multiply mapping * 4 as mapping refers to a vec4 whereas out is an array of floats
-				std::memcpy(&out[mapping * 4], &currentAttributes[j], sizeof(vec4f));
+			for (int j = 0; j < 4; j++) {  // pls unroll
+				const u32 mapping = (config >> (j * 8)) & 0x1F;
+				out.raw[mapping] = vsOutputRegisters[i][j];
 			}
 		}
 	}

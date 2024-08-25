@@ -12,6 +12,7 @@ namespace PICA {
 			u8* data;
 			u32 offset;
 			u32 size;
+			u32 stride;
 
 			u8 type;
 			u8 componentCount;

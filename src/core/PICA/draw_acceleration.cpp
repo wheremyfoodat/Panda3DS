@@ -98,6 +98,7 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 				attr.componentCount = size;
 				attr.offset = attributeOffset;
 				attr.size = size * sizePerComponent[attribType];
+				attr.stride = attrData.size;
 				attr.type = attribType;
 				attr.isPadding = false;
 				attributeOffset += attr.size;

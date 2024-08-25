@@ -62,6 +62,7 @@ class RendererGL final : public Renderer {
 	bool oldDepthmapEnable = false;
 	// Set by prepareDraw, tells us whether the current draw is using hw-accelerated shader
 	bool usingAcceleratedShader = false;
+	bool performIndexedRender = false;
 
 	// Cached pointer to the current vertex shader when using HW accelerated shaders
 	OpenGL::Shader* generatedVertexShader = nullptr;
