@@ -60,9 +60,15 @@ class RendererGL final : public Renderer {
 	float oldDepthScale = -1.0;
 	float oldDepthOffset = 0.0;
 	bool oldDepthmapEnable = false;
-	// Set by prepareDraw, tells us whether the current draw is using hw-accelerated shader
+	// Set by prepareForDraw, tells us whether the current draw is using hw-accelerated shader
 	bool usingAcceleratedShader = false;
 	bool performIndexedRender = false;
+	bool usingShortIndices = false;
+
+	// Set by prepareForDraw, metadata for indexed renders
+	GLuint minimumIndex = 0;
+	GLuint maximumIndex = 0;
+	void* hwIndexBufferOffset = nullptr;
 
 	// Cached pointer to the current vertex shader when using HW accelerated shaders
 	OpenGL::Shader* generatedVertexShader = nullptr;

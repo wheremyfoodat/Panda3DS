@@ -141,7 +141,7 @@ void GPU::drawArrays(bool indexed) {
 		// Total # of vertices to render
 		const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg];
 
-		// Note: In the hardware shader path the vertices span shouldn't actually be used as the rasterizer will perform its own attribute fetching
+		// Note: In the hardware shader path the vertices span shouldn't actually be used as the renderer will perform its own attribute fetching
 		renderer->drawVertices(primType, std::span(vertices).first(vertexCount));
 	} else {
 		const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;

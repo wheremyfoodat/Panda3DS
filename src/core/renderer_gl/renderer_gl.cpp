@@ -435,10 +435,8 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const auto primitiveTopology = primTypes[static_cast<usize>(primType)];
 	gl.disableScissor();
 
-	if (usingAcceleratedShader) {
-		hwVertexBuffer->Bind();
-		gl.bindVAO(hwShaderVAO);
-	} else {
+	// If we're using accelerated shaders, the hw VAO, VBO and EBO objects will have already been bound in prepareForDraw
+	if (!usingAcceleratedShader) {
 		vbo.bind();
 		gl.bindVAO(defaultVAO);
 	}
@@ -509,9 +507,12 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 	} else {
 		if (performIndexedRender) {
-			// When doing indexed rendering, bind the IBO and use glDrawRangeElementsBaseVertex to issue the indexed draw
+			// When doing indexed rendering, bind the EBO and use glDrawRangeElementsBaseVertex to issue the indexed draw
 			hwIndexBuffer->Bind();
-			//glDrawRangeElementsBaseVertex();
+			glDrawRangeElementsBaseVertex(
+				primitiveTopology, minimumIndex, maximumIndex, GLsizei(vertices.size()), usingShortIndices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
+				hwIndexBufferOffset, -minimumIndex
+			);
 		} else {
 			// When doing non-indexed rendering, just use glDrawArrays
 			OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
@@ -1008,7 +1009,10 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 
 			// Upload vertex data and index buffer data to our GPU
 			accelerateVertexUpload(shaderUnit, accel);
+
 			performIndexedRender = accel->indexed;
+			minimumIndex = GLsizei(accel->minimumIndex);
+			maximumIndex = GLsizei(accel->maximumIndex);
 		}
 	}
 
@@ -1146,17 +1150,21 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 
 	// Update index buffer if necessary
 	if (accel->indexed) {
-		const bool shortIndex = accel->useShortIndices;
-		const usize indexBufferSize = usize(vertexCount) * (shortIndex ? sizeof(u16) : sizeof(u8));
+		usingShortIndices = accel->useShortIndices;
+		const usize indexBufferSize = usize(vertexCount) * (usingShortIndices ? sizeof(u16) : sizeof(u8));
 
+		hwIndexBuffer->Bind();
 		auto indexBufferRes = hwIndexBuffer->Map(4, indexBufferSize);
+		hwIndexBufferOffset = reinterpret_cast<void*>(usize(indexBufferRes.buffer_offset));
+
 		std::memcpy(indexBufferRes.pointer, accel->indexBuffer, indexBufferSize);
 		hwIndexBuffer->Unmap(indexBufferSize);
 	}
 
+	hwVertexBuffer->Bind();
 	auto vertexBufferRes = hwVertexBuffer->Map(4, accel->vertexDataSize);
-
 	u8* vertexData = static_cast<u8*>(vertexBufferRes.pointer);
+
 	gl.bindVAO(hwShaderVAO);
 
 	for (int i = 0; i < totalAttribCount; i++) {
