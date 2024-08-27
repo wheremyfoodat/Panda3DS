@@ -40,7 +40,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Install bundle dependencies
-      run: brew install --overwrite python@3.12 && brew install dylibbundler imagemagick
+      run: brew install dylibbundler imagemagick
 
     - name: Run bundle script
       run: ./.github/mac-bundle.sh
