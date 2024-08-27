@@ -44,7 +44,6 @@ std::string FragmentGenerator::getDefaultVertexShader() {
 	if (api == API::GLES) {
 		ret += R"(
 			#define USING_GLES 1
-			#define fma(a, b, c) ((a) * (b) + (c))
 
 			precision mediump int;
 			precision mediump float;
@@ -108,6 +107,7 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 	if (api == API::GLES) {
 		ret += R"(
 			#define USING_GLES 1
+			#define fma(a, b, c) ((a) * (b) + (c))
 
 			precision mediump int;
 			precision mediump float;
