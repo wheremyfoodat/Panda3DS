@@ -54,7 +54,7 @@ jobs:
     runs-on: macos-13
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
@@ -67,7 +67,7 @@ jobs:
 
     - name: Install bundle dependencies
       run: |
-        brew install --overwrite python@3.12 && brew install dylibbundler imagemagick
+        brew install dylibbundler imagemagick
 
     - name: Install qt
       run: brew install qt && which macdeployqt
@@ -90,7 +90,7 @@ jobs:
       run: zip -r Alber Alber.app
 
     - name: Upload MacOS App
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: MacOS Alber App Bundle
         path: 'Alber.zip'
