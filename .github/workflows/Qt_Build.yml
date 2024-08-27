@@ -67,7 +67,7 @@ jobs:
 
     - name: Install bundle dependencies
       run: |
-        brew install --overwrite python@3.12 && brew install dylibbundler imagemagick
+        brew install dylibbundler imagemagick
 
     - name: Install qt
       run: brew install qt && which macdeployqt
