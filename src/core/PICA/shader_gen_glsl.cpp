@@ -503,7 +503,7 @@ void FragmentGenerator::compileLights(std::string& shader, const PICA::FragmentC
 					  "].distanceAttenuationScale + lightSources[" + std::to_string(lightID) + "].distanceAttenuationBias, 0.0, 1.0);\n";
 
 			shader += "distance_attenuation = lutLookup(" + std::to_string(16 + lightID) +
-					  ", int(clamp(floor(distance_att_delta * 256.0), 0.0, 255.0)));\n";
+					  "u, int(clamp(floor(distance_att_delta * 256.0), 0.0, 255.0)));\n";
 		}
 
 		compileLUTLookup(shader, config, i, spotlightLutIndex);
@@ -638,7 +638,7 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 	if (absEnabled) {
 		bool twoSidedDiffuse = config.lighting.lights[lightIndex].twoSidedDiffuse;
 		shader += twoSidedDiffuse ? "lut_lookup_delta = abs(lut_lookup_delta);\n" : "lut_lookup_delta = max(lut_lookup_delta, 0.0);\n";
-		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + ", int(clamp(floor(lut_lookup_delta * 256.0), 0.0, 255.0)));\n";
+		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + "u, int(clamp(floor(lut_lookup_delta * 256.0), 0.0, 255.0)));\n";
 		if (scale != 0) {
 			shader += "lut_lookup_result *= " + std::to_string(scales[scale]) + ";\n";
 		}
@@ -646,7 +646,7 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
 		// Range is [-1, 1] so we need to map it to [0, 1]
 		shader += "lut_lookup_index = int(clamp(floor(lut_lookup_delta * 128.0), -128.f, 127.f));\n";
 		shader += "if (lut_lookup_index < 0) lut_lookup_index += 256;\n";
-		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + ", lut_lookup_index);\n";
+		shader += "lut_lookup_result = lutLookup(" + std::to_string(lutIndex) + "u, lut_lookup_index);\n";
 		if (scale != 0) {
 			shader += "lut_lookup_result *= " + std::to_string(scales[scale]) + ";\n";
 		}
