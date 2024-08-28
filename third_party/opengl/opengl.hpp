@@ -602,22 +602,36 @@ namespace OpenGL {
 	static void disableScissor() { glDisable(GL_SCISSOR_TEST); }
 	static void enableBlend() { glEnable(GL_BLEND); }
 	static void disableBlend() { glDisable(GL_BLEND); }
+#ifdef USING_GLES
+	static void enableLogicOp() { /* glEnable(GL_COLOR_LOGIC_OP); */ }
+	static void disableLogicOp() { /* glDisable(GL_COLOR_LOGIC_OP); */ }
+#else
 	static void enableLogicOp() { glEnable(GL_COLOR_LOGIC_OP); }
 	static void disableLogicOp() { glDisable(GL_COLOR_LOGIC_OP); }
+#endif
 	static void enableDepth() { glEnable(GL_DEPTH_TEST); }
 	static void disableDepth() { glDisable(GL_DEPTH_TEST); }
 	static void enableStencil() { glEnable(GL_STENCIL_TEST); }
 	static void disableStencil() { glDisable(GL_STENCIL_TEST); }
 
+#ifdef USING_GLES
+	static void enableClipPlane(GLuint index) { /* glEnable(GL_CLIP_DISTANCE0 + index); */ }
+	static void disableClipPlane(GLuint index) { /* glDisable(GL_CLIP_DISTANCE0 + index); */ }
+#else
 	static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
 	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
+#endif
 
 	static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
 	static void setColourMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a) { glColorMask(r, g, b, a); }
 	static void setDepthMask(GLboolean mask) { glDepthMask(mask); }
 
 	// TODO: Add a proper enum for this
+#ifdef USING_GLES
+	static void setLogicOp(GLenum op) { /* glLogicOp(op); */ }
+#else
 	static void setLogicOp(GLenum op) { glLogicOp(op); }
+#endif
 
     enum Primitives {
         Triangle = GL_TRIANGLES,
