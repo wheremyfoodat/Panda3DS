@@ -21,7 +21,7 @@ index 990e2f80..2e7842ac 100644
  
  void main() {
 diff --git a/src/host_shaders/opengl_fragment_shader.frag b/src/host_shaders/opengl_fragment_shader.frag
-index 9f07df0b..75b708f7 100644
+index 9f07df0b..96a35afa 100644
 --- a/src/host_shaders/opengl_fragment_shader.frag
 +++ b/src/host_shaders/opengl_fragment_shader.frag
 @@ -1,4 +1,5 @@
@@ -97,9 +97,9 @@ index 9f07df0b..75b708f7 100644
 -			int se_x = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 0, 13);
 -			int se_y = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_LOW, 16, 13);
 -			int se_z = bitfieldExtract(GPUREG_LIGHTi_SPOTDIR_HIGH, 0, 13);
-+			int se_x = bitfieldExtractCompat(uint(GPUREG_LIGHTi_SPOTDIR_LOW), 0, 13);
-+			int se_y = bitfieldExtractCompat(uint(GPUREG_LIGHTi_SPOTDIR_LOW), 16, 13);
-+			int se_z = bitfieldExtractCompat(uint(GPUREG_LIGHTi_SPOTDIR_HIGH), 0, 13);
++			int se_x = int(bitfieldExtractCompat(uint(GPUREG_LIGHTi_SPOTDIR_LOW), 0, 13));
++			int se_y = int(bitfieldExtractCompat(uint(GPUREG_LIGHTi_SPOTDIR_LOW), 16, 13));
++			int se_z = int(bitfieldExtractCompat(uint(GPUREG_LIGHTi_SPOTDIR_HIGH), 0, 13));
  
  			if ((se_x & 0x1000) == 0x1000) se_x |= 0xffffe000;
  			if ((se_y & 0x1000) == 0x1000) se_y |= 0xffffe000;
