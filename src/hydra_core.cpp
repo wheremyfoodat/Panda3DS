@@ -114,7 +114,7 @@ hydra::Size HydraCore::getNativeSize() { return {400, 480}; }
 void HydraCore::setOutputSize(hydra::Size size) {}
 
 void HydraCore::resetContext() {
-#ifdef __ANDROID__
+#ifdef USING_GLES
 	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL ES init failed");
 	}
