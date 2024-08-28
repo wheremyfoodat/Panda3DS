@@ -33,6 +33,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-interference-size")
 endif() 
 
+if(ANDROID)
+    set(DEFAULT_OPENGL_PROFILE OpenGLES)
+else()
+    set(DEFAULT_OPENGL_PROFILE OpenGL)
+endif()
+
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
@@ -48,6 +54,14 @@ option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
+
+set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
+set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
+
+if(ENABLE_OPENGL AND (OPENGL_PROFILE STREQUAL "OpenGLES"))
+    message(STATUS "Building with OpenGLES support")
+    add_compile_definitions(USING_GLES)
+endif()
 
 if(BUILD_HYDRA_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
