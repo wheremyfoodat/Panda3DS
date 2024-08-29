@@ -12,7 +12,7 @@ struct BufferHandle {
 };
 
 // 64MB buffer for caching vertex data
-#define CACHE_BUFFER_SIZE 64 * 1024 * 1024
+#define CACHE_BUFFER_SIZE 128 * 1024 * 1024
 
 class VertexBufferCache {
 public:

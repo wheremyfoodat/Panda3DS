@@ -413,7 +413,7 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 	// Find the source surface.
 	auto srcFramebuffer = getColorRenderTarget(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
 	if (!srcFramebuffer) {
-		Helpers::warn("RendererGL::TextureCopy failed to locate src framebuffer!\n");
+		Helpers::warn("RendererMTL::TextureCopy failed to locate src framebuffer!\n");
 		return;
 	}
 	nextRenderPassName = "Clear before texture copy";
@@ -605,7 +605,12 @@ std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(
 	// Otherwise create and cache a new buffer.
 	Metal::ColorRenderTarget sampleBuffer(device, addr, format, width, height);
 
-	return colorRenderTargetCache.add(sampleBuffer);
+	auto& colorBuffer = colorRenderTargetCache.add(sampleBuffer);
+
+    // Clear the color buffer
+    colorClearOps[colorBuffer.texture] = {0, 0, 0, 0};
+
+    return colorBuffer;
 }
 
 Metal::DepthStencilRenderTarget& RendererMTL::getDepthRenderTarget() {
@@ -615,7 +620,15 @@ Metal::DepthStencilRenderTarget& RendererMTL::getDepthRenderTarget() {
 	if (buffer.has_value()) {
 		return buffer.value().get();
 	} else {
-		return depthStencilRenderTargetCache.add(sampleBuffer);
+		auto& depthBuffer = depthStencilRenderTargetCache.add(sampleBuffer);
+
+        // Clear the depth buffer
+        depthClearOps[depthBuffer.texture] = 0.0f;
+        if (depthBuffer.format == DepthFmt::Depth24Stencil8) {
+            stencilClearOps[depthBuffer.texture] = 0;
+        }
+
+        return depthBuffer;
 	}
 }
 
