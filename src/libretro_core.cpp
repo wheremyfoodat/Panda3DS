@@ -218,7 +218,7 @@ void retro_get_system_info(retro_system_info* info) {
 	info->valid_extensions = "3ds|3dsx|elf|axf|cci|cxi|app";
 	info->library_version = PANDA3DS_VERSION;
 	info->library_name = "Panda3DS";
-	info->block_extract = true;
+	info->block_extract = false;
 }
 
 void retro_get_system_av_info(retro_system_av_info* info) {
