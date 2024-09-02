@@ -79,7 +79,7 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 
 				// This opens up 2 parallel paths of execution
 				auto branchTakenExit = analyzeFunction(shader, dest, end, labels);
-				auto branchNotTakenExit = analyzeFunction(shader, pc + 1, dest, labels);
+				auto branchNotTakenExit = analyzeFunction(shader, pc + 1, end, labels);
 				it->second = exitParallel(branchTakenExit, branchNotTakenExit);
 				return it->second;
 			}
@@ -122,6 +122,7 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 				}
 				break;
 			}
+
 			case ShaderOpcodes::CALL: {
 				const u32 num = instruction & 0xff;
 				const u32 dest = getBits<10, 12>(instruction);

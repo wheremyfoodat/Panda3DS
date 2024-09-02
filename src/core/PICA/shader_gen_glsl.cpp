@@ -778,8 +778,6 @@ void main() {
 	gl_ClipDistance[1] = dot(clipCoords, a_coords);
 #endif
 })";
-		
-		std::cout << ret << "\n";
 		return ret;
 	}
 }

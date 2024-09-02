@@ -2,6 +2,7 @@
 
 #include <stb_image_write.h>
 
+#include <bit>
 #include <cmrc/cmrc.hpp>
 
 #include "PICA/float_types.hpp"
@@ -987,7 +988,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
 			);
 
-			// Empty source means compilation error, if the source is not empty then we convert the rcompiled PICA code into a valid shader and upload
+			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and upload
 			// it to the GPU
 			if (!picaShaderSource.empty()) {
 				std::string vertexShaderSource = fragShaderGen.getVertexShaderAccelerated(picaShaderSource, vertexConfig, usingUbershader);
@@ -1167,24 +1168,49 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 
 	gl.bindVAO(hwShaderVAO);
 
+	// Enable or disable vertex attributes as needed
+	const u32 currentAttributeMask = accel->enabledAttributeMask;
+	// Use bitwise xor to calculate which attributes chanced
+	u32 attributeMaskDiff = currentAttributeMask ^ previousAttributeMask;
+	
+	while (attributeMaskDiff != 0) {
+		// Get index of next different attribute and turn it off
+		const u32 index = 31 - std::countl_zero<u32>(attributeMaskDiff);
+		const u32 mask = 1u << index;
+		attributeMaskDiff ^= mask;
+
+		if ((currentAttributeMask & mask) != 0) {
+			// Attribute was disabled and is now enabled
+			hwShaderVAO.enableAttribute(index);
+		} else {
+			// Attribute was enabled and is now disabled
+			hwShaderVAO.disableAttribute(index);
+		}
+	}
+
+	previousAttributeMask = currentAttributeMask;
+
 	for (int i = 0; i < totalAttribCount; i++) {
 		const auto& attrib = accel->attributeInfo[i];
-		
+
 		if (attrib.fixed) {
-			Helpers::panic("Fixed attribute!");
+			if ((currentAttributeMask & (1u << i)) == 0) {
+				glVertexAttrib4f(attrib.inputReg, attrib.fixedValue[0], attrib.fixedValue[1], attrib.fixedValue[2], attrib.fixedValue[3]);
+			}
 		} else {
-			if (attrib.isPadding) {
+			if (attrib.isPadding) [[unlikely]] {
 				continue;
 			}
-
-			glVertexAttribPointer(i, attrib.componentCount, attributeFormats[attrib.type], GL_FALSE, attrib.stride, reinterpret_cast<GLvoid*>(vertexBufferRes.buffer_offset + attrib.offset));
-			// TODO: Disable unused attributes as well
-			hwShaderVAO.enableAttribute(i);
-
+	
 			const u32 attributeSize = attrib.size * vertexCount;
 			std::memcpy(vertexData, attrib.data, attributeSize);
-			
+
 			vertexData += attributeSize;
+
+			glVertexAttribPointer(
+				attrib.inputReg, attrib.componentCount, attributeFormats[attrib.type], GL_FALSE, attrib.stride,
+				reinterpret_cast<GLvoid*>(vertexBufferRes.buffer_offset + attrib.offset)
+			);
 		}
 	}
 

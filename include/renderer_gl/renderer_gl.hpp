@@ -70,6 +70,9 @@ class RendererGL final : public Renderer {
 	GLuint maximumIndex = 0;
 	void* hwIndexBufferOffset = nullptr;
 
+	// When doing hw shaders, we cache which attributes are enabled in our VAO to avoid having to enable/disable all attributes on each draw
+	u32 previousAttributeMask = 0;
+
 	// Cached pointer to the current vertex shader when using HW accelerated shaders
 	OpenGL::Shader* generatedVertexShader = nullptr;
 

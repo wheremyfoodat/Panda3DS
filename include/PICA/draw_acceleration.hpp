@@ -14,6 +14,7 @@ namespace PICA {
 			u32 size;
 			u32 stride;
 
+			u8 inputReg; // Which input reg should this attribute go to in the vertex shader?
 			u8 type;
 			u8 componentCount;
 			bool fixed;
@@ -27,6 +28,7 @@ namespace PICA {
 		// Minimum and maximum index in the index buffer for a draw call
 		u16 minimumIndex, maximumIndex;
 		u32 totalAttribCount;
+		u32 enabledAttributeMask;
 		u32 vertexDataSize;
 
 		std::array<AttributeInfo, maxAttribCount> attributeInfo;

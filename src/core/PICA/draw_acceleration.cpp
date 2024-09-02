@@ -8,7 +8,8 @@
 void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 	accel.indexed = indexed;
 	accel.totalAttribCount = totalAttribCount;
-
+	accel.enabledAttributeMask = 0;
+	
 	const u32 vertexBase = ((regs[PICA::InternalRegs::VertexAttribLoc] >> 1) & 0xfffffff) * 16;
 	const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg];  // Total # of vertices to transfer
 
@@ -50,6 +51,8 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 	}
 
 	const u64 vertexCfg = u64(regs[PICA::InternalRegs::AttribFormatLow]) | (u64(regs[PICA::InternalRegs::AttribFormatHigh]) << 32);
+	const u64 inputAttrCfg = getVertexShaderInputConfig();
+
 	u32 buffer = 0;
 	u32 attrCount = 0;
 	accel.vertexDataSize = 0;
@@ -94,7 +97,11 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 			
 				// Size of each component based on the attribute type
 				static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
+				const u32 inputReg = (inputAttrCfg >> (attrCount * 4)) & 0xf;
+				// Mark the attribute as enabled
+				accel.enabledAttributeMask |= 1 << inputReg;
 
+				attr.inputReg = inputReg;
 				attr.componentCount = size;
 				attr.offset = attributeOffset;
 				attr.size = size * sizePerComponent[attribType];
@@ -123,6 +130,9 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 				attr.fixedValue[i] = fixedAttr[i].toFloat32();
 			}
 
+			const u32 inputReg = (inputAttrCfg >> (attrCount * 4)) & 0xf;
+
+			attr.inputReg = inputReg;
 			attrCount += 1;
 		}
 	}
