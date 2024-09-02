@@ -512,7 +512,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 			hwIndexBuffer->Bind();
 			glDrawRangeElementsBaseVertex(
 				primitiveTopology, minimumIndex, maximumIndex, GLsizei(vertices.size()), usingShortIndices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
-				hwIndexBufferOffset, -minimumIndex
+				hwIndexBufferOffset, -GLint(minimumIndex)
 			);
 		} else {
 			// When doing non-indexed rendering, just use glDrawArrays
