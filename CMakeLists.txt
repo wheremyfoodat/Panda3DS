@@ -225,6 +225,7 @@ else()
 endif()
 
 add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/fdk-aac)
 
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
 set(CAPSTONE_ARM_SUPPORT ON)
@@ -478,7 +479,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
+target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra fdk-aac)
 target_link_libraries(AlberCore PUBLIC glad capstone)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
