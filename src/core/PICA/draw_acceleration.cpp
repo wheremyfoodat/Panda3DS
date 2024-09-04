@@ -1,5 +1,6 @@
 #include "PICA/draw_acceleration.hpp"
 
+#include <bit>
 #include <limits>
 
 #include "PICA/gpu.hpp"
@@ -53,88 +54,94 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 	const u64 vertexCfg = u64(regs[PICA::InternalRegs::AttribFormatLow]) | (u64(regs[PICA::InternalRegs::AttribFormatHigh]) << 32);
 	const u64 inputAttrCfg = getVertexShaderInputConfig();
 
-	u32 buffer = 0;
 	u32 attrCount = 0;
+	u32 loaderOffset = 0;
 	accel.vertexDataSize = 0;
+	accel.totalLoaderCount = 0;
 
-	while (attrCount < totalAttribCount) {
-		bool fixedAttrib = (fixedAttribMask & (1 << attrCount)) != 0;
+	for (int i = 0; i < PICA::DrawAcceleration::maxLoaderCount; i++) {
+		auto& loaderData = attributeInfo[i];  // Get information for this attribute loader
 
-		// Variable attribute attribute
-		if (!fixedAttrib) {
-			auto& attrData = attributeInfo[buffer];  // Get information for this attribute
-			u64 attrCfg = attrData.getConfigFull();  // Get config1 | (config2 << 32)
+		// This loader is empty, skip it
+		if (loaderData.componentCount == 0 || loaderData.size == 0) {
+			continue;
+		}
 
-			if (attrData.componentCount != 0) {
-				// Size of the attribute in bytes multiplied by the total number of vertices
-				const u32 bytes = attrData.size * vertexCount;
-				// Add it to the total vertex data size, aligned to 4 bytes.
-				accel.vertexDataSize += (bytes + 3) & ~3;
+		auto& loader = accel.loaders[accel.totalLoaderCount++];
+
+		// The size of the loader in bytes is equal to the bytes supplied for 1 vertex, multiplied by the number of vertices we'll be uploading
+		// Which is equal to maximumIndex - minimumIndex + 1
+		const u32 bytes = loaderData.size * (accel.maximumIndex - accel.minimumIndex + 1);
+		loader.size = bytes;
+
+		// Add it to the total vertex data size, aligned to 4 bytes.
+		accel.vertexDataSize += (bytes + 3) & ~3;
+		
+		// Get a pointer to the data where this loader's data is stored
+		const u32 loaderAddress = vertexBase + loaderData.offset + (accel.minimumIndex * loaderData.size);
+		loader.data = getPointerPhys<u8>(loaderAddress);
+
+		u64 attrCfg = loaderData.getConfigFull();  // Get config1 | (config2 << 32)
+		u32 attributeOffset = 0;
+
+		for (int component = 0; component < loaderData.componentCount; component++) {
+			uint attributeIndex = (attrCfg >> (component * 4)) & 0xf;  // Get index of attribute in vertexCfg
+
+			// Vertex attributes used as padding
+			// 12, 13, 14 and 15 are equivalent to 4, 8, 12 and 16 bytes of padding respectively
+			if (attributeIndex >= 12) [[unlikely]] {
+				Helpers::panic("Padding attribute");
+				// Align attribute address up to a 4 byte boundary
+				attributeOffset = (attributeOffset + 3) & -4;
+				attributeOffset += (attributeIndex - 11) << 2;
+				continue;
 			}
 
-			u32 attributeOffset = 0;
-			for (int i = 0; i < attrData.componentCount; i++) {
-				uint index = (attrCfg >> (i * 4)) & 0xf;  // Get index of attribute in vertexCfg
-				auto& attr = accel.attributeInfo[attrCount];
-				attr.fixed = false;
+			const u32 attribInfo = (vertexCfg >> (attributeIndex * 4)) & 0xf;
+			const u32 attribType = attribInfo & 0x3;  //  Type of attribute (sbyte/ubyte/short/float)
+			const u32 size = (attribInfo >> 2) + 1;   // Total number of components
 
-				// Vertex attributes used as padding
-				// 12, 13, 14 and 15 are equivalent to 4, 8, 12 and 16 bytes of padding respectively
-				if (index >= 12) [[unlikely]] {
-					Helpers::panic("Padding attribute");
-					// Align attribute address up to a 4 byte boundary
-					attributeOffset = (attributeOffset + 3) & -4;
-					attributeOffset += (index - 11) << 2;
+			// Size of each component based on the attribute type
+			static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
+			const u32 inputReg = (inputAttrCfg >> (attributeIndex * 4)) & 0xf;
+			// Mark the attribute as enabled
+			accel.enabledAttributeMask |= 1 << inputReg;
 
-					attr.data = nullptr;
-					attr.isPadding = true;
-					continue;
-				}
+			auto& attr = accel.attributeInfo[inputReg];
+			attr.componentCount = size;
+			attr.offset = attributeOffset + loaderOffset;
+			attr.stride = loaderData.size;
+			attr.type = attribType;
+			attributeOffset += size * sizePerComponent[attribType];
+		}
 
-				const u32 attribInfo = (vertexCfg >> (index * 4)) & 0xf;
-				const u32 attribType = attribInfo & 0x3;  //  Type of attribute (sbyte/ubyte/short/float)
-				const u32 size = (attribInfo >> 2) + 1;   // Total number of components
-			
-				// Size of each component based on the attribute type
-				static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
-				const u32 inputReg = (inputAttrCfg >> (attrCount * 4)) & 0xf;
-				// Mark the attribute as enabled
-				accel.enabledAttributeMask |= 1 << inputReg;
+		loaderOffset += loader.size;
+	}
 
-				// Get a pointer to the data where this attribute is stored
-				const u32 attrAddress = vertexBase + attributeOffset + attrData.offset + (accel.minimumIndex * attrData.size);
+	u32 fixedAttributes = fixedAttribMask;
+	accel.fixedAttributes = 0;
 
-				attr.data = getPointerPhys<u8>(attrAddress);
-				attr.inputReg = inputReg;
-				attr.componentCount = size;
-				attr.offset = attributeOffset;
-				attr.size = size * sizePerComponent[attribType];
-				attr.stride = attrData.size;
-				attr.type = attribType;
-				attr.isPadding = false;
-				attributeOffset += attr.size;
+	// Fetch values for all fixed attributes using CLZ on the fixed attribute mask to find the attributes that are actually fixed
+	while (fixedAttributes != 0) {
+		// Get index of next fixed attribute and turn it off
+		const u32 index = std::countr_zero<u32>(fixedAttributes);
+		const u32 mask = 1u << index;
+		fixedAttributes ^= mask;
 
-				attrCount += 1;
-			}
+		// PICA register this fixed attribute is meant to go to
+		const u32 inputReg = (inputAttrCfg >> (index * 4)) & 0xf;
+		const u32 inputRegMask = 1u << inputReg;
 
-			buffer += 1;
-		} else {
-			vec4f& fixedAttr = shaderUnit.vs.fixedAttributes[attrCount];
-			auto& attr = accel.attributeInfo[attrCount];
+		// If this input reg is already used for a non-fixed attribute then it will not be replaced by a fixed attribute
+		if ((accel.enabledAttributeMask & inputRegMask) == 0) {
+			vec4f& fixedAttr = shaderUnit.vs.fixedAttributes[index];
+			auto& attr = accel.attributeInfo[inputReg];
 
-			attr.fixed = true;
-			// Set the data pointer to nullptr in order to catch any potential bugs
-			attr.data = nullptr;
-			attr.isPadding = false;
+			accel.fixedAttributes |= inputRegMask;
 
 			for (int i = 0; i < 4; i++) {
 				attr.fixedValue[i] = fixedAttr[i].toFloat32();
 			}
-
-			const u32 inputReg = (inputAttrCfg >> (attrCount * 4)) & 0xf;
-
-			attr.inputReg = inputReg;
-			attrCount += 1;
 		}
 	}
 

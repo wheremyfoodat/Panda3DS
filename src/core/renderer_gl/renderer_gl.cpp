@@ -508,7 +508,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 	} else {
 		if (performIndexedRender) {
-			// When doing indexed rendering, bind the EBO and use glDrawRangeElementsBaseVertex to issue the indexed draw
+			// When doing indexed rendering, use glDrawRangeElementsBaseVertex to issue the indexed draw
 			hwIndexBuffer->Bind();
 			glDrawRangeElementsBaseVertex(
 				primitiveTopology, minimumIndex, maximumIndex, GLsizei(vertices.size()), usingShortIndices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
@@ -1165,12 +1165,13 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 	hwVertexBuffer->Bind();
 	auto vertexBufferRes = hwVertexBuffer->Map(4, accel->vertexDataSize);
 	u8* vertexData = static_cast<u8*>(vertexBufferRes.pointer);
+	const u32 vertexBufferOffset = vertexBufferRes.buffer_offset;
 
 	gl.bindVAO(hwShaderVAO);
 
 	// Enable or disable vertex attributes as needed
 	const u32 currentAttributeMask = accel->enabledAttributeMask;
-	// Use bitwise xor to calculate which attributes chanced
+	// Use bitwise xor to calculate which attributes changed
 	u32 attributeMaskDiff = currentAttributeMask ^ previousAttributeMask;
 	
 	while (attributeMaskDiff != 0) {
@@ -1190,29 +1191,30 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 
 	previousAttributeMask = currentAttributeMask;
 
-	for (int i = 0; i < totalAttribCount; i++) {
-		const auto& attrib = accel->attributeInfo[i];
+	// Upload the data for each (enabled) attribute loader into our vertex buffer
+	for (int i = 0; i < accel->totalLoaderCount; i++) {
+		auto& loader = accel->loaders[i];
 
-		if (attrib.fixed) {
-			if ((currentAttributeMask & (1u << i)) == 0) {
-				glVertexAttrib4f(attrib.inputReg, attrib.fixedValue[0], attrib.fixedValue[1], attrib.fixedValue[2], attrib.fixedValue[3]);
-			}
-		} else {
-			if (attrib.isPadding) [[unlikely]] {
-				continue;
-			}
-	
-			const u32 attributeSize = attrib.size * vertexCount;
-			std::memcpy(vertexData, attrib.data, attributeSize);
-
-			vertexData += attributeSize;
-
-			glVertexAttribPointer(
-				attrib.inputReg, attrib.componentCount, attributeFormats[attrib.type], GL_FALSE, attrib.stride,
-				reinterpret_cast<GLvoid*>(vertexBufferRes.buffer_offset + attrib.offset)
-			);
-		}
+		std::memcpy(vertexData, loader.data, loader.size);
+		vertexData += loader.size;
 	}
 
 	hwVertexBuffer->Unmap(accel->vertexDataSize);
+
+	// Iterate over the 16 PICA input registers and configure how they should be fetched.
+	for (int i = 0; i < 16; i++) {
+		const auto& attrib = accel->attributeInfo[i];
+		const u32 attributeMask = 1u << i;
+
+		if (accel->fixedAttributes & attributeMask) {
+			// This is a fixed attribute, so set its fixed value
+			// TODO: Don't update these if the value does not change, it generates way too many calls
+			glVertexAttrib4f(i, attrib.fixedValue[0], attrib.fixedValue[1], attrib.fixedValue[2], attrib.fixedValue[3]);
+		} else if (accel->enabledAttributeMask & attributeMask) {
+			glVertexAttribPointer(
+				i, attrib.componentCount, attributeFormats[attrib.type], GL_FALSE, attrib.stride,
+				reinterpret_cast<GLvoid*>(vertexBufferOffset + attrib.offset)
+			);
+		}
+	}
 }

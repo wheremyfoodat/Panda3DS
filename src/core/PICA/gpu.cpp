@@ -337,8 +337,6 @@ void GPU::drawArrays() {
 					}
 
 					// Fill the remaining attribute lanes with default parameters (1.0 for alpha/w, 0.0) for everything else
-					// Corgi does this although I'm not sure if it's actually needed for anything.
-					// TODO: Find out
 					while (component < 4) {
 						attribute[component] = (component == 3) ? f24::fromFloat32(1.0) : f24::fromFloat32(0.0);
 						component++;
