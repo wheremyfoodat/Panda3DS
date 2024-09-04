@@ -59,6 +59,8 @@ namespace Audio::AAC {
 		u32_le size;           // Size of input AAC stream
 		u32_le destAddrLeft;   // Output address for left channel samples
 		u32_le destAddrRight;  // Output address for right channel samples
+		u32_le unknown1;
+		u32_le unknown2;
 	};
 
 	struct Message {
