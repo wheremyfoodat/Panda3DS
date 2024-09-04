@@ -54,6 +54,13 @@ namespace Audio::AAC {
 		u32_le sampleCount;
 	};
 
+	struct DecodeRequest {
+		u32_le address;        // Address of input AAC stream
+		u32_le size;           // Size of input AAC stream
+		u32_le destAddrLeft;   // Output address for left channel samples
+		u32_le destAddrRight;  // Output address for right channel samples
+	};
+
 	struct Message {
 		u16_le mode = Mode::None;  // Encode or decode AAC?
 		u16_le command = Command::Init;
@@ -62,7 +69,9 @@ namespace Audio::AAC {
 		// Info on the AAC request
 		union {
 			std::array<u8, 24> commandData{};
+
 			DecodeResponse decodeResponse;
+			DecodeRequest decodeRequest;
 		};
 	};
 

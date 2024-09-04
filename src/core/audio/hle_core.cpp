@@ -6,6 +6,7 @@
 #include <thread>
 #include <utility>
 
+#include "audio/aac_decoder.hpp"
 #include "services/dsp.hpp"
 
 namespace Audio {
@@ -23,6 +24,8 @@ namespace Audio {
 		for (int i = 0; i < sources.size(); i++) {
 			sources[i].index = i;
 		}
+
+		aacDecoder.reset(new Audio::AAC::Decoder());
 	}
 
 	void HLE_DSP::resetAudioPipe() {
@@ -584,7 +587,6 @@ namespace Audio {
 		switch (request.command) {
 			case AAC::Command::EncodeDecode:
 				// Dummy response to stop games from hanging
-				// TODO: Fix this when implementing AAC
 				response.resultCode = AAC::ResultCode::Success;
 				response.decodeResponse.channelCount = 2;
 				response.decodeResponse.sampleCount = 1024;
@@ -593,6 +595,10 @@ namespace Audio {
 
 				response.command = request.command;
 				response.mode = request.mode;
+
+				// We've already got an AAC decoder but it's currently disabled until mixing & output is properly implemented
+				// TODO: Uncomment this when the time comes
+				// aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
 				break;
 
 			case AAC::Command::Init:

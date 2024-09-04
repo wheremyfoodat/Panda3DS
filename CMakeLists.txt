@@ -225,6 +225,7 @@ else()
 endif()
 
 add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/fdk-aac)
 
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
 set(CAPSTONE_ARM_SUPPORT ON)
@@ -275,7 +276,7 @@ set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selecto
                         src/core/applets/error_applet.cpp
 )
 set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp src/core/audio/teakra_core.cpp
-                       src/core/audio/miniaudio_device.cpp src/core/audio/hle_core.cpp
+                       src/core/audio/miniaudio_device.cpp src/core/audio/hle_core.cpp src/core/audio/aac_decoder.cpp
 )
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
@@ -314,7 +315,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
-                 include/sdl_sensors.hpp include/renderdoc.hpp
+                 include/sdl_sensors.hpp include/renderdoc.hpp include/audio/aac_decoder.hpp
 )
 
 cmrc_add_resource_library(
@@ -478,7 +479,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
+target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra fdk-aac)
 target_link_libraries(AlberCore PUBLIC glad capstone)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
