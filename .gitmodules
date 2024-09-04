@@ -78,4 +78,4 @@
 	url = https://github.com/Panda3DS-emu/metal-cpp
 [submodule "third_party/fdk-aac"]
 	path = third_party/fdk-aac
-	url = https://github.com/mstorsjo/fdk-aac/
+	url = https://github.com/Panda3DS-emu/fdk-aac/
