@@ -18,6 +18,8 @@ static retro_hw_render_callback hwRender;
 static std::filesystem::path savePath;
 
 static std::string touchScreenMode;
+static bool renderTouchScreen;
+
 static bool screenTouched;
 static int lastMouseX;
 static int lastMouseY;
@@ -25,6 +27,18 @@ static int lastMouseY;
 static int touchX = 0;
 static int touchY = 0;
 
+class CursorRenderer {
+	OpenGL::Program shader;
+	OpenGL::VertexArray vao;
+	OpenGL::VertexBuffer vbo;
+
+	public:
+	void init();
+	void deinit();
+	void draw(float x, float y, float size = 5);
+};
+
+std::unique_ptr<CursorRenderer> cursorRenderer;
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
 
@@ -52,9 +66,11 @@ static void videoResetContext() {
 #endif
 
 	emulator->initGraphicsContext(nullptr);
+	cursorRenderer->init();
 }
 
 static void videoDestroyContext() {
+	cursorRenderer->deinit();
 	emulator->deinitGraphicsContext();
 }
 
@@ -192,6 +208,7 @@ static void configInit() {
 		{"panda3ds_battery_level", "Battery percentage; 5|10|20|30|50|70|90|100"},
 		{"panda3ds_use_charger", "Charger plugged; enabled|disabled"},
 		{"panda3ds_touchscreen_mode", "Touchscreen touch mode; Auto|Pointer|Joystick|None"},
+		{"panda3ds_render_touchscreen", "Render touchscreen pointer; disabled|enabled"},
 		{nullptr, nullptr},
 	};
 
@@ -223,6 +240,7 @@ static void configUpdate() {
 	config.discordRpcEnabled = false;
 
 	touchScreenMode = fetchVariable("panda3ds_touchscreen_mode", "Auto");
+	renderTouchScreen = fetchVariableBool("panda3ds_render_touchscreen", false);
 
 	// Handle any settings that might need the emulator core to be notified when they're changed, and save the config.
 	emulator->setAudioEnabled(config.audioEnabled);
@@ -237,6 +255,80 @@ static void configCheckVariables() {
 	if (updated) {
 		configUpdate();
 	}
+}
+
+void CursorRenderer::init() {
+#ifdef USING_GLES
+	static const std::string version = R"(
+		#version 300 es
+		precision mediump float;
+	)";
+#else
+	static const std::string version = R"(
+		#version 410 core
+	)";
+#endif
+
+	std::string vertex = version + R"(
+		in vec2 position;
+		void main() { gl_Position = vec4(position, 0.0, 1.0); }
+	)";
+
+	std::string fragment = version + R"(
+		out vec4 color;
+		void main() { color = vec4(1.0, 1.0, 1.0, 1.0); }
+	)";
+
+	OpenGL::Shader vertCursor(vertex.c_str(), OpenGL::Vertex);
+	OpenGL::Shader fragCursor(fragment.c_str(), OpenGL::Fragment);
+	shader.create({vertCursor, fragCursor});
+
+	vbo.createFixedSize(12 * 12 * sizeof(GLfloat));
+	vbo.bind();
+
+	vao.create();
+	vao.bind();
+
+	vao.setAttributeFloat<float>(0, 2, 4 * sizeof(GLfloat), nullptr);
+	vao.enableAttribute(0);
+
+	vertCursor.free();
+	fragCursor.free();
+}
+
+void CursorRenderer::deinit() {
+	shader.free();
+	vao.free();
+	vbo.free();
+}
+
+void CursorRenderer::draw(float x, float y, float size) {
+	shader.use();
+	vao.bind();
+	vbo.bind();
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
+
+	float centerX = (x / 320) * 2.0f - 1.0f;
+	float centerY = 1.0f - (y / 240) * 2.0f;
+
+	GLfloat sizeX = size / 320;
+	GLfloat sizeY = size / 240;
+
+	GLfloat cursor[] = {
+		centerX - sizeX, centerY - sizeY, -0.5f, -0.5f,
+		centerX + sizeX, centerY - sizeY,  0.5f, -0.5f,
+		centerX + sizeX, centerY + sizeY,  0.5f,  0.5f,
+		centerX - sizeX, centerY + sizeY, -0.5f,  0.5f
+	};
+
+	vbo.bufferVertsSub(cursor, 12 * sizeof(GLfloat));
+
+	OpenGL::setViewport(40, 0, 320, 240);
+	OpenGL::draw(OpenGL::TriangleFan, 0, 4);
+
+	glDisable(GL_BLEND);
 }
 
 void retro_get_system_info(retro_system_info* info) {
@@ -295,10 +387,12 @@ void retro_init() {
 	}
 
 	emulator = std::make_unique<Emulator>();
+	cursorRenderer = std::make_unique<CursorRenderer>();
 }
 
 void retro_deinit() {
 	emulator = nullptr;
+	cursorRenderer = nullptr;
 }
 
 bool retro_load_game(const retro_game_info* game) {
@@ -422,6 +516,13 @@ void retro_run() {
 
 	hid.updateInputs(emulator->getTicks());
 	emulator->runFrame();
+
+	if (renderTouchScreen && cursorVisible) {
+		cursorRenderer->draw(touchX, touchY);
+	}
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBlitFramebuffer(0, 0, 400, 480, 0, 0, 400, 480, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
 	videoCallback(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
 }
