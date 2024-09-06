@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <cstdio>
 #include <regex>
+#include <chrono>
 
 #include <libretro.h>
 
@@ -19,6 +20,10 @@ static std::filesystem::path savePath;
 
 static std::string touchScreenMode;
 static bool renderTouchScreen;
+
+static auto cursorTimeout = 0;
+static auto cursorMovedAt = std::chrono::steady_clock::now();
+static bool cursorVisible = false;
 
 static bool screenTouched;
 static int lastMouseX;
@@ -209,6 +214,7 @@ static void configInit() {
 		{"panda3ds_use_charger", "Charger plugged; enabled|disabled"},
 		{"panda3ds_touchscreen_mode", "Touchscreen touch mode; Auto|Pointer|Joystick|None"},
 		{"panda3ds_render_touchscreen", "Render touchscreen pointer; disabled|enabled"},
+		{"panda3ds_hide_cursor_timeout", "Hide touchScreen pointer timeout; 3 Seconds|5 Seconds|10 Seconds|15 Seconds|20 Seconds|Never Hide"},
 		{nullptr, nullptr},
 	};
 
@@ -241,6 +247,7 @@ static void configUpdate() {
 
 	touchScreenMode = fetchVariable("panda3ds_touchscreen_mode", "Auto");
 	renderTouchScreen = fetchVariableBool("panda3ds_render_touchscreen", false);
+	cursorTimeout = fetchVariableInt("panda3ds_hide_cursor_timeout", 3);
 
 	// Handle any settings that might need the emulator core to be notified when they're changed, and save the config.
 	emulator->setAudioEnabled(config.audioEnabled);
@@ -254,6 +261,21 @@ static void configCheckVariables() {
 
 	if (updated) {
 		configUpdate();
+	}
+}
+
+static void updateCursorVisibility() {
+	if (renderTouchScreen && cursorTimeout) {
+		if (cursorVisible) {
+			auto current = std::chrono::steady_clock::now();
+			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(current - cursorMovedAt).count();
+
+			if (elapsed >= cursorTimeout) {
+				cursorVisible = false;
+			}
+		}
+	} else {
+		cursorVisible = true;
 	}
 }
 
@@ -425,6 +447,7 @@ void retro_reset() {
 
 void retro_run() {
 	configCheckVariables();
+	updateCursorVisibility();
 
 	renderer->setFBO(hwRender.get_current_framebuffer());
 	renderer->resetStateManager();
@@ -498,6 +521,11 @@ void retro_run() {
 			pointerX += static_cast<int>((moveX / 32767) * speedX);
 			pointerY += static_cast<int>((moveY / 32767) * speedY);
 		}
+	}
+
+	if (cursorTimeout && (pointerX != touchX || pointerY != touchY)) {
+		cursorVisible = true;
+		cursorMovedAt = std::chrono::steady_clock::now();
 	}
 
 	touchX = std::clamp(pointerX, 0, (int)(emulator->width - (offsetX * 2)));
