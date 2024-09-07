@@ -90,7 +90,7 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 	deviceConfig.dataCallback = [](ma_device* device, void* out, const void* input, ma_uint32 frameCount) {
 		auto self = reinterpret_cast<MiniAudioDevice*>(device->pUserData);
 		s16* output = reinterpret_cast<ma_int16*>(out);
-		usize maxSamples = std::min(self->samples->Capacity(), (usize)(frameCount * channelCount));
+		const usize maxSamples = std::min(self->samples->Capacity(), usize(frameCount * channelCount));
 
 		// Wait until there's enough samples to pop
 		while (self->samples->size() < maxSamples) {
