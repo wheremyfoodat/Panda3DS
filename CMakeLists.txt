@@ -519,6 +519,9 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         if(NOT ENABLE_OPENGL)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
+        
+        option(GENERATE_QT_TRANSLATION "Generate Qt translation file" OFF)
+        set(QT_LANGUAGES docs/translations)
 
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
@@ -554,6 +557,17 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
                 target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
             endif()
+        endif()
+
+        # Generates an en.ts file for translations
+        # To update the file, use cmake --build --target Alber_lupdate
+        if(GENERATE_QT_TRANSLATION)
+            find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+            qt_add_lupdate(Alber TS_FILES ${QT_LANGUAGES}/en.ts
+                SOURCES ${FRONTEND_SOURCE_FILES}
+                INCLUDE_DIRECTORIES ${FRONTEND_HEADER_FILES}
+                NO_GLOBAL_TARGET
+            )
         endif()
 
         qt_add_resources(AlberCore "app_images"
