@@ -15,7 +15,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
@@ -45,7 +45,7 @@ jobs:
         windeployqt --dir upload upload/Alber.exe
 
     - name: Upload executable
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: Windows executable
         path: upload
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
@@ -135,7 +135,7 @@ jobs:
         ./.github/linux-appimage-qt.sh
 
     - name: Upload executable
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: Linux executable
         path: './Alber-x86_64.AppImage' 
