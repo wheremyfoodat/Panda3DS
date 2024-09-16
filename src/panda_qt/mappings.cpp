@@ -1,6 +1,6 @@
-#include "input_mappings.hpp"
-
 #include <QKeyEvent>
+
+#include "input_mappings.hpp"
 
 InputMappings InputMappings::defaultKeyboardMappings() {
 	InputMappings mappings;

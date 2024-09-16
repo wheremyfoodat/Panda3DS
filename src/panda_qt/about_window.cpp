@@ -1,10 +1,12 @@
 #include "panda_qt/about_window.hpp"
-#include "version.hpp"
 
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QTextEdit>
 #include <QVBoxLayout>
 #include <QtGlobal>
+
+#include "version.hpp"
 
 // Based on https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/DolphinQt/AboutDialog.cpp
 

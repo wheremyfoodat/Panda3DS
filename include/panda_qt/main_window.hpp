@@ -140,7 +140,7 @@ class MainWindow : public QMainWindow {
 	MainWindow(QApplication* app, QWidget* parent = nullptr);
 	~MainWindow();
 
-	void closeEvent(QCloseEvent *event) override;
+	void closeEvent(QCloseEvent* event) override;
 	void keyPressEvent(QKeyEvent* event) override;
 	void keyReleaseEvent(QKeyEvent* event) override;
 	void mousePressEvent(QMouseEvent* event) override;
