@@ -1,10 +1,12 @@
 #include "emulator.hpp"
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__LIBRETRO__)
 #include <SDL_filesystem.h>
 #endif
 
 #include <fstream>
+
+#include "renderdoc.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -31,6 +33,10 @@ Emulator::Emulator()
 
 	audioDevice.init(dsp->getSamples());
 	setAudioEnabled(config.audioEnabled);
+
+	if (Renderdoc::isSupported() && config.enableRenderdoc) {
+		loadRenderdoc();
+	}
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
@@ -430,4 +436,10 @@ void Emulator::setAudioEnabled(bool enable) {
 	}
 
 	dsp->setAudioEnabled(enable);
+}
+
+void Emulator::loadRenderdoc() {
+	std::string capturePath = (std::filesystem::current_path() / "RenderdocCaptures").generic_string();
+	Renderdoc::loadRenderdoc();
+	Renderdoc::setOutputDir(capturePath, "");
 }

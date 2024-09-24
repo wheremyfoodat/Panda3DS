@@ -1,8 +1,9 @@
+#include "panda_qt/shader_editor.hpp"
+
 #include <QPushButton>
 #include <QVBoxLayout>
 
 #include "panda_qt/main_window.hpp"
-#include "panda_qt/shader_editor.hpp"
 
 using namespace Zep;
 

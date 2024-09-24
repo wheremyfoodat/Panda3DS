@@ -2,7 +2,9 @@
 
 #include <glad/gl.h>
 
-#include "sdl_gyro.hpp"
+#include "renderdoc.hpp"
+#include "sdl_sensors.hpp"
+#include "version.hpp"
 
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
@@ -33,13 +35,18 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
 #endif
 
+	const char* windowTitle = config.appVersionOnWindow ? ("Alber v" PANDA3DS_VERSION) : "Alber";
+	if (config.printAppVersion) {
+		printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
+	}
+
 	if (needOpenGL) {
 		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
 		// MacOS gets mad if we don't explicitly demand a core profile
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::panic("Window creation failed: %s", SDL_GetError());
@@ -59,7 +66,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
-		window = SDL_CreateWindow("Alber", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::warn("Window creation failed: %s", SDL_GetError());
@@ -142,6 +149,14 @@ void FrontendSDL::run() {
 							// Use F5 as a reset button
 							case SDLK_F5: {
 								emu.reset(Emulator::ReloadOption::Reload);
+								break;
+							}
+
+							case SDLK_F11: {
+								if constexpr (Renderdoc::isSupported()) {
+									Renderdoc::triggerCapture();
+								}
+
 								break;
 							}
 						}
@@ -299,7 +314,7 @@ void FrontendSDL::run() {
 
 				case SDL_CONTROLLERSENSORUPDATE: {
 					if (event.csensor.sensor == SDL_SENSOR_GYRO) {
-						auto rotation = Gyro::SDL::convertRotation({
+						auto rotation = Sensors::SDL::convertRotation({
 							event.csensor.data[0],
 							event.csensor.data[1],
 							event.csensor.data[2],
@@ -308,6 +323,9 @@ void FrontendSDL::run() {
 						hid.setPitch(s16(rotation.x));
 						hid.setRoll(s16(rotation.y));
 						hid.setYaw(s16(rotation.z));
+					} else if (event.csensor.sensor == SDL_SENSOR_ACCEL) {
+						auto accel = Sensors::SDL::convertAcceleration(event.csensor.data);
+						hid.setAccel(accel.x, accel.y, accel.z);
 					}
 					break;
 				}
@@ -376,8 +394,13 @@ void FrontendSDL::run() {
 
 void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
 	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;
+	bool haveAccelerometer = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL) == SDL_TRUE;
 
 	if (haveGyro) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_GYRO, SDL_TRUE);
+	}
+
+	if (haveAccelerometer) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
 	}
 }

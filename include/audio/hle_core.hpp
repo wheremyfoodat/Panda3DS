@@ -2,10 +2,12 @@
 #include <array>
 #include <cassert>
 #include <deque>
+#include <memory>
 #include <queue>
 #include <vector>
 
 #include "audio/aac.hpp"
+#include "audio/aac_decoder.hpp"
 #include "audio/dsp_core.hpp"
 #include "audio/dsp_shared_mem.hpp"
 #include "memory.hpp"
@@ -33,8 +35,8 @@ namespace Audio {
 			SampleFormat format;
 			SourceType sourceType;
 
-			bool fromQueue = false;        // Is this buffer from the buffer queue or an embedded buffer?
-			bool hasPlayedOnce = false;    // Has the buffer been played at least once before?
+			bool fromQueue = false;      // Is this buffer from the buffer queue or an embedded buffer?
+			bool hasPlayedOnce = false;  // Has the buffer been played at least once before?
 
 			bool operator<(const Buffer& other) const {
 				// Lower ID = Higher priority
@@ -128,6 +130,8 @@ namespace Audio {
 		std::array<std::vector<u8>, pipeCount> pipeData;      // The data of each pipe
 		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
 		Audio::HLE::DspMemory dspRam;
+
+		std::unique_ptr<Audio::AAC::Decoder> aacDecoder;
 
 		void resetAudioPipe();
 		bool loaded = false;  // Have we loaded a component?

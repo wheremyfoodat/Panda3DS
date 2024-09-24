@@ -39,6 +39,10 @@ struct EmulatorConfig {
 
 	bool audioEnabled = false;
 	bool vsyncEnabled = true;
+	
+	bool enableRenderdoc = false;
+	bool printAppVersion = true;
+	bool appVersionOnWindow = false;
 
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer

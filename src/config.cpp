@@ -41,6 +41,9 @@ void EmulatorConfig::load() {
 			discordRpcEnabled = toml::find_or<toml::boolean>(general, "EnableDiscordRPC", false);
 			usePortableBuild = toml::find_or<toml::boolean>(general, "UsePortableBuild", false);
 			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
+
+			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
+			appVersionOnWindow = toml::find_or<toml::boolean>(general, "AppVersionOnWindow", false);
 		}
 	}
 
@@ -67,6 +70,7 @@ void EmulatorConfig::load() {
 
 			forceShadergenForLights = toml::find_or<toml::boolean>(gpu, "ForceShadergenForLighting", true);
 			lightShadergenThreshold = toml::find_or<toml::integer>(gpu, "ShadergenLightThreshold", 1);
+			enableRenderdoc = toml::find_or<toml::boolean>(gpu, "EnableRenderdoc", false);
 		}
 	}
 
@@ -127,6 +131,8 @@ void EmulatorConfig::save() {
 	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
+	data["General"]["PrintAppVersion"] = printAppVersion;
+	data["General"]["AppVersionOnWindow"] = appVersionOnWindow;
 	
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
@@ -135,6 +141,7 @@ void EmulatorConfig::save() {
 	data["GPU"]["UseUbershaders"] = useUbershaders;
 	data["GPU"]["ForceShadergenForLighting"] = forceShadergenForLights;
 	data["GPU"]["ShadergenLightThreshold"] = lightShadergenThreshold;
+	data["GPU"]["EnableRenderdoc"] = enableRenderdoc;
 
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;
