@@ -11,7 +11,7 @@ struct BufferHandle {
     size_t offset;
 };
 
-// 64MB buffer for caching vertex data
+// 128MB buffer for caching vertex data
 #define CACHE_BUFFER_SIZE 128 * 1024 * 1024
 
 class VertexBufferCache {
