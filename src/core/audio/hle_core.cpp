@@ -76,6 +76,7 @@ namespace Audio {
 			source.reset();
 		}
 
+		mixer.reset();
 		// Note: Reset audio pipe AFTER resetting all pipes, otherwise the new data will be yeeted
 		resetAudioPipe();
 	}
@@ -250,6 +251,8 @@ namespace Audio {
 
 			source.isBufferIDDirty = false;
 		}
+
+		performMix(read, write);
 	}
 
 	void HLE_DSP::updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients) {
@@ -463,6 +466,50 @@ namespace Audio {
 				outputCount += sampleCount;
 			}
 		}
+	}
+
+	void HLE_DSP::performMix(Audio::HLE::SharedMemory& readRegion, Audio::HLE::SharedMemory& writeRegion) {
+		updateMixerConfig(readRegion);
+		// TODO: Do the actual audio mixing
+
+		auto& dspStatus = writeRegion.dspStatus;
+		// Stub the DSP status. It's unknown what the "unknown" field is but Citra sets it to 0, so we do too to be safe
+		dspStatus.droppedFrames = 0;
+		dspStatus.unknown = 0;
+	}
+
+	void HLE_DSP::updateMixerConfig(Audio::HLE::SharedMemory& sharedMem) {
+		auto& config = sharedMem.dspConfiguration;
+		// No configs have been changed, so there's nothing to update
+		if (config.dirtyRaw == 0) {
+			return;
+		}
+
+		if (config.outputFormatDirty) {
+			mixer.channelFormat = config.outputFormat;
+		}
+		
+		if (config.masterVolumeDirty) {
+			mixer.volumes[0] = config.masterVolume;
+		}
+
+		if (config.auxVolume0Dirty) {
+			mixer.volumes[1] = config.auxVolumes[0];
+		}
+		
+		if (config.auxVolume1Dirty) {
+			mixer.volumes[2] = config.auxVolumes[1];
+		}
+
+		if (config.auxBusEnable0Dirty) {
+			mixer.enableAuxStages[0] = config.auxBusEnable[0] != 0;
+		}
+
+		if (config.auxBusEnable1Dirty) {
+			mixer.enableAuxStages[1] = config.auxBusEnable[1] != 0;
+		}
+
+		config.dirtyRaw = 0;
 	}
 
 	HLE_DSP::SampleBuffer HLE_DSP::decodePCM8(const u8* data, usize sampleCount, Source& source) {
