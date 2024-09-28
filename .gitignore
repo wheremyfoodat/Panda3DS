@@ -64,5 +64,9 @@ fb.bat
 *.elf
 *.smdh
 
+# Compiled Metal shader files
+*.ir
+*.metallib
+
 config.toml
 CMakeSettings.json

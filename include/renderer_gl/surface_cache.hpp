@@ -19,8 +19,8 @@ template <typename SurfaceType, size_t capacity, bool evictOnOverflow = false>
 class SurfaceCache {
     // Vanilla std::optional can't hold actual references
     using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
-    static_assert(std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>()  ||
-        std::is_same<SurfaceType, Texture>(), "Invalid surface type");
+    //static_assert(std::is_same<SurfaceType, ColourBuffer>() || std::is_same<SurfaceType, DepthBuffer>()  ||
+    //    std::is_same<SurfaceType, Texture>(), "Invalid surface type");
 
     size_t size;
     size_t evictionIndex;
