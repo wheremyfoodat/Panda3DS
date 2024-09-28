@@ -130,6 +130,32 @@ MAKE_MEMORY_FUNCTIONS(32)
 MAKE_MEMORY_FUNCTIONS(64)
 #undef MAKE_MEMORY_FUNCTIONS
 
+static int readFloatThunk(lua_State* L) {
+	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	lua_pushnumber(L, (lua_Number)Helpers::bit_cast<float, u32>(LuaManager::g_emulator->getMemory().read32(vaddr)));
+	return 1;
+}
+
+static int writeFloatThunk(lua_State* L) {
+	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	const float value = (float)lua_tonumber(L, 2);
+	LuaManager::g_emulator->getMemory().write32(vaddr, Helpers::bit_cast<u32, float>(value));
+	return 0;
+}
+
+static int readDoubleThunk(lua_State* L) {
+	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	lua_pushnumber(L, (lua_Number)Helpers::bit_cast<double, u64>(LuaManager::g_emulator->getMemory().read64(vaddr)));
+	return 1;
+}
+
+static int writeDoubleThunk(lua_State* L) {
+	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	const double value = (double)lua_tonumber(L, 2);
+	LuaManager::g_emulator->getMemory().write64(vaddr, Helpers::bit_cast<u64, double>(value));
+	return 0;
+}
+
 static int getAppIDThunk(lua_State* L) {
 	std::optional<u64> id = LuaManager::g_emulator->getMemory().getProgramID();
 	
@@ -248,10 +274,14 @@ static constexpr luaL_Reg functions[] = {
 	{ "__read16", read16Thunk },
 	{ "__read32", read32Thunk },
 	{ "__read64", read64Thunk },
+	{ "__readFloat", readFloatThunk },
+	{ "__readDouble", readDoubleThunk },
 	{ "__write8", write8Thunk} ,
 	{ "__write16", write16Thunk },
 	{ "__write32", write32Thunk },
 	{ "__write64", write64Thunk },
+	{ "__writeFloat", writeFloatThunk },
+	{ "__writeDouble", writeDoubleThunk },
 	{ "__getAppID", getAppIDThunk },
 	{ "__pause", pauseThunk }, 
 	{ "__resume", resumeThunk },
@@ -273,10 +303,15 @@ void LuaManager::initializeThunks() {
 		read16 = function(addr) return GLOBALS.__read16(addr) end,
 		read32 = function(addr) return GLOBALS.__read32(addr) end,
 		read64 = function(addr) return GLOBALS.__read64(addr) end,
+		readFloat = function(addr) return GLOBALS.__readFloat(addr) end,
+		readDouble = function(addr) return GLOBALS.__readDouble(addr) end,
+
 		write8 = function(addr, value) GLOBALS.__write8(addr, value) end,
 		write16 = function(addr, value) GLOBALS.__write16(addr, value) end,
 		write32 = function(addr, value) GLOBALS.__write32(addr, value) end,
 		write64 = function(addr, value) GLOBALS.__write64(addr, value) end,
+		writeFloat = function(addr, value) GLOBALS.__writeFloat(addr, value) end,
+		writeDouble = function(addr, value) GLOBALS.__writeDouble(addr, value) end,
 
 		getAppID = function()
 			local ffi = require("ffi")
