@@ -90,7 +90,6 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 			// Vertex attributes used as padding
 			// 12, 13, 14 and 15 are equivalent to 4, 8, 12 and 16 bytes of padding respectively
 			if (attributeIndex >= 12) [[unlikely]] {
-				Helpers::panic("Padding attribute");
 				// Align attribute address up to a 4 byte boundary
 				attributeOffset = (attributeOffset + 3) & -4;
 				attributeOffset += (attributeIndex - 11) << 2;
