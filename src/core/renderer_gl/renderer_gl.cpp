@@ -1067,7 +1067,7 @@ void RendererGL::screenshot(const std::string& name) {
 
 	// Flip the image vertically
 	for (int y = 0; y < height; y++) {
-		memcpy(&flippedPixels[y * width * 4], &pixels[(height - y - 1) * width * 4], width * 4);
+		std::memcpy(&flippedPixels[y * width * 4], &pixels[(height - y - 1) * width * 4], width * 4);
 		// Swap R and B channels
 		for (int x = 0; x < width; x++) {
 			std::swap(flippedPixels[y * width * 4 + x * 4 + 0], flippedPixels[y * width * 4 + x * 4 + 2]);
@@ -1152,7 +1152,7 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 	// Update index buffer if necessary
 	if (accel->indexed) {
 		usingShortIndices = accel->useShortIndices;
-		const usize indexBufferSize = usize(vertexCount) * (usingShortIndices ? sizeof(u16) : sizeof(u8));
+		const usize indexBufferSize = regs[PICA::InternalRegs::VertexCountReg] * (usingShortIndices ? sizeof(u16) : sizeof(u8));
 
 		hwIndexBuffer->Bind();
 		auto indexBufferRes = hwIndexBuffer->Map(4, indexBufferSize);
