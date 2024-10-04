@@ -148,7 +148,7 @@ namespace {
 		ALWAYS_INLINE void EnsureSyncsWaitedForOffset(u32 offset) {
 			const u32 end = std::min<u32>(GetSyncIndexForOffset(offset) + 1, NUM_SYNC_POINTS);
 			for (; m_available_block_index < end; m_available_block_index++) {
-				if (!m_sync_objects[m_used_block_index]) [[unlikely]] {
+				if (!m_sync_objects[m_available_block_index]) [[unlikely]] {
 					Helpers::warn("GL stream buffer: Fence slot we're trying to wait on is not in use");
 				}
 
