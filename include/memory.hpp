@@ -131,16 +131,21 @@ public:
 	static constexpr u32 pageMask = pageSize - 1;
 	static constexpr u32 totalPageCount = 1 << (32 - pageShift);
 	
-	static constexpr u32 FCRAM_SIZE = u32(128_MB);
-	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(64_MB);
+	// TODO: All of these change on N3DS
+	static constexpr u32 FCRAM_SIZE = u32(128_MB);  // Total amount of FCRAM
 	static constexpr u32 FCRAM_PAGE_COUNT = FCRAM_SIZE / pageSize;
-	static constexpr u32 FCRAM_APPLICATION_PAGE_COUNT = FCRAM_APPLICATION_SIZE / pageSize;
+	static constexpr u32 FCRAM_MAX_APPLICATION_SIZE = u32(96_MB);  // Max amount available for applications
+	static constexpr u32 FCRAM_APPLICATION_MAX_PAGE_COUNT = FCRAM_MAX_APPLICATION_SIZE / pageSize;
 
 	static constexpr u32 DSP_RAM_SIZE = u32(512_KB);
 	static constexpr u32 DSP_CODE_MEMORY_OFFSET = u32(0_KB);
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
 private:
+	// This will get adjusted based on the cartridge exheader via setFcramApplicationSize, 64MB is just a default
+	u32 fcramApplicationSize = u32(64_MB);
+	u32 fcramApplicationPageCount = u32(64_MB) / pageSize;  // Same here
+
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
@@ -198,9 +203,23 @@ private:
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
 
+	// Set the amount of application FCRAM
+	void setApplicationRamSize(u32 size) {
+		fcramApplicationSize = size;
+		fcramApplicationPageCount = size / pageSize;
+
+		if (usedUserMemory > fcramApplicationSize) {
+			Helpers::panic("Set application FCRAM to a value less than the currently used application memory");
+		}
+
+		if (usedSystemMemory > totalSysFCRAM()) {
+			Helpers::panic("Set system FCRAM to a value less than the currently used system memory");
+		}
+	}
+
 	// Total amount of OS-only FCRAM available (Can vary depending on how much FCRAM the app requests via the cart exheader)
 	u32 totalSysFCRAM() {
-		return FCRAM_SIZE - FCRAM_APPLICATION_SIZE;
+		return FCRAM_SIZE - fcramApplicationSize;
 	}
 
 	// Amount of OS-only FCRAM currently available
@@ -210,9 +229,11 @@ private:
 
 	// Physical FCRAM index to the start of OS FCRAM
 	// We allocate the first part of physical FCRAM for the application, and the rest to the OS. So the index for the OS = application ram size
-	u32 sysFCRAMIndex() {
-		return FCRAM_APPLICATION_SIZE;
+	u32 sysFCRAMStartIndex() {
+		return fcramApplicationSize;
 	}
+
+	u32 getTotalAppFcramSize() { return fcramApplicationSize; }
 
 	enum class BatteryLevel {
 		Empty = 0,
