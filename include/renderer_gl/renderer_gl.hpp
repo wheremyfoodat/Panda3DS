@@ -99,6 +99,9 @@ class RendererGL final : public Renderer {
 	std::unique_ptr<StreamBuffer> hwVertexBuffer;
 	std::unique_ptr<StreamBuffer> hwIndexBuffer;
 
+	// Cache of fixed attribute values so that we don't do any duplicate updates
+	std::array<std::array<float, 4>, 16> fixedAttrValues;
+
 	// Cached recompiled fragment shader
 	struct CachedProgram {
 		OpenGL::Program program;

@@ -184,6 +184,12 @@ void RendererGL::initGraphicsContextInternal() {
 	OpenGL::clearColor();
 	OpenGL::setViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3]);
 
+	// Initialize fixed attributes
+	for (int i = 0; i < fixedAttrValues.size(); i++) {
+		fixedAttrValues[i] = {0.f, 0.f, 0.f, 0.f};
+		glVertexAttrib4f(i, 0.0, 0.0, 0.0, 0.0);
+	}
+
 	reset();
 
 	// Initialize the default vertex shader used with shadergen
@@ -1008,12 +1014,12 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
 			}
 
-			// Upload vertex data and index buffer data to our GPU
-			accelerateVertexUpload(shaderUnit, accel);
-
 			performIndexedRender = accel->indexed;
 			minimumIndex = GLsizei(accel->minimumIndex);
 			maximumIndex = GLsizei(accel->maximumIndex);
+
+			// Upload vertex data and index buffer data to our GPU
+			accelerateVertexUpload(shaderUnit, accel);
 		}
 	}
 
@@ -1207,9 +1213,13 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 		const u32 attributeMask = 1u << i;
 
 		if (accel->fixedAttributes & attributeMask) {
-			// This is a fixed attribute, so set its fixed value
-			// TODO: Don't update these if the value does not change, it generates way too many calls
-			glVertexAttrib4f(i, attrib.fixedValue[0], attrib.fixedValue[1], attrib.fixedValue[2], attrib.fixedValue[3]);
+			auto& attrValue = fixedAttrValues[i];
+			// This is a fixed attribute, so set its fixed value, but only if it actually needs to be updated
+			if (attrValue[0] != attrib.fixedValue[0] || attrValue[1] != attrib.fixedValue[1] || attrValue[2] != attrib.fixedValue[2] ||
+				attrValue[3] != attrib.fixedValue[3]) {
+				std::memcpy(attrValue.data(), attrib.fixedValue.data(), sizeof(attrib.fixedValue));
+				glVertexAttrib4f(i, attrib.fixedValue[0], attrib.fixedValue[1], attrib.fixedValue[2], attrib.fixedValue[3]);
+			}
 		} else if (accel->enabledAttributeMask & attributeMask) {
 			glVertexAttribPointer(
 				i, attrib.componentCount, attributeFormats[attrib.type], GL_FALSE, attrib.stride,
