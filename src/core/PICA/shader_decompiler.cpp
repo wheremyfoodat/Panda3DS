@@ -222,21 +222,21 @@ void ShaderDecompiler::writeAttributes() {
 	decompiledShader += R"(
 	layout(location = 0) in vec4 inputs[16];
 	layout(std140) uniform PICAShaderUniforms {
-		vec4 uniform_float[96];
-		uvec4 uniform_int;
+		vec4 uniform_f[96];
+		uvec4 uniform_i;
 		uint uniform_bool;
 	};
 
-	vec4 tmp_regs[16];
+	vec4 temp[16];
 	vec4 out_regs[16];
 	vec4 dummy_vec = vec4(0.0);
 	ivec3 addr_reg = ivec3(0);
 	bvec2 cmp_reg = bvec2(false);
 
-	vec4 float_uniform_indexed(int source, int offset) {
+	vec4 uniform_indexed(int source, int offset) {
 		int clipped_offs = (offset >= -128 && offset <= 127) ? offset : 0;
 		uint index = uint(clipped_offs + source) & 127u;
-		return (index < 96u) ? uniform_float[index] : vec4(1.0);
+		return (index < 96u) ? uniform_f[index] : vec4(1.0);
 	}
 )";
 }
@@ -340,7 +340,7 @@ std::string ShaderDecompiler::getSource(u32 source, [[maybe_unused]] u32 index) 
 	if (source < 0x10) {
 		return "inputs[" + std::to_string(source) + "]";
 	} else if (source < 0x20) {
-		return "tmp_regs[" + std::to_string(source - 0x10) + "]";
+		return "temp[" + std::to_string(source - 0x10) + "]";
 	} else {
 		const usize floatIndex = (source - 0x20) & 0x7f;
 
@@ -348,10 +348,10 @@ std::string ShaderDecompiler::getSource(u32 source, [[maybe_unused]] u32 index) 
 			if (floatIndex >= 96) [[unlikely]] {
 				return "dummy_vec";
 			}
-			return "uniform_float[" + std::to_string(floatIndex) + "]";
+			return "uniform_f[" + std::to_string(floatIndex) + "]";
 		} else {
 			static constexpr std::array<const char*, 4> offsets = {"0", "addr_reg.x", "addr_reg.y", "addr_reg.z"};
-			return fmt::format("float_uniform_indexed({}, {})", floatIndex, offsets[index]);
+			return fmt::format("uniform_indexed({}, {})", floatIndex, offsets[index]);
 		}
 	}
 }
@@ -360,7 +360,7 @@ std::string ShaderDecompiler::getDest(u32 dest) const {
 	if (dest < 0x10) {
 		return "out_regs[" + std::to_string(dest) + "]";
 	} else if (dest < 0x20) {
-		return "tmp_regs[" + std::to_string(dest - 0x10) + "]";
+		return "temp[" + std::to_string(dest - 0x10) + "]";
 	} else {
 		return "dummy_vec";
 	}
@@ -694,9 +694,9 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				const u32 uniformIndex = getBits<22, 2>(instruction);
 
 				// loop counter = uniform.y
-				decompiledShader += fmt::format("addr_reg.z = int((uniform_int[{}] >> 8u) & 0xFFu);\n", uniformIndex);
+				decompiledShader += fmt::format("addr_reg.z = int((uniform_i[{}] >> 8u) & 0xFFu);\n", uniformIndex);
 				decompiledShader += fmt::format(
-					"for (uint loopCtr{} = 0u; loopCtr{} <= ((uniform_int[{}] >> 0) & 0xFFu); loopCtr{}++, addr_reg.z += int((uniform_int[{}] >> "
+					"for (uint loopCtr{} = 0u; loopCtr{} <= (uniform_i[{}] & 0xFFu); loopCtr{}++, addr_reg.z += int((uniform_i[{}] >> "
 					"16u) & 0xFFu)) {{\n",
 					pc, pc, uniformIndex, pc, uniformIndex
 				);
