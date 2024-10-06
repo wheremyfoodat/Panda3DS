@@ -694,10 +694,10 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				const u32 uniformIndex = getBits<22, 2>(instruction);
 
 				// loop counter = uniform.y
-				decompiledShader += fmt::format("addr_reg.z = int((uniform_int[{}] >> 16u) & 0xFFu);\n", uniformIndex);
+				decompiledShader += fmt::format("addr_reg.z = int((uniform_int[{}] >> 8u) & 0xFFu);\n", uniformIndex);
 				decompiledShader += fmt::format(
-					"for (uint loopCtr{} = 0u; loopCtr{} <= ((uniform_int[{}] >> 24) & 0xFFu); loopCtr{}++, addr_reg.z += int((uniform_int[{}] >> "
-					"8u) & 0xFFu)) {{\n",
+					"for (uint loopCtr{} = 0u; loopCtr{} <= ((uniform_int[{}] >> 0) & 0xFFu); loopCtr{}++, addr_reg.z += int((uniform_int[{}] >> "
+					"16u) & 0xFFu)) {{\n",
 					pc, pc, uniformIndex, pc, uniformIndex
 				);
 
@@ -705,6 +705,10 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				const Function* func = findFunction(range);
 				callFunction(*func);
 				decompiledShader += "}\n";
+
+				// Jump to the end of the loop. We don't want to compile the code inside the loop again.
+				// This will be incremented by 1 due to the pc++ at the end of this loop.
+				pc = dest;
 
 				if (func->exitMode == ExitMode::AlwaysEnd) {
 					finished = true;
