@@ -253,7 +253,7 @@ std::string ShaderDecompiler::decompile() {
 
 	switch (api) {
 		case API::GL: decompiledShader += "#version 410 core\n"; break;
-		case API::GLES: decompiledShader += "#version 300 es\n"; break;
+		case API::GLES: decompiledShader += "#version 300 es\nprecision mediump float;\nprecision mediump int;\n"; break;
 		default: break;
 	}
 

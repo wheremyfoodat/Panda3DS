@@ -991,7 +991,8 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 			shader = OpenGL::Shader();
 
 			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
-				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint, PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
+				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint,
+				Helpers::isAndroid() ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
 			);
 
 			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and upload
