@@ -79,3 +79,6 @@
 [submodule "third_party/fmt"]
 	path = third_party/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "third_party/fdk-aac"]
+	path = third_party/fdk-aac
+	url = https://github.com/Panda3DS-emu/fdk-aac/

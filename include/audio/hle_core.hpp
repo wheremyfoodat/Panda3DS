@@ -2,10 +2,12 @@
 #include <array>
 #include <cassert>
 #include <deque>
+#include <memory>
 #include <queue>
 #include <vector>
 
 #include "audio/aac.hpp"
+#include "audio/aac_decoder.hpp"
 #include "audio/dsp_core.hpp"
 #include "audio/dsp_shared_mem.hpp"
 #include "memory.hpp"
@@ -33,8 +35,8 @@ namespace Audio {
 			SampleFormat format;
 			SourceType sourceType;
 
-			bool fromQueue = false;        // Is this buffer from the buffer queue or an embedded buffer?
-			bool hasPlayedOnce = false;    // Has the buffer been played at least once before?
+			bool fromQueue = false;      // Is this buffer from the buffer queue or an embedded buffer?
+			bool hasPlayedOnce = false;  // Has the buffer been played at least once before?
 
 			bool operator<(const Buffer& other) const {
 				// Lower ID = Higher priority
@@ -93,8 +95,7 @@ namespace Audio {
 		DSPSource() { reset(); }
 	};
 
-	class HLE_DSP : public DSPCore {
-		// The audio frame types are public in case we want to use them for unit tests
+	class DSPMixer {
 	  public:
 		template <typename T, usize channelCount = 1>
 		using Sample = std::array<T, channelCount>;
@@ -110,6 +111,43 @@ namespace Audio {
 
 		template <typename T>
 		using QuadFrame = Frame<T, 4>;
+
+	  private:
+		using ChannelFormat = HLE::DspConfiguration::OutputFormat;
+		// The audio from each DSP voice is converted to quadraphonic and then fed into 3 intermediate mixing stages
+		// Two of these intermediate mixers (second and third) are used for effects, including custom effects done on the CPU
+		static constexpr usize mixerStageCount = 3;
+
+	  public:
+		ChannelFormat channelFormat = ChannelFormat::Stereo;
+		std::array<float, mixerStageCount> volumes;
+		std::array<bool, 2> enableAuxStages;
+
+		void reset() {
+			channelFormat = ChannelFormat::Stereo;
+
+			volumes.fill(0.0);
+			enableAuxStages.fill(false);
+		}
+	};
+
+	class HLE_DSP : public DSPCore {
+		// The audio frame types are public in case we want to use them for unit tests
+	  public:
+		template <typename T, usize channelCount = 1>
+		using Sample = DSPMixer::Sample<T, channelCount>;
+
+		template <typename T, usize channelCount>
+		using Frame = DSPMixer::Frame<T, channelCount>;
+
+		template <typename T>
+		using MonoFrame = DSPMixer::MonoFrame<T>;
+
+		template <typename T>
+		using StereoFrame = DSPMixer::StereoFrame<T>;
+
+		template <typename T>
+		using QuadFrame = DSPMixer::QuadFrame<T>;
 
 		using Source = Audio::DSPSource;
 		using SampleBuffer = Source::SampleBuffer;
@@ -128,6 +166,9 @@ namespace Audio {
 		std::array<std::vector<u8>, pipeCount> pipeData;      // The data of each pipe
 		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
 		Audio::HLE::DspMemory dspRam;
+
+		Audio::DSPMixer mixer;
+		std::unique_ptr<Audio::AAC::Decoder> aacDecoder;
 
 		void resetAudioPipe();
 		bool loaded = false;  // Have we loaded a component?
@@ -171,10 +212,13 @@ namespace Audio {
 
 		void handleAACRequest(const AAC::Message& request);
 		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients);
+		void updateMixerConfig(HLE::SharedMemory& sharedMem);
 		void generateFrame(StereoFrame<s16>& frame);
 		void generateFrame(DSPSource& source);
 		void outputFrame();
-
+		// Perform the final mix, mixing the quadraphonic samples from all voices into the output audio frame
+		void performMix(Audio::HLE::SharedMemory& readRegion, Audio::HLE::SharedMemory& writeRegion);
+		
 		// Decode an entire buffer worth of audio
 		void decodeBuffer(DSPSource& source);
 

@@ -33,6 +33,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-interference-size")
 endif() 
 
+if(ANDROID)
+    set(DEFAULT_OPENGL_PROFILE OpenGLES)
+else()
+    set(DEFAULT_OPENGL_PROFILE OpenGL)
+endif()
+
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
@@ -48,6 +54,14 @@ option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
+
+set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
+set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
+
+if(ENABLE_OPENGL AND (OPENGL_PROFILE STREQUAL "OpenGLES"))
+    message(STATUS "Building with OpenGLES support")
+    add_compile_definitions(USING_GLES)
+endif()
 
 if(BUILD_HYDRA_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -213,6 +227,7 @@ else()
 endif()
 
 add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/fdk-aac)
 
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
 set(CAPSTONE_ARM_SUPPORT ON)
@@ -263,7 +278,7 @@ set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selecto
                         src/core/applets/error_applet.cpp
 )
 set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp src/core/audio/teakra_core.cpp
-                       src/core/audio/miniaudio_device.cpp src/core/audio/hle_core.cpp
+                       src/core/audio/miniaudio_device.cpp src/core/audio/hle_core.cpp src/core/audio/aac_decoder.cpp
 )
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
@@ -303,7 +318,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
-                 include/align.hpp
+                 include/align.hpp include/audio/aac_decoder.hpp
 )
 
 cmrc_add_resource_library(
@@ -468,7 +483,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
+target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra fdk-aac)
 target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
@@ -508,6 +523,9 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         if(NOT ENABLE_OPENGL)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
+        
+        option(GENERATE_QT_TRANSLATION "Generate Qt translation file" OFF)
+        set(QT_LANGUAGES docs/translations)
 
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
@@ -543,6 +561,17 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL GLX)
                 target_link_libraries(Alber PRIVATE OpenGL::OpenGL OpenGL::EGL OpenGL::GLX)
             endif()
+        endif()
+
+        # Generates an en.ts file for translations
+        # To update the file, use cmake --build --target Alber_lupdate
+        if(GENERATE_QT_TRANSLATION)
+            find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+            qt_add_lupdate(Alber TS_FILES ${QT_LANGUAGES}/en.ts
+                SOURCES ${FRONTEND_SOURCE_FILES}
+                INCLUDE_DIRECTORIES ${FRONTEND_HEADER_FILES}
+                NO_GLOBAL_TARGET
+            )
         endif()
 
         qt_add_resources(AlberCore "app_images"
