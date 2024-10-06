@@ -198,7 +198,7 @@ static void configUpdate() {
 	config.sdWriteProtected = fetchVariableBool("panda3ds_write_protect_virtual_sd", false);
 	config.accurateShaderMul = fetchVariableBool("panda3ds_accurate_shader_mul", false);
 	config.useUbershaders = fetchVariableBool("panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault);
-	config.accelerateShaders = FetchVariableBool("panda3ds_accelerate_shaders", EmulatorConfig::accelerateShadersDefault);
+	config.accelerateShaders = fetchVariableBool("panda3ds_accelerate_shaders", EmulatorConfig::accelerateShadersDefault);
 
 	config.forceShadergenForLights = fetchVariableBool("panda3ds_ubershader_lighting_override", true);
 	config.lightShadergenThreshold = fetchVariableRange("panda3ds_ubershader_lighting_override_threshold", 1, 8);
