@@ -80,7 +80,6 @@ void RendererGL::initGraphicsContextInternal() {
 	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
 
 	// Create stream buffers for vertex, index and uniform buffers
-	// TODO: Remove buffers from GL state tracking as the StreamBuffer implementation bypasses the state tracker.
 	static constexpr usize hwIndexBufferSize = 2_MB;
 	static constexpr usize hwVertexBufferSize = 16_MB;
 
@@ -1024,15 +1023,12 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 		}
 	}
 
-	if (usingUbershader) {
-		gl.useProgram(triangleProgram);
-	} else {
+	if (!usingUbershader) {
 		OpenGL::Program& program = getSpecializedShader();
 		gl.useProgram(program);
-	}
+	} else { // Bind ubershader & load ubershader uniforms
+		gl.useProgram(triangleProgram);
 
-	// Update ubershader uniforms
-	if (usingUbershader) {
 		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
 		const float depthOffset = f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
 		const bool depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
