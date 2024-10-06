@@ -38,7 +38,6 @@ struct GLStateManager {
 	
 	GLuint stencilMask;
 	GLuint boundVAO;
-	GLuint boundVBO;
 	GLuint currentProgram;
 	GLuint boundUBO;
 
@@ -173,13 +172,6 @@ struct GLStateManager {
 		}
 	}
 
-	void bindVBO(GLuint handle) {
-		if (boundVBO != handle) {
-			boundVBO = handle;
-			glBindBuffer(GL_ARRAY_BUFFER, handle);
-		}
-	}
-
 	void useProgram(GLuint handle) {
 		if (currentProgram != handle) {
 			currentProgram = handle;
@@ -195,7 +187,6 @@ struct GLStateManager {
 	}
 
 	void bindVAO(const OpenGL::VertexArray& vao) { bindVAO(vao.handle()); }
-	void bindVBO(const OpenGL::VertexBuffer& vbo) { bindVBO(vbo.handle()); }
 	void useProgram(const OpenGL::Program& program) { useProgram(program.handle()); }
 
 	void setColourMask(bool r, bool g, bool b, bool a) {

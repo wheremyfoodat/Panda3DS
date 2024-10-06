@@ -73,10 +73,7 @@ void GLStateManager::resetVAO() {
 }
 
 void GLStateManager::resetBuffers() {
-	boundVBO = 0;
 	boundUBO = 0;
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 

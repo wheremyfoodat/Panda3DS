@@ -107,6 +107,11 @@ class PICAShader {
 	alignas(16) std::array<vec4f, 16> inputs;           // Attributes passed to the shader
 	alignas(16) std::array<vec4f, 16> outputs;
 	alignas(16) vec4f dummy = vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});  // Dummy register used by the JIT
+	
+	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
+	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
+	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
+	using Hash = PICAHash::HashType;
 
   protected:
 	std::array<u32, 128> operandDescriptors;
@@ -125,14 +130,13 @@ class PICAShader {
 	std::array<CallInfo, 4> callInfo;
 	ShaderType type;
 
-	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
-	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
-	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
-	using Hash = PICAHash::HashType;
-
 	Hash lastCodeHash = 0;    // Last hash computed for the shader code (Used for the JIT caching mechanism)
 	Hash lastOpdescHash = 0;  // Last hash computed for the operand descriptors (Also used for the JIT)
 
+  public:
+	bool uniformsDirty = false;
+
+  protected:
 	bool codeHashDirty = false;
 	bool opdescHashDirty = false;
 
@@ -284,6 +288,7 @@ class PICAShader {
 				uniform[2] = f24::fromRaw(((floatUniformBuffer[0] & 0xff) << 16) | (floatUniformBuffer[1] >> 16));
 				uniform[3] = f24::fromRaw(floatUniformBuffer[0] >> 8);
 			}
+			uniformsDirty = true;
 		}
 	}
 
@@ -295,6 +300,12 @@ class PICAShader {
 		u[1] = getBits<8, 8>(word);
 		u[2] = getBits<16, 8>(word);
 		u[3] = getBits<24, 8>(word);
+		uniformsDirty = true;
+	}
+
+	void uploadBoolUniform(u32 value) {
+		boolUniform = value;
+		uniformsDirty = true;
 	}
 
 	void run();
@@ -302,6 +313,10 @@ class PICAShader {
 
 	Hash getCodeHash();
 	Hash getOpdescHash();
+
+	// Returns how big the PICA uniforms are combined. Used for hw accelerated shaders where we upload the uniforms to our GPU.
+	static constexpr usize totalUniformSize() { return sizeof(floatUniforms) + sizeof(intUniforms) + sizeof(boolUniform); }
+	void* getUniformPointer() { return static_cast<void*>(&floatUniforms); }
 };
 
 static_assert(
