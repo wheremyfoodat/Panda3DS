@@ -715,7 +715,7 @@ void FragmentGenerator::compileLogicOps(std::string& shader, const PICA::Fragmen
 		case PICA::LogicOpMode::Copy: shader += "combinerOutput"; break;
 		case PICA::LogicOpMode::Nop: shader += "fb_color"; break;
 		case PICA::LogicOpMode::Clear: shader += "vec4(0.0)"; break;
-		case PICA::LogicOpMode::Set: shader += "vec4(uintBitsToFloat(0xFFFFFFFFu))"; break;
+		case PICA::LogicOpMode::Set: shader += "vec4(1.0)"; break;
 		case PICA::LogicOpMode::InvertedCopy: shader += "vec4(uvec4(combinerOutput * 255.0) ^ uvec4(0xFFu)) * (1.0 / 255.0)"; break;
 
 		default:
