@@ -168,7 +168,8 @@ void RendererGL::initGraphicsContextInternal() {
 	reset();
 
 	// Populate our driver info structure
-	driverInfo.supportsFbFetch = GLAD_GL_EXT_shader_framebuffer_fetch != 0;
+	driverInfo.supportsExtFbFetch = GLAD_GL_EXT_shader_framebuffer_fetch != 0;
+	driverInfo.supportsArmFbFetch = GLAD_GL_ARM_shader_framebuffer_fetch != 0;
 
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();

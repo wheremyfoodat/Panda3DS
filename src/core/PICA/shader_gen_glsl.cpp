@@ -108,11 +108,24 @@ std::string FragmentGenerator::generate(const FragmentConfig& config, void* driv
 	}
 
 	// For GLES we need to enable & use the framebuffer fetch extension in order to emulate logic ops
-	const bool emitLogicOps = api == API::GLES && config.outConfig.logicOpMode != PICA::LogicOpMode::Copy && driverInfo != nullptr &&
-							  static_cast<OpenGL::Driver*>(driverInfo)->supportsFbFetch;
+	bool emitLogicOps = api == API::GLES && config.outConfig.logicOpMode != PICA::LogicOpMode::Copy && driverInfo != nullptr;
 
 	if (emitLogicOps) {
-		ret += "\n#extension GL_EXT_shader_framebuffer_fetch : enable\n";
+		auto driver = static_cast<OpenGL::Driver*>(driverInfo);
+
+		// If the driver does not support framebuffer fetch at all, don't emit logic op code
+		if (!driver->supportFbFetch()) {
+			emitLogicOps = false;
+		}
+		
+		// Figure out which fb fetch extension we have and enable it
+		else {
+			if (driver->supportsExtFbFetch) {
+				ret += "\n#extension GL_EXT_shader_framebuffer_fetch : enable\n";
+			} else if (driver->supportsArmFbFetch) {
+				ret += "\n#extension GL_ARM_shader_framebuffer_fetch : enable\n#define gl_LastFragData gl_LastFragColorARM\n";
+			}
+		}
 	}
 
 	bool unimplementedFlag = false;
