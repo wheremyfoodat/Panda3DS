@@ -121,9 +121,9 @@ std::string FragmentGenerator::generate(const FragmentConfig& config, void* driv
 		// Figure out which fb fetch extension we have and enable it
 		else {
 			if (driver->supportsExtFbFetch) {
-				ret += "\n#extension GL_EXT_shader_framebuffer_fetch : enable\n";
+				ret += "\n#extension GL_EXT_shader_framebuffer_fetch : enable\n#define fb_color fragColor\n";
 			} else if (driver->supportsArmFbFetch) {
-				ret += "\n#extension GL_ARM_shader_framebuffer_fetch : enable\n#define gl_LastFragData gl_LastFragColorARM\n";
+				ret += "\n#extension GL_ARM_shader_framebuffer_fetch : enable\n#define fb_color gl_LastFragColorARM[0]\n";
 			}
 		}
 	}
@@ -711,7 +711,7 @@ void FragmentGenerator::compileLogicOps(std::string& shader, const PICA::Fragmen
 	shader += "fragColor = ";
 	switch (config.outConfig.logicOpMode) {
 		case PICA::LogicOpMode::Copy: shader += "combinerOutput"; break;
-		case PICA::LogicOpMode::Nop: shader += "gl_LastFragData[0]"; break;
+		case PICA::LogicOpMode::Nop: shader += "fb_color"; break;
 		case PICA::LogicOpMode::Clear: shader += "vec4(0.0)"; break;
 		case PICA::LogicOpMode::Set: shader += "vec4(uintBitsToFloat(0xFFFFFFFFu))"; break;
 		case PICA::LogicOpMode::InvertedCopy: shader += "vec4(uvec4(combinerOutput * 255.0) ^ uvec4(0xFFu)) * (1.0 / 255.0)"; break;
