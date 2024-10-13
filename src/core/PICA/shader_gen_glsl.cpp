@@ -34,6 +34,8 @@ static constexpr const char* uniformDefinition = R"(
 
 std::string FragmentGenerator::getDefaultVertexShader() {
 	std::string ret = "";
+	// Reserve some space (128KB) in the output string to avoid too many allocations later
+	ret.reserve(128 * 1024);
 
 	switch (api) {
 		case API::GL: ret += "#version 410 core"; break;
