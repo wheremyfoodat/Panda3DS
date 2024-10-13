@@ -25,10 +25,11 @@ namespace PICA::ShaderGen {
 		bool isSamplerEnabled(u32 environmentID, u32 lutID);
 
 		void compileFog(std::string& shader, const PICA::FragmentConfig& config);
+		void compileLogicOps(std::string& shader, const PICA::FragmentConfig& config);
 
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
-		std::string generate(const PICA::FragmentConfig& config);
+		std::string generate(const PICA::FragmentConfig& config, void* driverInfo = nullptr);
 		std::string getDefaultVertexShader();
 
 		void setTarget(API api, Language language) {
