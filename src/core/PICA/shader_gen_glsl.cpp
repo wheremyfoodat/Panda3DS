@@ -112,7 +112,7 @@ std::string FragmentGenerator::generate(const FragmentConfig& config, void* driv
 							  static_cast<OpenGL::Driver*>(driverInfo)->supportsFbFetch;
 
 	if (emitLogicOps) {
-		ret += "\n#extension GL_EXT_shader_framebuffer_fetch : require\n";
+		ret += "\n#extension GL_EXT_shader_framebuffer_fetch : enable\n";
 	}
 
 	bool unimplementedFlag = false;
