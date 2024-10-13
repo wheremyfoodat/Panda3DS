@@ -17,6 +17,7 @@ namespace PICA {
 			// enable == off means a CompareFunction of Always
 			BitField<0, 3, CompareFunction> alphaTestFunction;
 			BitField<3, 1, u32> depthMapEnable;
+			BitField<4, 4, LogicOpMode> logicOpMode;
 		};
 	};
 
@@ -213,6 +214,10 @@ namespace PICA {
 			outConfig.alphaTestFunction =
 				(alphaTestConfig & 1) ? static_cast<PICA::CompareFunction>(alphaTestFunction) : PICA::CompareFunction::Always;
 			outConfig.depthMapEnable = regs[InternalRegs::DepthmapEnable] & 1;
+
+			// Shows if blending is enabled. If it is not enabled, then logic ops are enabled instead
+			const bool blendingEnabled = (regs[InternalRegs::ColourOperation] & (1 << 8)) != 0;
+			outConfig.logicOpMode = blendingEnabled ? LogicOpMode::Copy : LogicOpMode(Helpers::getBits<0, 4>(regs[InternalRegs::LogicOp]));
 
 			texConfig.texUnitConfig = regs[InternalRegs::TexUnitCfg];
 			texConfig.texEnvUpdateBuffer = regs[InternalRegs::TexEnvUpdateBuffer];

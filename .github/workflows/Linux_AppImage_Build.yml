@@ -24,7 +24,7 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Install misc packages
-      run: sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev libfuse2
+      run: sudo apt-get update && sudo apt install libx11-dev libgl1 libglx-mesa0 mesa-common-dev libfuse2
 
     - name: Install newer Clang
       run: |
