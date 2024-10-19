@@ -20,7 +20,7 @@ struct EmulatorConfig {
 #else
 	static constexpr bool ubershaderDefault = true;
 #endif
-	static constexpr bool accelerateShadersDefault = false;
+	static constexpr bool accelerateShadersDefault = true;
 	
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
