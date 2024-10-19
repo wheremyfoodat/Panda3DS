@@ -632,7 +632,7 @@ namespace Audio {
 		AAC::Message response;
 
 		switch (request.command) {
-			case AAC::Command::EncodeDecode:
+			case AAC::Command::EncodeDecode: {
 				// Dummy response to stop games from hanging
 				response.resultCode = AAC::ResultCode::Success;
 				response.decodeResponse.channelCount = 2;
@@ -643,10 +643,13 @@ namespace Audio {
 				response.command = request.command;
 				response.mode = request.mode;
 
-				// We've already got an AAC decoder but it's currently disabled until mixing & output is properly implemented
-				// TODO: Uncomment this when the time comes
-				// aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
+				// TODO: Make this a toggle in config.toml. Currently we have it off by default until we finish the DSP mixer.
+				constexpr bool enableAAC = false;
+				if (enableAAC) {
+					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
+				}
 				break;
+			}
 
 			case AAC::Command::Init:
 			case AAC::Command::Shutdown:
