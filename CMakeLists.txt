@@ -26,7 +26,7 @@ if(APPLE)
 endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security -Wno-invalid-offsetof")
 endif() 
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
