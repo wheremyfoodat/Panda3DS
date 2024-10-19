@@ -249,6 +249,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 						// If we've reached 3 verts, issue a draw call
 						// Handle rendering depending on the primitive type
 						if (immediateModeVertIndex == 3) {
+							renderer->prepareForDraw(shaderUnit, nullptr);
 							renderer->drawVertices(PICA::PrimType::TriangleList, immediateModeVertices);
 
 							switch (primType) {
@@ -300,7 +301,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		}
 
 		case VertexBoolUniform: {
-			shaderUnit.vs.boolUniform = value & 0xffff;
+			shaderUnit.vs.uploadBoolUniform(value & 0xffff);
 			break;
 		}
 

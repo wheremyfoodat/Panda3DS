@@ -20,11 +20,13 @@ struct EmulatorConfig {
 #else
 	static constexpr bool ubershaderDefault = true;
 #endif
-
+	static constexpr bool accelerateShadersDefault = true;
+	
 	bool shaderJitEnabled = shaderJitDefault;
-	bool discordRpcEnabled = false;
 	bool useUbershaders = ubershaderDefault;
+	bool accelerateShaders = accelerateShadersDefault;
 	bool accurateShaderMul = false;
+	bool discordRpcEnabled = false;
 
 	// Toggles whether to force shadergen when there's more than N lights active and we're using the ubershader, for better performance
 	bool forceShadergenForLights = true;

@@ -67,6 +67,7 @@ void EmulatorConfig::load() {
 			vsyncEnabled = toml::find_or<toml::boolean>(gpu, "EnableVSync", true);
 			useUbershaders = toml::find_or<toml::boolean>(gpu, "UseUbershaders", ubershaderDefault);
 			accurateShaderMul = toml::find_or<toml::boolean>(gpu, "AccurateShaderMultiplication", false);
+			accelerateShaders = toml::find_or<toml::boolean>(gpu, "AccelerateShaders", accelerateShadersDefault);
 
 			forceShadergenForLights = toml::find_or<toml::boolean>(gpu, "ForceShadergenForLighting", true);
 			lightShadergenThreshold = toml::find_or<toml::integer>(gpu, "ShadergenLightThreshold", 1);
@@ -141,6 +142,7 @@ void EmulatorConfig::save() {
 	data["GPU"]["UseUbershaders"] = useUbershaders;
 	data["GPU"]["ForceShadergenForLighting"] = forceShadergenForLights;
 	data["GPU"]["ShadergenLightThreshold"] = lightShadergenThreshold;
+	data["GPU"]["AccelerateShaders"] = accelerateShaders;
 	data["GPU"]["EnableRenderdoc"] = enableRenderdoc;
 
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));

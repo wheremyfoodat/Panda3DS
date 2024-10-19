@@ -98,7 +98,7 @@ jobs:
           ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
 
   Linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4
@@ -151,7 +151,7 @@ jobs:
           ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
 
   Android-x64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4

@@ -117,37 +117,62 @@ void GPU::reset() {
 	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
 	externalRegs[Framebuffer1Select] = 0;
 
-	renderer->setUbershaderSetting(config.useUbershaders);
 	renderer->reset();
-}
-
-// Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
-// And whether we are going to use the shader JIT (second template parameter)
-void GPU::drawArrays(bool indexed) {
-	const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
-
-	if (indexed) {
-		if (shaderJITEnabled)
-			drawArrays<true, true>();
-		else
-			drawArrays<true, false>();
-	} else {
-		if (shaderJITEnabled)
-			drawArrays<false, true>();
-		else
-			drawArrays<false, false>();
-	}
 }
 
 static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
 
-template <bool indexed, bool useShaderJIT>
-void GPU::drawArrays() {
-	if constexpr (useShaderJIT) {
-		shaderJIT.prepare(shaderUnit.vs);
+// Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
+// And whether we are going to use the shader JIT (second template parameter)
+void GPU::drawArrays(bool indexed) {
+	PICA::DrawAcceleration accel;
+
+	if (config.accelerateShaders) {
+		// If we are potentially going to use hw shaders, gather necessary to do vertex fetch, index buffering, etc on the GPU
+		// This includes parsing which vertices to upload, getting pointers to the index buffer data & vertex data, and so on 
+		getAcceleratedDrawInfo(accel, indexed);
 	}
 
-	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
+	const bool hwShaders = renderer->prepareForDraw(shaderUnit, &accel);
+
+	if (hwShaders) {
+		// Hardware shaders have their own accelerated code path for draws, so they skip everything here
+		const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(regs[PICA::InternalRegs::PrimitiveConfig]));
+		// Total # of vertices to render
+		const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg];
+
+		// Note: In the hardware shader path the vertices span shouldn't actually be used as the renderer will perform its own attribute fetching
+		renderer->drawVertices(primType, std::span(vertices).first(vertexCount));
+	} else {
+		const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
+
+		if (indexed) {
+			if (shaderJITEnabled) {
+				drawArrays<true, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<true, ShaderExecMode::Interpreter>();
+			}
+		} else {
+			if (shaderJITEnabled) {
+				drawArrays<false, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<false, ShaderExecMode::Interpreter>();
+			}
+		}
+	}
+}
+
+template <bool indexed, ShaderExecMode mode>
+void GPU::drawArrays() {
+	if constexpr (mode == ShaderExecMode::JIT) {
+		shaderJIT.prepare(shaderUnit.vs);
+	} else if constexpr (mode == ShaderExecMode::Hardware) {
+		// Hardware shaders have their own accelerated code path for draws, so they're not meant to take this path
+		Helpers::panic("GPU::DrawArrays: Hardware shaders shouldn't take this path!");
+	}
+
+	// We can have up to 16 attributes, each one consisting of 4 floats
+	constexpr u32 maxAttrSizeInFloats = 16 * 4;
 
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
@@ -312,8 +337,6 @@ void GPU::drawArrays() {
 					}
 
 					// Fill the remaining attribute lanes with default parameters (1.0 for alpha/w, 0.0) for everything else
-					// Corgi does this although I'm not sure if it's actually needed for anything.
-					// TODO: Find out
 					while (component < 4) {
 						attribute[component] = (component == 3) ? f24::fromFloat32(1.0) : f24::fromFloat32(0.0);
 						component++;
@@ -327,13 +350,13 @@ void GPU::drawArrays() {
 
 		// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
 		// Based on the SH_ATTRIBUTES_PERMUTATION registers.
-		// Ie it might attribute #0 to v2, #1 to v7, etc
+		// Ie it might map attribute #0 to v2, #1 to v7, etc
 		for (int j = 0; j < totalAttribCount; j++) {
 			const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
 			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
 		}
 
-		if constexpr (useShaderJIT) {
+		if constexpr (mode == ShaderExecMode::JIT) {
 			shaderJIT.run(shaderUnit.vs);
 		} else {
 			shaderUnit.vs.run();

@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 
+#include "PICA/draw_acceleration.hpp"
 #include "PICA/dynapica/shader_rec.hpp"
 #include "PICA/float_types.hpp"
 #include "PICA/pica_vertex.hpp"
@@ -12,6 +13,12 @@
 #include "logger.hpp"
 #include "memory.hpp"
 #include "renderer.hpp"
+
+enum class ShaderExecMode {
+	Interpreter,  // Interpret shaders on the CPU
+	JIT,          // Recompile shaders to CPU machine code
+	Hardware,     // Recompiler shaders to host shaders and run them on the GPU
+};
 
 class GPU {
 	static constexpr u32 regNum = 0x300;
@@ -45,7 +52,7 @@ class GPU {
 	uint immediateModeVertIndex;
 	uint immediateModeAttrIndex;  // Index of the immediate mode attribute we're uploading
 
-	template <bool indexed, bool useShaderJIT>
+	template <bool indexed, ShaderExecMode mode>
 	void drawArrays();
 
 	// Silly method of avoiding linking problems. TODO: Change to something less silly
@@ -81,6 +88,7 @@ class GPU {
 	std::unique_ptr<Renderer> renderer;
 	PICA::Vertex getImmediateModeVertex();
 
+	void getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed);
   public:
 	// 256 entries per LUT with each LUT as its own row forming a 2D image 256 * LUT_COUNT
 	// Encoded in PICA native format
