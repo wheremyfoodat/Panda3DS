@@ -318,7 +318,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
-                 include/align.hpp include/audio/aac_decoder.hpp
+                 include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp
 )
 
 cmrc_add_resource_library(
