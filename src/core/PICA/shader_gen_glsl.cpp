@@ -811,6 +811,7 @@ void main() {
 })";
 		return ret;
 	}
+}
 
 void FragmentGenerator::compileLogicOps(std::string& shader, const PICA::FragmentConfig& config) {
 	if (api != API::GLES) [[unlikely]] {
