@@ -219,8 +219,25 @@ const Function* ShaderDecompiler::findFunction(const AddressRange& range) {
 }
 
 void ShaderDecompiler::writeAttributes() {
+	// Annoyingly, GLES does not support having an array as an input attribute, so declare each attribute separately for now
 	decompiledShader += R"(
-	layout(location = 0) in vec4 inputs[16];
+	layout(location = 0) in vec4 attr0;
+	layout(location = 1) in vec4 attr1;
+	layout(location = 2) in vec4 attr2;
+	layout(location = 3) in vec4 attr3;
+	layout(location = 4) in vec4 attr4;
+	layout(location = 5) in vec4 attr5;
+	layout(location = 6) in vec4 attr6;
+	layout(location = 7) in vec4 attr7;
+	layout(location = 8) in vec4 attr8;
+	layout(location = 9) in vec4 attr9;
+	layout(location = 10) in vec4 attr10;
+	layout(location = 11) in vec4 attr11;
+	layout(location = 12) in vec4 attr12;
+	layout(location = 13) in vec4 attr13;
+	layout(location = 14) in vec4 attr14;
+	layout(location = 15) in vec4 attr15;
+
 	layout(std140) uniform PICAShaderUniforms {
 		vec4 uniform_f[96];
 		uvec4 uniform_i;
@@ -249,7 +266,9 @@ std::string ShaderDecompiler::decompile() {
 	}
 
 	compilationError = false;
-	decompiledShader = "";
+	decompiledShader.clear();
+	// Reserve some memory for the shader string to avoid memory allocations
+	decompiledShader.reserve(256 * 1024);
 
 	switch (api) {
 		case API::GL: decompiledShader += "#version 410 core\n"; break;
@@ -338,7 +357,7 @@ std::string ShaderDecompiler::decompile() {
 
 std::string ShaderDecompiler::getSource(u32 source, [[maybe_unused]] u32 index) const {
 	if (source < 0x10) {
-		return "inputs[" + std::to_string(source) + "]";
+		return "attr" + std::to_string(source);
 	} else if (source < 0x20) {
 		return "temp[" + std::to_string(source - 0x10) + "]";
 	} else {
