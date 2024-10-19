@@ -5,6 +5,10 @@
 #include "PICA/pica_frag_config.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
+
+// We can include the driver headers here since they shouldn't have any actual API-specific code
+#include "renderer_gl/gl_driver.hpp"
+
 using namespace PICA;
 using namespace PICA::ShaderGen;
 
@@ -38,6 +42,8 @@ static constexpr const char* uniformDefinition = R"(
 
 std::string FragmentGenerator::getDefaultVertexShader() {
 	std::string ret = "";
+	// Reserve some space (128KB) in the output string to avoid too many allocations later
+	ret.reserve(128 * 1024);
 
 	switch (api) {
 		case API::GL: ret += "#version 410 core"; break;
@@ -98,13 +104,34 @@ std::string FragmentGenerator::getDefaultVertexShader() {
 	return ret;
 }
 
-std::string FragmentGenerator::generate(const FragmentConfig& config) {
+std::string FragmentGenerator::generate(const FragmentConfig& config, void* driverInfo) {
 	std::string ret = "";
 
 	switch (api) {
 		case API::GL: ret += "#version 410 core"; break;
 		case API::GLES: ret += "#version 300 es"; break;
 		default: break;
+	}
+
+	// For GLES we need to enable & use the framebuffer fetch extension in order to emulate logic ops
+	bool emitLogicOps = api == API::GLES && config.outConfig.logicOpMode != PICA::LogicOpMode::Copy && driverInfo != nullptr;
+
+	if (emitLogicOps) {
+		auto driver = static_cast<OpenGL::Driver*>(driverInfo);
+
+		// If the driver does not support framebuffer fetch at all, don't emit logic op code
+		if (!driver->supportFbFetch()) {
+			emitLogicOps = false;
+		}
+		
+		// Figure out which fb fetch extension we have and enable it
+		else {
+			if (driver->supportsExtFbFetch) {
+				ret += "\n#extension GL_EXT_shader_framebuffer_fetch : enable\n#define fb_color fragColor\n";
+			} else if (driver->supportsArmFbFetch) {
+				ret += "\n#extension GL_ARM_shader_framebuffer_fetch : enable\n#define fb_color gl_LastFragColorARM[0]\n";
+			}
+		}
 	}
 
 	bool unimplementedFlag = false;
@@ -196,10 +223,13 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 	}
 
 	compileFog(ret, config);
-
 	applyAlphaTest(ret, config);
 
-	ret += "fragColor = combinerOutput;\n}"; // End of main function
+	if (!emitLogicOps) {
+		ret += "fragColor = combinerOutput;\n}";  // End of main function
+	} else {
+		compileLogicOps(ret, config);
+	}
 
 	return ret;
 }
@@ -781,4 +811,28 @@ void main() {
 })";
 		return ret;
 	}
+
+void FragmentGenerator::compileLogicOps(std::string& shader, const PICA::FragmentConfig& config) {
+	if (api != API::GLES) [[unlikely]] {
+		Helpers::warn("Shadergen: Unsupported API for compileLogicOps");
+		shader += "fragColor = combinerOutput;\n}"; // End of main function
+
+		return;
+	}
+	
+	shader += "fragColor = ";
+	switch (config.outConfig.logicOpMode) {
+		case PICA::LogicOpMode::Copy: shader += "combinerOutput"; break;
+		case PICA::LogicOpMode::Nop: shader += "fb_color"; break;
+		case PICA::LogicOpMode::Clear: shader += "vec4(0.0)"; break;
+		case PICA::LogicOpMode::Set: shader += "vec4(1.0)"; break;
+		case PICA::LogicOpMode::InvertedCopy: shader += "vec4(uvec4(combinerOutput * 255.0) ^ uvec4(0xFFu)) * (1.0 / 255.0)"; break;
+
+		default:
+			shader += "combinerOutput";
+			Helpers::warn("Shadergen: Unimplemented logic op mode");
+			break;
+	}
+
+	shader += ";\n}"; // End of main function
 }

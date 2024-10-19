@@ -383,7 +383,7 @@ if(ENABLE_OPENGL)
     set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
         include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
         include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
-        include/renderer_gl/gl_state.hpp
+        include/renderer_gl/gl_state.hpp include/renderer_gl/gl_driver.hpp
     )
 
     set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp

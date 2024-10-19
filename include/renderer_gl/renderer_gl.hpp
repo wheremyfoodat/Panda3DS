@@ -17,6 +17,7 @@
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
 #include "gl/stream_buffer.h"
+#include "gl_driver.hpp"
 #include "gl_state.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
@@ -143,6 +144,7 @@ class RendererGL final : public Renderer {
 	OpenGL::Program& getSpecializedShader();
 
 	PICA::ShaderGen::FragmentGenerator fragShaderGen;
+	OpenGL::Driver driverInfo;
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();

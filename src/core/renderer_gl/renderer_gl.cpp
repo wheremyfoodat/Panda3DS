@@ -191,6 +191,10 @@ void RendererGL::initGraphicsContextInternal() {
 
 	reset();
 
+	// Populate our driver info structure
+	driverInfo.supportsExtFbFetch = GLAD_GL_EXT_shader_framebuffer_fetch != 0;
+	driverInfo.supportsArmFbFetch = GLAD_GL_ARM_shader_framebuffer_fetch != 0;
+
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
 	defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
@@ -834,6 +838,10 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	constexpr uint fsUBOBlockBinding = 2;
 
 	PICA::FragmentConfig fsConfig(regs);
+	// If we're not on GLES, ignore the logic op configuration and don't generate redundant shaders for it, since we use hw logic ops
+#ifndef USING_GLES
+	fsConfig.outConfig.logicOpMode = PICA::LogicOpMode(0);
+#endif
 
 	OpenGL::Shader& fragShader = shaderCache.fragmentShaderCache[fsConfig];
 	if (!fragShader.exists()) {
