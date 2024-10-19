@@ -632,7 +632,7 @@ namespace Audio {
 		AAC::Message response;
 
 		switch (request.command) {
-			case AAC::Command::EncodeDecode:
+			case AAC::Command::EncodeDecode: {
 				// Dummy response to stop games from hanging
 				response.resultCode = AAC::ResultCode::Success;
 				response.decodeResponse.channelCount = 2;
@@ -649,6 +649,7 @@ namespace Audio {
 					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
 				}
 				break;
+			}
 
 			case AAC::Command::Init:
 			case AAC::Command::Shutdown:
