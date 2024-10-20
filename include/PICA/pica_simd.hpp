@@ -54,8 +54,8 @@ namespace PICA::IndexBuffer {
 
 		if constexpr (useShortIndices) {
 			// 16-bit indices
-			uint16x8_t minima = vdupq_n_u16(0);
-			uint16x8_t maxima = vdupq_n_u16(0xffff);
+			uint16x8_t minima = vdupq_n_u16(0xffff);
+			uint16x8_t maxima = vdupq_n_u16(0);
 
 			while (vertexCount > vertsPerLoop) {
 				const uint16x8_t data = vld1q_u16(reinterpret_cast<u16*>(indexBuffer));
@@ -83,8 +83,8 @@ namespace PICA::IndexBuffer {
 			maximumIndex = vgetq_lane_u16(foldedMaxima3, 0);
 		} else {
 			// 8-bit indices
-			uint8x16_t minima = vdupq_n_u8(0);
-			uint8x16_t maxima = vdupq_n_u8(0xff);
+			uint8x16_t minima = vdupq_n_u8(0xff);
+			uint8x16_t maxima = vdupq_n_u8(0);
 
 			while (vertexCount > vertsPerLoop) {
 				uint8x16_t data = vld1q_u8(indexBuffer);
