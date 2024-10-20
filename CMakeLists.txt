@@ -54,6 +54,7 @@ option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
+option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -211,6 +212,13 @@ else()
     set(HOST_ARM64 FALSE)
 endif()
 
+# Enable SSE4.1 if it's not explicitly disabled
+# Annoyingly, we can't easily do this if we're using MSVC cause there's no SSE4.1 flag, only SSE4.1
+if(NOT MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DISABLE_SSE4 AND HOST_X64)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
+endif()
+
 if(ENABLE_RENDERDOC_API)
     find_package(RenderDoc 1.6.0 MODULE REQUIRED)
     add_compile_definitions(PANDA3DS_ENABLE_RENDERDOC)
@@ -318,7 +326,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
-                 include/align.hpp include/audio/aac_decoder.hpp
+                 include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp
 )
 
 cmrc_add_resource_library(
