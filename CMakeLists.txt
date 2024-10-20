@@ -214,7 +214,7 @@ endif()
 
 # Enable SSE4.1 if it's not explicitly disabled
 # Annoyingly, we can't easily do this if we're using MSVC cause there's no SSE4.1 flag, only SSE4.1
-if(NOT MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DISABLE_SSE4)
+if(NOT MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DISABLE_SSE4 AND HOST_X64)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
 endif()
