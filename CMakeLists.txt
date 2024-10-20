@@ -54,6 +54,7 @@ option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
+option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -210,6 +211,16 @@ if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
 else()
     set(HOST_ARM64 FALSE)
 endif()
+
+# Enable SSE4.1 if it's not explicitly disabled
+# Annoyingly, we can't easily do this if we're using MSVC cause there's no SSE4.1 flag, only SSE4.1
+if(NOT MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DISABLE_SSE4)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
+endif()
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:AVX")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX")
 
 if(ENABLE_RENDERDOC_API)
     find_package(RenderDoc 1.6.0 MODULE REQUIRED)

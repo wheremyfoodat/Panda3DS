@@ -1,7 +1,6 @@
 #include "PICA/draw_acceleration.hpp"
 
 #include <bit>
-#include <limits>
 #include <tuple>
 
 #include "PICA/gpu.hpp"

@@ -7,6 +7,7 @@
 
 #if defined(_M_AMD64) || defined(__x86_64__)
 #define PICA_SIMD_X64
+#include <immintrin.h>
 #elif defined(_M_ARM64) || defined(__aarch64__)
 #define PICA_SIMD_ARM64
 #include <arm_neon.h>
@@ -24,13 +25,13 @@ namespace PICA::IndexBuffer {
 		if constexpr (useShortIndices) {
 			u16* indexBuffer16 = reinterpret_cast<u16*>(indexBuffer);
 
-			for (int i = 0; i < vertexCount; i++) {
+			for (u32 i = 0; i < vertexCount; i++) {
 				u16 index = indexBuffer16[i];
 				minimumIndex = std::min(minimumIndex, index);
 				maximumIndex = std::max(maximumIndex, index);
 			}
 		} else {
-			for (int i = 0; i < vertexCount; i++) {
+			for (u32 i = 0; i < vertexCount; i++) {
 				u16 index = u16(indexBuffer[i]);
 				minimumIndex = std::min(minimumIndex, index);
 				maximumIndex = std::max(maximumIndex, index);
@@ -131,12 +132,120 @@ namespace PICA::IndexBuffer {
 	}
 #endif
 
-	// Analyzes a PICA index buffer to get the minimum and maximum indices in the buffer, and returns them in a pair in the form [min, max]
-	// Takes a template parameter to decide whether the indices in the buffer are in u8 or u16 format.
+#if defined(PICA_SIMD_X64) && (defined(__SSE4_1__) || defined(__AVX__))
+	template <bool useShortIndices>
+	std::pair<u16, u16> analyzeSSE4_1(u8* indexBuffer, u32 vertexCount) {
+		// We process 16 bytes per iteration, which is 8 vertices if we're using u16
+		// indices or 16 vertices if we're using u8 indices
+		constexpr u32 vertsPerLoop = (useShortIndices) ? 8 : 16;
+
+		if (vertexCount < vertsPerLoop) {
+			return analyzePortable<useShortIndices>(indexBuffer, vertexCount);
+		}
+
+		u16 minimumIndex, maximumIndex;
+
+		if constexpr (useShortIndices) {
+			// Calculate the horizontal minimum/maximum value across an SSE vector of 16-bit unsigned integers.
+			// Based on https://stackoverflow.com/a/22259607
+			auto horizontalMin16 = [](__m128i vector) -> u16 { return u16(_mm_cvtsi128_si32(_mm_minpos_epu16(vector))); };
+
+			auto horizontalMax16 = [](__m128i vector) -> u16 {
+				// We have an instruction to compute horizontal minimum but not maximum, so we use it.
+				// To use it, we have to subtract each value from 0xFFFF (which we do with an xor), then execute a horizontal minimum
+				__m128i flipped = _mm_xor_si128(vector, _mm_set_epi32(0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu));
+				u16 min = u16(_mm_cvtsi128_si32(_mm_minpos_epu16(flipped)));
+				return u16(min ^ 0xffff);
+			};
+
+			// 16-bit indices
+			// Initialize the minima vector to all FFs (So 0xFFFF for each 16-bit lane)
+			// And the maxima vector to all 0s (0 for each 16-bit lane)
+			__m128i minima = _mm_set_epi32(0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu);
+			__m128i maxima = _mm_set_epi32(0, 0, 0, 0);
+
+			while (vertexCount >= vertsPerLoop) {
+				const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(indexBuffer));
+				minima = _mm_min_epu16(data, minima);
+				maxima = _mm_max_epu16(data, maxima);
+
+				indexBuffer += 16;
+				vertexCount -= vertsPerLoop;
+			}
+
+			minimumIndex = u16(horizontalMin16(minima));
+			maximumIndex = u16(horizontalMax16(maxima));
+		} else {
+			// Calculate the horizontal minimum/maximum value across an SSE vector of 8-bit unsigned integers.
+			// Based on https://stackoverflow.com/a/22259607
+			auto horizontalMin8 = [](__m128i vector) -> u8 {
+				vector = _mm_min_epu8(vector, _mm_shuffle_epi32(vector, _MM_SHUFFLE(3, 2, 3, 2)));
+				vector = _mm_min_epu8(vector, _mm_shuffle_epi32(vector, _MM_SHUFFLE(1, 1, 1, 1)));
+				vector = _mm_min_epu8(vector, _mm_shufflelo_epi16(vector, _MM_SHUFFLE(1, 1, 1, 1)));
+				vector = _mm_min_epu8(vector, _mm_srli_epi16(vector, 8));
+				return u8(_mm_cvtsi128_si32(vector));
+			};
+
+			auto horizontalMax8 = [](__m128i vector) -> u8 {
+				vector = _mm_max_epu8(vector, _mm_shuffle_epi32(vector, _MM_SHUFFLE(3, 2, 3, 2)));
+				vector = _mm_max_epu8(vector, _mm_shuffle_epi32(vector, _MM_SHUFFLE(1, 1, 1, 1)));
+				vector = _mm_max_epu8(vector, _mm_shufflelo_epi16(vector, _MM_SHUFFLE(1, 1, 1, 1)));
+				vector = _mm_max_epu8(vector, _mm_srli_epi16(vector, 8));
+				return u8(_mm_cvtsi128_si32(vector));
+			};
+
+			// 8-bit indices
+			// Initialize the minima vector to all FFs (So 0xFF for each 8-bit lane)
+			// And the maxima vector to all 0s (0 for each 8-bit lane)
+			__m128i minima = _mm_set_epi32(0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu);
+			__m128i maxima = _mm_set_epi32(0, 0, 0, 0);
+
+			while (vertexCount >= vertsPerLoop) {
+				const __m128i data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(indexBuffer));
+				minima = _mm_min_epu8(data, minima);
+				maxima = _mm_max_epu8(data, maxima);
+
+				indexBuffer += 16;
+				vertexCount -= vertsPerLoop;
+			}
+
+			minimumIndex = u16(horizontalMin8(minima));
+			maximumIndex = u16(horizontalMax8(maxima));
+		}
+
+		// If any indices could not be processed cause the buffer size
+		// is not 16-byte aligned, process them the naive way
+		// Calculate the minimum and maximum indices used in the index
+		// buffer, so we'll only upload them
+		while (vertexCount > 0) {
+			if constexpr (useShortIndices) {
+				u16 index = *reinterpret_cast<u16*>(indexBuffer);
+				minimumIndex = std::min(minimumIndex, index);
+				maximumIndex = std::max(maximumIndex, index);
+				indexBuffer += 2;
+			} else {
+				u16 index = u16(*indexBuffer++);
+				minimumIndex = std::min(minimumIndex, index);
+				maximumIndex = std::max(maximumIndex, index);
+			}
+
+			vertexCount -= 1;
+		}
+
+		return {minimumIndex, maximumIndex};
+	}
+#endif
+
+	// Analyzes a PICA index buffer to get the minimum and maximum indices in the
+	// buffer, and returns them in a pair in the form [min, max]. Takes a template
+	// parameter to decide whether the indices in the buffer are u8 or u16
 	template <bool useShortIndices>
 	std::pair<u16, u16> analyze(u8* indexBuffer, u32 vertexCount) {
-#ifdef PICA_SIMD_ARM64
+#if defined(PICA_SIMD_ARM64)
 		return analyzeNEON<useShortIndices>(indexBuffer, vertexCount);
+#elif defined(PICA_SIMD_X64) && (defined(__SSE4_1__) || defined(__AVX__))
+		// Annoyingly, MSVC refuses to define __SSE4_1__ even when we're building with AVX
+		return analyzeSSE4_1<useShortIndices>(indexBuffer, vertexCount);
 #else
 		return analyzePortable<useShortIndices>(indexBuffer, vertexCount);
 #endif
