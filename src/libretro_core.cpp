@@ -170,7 +170,7 @@ static void configInit() {
 		{"panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
 																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
-		{"panda3ds_dsp_emulation", "DSP emulation; Null|HLE|LLE"},
+		{"panda3ds_dsp_emulation", "DSP emulation; HLE|LLE|Null"},
 		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
 		{"panda3ds_use_virtual_sd", "Enable virtual SD card; enabled|disabled"},
 		{"panda3ds_write_protect_virtual_sd", "Write protect virtual SD card; disabled|enabled"},

@@ -33,7 +33,7 @@ struct EmulatorConfig {
 	int lightShadergenThreshold = 1;
 
 	RendererType rendererType = RendererType::OpenGL;
-	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::Null;
+	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::HLE;
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;

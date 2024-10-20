@@ -80,7 +80,7 @@ void EmulatorConfig::load() {
 		if (audioResult.is_ok()) {
 			auto audio = audioResult.unwrap();
 
-			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "Null");
+			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "HLE");
 			dspType = Audio::DSPCore::typeFromString(dspCoreName);
 			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", false);
 		}
