@@ -57,7 +57,7 @@ namespace PICA::IndexBuffer {
 			uint16x8_t minima = vdupq_n_u16(0xffff);
 			uint16x8_t maxima = vdupq_n_u16(0);
 
-			while (vertexCount > vertsPerLoop) {
+			while (vertexCount >= vertsPerLoop) {
 				const uint16x8_t data = vld1q_u16(reinterpret_cast<u16*>(indexBuffer));
 				minima = vminq_u16(data, minima);
 				maxima = vmaxq_u16(data, maxima);
@@ -86,7 +86,7 @@ namespace PICA::IndexBuffer {
 			uint8x16_t minima = vdupq_n_u8(0xff);
 			uint8x16_t maxima = vdupq_n_u8(0);
 
-			while (vertexCount > vertsPerLoop) {
+			while (vertexCount >= vertsPerLoop) {
 				uint8x16_t data = vld1q_u8(indexBuffer);
 				minima = vminq_u8(data, minima);
 				maxima = vmaxq_u8(data, maxima);
