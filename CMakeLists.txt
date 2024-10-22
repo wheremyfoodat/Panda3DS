@@ -267,7 +267,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
                          src/core/services/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
-                         src/core/services/csnd.cpp src/core/services/nwm_uds.cpp
+                         src/core/services/csnd.cpp src/core/services/nwm_uds.cpp src/core/services/fonts.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
@@ -326,14 +326,14 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
-                 include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp
+                 include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
 )
 
 cmrc_add_resource_library(
     resources_console_fonts
     NAMESPACE ConsoleFonts
     WHENCE "src/core/services/fonts/"
-    "src/core/services/fonts/CitraSharedFontUSRelocated.bin"
+    "src/core/services/fonts/SharedFontReplacement.bin"
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
