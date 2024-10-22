@@ -184,6 +184,10 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		text.extract(&exheader[0x10]);
 		rodata.extract(&exheader[0x20]);
 		data.extract(&exheader[0x30]);
+
+		// Access Control Info section of the exheader
+		const u8* aci = &exheader[0x200];
+		flag0 = aci[0xE];
 	}
 
 	printf("Stack size: %08X\nBSS size: %08X\n", stackSize, bssSize);
