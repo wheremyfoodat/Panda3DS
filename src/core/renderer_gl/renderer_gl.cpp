@@ -8,6 +8,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/pica_frag_uniforms.hpp"
+#include "PICA/pica_simd.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_decompiler.hpp"
 #include "config.hpp"
@@ -192,8 +193,8 @@ void RendererGL::initGraphicsContextInternal() {
 	reset();
 
 	// Populate our driver info structure
-	driverInfo.supportsExtFbFetch = GLAD_GL_EXT_shader_framebuffer_fetch != 0;
-	driverInfo.supportsArmFbFetch = GLAD_GL_ARM_shader_framebuffer_fetch != 0;
+	driverInfo.supportsExtFbFetch = (GLAD_GL_EXT_shader_framebuffer_fetch != 0);
+	driverInfo.supportsArmFbFetch = (GLAD_GL_ARM_shader_framebuffer_fetch != 0);
 
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
@@ -519,10 +520,20 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 		if (performIndexedRender) {
 			// When doing indexed rendering, use glDrawRangeElementsBaseVertex to issue the indexed draw
 			hwIndexBuffer->Bind();
-			glDrawRangeElementsBaseVertex(
-				primitiveTopology, minimumIndex, maximumIndex, GLsizei(vertices.size()), usingShortIndices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
-				hwIndexBufferOffset, -GLint(minimumIndex)
-			);
+
+			if (glDrawRangeElementsBaseVertex != nullptr) [[likely]] {
+				glDrawRangeElementsBaseVertex(
+					primitiveTopology, minimumIndex, maximumIndex, GLsizei(vertices.size()), usingShortIndices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE,
+					hwIndexBufferOffset, -GLint(minimumIndex)
+				);
+			} else {
+				// If glDrawRangeElementsBaseVertex is not available then prepareForDraw will have subtracted the base vertex from the index buffer
+				// for us, so just use glDrawRangeElements
+				glDrawRangeElements(
+					primitiveTopology, 0, GLint(maximumIndex - minimumIndex), GLsizei(vertices.size()),
+					usingShortIndices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE, hwIndexBufferOffset
+				);
+			}
 		} else {
 			// When doing non-indexed rendering, just use glDrawArrays
 			OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
@@ -1170,6 +1181,13 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 		hwIndexBufferOffset = reinterpret_cast<void*>(usize(indexBufferRes.buffer_offset));
 
 		std::memcpy(indexBufferRes.pointer, accel->indexBuffer, indexBufferSize);
+		// If we don't have glDrawRangeElementsBaseVertex, we must subtract the base index value from our index buffer manually
+		if (glDrawRangeElementsBaseVertex == nullptr) [[unlikely]] {
+			const u32 indexCount = regs[PICA::InternalRegs::VertexCountReg];
+			usingShortIndices ? PICA::IndexBuffer::subtractBaseIndex<true>((u8*)indexBufferRes.pointer, indexCount, accel->minimumIndex)
+							  : PICA::IndexBuffer::subtractBaseIndex<false>((u8*)indexBufferRes.pointer, indexCount, accel->minimumIndex);
+		}
+
 		hwIndexBuffer->Unmap(indexBufferSize);
 	}
 
