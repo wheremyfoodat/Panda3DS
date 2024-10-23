@@ -6,6 +6,8 @@ namespace OpenGL {
 	struct Driver {
 		bool supportsExtFbFetch = false;
 		bool supportsArmFbFetch = false;
+		// Does this driver support glDraw(Range)ElementsBaseVertex?
+		bool supportsDrawElementsBaseVertex = false;
 
 		bool supportFbFetch() const { return supportsExtFbFetch || supportsArmFbFetch; }
 	};
