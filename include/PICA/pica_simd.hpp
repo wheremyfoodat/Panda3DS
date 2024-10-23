@@ -255,18 +255,18 @@ namespace PICA::IndexBuffer {
 	// So we need to subtract the base vertex index from every index in the index buffer ourselves
 	// This is not really common, so we do it without SIMD for the moment, just to be able to run on Android Studio
 	template <bool useShortIndices>
-	void subtractBaseIndex(u8* indexBuffer, u32 vertexCount, u16 baseIndex) {
+	void subtractBaseIndex(u8* indexBuffer, u32 indexCount, u16 baseIndex) {
 		// Calculate the minimum and maximum indices used in the index buffer, so we'll only upload them
 		if constexpr (useShortIndices) {
 			u16* indexBuffer16 = reinterpret_cast<u16*>(indexBuffer);
 
-			for (u32 i = 0; i < vertexCount; i++) {
+			for (u32 i = 0; i < indexCount; i++) {
 				indexBuffer16[i] -= baseIndex;
 			}
 		} else {
 			u8 baseIndex8 = u8(baseIndex);
 
-			for (u32 i = 0; i < vertexCount; i++) {
+			for (u32 i = 0; i < indexCount; i++) {
 				indexBuffer[i] -= baseIndex8;
 			}
 		}

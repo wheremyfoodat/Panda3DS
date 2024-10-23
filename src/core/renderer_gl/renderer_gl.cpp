@@ -195,7 +195,6 @@ void RendererGL::initGraphicsContextInternal() {
 	// Populate our driver info structure
 	driverInfo.supportsExtFbFetch = (GLAD_GL_EXT_shader_framebuffer_fetch != 0);
 	driverInfo.supportsArmFbFetch = (GLAD_GL_ARM_shader_framebuffer_fetch != 0);
-	driverInfo.supportsDrawElementsBaseVertex = (glDrawRangeElementsBaseVertex != nullptr);
 
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
@@ -531,7 +530,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 				// If glDrawRangeElementsBaseVertex is not available then prepareForDraw will have subtracted the base vertex from the index buffer
 				// for us, so just use glDrawRangeElements
 				glDrawRangeElements(
-					primitiveTopology, 0, maximumIndex - minimumIndex, GLsizei(vertices.size()),
+					primitiveTopology, 0, GLint(maximumIndex - minimumIndex), GLsizei(vertices.size()),
 					usingShortIndices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE, hwIndexBufferOffset
 				);
 			}
@@ -1183,9 +1182,10 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 
 		std::memcpy(indexBufferRes.pointer, accel->indexBuffer, indexBufferSize);
 		// If we don't have glDrawRangeElementsBaseVertex, we must subtract the base index value from our index buffer manually
-		if (!driverInfo.supportsDrawElementsBaseVertex) [[unlikely]] {
-			usingShortIndices ? PICA::IndexBuffer::subtractBaseIndex<true>((u8*)indexBufferRes.pointer, vertexCount, accel->minimumIndex)
-							  : PICA::IndexBuffer::subtractBaseIndex<false>((u8*)indexBufferRes.pointer, vertexCount, accel->minimumIndex);
+		if (glDrawRangeElementsBaseVertex == nullptr) [[unlikely]] {
+			const u32 indexCount = regs[PICA::InternalRegs::VertexCountReg];
+			usingShortIndices ? PICA::IndexBuffer::subtractBaseIndex<true>((u8*)indexBufferRes.pointer, indexCount, accel->minimumIndex)
+							  : PICA::IndexBuffer::subtractBaseIndex<false>((u8*)indexBufferRes.pointer, indexCount, accel->minimumIndex);
 		}
 
 		hwIndexBuffer->Unmap(indexBufferSize);
