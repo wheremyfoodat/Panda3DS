@@ -6,6 +6,8 @@
 
 #include "services/fonts.hpp"
 
+#include <cstring>
+
 namespace HLE::Fonts {
 	void relocateSharedFont(u8* sharedFont, u32 newAddress) {
 		constexpr u32 sharedFontStartOffset = 0x80;
