@@ -15,6 +15,7 @@ import android.renderscript.Matrix3f;
 import android.renderscript.Matrix4f;
 import android.util.Log;
 import android.util.Rational;
+import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
@@ -209,6 +210,9 @@ public class GameActivity extends BaseActivity implements EmulatorCallback, Sens
 	}
 
 	private float getDeviceRotationAngle() {
+		if (getWindow().getDecorView() == null || getWindow().getDecorView().getDisplay() == null)
+			return 0.0f;
+
 		int rotation = getWindow().getDecorView().getDisplay().getRotation();
 		switch (rotation) {
 			case Surface.ROTATION_90: return 90.0f;

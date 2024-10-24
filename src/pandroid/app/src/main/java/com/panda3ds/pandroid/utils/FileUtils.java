@@ -230,6 +230,10 @@ public class FileUtils {
         return parseFile(path).lastModified();
     }
 
+    public static long getLength(String path) {
+        return parseFile(path).length();
+    }
+
     public static String[] listFiles(String path) {
         DocumentFile folder = parseFile(path);
         DocumentFile[] files = folder.listFiles();
