@@ -98,7 +98,6 @@
     <string name="invalid_game">Invalid game</string>
     <string name="pref_accurate_shader_title">Accurate shader multiplication</string>
     <string name="pref_accurate_shader_summary">Can improve rendering at a small performance loss</string>
-    <string name="pref_accurate_shader_summary">Use better precision on shaders</string>
     <string name="pref_game_crypto_keys">Import keys</string>
     <string name="file_imported">%s imported</string>
     <string name="file_available">%s available</string>
