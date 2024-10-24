@@ -33,6 +33,7 @@ public class AlberDriver {
 	public static native byte[] GetSmdh();
 
 	public static native void setShaderJitEnabled(boolean enable);
+	public static native void setAccurateShaderMulEnable(boolean enable);
 
 	public static int openDocument(String path, String mode) {
 		try {

@@ -90,4 +90,6 @@
     <string name="behavior">Comportamento</string>
     <string name="invalid_game">Jogo invalido</string>
     <string name="tools">Ferramentas</string>
+    <string name="pref_accurate_shader_title">Multiplicação precisa de shader</string>
+    <string name="pref_accurate_shader_summary">Usar calculos mais precisos para shaders</string>
 </resources>

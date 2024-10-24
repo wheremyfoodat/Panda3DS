@@ -44,6 +44,7 @@ extern "C" {
 AlberFunction(void, functionName) (JNIEnv* env, jobject obj, type value) { emulator->getConfig().settingName = value; }
 
 MAKE_SETTING(setShaderJitEnabled, jboolean, shaderJitEnabled)
+MAKE_SETTING(setAccurateShaderMulEnable, jboolean, accurateShaderMul)
 
 #undef MAKE_SETTING
 
