@@ -112,14 +112,15 @@ AlberFunction(void, KeyUp)(JNIEnv* env, jobject obj, jint keyCode) { hidService-
 AlberFunction(void, KeyDown)(JNIEnv* env, jobject obj, jint keyCode) { hidService->pressKey((u32)keyCode); }
 
 AlberFunction(void, SetGyro)(JNIEnv* env, jobject obj, jfloat roll, jfloat pitch, jfloat yaw) {
-    auto rotation = Sensors::SDL::convertRotation({ (float) roll, (float) pitch, (float) yaw });
+    auto rotation = Sensors::SDL::convertRotation({ float(roll), float(pitch), float(yaw) });
     hidService->setPitch(s16(rotation.x));
     hidService->setRoll(s16(rotation.y));
     hidService->setYaw(s16(rotation.z));
 }
 
 AlberFunction(void, SetAccel)(JNIEnv* env, jobject obj, jfloat rawX, jfloat rawY, jfloat rawZ) {
-    auto accel = Sensors::SDL::convertAcceleration(new float[3]{ (float) rawX, (float) rawY, (float) rawZ });
+    float data[3] = { float(rawX), float(rawY), float(rawZ) };
+    auto accel = Sensors::SDL::convertAcceleration(data);
     hidService->setAccel(accel.x, accel.y, accel.z);
 }
 
