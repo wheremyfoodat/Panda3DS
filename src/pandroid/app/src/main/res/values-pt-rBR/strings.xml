@@ -92,4 +92,10 @@
     <string name="tools">Ferramentas</string>
     <string name="pref_accurate_shader_title">Multiplicação precisa de shader</string>
     <string name="pref_accurate_shader_summary">Usar calculos mais precisos para shaders</string>
+    <string name="pref_game_crypto_keys">Importar chaves</string>
+    <string name="file_available">%s disponível</string>
+    <string name="file_not_available">%s não disponível</string>
+    <string name="pref_game_seed_db_keys">Importar SeedDB</string>
+    <string name="invalid_file">Arquivo inválido</string>
+    <string name="file_imported">%s Importado</string>
 </resources>
