@@ -24,7 +24,9 @@ public class AlberDriver {
 	public static native void KeyUp(int code);
 	public static native void SetCirclepadAxis(int x, int y);
 	public static native void TouchScreenUp();
-	public static native void TouchScreenDown(int x, int y);
+	public static native void TouchScreenDown(int x, int y);;
+	public static native void SetGyro(float roll, float pitch, float yaw);
+	public static native void SetAccel(float x, float y, float z);
 	public static native void Pause();
 	public static native void Resume();
 	public static native void LoadLuaScript(String script);
