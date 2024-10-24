@@ -89,6 +89,7 @@ AlberFunction(void, Finalize)(JNIEnv* env, jobject obj) {
 	emulator = nullptr;
 	hidService = nullptr;
 	renderer = nullptr;
+	romLoaded = false;
 }
 
 AlberFunction(jboolean, HasRomLoaded)(JNIEnv* env, jobject obj) { return romLoaded; }

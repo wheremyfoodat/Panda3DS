@@ -18,8 +18,6 @@ import com.panda3ds.pandroid.app.preferences.screen_editor.ScreenLayoutsPreferen
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.utils.FileUtils;
 
-import java.io.File;
-
 public class GeneralPreferences extends BasePreferenceFragment implements ActivityResultCallback<Uri> {
     private final ActivityResultContracts.OpenDocument openFolderContract = new ActivityResultContracts.OpenDocument();
     private ActivityResultLauncher<String[]> pickFileRequest;
