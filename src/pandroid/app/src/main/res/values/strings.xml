@@ -98,4 +98,10 @@
     <string name="invalid_game">Invalid game</string>
     <string name="pref_accurate_shader_title">Accurate shader multiplication</string>
     <string name="pref_accurate_shader_summary">Can improve rendering at a small performance loss</string>
+    <string name="pref_game_crypto_keys">Import keys</string>
+    <string name="file_imported">%s imported</string>
+    <string name="file_available">%s available</string>
+    <string name="file_not_available">%s not available</string>
+    <string name="pref_game_seed_db_keys">Import SeedDB</string>
+    <string name="invalid_file">Invalid file</string>
 </resources>
