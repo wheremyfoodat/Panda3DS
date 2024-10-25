@@ -45,7 +45,7 @@ public class GeneralPreferences extends BasePreferenceFragment implements Activi
 
     private void refresh() {
         setSwitchValue("behavior.pictureInPicture", GlobalConfig.get(GlobalConfig.KEY_PICTURE_IN_PICTURE));
-        setSummaryValue("games.aes_key", String.format(getString(FileUtils.exists(FileUtils.getPrivatePath()+"/sysdata/aes_keys.txt") ? R.string.file_available : R.string.file_not_available), "aes_key.txt"));
+        setSummaryValue("games.aes_key", String.format(getString(FileUtils.exists(FileUtils.getPrivatePath()+"/sysdata/aes_keys.txt") ? R.string.file_available : R.string.file_not_available), "aes_keys.txt"));
         setSummaryValue("games.seed_db", String.format(getString(FileUtils.exists(FileUtils.getPrivatePath()+"/sysdata/seeddb.bin") ? R.string.file_available : R.string.file_not_available), "seeddb.bin"));
     }
 
