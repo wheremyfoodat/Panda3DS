@@ -21,7 +21,7 @@ struct EmulatorConfig {
 	static constexpr bool ubershaderDefault = true;
 #endif
 	static constexpr bool accelerateShadersDefault = true;
-	
+
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
@@ -41,10 +41,9 @@ struct EmulatorConfig {
 
 	bool audioEnabled = false;
 	bool vsyncEnabled = true;
-	
+
 	bool enableRenderdoc = false;
 	bool printAppVersion = true;
-	bool appVersionOnWindow = false;
 
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer
@@ -53,6 +52,24 @@ struct EmulatorConfig {
 	// Default ROM path to open in Qt and misc frontends
 	std::filesystem::path defaultRomPath = "";
 	std::filesystem::path filePath;
+
+	// Frontend window settings
+	struct WindowSettings {
+		static constexpr int defaultX = 200;
+		static constexpr int defaultY = 200;
+		static constexpr int defaultWidth = 800;
+		static constexpr int defaultHeight = 240 * 2;
+
+		bool rememberPosition = false;  // Remember window position & size
+		bool showAppVersion = false;
+
+		int x = defaultX;
+		int y = defaultY;
+		int width = defaultHeight;
+		int height = defaultHeight;
+	};
+
+	WindowSettings windowSettings;
 
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
