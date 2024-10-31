@@ -482,6 +482,7 @@ if(ENABLE_METAL AND APPLE)
         include/renderer_mtl/mtl_render_target.hpp
         include/renderer_mtl/mtl_texture.hpp
         include/renderer_mtl/mtl_vertex_buffer_cache.hpp
+        include/renderer_mtl/mtl_lut_texture.hpp
         include/renderer_mtl/pica_to_mtl.hpp
         include/renderer_mtl/objc_helper.hpp
     )
@@ -490,6 +491,7 @@ if(ENABLE_METAL AND APPLE)
         src/core/renderer_mtl/renderer_mtl.cpp
         src/core/renderer_mtl/mtl_texture.cpp
         src/core/renderer_mtl/mtl_etc1.cpp
+        src/core/renderer_mtl/mtl_lut_texture.cpp
         src/core/renderer_mtl/objc_helper.mm
         src/host_shaders/metal_shaders.metal
         src/host_shaders/metal_copy_to_lut_texture.metal
@@ -587,7 +589,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         if(NOT ENABLE_OPENGL)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
-        
+
         option(GENERATE_QT_TRANSLATION "Generate Qt translation file" OFF)
         set(QT_LANGUAGES docs/translations)
 

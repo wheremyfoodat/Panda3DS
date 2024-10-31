@@ -1,17 +1,21 @@
-#include "PICA/gpu.hpp"
 #include "renderer_mtl/renderer_mtl.hpp"
-#include "renderer_mtl/objc_helper.hpp"
 
 #include <cmrc/cmrc.hpp>
 #include <cstddef>
+#include "renderer_mtl/mtl_lut_texture.hpp"
 
+// HACK
+#undef NO
+
+#include "PICA/gpu.hpp"
 #include "SDL_metal.h"
 
 using namespace PICA;
 
 CMRC_DECLARE(RendererMTL);
 
-const u16 LIGHT_LUT_TEXTURE_WIDTH = 256;
+const u16 LIGHTING_LUT_TEXTURE_WIDTH = 256;
+const u32 FOG_LUT_TEXTURE_WIDTH = 128;
 
 // HACK: redefinition...
 PICA::ColorFmt ToColorFormat(u32 format) {
@@ -23,10 +27,10 @@ PICA::ColorFmt ToColorFormat(u32 format) {
 }
 
 MTL::Library* loadLibrary(MTL::Device* device, const cmrc::file& shaderSource) {
-	//MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
+	// MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
 	NS::Error* error = nullptr;
 	MTL::Library* library = device->newLibrary(Metal::createDispatchData(shaderSource.begin(), shaderSource.size()), &error);
-	//MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
+	// MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
 	if (error) {
 		Helpers::panic("Error loading shaders: %s", error->description()->cString(NS::ASCIIStringEncoding));
 	}
@@ -39,19 +43,19 @@ RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, 
 RendererMTL::~RendererMTL() {}
 
 void RendererMTL::reset() {
-    vertexBufferCache.reset();
-    depthStencilCache.reset();
-    drawPipelineCache.reset();
-    blitPipelineCache.reset();
-    textureCache.reset();
-    depthStencilRenderTargetCache.reset();
+	vertexBufferCache.reset();
+	depthStencilCache.reset();
+	drawPipelineCache.reset();
+	blitPipelineCache.reset();
+	textureCache.reset();
+	depthStencilRenderTargetCache.reset();
 	colorRenderTargetCache.reset();
 }
 
 void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 	if (!drawable) {
-        return;
+		return;
 	}
 
 	using namespace PICA::ExternalRegs;
@@ -62,7 +66,7 @@ void RendererMTL::display() {
 	auto topScreen = colorRenderTargetCache.findFromAddress(topScreenAddr);
 
 	if (topScreen) {
-	    clearColor(nullptr, topScreen->get().texture);
+		clearColor(nullptr, topScreen->get().texture);
 	}
 
 	// Bottom screen
@@ -71,7 +75,7 @@ void RendererMTL::display() {
 	auto bottomScreen = colorRenderTargetCache.findFromAddress(bottomScreenAddr);
 
 	if (bottomScreen) {
-        clearColor(nullptr, bottomScreen->get().texture);
+		clearColor(nullptr, bottomScreen->get().texture);
 	}
 
 	// -------- Draw --------
@@ -131,14 +135,14 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();
 	textureDescriptor->setTextureType(MTL::TextureType2D);
-	textureDescriptor->setPixelFormat(MTL::PixelFormatRGBA32Float);
-	textureDescriptor->setWidth(LIGHT_LUT_TEXTURE_WIDTH);
-	textureDescriptor->setHeight(Lights::LUT_Count + 1);
-	textureDescriptor->setUsage(MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite);
+	textureDescriptor->setPixelFormat(MTL::PixelFormatRGBA8Unorm);
+	textureDescriptor->setWidth(1);
+	textureDescriptor->setHeight(1);
 	textureDescriptor->setStorageMode(MTL::StorageModePrivate);
+	textureDescriptor->setUsage(MTL::TextureUsageShaderRead);
 
-	lutTexture = device->newTexture(textureDescriptor);
-	lutTexture->setLabel(toNSString("LUT texture"));
+	nullTexture = device->newTexture(textureDescriptor);
+	nullTexture->setLabel(toNSString("Null texture"));
 	textureDescriptor->release();
 
 	// Samplers
@@ -152,6 +156,9 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	linearSampler = device->newSamplerState(samplerDescriptor);
 
 	samplerDescriptor->release();
+
+	lutLightingTexture = new Metal::LutTexture(device, MTL::TextureType2DArray, MTL::PixelFormatR16Unorm, LIGHTING_LUT_TEXTURE_WIDTH, Lights::LUT_Count, "Lighting LUT texture");
+	lutFogTexture = new Metal::LutTexture(device, MTL::TextureType1DArray, MTL::PixelFormatRG32Float, FOG_LUT_TEXTURE_WIDTH, 1, "Fog LUT texture");
 
 	// -------- Pipelines --------
 
@@ -249,14 +256,15 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	// Copy to LUT texture
 	MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
-    constants->setConstantValue(&LIGHT_LUT_TEXTURE_WIDTH, MTL::DataTypeUShort, NS::UInteger(0));
+	constants->setConstantValue(&LIGHTING_LUT_TEXTURE_WIDTH, MTL::DataTypeUShort, NS::UInteger(0));
 
-    error = nullptr;
-    MTL::Function* vertexCopyToLutTextureFunction = copyToLutTextureLibrary->newFunction(NS::String::string("vertexCopyToLutTexture", NS::ASCIIStringEncoding), constants, &error);
-    if (error) {
-        Helpers::panic("Error creating copy_to_lut_texture vertex function: %s", error->description()->cString(NS::ASCIIStringEncoding));
-    }
-    constants->release();
+	error = nullptr;
+	MTL::Function* vertexCopyToLutTextureFunction =
+		copyToLutTextureLibrary->newFunction(NS::String::string("vertexCopyToLutTexture", NS::ASCIIStringEncoding), constants, &error);
+	if (error) {
+		Helpers::panic("Error creating copy_to_lut_texture vertex function: %s", error->description()->cString(NS::ASCIIStringEncoding));
+	}
+	constants->release();
 
 	MTL::RenderPipelineDescriptor* copyToLutTexturePipelineDescriptor = MTL::RenderPipelineDescriptor::alloc()->init();
 	copyToLutTexturePipelineDescriptor->setVertexFunction(vertexCopyToLutTextureFunction);
@@ -314,8 +322,8 @@ void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 c
 		depthClearOps[depth->get().texture] = depthVal;
 
 		if (format == DepthFmt::Depth24Stencil8) {
-            const u8 stencilVal = value >> 24;
-            stencilClearOps[depth->get().texture] = stencilVal;
+			const u8 stencilVal = value >> 24;
+			stencilClearOps[depth->get().texture] = stencilVal;
 		}
 
 		return;
@@ -365,7 +373,7 @@ void RendererMTL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, 
 }
 
 void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
-    // Texture copy size is aligned to 16 byte units
+	// Texture copy size is aligned to 16 byte units
 	const u32 copySize = totalBytes & ~0xf;
 	if (copySize == 0) {
 		Helpers::warn("TextureCopy total bytes less than 16!\n");
@@ -463,33 +471,33 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	// Depth uniforms
 	struct {
-        float depthScale;
-       	float depthOffset;
-       	bool depthMapEnable;
+		float depthScale;
+		float depthOffset;
+		bool depthMapEnable;
 	} depthUniforms;
 	depthUniforms.depthScale = Floats::f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
-   	depthUniforms.depthOffset = Floats::f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
-   	depthUniforms.depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
+	depthUniforms.depthOffset = Floats::f24::fromRaw(regs[PICA::InternalRegs::DepthOffset] & 0xffffff).toFloat32();
+	depthUniforms.depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
 	// -------- Pipeline --------
 	Metal::DrawPipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
 	if (depthStencilRenderTarget) {
-        pipelineHash.depthFmt = depthStencilRenderTarget->format;
-    }
-    pipelineHash.fragHash.lightingEnabled = regs[0x008F] & 1;
-    pipelineHash.fragHash.lightingNumLights = regs[0x01C2] & 0x7;
-    pipelineHash.fragHash.lightingConfig1 = regs[0x01C4u];
-    pipelineHash.fragHash.alphaControl = regs[0x104];
+		pipelineHash.depthFmt = depthStencilRenderTarget->format;
+	}
+	pipelineHash.fragHash.lightingEnabled = regs[0x008F] & 1;
+	pipelineHash.fragHash.lightingNumLights = regs[0x01C2] & 0x7;
+	pipelineHash.fragHash.lightingConfig1 = regs[0x01C4u];
+	pipelineHash.fragHash.alphaControl = regs[0x104];
 
 	// Blending and logic op
 	pipelineHash.blendEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
 	pipelineHash.colorWriteMask = colorMask;
 
-	u8 logicOp = 3; // Copy, which doesn't do anything
+	u8 logicOp = 3;  // Copy
 	if (pipelineHash.blendEnabled) {
-    	pipelineHash.blendControl = regs[PICA::InternalRegs::BlendFunc];
+		pipelineHash.blendControl = regs[PICA::InternalRegs::BlendFunc];
 	} else {
-	    logicOp = Helpers::getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
+		logicOp = Helpers::getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
 	}
 
 	MTL::RenderPipelineState* pipeline = drawPipelineCache.get(pipelineHash);
@@ -500,25 +508,25 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	// -------- Render --------
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	bool doesClear = clearColor(renderPassDescriptor, colorRenderTarget->texture);
-    if (depthStencilRenderTarget) {
-        if (clearDepth(renderPassDescriptor, depthStencilRenderTarget->texture))
-            doesClear = true;
-        if (depthStencilRenderTarget->format == DepthFmt::Depth24Stencil8) {
-            if (clearStencil(renderPassDescriptor, depthStencilRenderTarget->texture))
-                doesClear = true;
-        }
-    }
+	if (depthStencilRenderTarget) {
+		if (clearDepth(renderPassDescriptor, depthStencilRenderTarget->texture)) doesClear = true;
+		if (depthStencilRenderTarget->format == DepthFmt::Depth24Stencil8) {
+			if (clearStencil(renderPassDescriptor, depthStencilRenderTarget->texture)) doesClear = true;
+		}
+	}
 
-    nextRenderPassName = "Draw vertices";
-	beginRenderPassIfNeeded(renderPassDescriptor, doesClear, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr));
+	nextRenderPassName = "Draw vertices";
+	beginRenderPassIfNeeded(
+		renderPassDescriptor, doesClear, colorRenderTarget->texture, (depthStencilRenderTarget ? depthStencilRenderTarget->texture : nullptr)
+	);
 
 	// Update the LUT texture if necessary
 	if (gpu.lightingLUTDirty) {
 		updateLightingLUT(renderCommandEncoder);
 	}
 	if (gpu.fogLUTDirty) {
-        updateFogLUT(renderCommandEncoder);
-    }
+		updateFogLUT(renderCommandEncoder);
+	}
 
 	renderCommandEncoder->setRenderPipelineState(pipeline);
 	renderCommandEncoder->setDepthStencilState(depthStencilState);
@@ -526,7 +534,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	if (vertices.size_bytes() < 4 * 1024) {
 		renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
 	} else {
-	    Metal::BufferHandle buffer = vertexBufferCache.get(vertices.data(), vertices.size_bytes());
+		Metal::BufferHandle buffer = vertexBufferCache.get(vertices.data(), vertices.size_bytes());
 		renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, VERTEX_BUFFER_BINDING_INDEX);
 	}
 
@@ -541,20 +549,20 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	// Blend color
 	if (pipelineHash.blendEnabled) {
-       	u32 constantColor = regs[PICA::InternalRegs::BlendColour];
-    	const u8 r = constantColor & 0xff;
-    	const u8 g = Helpers::getBits<8, 8>(constantColor);
-    	const u8 b = Helpers::getBits<16, 8>(constantColor);
-    	const u8 a = Helpers::getBits<24, 8>(constantColor);
+		u32 constantColor = regs[PICA::InternalRegs::BlendColour];
+		const u8 r = constantColor & 0xff;
+		const u8 g = Helpers::getBits<8, 8>(constantColor);
+		const u8 b = Helpers::getBits<16, 8>(constantColor);
+		const u8 a = Helpers::getBits<24, 8>(constantColor);
 
-        renderCommandEncoder->setBlendColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+		renderCommandEncoder->setBlendColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
 	}
 
 	// Stencil reference
 	if (stencilEnable) {
-	    const s8 reference = s8(Helpers::getBits<16, 8>(depthStencilHash.stencilConfig)); // Signed reference value
-        renderCommandEncoder->setStencilReferenceValue(reference);
-    }
+		const s8 reference = s8(Helpers::getBits<16, 8>(depthStencilHash.stencilConfig));  // Signed reference value
+		renderCommandEncoder->setStencilReferenceValue(reference);
+	}
 
 	// Bind resources
 	setupTextureEnvState(renderCommandEncoder);
@@ -563,6 +571,8 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
 	renderCommandEncoder->setVertexBytes(&depthUniforms, sizeof(depthUniforms), 2);
 	renderCommandEncoder->setFragmentBytes(&logicOp, sizeof(logicOp), 2);
+	u32 lutSlices[2] = {lutLightingTexture->getCurrentIndex(), lutFogTexture->getCurrentIndex()};
+	renderCommandEncoder->setFragmentBytes(&lutSlices, sizeof(lutSlices), 3);
 
 	renderCommandEncoder->drawPrimitives(toMTLPrimitiveType(primType), NS::UInteger(0), NS::UInteger(vertices.size()));
 }
@@ -575,11 +585,14 @@ void RendererMTL::screenshot(const std::string& name) {
 void RendererMTL::deinitGraphicsContext() {
 	reset();
 
+	delete lutLightingTexture;
+	delete lutFogTexture;
+
 	// Release
 	copyToLutTexturePipeline->release();
 	displayPipeline->release();
 	defaultDepthStencilState->release();
-	lutTexture->release();
+	nullTexture->release();
 	linearSampler->release();
 	nearestSampler->release();
 	library->release();
@@ -607,10 +620,10 @@ std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(
 
 	auto& colorBuffer = colorRenderTargetCache.add(sampleBuffer);
 
-    // Clear the color buffer
-    colorClearOps[colorBuffer.texture] = {0, 0, 0, 0};
+	// Clear the color buffer
+	colorClearOps[colorBuffer.texture] = {0, 0, 0, 0};
 
-    return colorBuffer;
+	return colorBuffer;
 }
 
 Metal::DepthStencilRenderTarget& RendererMTL::getDepthRenderTarget() {
@@ -622,13 +635,13 @@ Metal::DepthStencilRenderTarget& RendererMTL::getDepthRenderTarget() {
 	} else {
 		auto& depthBuffer = depthStencilRenderTargetCache.add(sampleBuffer);
 
-        // Clear the depth buffer
-        depthClearOps[depthBuffer.texture] = 0.0f;
-        if (depthBuffer.format == DepthFmt::Depth24Stencil8) {
-            stencilClearOps[depthBuffer.texture] = 0;
-        }
+		// Clear the depth buffer
+		depthClearOps[depthBuffer.texture] = 0.0f;
+		if (depthBuffer.format == DepthFmt::Depth24Stencil8) {
+			stencilClearOps[depthBuffer.texture] = 0;
+		}
 
-        return depthBuffer;
+		return depthBuffer;
 	}
 }
 
@@ -683,7 +696,9 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 
 	for (int i = 0; i < 3; i++) {
 		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
-			continue;
+    		encoder->setFragmentTexture(nullTexture, i);
+    		encoder->setFragmentSamplerState(nearestSampler, i);
+            continue;
 		}
 
 		const size_t ioBase = ioBases[i];
@@ -701,42 +716,55 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 			encoder->setFragmentTexture(tex.texture, i);
 			encoder->setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);
 		} else {
-			// TODO: bind a dummy texture?
+			// TODO: log
 		}
 	}
-
-	// LUT texture
-	encoder->setFragmentTexture(lutTexture, 3);
-	encoder->setFragmentSamplerState(linearSampler, 3);
 }
 
 void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.lightingLUTDirty = false;
-	std::array<float, GPU::LightingLutSize * 2> lightingLut = {0.0f};
 
-	for (int i = 0; i < gpu.lightingLUT.size(); i += 2) {
-    	uint64_t value = gpu.lightingLUT[i >> 1] & 0xFFF;
-    	lightingLut[i] = (float)(value << 4) / 65535.0f;
+	std::array<u16, GPU::LightingLutSize> lightingLut;
+
+	for (int i = 0; i < gpu.lightingLUT.size(); i++) {
+		uint64_t value = gpu.lightingLUT[i] & 0xFFF;
+		lightingLut[i] = (value << 4);
 	}
 
-	//for (int i = 0; i < Lights::LUT_Count; i++) {
-	//    lutTexture->replaceRegion(MTL::Region(0, 0, LIGHT_LUT_TEXTURE_WIDTH, 1), 0, i, u16_lightinglut.data() + LIGHT_LUT_TEXTURE_WIDTH * i, 0, 0);
-	//}
+	u32 index = lutLightingTexture->getNextIndex();
+	lutLightingTexture->getTexture()->replaceRegion(MTL::Region(0, 0, LIGHTING_LUT_TEXTURE_WIDTH, Lights::LUT_Count), 0, index, lightingLut.data(), LIGHTING_LUT_TEXTURE_WIDTH * 2, 0);
 
+	/*
+	endRenderPass();
+
+	Metal::BufferHandle buffer = vertexBufferCache.get(lightingLut.data(), sizeof(lightingLut));
+
+	auto blitCommandEncoder = commandBuffer->blitCommandEncoder();
+	blitCommandEncoder->copyFromBuffer(buffer.buffer, buffer.offset, LIGHT_LUT_TEXTURE_WIDTH * 2 * 4, 0, MTL::Size(LIGHT_LUT_TEXTURE_WIDTH,
+	Lights::LUT_Count, 1), lutLightingTexture, 0, 0, MTL::Origin(0, 0, 0));
+
+	blitCommandEncoder->endEncoding();
+	*/
+
+	/*
 	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
-	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
-	renderCommandEncoder->setVertexTexture(lutTexture, 0);
+	renderCommandEncoder->setVertexTexture(lutLightingTexture, 0);
 	Metal::BufferHandle buffer = vertexBufferCache.get(lightingLut.data(), sizeof(lightingLut));
 	renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
 	u32 arrayOffset = 0;
 	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
 
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), GPU::LightingLutSize);
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypePoint, NS::UInteger(0), GPU::LightingLutSize);
+
+	MTL::Resource* barrierResources[] = {lutLightingTexture};
+	renderCommandEncoder->memoryBarrier(barrierResources, 1, MTL::RenderStageVertex, MTL::RenderStageFragment);
+	*/
 }
 
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.fogLUTDirty = false;
-	std::array<float, 128 * 2> fogLut = {0.0f};
+
+	std::array<float, FOG_LUT_TEXTURE_WIDTH * 2> fogLut = {0.0f};
 
 	for (int i = 0; i < fogLut.size(); i += 2) {
 		const uint32_t value = gpu.fogLUT[i >> 1];
@@ -749,20 +777,31 @@ void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 		fogLut[i + 1] = fogDifference;
 	}
 
+	u32 index = lutFogTexture->getNextIndex();
+	lutFogTexture->getTexture()->replaceRegion(MTL::Region(0, 0, FOG_LUT_TEXTURE_WIDTH, 1), 0, index, fogLut.data(), 0, 0);
+
+	/*
 	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
 	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
-	renderCommandEncoder->setVertexTexture(lutTexture, 0);
-	//Metal::BufferHandle buffer = vertexBufferCache.get(fogLut.data(), sizeof(fogLut));
-	//renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
+	renderCommandEncoder->setVertexTexture(lutLightingTexture, 0);
+	// Metal::BufferHandle buffer = vertexBufferCache.get(fogLut.data(), sizeof(fogLut));
+	// renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
 	renderCommandEncoder->setVertexBytes(fogLut.data(), sizeof(fogLut), 0);
 	u32 arrayOffset = (u32)Lights::LUT_Count;
 	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
 
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(128));
+	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypePoint, NS::UInteger(0), NS::UInteger(128));
+
+	MTL::Resource* barrierResources[] = {lutLightingTexture};
+	renderCommandEncoder->memoryBarrier(barrierResources, 1, MTL::RenderStageVertex, MTL::RenderStageFragment);
+	*/
 }
 
-void RendererMTL::textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect, const Math::Rect<u32>& destRect) {
-    nextRenderPassName = "Texture copy";
+void RendererMTL::textureCopyImpl(
+	Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect,
+	const Math::Rect<u32>& destRect
+) {
+	nextRenderPassName = "Texture copy";
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	// TODO: clearColor sets the load action to load if it didn't find any clear, but that is unnecessary if we are doing a copy to the whole texture
 	bool doesClear = clearColor(renderPassDescriptor, destFramebuffer.texture);
@@ -775,8 +814,13 @@ void RendererMTL::textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Meta
 	renderCommandEncoder->setRenderPipelineState(blitPipeline);
 
 	// Viewport
-	renderCommandEncoder->setViewport(MTL::Viewport{double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
-	float srcRectNDC[4] = {srcRect.left / (float)srcFramebuffer.size.u(), srcRect.bottom / (float)srcFramebuffer.size.v(), (srcRect.right - srcRect.left) / (float)srcFramebuffer.size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer.size.v()};
+	renderCommandEncoder->setViewport(MTL::Viewport{
+		double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0
+	});
+	float srcRectNDC[4] = {
+		srcRect.left / (float)srcFramebuffer.size.u(), srcRect.bottom / (float)srcFramebuffer.size.v(),
+		(srcRect.right - srcRect.left) / (float)srcFramebuffer.size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer.size.v()
+	};
 
 	// Bind resources
 	renderCommandEncoder->setVertexBytes(&srcRectNDC, sizeof(srcRectNDC), 0);
@@ -784,4 +828,27 @@ void RendererMTL::textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Meta
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
+}
+
+void RendererMTL::beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, bool doesClears, MTL::Texture* colorTexture, MTL::Texture* depthTexture) {
+	createCommandBufferIfNeeded();
+
+	if (doesClears || !renderCommandEncoder || colorTexture != lastColorTexture || (depthTexture != lastDepthTexture && !(lastDepthTexture && !depthTexture))) {
+	    endRenderPass();
+
+        renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+        renderCommandEncoder->setLabel(toNSString(nextRenderPassName));
+
+        // Bind persistent resources
+
+       	// LUT texture
+       	renderCommandEncoder->setFragmentTexture(lutLightingTexture->getTexture(), 3);
+       	renderCommandEncoder->setFragmentTexture(lutFogTexture->getTexture(), 4);
+       	renderCommandEncoder->setFragmentSamplerState(linearSampler, 3);
+
+	    lastColorTexture = colorTexture;
+        lastDepthTexture = depthTexture;
+	}
+
+	renderPassDescriptor->release();
 }

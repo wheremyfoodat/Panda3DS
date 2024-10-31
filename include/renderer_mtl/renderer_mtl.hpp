@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Metal/Metal.hpp>
 #include <QuartzCore/QuartzCore.hpp>
 
@@ -8,6 +10,8 @@
 #include "mtl_draw_pipeline_cache.hpp"
 #include "mtl_depth_stencil_cache.hpp"
 #include "mtl_vertex_buffer_cache.hpp"
+#include "mtl_lut_texture.hpp"
+
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
 
@@ -54,11 +58,14 @@ class RendererMTL final : public Renderer {
 	Metal::DepthStencilCache depthStencilCache;
 	Metal::VertexBufferCache vertexBufferCache;
 
-	// Objects
+	// Resources
 	MTL::SamplerState* nearestSampler;
 	MTL::SamplerState* linearSampler;
-	MTL::Texture* lutTexture;
+	MTL::Texture* nullTexture;
 	MTL::DepthStencilState* defaultDepthStencilState;
+
+	Metal::LutTexture* lutLightingTexture;
+	Metal::LutTexture* lutFogTexture;
 
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
@@ -91,21 +98,7 @@ class RendererMTL final : public Renderer {
         }
 	}
 
-	void beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, bool doesClears, MTL::Texture* colorTexture, MTL::Texture* depthTexture = nullptr) {
-		createCommandBufferIfNeeded();
-
-		if (doesClears || !renderCommandEncoder || colorTexture != lastColorTexture || (depthTexture != lastDepthTexture && !(lastDepthTexture && !depthTexture))) {
-		    endRenderPass();
-
-            renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
-            renderCommandEncoder->setLabel(toNSString(nextRenderPassName));
-
-		    lastColorTexture = colorTexture;
-            lastDepthTexture = depthTexture;
-		}
-
-		renderPassDescriptor->release();
-	}
+	void beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, bool doesClears, MTL::Texture* colorTexture, MTL::Texture* depthTexture = nullptr);
 
 	void commitCommandBuffer() {
 	   if (renderCommandEncoder) {
@@ -115,6 +108,8 @@ class RendererMTL final : public Renderer {
         }
         if (commandBuffer) {
             commandBuffer->commit();
+            // HACK
+            commandBuffer->waitUntilCompleted();
             commandBuffer->release();
             commandBuffer = nullptr;
         }

@@ -135,7 +135,10 @@ public:
                	colorAttachment->setDestinationAlphaBlendFactor(toMTLBlendFactor(alphaDestFunc));
             }
 
-            desc->setDepthAttachmentPixelFormat(toMTLPixelFormatDepth(hash.depthFmt));
+            MTL::PixelFormat depthFormat = toMTLPixelFormatDepth(hash.depthFmt);
+            desc->setDepthAttachmentPixelFormat(depthFormat);
+            if (hash.depthFmt == DepthFmt::Depth24Stencil8)
+                desc->setStencilAttachmentPixelFormat(depthFormat);
 
            	NS::Error* error = nullptr;
             desc->setLabel(toNSString("Draw pipeline"));

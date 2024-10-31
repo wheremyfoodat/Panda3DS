@@ -406,13 +406,11 @@ uint4 performLogicOpU(LogicOp logicOp, uint4 s, uint4 d) {
 #define RG_LUT 5u
 #define RR_LUT 6u
 
-#define FOG_INDEX 24
-
-float lutLookup(texture2d<float> texLut, uint lut, uint index) {
-	return texLut.read(uint2(index, lut)).r;
+float lutLookup(texture2d_array<float> texLut, uint slice, uint lut, uint index) {
+	return texLut.read(uint2(index, lut), slice).r;
 }
 
-float lightLutLookup(thread Globals& globals, thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture2d<float> texLut, uint environment_id, uint lut_id, uint light_id, float3 light_vector, float3 half_vector) {
+float lightLutLookup(thread Globals& globals, thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture2d_array<float> texLut, uint slice, uint environment_id, uint lut_id, uint light_id, float3 light_vector, float3 half_vector) {
 	uint lut_index;
 	int bit_in_config1;
 	if (lut_id == SP_LUT) {
@@ -498,12 +496,12 @@ float lightLutLookup(thread Globals& globals, thread DrawVertexOut& in, constant
 			delta = abs(delta);
 		}
 		int index = int(clamp(floor(delta * 255.0), 0.f, 255.f));
-		return lutLookup(texLut, lut_index, index) * scale;
+		return lutLookup(texLut, slice, lut_index, index) * scale;
 	} else {
 		// Range is [-1, 1] so we need to map it to [0, 1]
 		int index = int(clamp(floor(delta * 128.0), -128.f, 127.f));
 		if (index < 0) index += 256;
-		return lutLookup(texLut, lut_index, index) * scale;
+		return lutLookup(texLut, slice, lut_index, index) * scale;
 	}
 }
 
@@ -515,7 +513,7 @@ float3 regToColor(uint reg) {
 }
 
 // Implements the following algorthm: https://mathb.in/26766
-void calcLighting(thread Globals& globals, thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture2d<float> texLut, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
+void calcLighting(thread Globals& globals, thread DrawVertexOut& in, constant PicaRegs& picaRegs, texture2d_array<float> texLut, uint slice, sampler linearSampler, thread float4& primaryColor, thread float4& secondaryColor) {
 	// Quaternions describe a transformation from surface-local space to eye space.
 	// In surface-local space, by definition (and up to permutation) the normal vector is (0,0,1),
 	// the tangent vector is (1,0,0), and the bitangent vector is (0,1,0).
@@ -566,10 +564,10 @@ void calcLighting(thread Globals& globals, thread DrawVertexOut& in, constant Pi
 		globals.GPUREG_LIGHTi_CONFIG = picaRegs.read(0x0149u + (lightId << 4u));
 
 		float lightDistance;
-		float3 lightPosition = normalize(float3(
+		float3 lightPosition = float3(
 			decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_LOW, 0, 16), 5u, 10u), decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_LOW, 16, 16), 5u, 10u),
 			decodeFP(extract_bits(GPUREG_LIGHTi_VECTOR_HIGH, 0, 16), 5u, 10u)
-		));
+		);
 
 		// Positional Light
 		if (extract_bits(globals.GPUREG_LIGHTi_CONFIG, 0, 1) == 0u) {
@@ -613,23 +611,23 @@ void calcLighting(thread Globals& globals, thread DrawVertexOut& in, constant Pi
 			float delta = lightDistance * distanceAttenuationScale + distanceAttenuationBias;
 			delta = clamp(delta, 0.0, 1.0);
 			int index = int(clamp(floor(delta * 255.0), 0.0, 255.0));
-			distanceAttenuation = lutLookup(texLut, 16u + lightId, index);
+			distanceAttenuation = lutLookup(texLut, slice, 16u + lightId, index);
 		}
 
-		float spotlightAttenuation = lightLutLookup(globals, in, picaRegs, texLut, environmentId, SP_LUT, lightId, lightVector, halfVector);
-		float specular0Distribution = lightLutLookup(globals, in, picaRegs, texLut, environmentId, D0_LUT, lightId, lightVector, halfVector);
-		float specular1Distribution = lightLutLookup(globals, in, picaRegs, texLut, environmentId, D1_LUT, lightId, lightVector, halfVector);
+		float spotlightAttenuation = lightLutLookup(globals, in, picaRegs, texLut, slice, environmentId, SP_LUT, lightId, lightVector, halfVector);
+		float specular0Distribution = lightLutLookup(globals, in, picaRegs, texLut, slice, environmentId, D0_LUT, lightId, lightVector, halfVector);
+		float specular1Distribution = lightLutLookup(globals, in, picaRegs, texLut, slice, environmentId, D1_LUT, lightId, lightVector, halfVector);
 		float3 reflectedColor;
-		reflectedColor.r = lightLutLookup(globals, in, picaRegs, texLut, environmentId, RR_LUT, lightId, lightVector, halfVector);
+		reflectedColor.r = lightLutLookup(globals, in, picaRegs, texLut, slice, environmentId, RR_LUT, lightId, lightVector, halfVector);
 
 		if (isSamplerEnabled(environmentId, RG_LUT)) {
-			reflectedColor.g = lightLutLookup(globals, in, picaRegs, texLut, environmentId, RG_LUT, lightId, lightVector, halfVector);
+			reflectedColor.g = lightLutLookup(globals, in, picaRegs, texLut, slice, environmentId, RG_LUT, lightId, lightVector, halfVector);
 		} else {
 			reflectedColor.g = reflectedColor.r;
 		}
 
 		if (isSamplerEnabled(environmentId, RB_LUT)) {
-			reflectedColor.b = lightLutLookup(globals, in, picaRegs, texLut, environmentId, RB_LUT, lightId, lightVector, halfVector);
+			reflectedColor.b = lightLutLookup(globals, in, picaRegs, texLut, slice, environmentId, RB_LUT, lightId, lightVector, halfVector);
 		} else {
 			reflectedColor.b = reflectedColor.r;
 		}
@@ -655,7 +653,7 @@ void calcLighting(thread Globals& globals, thread DrawVertexOut& in, constant Pi
 	float fresnelFactor;
 
 	if (fresnelOutput1 == 1u || fresnelOutput2 == 1u) {
-		fresnelFactor = lightLutLookup(globals, in, picaRegs, texLut, environmentId, FR_LUT, lightId, lightVector, halfVector);
+		fresnelFactor = lightLutLookup(globals, in, picaRegs, texLut, slice, environmentId, FR_LUT, lightId, lightVector, halfVector);
 	}
 
 	if (fresnelOutput1 == 1u) {
@@ -676,9 +674,7 @@ float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]],
-                             texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture2d<float> texLut [[texture(3)]],
-                             sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]], constant uint2& lutSlices [[buffer(3)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture2d_array<float> texLightingLut [[texture(3)]], texture1d_array<float> texFogLut [[texture(4)]], sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
 
     // HACK
@@ -689,7 +685,7 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 
     globals.tevSources[0] = in.color;
     if (lightingEnabled) {
-        calcLighting(globals, in, picaRegs, texLut, linearSampler, globals.tevSources[1], globals.tevSources[2]);
+        calcLighting(globals, in, picaRegs, texLightingLut, lutSlices.x, linearSampler, globals.tevSources[1], globals.tevSources[2]);
     } else {
         globals.tevSources[1] = float4(0.0);
         globals.tevSources[2] = float4(0.0);
@@ -729,13 +725,13 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 	bool enable_fog = (textureEnvUpdateBuffer & 7u) == 5u;
 
 	if (enable_fog) {
-		bool flip_depth = (textureEnvUpdateBuffer & (1u << 16)) != 0u;
-		float fog_index = flip_depth ? 1.0 - in.position.z : in.position.z;
-		fog_index *= 128.0;
-		float clamped_index = clamp(floor(fog_index), 0.0, 127.0);
-		float delta = fog_index - clamped_index;
-		float2 value = texLut.read(uint2(clamped_index, FOG_INDEX)).rg;
-		float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);
+		bool flipDepth = (textureEnvUpdateBuffer & (1u << 16)) != 0u;
+		float fogIndex = flipDepth ? 1.0 - in.position.z : in.position.z;
+		fogIndex *= 128.0;
+		float clampedIndex = clamp(floor(fogIndex), 0.0, 127.0);
+		float delta = fogIndex - clampedIndex;
+		float2 value = texFogLut.read(clampedIndex, lutSlices.y).rg;
+		float fogFactor = clamp(value.r + value.g * delta, 0.0, 1.0);
 
 		uint GPUREG_FOG_COLOR = picaRegs.read(0x00E1u);
 
@@ -743,9 +739,9 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 		float r = (GPUREG_FOG_COLOR & 0xFFu) / 255.0;
 		float g = ((GPUREG_FOG_COLOR >> 8) & 0xFFu) / 255.0;
 		float b = ((GPUREG_FOG_COLOR >> 16) & 0xFFu) / 255.0;
-		float3 fog_color = float3(r, g, b);
+		float3 fogColor = float3(r, g, b);
 
-		color.rgb = mix(fog_color, color.rgb, fog_factor);
+		color.rgb = mix(fogColor, color.rgb, fogFactor);
 	}
 
 	// Perform alpha test

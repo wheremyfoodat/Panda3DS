@@ -1,4 +1,5 @@
 #pragma once
+
 #include <array>
 #include <string>
 #include <Metal/Metal.hpp>
