@@ -40,13 +40,23 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
 	}
 
+	// Apply window size settings if the appropriate option is enabled
+	if (config.windowSettings.rememberPosition) {
+		windowWidth = config.windowSettings.width;
+		windowHeight = config.windowSettings.height;
+	} else {
+		windowWidth = 400;
+		windowHeight = 480;
+	}
+	emu.setOutputSize(windowWidth, windowHeight);
+
 	if (needOpenGL) {
 		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
 		// MacOS gets mad if we don't explicitly demand a core profile
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
-		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::panic("Window creation failed: %s", SDL_GetError());
@@ -66,7 +76,9 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
-		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 480, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow(
+			windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+		);
 
 		if (window == nullptr) {
 			Helpers::warn("Window creation failed: %s", SDL_GetError());
@@ -98,10 +110,18 @@ void FrontendSDL::run() {
 			namespace Keys = HID::Keys;
 
 			switch (event.type) {
-				case SDL_QUIT:
+				case SDL_QUIT: {
 					printf("Bye :(\n");
 					programRunning = false;
+
+					// Remember window position & size for future runs
+					auto& windowSettings = emu.getConfig().windowSettings;
+					// Note: For the time being we currently don't actually apply the x/y positions to the window, and center it instead
+					// This is subject to change in the future, so let's save the x/y positions to the config file anyways
+					SDL_GetWindowPosition(window, &windowSettings.x, &windowSettings.y);
+					SDL_GetWindowSize(window, &windowSettings.width, &windowSettings.height);
 					return;
+				}
 
 				case SDL_KEYDOWN: {
 					if (emu.romType == ROMType::None) break;
