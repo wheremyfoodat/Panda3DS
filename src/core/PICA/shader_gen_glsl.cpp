@@ -1,6 +1,14 @@
+#include <fmt/format.h>
+
+#include <utility>
+
 #include "PICA/pica_frag_config.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen.hpp"
+
+// We can include the driver headers here since they shouldn't have any actual API-specific code
+#include "renderer_gl/gl_driver.hpp"
+
 using namespace PICA;
 using namespace PICA::ShaderGen;
 
@@ -34,6 +42,8 @@ static constexpr const char* uniformDefinition = R"(
 
 std::string FragmentGenerator::getDefaultVertexShader() {
 	std::string ret = "";
+	// Reserve some space (128KB) in the output string to avoid too many allocations later
+	ret.reserve(128 * 1024);
 
 	switch (api) {
 		case API::GL: ret += "#version 410 core"; break;
@@ -94,13 +104,34 @@ std::string FragmentGenerator::getDefaultVertexShader() {
 	return ret;
 }
 
-std::string FragmentGenerator::generate(const FragmentConfig& config) {
+std::string FragmentGenerator::generate(const FragmentConfig& config, void* driverInfo) {
 	std::string ret = "";
 
 	switch (api) {
 		case API::GL: ret += "#version 410 core"; break;
 		case API::GLES: ret += "#version 300 es"; break;
 		default: break;
+	}
+
+	// For GLES we need to enable & use the framebuffer fetch extension in order to emulate logic ops
+	bool emitLogicOps = api == API::GLES && config.outConfig.logicOpMode != PICA::LogicOpMode::Copy && driverInfo != nullptr;
+
+	if (emitLogicOps) {
+		auto driver = static_cast<OpenGL::Driver*>(driverInfo);
+
+		// If the driver does not support framebuffer fetch at all, don't emit logic op code
+		if (!driver->supportFbFetch()) {
+			emitLogicOps = false;
+		}
+		
+		// Figure out which fb fetch extension we have and enable it
+		else {
+			if (driver->supportsExtFbFetch) {
+				ret += "\n#extension GL_EXT_shader_framebuffer_fetch : enable\n#define fb_color fragColor\n";
+			} else if (driver->supportsArmFbFetch) {
+				ret += "\n#extension GL_ARM_shader_framebuffer_fetch : enable\n#define fb_color gl_LastFragColorARM[0]\n";
+			}
+		}
 	}
 
 	bool unimplementedFlag = false;
@@ -192,10 +223,13 @@ std::string FragmentGenerator::generate(const FragmentConfig& config) {
 	}
 
 	compileFog(ret, config);
-
 	applyAlphaTest(ret, config);
 
-	ret += "fragColor = combinerOutput;\n}"; // End of main function
+	if (!emitLogicOps) {
+		ret += "fragColor = combinerOutput;\n}";  // End of main function
+	} else {
+		compileLogicOps(ret, config);
+	}
 
 	return ret;
 }
@@ -670,4 +704,136 @@ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConf
 	shader += "vec2 value = texelFetch(u_tex_luts, ivec2(int(clamped_index), 24), 0).rg;"; // fog LUT is past the light LUTs
 	shader += "float fog_factor = clamp(value.r + value.g * delta, 0.0, 1.0);";
 	shader += "combinerOutput.rgb = mix(fog_color, combinerOutput.rgb, fog_factor);";
+}
+
+std::string FragmentGenerator::getVertexShaderAccelerated(const std::string& picaSource, const PICA::VertConfig& vertConfig, bool usingUbershader) {
+	// First, calculate output register -> Fixed function fragment semantics based on the VAO config
+	// This array contains the mappings for the 32 fixed function semantics (8 variables, with 4 lanes each).
+	// Each entry is a pair, containing the output reg to use for this semantic (first) and which lane of that register (second)
+	std::array<std::pair<int, int>, 32> outputMappings{};
+	// Output registers adjusted according to VS_OUTPUT_MASK, which handles enabling and disabling output attributes
+	std::array<u8, 16> vsOutputRegisters;
+
+	{
+		uint count = 0;
+		u16 outputMask = vertConfig.outputMask;
+
+		// See which registers are actually enabled and ignore the disabled ones
+		for (int i = 0; i < 16; i++) {
+			if (outputMask & 1) {
+				vsOutputRegisters[count++] = i;
+			}
+
+			outputMask >>= 1;
+		}
+
+		// For the others, map the index to a vs output directly (TODO: What does hw actually do?)
+		for (; count < 16; count++) {
+			vsOutputRegisters[count] = count;
+		}
+
+		for (int i = 0; i < vertConfig.outputCount; i++) {
+			const u32 config = vertConfig.outmaps[i];
+			for (int j = 0; j < 4; j++) {
+				const u32 mapping = (config >> (j * 8)) & 0x1F;
+				outputMappings[mapping] = std::make_pair(vsOutputRegisters[i], j);
+			}
+		}
+	}
+
+	auto getSemanticName = [&](u32 semanticIndex) {
+		auto [reg, lane] = outputMappings[semanticIndex];
+		return fmt::format("out_regs[{}][{}]", reg, lane);
+	};
+
+	std::string semantics = fmt::format(
+		R"(
+	vec4 a_coords = vec4({}, {}, {}, {});
+	vec4 a_quaternion = vec4({}, {}, {}, {});
+	vec4 a_vertexColour = vec4({}, {}, {}, {});
+	vec2 a_texcoord0 = vec2({}, {});
+	float a_texcoord0_w = {};
+	vec2 a_texcoord1 = vec2({}, {});
+	vec2 a_texcoord2 = vec2({}, {});
+	vec3 a_view = vec3({}, {}, {});
+)",
+		getSemanticName(0), getSemanticName(1), getSemanticName(2), getSemanticName(3), getSemanticName(4), getSemanticName(5), getSemanticName(6),
+		getSemanticName(7), getSemanticName(8), getSemanticName(9), getSemanticName(10), getSemanticName(11), getSemanticName(12),
+		getSemanticName(13), getSemanticName(16), getSemanticName(14), getSemanticName(15), getSemanticName(22), getSemanticName(23),
+		getSemanticName(18), getSemanticName(19), getSemanticName(20)
+	);
+
+	if (usingUbershader) {
+		Helpers::panic("Unimplemented: GetVertexShaderAccelerated for ubershader");
+		return picaSource;
+	} else {
+		// TODO: Uniforms and don't hardcode fixed-function semantic indices...
+		std::string ret = picaSource;
+		if (api == API::GLES) {
+			ret += "\n#define USING_GLES\n";
+		}
+
+		ret += uniformDefinition;
+
+		ret += R"(
+out vec4 v_quaternion;
+out vec4 v_colour;
+out vec3 v_texcoord0;
+out vec2 v_texcoord1;
+out vec3 v_view;
+out vec2 v_texcoord2;
+
+#ifndef USING_GLES
+	out float gl_ClipDistance[2];
+#endif
+
+void main() {
+	pica_shader_main();
+)";
+	// Transfer fixed function fragment registers from vertex shader output to the fragment shader
+	ret += semantics;
+	
+	ret += R"(
+	gl_Position = a_coords;
+	vec4 colourAbs = abs(a_vertexColour);
+	v_colour = min(colourAbs, vec4(1.f));
+
+	v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
+	v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
+	v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+	v_view = a_view;
+	v_quaternion = a_quaternion;
+
+#ifndef USING_GLES
+	gl_ClipDistance[0] = -a_coords.z;
+	gl_ClipDistance[1] = dot(clipCoords, a_coords);
+#endif
+})";
+		return ret;
+	}
+}
+
+void FragmentGenerator::compileLogicOps(std::string& shader, const PICA::FragmentConfig& config) {
+	if (api != API::GLES) [[unlikely]] {
+		Helpers::warn("Shadergen: Unsupported API for compileLogicOps");
+		shader += "fragColor = combinerOutput;\n}"; // End of main function
+
+		return;
+	}
+	
+	shader += "fragColor = ";
+	switch (config.outConfig.logicOpMode) {
+		case PICA::LogicOpMode::Copy: shader += "combinerOutput"; break;
+		case PICA::LogicOpMode::Nop: shader += "fb_color"; break;
+		case PICA::LogicOpMode::Clear: shader += "vec4(0.0)"; break;
+		case PICA::LogicOpMode::Set: shader += "vec4(1.0)"; break;
+		case PICA::LogicOpMode::InvertedCopy: shader += "vec4(uvec4(combinerOutput * 255.0) ^ uvec4(0xFFu)) * (1.0 / 255.0)"; break;
+
+		default:
+			shader += "combinerOutput";
+			Helpers::warn("Shadergen: Unimplemented logic op mode");
+			break;
+	}
+
+	shader += ";\n}"; // End of main function
 }

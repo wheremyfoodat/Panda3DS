@@ -1,8 +1,11 @@
 #pragma once
+#include <fmt/format.h>
+
+#include <map>
 #include <set>
 #include <string>
 #include <tuple>
-#include <map>
+#include <utility>
 #include <vector>
 
 #include "PICA/shader.hpp"
@@ -41,9 +44,12 @@ namespace PICA::ShaderGen {
 			explicit Function(u32 start, u32 end) : start(start), end(end) {}
 			bool operator<(const Function& other) const { return AddressRange(start, end) < AddressRange(other.start, other.end); }
 
-			std::string getIdentifier() const { return "func_" + std::to_string(start) + "_to_" + std::to_string(end); }
-			std::string getForwardDecl() const { return "void " + getIdentifier() + "();\n"; }
-			std::string getCallStatement() const { return getIdentifier() + "()"; }
+			std::string getIdentifier() const { return fmt::format("fn_{}_{}", start, end); }
+			// To handle weird control flow, we have to return from each function a bool that indicates whether or not the shader reached an end
+			// instruction and should thus terminate. This is necessary for games like Rayman and Gravity Falls, which have "END" instructions called
+			// from within functions deep in the callstack
+			std::string getForwardDecl() const { return fmt::format("bool fn_{}_{}();\n", start, end); }
+			std::string getCallStatement() const { return fmt::format("fn_{}_{}()", start, end); }
 		};
 
 		std::set<Function> functions{};
@@ -93,9 +99,11 @@ namespace PICA::ShaderGen {
 
 		API api;
 		Language language;
+		bool compilationError = false;
 
 		void compileInstruction(u32& pc, bool& finished);
-		void compileRange(const AddressRange& range);
+		// Compile range "range" and returns the end PC or if we're "finished" with the program (called an END instruction)
+		std::pair<u32, bool> compileRange(const AddressRange& range);
 		void callFunction(const Function& function);
 		const Function* findFunction(const AddressRange& range);
 
@@ -105,6 +113,7 @@ namespace PICA::ShaderGen {
 		std::string getDest(u32 dest) const;
 		std::string getSwizzlePattern(u32 swizzle) const;
 		std::string getDestSwizzle(u32 destinationMask) const;
+		const char* getCondition(u32 cond, u32 refX, u32 refY);
 
 		void setDest(u32 operandDescriptor, const std::string& dest, const std::string& value);
 		// Returns if the instruction uses the typical register encodings most instructions use

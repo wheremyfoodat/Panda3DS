@@ -26,7 +26,7 @@ if(APPLE)
 endif()
 
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security -Wno-invalid-offsetof")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -55,6 +55,7 @@ option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
+option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -147,11 +148,13 @@ if (NOT ANDROID)
     target_link_libraries(AlberCore PUBLIC SDL2-static)
 endif()
 
+add_subdirectory(third_party/fmt)
 add_subdirectory(third_party/toml11)
 include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
 include_directories(third_party/glm)
 include_directories(third_party/renderdoc)
+include_directories(third_party/duckstation)
 
 add_subdirectory(third_party/cmrc)
 
@@ -210,6 +213,13 @@ else()
     set(HOST_ARM64 FALSE)
 endif()
 
+# Enable SSE4.1 if it's not explicitly disabled
+# Annoyingly, we can't easily do this if we're using MSVC cause there's no SSE4.1 flag, only SSE4.1
+if(NOT MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DISABLE_SSE4 AND HOST_X64)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
+endif()
+
 if(ENABLE_RENDERDOC_API)
     find_package(RenderDoc 1.6.0 MODULE REQUIRED)
     add_compile_definitions(PANDA3DS_ENABLE_RENDERDOC)
@@ -258,13 +268,13 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
                          src/core/services/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
-                         src/core/services/csnd.cpp src/core/services/nwm_uds.cpp
+                         src/core/services/csnd.cpp src/core/services/nwm_uds.cpp src/core/services/fonts.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp src/core/PICA/shader_gen_glsl.cpp
-                      src/core/PICA/shader_decompiler.cpp
+                      src/core/PICA/shader_decompiler.cpp src/core/PICA/draw_acceleration.cpp
 )
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
@@ -316,14 +326,15 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
                  include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
-                 include/sdl_sensors.hpp include/renderdoc.hpp include/audio/aac_decoder.hpp
+                 include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
+                 include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
 )
 
 cmrc_add_resource_library(
     resources_console_fonts
     NAMESPACE ConsoleFonts
     WHENCE "src/core/services/fonts/"
-    "src/core/services/fonts/CitraSharedFontUSRelocated.bin"
+    "src/core/services/fonts/SharedFontReplacement.bin"
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -349,7 +360,6 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
 endif()
 
 if(ENABLE_QT_GUI)
-    include_directories(third_party/duckstation)
     set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
 
     if(APPLE)
@@ -382,7 +392,7 @@ if(ENABLE_OPENGL)
     set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
         include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
         include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
-        include/renderer_gl/gl_state.hpp
+        include/renderer_gl/gl_state.hpp include/renderer_gl/gl_driver.hpp
     )
 
     set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
@@ -391,6 +401,8 @@ if(ENABLE_OPENGL)
         src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
         src/host_shaders/opengl_fragment_shader.frag
     )
+
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/stream_buffer.cpp)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
     source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
@@ -555,7 +567,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
 target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra fdk-aac)
-target_link_libraries(AlberCore PUBLIC glad capstone)
+target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")

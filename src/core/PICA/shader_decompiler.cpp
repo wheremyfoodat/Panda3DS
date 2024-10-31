@@ -1,5 +1,10 @@
 #include "PICA/shader_decompiler.hpp"
 
+#include <fmt/format.h>
+
+#include <array>
+#include <cassert>
+
 #include "config.hpp"
 
 using namespace PICA;
@@ -13,9 +18,43 @@ void ControlFlow::analyze(const PICAShader& shader, u32 entrypoint) {
 	analysisFailed = false;
 
 	const Function* function = addFunction(shader, entrypoint, PICAShader::maxInstructionCount);
-	if (function == nullptr) {
+	if (function == nullptr || function->exitMode != ExitMode::AlwaysEnd) {
 		analysisFailed = true;
 	}
+}
+
+// Helpers for merging parallel/series exit methods from Citra
+// Merges exit method of two parallel branches.
+static ExitMode exitParallel(ExitMode a, ExitMode b) {
+	if (a == ExitMode::Unknown) {
+		return b;
+	}
+	else if (b == ExitMode::Unknown) {
+		return a;
+	}
+	else if (a == b) {
+		return a;
+	}
+	return ExitMode::Conditional;
+}
+
+// Cascades exit method of two blocks of code.
+static ExitMode exitSeries(ExitMode a, ExitMode b) {
+	assert(a != ExitMode::AlwaysEnd);
+
+	if (a == ExitMode::Unknown) {
+		return ExitMode::Unknown;
+	}
+
+	if (a == ExitMode::AlwaysReturn) {
+		return b;
+	}
+
+	if (b == ExitMode::Unknown || b == ExitMode::AlwaysEnd) {
+		return ExitMode::AlwaysEnd;
+	}
+
+	return ExitMode::Conditional;
 }
 
 ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 end, Function::Labels& labels) {
@@ -32,25 +71,132 @@ ExitMode ControlFlow::analyzeFunction(const PICAShader& shader, u32 start, u32 e
 		const u32 opcode = instruction >> 26;
 
 		switch (opcode) {
-			case ShaderOpcodes::JMPC: Helpers::panic("Unimplemented control flow operation (JMPC)");
-			case ShaderOpcodes::JMPU: Helpers::panic("Unimplemented control flow operation (JMPU)");
-			case ShaderOpcodes::IFU: Helpers::panic("Unimplemented control flow operation (IFU)");
-			case ShaderOpcodes::IFC: Helpers::panic("Unimplemented control flow operation (IFC)");
-			case ShaderOpcodes::CALL: Helpers::panic("Unimplemented control flow operation (CALL)");
-			case ShaderOpcodes::CALLC: Helpers::panic("Unimplemented control flow operation (CALLC)");
-			case ShaderOpcodes::CALLU: Helpers::panic("Unimplemented control flow operation (CALLU)");
-			case ShaderOpcodes::LOOP: Helpers::panic("Unimplemented control flow operation (LOOP)");
-			case ShaderOpcodes::END: it->second = ExitMode::AlwaysEnd; return it->second;
+			case ShaderOpcodes::JMPC:
+			case ShaderOpcodes::JMPU: {
+				const u32 dest = getBits<10, 12>(instruction);
+				// Register this jump address to our outLabels set
+				labels.insert(dest);
 
+				// This opens up 2 parallel paths of execution
+				auto branchTakenExit = analyzeFunction(shader, dest, end, labels);
+				auto branchNotTakenExit = analyzeFunction(shader, pc + 1, end, labels);
+				it->second = exitParallel(branchTakenExit, branchNotTakenExit);
+				return it->second;
+			}
+
+			case ShaderOpcodes::IFU:
+			case ShaderOpcodes::IFC: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+
+				const Function* branchTakenFunc = addFunction(shader, pc + 1, dest);
+				// Check if analysis of the branch taken func failed and return unknown if it did
+				if (analysisFailed) {
+					it->second = ExitMode::Unknown;
+					return it->second;
+				}
+
+				// Next analyze the not taken func
+				ExitMode branchNotTakenExitMode = ExitMode::AlwaysReturn;
+				if (num != 0) {
+					const Function* branchNotTakenFunc = addFunction(shader, dest, dest + num);
+					// Check if analysis failed and return unknown if it did
+					if (analysisFailed) {
+						it->second = ExitMode::Unknown;
+						return it->second;
+					}
+
+					branchNotTakenExitMode = branchNotTakenFunc->exitMode;
+				}
+
+				auto parallel = exitParallel(branchTakenFunc->exitMode, branchNotTakenExitMode);
+				// Both branches of the if/else end, so there's nothing after the call
+				if (parallel == ExitMode::AlwaysEnd) {
+					it->second = parallel;
+					return it->second;
+				} else {
+					ExitMode afterConditional = analyzeFunction(shader, dest + num, end, labels);
+					ExitMode conditionalExitMode = exitSeries(parallel, afterConditional);
+					it->second = conditionalExitMode;
+					return it->second;
+				}
+				break;
+			}
+
+			case ShaderOpcodes::CALL: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+				const Function* calledFunction = addFunction(shader, dest, dest + num);
+
+				// Check if analysis of the branch taken func failed and return unknown if it did
+				if (analysisFailed) {
+					it->second = ExitMode::Unknown;
+					return it->second;
+				}
+
+				if (calledFunction->exitMode == ExitMode::AlwaysEnd) {
+					it->second = ExitMode::AlwaysEnd;
+					return it->second;
+				}
+
+				// Exit mode of the remainder of this function, after we return from the callee
+				const ExitMode postCallExitMode = analyzeFunction(shader, pc + 1, end, labels);
+				const ExitMode exitMode = exitSeries(calledFunction->exitMode, postCallExitMode);
+
+				it->second = exitMode;
+				return exitMode;
+			}
+
+			case ShaderOpcodes::CALLC:
+			case ShaderOpcodes::CALLU: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+				const Function* calledFunction = addFunction(shader, dest, dest + num);
+
+				// Check if analysis of the branch taken func failed and return unknown if it did
+				if (analysisFailed) {
+					it->second = ExitMode::Unknown;
+					return it->second;
+				}
+
+				// Exit mode of the remainder of this function, after we return from the callee
+				const ExitMode postCallExitMode = analyzeFunction(shader, pc + 1, end, labels);
+				const ExitMode exitMode = exitSeries(exitParallel(calledFunction->exitMode, ExitMode::AlwaysReturn), postCallExitMode);
+
+				it->second = exitMode;
+				return exitMode;
+			}
+
+			case ShaderOpcodes::LOOP: {
+				u32 dest = getBits<10, 12>(instruction);
+				const Function* loopFunction = addFunction(shader, pc + 1, dest + 1);
+				if (analysisFailed) {
+					it->second = ExitMode::Unknown;
+					return it->second;
+				}
+
+				if (loopFunction->exitMode == ExitMode::AlwaysEnd) {
+					it->second = ExitMode::AlwaysEnd;
+					return it->second;
+				}
+
+				const ExitMode afterLoop = analyzeFunction(shader, dest + 1, end, labels);
+				const ExitMode exitMode = exitSeries(loopFunction->exitMode, afterLoop);
+				it->second = exitMode;
+				return it->second;
+			}
+
+			case ShaderOpcodes::END: it->second = ExitMode::AlwaysEnd; return it->second;
 			default: break;
 		}
 	}
 
 	// A function without control flow instructions will always reach its "return point" and return
-	return ExitMode::AlwaysReturn;
+	it->second = ExitMode::AlwaysReturn;
+	return it->second;
 }
 
-void ShaderDecompiler::compileRange(const AddressRange& range) {
+std::pair<u32, bool> ShaderDecompiler::compileRange(const AddressRange& range) {
 	u32 pc = range.start;
 	const u32 end = range.end >= range.start ? range.end : PICAShader::maxInstructionCount;
 	bool finished = false;
@@ -58,6 +204,8 @@ void ShaderDecompiler::compileRange(const AddressRange& range) {
 	while (pc < end && !finished) {
 		compileInstruction(pc, finished);
 	}
+
+	return std::make_pair(pc, finished);
 }
 
 const Function* ShaderDecompiler::findFunction(const AddressRange& range) {
@@ -71,20 +219,43 @@ const Function* ShaderDecompiler::findFunction(const AddressRange& range) {
 }
 
 void ShaderDecompiler::writeAttributes() {
+	// Annoyingly, GLES does not support having an array as an input attribute, so declare each attribute separately for now
 	decompiledShader += R"(
-		layout(location = 0) in vec4 inputs[8];
+	layout(location = 0) in vec4 attr0;
+	layout(location = 1) in vec4 attr1;
+	layout(location = 2) in vec4 attr2;
+	layout(location = 3) in vec4 attr3;
+	layout(location = 4) in vec4 attr4;
+	layout(location = 5) in vec4 attr5;
+	layout(location = 6) in vec4 attr6;
+	layout(location = 7) in vec4 attr7;
+	layout(location = 8) in vec4 attr8;
+	layout(location = 9) in vec4 attr9;
+	layout(location = 10) in vec4 attr10;
+	layout(location = 11) in vec4 attr11;
+	layout(location = 12) in vec4 attr12;
+	layout(location = 13) in vec4 attr13;
+	layout(location = 14) in vec4 attr14;
+	layout(location = 15) in vec4 attr15;
 
-		layout(std140) uniform PICAShaderUniforms {
-			vec4 uniform_float[96];
-			uvec4 uniform_int;
-			uint uniform_bool;
-		};
-	
-		vec4 temp_registers[16];
-		vec4 dummy_vec = vec4(0.0);
+	layout(std140) uniform PICAShaderUniforms {
+		vec4 uniform_f[96];
+		uvec4 uniform_i;
+		uint uniform_bool;
+	};
+
+	vec4 temp[16];
+	vec4 out_regs[16];
+	vec4 dummy_vec = vec4(0.0);
+	ivec3 addr_reg = ivec3(0);
+	bvec2 cmp_reg = bvec2(false);
+
+	vec4 uniform_indexed(int source, int offset) {
+		int clipped_offs = (offset >= -128 && offset <= 127) ? offset : 0;
+		uint index = uint(clipped_offs + source) & 127u;
+		return (index < 96u) ? uniform_f[index] : vec4(1.0);
+	}
 )";
-
-	decompiledShader += "\n";
 }
 
 std::string ShaderDecompiler::decompile() {
@@ -94,11 +265,14 @@ std::string ShaderDecompiler::decompile() {
 		return "";
 	}
 
-	decompiledShader = "";
+	compilationError = false;
+	decompiledShader.clear();
+	// Reserve some memory for the shader string to avoid memory allocations
+	decompiledShader.reserve(256 * 1024);
 
 	switch (api) {
 		case API::GL: decompiledShader += "#version 410 core\n"; break;
-		case API::GLES: decompiledShader += "#version 300 es\n"; break;
+		case API::GLES: decompiledShader += "#version 300 es\nprecision mediump float;\nprecision mediump int;\n"; break;
 		default: break;
 	}
 
@@ -109,7 +283,7 @@ std::string ShaderDecompiler::decompile() {
 		decompiledShader += R"(
 			vec4 safe_mul(vec4 a, vec4 b) {
 				vec4 res = a * b;
-				return mix(res, mix(mix(vec4(0.0), res, isnan(rhs)), product, isnan(lhs)), isnan(res));
+				return mix(res, mix(mix(vec4(0.0), res, isnan(b)), res, isnan(a)), isnan(res));
 			}
 		)";
 	}
@@ -121,17 +295,61 @@ std::string ShaderDecompiler::decompile() {
 
 	decompiledShader += "void pica_shader_main() {\n";
 	AddressRange mainFunctionRange(entrypoint, PICAShader::maxInstructionCount);
-	callFunction(*findFunction(mainFunctionRange));
-	decompiledShader += "}\n";
+	auto mainFunc = findFunction(mainFunctionRange);
 
-	for (auto& func : controlFlow.functions) {
-		if (func.outLabels.size() > 0) {
-			Helpers::panic("Function with out labels");
+	decompiledShader += mainFunc->getCallStatement() + ";\n}\n";
+
+	for (const Function& func : controlFlow.functions) {
+		if (func.outLabels.empty()) {
+			decompiledShader += fmt::format("bool {}() {{\n", func.getIdentifier());
+
+			auto [pc, finished] = compileRange(AddressRange(func.start, func.end));
+			if (!finished) {
+				decompiledShader += "return false;";
+			}
+
+			decompiledShader += "}\n";
+		} else {
+			auto labels = func.outLabels;
+			labels.insert(func.start);
+
+			// If a function has jumps and "labels", this needs to be emulated using a switch-case, with the variable being switched on being the
+			// current PC
+			decompiledShader += fmt::format("bool {}() {{\n", func.getIdentifier());
+			decompiledShader += fmt::format("uint pc = {}u;\n", func.start);
+			decompiledShader += "while(true){\nswitch(pc){\n";
+
+			for (u32 label : labels) {
+				decompiledShader += fmt::format("case {}u: {{", label);
+				// Fetch the next label whose address > label
+				auto it = labels.lower_bound(label + 1);
+				u32 next = (it == labels.end()) ? func.end : *it;
+
+				auto [endPC, finished] = compileRange(AddressRange(label, next));
+				if (endPC > next && !finished) {
+					labels.insert(endPC);
+					decompiledShader += fmt::format("pc = {}u; break;", endPC);
+				}
+
+				// Fallthrough to next label
+				decompiledShader += "}\n";
+			}
+
+			decompiledShader += "default: return false;\n";
+			// Exit the switch and loop
+			decompiledShader += "} }\n";
+
+			// Exit the function
+			decompiledShader += "return false;\n";
+			decompiledShader += "}\n";
 		}
+	}
 
-		decompiledShader += "void " + func.getIdentifier() + "() {\n";
-		compileRange(AddressRange(func.start, func.end));
-		decompiledShader += "}\n";
+	// We allow some leeway for "compilation errors" in addition to control flow errors, in cases where eg an unimplemented instruction
+	// or an instruction that we can't emulate in GLSL is found in the instruction stream. Just like control flow errors, these return an empty string
+	// and the renderer core will decide to use CPU shaders instead
+	if (compilationError) [[unlikely]] {
+		return "";
 	}
 
 	return decompiledShader;
@@ -139,30 +357,41 @@ std::string ShaderDecompiler::decompile() {
 
 std::string ShaderDecompiler::getSource(u32 source, [[maybe_unused]] u32 index) const {
 	if (source < 0x10) {
-		return "inputs[" + std::to_string(source) + "]";
+		return "attr" + std::to_string(source);
 	} else if (source < 0x20) {
-		return "temp_registers[" + std::to_string(source - 0x10) + "]";
+		return "temp[" + std::to_string(source - 0x10) + "]";
 	} else {
 		const usize floatIndex = (source - 0x20) & 0x7f;
 
-		if (floatIndex >= 96) [[unlikely]] {
-			return "dummy_vec";
+		if (index == 0) {
+			if (floatIndex >= 96) [[unlikely]] {
+				return "dummy_vec";
+			}
+			return "uniform_f[" + std::to_string(floatIndex) + "]";
+		} else {
+			static constexpr std::array<const char*, 4> offsets = {"0", "addr_reg.x", "addr_reg.y", "addr_reg.z"};
+			return fmt::format("uniform_indexed({}, {})", floatIndex, offsets[index]);
 		}
-		return "uniform_float[" + std::to_string(floatIndex) + "]";
 	}
 }
 
 std::string ShaderDecompiler::getDest(u32 dest) const {
 	if (dest < 0x10) {
-		return "output_registers[" + std::to_string(dest) + "]";
+		return "out_regs[" + std::to_string(dest) + "]";
 	} else if (dest < 0x20) {
-		return "temp_registers[" + std::to_string(dest - 0x10) + "]";
+		return "temp[" + std::to_string(dest - 0x10) + "]";
 	} else {
 		return "dummy_vec";
 	}
 }
 
 std::string ShaderDecompiler::getSwizzlePattern(u32 swizzle) const {
+	// If the swizzle field is this value then the swizzle pattern is .xyzw so we don't need a shuffle
+	static constexpr uint noSwizzle = 0x1B;
+	if (swizzle == noSwizzle) {
+		return "";
+	}
+
 	static constexpr std::array<char, 4> names = {'x', 'y', 'z', 'w'};
 	std::string ret(".    ");
 	
@@ -176,7 +405,6 @@ std::string ShaderDecompiler::getSwizzlePattern(u32 swizzle) const {
 
 std::string ShaderDecompiler::getDestSwizzle(u32 destinationMask) const {
 	std::string ret = ".";
-	
 	if (destinationMask & 0b1000) {
 		ret += "x";
 	}
@@ -208,11 +436,12 @@ void ShaderDecompiler::setDest(u32 operandDescriptor, const std::string& dest, c
 		return;
 	}
 
-	decompiledShader += dest + destSwizzle + " = ";
-	if (writtenLaneCount == 1) {
-		decompiledShader += "float(" + value + ");\n";
-	} else {
-		decompiledShader += "vec" + std::to_string(writtenLaneCount) + "(" + value + ");\n";
+	// Don't write destination swizzle if all lanes are getting written to
+	decompiledShader += fmt::format("{}{} = ", dest, writtenLaneCount == 4 ? "" : destSwizzle);
+	if (writtenLaneCount <= 3) {
+		decompiledShader += fmt::format("({}){};\n", value, destSwizzle);
+	} else if (writtenLaneCount == 4) {
+		decompiledShader += fmt::format("{};\n", value);
 	}
 }
 
@@ -246,26 +475,101 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 
 		std::string dest = getDest(destIndex);
 
-		if (idx != 0) {
-			Helpers::panic("GLSL recompiler: Indexed instruction");
-		}
-
-		if (invertSources) {
-			Helpers::panic("GLSL recompiler: Inverted instruction");
-		}
-
 		switch (opcode) {
 			case ShaderOpcodes::MOV: setDest(operandDescriptor, dest, src1); break;
-			case ShaderOpcodes::ADD: setDest(operandDescriptor, dest, src1 + " + " + src2); break;
-			case ShaderOpcodes::MUL: setDest(operandDescriptor, dest, src1 + " * " + src2); break;
-			case ShaderOpcodes::MAX: setDest(operandDescriptor, dest, "max(" + src1 + ", " + src2 + ")"); break;
-			case ShaderOpcodes::MIN: setDest(operandDescriptor, dest, "min(" + src1 + ", " + src2 + ")"); break;
+			case ShaderOpcodes::ADD: setDest(operandDescriptor, dest, fmt::format("{} + {}", src1, src2)); break;
+			case ShaderOpcodes::MUL:
+				if (!config.accurateShaderMul) {
+					setDest(operandDescriptor, dest, fmt::format("{} * {}", src1, src2));
+				} else {
+					setDest(operandDescriptor, dest, fmt::format("safe_mul({}, {})", src1, src2));
+				}
+				break;
+			case ShaderOpcodes::MAX: setDest(operandDescriptor, dest, fmt::format("max({}, {})", src1, src2)); break;
+			case ShaderOpcodes::MIN: setDest(operandDescriptor, dest, fmt::format("min({}, {})", src1, src2)); break;
 
-			case ShaderOpcodes::DP3: setDest(operandDescriptor, dest, "vec4(dot(" + src1 + ".xyz, " + src2 + ".xyz))"); break;
-			case ShaderOpcodes::DP4: setDest(operandDescriptor, dest, "vec4(dot(" + src1 + ", " + src2 + "))"); break;
-			case ShaderOpcodes::RSQ: setDest(operandDescriptor, dest, "vec4(inversesqrt(" + src1 + ".x))"); break;
+			case ShaderOpcodes::DP3:
+				if (!config.accurateShaderMul) {
+					setDest(operandDescriptor, dest, fmt::format("vec4(dot({}.xyz, {}.xyz))", src1, src2));
+				} else {
+					// A dot product between a and b is equivalent to the per-lane multiplication of a and b followed by a dot product with vec3(1.0)
+					setDest(operandDescriptor, dest, fmt::format("vec4(dot(safe_mul({}, {}).xyz, vec3(1.0)))", src1, src2));
+				}
+				break;
+			case ShaderOpcodes::DP4:
+				if (!config.accurateShaderMul) {
+					setDest(operandDescriptor, dest, fmt::format("vec4(dot({}, {}))", src1, src2));
+				} else {
+					// A dot product between a and b is equivalent to the per-lane multiplication of a and b followed by a dot product with vec4(1.0)
+					setDest(operandDescriptor, dest, fmt::format("vec4(dot(safe_mul({}, {}), vec4(1.0)))", src1, src2));
+				}
+				break;
+			case ShaderOpcodes::FLR: setDest(operandDescriptor, dest, fmt::format("floor({})", src1)); break;
+			case ShaderOpcodes::RSQ: setDest(operandDescriptor, dest, fmt::format("vec4(inversesqrt({}.x))", src1)); break;
+			case ShaderOpcodes::RCP: setDest(operandDescriptor, dest, fmt::format("vec4(1.0 / {}.x)", src1)); break;
+			case ShaderOpcodes::LG2: setDest(operandDescriptor, dest, fmt::format("vec4(log2({}.x))", src1)); break;
+			case ShaderOpcodes::EX2: setDest(operandDescriptor, dest, fmt::format("vec4(exp2({}.x))", src1)); break;
 
-			default: Helpers::panic("GLSL recompiler: Unknown common opcode: %X", opcode); break;
+			case ShaderOpcodes::SLT:
+			case ShaderOpcodes::SLTI: setDest(operandDescriptor, dest, fmt::format("vec4(lessThan({}, {}))", src1, src2)); break;
+
+			case ShaderOpcodes::SGE:
+			case ShaderOpcodes::SGEI: setDest(operandDescriptor, dest, fmt::format("vec4(greaterThanEqual({}, {}))", src1, src2)); break;
+
+			case ShaderOpcodes::DPH:
+			case ShaderOpcodes::DPHI:
+				if (!config.accurateShaderMul) {
+					setDest(operandDescriptor, dest, fmt::format("vec4(dot(vec4({}.xyz, 1.0), {}))", src1, src2));
+				} else {
+					// A dot product between a and b is equivalent to the per-lane multiplication of a and b followed by a dot product with vec4(1.0)
+					setDest(operandDescriptor, dest, fmt::format("vec4(dot(safe_mul(vec4({}.xyz, 1.0), {}), vec4(1.0)))", src1, src2));
+				}
+				break;
+
+			case ShaderOpcodes::CMP1:
+			case ShaderOpcodes::CMP2: {
+				static constexpr std::array<const char*, 8> operators = {
+					// The last 2 operators always return true and are handled specially
+					"==", "!=", "<", "<=", ">", ">=", "", "",
+				};
+
+				const u32 cmpY = getBits<21, 3>(instruction);
+				const u32 cmpX = getBits<24, 3>(instruction);
+
+				// Compare x first
+				if (cmpX >= 6) {
+					decompiledShader += "cmp_reg.x = true;\n";
+				} else {
+					decompiledShader += fmt::format("cmp_reg.x = {}.x {} {}.x;\n", src1, operators[cmpX], src2);
+				}
+
+				// Then compare Y
+				if (cmpY >= 6) {
+					decompiledShader += "cmp_reg.y = true;\n";
+				} else {
+					decompiledShader += fmt::format("cmp_reg.y = {}.y {} {}.y;\n", src1, operators[cmpY], src2);
+				}
+				break;
+			}
+
+			case ShaderOpcodes::MOVA: {
+				const bool writeX = getBit<3>(operandDescriptor);  // Should we write the x component of the address register?
+				const bool writeY = getBit<2>(operandDescriptor);
+
+				if (writeX && writeY) {
+					decompiledShader += fmt::format("addr_reg.xy = ivec2({}.xy);\n", src1);
+				} else if (writeX) {
+					decompiledShader += fmt::format("addr_reg.x = int({}.x);\n", src1);
+				} else if (writeY) {
+					decompiledShader += fmt::format("addr_reg.y = int({}.y);\n", src1);
+				}
+				break;
+			}
+
+			default:
+				Helpers::warn("GLSL recompiler: Unknown common opcode: %02X. Falling back to CPU shaders", opcode);
+				compilationError = true;
+				break;
 		}
 	} else if (opcode >= 0x30 && opcode <= 0x3F) { // MAD and MADI
 		const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
@@ -299,22 +603,155 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 		src3 += getSwizzlePattern(swizzle3);
 
 		std::string dest = getDest(destIndex);
-
-		if (idx != 0) {
-			Helpers::panic("GLSL recompiler: Indexed instruction");
+		if (!config.accurateShaderMul) {
+			setDest(operandDescriptor, dest, fmt::format("{} * {} + {}", src1, src2, src3));
+		} else {
+			setDest(operandDescriptor, dest, fmt::format("safe_mul({}, {}) + {}", src1, src2, src3));
 		}
-
-		setDest(operandDescriptor, dest, src1 + " * " + src2 + " + " + src3);
 	} else {
 		switch (opcode) {
-			case ShaderOpcodes::END: finished = true; return;
-			default: Helpers::panic("GLSL recompiler: Unknown opcode: %X", opcode); break;
+			case ShaderOpcodes::JMPC: {
+				const u32 dest = getBits<10, 12>(instruction);
+				const u32 condOp = getBits<22, 2>(instruction);
+				const uint refY = getBit<24>(instruction);
+				const uint refX = getBit<25>(instruction);
+				const char* condition = getCondition(condOp, refX, refY);
+
+				decompiledShader += fmt::format("if ({}) {{ pc = {}u; break; }}\n", condition, dest);
+				break;
+			}
+
+			case ShaderOpcodes::JMPU: {
+				const u32 dest = getBits<10, 12>(instruction);
+				const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
+				const u32 mask = 1u << bit;
+				const u32 test = (instruction & 1) ^ 1;  // If the LSB is 0 we jump if bit = 1, otherwise 0
+
+				decompiledShader += fmt::format("if ((uniform_bool & {}u) {} 0u) {{ pc = {}u; break; }}\n", mask, (test != 0) ? "!=" : "==", dest);
+				break;
+			}
+
+			case ShaderOpcodes::IFU:
+			case ShaderOpcodes::IFC: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+				const Function* conditionalFunc = findFunction(AddressRange(pc + 1, dest));
+
+				if (opcode == ShaderOpcodes::IFC) {
+					const u32 condOp = getBits<22, 2>(instruction);
+					const uint refY = getBit<24>(instruction);
+					const uint refX = getBit<25>(instruction);
+					const char* condition = getCondition(condOp, refX, refY);
+
+					decompiledShader += fmt::format("if ({}) {{", condition);
+				} else {
+					const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
+					const u32 mask = 1u << bit;
+
+					decompiledShader += fmt::format("if ((uniform_bool & {}u) != 0u) {{", mask);
+				}
+
+				callFunction(*conditionalFunc);
+				decompiledShader += "}\n";
+
+				pc = dest;
+				if (num > 0) {
+					const Function* elseFunc = findFunction(AddressRange(dest, dest + num));
+					pc = dest + num;
+
+					decompiledShader += "else { ";
+					callFunction(*elseFunc);
+					decompiledShader += "}\n";
+
+					if (conditionalFunc->exitMode == ExitMode::AlwaysEnd && elseFunc->exitMode == ExitMode::AlwaysEnd) {
+						finished = true;
+						return;
+					}
+				}
+
+				return;
+			}
+
+			case ShaderOpcodes::CALL:
+			case ShaderOpcodes::CALLC:
+			case ShaderOpcodes::CALLU: {
+				const u32 num = instruction & 0xff;
+				const u32 dest = getBits<10, 12>(instruction);
+				const Function* calledFunc = findFunction(AddressRange(dest, dest + num));
+
+				// Handle conditions for CALLC/CALLU
+				if (opcode == ShaderOpcodes::CALLC) {
+					const u32 condOp = getBits<22, 2>(instruction);
+					const uint refY = getBit<24>(instruction);
+					const uint refX = getBit<25>(instruction);
+					const char* condition = getCondition(condOp, refX, refY);
+
+					decompiledShader += fmt::format("if ({}) {{", condition);
+				} else if (opcode == ShaderOpcodes::CALLU) {
+					const u32 bit = getBits<22, 4>(instruction);  // Bit of the bool uniform to check
+					const u32 mask = 1u << bit;
+
+					decompiledShader += fmt::format("if ((uniform_bool & {}u) != 0u) {{", mask);
+				}
+
+				callFunction(*calledFunc);
+
+				// Close brackets for CALLC/CALLU
+				if (opcode != ShaderOpcodes::CALL) {
+					decompiledShader += "}";
+				}
+
+				if (opcode == ShaderOpcodes::CALL && calledFunc->exitMode == ExitMode::AlwaysEnd) {
+					finished = true;
+					return;
+				}
+				break;
+			}
+
+			case ShaderOpcodes::LOOP: {
+				const u32 dest = getBits<10, 12>(instruction);
+				const u32 uniformIndex = getBits<22, 2>(instruction);
+
+				// loop counter = uniform.y
+				decompiledShader += fmt::format("addr_reg.z = int((uniform_i[{}] >> 8u) & 0xFFu);\n", uniformIndex);
+				decompiledShader += fmt::format(
+					"for (uint loopCtr{} = 0u; loopCtr{} <= (uniform_i[{}] & 0xFFu); loopCtr{}++, addr_reg.z += int((uniform_i[{}] >> "
+					"16u) & 0xFFu)) {{\n",
+					pc, pc, uniformIndex, pc, uniformIndex
+				);
+
+				AddressRange range(pc + 1, dest + 1);
+				const Function* func = findFunction(range);
+				callFunction(*func);
+				decompiledShader += "}\n";
+
+				// Jump to the end of the loop. We don't want to compile the code inside the loop again.
+				// This will be incremented by 1 due to the pc++ at the end of this loop.
+				pc = dest;
+
+				if (func->exitMode == ExitMode::AlwaysEnd) {
+					finished = true;
+					return;
+				}
+				break;
+			}
+
+			case ShaderOpcodes::END:
+				decompiledShader += "return true;\n";
+				finished = true;
+				return;
+
+			case ShaderOpcodes::NOP: break;
+
+			default:
+				Helpers::warn("GLSL recompiler: Unknown opcode: %02X. Falling back to CPU shaders", opcode);
+				compilationError = true;
+				break;
 		}
 	}
 
 	pc++;
 }
-
 
 bool ShaderDecompiler::usesCommonEncoding(u32 instruction) const {
 	const u32 opcode = instruction >> 26;
@@ -339,16 +776,57 @@ bool ShaderDecompiler::usesCommonEncoding(u32 instruction) const {
 		case ShaderOpcodes::SLT:
 		case ShaderOpcodes::SLTI:
 		case ShaderOpcodes::SGE:
-		case ShaderOpcodes::SGEI: return true;
+		case ShaderOpcodes::SGEI:
+		case ShaderOpcodes::LITP: return true;
 
 		default: return false;
 	}
 }
 
-void ShaderDecompiler::callFunction(const Function& function) { decompiledShader += function.getCallStatement() + ";\n"; }
+void ShaderDecompiler::callFunction(const Function& function) {
+	switch (function.exitMode) {
+		// This function always ends, so call it and return true to signal that we're gonna be ending the shader
+		case ExitMode::AlwaysEnd: decompiledShader += function.getCallStatement() + ";\nreturn true;\n"; break;
+		// This function will potentially end. Call it, see if it returns that it ended, and return that we're ending if it did
+		case ExitMode::Conditional: decompiledShader += fmt::format("if ({}) {{ return true; }}\n", function.getCallStatement()); break;
+		// This function will not end. Just call it like a normal function.
+		default: decompiledShader += function.getCallStatement() + ";\n"; break;
+	}
+}
 
 std::string ShaderGen::decompileShader(PICAShader& shader, EmulatorConfig& config, u32 entrypoint, API api, Language language) {
 	ShaderDecompiler decompiler(shader, config, entrypoint, api, language);
 
 	return decompiler.decompile();
+}
+
+const char* ShaderDecompiler::getCondition(u32 cond, u32 refX, u32 refY) {
+	static constexpr std::array<const char*, 16> conditions = {
+		// ref(Y, X) = (0, 0)
+		"!all(cmp_reg)",
+		"all(not(cmp_reg))",
+		"!cmp_reg.x",
+		"!cmp_reg.y",
+
+		// ref(Y, X) = (0, 1)
+		"cmp_reg.x || !cmp_reg.y",
+		"cmp_reg.x && !cmp_reg.y",
+		"cmp_reg.x",
+		"!cmp_reg.y",
+
+		// ref(Y, X) = (1, 0)
+		"!cmp_reg.x || cmp_reg.y",
+		"!cmp_reg.x && cmp_reg.y",
+		"!cmp_reg.x",
+		"cmp_reg.y",
+
+		// ref(Y, X) = (1, 1)
+		"any(cmp_reg)",
+		"all(cmp_reg)",
+		"cmp_reg.x",
+		"cmp_reg.y",
+	};
+	const u32 key = (cond & 0b11) | (refX << 2) | (refY << 3);
+
+	return conditions[key];
 }

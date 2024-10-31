@@ -396,6 +396,25 @@ namespace PICA {
 		GreaterOrEqual = 7,
 	};
 
+	enum class LogicOpMode : u32 {
+		Clear = 0,
+		And = 1,
+		ReverseAnd = 2,
+		Copy = 3,
+		Set = 4,
+		InvertedCopy = 5,
+		Nop = 6,
+		Invert = 7,
+		Nand = 8,
+		Or = 9,
+		Nor = 10,
+		Xor = 11,
+		Equiv = 12,
+		InvertedAnd = 13,
+		ReverseOr = 14,
+		InvertedOr = 15,
+	};
+
 	enum class FogMode : u32 {
 		Disabled = 0,
 		Fog = 5,

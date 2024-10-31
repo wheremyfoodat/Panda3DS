@@ -3,6 +3,7 @@
 
 #include "PICA/gpu.hpp"
 #include "PICA/pica_frag_config.hpp"
+#include "PICA/pica_vert_config.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_gen_types.hpp"
 #include "helpers.hpp"
@@ -25,11 +26,14 @@ namespace PICA::ShaderGen {
 		bool isSamplerEnabled(u32 environmentID, u32 lutID);
 
 		void compileFog(std::string& shader, const PICA::FragmentConfig& config);
+		void compileLogicOps(std::string& shader, const PICA::FragmentConfig& config);
 
 	  public:
 		FragmentGenerator(API api, Language language) : api(api), language(language) {}
-		std::string generate(const PICA::FragmentConfig& config);
+		std::string generate(const PICA::FragmentConfig& config, void* driverInfo = nullptr);
 		std::string getDefaultVertexShader();
+		// For when PICA shader is acceleration is enabled. Turn the PICA shader source into a proper vertex shader
+		std::string getVertexShaderAccelerated(const std::string& picaSource, const PICA::VertConfig& vertConfig, bool usingUbershader);
 
 		void setTarget(API api, Language language) {
 			this->api = api;

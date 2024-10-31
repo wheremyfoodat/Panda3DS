@@ -298,5 +298,5 @@ private:
 
 	bool allocateMainThreadStack(u32 size);
 	Regions getConsoleRegion();
-	void copySharedFont(u8* ptr);
+	void copySharedFont(u8* ptr, u32 vaddr);
 };

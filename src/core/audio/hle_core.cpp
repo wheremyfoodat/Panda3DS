@@ -76,6 +76,7 @@ namespace Audio {
 			source.reset();
 		}
 
+		mixer.reset();
 		// Note: Reset audio pipe AFTER resetting all pipes, otherwise the new data will be yeeted
 		resetAudioPipe();
 	}
@@ -250,6 +251,8 @@ namespace Audio {
 
 			source.isBufferIDDirty = false;
 		}
+
+		performMix(read, write);
 	}
 
 	void HLE_DSP::updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients) {
@@ -465,6 +468,50 @@ namespace Audio {
 		}
 	}
 
+	void HLE_DSP::performMix(Audio::HLE::SharedMemory& readRegion, Audio::HLE::SharedMemory& writeRegion) {
+		updateMixerConfig(readRegion);
+		// TODO: Do the actual audio mixing
+
+		auto& dspStatus = writeRegion.dspStatus;
+		// Stub the DSP status. It's unknown what the "unknown" field is but Citra sets it to 0, so we do too to be safe
+		dspStatus.droppedFrames = 0;
+		dspStatus.unknown = 0;
+	}
+
+	void HLE_DSP::updateMixerConfig(Audio::HLE::SharedMemory& sharedMem) {
+		auto& config = sharedMem.dspConfiguration;
+		// No configs have been changed, so there's nothing to update
+		if (config.dirtyRaw == 0) {
+			return;
+		}
+
+		if (config.outputFormatDirty) {
+			mixer.channelFormat = config.outputFormat;
+		}
+		
+		if (config.masterVolumeDirty) {
+			mixer.volumes[0] = config.masterVolume;
+		}
+
+		if (config.auxVolume0Dirty) {
+			mixer.volumes[1] = config.auxVolumes[0];
+		}
+		
+		if (config.auxVolume1Dirty) {
+			mixer.volumes[2] = config.auxVolumes[1];
+		}
+
+		if (config.auxBusEnable0Dirty) {
+			mixer.enableAuxStages[0] = config.auxBusEnable[0] != 0;
+		}
+
+		if (config.auxBusEnable1Dirty) {
+			mixer.enableAuxStages[1] = config.auxBusEnable[1] != 0;
+		}
+
+		config.dirtyRaw = 0;
+	}
+
 	HLE_DSP::SampleBuffer HLE_DSP::decodePCM8(const u8* data, usize sampleCount, Source& source) {
 		SampleBuffer decodedSamples(sampleCount);
 
@@ -585,7 +632,7 @@ namespace Audio {
 		AAC::Message response;
 
 		switch (request.command) {
-			case AAC::Command::EncodeDecode:
+			case AAC::Command::EncodeDecode: {
 				// Dummy response to stop games from hanging
 				response.resultCode = AAC::ResultCode::Success;
 				response.decodeResponse.channelCount = 2;
@@ -596,10 +643,13 @@ namespace Audio {
 				response.command = request.command;
 				response.mode = request.mode;
 
-				// We've already got an AAC decoder but it's currently disabled until mixing & output is properly implemented
-				// TODO: Uncomment this when the time comes
-				// aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
+				// TODO: Make this a toggle in config.toml. Currently we have it off by default until we finish the DSP mixer.
+				constexpr bool enableAAC = false;
+				if (enableAAC) {
+					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
+				}
 				break;
+			}
 
 			case AAC::Command::Init:
 			case AAC::Command::Shutdown:

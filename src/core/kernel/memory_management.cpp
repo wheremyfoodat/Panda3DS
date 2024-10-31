@@ -136,7 +136,7 @@ void Kernel::mapMemoryBlock() {
 				break;
 
 			case KernelHandles::FontSharedMemHandle:
-				mem.copySharedFont(ptr);
+				mem.copySharedFont(ptr, addr);
 				break;
 
 			case KernelHandles::CSNDSharedMemHandle:

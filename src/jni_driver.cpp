@@ -8,6 +8,7 @@
 #include "renderer_gl/renderer_gl.hpp"
 #include "services/hid.hpp"
 #include "android_utils.hpp"
+#include "sdl_sensors.hpp"
 
 std::unique_ptr<Emulator> emulator = nullptr;
 HIDService* hidService = nullptr;
@@ -43,6 +44,7 @@ extern "C" {
 AlberFunction(void, functionName) (JNIEnv* env, jobject obj, type value) { emulator->getConfig().settingName = value; }
 
 MAKE_SETTING(setShaderJitEnabled, jboolean, shaderJitEnabled)
+MAKE_SETTING(setAccurateShaderMulEnable, jboolean, accurateShaderMul)
 
 #undef MAKE_SETTING
 
@@ -87,6 +89,7 @@ AlberFunction(void, Finalize)(JNIEnv* env, jobject obj) {
 	emulator = nullptr;
 	hidService = nullptr;
 	renderer = nullptr;
+	romLoaded = false;
 }
 
 AlberFunction(jboolean, HasRomLoaded)(JNIEnv* env, jobject obj) { return romLoaded; }
@@ -109,6 +112,19 @@ AlberFunction(void, TouchScreenDown)(JNIEnv* env, jobject obj, jint x, jint y) {
 AlberFunction(void, TouchScreenUp)(JNIEnv* env, jobject obj) { hidService->releaseTouchScreen(); }
 AlberFunction(void, KeyUp)(JNIEnv* env, jobject obj, jint keyCode) { hidService->releaseKey((u32)keyCode); }
 AlberFunction(void, KeyDown)(JNIEnv* env, jobject obj, jint keyCode) { hidService->pressKey((u32)keyCode); }
+
+AlberFunction(void, SetGyro)(JNIEnv* env, jobject obj, jfloat roll, jfloat pitch, jfloat yaw) {
+    auto rotation = Sensors::SDL::convertRotation({ float(roll), float(pitch), float(yaw) });
+    hidService->setPitch(s16(rotation.x));
+    hidService->setRoll(s16(rotation.y));
+    hidService->setYaw(s16(rotation.z));
+}
+
+AlberFunction(void, SetAccel)(JNIEnv* env, jobject obj, jfloat rawX, jfloat rawY, jfloat rawZ) {
+    float data[3] = { float(rawX), float(rawY), float(rawZ) };
+    auto accel = Sensors::SDL::convertAcceleration(data);
+    hidService->setAccel(accel.x, accel.y, accel.z);
+}
 
 AlberFunction(void, SetCirclepadAxis)(JNIEnv* env, jobject obj, jint x, jint y) {
 	hidService->setCirclepadX((s16)x);
