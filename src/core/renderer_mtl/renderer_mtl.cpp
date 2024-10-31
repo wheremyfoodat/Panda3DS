@@ -165,7 +165,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	// Load shaders
 	auto mtlResources = cmrc::RendererMTL::get_filesystem();
 	library = loadLibrary(device, mtlResources.open("metal_shaders.metallib"));
-	MTL::Library* copyToLutTextureLibrary = loadLibrary(device, mtlResources.open("metal_copy_to_lut_texture.metallib"));
+	MTL::Library* blitLibrary = loadLibrary(device, mtlResources.open("metal_blit.metallib"));
+	//MTL::Library* copyToLutTextureLibrary = loadLibrary(device, mtlResources.open("metal_copy_to_lut_texture.metallib"));
 
 	// Display
 	MTL::Function* vertexDisplayFunction = library->newFunction(NS::String::string("vertexDisplay", NS::ASCIIStringEncoding));
@@ -188,8 +189,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	fragmentDisplayFunction->release();
 
 	// Blit
-	MTL::Function* vertexBlitFunction = library->newFunction(NS::String::string("vertexBlit", NS::ASCIIStringEncoding));
-	MTL::Function* fragmentBlitFunction = library->newFunction(NS::String::string("fragmentBlit", NS::ASCIIStringEncoding));
+	MTL::Function* vertexBlitFunction = blitLibrary->newFunction(NS::String::string("vertexBlit", NS::ASCIIStringEncoding));
+	MTL::Function* fragmentBlitFunction = blitLibrary->newFunction(NS::String::string("fragmentBlit", NS::ASCIIStringEncoding));
 
 	blitPipelineCache.set(device, vertexBlitFunction, fragmentBlitFunction);
 
@@ -255,6 +256,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	drawPipelineCache.set(device, library, vertexDrawFunction, vertexDescriptor);
 
 	// Copy to LUT texture
+	/*
 	MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
 	constants->setConstantValue(&LIGHTING_LUT_TEXTURE_WIDTH, MTL::DataTypeUShort, NS::UInteger(0));
 
@@ -279,6 +281,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	}
 	copyToLutTexturePipelineDescriptor->release();
 	vertexCopyToLutTextureFunction->release();
+	*/
 
 	// Depth stencil cache
 	depthStencilCache.set(device);
@@ -293,7 +296,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	depthStencilDescriptor->release();
 
 	// Release
-	copyToLutTextureLibrary->release();
+	blitLibrary->release();
+	//copyToLutTextureLibrary->release();
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -528,8 +532,8 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 		updateFogLUT(renderCommandEncoder);
 	}
 
-	renderCommandEncoder->setRenderPipelineState(pipeline);
-	renderCommandEncoder->setDepthStencilState(depthStencilState);
+	commandEncoder.setRenderPipelineState(pipeline);
+	commandEncoder.setDepthStencilState(depthStencilState);
 	// If size is < 4KB, use inline vertex data, otherwise use a buffer
 	if (vertices.size_bytes() < 4 * 1024) {
 		renderCommandEncoder->setVertexBytes(vertices.data(), vertices.size_bytes(), VERTEX_BUFFER_BINDING_INDEX);
@@ -566,7 +570,7 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 
 	// Bind resources
 	setupTextureEnvState(renderCommandEncoder);
-	bindTexturesToSlots(renderCommandEncoder);
+	bindTexturesToSlots();
 	renderCommandEncoder->setVertexBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
 	renderCommandEncoder->setFragmentBytes(&regs[0x48], (0x200 - 0x48) * sizeof(regs[0]), 0);
 	renderCommandEncoder->setVertexBytes(&depthUniforms, sizeof(depthUniforms), 2);
@@ -589,7 +593,7 @@ void RendererMTL::deinitGraphicsContext() {
 	delete lutFogTexture;
 
 	// Release
-	copyToLutTexturePipeline->release();
+	//copyToLutTexturePipeline->release();
 	displayPipeline->release();
 	defaultDepthStencilState->release();
 	nullTexture->release();
@@ -687,7 +691,7 @@ void RendererMTL::setupTextureEnvState(MTL::RenderCommandEncoder* encoder) {
 	encoder->setFragmentBytes(&envState, sizeof(envState), 1);
 }
 
-void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
+void RendererMTL::bindTexturesToSlots() {
 	static constexpr std::array<u32, 3> ioBases = {
 		PICA::InternalRegs::Tex0BorderColor,
 		PICA::InternalRegs::Tex1BorderColor,
@@ -696,8 +700,8 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 
 	for (int i = 0; i < 3; i++) {
 		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
-    		encoder->setFragmentTexture(nullTexture, i);
-    		encoder->setFragmentSamplerState(nearestSampler, i);
+    		commandEncoder.setFragmentTexture(nullTexture, i);
+    		commandEncoder.setFragmentSamplerState(nearestSampler, i);
             continue;
 		}
 
@@ -713,8 +717,8 @@ void RendererMTL::bindTexturesToSlots(MTL::RenderCommandEncoder* encoder) {
 		if (addr != 0) [[likely]] {
 			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
 			auto tex = getTexture(targetTex);
-			encoder->setFragmentTexture(tex.texture, i);
-			encoder->setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);
+			commandEncoder.setFragmentTexture(tex.texture, i);
+			commandEncoder.setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);
 		} else {
 			// TODO: log
 		}
@@ -811,7 +815,7 @@ void RendererMTL::textureCopyImpl(
 	Metal::BlitPipelineHash hash{destFramebuffer.format, DepthFmt::Unknown1};
 	auto blitPipeline = blitPipelineCache.get(hash);
 
-	renderCommandEncoder->setRenderPipelineState(blitPipeline);
+	commandEncoder.setRenderPipelineState(blitPipeline);
 
 	// Viewport
 	renderCommandEncoder->setViewport(MTL::Viewport{
@@ -824,8 +828,8 @@ void RendererMTL::textureCopyImpl(
 
 	// Bind resources
 	renderCommandEncoder->setVertexBytes(&srcRectNDC, sizeof(srcRectNDC), 0);
-	renderCommandEncoder->setFragmentTexture(srcFramebuffer.texture, 0);
-	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
+	renderCommandEncoder->setFragmentTexture(srcFramebuffer.texture, GET_HELPER_TEXTURE_BINDING(0));
+	renderCommandEncoder->setFragmentSamplerState(nearestSampler, GET_HELPER_SAMPLER_STATE_BINDING(0));
 
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 }
@@ -838,6 +842,7 @@ void RendererMTL::beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassD
 
         renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
         renderCommandEncoder->setLabel(toNSString(nextRenderPassName));
+        commandEncoder.newRenderCommandEncoder(renderCommandEncoder);
 
         // Bind persistent resources
 

@@ -483,6 +483,8 @@ if(ENABLE_METAL AND APPLE)
         include/renderer_mtl/mtl_texture.hpp
         include/renderer_mtl/mtl_vertex_buffer_cache.hpp
         include/renderer_mtl/mtl_lut_texture.hpp
+        include/renderer_mtl/mtl_command_encoder.hpp
+        include/renderer_mtl/mtl_common.hpp
         include/renderer_mtl/pica_to_mtl.hpp
         include/renderer_mtl/objc_helper.hpp
     )
@@ -494,7 +496,8 @@ if(ENABLE_METAL AND APPLE)
         src/core/renderer_mtl/mtl_lut_texture.cpp
         src/core/renderer_mtl/objc_helper.mm
         src/host_shaders/metal_shaders.metal
-        src/host_shaders/metal_copy_to_lut_texture.metal
+        src/host_shaders/metal_blit.metal
+        #src/host_shaders/metal_copy_to_lut_texture.metal
     )
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_MTL_INCLUDE_FILES})
@@ -520,7 +523,8 @@ if(ENABLE_METAL AND APPLE)
     endfunction()
 
     add_metal_shader(metal_shaders)
-    add_metal_shader(metal_copy_to_lut_texture)
+    add_metal_shader(metal_blit)
+    #add_metal_shader(metal_copy_to_lut_texture)
 
     add_custom_target(
         compile_msl_shaders
@@ -532,7 +536,8 @@ if(ENABLE_METAL AND APPLE)
         NAMESPACE RendererMTL
         WHENCE "src/host_shaders/"
         "src/host_shaders/metal_shaders.metallib"
-        "src/host_shaders/metal_copy_to_lut_texture.metallib"
+        "src/host_shaders/metal_blit.metallib"
+        #"src/host_shaders/metal_copy_to_lut_texture.metallib"
     )
     add_dependencies(resources_renderer_mtl compile_msl_shaders)
 

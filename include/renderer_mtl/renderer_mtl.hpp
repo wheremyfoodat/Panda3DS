@@ -11,6 +11,7 @@
 #include "mtl_depth_stencil_cache.hpp"
 #include "mtl_vertex_buffer_cache.hpp"
 #include "mtl_lut_texture.hpp"
+#include "mtl_command_encoder.hpp"
 
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
@@ -46,6 +47,8 @@ class RendererMTL final : public Renderer {
 	MTL::Device* device;
 	MTL::CommandQueue* commandQueue;
 
+	Metal::CommandEncoder commandEncoder;
+
 	// Libraries
 	MTL::Library* library;
 
@@ -69,7 +72,7 @@ class RendererMTL final : public Renderer {
 
 	// Pipelines
 	MTL::RenderPipelineState* displayPipeline;
-	MTL::RenderPipelineState* copyToLutTexturePipeline;
+	//MTL::RenderPipelineState* copyToLutTexturePipeline;
 
 	// Clears
 	std::map<MTL::Texture*, Color4> colorClearOps;
@@ -177,7 +180,7 @@ class RendererMTL final : public Renderer {
 	Metal::DepthStencilRenderTarget& getDepthRenderTarget();
 	Metal::Texture& getTexture(Metal::Texture& tex);
 	void setupTextureEnvState(MTL::RenderCommandEncoder* encoder);
-	void bindTexturesToSlots(MTL::RenderCommandEncoder* encoder);
+	void bindTexturesToSlots();
 	void updateLightingLUT(MTL::RenderCommandEncoder* encoder);
 	void updateFogLUT(MTL::RenderCommandEncoder* encoder);
 	void textureCopyImpl(Metal::ColorRenderTarget& srcFramebuffer, Metal::ColorRenderTarget& destFramebuffer, const Math::Rect<u32>& srcRect, const Math::Rect<u32>& destRect);

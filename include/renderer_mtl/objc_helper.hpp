@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <Metal/Metal.hpp>
+#include "mtl_common.hpp"
 
 namespace Metal {
 
