@@ -99,12 +99,22 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		}
 	}
 
-	if (emu->getConfig().appVersionOnWindow) {
-		setWindowTitle("Alber v" PANDA3DS_VERSION);
-	}
+	// Handle UI configs before setting up the emulator thread
+	{
+		auto& config = emu->getConfig();
+		auto& windowSettings = config.windowSettings;
 
-	if (emu->getConfig().printAppVersion) {
-		printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
+		if (windowSettings.showAppVersion) {
+			setWindowTitle("Alber v" PANDA3DS_VERSION);
+		}
+
+		if (windowSettings.rememberPosition) {
+			setGeometry(windowSettings.x, windowSettings.y, windowSettings.width, config.windowSettings.height);
+		}
+
+		if (config.printAppVersion) {
+			printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
+		}
 	}
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
@@ -221,6 +231,15 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 	if (emuThread.joinable()) {
 		emuThread.join();
 	}
+
+	// Cache window position/size in config file to restore next time
+	const QRect& windowGeometry = geometry();
+	auto& windowConfig = emu->getConfig().windowSettings;
+
+	windowConfig.x = windowGeometry.x();
+	windowConfig.y = windowGeometry.y();
+	windowConfig.width = windowGeometry.width();
+	windowConfig.height = windowGeometry.height();
 }
 
 // Cleanup when the main window closes

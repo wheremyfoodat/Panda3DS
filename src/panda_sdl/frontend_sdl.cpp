@@ -35,7 +35,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
 #endif
 
-	const char* windowTitle = config.appVersionOnWindow ? ("Alber v" PANDA3DS_VERSION) : "Alber";
+	const char* windowTitle = config.windowSettings.showAppVersion ? ("Alber v" PANDA3DS_VERSION) : "Alber";
 	if (config.printAppVersion) {
 		printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
 	}

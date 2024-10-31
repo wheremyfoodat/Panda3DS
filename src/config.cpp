@@ -43,7 +43,21 @@ void EmulatorConfig::load() {
 			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
 
 			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
-			appVersionOnWindow = toml::find_or<toml::boolean>(general, "AppVersionOnWindow", false);
+		}
+	}
+
+	if (data.contains("Window")) {
+		auto windowResult = toml::expect<toml::value>(data.at("Window"));
+		if (windowResult.is_ok()) {
+			auto window = windowResult.unwrap();
+
+			windowSettings.showAppVersion = toml::find_or<toml::boolean>(window, "AppVersionOnWindow", false);
+			windowSettings.rememberPosition = toml::find_or<toml::boolean>(window, "RememberWindowPosition", false);
+
+			windowSettings.x = toml::find_or<toml::integer>(window, "WindowPosX", WindowSettings::defaultX);
+			windowSettings.y = toml::find_or<toml::integer>(window, "WindowPosY", WindowSettings::defaultY);
+			windowSettings.width = toml::find_or<toml::integer>(window, "WindowWidth", WindowSettings::defaultWidth);
+			windowSettings.height = toml::find_or<toml::integer>(window, "WindowHeight", WindowSettings::defaultHeight);
 		}
 	}
 
@@ -133,7 +147,13 @@ void EmulatorConfig::save() {
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
 	data["General"]["PrintAppVersion"] = printAppVersion;
-	data["General"]["AppVersionOnWindow"] = appVersionOnWindow;
+
+	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
+	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;
+	data["Window"]["WindowPosX"] = windowSettings.x;
+	data["Window"]["WindowPosY"] = windowSettings.y;
+	data["Window"]["WindowWidth"] = windowSettings.width;
+	data["Window"]["WindowHeight"] = windowSettings.height;
 	
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
