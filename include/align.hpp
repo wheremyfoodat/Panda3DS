@@ -7,7 +7,7 @@
 
 #include "helpers.hpp"
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include <malloc.h>
 #endif
 
@@ -77,7 +77,7 @@ namespace Common {
 	}
 
 	ALWAYS_INLINE static void* alignedMalloc(size_t size, size_t alignment) {
-#ifdef _MSC_VER
+#ifdef _WIN32
 		return _aligned_malloc(size, alignment);
 #else
 		// Unaligned sizes are slow on macOS.
