@@ -643,8 +643,8 @@ namespace Audio {
 				response.command = request.command;
 				response.mode = request.mode;
 
-				// TODO: Make this a toggle in config.toml. Currently we have it off by default until we finish the DSP mixer.
-				constexpr bool enableAAC = false;
+				// TODO: Make this a toggle in config.toml. Currently we have it on by default.
+				constexpr bool enableAAC = true;
 				if (enableAAC) {
 					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
 				}
