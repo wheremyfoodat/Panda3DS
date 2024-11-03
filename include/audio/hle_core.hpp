@@ -47,14 +47,17 @@ namespace Audio {
 
 		// Buffer of decoded PCM16 samples. TODO: Are there better alternatives to use over deque?
 		using SampleBuffer = std::deque<std::array<s16, 2>>;
-
 		using BufferQueue = std::priority_queue<Buffer>;
+
 		BufferQueue buffers;
 
 		SampleFormat sampleFormat = SampleFormat::ADPCM;
 		SourceType sourceType = SourceType::Stereo;
 
-		std::array<float, 3> gain0, gain1, gain2;
+		// There's one gain configuration for each of the 3 intermediate mixing stages
+		// And each gain configuration is composed of 4 gain values, one for each sample in a quad-channel sample
+		std::array<std::array<float, 4>, 3> gains;
+
 		u32 samplePosition;  // Sample number into the current audio buffer
 		float rateMultiplier;
 		u16 syncCount;
@@ -112,6 +115,10 @@ namespace Audio {
 		template <typename T>
 		using QuadFrame = Frame<T, 4>;
 
+		// Internally the DSP uses four channels when mixing.
+		// Neatly, QuadFrame<s32> means that every sample is a uint32x4 value, which is particularly nice for SIMD mixing
+		using IntermediateMix = QuadFrame<s32>;
+
 	  private:
 		using ChannelFormat = HLE::DspConfiguration::OutputFormat;
 		// The audio from each DSP voice is converted to quadraphonic and then fed into 3 intermediate mixing stages
@@ -151,7 +158,8 @@ namespace Audio {
 
 		using Source = Audio::DSPSource;
 		using SampleBuffer = Source::SampleBuffer;
-
+		using IntermediateMix = DSPMixer::IntermediateMix;
+		
 	  private:
 		enum class DSPState : u32 {
 			Off,

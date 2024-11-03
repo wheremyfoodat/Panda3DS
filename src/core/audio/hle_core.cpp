@@ -228,6 +228,7 @@ namespace Audio {
 		// The DSP checks the DSP configuration dirty bits on every frame, applies them, and clears them
 		read.dspConfiguration.dirtyRaw = 0;
 		read.dspConfiguration.dirtyRaw2 = 0;
+		std::array<IntermediateMix, 3> mixes{};
 
 		for (int i = 0; i < sourceCount; i++) {
 			// Update source configuration from the read region of shared memory
@@ -250,6 +251,24 @@ namespace Audio {
 			status.samplePosition = source.samplePosition;
 
 			source.isBufferIDDirty = false;
+
+			// If the source is still enabled, mix its output into the intermediate mix buffers
+			if (source.enabled) {
+				for (int mix = 0; mix < mixes.size(); mix++) {
+					IntermediateMix& intermediateMix = mixes[mix];
+					const std::array<float, 4>& gains = source.gains[mix];
+
+					// TODO: SIMD implementations
+					for (usize sampleIndex = 0; sampleIndex < Audio::samplesInFrame; sampleIndex++) {
+						// Mono samples are in the format: (l, r)
+						// When converting to quad, gain0 and gain2 are applied to the left sample, gain1 and gain3 to the right one
+						intermediateMix[sampleIndex][0] += s32(source.currentSamples[sampleIndex][0] * gains[0]);
+						intermediateMix[sampleIndex][1] += s32(source.currentSamples[sampleIndex][1] * gains[1]);
+						intermediateMix[sampleIndex][2] += s32(source.currentSamples[sampleIndex][0] * gains[2]);
+						intermediateMix[sampleIndex][3] += s32(source.currentSamples[sampleIndex][1] * gains[3]);
+					}
+				}
+			}
 		}
 
 		performMix(read, write);
@@ -373,6 +392,21 @@ namespace Audio {
 				}
 			}
 		}
+
+#define CONFIG_GAIN(index)                 \
+	if (config.gain##index##Dirty) {       \
+		auto& dest = source.gains[index];  \
+		auto& source = config.gain[index]; \
+                                           \
+		dest[0] = float(source[0]);        \
+		dest[1] = float(source[1]);        \
+		dest[2] = float(source[2]);        \
+		dest[3] = float(source[3]);        \
+	}
+		CONFIG_GAIN(0);
+		CONFIG_GAIN(1);
+		CONFIG_GAIN(2);
+#undef CONFIG_GAIN
 
 		config.dirtyRaw = 0;
 	}
