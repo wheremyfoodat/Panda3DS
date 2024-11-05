@@ -15,6 +15,8 @@
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	setWindowTitle("Alber");
+	setWindowIcon(QIcon(":/docs/img/rpog_icon.png"));
+
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);

@@ -25,6 +25,12 @@ if(APPLE)
     enable_language(OBJC)
 endif()
 
+# Enable RC support in order to use resource files for application icons
+if(WIN32)
+    enable_language(RC)
+    set(APP_RESOURCES docs/img/windows_icon.rc)
+endif()
+
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security -Wno-invalid-offsetof")
 endif()
@@ -668,7 +674,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)
-    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES})
+    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${APP_RESOURCES})
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)

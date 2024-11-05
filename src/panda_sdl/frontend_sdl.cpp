@@ -40,11 +40,18 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
 	}
 
+	// Positions of the window
+	int windowX, windowY;
+
 	// Apply window size settings if the appropriate option is enabled
 	if (config.windowSettings.rememberPosition) {
+		windowX = config.windowSettings.x;
+		windowY = config.windowSettings.y;
 		windowWidth = config.windowSettings.width;
 		windowHeight = config.windowSettings.height;
 	} else {
+		windowX = SDL_WINDOWPOS_CENTERED;
+		windowY = SDL_WINDOWPOS_CENTERED;
 		windowWidth = 400;
 		windowHeight = 480;
 	}
@@ -56,7 +63,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
-		window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		window = SDL_CreateWindow(windowTitle, windowX, windowY, windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::panic("Window creation failed: %s", SDL_GetError());
@@ -76,9 +83,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 #ifdef PANDA3DS_ENABLE_VULKAN
 	if (config.rendererType == RendererType::Vulkan) {
-		window = SDL_CreateWindow(
-			windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
-		);
+		window = SDL_CreateWindow(windowTitle, windowX, windowY, windowWidth, windowHeight, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
 			Helpers::warn("Window creation failed: %s", SDL_GetError());
@@ -126,8 +131,6 @@ void FrontendSDL::run() {
 
 					// Remember window position & size for future runs
 					auto& windowSettings = emu.getConfig().windowSettings;
-					// Note: For the time being we currently don't actually apply the x/y positions to the window, and center it instead
-					// This is subject to change in the future, so let's save the x/y positions to the config file anyways
 					SDL_GetWindowPosition(window, &windowSettings.x, &windowSettings.y);
 					SDL_GetWindowSize(window, &windowSettings.width, &windowSettings.height);
 					return;
