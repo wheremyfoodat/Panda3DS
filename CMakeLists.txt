@@ -591,7 +591,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         qt_add_resources(AlberCore "app_images"
             PREFIX "/"
             FILES
-                docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/img/rpog_icon.png
+                docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/img/rpog_icon.png docs/img/rsyn_icon.png
         )
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
