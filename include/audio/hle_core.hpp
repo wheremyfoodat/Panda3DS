@@ -16,6 +16,46 @@ namespace Audio {
 	using SampleFormat = HLE::SourceConfiguration::Configuration::Format;
 	using SourceType = HLE::SourceConfiguration::Configuration::MonoOrStereo;
 
+	class DSPMixer {
+	  public:
+		template <typename T, usize channelCount = 1>
+		using Sample = std::array<T, channelCount>;
+
+		template <typename T, usize channelCount>
+		using Frame = std::array<Sample<T, channelCount>, 160>;
+
+		template <typename T>
+		using MonoFrame = Frame<T, 1>;
+
+		template <typename T>
+		using StereoFrame = Frame<T, 2>;
+
+		template <typename T>
+		using QuadFrame = Frame<T, 4>;
+
+		// Internally the DSP uses four channels when mixing.
+		// Neatly, QuadFrame<s32> means that every sample is a uint32x4 value, which is particularly nice for SIMD mixing
+		using IntermediateMix = QuadFrame<s32>;
+
+	  private:
+		using ChannelFormat = HLE::DspConfiguration::OutputFormat;
+		// The audio from each DSP voice is converted to quadraphonic and then fed into 3 intermediate mixing stages
+		// Two of these intermediate mixers (second and third) are used for effects, including custom effects done on the CPU
+		static constexpr usize mixerStageCount = 3;
+
+	  public:
+		ChannelFormat channelFormat = ChannelFormat::Stereo;
+		std::array<float, mixerStageCount> volumes;
+		std::array<bool, 2> enableAuxStages;
+
+		void reset() {
+			channelFormat = ChannelFormat::Stereo;
+
+			volumes.fill(0.0);
+			enableAuxStages.fill(false);
+		}
+	};
+
 	struct DSPSource {
 		// Audio buffer information
 		// https://www.3dbrew.org/wiki/DSP_Memory_Region
@@ -49,6 +89,7 @@ namespace Audio {
 		using SampleBuffer = std::deque<std::array<s16, 2>>;
 		using BufferQueue = std::priority_queue<Buffer>;
 
+		DSPMixer::StereoFrame<s16> currentFrame;
 		BufferQueue buffers;
 
 		SampleFormat sampleFormat = SampleFormat::ADPCM;
@@ -98,46 +139,6 @@ namespace Audio {
 		DSPSource() { reset(); }
 	};
 
-	class DSPMixer {
-	  public:
-		template <typename T, usize channelCount = 1>
-		using Sample = std::array<T, channelCount>;
-
-		template <typename T, usize channelCount>
-		using Frame = std::array<Sample<T, channelCount>, 160>;
-
-		template <typename T>
-		using MonoFrame = Frame<T, 1>;
-
-		template <typename T>
-		using StereoFrame = Frame<T, 2>;
-
-		template <typename T>
-		using QuadFrame = Frame<T, 4>;
-
-		// Internally the DSP uses four channels when mixing.
-		// Neatly, QuadFrame<s32> means that every sample is a uint32x4 value, which is particularly nice for SIMD mixing
-		using IntermediateMix = QuadFrame<s32>;
-
-	  private:
-		using ChannelFormat = HLE::DspConfiguration::OutputFormat;
-		// The audio from each DSP voice is converted to quadraphonic and then fed into 3 intermediate mixing stages
-		// Two of these intermediate mixers (second and third) are used for effects, including custom effects done on the CPU
-		static constexpr usize mixerStageCount = 3;
-
-	  public:
-		ChannelFormat channelFormat = ChannelFormat::Stereo;
-		std::array<float, mixerStageCount> volumes;
-		std::array<bool, 2> enableAuxStages;
-
-		void reset() {
-			channelFormat = ChannelFormat::Stereo;
-
-			volumes.fill(0.0);
-			enableAuxStages.fill(false);
-		}
-	};
-
 	class HLE_DSP : public DSPCore {
 		// The audio frame types are public in case we want to use them for unit tests
 	  public:
@@ -159,7 +160,7 @@ namespace Audio {
 		using Source = Audio::DSPSource;
 		using SampleBuffer = Source::SampleBuffer;
 		using IntermediateMix = DSPMixer::IntermediateMix;
-		
+
 	  private:
 		enum class DSPState : u32 {
 			Off,
@@ -226,7 +227,7 @@ namespace Audio {
 		void outputFrame();
 		// Perform the final mix, mixing the quadraphonic samples from all voices into the output audio frame
 		void performMix(Audio::HLE::SharedMemory& readRegion, Audio::HLE::SharedMemory& writeRegion);
-		
+
 		// Decode an entire buffer worth of audio
 		void decodeBuffer(DSPSource& source);
 

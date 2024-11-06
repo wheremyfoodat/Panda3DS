@@ -262,10 +262,10 @@ namespace Audio {
 					for (usize sampleIndex = 0; sampleIndex < Audio::samplesInFrame; sampleIndex++) {
 						// Mono samples are in the format: (l, r)
 						// When converting to quad, gain0 and gain2 are applied to the left sample, gain1 and gain3 to the right one
-						intermediateMix[sampleIndex][0] += s32(source.currentSamples[sampleIndex][0] * gains[0]);
-						intermediateMix[sampleIndex][1] += s32(source.currentSamples[sampleIndex][1] * gains[1]);
-						intermediateMix[sampleIndex][2] += s32(source.currentSamples[sampleIndex][0] * gains[2]);
-						intermediateMix[sampleIndex][3] += s32(source.currentSamples[sampleIndex][1] * gains[3]);
+						intermediateMix[sampleIndex][0] += s32(source.currentFrame[sampleIndex][0] * gains[0]);
+						intermediateMix[sampleIndex][1] += s32(source.currentFrame[sampleIndex][1] * gains[1]);
+						intermediateMix[sampleIndex][2] += s32(source.currentFrame[sampleIndex][0] * gains[2]);
+						intermediateMix[sampleIndex][3] += s32(source.currentFrame[sampleIndex][1] * gains[3]);
 					}
 				}
 			}
@@ -467,6 +467,9 @@ namespace Audio {
 	}
 
 	void HLE_DSP::generateFrame(DSPSource& source) {
+		// Zero out all output samples at first. TODO: Don't zero out the entire frame initially, rather only zero-out the "unwritten" samples when the frame is done being processed.
+		source.currentFrame = {};
+
 		if (source.currentSamples.empty()) {
 			// There's no audio left to play, turn the voice off
 			if (source.buffers.empty()) {
@@ -480,7 +483,7 @@ namespace Audio {
 
 			decodeBuffer(source);
 		} else {
-			uint maxSampleCount = uint(float(Audio::samplesInFrame) * source.rateMultiplier);
+			uint maxSampleCount = uint(float(Audio::samplesInFrame) * 1.0);
 			uint outputCount = 0;
 
 			while (outputCount < maxSampleCount) {
@@ -494,8 +497,14 @@ namespace Audio {
 
 				const uint sampleCount = std::min<s32>(maxSampleCount - outputCount, source.currentSamples.size());
 
-				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
+				// Copy samples to current frame buffer
+				// TODO: Implement linear/polyphase interpolation
+				std::copy(
+					source.currentSamples.begin(), std::next(source.currentSamples.begin(), sampleCount), source.currentFrame.begin() + outputCount
+				);
+				// Remove samples from sample buffer
 				source.currentSamples.erase(source.currentSamples.begin(), std::next(source.currentSamples.begin(), sampleCount));
+				// Advance sample position
 				source.samplePosition += sampleCount;
 				outputCount += sampleCount;
 			}
@@ -718,5 +727,7 @@ namespace Audio {
 
 		buffers = {};
 		currentSamples.clear();
+
+		gains.fill({});
 	}
 }  // namespace Audio
