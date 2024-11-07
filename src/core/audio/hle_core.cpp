@@ -319,6 +319,10 @@ namespace Audio {
 			source.sourceType = config.monoOrStereo;
 		}
 
+		if (config.interpolationDirty) {
+			source.interpolationMode = config.interpolationMode;
+		}
+
 		if (config.rateMultiplierDirty) {
 			source.rateMultiplier = (config.rateMultiplier > 0.f) ? config.rateMultiplier : 1.f;
 		}
@@ -499,6 +503,7 @@ namespace Audio {
 
 				// Copy samples to current frame buffer
 				// TODO: Implement linear/polyphase interpolation
+
 				std::copy(
 					source.currentSamples.begin(), std::next(source.currentSamples.begin(), sampleCount), source.currentFrame.begin() + outputCount
 				);
@@ -718,6 +723,7 @@ namespace Audio {
 		// Initialize these to some sane defaults
 		sampleFormat = SampleFormat::ADPCM;
 		sourceType = SourceType::Stereo;
+		interpolationMode = InterpolationMode::Linear;
 
 		samplePosition = 0;
 		previousBufferID = 0;

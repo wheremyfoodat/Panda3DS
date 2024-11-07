@@ -88,12 +88,14 @@ namespace Audio {
 		// Buffer of decoded PCM16 samples. TODO: Are there better alternatives to use over deque?
 		using SampleBuffer = std::deque<std::array<s16, 2>>;
 		using BufferQueue = std::priority_queue<Buffer>;
+		using InterpolationMode = HLE::SourceConfiguration::Configuration::InterpolationMode;
 
 		DSPMixer::StereoFrame<s16> currentFrame;
 		BufferQueue buffers;
 
 		SampleFormat sampleFormat = SampleFormat::ADPCM;
 		SourceType sourceType = SourceType::Stereo;
+		InterpolationMode interpolationMode = InterpolationMode::Linear;
 
 		// There's one gain configuration for each of the 3 intermediate mixing stages
 		// And each gain configuration is composed of 4 gain values, one for each sample in a quad-channel sample
