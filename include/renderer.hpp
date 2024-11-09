@@ -18,7 +18,8 @@ enum class RendererType : s8 {
 	Null = 0,
 	OpenGL = 1,
 	Vulkan = 2,
-	Software = 3,
+	Metal = 3,
+	Software = 4,
 };
 
 struct EmulatorConfig;

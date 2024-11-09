@@ -124,6 +124,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		const RendererType rendererType = emu->getConfig().rendererType;
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
 		usingVk = (rendererType == RendererType::Vulkan);
+		usingMtl = (rendererType == RendererType::Metal);
 
 		if (usingGL) {
 			// Make GL context current for this thread, enable VSync
@@ -134,6 +135,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			emu->initGraphicsContext(glContext);
 		} else if (usingVk) {
 			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
+		} else if (usingMtl) {
+			Helpers::panic("Metal on Qt currently doesn't work, try the SDL frontend instead!");
 		} else {
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
