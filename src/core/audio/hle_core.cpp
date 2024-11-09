@@ -487,10 +487,10 @@ namespace Audio {
 
 			decodeBuffer(source);
 		} else {
-			uint maxSampleCount = uint(float(Audio::samplesInFrame) * 1.0);
 			usize outputCount = 0;
+			static constexpr usize maxSamples = Audio::samplesInFrame;
 
-			while (outputCount < maxSampleCount) {
+			while (outputCount < maxSamples) {
 				if (source.currentSamples.empty()) {
 					if (source.buffers.empty()) {
 						break;
@@ -518,9 +518,9 @@ namespace Audio {
 						);
 						break;
 				}
-
-				source.samplePosition += u32(outputCount);
 			}
+
+			source.samplePosition += u32(outputCount * source.rateMultiplier);
 		}
 	}
 
