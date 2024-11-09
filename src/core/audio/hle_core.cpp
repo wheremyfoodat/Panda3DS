@@ -488,7 +488,7 @@ namespace Audio {
 			decodeBuffer(source);
 		} else {
 			uint maxSampleCount = uint(float(Audio::samplesInFrame) * 1.0);
-			uint outputCount = 0;
+			usize outputCount = 0;
 
 			while (outputCount < maxSampleCount) {
 				if (source.currentSamples.empty()) {
@@ -499,19 +499,27 @@ namespace Audio {
 					}
 				}
 
-				const uint sampleCount = std::min<s32>(maxSampleCount - outputCount, source.currentSamples.size());
+				switch (source.interpolationMode) {
+					case Source::InterpolationMode::Linear:
+						Audio::Interpolation::linear(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
+					case Source::InterpolationMode::None:
+						Audio::Interpolation::none(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
 
-				// Copy samples to current frame buffer
-				// TODO: Implement linear/polyphase interpolation
+					case Source::InterpolationMode::Polyphase:
+						// Currently stubbed to be the same as linear
+						Audio::Interpolation::polyphase(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
+				}
 
-				std::copy(
-					source.currentSamples.begin(), std::next(source.currentSamples.begin(), sampleCount), source.currentFrame.begin() + outputCount
-				);
-				// Remove samples from sample buffer
-				source.currentSamples.erase(source.currentSamples.begin(), std::next(source.currentSamples.begin(), sampleCount));
-				// Advance sample position
-				source.samplePosition += sampleCount;
-				outputCount += sampleCount;
+				source.samplePosition += u32(outputCount);
 			}
 		}
 	}
