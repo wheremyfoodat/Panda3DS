@@ -2,9 +2,10 @@
 
 #include <cmrc/cmrc.hpp>
 #include <cstddef>
+
 #include "renderer_mtl/mtl_lut_texture.hpp"
 
-// HACK
+// Hack: Apple annoyingly defines a global "NO" macro which ends up conflicting with our own code...
 #undef NO
 
 #include "PICA/gpu.hpp"
@@ -14,8 +15,10 @@ using namespace PICA;
 
 CMRC_DECLARE(RendererMTL);
 
-const u16 LIGHTING_LUT_TEXTURE_WIDTH = 256;
-const u32 FOG_LUT_TEXTURE_WIDTH = 128;
+static constexpr u16 LIGHTING_LUT_TEXTURE_WIDTH = 256;
+static constexpr u32 FOG_LUT_TEXTURE_WIDTH = 128;
+// Bind the vertex buffer to binding 30 so that it doesn't occupy the lower indices
+static constexpr uint VERTEX_BUFFER_BINDING_INDEX = 30;
 
 // HACK: redefinition...
 PICA::ColorFmt ToColorFormat(u32 format) {
@@ -40,6 +43,7 @@ MTL::Library* loadLibrary(MTL::Device* device, const cmrc::file& shaderSource) {
 
 RendererMTL::RendererMTL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
 	: Renderer(gpu, internalRegs, externalRegs) {}
+
 RendererMTL::~RendererMTL() {}
 
 void RendererMTL::reset() {
@@ -78,7 +82,7 @@ void RendererMTL::display() {
 		clearColor(nullptr, bottomScreen->get().texture);
 	}
 
-	// -------- Draw --------
+	// Draw
 	commandBuffer->pushDebugGroup(toNSString("Display"));
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
@@ -130,8 +134,6 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	metalLayer->setDevice(device);
 	commandQueue = device->newCommandQueue();
 
-	// -------- Objects --------
-
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();
 	textureDescriptor->setTextureType(MTL::TextureType2D);
@@ -157,7 +159,9 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 
 	samplerDescriptor->release();
 
-	lutLightingTexture = new Metal::LutTexture(device, MTL::TextureType2DArray, MTL::PixelFormatR16Unorm, LIGHTING_LUT_TEXTURE_WIDTH, Lights::LUT_Count, "Lighting LUT texture");
+	lutLightingTexture = new Metal::LutTexture(
+		device, MTL::TextureType2DArray, MTL::PixelFormatR16Unorm, LIGHTING_LUT_TEXTURE_WIDTH, Lights::LUT_Count, "Lighting LUT texture"
+	);
 	lutFogTexture = new Metal::LutTexture(device, MTL::TextureType1DArray, MTL::PixelFormatRG32Float, FOG_LUT_TEXTURE_WIDTH, 1, "Fog LUT texture");
 
 	// -------- Pipelines --------
@@ -166,7 +170,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	auto mtlResources = cmrc::RendererMTL::get_filesystem();
 	library = loadLibrary(device, mtlResources.open("metal_shaders.metallib"));
 	MTL::Library* blitLibrary = loadLibrary(device, mtlResources.open("metal_blit.metallib"));
-	//MTL::Library* copyToLutTextureLibrary = loadLibrary(device, mtlResources.open("metal_copy_to_lut_texture.metallib"));
+	// MTL::Library* copyToLutTextureLibrary = loadLibrary(device, mtlResources.open("metal_copy_to_lut_texture.metallib"));
 
 	// Display
 	MTL::Function* vertexDisplayFunction = library->newFunction(NS::String::string("vertexDisplay", NS::ASCIIStringEncoding));
@@ -295,9 +299,8 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	defaultDepthStencilState = device->newDepthStencilState(depthStencilDescriptor);
 	depthStencilDescriptor->release();
 
-	// Release
 	blitLibrary->release();
-	//copyToLutTextureLibrary->release();
+	// copyToLutTextureLibrary->release();
 }
 
 void RendererMTL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
@@ -592,8 +595,7 @@ void RendererMTL::deinitGraphicsContext() {
 	delete lutLightingTexture;
 	delete lutFogTexture;
 
-	// Release
-	//copyToLutTexturePipeline->release();
+	// copyToLutTexturePipeline->release();
 	displayPipeline->release();
 	defaultDepthStencilState->release();
 	nullTexture->release();
@@ -700,9 +702,9 @@ void RendererMTL::bindTexturesToSlots() {
 
 	for (int i = 0; i < 3; i++) {
 		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
-    		commandEncoder.setFragmentTexture(nullTexture, i);
-    		commandEncoder.setFragmentSamplerState(nearestSampler, i);
-            continue;
+			commandEncoder.setFragmentTexture(nullTexture, i);
+			commandEncoder.setFragmentSamplerState(nearestSampler, i);
+			continue;
 		}
 
 		const size_t ioBase = ioBases[i];
@@ -736,7 +738,9 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	}
 
 	u32 index = lutLightingTexture->getNextIndex();
-	lutLightingTexture->getTexture()->replaceRegion(MTL::Region(0, 0, LIGHTING_LUT_TEXTURE_WIDTH, Lights::LUT_Count), 0, index, lightingLut.data(), LIGHTING_LUT_TEXTURE_WIDTH * 2, 0);
+	lutLightingTexture->getTexture()->replaceRegion(
+		MTL::Region(0, 0, LIGHTING_LUT_TEXTURE_WIDTH, Lights::LUT_Count), 0, index, lightingLut.data(), LIGHTING_LUT_TEXTURE_WIDTH * 2, 0
+	);
 
 	/*
 	endRenderPass();
@@ -768,7 +772,7 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.fogLUTDirty = false;
 
-	std::array<float, FOG_LUT_TEXTURE_WIDTH * 2> fogLut = {0.0f};
+	std::array<float, FOG_LUT_TEXTURE_WIDTH* 2> fogLut = {0.0f};
 
 	for (int i = 0; i < fogLut.size(); i += 2) {
 		const uint32_t value = gpu.fogLUT[i >> 1];
@@ -807,7 +811,8 @@ void RendererMTL::textureCopyImpl(
 ) {
 	nextRenderPassName = "Texture copy";
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
-	// TODO: clearColor sets the load action to load if it didn't find any clear, but that is unnecessary if we are doing a copy to the whole texture
+	// TODO: clearColor sets the load action to load if it didn't find any clear, but that is unnecessary if we are doing a copy to the whole
+	// texture
 	bool doesClear = clearColor(renderPassDescriptor, destFramebuffer.texture);
 	beginRenderPassIfNeeded(renderPassDescriptor, doesClear, destFramebuffer.texture);
 
@@ -819,11 +824,13 @@ void RendererMTL::textureCopyImpl(
 
 	// Viewport
 	renderCommandEncoder->setViewport(MTL::Viewport{
-		double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0
-	});
+		double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
+
 	float srcRectNDC[4] = {
-		srcRect.left / (float)srcFramebuffer.size.u(), srcRect.bottom / (float)srcFramebuffer.size.v(),
-		(srcRect.right - srcRect.left) / (float)srcFramebuffer.size.u(), (srcRect.top - srcRect.bottom) / (float)srcFramebuffer.size.v()
+		srcRect.left / (float)srcFramebuffer.size.u(),
+		srcRect.bottom / (float)srcFramebuffer.size.v(),
+		(srcRect.right - srcRect.left) / (float)srcFramebuffer.size.u(),
+		(srcRect.top - srcRect.bottom) / (float)srcFramebuffer.size.v(),
 	};
 
 	// Bind resources
@@ -834,25 +841,28 @@ void RendererMTL::textureCopyImpl(
 	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 }
 
-void RendererMTL::beginRenderPassIfNeeded(MTL::RenderPassDescriptor* renderPassDescriptor, bool doesClears, MTL::Texture* colorTexture, MTL::Texture* depthTexture) {
+void RendererMTL::beginRenderPassIfNeeded(
+	MTL::RenderPassDescriptor* renderPassDescriptor, bool doesClears, MTL::Texture* colorTexture, MTL::Texture* depthTexture
+) {
 	createCommandBufferIfNeeded();
 
-	if (doesClears || !renderCommandEncoder || colorTexture != lastColorTexture || (depthTexture != lastDepthTexture && !(lastDepthTexture && !depthTexture))) {
-	    endRenderPass();
+	if (doesClears || !renderCommandEncoder || colorTexture != lastColorTexture ||
+		(depthTexture != lastDepthTexture && !(lastDepthTexture && !depthTexture))) {
+		endRenderPass();
 
-        renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
-        renderCommandEncoder->setLabel(toNSString(nextRenderPassName));
-        commandEncoder.newRenderCommandEncoder(renderCommandEncoder);
+		renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+		renderCommandEncoder->setLabel(toNSString(nextRenderPassName));
+		commandEncoder.newRenderCommandEncoder(renderCommandEncoder);
 
-        // Bind persistent resources
+		// Bind persistent resources
 
-       	// LUT texture
-       	renderCommandEncoder->setFragmentTexture(lutLightingTexture->getTexture(), 3);
-       	renderCommandEncoder->setFragmentTexture(lutFogTexture->getTexture(), 4);
-       	renderCommandEncoder->setFragmentSamplerState(linearSampler, 3);
+		// LUT texture
+		renderCommandEncoder->setFragmentTexture(lutLightingTexture->getTexture(), 3);
+		renderCommandEncoder->setFragmentTexture(lutFogTexture->getTexture(), 4);
+		renderCommandEncoder->setFragmentSamplerState(linearSampler, 3);
 
-	    lastColorTexture = colorTexture;
-        lastDepthTexture = depthTexture;
+		lastColorTexture = colorTexture;
+		lastDepthTexture = depthTexture;
 	}
 
 	renderPassDescriptor->release();
