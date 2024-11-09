@@ -732,6 +732,7 @@ namespace Audio {
 		rateMultiplier = 1.f;
 
 		buffers = {};
+        interpolationState = {};
 		currentSamples.clear();
 
 		gains.fill({});
