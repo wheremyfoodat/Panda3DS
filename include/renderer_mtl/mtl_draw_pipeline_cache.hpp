@@ -8,9 +8,9 @@ using namespace PICA;
 
 namespace Metal {
 	struct DrawFragmentFunctionHash {
+		u32 lightingConfig1;   // 32 bits (TODO: check this)
 		bool lightingEnabled;  // 1 bit
 		u8 lightingNumLights;  // 3 bits
-		u32 lightingConfig1;   // 32 bits (TODO: check this)
 		//                                 |   ref    | func |  on  |
 		u16 alphaControl;  // 12 bits (mask:  11111111   0111   0001)
 	};
