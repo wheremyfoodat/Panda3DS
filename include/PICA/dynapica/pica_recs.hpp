@@ -2,7 +2,7 @@
 #include "helpers.hpp"
 #include "vertex_loader_rec.hpp"
 
-// Common file for our PICA JITs (From vertex config -> CPU assembly and from PICA shader -> CPU assembly)
+// Common file for our PICA JITs (From PICA shader -> CPU assembly)
 
 namespace Dynapica {
 #ifdef PANDA3DS_DYNAPICA_SUPPORTED

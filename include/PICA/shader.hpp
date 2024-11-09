@@ -1,6 +1,8 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <cstddef>
 #include <cstring>
 
 #include "PICA/float_types.hpp"
@@ -21,7 +23,7 @@ namespace ShaderOpcodes {
 		DST = 0x04,
 		EX2 = 0x05,
 		LG2 = 0x06,
-		LIT = 0x07,
+		LITP = 0x07,
 		MUL = 0x08,
 		SGE = 0x09,
 		SLT = 0x0A,
@@ -55,6 +57,10 @@ namespace ShaderOpcodes {
 		MAD = 0x38  // Everything between 0x38-0x3F is a MAD but fuck it
 	};
 }
+
+namespace PICA::ShaderGen {
+	class ShaderDecompiler;
+};
 
 // Note: All PICA f24 vec4 registers must have the alignas(16) specifier to make them easier to access in SSE/NEON code in the JIT
 class PICAShader {
@@ -90,14 +96,22 @@ class PICAShader {
   public:
 	// These are placed close to the temp registers and co because it helps the JIT generate better code
 	u32 entrypoint = 0;  // Initial shader PC
-	u32 boolUniform;
-	std::array<std::array<u8, 4>, 4> intUniforms;
+
+	// We want these registers in this order & with this alignment for uploading them directly to a UBO
+	// When emulating shaders on the GPU. Plus this alignment for float uniforms is necessary for doing SIMD in the shader->CPU recompilers.
 	alignas(16) std::array<vec4f, 96> floatUniforms;
+	alignas(16) std::array<std::array<u8, 4>, 4> intUniforms;
+	u32 boolUniform;
 
 	alignas(16) std::array<vec4f, 16> fixedAttributes;  // Fixed vertex attributes
 	alignas(16) std::array<vec4f, 16> inputs;           // Attributes passed to the shader
 	alignas(16) std::array<vec4f, 16> outputs;
 	alignas(16) vec4f dummy = vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});  // Dummy register used by the JIT
+	
+	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
+	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
+	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
+	using Hash = PICAHash::HashType;
 
   protected:
 	std::array<u32, 128> operandDescriptors;
@@ -116,20 +130,20 @@ class PICAShader {
 	std::array<CallInfo, 4> callInfo;
 	ShaderType type;
 
-	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
-	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
-	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
-	using Hash = PICAHash::HashType;
-
 	Hash lastCodeHash = 0;    // Last hash computed for the shader code (Used for the JIT caching mechanism)
 	Hash lastOpdescHash = 0;  // Last hash computed for the operand descriptors (Also used for the JIT)
 
+  public:
+	bool uniformsDirty = false;
+
+  protected:
 	bool codeHashDirty = false;
 	bool opdescHashDirty = false;
 
 	// Add these as friend classes for the JIT so it has access to all important state
 	friend class ShaderJIT;
 	friend class ShaderEmitter;
+	friend class PICA::ShaderGen::ShaderDecompiler;
 
 	vec4f getSource(u32 source);
 	vec4f& getDest(u32 dest);
@@ -151,6 +165,7 @@ class PICAShader {
 	void jmpc(u32 instruction);
 	void jmpu(u32 instruction);
 	void lg2(u32 instruction);
+	void litp(u32 instruction);
 	void loop(u32 instruction);
 	void mad(u32 instruction);
 	void madi(u32 instruction);
@@ -220,12 +235,8 @@ class PICAShader {
   public:
 	static constexpr size_t maxInstructionCount = 4096;
 	std::array<u32, maxInstructionCount> loadedShader;    // Currently loaded & active shader
-	std::array<u32, maxInstructionCount> bufferedShader;  // Shader to be transferred when the SH_CODETRANSFER_END reg gets written to
 
 	PICAShader(ShaderType type) : type(type) {}
-
-	// Theese functions are in the header to be inlined more easily, though with LTO I hope I'll be able to move them
-	void finalize() { std::memcpy(&loadedShader[0], &bufferedShader[0], 4096 * sizeof(u32)); }
 
 	void setBufferIndex(u32 index) { bufferIndex = index & 0xfff; }
 	void setOpDescriptorIndex(u32 index) { opDescriptorIndex = index & 0x7f; }
@@ -235,7 +246,7 @@ class PICAShader {
 			Helpers::panic("o no, shader upload overflew");
 		}
 
-		bufferedShader[bufferIndex++] = word;
+		loadedShader[bufferIndex++] = word;
 		bufferIndex &= 0xfff;
 
 		codeHashDirty = true;  // Signal the JIT if necessary that the program hash has potentially changed
@@ -256,13 +267,15 @@ class PICAShader {
 
 	void uploadFloatUniform(u32 word) {
 		floatUniformBuffer[floatUniformWordCount++] = word;
-		if (floatUniformIndex >= 96) {
-			Helpers::panic("[PICA] Tried to write float uniform %d", floatUniformIndex);
-		}
 
 		if ((f32UniformTransfer && floatUniformWordCount >= 4) || (!f32UniformTransfer && floatUniformWordCount >= 3)) {
-			vec4f& uniform = floatUniforms[floatUniformIndex++];
 			floatUniformWordCount = 0;
+
+			// Check if the program tries to upload to a non-existent uniform, and empty the queue without writing in that case
+			if (floatUniformIndex >= 96) [[unlikely]] {
+				return;
+			}
+			vec4f& uniform = floatUniforms[floatUniformIndex++];
 
 			if (f32UniformTransfer) {
 				uniform[0] = f24::fromFloat32(*(float*)&floatUniformBuffer[3]);
@@ -275,6 +288,7 @@ class PICAShader {
 				uniform[2] = f24::fromRaw(((floatUniformBuffer[0] & 0xff) << 16) | (floatUniformBuffer[1] >> 16));
 				uniform[3] = f24::fromRaw(floatUniformBuffer[0] >> 8);
 			}
+			uniformsDirty = true;
 		}
 	}
 
@@ -286,6 +300,12 @@ class PICAShader {
 		u[1] = getBits<8, 8>(word);
 		u[2] = getBits<16, 8>(word);
 		u[3] = getBits<24, 8>(word);
+		uniformsDirty = true;
+	}
+
+	void uploadBoolUniform(u32 value) {
+		boolUniform = value;
+		uniformsDirty = true;
 	}
 
 	void run();
@@ -293,4 +313,13 @@ class PICAShader {
 
 	Hash getCodeHash();
 	Hash getOpdescHash();
+
+	// Returns how big the PICA uniforms are combined. Used for hw accelerated shaders where we upload the uniforms to our GPU.
+	static constexpr usize totalUniformSize() { return sizeof(floatUniforms) + sizeof(intUniforms) + sizeof(boolUniform); }
+	void* getUniformPointer() { return static_cast<void*>(&floatUniforms); }
 };
+
+static_assert(
+	offsetof(PICAShader, intUniforms) == offsetof(PICAShader, floatUniforms) + 96 * sizeof(float) * 4 &&
+	offsetof(PICAShader, boolUniform) == offsetof(PICAShader, intUniforms) + 4 * sizeof(u8) * 4
+);

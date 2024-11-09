@@ -114,6 +114,7 @@ class Memory {
 		bool changeState = false;
 		bool changePerms = false;
 	};
+	using Handle = HorizonHandle;
 
 	u8* fcram;
 	u8* dspRam;  // Provided to us by Audio
@@ -222,8 +223,14 @@ private:
 	u8* getFCRAM() { return fcram; }
 
 	enum class BatteryLevel {
-		Empty = 0, AlmostEmpty, OneBar, TwoBars, ThreeBars, FourBars
+		Empty = 0,
+		AlmostEmpty,
+		OneBar,
+		TwoBars,
+		ThreeBars,
+		FourBars,
 	};
+
 	u8 getBatteryState(bool adapterConnected, bool charging, BatteryLevel batteryLevel) {
 		u8 value = static_cast<u8>(batteryLevel) << 2; // Bits 2:4 are the battery level from 0 to 5
 		if (adapterConnected) value |= 1 << 0; // Bit 0 shows if the charger is connected
@@ -287,5 +294,5 @@ private:
 
 	bool allocateMainThreadStack(u32 size);
 	Regions getConsoleRegion();
-	void copySharedFont(u8* ptr);
+	void copySharedFont(u8* ptr, u32 vaddr);
 };

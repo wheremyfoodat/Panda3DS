@@ -15,6 +15,9 @@
 #ifdef PANDA3DS_ENABLE_VULKAN
 #include "renderer_vk/renderer_vk.hpp"
 #endif
+#ifdef PANDA3DS_ENABLE_METAL
+#include "renderer_mtl/renderer_mtl.hpp"
+#endif
 
 constexpr u32 topScreenWidth = 240;
 constexpr u32 topScreenHeight = 400;
@@ -53,10 +56,20 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
 			break;
 		}
 #endif
+#ifdef PANDA3DS_ENABLE_METAL
+		case RendererType::Metal: {
+			renderer.reset(new RendererMTL(*this, regs, externalRegs));
+			break;
+		}
+#endif
 		default: {
 			Helpers::panic("Rendering backend not supported: %s", Renderer::typeToString(config.rendererType));
 			break;
 		}
+	}
+
+	if (renderer != nullptr) {
+		renderer->setConfig(&config);
 	}
 }
 
@@ -64,9 +77,14 @@ void GPU::reset() {
 	regs.fill(0);
 	shaderUnit.reset();
 	shaderJIT.reset();
+	shaderJIT.setAccurateMul(config.accurateShaderMul);
+
 	std::memset(vram, 0, vramSize);
 	lightingLUT.fill(0);
 	lightingLUTDirty = true;
+
+	fogLUT.fill(0);
+	fogLUTDirty = true;
 
 	totalAttribCount = 0;
 	fixedAttribMask = 0;
@@ -111,33 +129,59 @@ void GPU::reset() {
 	renderer->reset();
 }
 
+static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
+
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
-	const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
+	PICA::DrawAcceleration accel;
 
-	if (indexed) {
-		if (shaderJITEnabled)
-			drawArrays<true, true>();
-		else
-			drawArrays<true, false>();
+	if (config.accelerateShaders) {
+		// If we are potentially going to use hw shaders, gather necessary to do vertex fetch, index buffering, etc on the GPU
+		// This includes parsing which vertices to upload, getting pointers to the index buffer data & vertex data, and so on 
+		getAcceleratedDrawInfo(accel, indexed);
+	}
+
+	const bool hwShaders = renderer->prepareForDraw(shaderUnit, &accel);
+
+	if (hwShaders) {
+		// Hardware shaders have their own accelerated code path for draws, so they skip everything here
+		const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(regs[PICA::InternalRegs::PrimitiveConfig]));
+		// Total # of vertices to render
+		const u32 vertexCount = regs[PICA::InternalRegs::VertexCountReg];
+
+		// Note: In the hardware shader path the vertices span shouldn't actually be used as the renderer will perform its own attribute fetching
+		renderer->drawVertices(primType, std::span(vertices).first(vertexCount));
 	} else {
-		if (shaderJITEnabled)
-			drawArrays<false, true>();
-		else
-			drawArrays<false, false>();
+		const bool shaderJITEnabled = ShaderJIT::isAvailable() && config.shaderJitEnabled;
+
+		if (indexed) {
+			if (shaderJITEnabled) {
+				drawArrays<true, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<true, ShaderExecMode::Interpreter>();
+			}
+		} else {
+			if (shaderJITEnabled) {
+				drawArrays<false, ShaderExecMode::JIT>();
+			} else {
+				drawArrays<false, ShaderExecMode::Interpreter>();
+			}
+		}
 	}
 }
 
-static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
-
-template <bool indexed, bool useShaderJIT>
+template <bool indexed, ShaderExecMode mode>
 void GPU::drawArrays() {
-	if constexpr (useShaderJIT) {
+	if constexpr (mode == ShaderExecMode::JIT) {
 		shaderJIT.prepare(shaderUnit.vs);
+	} else if constexpr (mode == ShaderExecMode::Hardware) {
+		// Hardware shaders have their own accelerated code path for draws, so they're not meant to take this path
+		Helpers::panic("GPU::DrawArrays: Hardware shaders shouldn't take this path!");
 	}
 
-	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
+	// We can have up to 16 attributes, each one consisting of 4 floats
+	constexpr u32 maxAttrSizeInFloats = 16 * 4;
 
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
@@ -147,7 +191,10 @@ void GPU::drawArrays() {
 	// Configures the type of primitive and the number of vertex shader outputs
 	const u32 primConfig = regs[PICA::InternalRegs::PrimitiveConfig];
 	const PICA::PrimType primType = static_cast<PICA::PrimType>(Helpers::getBits<8, 2>(primConfig));
-	if (vertexCount > Renderer::vertexBufferSize) Helpers::panic("[PICA] vertexCount > vertexBufferSize");
+	if (vertexCount > Renderer::vertexBufferSize) [[unlikely]] {
+		Helpers::warn("[PICA] vertexCount > vertexBufferSize");
+		return;
+	}
 
 	if ((primType == PICA::PrimType::TriangleList && vertexCount % 3) || (primType == PICA::PrimType::TriangleStrip && vertexCount < 3) ||
 		(primType == PICA::PrimType::TriangleFan && vertexCount < 3)) {
@@ -299,8 +346,6 @@ void GPU::drawArrays() {
 					}
 
 					// Fill the remaining attribute lanes with default parameters (1.0 for alpha/w, 0.0) for everything else
-					// Corgi does this although I'm not sure if it's actually needed for anything.
-					// TODO: Find out
 					while (component < 4) {
 						attribute[component] = (component == 3) ? f24::fromFloat32(1.0) : f24::fromFloat32(0.0);
 						component++;
@@ -314,13 +359,13 @@ void GPU::drawArrays() {
 
 		// Before running the shader, the PICA maps the fetched attributes from the attribute registers to the shader input registers
 		// Based on the SH_ATTRIBUTES_PERMUTATION registers.
-		// Ie it might attribute #0 to v2, #1 to v7, etc
+		// Ie it might map attribute #0 to v2, #1 to v7, etc
 		for (int j = 0; j < totalAttribCount; j++) {
 			const u32 mapping = (inputAttrCfg >> (j * 4)) & 0xf;
 			std::memcpy(&shaderUnit.vs.inputs[mapping], &currentAttributes[j], sizeof(vec4f));
 		}
 
-		if constexpr (useShaderJIT) {
+		if constexpr (mode == ShaderExecMode::JIT) {
 			shaderJIT.run(shaderUnit.vs);
 		} else {
 			shaderUnit.vs.run();
@@ -355,7 +400,7 @@ PICA::Vertex GPU::getImmediateModeVertex() {
 
 	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
 	shaderUnit.vs.run();
-	
+
 	// Map shader outputs to fixed function properties
 	const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 	for (int i = 0; i < totalShaderOutputs; i++) {

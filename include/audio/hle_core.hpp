@@ -2,9 +2,12 @@
 #include <array>
 #include <cassert>
 #include <deque>
+#include <memory>
 #include <queue>
 #include <vector>
 
+#include "audio/aac.hpp"
+#include "audio/aac_decoder.hpp"
 #include "audio/dsp_core.hpp"
 #include "audio/dsp_shared_mem.hpp"
 #include "memory.hpp"
@@ -41,15 +44,25 @@ namespace Audio {
 				return this->bufferID > other.bufferID;
 			}
 		};
+
 		// Buffer of decoded PCM16 samples. TODO: Are there better alternatives to use over deque?
 		using SampleBuffer = std::deque<std::array<s16, 2>>;
 
 		using BufferQueue = std::priority_queue<Buffer>;
 		BufferQueue buffers;
 
+		SampleFormat sampleFormat = SampleFormat::ADPCM;
+		SourceType sourceType = SourceType::Stereo;
+
 		std::array<float, 3> gain0, gain1, gain2;
+		u32 samplePosition;  // Sample number into the current audio buffer
+		float rateMultiplier;
 		u16 syncCount;
-		bool enabled;  // Is the source enabled?
+		u16 currentBufferID;
+		u16 previousBufferID;
+
+		bool enabled;                  // Is the source enabled?
+		bool isBufferIDDirty = false;  // Did we change buffers?
 
 		// ADPCM decoding info:
 		// An array of fixed point S5.11 coefficients. These provide "weights" for the history samples
@@ -65,6 +78,10 @@ namespace Audio {
 		int index = 0;  // Index of the voice in [0, 23] for debugging
 
 		void reset();
+
+		// Push a buffer to the buffer queue
+		void pushBuffer(const Buffer& buffer) { buffers.push(buffer); }
+
 		// Pop a buffer from the buffer queue and return it
 		Buffer popBuffer() {
 			assert(!buffers.empty());
@@ -78,8 +95,7 @@ namespace Audio {
 		DSPSource() { reset(); }
 	};
 
-	class HLE_DSP : public DSPCore {
-		// The audio frame types are public in case we want to use them for unit tests
+	class DSPMixer {
 	  public:
 		template <typename T, usize channelCount = 1>
 		using Sample = std::array<T, channelCount>;
@@ -95,6 +111,43 @@ namespace Audio {
 
 		template <typename T>
 		using QuadFrame = Frame<T, 4>;
+
+	  private:
+		using ChannelFormat = HLE::DspConfiguration::OutputFormat;
+		// The audio from each DSP voice is converted to quadraphonic and then fed into 3 intermediate mixing stages
+		// Two of these intermediate mixers (second and third) are used for effects, including custom effects done on the CPU
+		static constexpr usize mixerStageCount = 3;
+
+	  public:
+		ChannelFormat channelFormat = ChannelFormat::Stereo;
+		std::array<float, mixerStageCount> volumes;
+		std::array<bool, 2> enableAuxStages;
+
+		void reset() {
+			channelFormat = ChannelFormat::Stereo;
+
+			volumes.fill(0.0);
+			enableAuxStages.fill(false);
+		}
+	};
+
+	class HLE_DSP : public DSPCore {
+		// The audio frame types are public in case we want to use them for unit tests
+	  public:
+		template <typename T, usize channelCount = 1>
+		using Sample = DSPMixer::Sample<T, channelCount>;
+
+		template <typename T, usize channelCount>
+		using Frame = DSPMixer::Frame<T, channelCount>;
+
+		template <typename T>
+		using MonoFrame = DSPMixer::MonoFrame<T>;
+
+		template <typename T>
+		using StereoFrame = DSPMixer::StereoFrame<T>;
+
+		template <typename T>
+		using QuadFrame = DSPMixer::QuadFrame<T>;
 
 		using Source = Audio::DSPSource;
 		using SampleBuffer = Source::SampleBuffer;
@@ -114,8 +167,8 @@ namespace Audio {
 		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
 		Audio::HLE::DspMemory dspRam;
 
-		SampleFormat sampleFormat = SampleFormat::ADPCM;
-		SourceType sourceType = SourceType::Stereo;
+		Audio::DSPMixer mixer;
+		std::unique_ptr<Audio::AAC::Decoder> aacDecoder;
 
 		void resetAudioPipe();
 		bool loaded = false;  // Have we loaded a component?
@@ -132,7 +185,7 @@ namespace Audio {
 			} else if (counter1 == 0xffff && counter0 != 0xfffe) {
 				return 0;
 			} else {
-				return counter0 > counter1 ? 0 : 0;
+				return (counter0 > counter1) ? 0 : 1;
 			}
 		}
 
@@ -157,11 +210,20 @@ namespace Audio {
 			}
 		}
 
+		void handleAACRequest(const AAC::Message& request);
 		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients);
+		void updateMixerConfig(HLE::SharedMemory& sharedMem);
 		void generateFrame(StereoFrame<s16>& frame);
+		void generateFrame(DSPSource& source);
 		void outputFrame();
+		// Perform the final mix, mixing the quadraphonic samples from all voices into the output audio frame
+		void performMix(Audio::HLE::SharedMemory& readRegion, Audio::HLE::SharedMemory& writeRegion);
+		
 		// Decode an entire buffer worth of audio
 		void decodeBuffer(DSPSource& source);
+
+		SampleBuffer decodePCM8(const u8* data, usize sampleCount, Source& source);
+		SampleBuffer decodePCM16(const u8* data, usize sampleCount, Source& source);
 		SampleBuffer decodeADPCM(const u8* data, usize sampleCount, Source& source);
 
 	  public:
@@ -169,7 +231,7 @@ namespace Audio {
 		~HLE_DSP() override {}
 
 		void reset() override;
-		void runAudioFrame() override;
+		void runAudioFrame(u64 eventTimestamp) override;
 
 		u8* getDspMemory() override { return dspRam.rawMemory.data(); }
 

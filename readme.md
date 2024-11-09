@@ -1,5 +1,5 @@
 # Panda3DS
-[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml) [![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml) [![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml) [![AUR Package](https://img.shields.io/aur/version/panda3ds-git)](https://aur.archlinux.org/packages/panda3ds-git)
+[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml) [![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml) [![Android Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml) [![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml) [![AUR Package](https://img.shields.io/aur/version/panda3ds-git)](https://aur.archlinux.org/packages/panda3ds-git)
 
 Panda3DS is an HLE, red-panda-themed Nintendo 3DS emulator written in C++ which started out as a fun project out of curiosity, but evolved into something that can sort of play games!
 
@@ -10,7 +10,7 @@ Join our Discord server by pressing on the banner below, or find us on other pla
 
 [![Discord Banner 2](https://discord.com/api/guilds/1118695732958994532/widget.png?style=banner2)](https://discord.gg/ZYbugsEmsw)
 
-![screenshot1](docs/img/KirbyRobobot.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png)
+![screenshot1](docs/img/KirbyRobobot.png) ![screenshot2](docs/img/OoT_Title.png) ![screenshot3](docs/img/pokegang.png) ![screenshot4](docs/img/KirbyAndroid.png)
 
 # Download
 You can download stable builds from the Releases tab, or you can download the latest build from the tables below. Additionally, Panda3DS comes in 2 flavours on PC: A minimal SDL frontend, which does not have a GUI, and an experimental Qt 6 frontend with a proper user interface.
@@ -22,16 +22,16 @@ SDL builds (No GUI):
 |MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
 |Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Linux_AppImage_Build/master/Linux%20executable.zip)|
 
-Qt builds:
+Qt and Android builds:
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Windows%20executable.zip)|
 |MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
 |Linux build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Linux%20executable.zip)|
-
+|Android build (arm64)|[![Android Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml)|[Android APK](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Android_Build/master/Android%20APKs%20(arm64).zip)|
 
 # Compatibility
-Panda3DS is still in the early stages of development. Many games boot, many don't. Lots of games have at least some hilariously broken graphics, audio is not supported, and some QoL features (including a GUI) are missing. However, even more things are implemented, such as most of the 3DS core required to play games, and various neat features, such as Lua scripting, discord bot support, support for some system apps, cheats, controller support, WIP amiibo support and many more! The emulator is constantly evolving, so make sure to take a peek every now and then!
+Panda3DS is still in the early stages of development. Many games boot, many don't. Lots of games have at least some hilariously broken graphics, audio is WIP, and some QoL features are missing. However, even more things are implemented, such as most of the 3DS core required to play games, and various neat features, such as Lua scripting, discord bot support, support for some system apps, cheats, controller support, WIP amiibo support and many more! The emulator is constantly evolving, so make sure to take a peek every now and then!
 
 For documenting game compatibility, make sure to visit the [games list repository](https://github.com/Panda3DS-emu/Panda3DS-Games-List). For miscellaneous issues or more technical issues, feel free to use this repo's issues tab.
 # Why?
@@ -116,7 +116,7 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
 - [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
 - [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
-- [shadPS4](https://github.com/georgemoralis/shadPS4): Work-in-progress PS4 emulator by the founder of PCSX, PCSX2 and more
+- [shadPS4](https://github.com/shadps4-emu/shadPS4): Work-in-progress PS4 emulator by the founder of PCSX, PCSX2 and more
 - [Hydra](https://github.com/hydra-emu/hydra): Cross-platform GameBoy, NES, N64 and Chip-8 emulator
 
 # Support

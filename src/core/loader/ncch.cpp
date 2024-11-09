@@ -1,12 +1,15 @@
+#include "loader/ncch.hpp"
+
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
-#include <cstring>
-#include <vector>
-#include "loader/lz77.hpp"
-#include "loader/ncch.hpp"
-#include "memory.hpp"
+#include <cryptopp/sha.h>
 
+#include <cstring>
 #include <iostream>
+#include <vector>
+
+#include "loader/lz77.hpp"
+#include "memory.hpp"
 
 bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSInfo &info) {
     // 0x200 bytes for the NCCH header
@@ -25,9 +28,11 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 	}
 
 	codeFile.clear();
-	saveData.clear();
 	smdh.clear();
 	partitionInfo = info;
+
+	primaryKey = {};
+	secondaryKey = {};
 
 	size = u64(*(u32*)&header[0x104]) * mediaUnit; // TODO: Maybe don't type pun because big endian will break
 	exheaderSize = *(u32*)&header[0x180];
@@ -68,8 +73,26 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		if (!seedCrypto) {
 			secondaryKeyY = primaryKeyY;
 		} else {
-			Helpers::warn("Seed crypto is not supported");
-			gotCryptoKeys = false;
+			// In seed crypto mode, the secondary key is computed through a SHA256 hash of the primary key and a title-specific seed, which we fetch
+			// from seeddb.bin
+			std::optional<Crypto::AESKey> seedOptional = aesEngine.getSeedFromDB(programID);
+			if (seedOptional.has_value()) {
+				auto seed = *seedOptional;
+				
+				CryptoPP::SHA256 shaEngine;
+				std::array<u8, 32> data;
+				std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
+
+				std::memcpy(&data[0], primaryKeyY.data(), primaryKeyY.size());
+				std::memcpy(&data[16], seed.data(), seed.size());
+				shaEngine.CalculateDigest(hash.data(), data.data(), data.size());
+				// Note that SHA256 will produce a 256-bit hash, while we only need 128 bits cause this is an AES key
+				// So the latter 16 bytes of the SHA256 are thrown out.
+				std::memcpy(secondaryKeyY.data(), hash.data(), secondaryKeyY.size());
+			} else {
+				Helpers::warn("Couldn't find a seed value for this title. Make sure you have a seeddb.bin file alongside your aes_keys.txt");
+				gotCryptoKeys = false;
+			}
 		}
 
 		auto primaryResult = getPrimaryKey(aesEngine, primaryKeyY);
@@ -78,15 +101,15 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 		if (!primaryResult.first || !secondaryResult.first) {
 			gotCryptoKeys = false;
 		} else {
-			Crypto::AESKey primaryKey = primaryResult.second;
-			Crypto::AESKey secondaryKey = secondaryResult.second;
+			primaryKey = primaryResult.second;
+			secondaryKey = secondaryResult.second;
 
 			EncryptionInfo encryptionInfoTmp;
-			encryptionInfoTmp.normalKey = primaryKey;
+			encryptionInfoTmp.normalKey = *primaryKey;
 			encryptionInfoTmp.initialCounter.fill(0);
 
-			for (std::size_t i = 1; i <= sizeof(std::uint64_t) - 1; i++) {
-				encryptionInfoTmp.initialCounter[i] = header[0x108 + sizeof(std::uint64_t) - 1 - i];
+			for (usize i = 0; i < 8; i++) {
+				encryptionInfoTmp.initialCounter[i] = header[0x108 + 7 - i];
 			}
 			encryptionInfoTmp.initialCounter[8] = 1;
 			exheaderInfo.encryptionInfo = encryptionInfoTmp;
@@ -94,7 +117,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 			encryptionInfoTmp.initialCounter[8] = 2;
 			exeFS.encryptionInfo = encryptionInfoTmp;
 
-			encryptionInfoTmp.normalKey = secondaryKey;
+			encryptionInfoTmp.normalKey = *secondaryKey;
 			encryptionInfoTmp.initialCounter[8] = 3;
 			romFS.encryptionInfo = encryptionInfoTmp;
 		}
@@ -152,8 +175,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 			}
 		}
 
-		const u64 saveDataSize = *(u64*)&exheader[0x1C0 + 0x0]; // Size of save data in bytes
-		saveData.resize(saveDataSize, 0xff);
+		saveDataSize = *(u64*)&exheader[0x1C0 + 0x0]; // Size of save data in bytes
 
 		compressCode = (exheader[0xD] & 1) != 0;
 		stackSize = *(u32*)&exheader[0x1C];
@@ -201,13 +223,20 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 					Helpers::panic("Second code file in a single NCCH partition. What should this do?\n");
 				}
 
+				// All files in ExeFS use the same IV, though .code uses the secondary key for decryption
+				// whereas .icon/.banner use the primary key.
+				FSInfo info = exeFS;
+				if (encrypted && secondaryKey.has_value() && info.encryptionInfo.has_value()) {
+					info.encryptionInfo->normalKey = *secondaryKey;
+				}
+
 				if (compressCode) {
 					std::vector<u8> tmp;
 					tmp.resize(fileSize);
 
 					// A file offset of 0 means our file is located right after the ExeFS header
 					// So in the ROM, files are located at (file offset + exeFS offset + exeFS header size)
-					readFromFile(file, exeFS, tmp.data(), fileOffset + exeFSHeaderSize, fileSize);
+					readFromFile(file, info, tmp.data(), fileOffset + exeFSHeaderSize, fileSize);
 					
 					// Decompress .code file from the tmp vector to the "code" vector
 					if (!CartLZ77::decompress(codeFile, tmp)) {
@@ -216,7 +245,7 @@ bool NCCH::loadFromHeader(Crypto::AESEngine &aesEngine, IOFile& file, const FSIn
 					}
 				} else {
 					codeFile.resize(fileSize);
-					readFromFile(file, exeFS, codeFile.data(), fileOffset + exeFSHeaderSize, fileSize);
+					readFromFile(file, info, codeFile.data(), fileOffset + exeFSHeaderSize, fileSize);
 				}
 			} else if (std::strcmp(name, "icon") == 0) {
 				// Parse icon file to extract region info and more in the future (logo, etc)
@@ -295,6 +324,7 @@ std::pair<bool, Crypto::AESKey> NCCH::getPrimaryKey(Crypto::AESEngine &aesEngine
 
 	if (encrypted) {
 		if (fixedCryptoKey) {
+			result.fill(0);
 			return {true, result};
 		}
 
@@ -316,6 +346,7 @@ std::pair<bool, Crypto::AESKey> NCCH::getSecondaryKey(Crypto::AESEngine &aesEngi
 	if (encrypted) {
 
 		if (fixedCryptoKey) {
+			result.fill(0);
 			return {true, result};
 		}
 

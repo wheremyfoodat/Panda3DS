@@ -1,0 +1,73 @@
+; Example PICA200 vertex shader
+
+; Uniforms
+.fvec projection[4]
+
+; Constants
+.constf myconst(0.0, 1.0, -1.0, 0.1)
+.constf myconst2(0.3, 0.0, 0.0, 0.0)
+.alias  zeros myconst.xxxx ; Vector full of zeros
+.alias  ones  myconst.yyyy ; Vector full of ones
+
+.constf magenta(0.8, 0.192, 0.812, 1.0)
+.constf cyan(0.137, 0.949, 0.906, 1.0)
+.constf lime(0.286, 0.929, 0.412, 1.0)
+
+.constf normalize_y(1.0, 1.0/128.0, 1.0, 1.0)
+
+; Outputs
+.out outpos position
+.out outclr color
+
+; Inputs (defined as aliases for convenience)
+.alias inpos v0
+.alias inclr v1
+
+.bool test
+
+.proc main
+	; Force the w component of inpos to be 1.0
+	mov r0.xyz, inpos
+	mov r0.w,   ones
+
+	; outpos = projectionMatrix * inpos
+	dp4 outpos.x, projection[0], r0
+	dp4 outpos.y, projection[1], r0
+	dp4 outpos.z, projection[2], r0
+	dp4 outpos.w, projection[3], r0
+
+	; Test litp via the output fragment colour
+	; r1 = input colour
+	mov r1, inclr
+
+	; This should perform the following operation:
+	; cmp = (x >= 0, w >= 0)
+	; dest = ( max(x, 0), clamp(y, -128, +128 ), 0, max(w, 0) );
+	litp r2, r1
+
+	ifc cmp.x
+		ifc cmp.y
+			; cmp.x = 1, cmp.y = 1, write magenta
+			mov outclr, magenta
+			end
+		.else
+			; cmp.x = 1, cmp.y = 0, write cyan
+			mov outclr, cyan
+			end
+		.end
+	.else
+		ifc cmp.y
+			; cmp.x = 0, cmp.y
+			mov outclr, lime
+			end
+		.end
+	.end
+
+	; cmp.x 0, cmp.y = 0, write output of litp to out colour, with y normalized to [-1, 1]
+	mul r2.xyz, normalize_y, r2	
+	; Set alpha to one
+	mov r2.a, ones.a
+
+	mov outclr, r2
+	end
+.end

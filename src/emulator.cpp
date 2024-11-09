@@ -1,10 +1,12 @@
 #include "emulator.hpp"
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__LIBRETRO__)
 #include <SDL_filesystem.h>
 #endif
 
 #include <fstream>
+
+#include "renderdoc.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -31,6 +33,10 @@ Emulator::Emulator()
 
 	audioDevice.init(dsp->getSamples());
 	setAudioEnabled(config.audioEnabled);
+
+	if (Renderdoc::isSupported() && config.enableRenderdoc) {
+		loadRenderdoc();
+	}
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
@@ -84,6 +90,7 @@ void Emulator::reset(ReloadOption reload) {
 	}
 }
 
+#ifndef __LIBRETRO__
 std::filesystem::path Emulator::getAndroidAppPath() {
 	// SDL_GetPrefPath fails to get the path due to no JNI environment
 	std::ifstream cmdline("/proc/self/cmdline");
@@ -100,6 +107,7 @@ std::filesystem::path Emulator::getConfigPath() {
 		return std::filesystem::current_path() / "config.toml";
 	}
 }
+#endif
 
 void Emulator::step() {}
 void Emulator::render() {}
@@ -165,9 +173,11 @@ void Emulator::pollScheduler() {
 
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
 			case Scheduler::EventType::RunDSP: {
-				dsp->runAudioFrame();
+				dsp->runAudioFrame(time);
 				break;
 			}
+
+			case Scheduler::EventType::SignalY2R: kernel.getServiceManager().getY2R().signalConversionDone(); break;
 
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
@@ -177,6 +187,7 @@ void Emulator::pollScheduler() {
 	}
 }
 
+#ifndef __LIBRETRO__
 // Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
 // Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
 // %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
@@ -200,6 +211,7 @@ std::filesystem::path Emulator::getAppDataRoot() {
 
 	return appDataPath;
 }
+#endif
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
 	// Reset the emulator if we've already loaded a ROM
@@ -214,6 +226,8 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	const std::filesystem::path appDataPath = getAppDataRoot();
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
 	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
+	const std::filesystem::path seedDBPath = appDataPath / "sysdata" / "seeddb.bin";
+
 	IOFile::setAppDataDir(dataPath);
 
 	// Open the text file containing our AES keys if it exists. We use the std::filesystem::exists overload that takes an error code param to
@@ -221,6 +235,10 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	std::error_code ec;
 	if (std::filesystem::exists(aesKeysPath, ec) && !ec) {
 		aesEngine.loadKeys(aesKeysPath);
+	}
+
+	if (std::filesystem::exists(seedDBPath, ec) && !ec) {
+		aesEngine.setSeedPath(seedDBPath);
 	}
 
 	kernel.initializeFS();
@@ -293,6 +311,11 @@ bool Emulator::load3DSX(const std::filesystem::path& path) {
 }
 
 bool Emulator::loadELF(const std::filesystem::path& path) {
+	// We can't open a new file with this ifstream if it's associated with a file
+	if (loadedELF.is_open()) {
+		loadedELF.close();
+	}
+
 	loadedELF.open(path, std::ios_base::binary);  // Open ROM in binary mode
 	romType = ROMType::ELF;
 
@@ -413,4 +436,10 @@ void Emulator::setAudioEnabled(bool enable) {
 	}
 
 	dsp->setAudioEnabled(enable);
+}
+
+void Emulator::loadRenderdoc() {
+	std::string capturePath = (std::filesystem::current_path() / "RenderdocCaptures").generic_string();
+	Renderdoc::loadRenderdoc();
+	Renderdoc::setOutputDir(capturePath, "");
 }

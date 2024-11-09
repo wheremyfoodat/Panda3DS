@@ -163,7 +163,7 @@ void Kernel::mapMemoryBlock() {
 				break;
 
 			case KernelHandles::FontSharedMemHandle:
-				mem.copySharedFont(ptr);
+				mem.copySharedFont(ptr, addr);
 				break;
 
 			case KernelHandles::CSNDSharedMemHandle:
@@ -181,7 +181,7 @@ void Kernel::mapMemoryBlock() {
 	regs[0] = Result::Success;
 }
 
-Handle Kernel::makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission) {
+HorizonHandle Kernel::makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission) {
 	Handle ret = makeObject(KernelObjectType::MemoryBlock);
 	objects[ret].data = new MemoryBlock(addr, size, myPermission, otherPermission);
 

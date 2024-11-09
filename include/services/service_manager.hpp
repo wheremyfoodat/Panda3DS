@@ -42,6 +42,8 @@ struct EmulatorConfig;
 class Kernel;
 
 class ServiceManager {
+	using Handle = HorizonHandle;
+
 	std::span<u32, 16> regs;
 	Memory& mem;
 	Kernel& kernel;
@@ -109,4 +111,5 @@ class ServiceManager {
 	HIDService& getHID() { return hid; }
 	NFCService& getNFC() { return nfc; }
 	DSPService& getDSP() { return dsp; }
+	Y2RService& getY2R() { return y2r; }
 };

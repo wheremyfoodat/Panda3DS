@@ -294,12 +294,12 @@ namespace Audio::HLE {
 
 	struct SourceStatus {
 		struct Status {
-			u8 isEnabled;             ///< Is this channel enabled? (Doesn't have to be playing anything.)
+			u8 enabled;               ///< Is this channel enabled? (Doesn't have to be playing anything.)
 			u8 currentBufferIDDirty;  ///< Non-zero when current_buffer_id changes
 			u16_le syncCount;         ///< Is set by the DSP to the value of SourceConfiguration::sync_count
-			u32_dsp bufferPosition;   ///< Number of samples into the current buffer
+			u32_dsp samplePosition;   ///< Number of samples into the current buffer
 			u16_le currentBufferID;   ///< Updated when a buffer finishes playing
-			u16_le lastBufferID;      ///< Updated when all buffers in the queue finish playing
+			u16_le previousBufferID;  ///< Updated when all buffers in the queue finish playing
 		};
 
 		Status status[sourceCount];
@@ -324,8 +324,8 @@ namespace Audio::HLE {
 			BitField<15, 1, u32> outputBufferCountDirty;
 			BitField<16, 1, u32> masterVolumeDirty;
 
-			BitField<24, 1, u32> auxReturnVolume0Dirty;
-			BitField<25, 1, u32> auxReturnVolume1Dirty;
+			BitField<24, 1, u32> auxVolume0Dirty;
+			BitField<25, 1, u32> auxVolume1Dirty;
 			BitField<26, 1, u32> outputFormatDirty;
 			BitField<27, 1, u32> clippingModeDirty;
 			BitField<28, 1, u32> headphonesConnectedDirty;
@@ -337,7 +337,7 @@ namespace Audio::HLE {
 		/// The DSP has three intermediate audio mixers. This controls the volume level (0.0-1.0) for
 		/// each at the final mixer.
 		float_le masterVolume;
-		std::array<float_le, 2> auxReturnVolume;
+		std::array<float_le, 2> auxVolumes;
 
 		u16_le outputBufferCount;
 		u16 pad1[2];
@@ -422,7 +422,7 @@ namespace Audio::HLE {
 
 	struct DspStatus {
 		u16_le unknown;
-		u16_le dropped_frames;
+		u16_le droppedFrames;
 		u16 pad0[0xE];
 	};
 	ASSERT_DSP_STRUCT(DspStatus, 32);

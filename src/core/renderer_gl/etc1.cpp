@@ -12,8 +12,9 @@ static constexpr u32 signExtend3To32(u32 val) {
 u32 Texture::getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, std::span<const u8> data) {
     // Pixel offset of the 8x8 tile based on u, v and the width of the texture
     u32 offs = ((u & ~7) * 8) + ((v & ~7) * width);
-    if (!hasAlpha)
+    if (!hasAlpha) {
         offs >>= 1;
+    }
 
     // In-tile offsets for u/v
     u &= 7;

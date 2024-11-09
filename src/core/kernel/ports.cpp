@@ -1,7 +1,7 @@
 #include "kernel.hpp"
 #include <cstring>
 
-Handle Kernel::makePort(const char* name) {
+HorizonHandle Kernel::makePort(const char* name) {
 	Handle ret = makeObject(KernelObjectType::Port);
 	portHandles.push_back(ret); // Push the port handle to our cache of port handles
 	objects[ret].data = new Port(name);
@@ -9,7 +9,7 @@ Handle Kernel::makePort(const char* name) {
 	return ret;
 }
 
-Handle Kernel::makeSession(Handle portHandle) {
+HorizonHandle Kernel::makeSession(Handle portHandle) {
 	const auto port = getObject(portHandle, KernelObjectType::Port);
 	if (port == nullptr) [[unlikely]] {
 		Helpers::panic("Trying to make session for non-existent port");
@@ -23,7 +23,7 @@ Handle Kernel::makeSession(Handle portHandle) {
 
 // Get the handle of a port based on its name
 // If there's no such port, return nullopt
-std::optional<Handle> Kernel::getPortHandle(const char* name) {
+std::optional<HorizonHandle> Kernel::getPortHandle(const char* name) {
 	for (auto handle : portHandles) {
 		const auto data = objects[handle].getData<Port>();
 		if (std::strncmp(name, data->name, Port::maxNameLen) == 0) {

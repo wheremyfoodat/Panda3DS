@@ -8,6 +8,7 @@
 #include "config_mem.hpp"
 #include "kernel/fcram.hpp"
 #include "resource_limits.hpp"
+#include "services/fonts.hpp"
 #include "services/ptm.hpp"
 
 CMRC_DECLARE(ConsoleFonts);
@@ -47,7 +48,7 @@ void Memory::reset() {
 		if (e.handle == KernelHandles::FontSharedMemHandle) {
 			// Read font size from the cmrc filesystem the font is stored in
 			auto fonts = cmrc::ConsoleFonts::get_filesystem();
-			e.size = fonts.open("CitraSharedFontUSRelocated.bin").size();
+			e.size = fonts.open("SharedFontReplacement.bin").size();
 		}
 
 		e.mapped = false;
@@ -578,10 +579,13 @@ Regions Memory::getConsoleRegion() {
 	return region;
 }
 
-void Memory::copySharedFont(u8* pointer) {
+void Memory::copySharedFont(u8* pointer, u32 vaddr) {
 	auto fonts = cmrc::ConsoleFonts::get_filesystem();
-	auto font = fonts.open("CitraSharedFontUSRelocated.bin");
+	auto font = fonts.open("SharedFontReplacement.bin");
 	std::memcpy(pointer, font.begin(), font.size());
+
+	// Relocate shared font to the address it's being loaded to
+	HLE::Fonts::relocateSharedFont(pointer, vaddr);
 }
 
 std::optional<u64> Memory::getProgramID() {

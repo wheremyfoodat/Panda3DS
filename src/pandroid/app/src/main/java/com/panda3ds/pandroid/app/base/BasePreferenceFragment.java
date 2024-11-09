@@ -26,6 +26,10 @@ public abstract class BasePreferenceFragment extends PreferenceFragmentCompat {
 		((SwitchPreferenceCompat)findPreference(id)).setChecked(value);
 	}
 
+	protected void setSummaryValue(String id,String text) {
+		findPreference(id).setSummary(text);
+	}
+
 	protected void setActivityTitle(@StringRes int titleId) {
 		ActionBar header = ((AppCompatActivity) requireActivity()).getSupportActionBar();
 		if (header != null) {

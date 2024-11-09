@@ -83,7 +83,7 @@ void Kernel::setVersion(u8 major, u8 minor) {
 	mem.kernelVersion = descriptor; // The memory objects needs a copy because you can read the kernel ver from config mem
 }
 
-Handle Kernel::makeProcess(u32 id) {
+HorizonHandle Kernel::makeProcess(u32 id) {
 	const Handle processHandle = makeObject(KernelObjectType::Process);
 	const Handle resourceLimitHandle = makeObject(KernelObjectType::ResourceLimit);
 
@@ -401,3 +401,5 @@ std::string Kernel::getProcessName(u32 pid) {
 		Helpers::panic("Attempted to name non-current process");
 	}
 }
+
+Scheduler& Kernel::getScheduler() { return cpu.getScheduler(); }

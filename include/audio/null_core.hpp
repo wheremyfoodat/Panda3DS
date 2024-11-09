@@ -27,7 +27,7 @@ namespace Audio {
 		~NullDSP() override {}
 
 		void reset() override;
-		void runAudioFrame() override;
+		void runAudioFrame(u64 eventTimestamp) override;
 
 		u8* getDspMemory() override { return dspRam.data(); }
 

@@ -5,6 +5,8 @@
 #include "memory.hpp"
 
 class SOCService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::SOC;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, socLogger)
@@ -14,7 +16,7 @@ class SOCService {
 	// Service commands
 	void initializeSockets(u32 messagePointer);
 
-public:
+  public:
 	SOCService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

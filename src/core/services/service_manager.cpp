@@ -93,7 +93,7 @@ void ServiceManager::registerClient(u32 messagePointer) {
 }
 
 // clang-format off
-static std::map<std::string, Handle> serviceMap = {
+static std::map<std::string, HorizonHandle> serviceMap = {
 	{ "ac:u", KernelHandles::AC },
 	{ "act:a", KernelHandles::ACT },
 	{ "act:u", KernelHandles::ACT },

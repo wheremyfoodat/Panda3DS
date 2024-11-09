@@ -355,111 +355,152 @@ namespace OpenGL {
         }
     };
 
-    enum ShaderType {
-        Fragment = GL_FRAGMENT_SHADER,
-        Vertex = GL_VERTEX_SHADER,
-        Geometry = GL_GEOMETRY_SHADER,
-        Compute = GL_COMPUTE_SHADER,
-        TessControl = GL_TESS_CONTROL_SHADER,
-        TessEvaluation = GL_TESS_EVALUATION_SHADER
-    };
+	enum ShaderType {
+		Fragment = GL_FRAGMENT_SHADER,
+		Vertex = GL_VERTEX_SHADER,
+		Geometry = GL_GEOMETRY_SHADER,
+		Compute = GL_COMPUTE_SHADER,
+		TessControl = GL_TESS_CONTROL_SHADER,
+		TessEvaluation = GL_TESS_EVALUATION_SHADER
+	};
 
-    struct Shader {
-        GLuint m_handle = 0;
+	struct Shader {
+		GLuint m_handle = 0;
 
-        Shader() {}
-        Shader(const std::string_view source, ShaderType type) { create(source, static_cast<GLenum>(type)); }
+		Shader() {}
+		Shader(const std::string_view source, ShaderType type) { create(source, static_cast<GLenum>(type)); }
 
-        // Returns whether compilation failed or not
-        bool create(const std::string_view source, GLenum type) {
-            m_handle = glCreateShader(type);
-            const GLchar* const sources[1] = { source.data() };
+		// Returns whether compilation failed or not
+		bool create(const std::string_view source, GLenum type) {
+			m_handle = glCreateShader(type);
+			const GLchar* const sources[1] = {source.data()};
 
-            glShaderSource(m_handle, 1, sources, nullptr);
-            glCompileShader(m_handle);
+			glShaderSource(m_handle, 1, sources, nullptr);
+			glCompileShader(m_handle);
 
-            GLint success;
-            glGetShaderiv(m_handle, GL_COMPILE_STATUS, &success);
-            if (success == GL_FALSE) {
-                char buf[4096];
-                glGetShaderInfoLog(m_handle, 4096, nullptr, buf);
-                fprintf(stderr, "Failed to compile shader\nError: %s\n", buf);
-                glDeleteShader(m_handle);
+			GLint success;
+			glGetShaderiv(m_handle, GL_COMPILE_STATUS, &success);
+			if (success == GL_FALSE) {
+				char buf[4096];
+				glGetShaderInfoLog(m_handle, 4096, nullptr, buf);
+				fprintf(stderr, "Failed to compile shader\nError: %s\n", buf);
+				glDeleteShader(m_handle);
 
-                m_handle = 0;
-            }
+				m_handle = 0;
+			}
 
-            return m_handle != 0;
-        }
+			return m_handle != 0;
+		}
 
-        GLuint handle() const { return m_handle; }
-        bool exists() const { return m_handle != 0; }
-    };
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+
+		void free() {
+			if (exists()) {
+				glDeleteShader(m_handle);
+				m_handle = 0;
+			}
+		}
+
+#ifdef OPENGL_DESTRUCTORS
+		~Shader() { free(); }
+#endif
+	};
 
     struct Program {
-        GLuint m_handle = 0;
+		GLuint m_handle = 0;
 
-        bool create(std::initializer_list<std::reference_wrapper<Shader>> shaders) {
-            m_handle = glCreateProgram();
-            for (const auto& shader : shaders) {
-                glAttachShader(m_handle, shader.get().handle());
-            }
+		bool create(std::initializer_list<std::reference_wrapper<Shader>> shaders) {
+			m_handle = glCreateProgram();
+			for (const auto& shader : shaders) {
+				glAttachShader(m_handle, shader.get().handle());
+			}
 
-            glLinkProgram(m_handle);
-            GLint success;
-            glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
+			glLinkProgram(m_handle);
+			GLint success;
+			glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
 
-            if (!success) {
-                char buf[4096];
-                glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
-                fprintf(stderr, "Failed to link program\nError: %s\n", buf);
-                glDeleteProgram(m_handle);
+			if (!success) {
+				char buf[4096];
+				glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
+				fprintf(stderr, "Failed to link program\nError: %s\n", buf);
+				glDeleteProgram(m_handle);
 
-                m_handle = 0;
-            }
+				m_handle = 0;
+			}
 
-            return m_handle != 0;
-        }
+			return m_handle != 0;
+		}
 
-        GLuint handle() const { return m_handle; }
-        bool exists() const { return m_handle != 0; }
-        void use() const { glUseProgram(m_handle); }
-    };
+		bool createFromBinary(const uint8_t* binary, size_t size, GLenum format) {
+			m_handle = glCreateProgram();
+			glProgramBinary(m_handle, format, binary, size);
+
+			GLint success;
+			glGetProgramiv(m_handle, GL_LINK_STATUS, &success);
+
+			if (!success) {
+				char buf[4096];
+				glGetProgramInfoLog(m_handle, 4096, nullptr, buf);
+				fprintf(stderr, "Failed to link program\nError: %s\n", buf);
+				glDeleteProgram(m_handle);
+
+				m_handle = 0;
+			}
+
+			return m_handle != 0;
+		}
+
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+		void use() const { glUseProgram(m_handle); }
+
+		void free() {
+			if (exists()) {
+				glDeleteProgram(m_handle);
+				m_handle = 0;
+			}
+		}
+
+#ifdef OPENGL_DESTRUCTORS
+		~Program() { free(); }
+#endif
+	};
 
     static void dispatchCompute(GLuint groupsX = 1, GLuint groupsY = 1, GLuint groupsZ = 1) {
         glDispatchCompute(groupsX, groupsY, groupsZ);
     }
 
-    struct VertexBuffer {
-        GLuint m_handle = 0;
+	struct VertexBuffer {
+		GLuint m_handle = 0;
 
-        void create() {
-            if (m_handle == 0) {
-                glGenBuffers(1, &m_handle);
-            }
-        }
+		void create() {
+			if (m_handle == 0) {
+				glGenBuffers(1, &m_handle);
+			}
+		}
 
-        void createFixedSize(GLsizei size, GLenum usage = GL_DYNAMIC_DRAW) {
-            create();
-            bind();
-            glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
-        }
+		void createFixedSize(GLsizei size, GLenum usage = GL_DYNAMIC_DRAW) {
+			create();
+			bind();
+			glBufferData(GL_ARRAY_BUFFER, size, nullptr, usage);
+		}
 
-        VertexBuffer(bool shouldCreate = false) {
-            if (shouldCreate) {
-                create();
-            }
-        }
+		VertexBuffer(bool shouldCreate = false) {
+			if (shouldCreate) {
+				create();
+			}
+		}
 
 #ifdef OPENGL_DESTRUCTORS
-        ~VertexBuffer() { free(); }
-#endif  
-        GLuint handle() const { return m_handle; }
-        bool exists() const { return m_handle != 0; }
-        void bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
-        void free() { glDeleteBuffers(1, &m_handle); }
+		~VertexBuffer() { free(); }
+#endif
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+		void bind() const { glBindBuffer(GL_ARRAY_BUFFER, m_handle); }
+		void free() { glDeleteBuffers(1, &m_handle); }
 
-        // Reallocates the buffer on every call. Prefer the sub version if possible.
+		// Reallocates the buffer on every call. Prefer the sub version if possible.
 		template <typename VertType>
 		void bufferVerts(VertType* vertices, int vertCount, GLenum usage = GL_DYNAMIC_DRAW) {
 			glBufferData(GL_ARRAY_BUFFER, sizeof(VertType) * vertCount, vertices, usage);
@@ -471,7 +512,7 @@ namespace OpenGL {
 			glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(VertType) * vertCount, vertices);
 		}
 
-        // If C++20 is available, add overloads that take std::span instead of raw pointers
+		// If C++20 is available, add overloads that take std::span instead of raw pointers
 #ifdef OPENGL_HAVE_CPP20
 		template <typename VertType>
 		void bufferVerts(std::span<const VertType> vertices, GLenum usage = GL_DYNAMIC_DRAW) {
@@ -483,6 +524,48 @@ namespace OpenGL {
 			glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(VertType) * vertices.size(), vertices.data());
 		}
 #endif
+	};
+
+	struct UniformBuffer {
+		GLuint m_handle = 0;
+
+		void create() {
+			if (m_handle == 0) {
+				glGenBuffers(1, &m_handle);
+			}
+		}
+
+		void createFixedSize(GLsizei size, GLenum usage = GL_DYNAMIC_DRAW) {
+			create();
+			bind();
+			glBufferData(GL_UNIFORM_BUFFER, size, nullptr, usage);
+		}
+
+		UniformBuffer(bool shouldCreate = false) {
+			if (shouldCreate) {
+				create();
+			}
+		}
+
+#ifdef OPENGL_DESTRUCTORS
+		~UniformBuffer() { free(); }
+#endif
+		GLuint handle() const { return m_handle; }
+		bool exists() const { return m_handle != 0; }
+		void bind() const { glBindBuffer(GL_UNIFORM_BUFFER, m_handle); }
+		void free() { glDeleteBuffers(1, &m_handle); }
+
+		// Reallocates the buffer on every call. Prefer the sub version if possible.
+		template <typename UniformType>
+		void buffer(const UniformType& uniformData, GLenum usage = GL_DYNAMIC_DRAW) {
+			glBufferData(GL_UNIFORM_BUFFER, sizeof(uniformData), &uniformData, usage);
+		}
+
+		// Only use if you used createFixedSize
+		template <typename UniformType>
+		void bufferSub(const UniformType& uniformData, int vertCount, GLintptr offset = 0) {
+			glBufferSubData(GL_UNIFORM_BUFFER, offset, sizeof(uniformData), &uniformData);
+		}
 	};
 
     enum DepthFunc {

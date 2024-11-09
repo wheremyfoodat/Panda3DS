@@ -28,5 +28,11 @@
             app:summary="@string/pref_shader_jit_summary"
             app:iconSpaceReserved="false"/>
 
+        <SwitchPreferenceCompat
+            app:key="accurateShaderMul"
+            app:title="@string/pref_accurate_shader_title"
+            app:summary="@string/pref_accurate_shader_summary"
+            app:iconSpaceReserved="false"/>
+
     </PreferenceCategory>
 </PreferenceScreen>

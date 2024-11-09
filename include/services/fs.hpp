@@ -16,6 +16,8 @@
 class Kernel;
 
 class FSService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::FS;
 	Memory& mem;
 	Kernel& kernel;
@@ -81,7 +83,7 @@ class FSService {
 	// Used for set/get priority: Not sure what sort of priority this is referring to
 	u32 priority;
 
-public:
+  public:
 	FSService(Memory& mem, Kernel& kernel, const EmulatorConfig& config)
 		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem),
 		  sdmcWriteOnly(mem, true), selfNcch(mem), ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1),
