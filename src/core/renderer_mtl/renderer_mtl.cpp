@@ -114,9 +114,7 @@ void RendererMTL::display() {
 	endRenderPass();
 
 	commandBuffer->presentDrawable(drawable);
-
 	commandBuffer->popDebugGroup();
-
 	commitCommandBuffer();
 
 	// Inform the vertex buffer cache that the frame ended
@@ -623,12 +621,10 @@ std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(
 
 	// Otherwise create and cache a new buffer.
 	Metal::ColorRenderTarget sampleBuffer(device, addr, format, width, height);
-
 	auto& colorBuffer = colorRenderTargetCache.add(sampleBuffer);
 
 	// Clear the color buffer
 	colorClearOps[colorBuffer.texture] = {0, 0, 0, 0};
-
 	return colorBuffer;
 }
 
@@ -722,7 +718,8 @@ void RendererMTL::bindTexturesToSlots() {
 			commandEncoder.setFragmentTexture(tex.texture, i);
 			commandEncoder.setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);
 		} else {
-			// TODO: log
+			// TODO: Bind a blank texture here. Some games, like Pokemon X, will render with a texture bound to nullptr, triggering GPU open bus
+			// Binding a blank texture makes all of those games look normal
 		}
 	}
 }
@@ -741,32 +738,6 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 	lutLightingTexture->getTexture()->replaceRegion(
 		MTL::Region(0, 0, LIGHTING_LUT_TEXTURE_WIDTH, Lights::LUT_Count), 0, index, lightingLut.data(), LIGHTING_LUT_TEXTURE_WIDTH * 2, 0
 	);
-
-	/*
-	endRenderPass();
-
-	Metal::BufferHandle buffer = vertexBufferCache.get(lightingLut.data(), sizeof(lightingLut));
-
-	auto blitCommandEncoder = commandBuffer->blitCommandEncoder();
-	blitCommandEncoder->copyFromBuffer(buffer.buffer, buffer.offset, LIGHT_LUT_TEXTURE_WIDTH * 2 * 4, 0, MTL::Size(LIGHT_LUT_TEXTURE_WIDTH,
-	Lights::LUT_Count, 1), lutLightingTexture, 0, 0, MTL::Origin(0, 0, 0));
-
-	blitCommandEncoder->endEncoding();
-	*/
-
-	/*
-	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
-	renderCommandEncoder->setVertexTexture(lutLightingTexture, 0);
-	Metal::BufferHandle buffer = vertexBufferCache.get(lightingLut.data(), sizeof(lightingLut));
-	renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
-	u32 arrayOffset = 0;
-	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
-
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypePoint, NS::UInteger(0), GPU::LightingLutSize);
-
-	MTL::Resource* barrierResources[] = {lutLightingTexture};
-	renderCommandEncoder->memoryBarrier(barrierResources, 1, MTL::RenderStageVertex, MTL::RenderStageFragment);
-	*/
 }
 
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
@@ -787,22 +758,6 @@ void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 
 	u32 index = lutFogTexture->getNextIndex();
 	lutFogTexture->getTexture()->replaceRegion(MTL::Region(0, 0, FOG_LUT_TEXTURE_WIDTH, 1), 0, index, fogLut.data(), 0, 0);
-
-	/*
-	renderCommandEncoder->setRenderPipelineState(copyToLutTexturePipeline);
-	renderCommandEncoder->setDepthStencilState(defaultDepthStencilState);
-	renderCommandEncoder->setVertexTexture(lutLightingTexture, 0);
-	// Metal::BufferHandle buffer = vertexBufferCache.get(fogLut.data(), sizeof(fogLut));
-	// renderCommandEncoder->setVertexBuffer(buffer.buffer, buffer.offset, 0);
-	renderCommandEncoder->setVertexBytes(fogLut.data(), sizeof(fogLut), 0);
-	u32 arrayOffset = (u32)Lights::LUT_Count;
-	renderCommandEncoder->setVertexBytes(&arrayOffset, sizeof(u32), 1);
-
-	renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypePoint, NS::UInteger(0), NS::UInteger(128));
-
-	MTL::Resource* barrierResources[] = {lutLightingTexture};
-	renderCommandEncoder->memoryBarrier(barrierResources, 1, MTL::RenderStageVertex, MTL::RenderStageFragment);
-	*/
 }
 
 void RendererMTL::textureCopyImpl(
