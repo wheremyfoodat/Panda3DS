@@ -1,13 +1,17 @@
 #pragma once
 
+#include <cstring>
+
+#include "helpers.hpp"
 #include "pica_to_mtl.hpp"
+
 
 using namespace PICA;
 
 namespace Metal {
 	struct BufferHandle {
 		MTL::Buffer* buffer;
-		size_t offset;
+		usize offset;
 	};
 
 	class VertexBufferCache {
@@ -35,7 +39,7 @@ namespace Metal {
 			additionalAllocations.clear();
 		}
 
-		BufferHandle get(const void* data, size_t size) {
+		BufferHandle get(const void* data, usize size) {
 			// If the vertex buffer is too large, just create a new one
 			if (ptr + size > CACHE_BUFFER_SIZE) {
 				MTL::Buffer* newBuffer = device->newBuffer(data, size, MTL::ResourceStorageModeShared);
@@ -47,9 +51,9 @@ namespace Metal {
 			}
 
 			// Copy the data into the buffer
-			memcpy((char*)buffer->contents() + ptr, data, size);
+			std::memcpy((char*)buffer->contents() + ptr, data, size);
 
-			size_t oldPtr = ptr;
+			auto oldPtr = ptr;
 			ptr += size;
 
 			return BufferHandle{buffer, oldPtr};
@@ -57,6 +61,7 @@ namespace Metal {
 
 		void reset() {
 			endFrame();
+
 			if (buffer) {
 				buffer->release();
 				create();
@@ -65,7 +70,7 @@ namespace Metal {
 
 	  private:
 		MTL::Buffer* buffer = nullptr;
-		size_t ptr = 0;
+		usize ptr = 0;
 		std::vector<MTL::Buffer*> additionalAllocations;
 
 		MTL::Device* device;

@@ -11,7 +11,6 @@
 #include "opengl.hpp"
 #include "renderer_mtl/pica_to_mtl.hpp"
 
-
 template <typename T>
 using Interval = boost::icl::right_open_interval<T>;
 

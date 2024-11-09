@@ -4,7 +4,6 @@
 
 #include "PICA/regs.hpp"
 
-
 namespace PICA {
 	struct PixelFormatInfo {
 		MTL::PixelFormat pixelFormat;
@@ -61,7 +60,7 @@ namespace PICA {
 			case 5: return MTL::CompareFunctionLessEqual;
 			case 6: return MTL::CompareFunctionGreater;
 			case 7: return MTL::CompareFunctionGreaterEqual;
-			default: panic("Unknown compare function %u", func);
+			default: Helpers::panic("Unknown compare function %u", func);
 		}
 
 		return MTL::CompareFunctionAlways;
@@ -77,7 +76,7 @@ namespace PICA {
 			case 5: return MTL::BlendOperationAdd;  // Unused (same as 0)
 			case 6: return MTL::BlendOperationAdd;  // Unused (same as 0)
 			case 7: return MTL::BlendOperationAdd;  // Unused (same as 0)
-			default: panic("Unknown blend operation %u", op);
+			default: Helpers::panic("Unknown blend operation %u", op);
 		}
 
 		return MTL::BlendOperationAdd;
@@ -101,7 +100,7 @@ namespace PICA {
 			case 13: return MTL::BlendFactorOneMinusBlendAlpha;
 			case 14: return MTL::BlendFactorSourceAlphaSaturated;
 			case 15: return MTL::BlendFactorOne;  // Undocumented
-			default: panic("Unknown blend factor %u", factor);
+			default: Helpers::panic("Unknown blend factor %u", factor);
 		}
 
 		return MTL::BlendFactorOne;
@@ -117,7 +116,7 @@ namespace PICA {
 			case 5: return MTL::StencilOperationInvert;
 			case 6: return MTL::StencilOperationIncrementWrap;
 			case 7: return MTL::StencilOperationDecrementWrap;
-			default: panic("Unknown stencil operation %u", op);
+			default: Helpers::panic("Unknown stencil operation %u", op);
 		}
 
 		return MTL::StencilOperationKeep;
@@ -131,7 +130,6 @@ namespace PICA {
 				Helpers::warn("Triangle fans are not supported on Metal, using triangles instead");
 				return MTL::PrimitiveTypeTriangle;
 			case PrimType::GeometryPrimitive:
-				// Helpers::warn("Geometry primitives are not yet, using triangles instead");
 				return MTL::PrimitiveTypeTriangle;
 		}
 	}
@@ -146,7 +144,7 @@ namespace PICA {
 			case 5: return MTL::SamplerAddressModeClampToBorderColor;
 			case 6: return MTL::SamplerAddressModeRepeat;
 			case 7: return MTL::SamplerAddressModeRepeat;
-			default: panic("Unknown sampler address mode %u", addrMode);
+			default: Helpers::panic("Unknown sampler address mode %u", addrMode);
 		}
 
 		return MTL::SamplerAddressModeClampToEdge;
