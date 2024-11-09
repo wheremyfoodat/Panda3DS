@@ -1,5 +1,7 @@
 #include "fcram.hpp"
+
 #include "memory.hpp"
+
 
 void KFcram::Region::reset(u32 start, size_t size) {
 	this->start = start;
@@ -34,27 +36,24 @@ void KFcram::Region::alloc(std::list<FcramBlock>& out, s32 allocPages, bool line
 		FcramBlock outBlock(paddr, it->pages);
 		out.push_back(outBlock);
 
-		if (allocPages < 1) return;
+		if (allocPages < 1) {
+			return;
+		}
 	}
 
 	// Official kernel panics here
 	Helpers::panic("Failed to allocate FCRAM, not enough guest memory");
 }
 
-u32 KFcram::Region::getUsedCount() {
-	return pages - freePages;
-}
-
-u32 KFcram::Region::getFreeCount() {
-	return freePages;
-}
+u32 KFcram::Region::getUsedCount() { return pages - freePages; }
+u32 KFcram::Region::getFreeCount() { return freePages; }
 
 KFcram::KFcram(Memory& mem) : mem(mem) {}
 
 void KFcram::reset(size_t ramSize, size_t appSize, size_t sysSize, size_t baseSize) {
 	fcram = mem.getFCRAM();
 	refs = std::unique_ptr<u32>(new u32[ramSize >> 12]);
-	memset(refs.get(), 0, (ramSize >> 12) * sizeof(u32));
+	std::memset(refs.get(), 0, (ramSize >> 12) * sizeof(u32));
 
 	appRegion.reset(0, appSize);
 	sysRegion.reset(appSize, sysSize);
@@ -63,15 +62,9 @@ void KFcram::reset(size_t ramSize, size_t appSize, size_t sysSize, size_t baseSi
 
 void KFcram::alloc(FcramBlockList& out, s32 pages, FcramRegion region, bool linear) {
 	switch (region) {
-		case FcramRegion::App:
-			appRegion.alloc(out, pages, linear);
-			break;
-		case FcramRegion::Sys:
-			sysRegion.alloc(out, pages, linear);
-			break;
-		case FcramRegion::Base:
-			baseRegion.alloc(out, pages, linear);
-			break;
+		case FcramRegion::App: appRegion.alloc(out, pages, linear); break;
+		case FcramRegion::Sys: sysRegion.alloc(out, pages, linear); break;
+		case FcramRegion::Base: baseRegion.alloc(out, pages, linear); break;
 		default: Helpers::panic("Invalid FCRAM region chosen for allocation!"); break;
 	}
 
@@ -92,7 +85,10 @@ void KFcram::decRef(FcramBlockList& list) {
 		for (int i = 0; i < it->pages; i++) {
 			u32 index = (it->paddr >> 12) + i;
 			refs.get()[index]--;
-			if (!refs.get()[index]) Helpers::panic("TODO: Freeing FCRAM");
+
+			if (!refs.get()[index]) {
+				Helpers::panic("TODO: Freeing FCRAM");
+			}
 		}
 	}
 }

@@ -5,7 +5,7 @@
 
 class Memory;
 
-typedef std::list<FcramBlock> FcramBlockList;
+using FcramBlockList = std::list<FcramBlock>;
 
 class KFcram {
 	struct Region {
