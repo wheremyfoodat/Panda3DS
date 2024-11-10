@@ -483,7 +483,8 @@ namespace Audio {
 	}
 
 	void HLE_DSP::generateFrame(DSPSource& source) {
-		// Zero out all output samples at first. TODO: Don't zero out the entire frame initially, rather only zero-out the "unwritten" samples when the frame is done being processed.
+		// Zero out all output samples at first. TODO: Don't zero out the entire frame initially, rather only zero-out the "unwritten" samples when
+		// the frame is done being processed.
 		source.currentFrame = {};
 
 		if (source.currentSamples.empty()) {
@@ -556,7 +557,7 @@ namespace Audio {
 		if (config.outputFormatDirty) {
 			mixer.channelFormat = config.outputFormat;
 		}
-		
+
 		if (config.masterVolumeDirty) {
 			mixer.volumes[0] = config.masterVolume;
 		}
@@ -564,7 +565,7 @@ namespace Audio {
 		if (config.auxVolume0Dirty) {
 			mixer.volumes[1] = config.auxVolumes[0];
 		}
-		
+
 		if (config.auxVolume1Dirty) {
 			mixer.volumes[2] = config.auxVolumes[1];
 		}
@@ -726,7 +727,7 @@ namespace Audio {
 				response = request;
 				response.resultCode = AAC::ResultCode::Success;
 				break;
-				
+
 			default: Helpers::warn("Unknown AAC command type"); break;
 		}
 
@@ -752,7 +753,7 @@ namespace Audio {
 		rateMultiplier = 1.f;
 
 		buffers = {};
-        interpolationState = {};
+		interpolationState = {};
 		currentSamples.clear();
 
 		gains.fill({});
