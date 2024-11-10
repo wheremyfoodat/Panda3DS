@@ -255,6 +255,11 @@ namespace Audio {
 			// If the source is still enabled, mix its output into the intermediate mix buffers
 			if (source.enabled) {
 				for (int mix = 0; mix < mixes.size(); mix++) {
+					// Check if this stage is passthrough, and if it is, then skip it
+					if ((source.enabledMixStages & (1u << mix)) == 0) {
+						continue;
+					}
+
 					IntermediateMix& intermediateMix = mixes[mix];
 					const std::array<float, 4>& gains = source.gains[mix];
 
@@ -397,16 +402,23 @@ namespace Audio {
 			}
 		}
 
-#define CONFIG_GAIN(index)                 \
-	if (config.gain##index##Dirty) {       \
-		auto& dest = source.gains[index];  \
-		auto& source = config.gain[index]; \
-                                           \
-		dest[0] = float(source[0]);        \
-		dest[1] = float(source[1]);        \
-		dest[2] = float(source[2]);        \
-		dest[3] = float(source[3]);        \
+#define CONFIG_GAIN(index)                                                          \
+	if (config.gain##index##Dirty) {                                                \
+		auto& dest = source.gains[index];                                           \
+		auto& sourceGain = config.gain[index];                                      \
+                                                                                    \
+		dest[0] = float(sourceGain[0]);                                             \
+		dest[1] = float(sourceGain[1]);                                             \
+		dest[2] = float(sourceGain[2]);                                             \
+		dest[3] = float(sourceGain[3]);                                             \
+                                                                                    \
+		if (dest[0] == 0.f && dest[1] == 0.f && dest[2] == 0.f && dest[3] == 0.f) { \
+			source.enabledMixStages &= ~(1u << index);                              \
+		} else {                                                                    \
+			source.enabledMixStages |= (1u << index);                               \
+		}                                                                           \
 	}
+
 		CONFIG_GAIN(0);
 		CONFIG_GAIN(1);
 		CONFIG_GAIN(2);
@@ -744,5 +756,6 @@ namespace Audio {
 		currentSamples.clear();
 
 		gains.fill({});
+		enabledMixStages = 0;
 	}
 }  // namespace Audio

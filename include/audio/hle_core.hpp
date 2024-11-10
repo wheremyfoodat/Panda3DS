@@ -61,6 +61,10 @@ namespace Audio {
 		// There's one gain configuration for each of the 3 intermediate mixing stages
 		// And each gain configuration is composed of 4 gain values, one for each sample in a quad-channel sample
 		std::array<std::array<float, 4>, 3> gains;
+		// Of the 3 intermediate mix stages, typically only the first one is actually enabled and the other ones do nothing
+		// Ie their gain is vec4(0.0). We track which stages are disabled (have a gain of all 0s) using this bitfield and skip them
+		// In order to save up on CPU time.
+		uint enabledMixStages = 0;
 
 		u32 samplePosition;  // Sample number into the current audio buffer
 		float rateMultiplier;
