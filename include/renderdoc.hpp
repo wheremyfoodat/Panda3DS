@@ -29,9 +29,9 @@ namespace Renderdoc {
 #else
 namespace Renderdoc {
 	static void loadRenderdoc() {}
-	static void startCapture() { Helpers::panic("Tried to start a Renderdoc capture while support for renderdoc is disabled") }
-	static void endCapture() { Helpers::panic("Tried to end a Renderdoc capture while support for renderdoc is disabled") }
-	static void triggerCapture() { Helpers::panic("Tried to trigger a Renderdoc capture while support for renderdoc is disabled") }
+	static void startCapture() { Helpers::panic("Tried to start a Renderdoc capture while support for renderdoc is disabled"); }
+	static void endCapture() { Helpers::panic("Tried to end a Renderdoc capture while support for renderdoc is disabled"); }
+	static void triggerCapture() { Helpers::panic("Tried to trigger a Renderdoc capture while support for renderdoc is disabled"); }
 	static void setOutputDir(const std::string& path, const std::string& prefix) {}
 	static constexpr bool isSupported() { return false; }
 }  // namespace Renderdoc
