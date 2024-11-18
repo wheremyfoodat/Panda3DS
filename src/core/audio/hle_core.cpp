@@ -279,7 +279,7 @@ namespace Audio {
 		for (int i = 0; i < Audio::samplesInFrame; i++) {
 			auto& mix0 = mixes[0];
 			auto& sample = mix0[i];
-			frame[i] = {s16(sample[0]), s16(sample[2])};
+			frame[i] = {s16(sample[0]), s16(sample[1])};
 		}
 
 		performMix(read, write);
