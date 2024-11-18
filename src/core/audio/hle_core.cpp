@@ -211,11 +211,11 @@ namespace Audio {
 
 		if (audioEnabled) {
 			// Wait until we've actually got room to push our frame
-			while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+			while (sampleBuffer.size() + frame.size() * 2 > sampleBuffer.Capacity()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds{1});
 			}
 
-			sampleBuffer.push(frame.data(), frame.size());
+			sampleBuffer.push(frame.data(), frame.size() * 2);
 		}
 	}
 
@@ -274,6 +274,12 @@ namespace Audio {
 					}
 				}
 			}
+		}
+
+		for (int i = 0; i < Audio::samplesInFrame; i++) {
+			auto& mix0 = mixes[0];
+			auto& sample = mix0[i];
+			frame[i] = {s16(sample[0]), s16(sample[2])};
 		}
 
 		performMix(read, write);
