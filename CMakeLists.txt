@@ -127,7 +127,6 @@ include_directories(third_party/elfio/)
 include_directories(third_party/hips/include/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
-include_directories(third_party/cryptopp/)
 include_directories(third_party/cityhash/include)
 include_directories(third_party/result/include)
 include_directories(third_party/xxhash/include)
@@ -183,9 +182,20 @@ if(ANDROID)
     target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
 
-set(CRYPTOPP_BUILD_TESTING OFF)
-add_subdirectory(third_party/cryptopp)
 add_subdirectory(third_party/glad)
+
+# Cryptopp doesn't support compiling under clang-cl, so we have to include it as a prebuilt MSVC static library
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND MSVC)
+    add_subdirectory(third_party/cryptoppwin)
+    include_directories(third_party/cryptoppwin/include)
+    target_link_libraries(AlberCore PRIVATE cryptoppwin)
+else()
+    set(CRYPTOPP_BUILD_TESTING OFF)
+
+    add_subdirectory(third_party/cryptopp)
+    include_directories(third_party/cryptopp)
+    target_link_libraries(AlberCore PRIVATE cryptopp)
+endif()
 
 if(ENABLE_LUAJIT)
     add_subdirectory(third_party/LuaJIT luajit)
@@ -577,7 +587,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra fdk-aac)
+target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts teakra fdk-aac)
 target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
