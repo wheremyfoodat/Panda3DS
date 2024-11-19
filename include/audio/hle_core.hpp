@@ -48,7 +48,7 @@ namespace Audio {
 		using SampleBuffer = std::deque<std::array<s16, 2>>;
 		using BufferQueue = std::priority_queue<Buffer>;
 		using InterpolationMode = HLE::SourceConfiguration::Configuration::InterpolationMode;
-        using InterpolationState = Audio::Interpolation::State;
+		using InterpolationState = Audio::Interpolation::State;
 
 		DSPMixer::StereoFrame<s16> currentFrame;
 		BufferQueue buffers;
@@ -56,7 +56,7 @@ namespace Audio {
 		SampleFormat sampleFormat = SampleFormat::ADPCM;
 		SourceType sourceType = SourceType::Stereo;
 		InterpolationMode interpolationMode = InterpolationMode::Linear;
-        InterpolationState interpolationState;
+		InterpolationState interpolationState;
 
 		// There's one gain configuration for each of the 3 intermediate mixing stages
 		// And each gain configuration is composed of 4 gain values, one for each sample in a quad-channel sample
@@ -221,5 +221,4 @@ namespace Audio {
 		void setSemaphore(u16 value) override {}
 		void setSemaphoreMask(u16 value) override {}
 	};
-
 }  // namespace Audio
