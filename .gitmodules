@@ -82,3 +82,6 @@
 [submodule "third_party/fdk-aac"]
 	path = third_party/fdk-aac
 	url = https://github.com/Panda3DS-emu/fdk-aac/
+[submodule "third_party/cryptoppwin"]
+	path = third_party/cryptoppwin
+	url = https://github.com/shadps4-emu/ext-cryptoppwin
