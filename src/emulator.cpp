@@ -50,6 +50,7 @@ Emulator::Emulator()
 Emulator::~Emulator() {
 	config.save();
 	lua.close();
+	audioDevice.close();
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	discordRpc.stop();
@@ -249,7 +250,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		success = loadELF(path);
 	else if (extension == ".3ds" || extension == ".cci")
 		success = loadNCSD(path, ROMType::NCSD);
-	else if (extension == ".cxi" || extension == ".app" || extension == ".ncch")
+	else if (extension == ".cxi" || extension == ".app")
 		success = loadNCSD(path, ROMType::CXI);
 	else if (extension == ".3dsx")
 		success = load3DSX(path);
