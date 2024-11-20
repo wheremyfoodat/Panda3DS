@@ -27,8 +27,8 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 
 			// TODO: Make backend selectable here
 			found = true;
-			//count = 1;
-			//backends[0] = backend;
+			// count = 1;
+			// backends[0] = backend;
 		}
 
 		if (!found) {
@@ -81,8 +81,8 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 	deviceConfig.playback.format = ma_format_s16;
 	deviceConfig.playback.channels = channelCount;
 	deviceConfig.sampleRate = sampleRate;
-	//deviceConfig.periodSizeInFrames = 64;
-	//deviceConfig.periods = 16;
+	// deviceConfig.periodSizeInFrames = 64;
+	// deviceConfig.periods = 16;
 	deviceConfig.pUserData = this;
 	deviceConfig.aaudio.usage = ma_aaudio_usage_game;
 	deviceConfig.wasapi.noAutoConvertSRC = true;
@@ -130,7 +130,7 @@ void MiniAudioDevice::start() {
 
 void MiniAudioDevice::stop() {
 	if (!initialized) {
-		Helpers::warn("MiniAudio device not initialized, can't start");
+		Helpers::warn("MiniAudio device not initialized, can't stop");
 		return;
 	}
 
@@ -139,6 +139,17 @@ void MiniAudioDevice::stop() {
 
 		if (ma_device_stop(&device) != MA_SUCCESS) {
 			Helpers::warn("Failed to stop audio device");
-		} 
+		}
+	}
+}
+
+void MiniAudioDevice::close() {
+	stop();
+
+	if (initialized) {
+		initialized = false;
+
+		ma_device_uninit(&device);
+		ma_context_uninit(&context);
 	}
 }

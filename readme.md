@@ -68,7 +68,7 @@ Simply drag and drop a ROM to the executable if supported, or invoke the executa
 <br>
 Panda3DS can load ROMs in the following formats:
 - .3ds/.cci
-- .cxi/.app
+- .cxi/.app/.ncch
 - .elf/.axf
 - .3dsx
 

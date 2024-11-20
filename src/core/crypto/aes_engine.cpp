@@ -2,7 +2,10 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <tuple>
+#include <vector>
 
 #include "helpers.hpp"
 
@@ -15,6 +18,19 @@ namespace Crypto {
 			return;
 		}
 
+		auto splitString = [](const std::string& s, const char c) -> std::vector<std::string> {
+			std::istringstream tmp(s);
+			std::vector<std::string> result(1);
+
+			while (std::getline(tmp, *result.rbegin(), c)) {
+				result.emplace_back();
+			}
+
+			// Remove temporary slot
+			result.pop_back();
+			return result;
+		};
+
 		while (!file.eof()) {
 			std::string line;
 			std::getline(file, line);
@@ -24,7 +40,7 @@ namespace Crypto {
 				continue;
 			}
 
-			const auto parts = Helpers::split(line, '=');
+			const auto parts = splitString(line, '=');
 			if (parts.size() != 2) {
 				Helpers::warn("Keys: Failed to parse %s", line.c_str());
 				continue;

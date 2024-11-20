@@ -1,7 +1,7 @@
 # Software Information
 display_name = "Nintendo - 3DS (Panda3DS)"
 authors = "Panda3DS Authors (tm)"
-supported_extensions = "3ds|3dsx|elf|axf|cci|cxi|app"
+supported_extensions = "3ds|3dsx|elf|axf|cci|cxi|app|ncch"
 corename = "Panda3DS"
 categories = "Emulator"
 license = "GPLv3"
