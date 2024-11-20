@@ -59,7 +59,7 @@ namespace DSP::MixIntoQuad {
 			// Multiply samples by their respective gains, truncate the result, and add it into the intermediate mix buffer
 			int32x4_t offset = vcvtq_s32_f32(vmulq_f32(currentFrame, gains_));
 			int32x4_t intermediateMixPrev = vld1q_s32((s32*)&mix[sampleIndex][0]);
-			int32x4_t result = vaddq_f32(intermediateMixPrev, offset);
+			int32x4_t result = vaddq_s32(intermediateMixPrev, offset);
 			vst1q_s32((s32*)&mix[sampleIndex][0], result);
 		}
 	}
