@@ -66,7 +66,6 @@ class Emulator {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	Discord::RPC discordRpc;
 #endif
-	void setAudioEnabled(bool enable);
 	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
@@ -99,6 +98,7 @@ class Emulator {
 	void resume();  // Resume the emulator
 	void pause();   // Pause the emulator
 	void togglePause();
+	void setAudioEnabled(bool enable);
 
 	bool loadAmiibo(const std::filesystem::path& path);
 	bool loadROM(const std::filesystem::path& path);

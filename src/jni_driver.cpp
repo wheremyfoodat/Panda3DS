@@ -48,6 +48,11 @@ MAKE_SETTING(setAccurateShaderMulEnable, jboolean, accurateShaderMul)
 
 #undef MAKE_SETTING
 
+AlberFunction(void, setAudioEnabled)(JNIEnv* env, jobject obj, jboolean value) {
+	emulator->getConfig().audioEnabled = value;
+	emulator->setAudioEnabled(value);
+}
+
 AlberFunction(void, Setup)(JNIEnv* env, jobject obj) {
     env->GetJavaVM(&jvm);
 
