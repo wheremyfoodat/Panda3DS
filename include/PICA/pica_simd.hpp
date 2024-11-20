@@ -3,6 +3,7 @@
 #include <limits>
 #include <utility>
 
+#include "compiler_builtins.hpp"
 #include "helpers.hpp"
 
 #if defined(_M_AMD64) || defined(__x86_64__)
@@ -43,7 +44,7 @@ namespace PICA::IndexBuffer {
 
 #ifdef PICA_SIMD_ARM64
 	template <bool useShortIndices>
-	std::pair<u16, u16> analyzeNEON(u8* indexBuffer, u32 vertexCount) {
+	ALWAYS_INLINE std::pair<u16, u16> analyzeNEON(u8* indexBuffer, u32 vertexCount) {
 		// We process 16 bytes per iteration, which is 8 vertices if we're using u16 indices or 16 vertices if we're using u8 indices
 		constexpr u32 vertsPerLoop = (useShortIndices) ? 8 : 16;
 
@@ -134,7 +135,7 @@ namespace PICA::IndexBuffer {
 
 #if defined(PICA_SIMD_X64) && (defined(__SSE4_1__) || defined(__AVX__))
 	template <bool useShortIndices>
-	std::pair<u16, u16> analyzeSSE4_1(u8* indexBuffer, u32 vertexCount) {
+	ALWAYS_INLINE std::pair<u16, u16> analyzeSSE4_1(u8* indexBuffer, u32 vertexCount) {
 		// We process 16 bytes per iteration, which is 8 vertices if we're using u16
 		// indices or 16 vertices if we're using u8 indices
 		constexpr u32 vertsPerLoop = (useShortIndices) ? 8 : 16;
