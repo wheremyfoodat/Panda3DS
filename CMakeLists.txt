@@ -314,6 +314,7 @@ set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selecto
 )
 set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp src/core/audio/teakra_core.cpp
                        src/core/audio/miniaudio_device.cpp src/core/audio/hle_core.cpp src/core/audio/aac_decoder.cpp
+                       src/core/audio/audio_interpolation.cpp
 )
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
@@ -354,6 +355,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
                  include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
+                 include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
 )
 
 cmrc_add_resource_library(
