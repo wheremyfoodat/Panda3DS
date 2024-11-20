@@ -31,13 +31,14 @@ namespace DSP::MixIntoQuad {
 
 #if defined(DSP_SIMD_X64) && (defined(__SSE4_1__) || defined(__AVX__))
 	ALWAYS_INLINE static void mixSSE4_1(IntermediateMix& mix, StereoFrame16& frame, const float* gains) {
+		__m128 gains_ = _mm_load_ps(gains);
+
 		for (usize sampleIndex = 0; sampleIndex < Audio::samplesInFrame; sampleIndex++) {
 			// The stereo samples, repeated every 4 bytes inside the vector register
 			__m128i stereoSamples = _mm_castps_si128(_mm_load1_ps((float*)&frame[sampleIndex][0]));
 
 			__m128 currentFrame = _mm_cvtepi32_ps(_mm_cvtepi16_epi32(stereoSamples));
-			__m128 gains_ = _mm_load_ps(gains);
-			__m128i offset = _mm_cvtps_epi32(_mm_mul_ps(currentFrame, gains_));
+			__m128i offset = _mm_cvttps_epi32(_mm_mul_ps(currentFrame, gains_));
 			__m128i intermediateMixPrev = _mm_load_si128((__m128i*)&mix[sampleIndex][0]);
 			__m128i result = _mm_add_epi32(intermediateMixPrev, offset);
 			_mm_store_si128((__m128i*)&mix[sampleIndex][0], result);
@@ -46,7 +47,22 @@ namespace DSP::MixIntoQuad {
 #endif
 
 #ifdef DSP_SIMD_ARM64
-	ALWAYS_INLINE static void mixNEON(IntermediateMix& mix, StereoFrame16& frame, const float* gains) { mixPortable(mix, frame, gains); }
+	ALWAYS_INLINE static void mixNEON(IntermediateMix& mix, StereoFrame16& frame, const float* gains) {
+		float32x4_t gains_ = vld1q_f32(gains);
+
+		for (usize sampleIndex = 0; sampleIndex < Audio::samplesInFrame; sampleIndex++) {
+			// Load l and r samples and repeat them every 4 bytes
+			int32x4_t stereoSamples = vld1q_dup_s32((s32*)&frame[sampleIndex][0]);
+			// Expand the bottom 4 s16 samples into an int32x4 with sign extension, then convert them to float32x4
+			float32x4_t currentFrame = vcvtq_f32_s32(vmovl_s16(vget_low_s16(vreinterpretq_s16_s32(stereoSamples))));
+
+			// Multiply samples by their respective gains, truncate the result, and add it into the intermediate mix buffer
+			int32x4_t offset = vcvtq_s32_f32(vmulq_f32(currentFrame, gains_));
+			int32x4_t intermediateMixPrev = vld1q_s32((s32*)&mix[sampleIndex][0]);
+			int32x4_t result = vaddq_f32(intermediateMixPrev, offset);
+			vst1q_s32((s32*)&mix[sampleIndex][0], result);
+		}
+	}
 #endif
 
 	// Mixes the stereo output of a DSP voice into a quadraphonic intermediate mix
