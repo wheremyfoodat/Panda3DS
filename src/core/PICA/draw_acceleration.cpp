@@ -90,7 +90,11 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 			const u32 size = (attribInfo >> 2) + 1;   // Total number of components
 
 			// Size of each component based on the attribute type
-			static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
+			[[maybe_unused]] static constexpr u32 sizePerComponent[4] = {1, 1, 2, 4};
+			// To avoid a multiplication, instead of multiplying by the above values, we shift left instead
+			// So multiplication by 1 becomes a shift by 0, mul by 2 becomes a shift by 1, and mul by 4 becomes a shift by 2 
+			static constexpr u32 sizeShiftPerComponent[4] = {0, 0, 1, 2};
+
 			const u32 inputReg = (inputAttrCfg >> (attributeIndex * 4)) & 0xf;
 			// Mark the attribute as enabled
 			accel.enabledAttributeMask |= 1 << inputReg;
@@ -100,7 +104,7 @@ void GPU::getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed) {
 			attr.offset = attributeOffset + loaderOffset;
 			attr.stride = loaderData.size;
 			attr.type = attribType;
-			attributeOffset += size * sizePerComponent[attribType];
+			attributeOffset += size << sizeShiftPerComponent[attribType];
 		}
 
 		loaderOffset += loader.size;
