@@ -50,7 +50,9 @@ namespace Audio {
 		using InterpolationMode = HLE::SourceConfiguration::Configuration::InterpolationMode;
 		using InterpolationState = Audio::Interpolation::State;
 
-		DSPMixer::StereoFrame<s16> currentFrame;
+		// The samples this voice output for this audio frame.
+		// Aligned to 4 for SIMD purposes.
+		alignas(4) DSPMixer::StereoFrame<s16> currentFrame;
 		BufferQueue buffers;
 
 		SampleFormat sampleFormat = SampleFormat::ADPCM;
@@ -60,7 +62,8 @@ namespace Audio {
 
 		// There's one gain configuration for each of the 3 intermediate mixing stages
 		// And each gain configuration is composed of 4 gain values, one for each sample in a quad-channel sample
-		std::array<std::array<float, 4>, 3> gains;
+		// Aligned to 16 for SIMD purposes
+		alignas(16) std::array<std::array<float, 4>, 3> gains;
 		// Of the 3 intermediate mix stages, typically only the first one is actually enabled and the other ones do nothing
 		// Ie their gain is vec4(0.0). We track which stages are disabled (have a gain of all 0s) using this bitfield and skip them
 		// In order to save up on CPU time.

@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "audio/aac_decoder.hpp"
+#include "audio/dsp_simd.hpp"
 #include "services/dsp.hpp"
 
 namespace Audio {
@@ -228,7 +229,9 @@ namespace Audio {
 		// The DSP checks the DSP configuration dirty bits on every frame, applies them, and clears them
 		read.dspConfiguration.dirtyRaw = 0;
 		read.dspConfiguration.dirtyRaw2 = 0;
-		std::array<IntermediateMix, 3> mixes{};
+
+		// The intermediate mix buffer is aligned to 16 for SIMD purposes
+		alignas(16) std::array<IntermediateMix, 3> mixes{};
 
 		for (int i = 0; i < sourceCount; i++) {
 			// Update source configuration from the read region of shared memory
@@ -263,15 +266,7 @@ namespace Audio {
 					IntermediateMix& intermediateMix = mixes[mix];
 					const std::array<float, 4>& gains = source.gains[mix];
 
-					// TODO: SIMD implementations
-					for (usize sampleIndex = 0; sampleIndex < Audio::samplesInFrame; sampleIndex++) {
-						// Mono samples are in the format: (l, r)
-						// When converting to quad, gain0 and gain2 are applied to the left sample, gain1 and gain3 to the right one
-						intermediateMix[sampleIndex][0] += s32(source.currentFrame[sampleIndex][0] * gains[0]);
-						intermediateMix[sampleIndex][1] += s32(source.currentFrame[sampleIndex][1] * gains[1]);
-						intermediateMix[sampleIndex][2] += s32(source.currentFrame[sampleIndex][0] * gains[2]);
-						intermediateMix[sampleIndex][3] += s32(source.currentFrame[sampleIndex][1] * gains[3]);
-					}
+					DSP::MixIntoQuad::mix(intermediateMix, source.currentFrame, gains.data());
 				}
 			}
 		}
