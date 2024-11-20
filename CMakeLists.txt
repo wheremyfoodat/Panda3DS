@@ -239,6 +239,11 @@ endif()
 if(NOT MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DISABLE_SSE4 AND HOST_X64)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
+elseif(MSVC AND NOT DISABLE_SSE4)
+    # Tell our SIMD code to use SSE4.1 by defining the relevant macros.
+    # Clang defines these macros, MSVC does not.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D__SSE3__ /D__SSE4_1__")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D__SSE3__ /D__SSE4_1__")
 endif()
 
 if(ENABLE_RENDERDOC_API)
