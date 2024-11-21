@@ -204,6 +204,8 @@ static void configUpdate() {
 	config.lightShadergenThreshold = fetchVariableRange("panda3ds_ubershader_lighting_override_threshold", 1, 8);
 	config.discordRpcEnabled = false;
 
+	// Handle any settings that might need the emulator core to be notified when they're changed, and save the config.
+	emulator->setAudioEnabled(config.audioEnabled);
 	config.save();
 }
 
