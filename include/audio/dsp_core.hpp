@@ -24,7 +24,8 @@ namespace Audio {
 	static constexpr u64 lleSlice = 16384;
 
 	class DSPCore {
-		using Samples = Common::RingBuffer<s16, 1024>;
+		// 0x2000 stereo (= 2 channel) samples
+		using Samples = Common::RingBuffer<s16, 0x2000 * 2>;
 
 	  protected:
 		Memory& mem;
