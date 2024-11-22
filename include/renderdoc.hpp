@@ -59,7 +59,7 @@ namespace Renderdoc {
 		}
 
 		~InstantScope() { Renderdoc::endCapture(); }
-		
+
 		InstantScope(const InstantScope&) = delete;
 		InstantScope& operator=(const InstantScope&) = delete;
 

@@ -82,7 +82,7 @@ namespace Audio {
 
 		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
 	}
-	
+
 	u16 NullDSP::recvData(u32 regId) {
 		if (regId != 0) {
 			Helpers::panic("Audio: invalid register in null frontend");
@@ -116,13 +116,11 @@ namespace Audio {
 							// TODO: Other initialization stuff here
 							dspState = DSPState::On;
 							resetAudioPipe();
-							
+
 							dspService.triggerPipeEvent(DSPPipeType::Audio);
 							break;
 
-						case StateChange::Shutdown:
-							dspState = DSPState::Off;
-							break;
+						case StateChange::Shutdown: dspState = DSPState::Off; break;
 
 						default: Helpers::panic("Unimplemented DSP audio pipe state change %d", state);
 					}

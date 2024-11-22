@@ -8,8 +8,8 @@
 
 #include "helpers.hpp"
 #include "logger.hpp"
-#include "scheduler.hpp"
 #include "ring_buffer.hpp"
+#include "scheduler.hpp"
 
 // The DSP core must have access to the DSP service to be able to trigger interrupts properly
 class DSPService;
@@ -39,8 +39,7 @@ namespace Audio {
 
 	  public:
 		enum class Type { Null, Teakra, HLE };
-		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService)
-			: mem(mem), scheduler(scheduler), dspService(dspService) {}
+		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService) : mem(mem), scheduler(scheduler), dspService(dspService) {}
 		virtual ~DSPCore() {}
 
 		virtual void reset() = 0;
