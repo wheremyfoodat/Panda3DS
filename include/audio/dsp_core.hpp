@@ -8,8 +8,8 @@
 
 #include "helpers.hpp"
 #include "logger.hpp"
-#include "scheduler.hpp"
 #include "ring_buffer.hpp"
+#include "scheduler.hpp"
 
 // The DSP core must have access to the DSP service to be able to trigger interrupts properly
 class DSPService;
@@ -24,7 +24,8 @@ namespace Audio {
 	static constexpr u64 lleSlice = 16384;
 
 	class DSPCore {
-		using Samples = Common::RingBuffer<s16, 1024>;
+		// 0x2000 stereo (= 2 channel) samples
+		using Samples = Common::RingBuffer<s16, 0x2000 * 2>;
 
 	  protected:
 		Memory& mem;
@@ -38,8 +39,7 @@ namespace Audio {
 
 	  public:
 		enum class Type { Null, Teakra, HLE };
-		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService)
-			: mem(mem), scheduler(scheduler), dspService(dspService) {}
+		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService) : mem(mem), scheduler(scheduler), dspService(dspService) {}
 		virtual ~DSPCore() {}
 
 		virtual void reset() = 0;

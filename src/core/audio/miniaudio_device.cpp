@@ -1,5 +1,7 @@
 #include "audio/miniaudio_device.hpp"
 
+#include <cstring>
+
 #include "helpers.hpp"
 
 MiniAudioDevice::MiniAudioDevice() : initialized(false), running(false), samples(nullptr) {}
@@ -87,20 +89,34 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 	deviceConfig.aaudio.usage = ma_aaudio_usage_game;
 	deviceConfig.wasapi.noAutoConvertSRC = true;
 
+	lastStereoSample = {0, 0};
+
 	deviceConfig.dataCallback = [](ma_device* device, void* out, const void* input, ma_uint32 frameCount) {
 		auto self = reinterpret_cast<MiniAudioDevice*>(device->pUserData);
-		s16* output = reinterpret_cast<ma_int16*>(out);
-		const usize maxSamples = std::min(self->samples->Capacity(), usize(frameCount * channelCount));
-
-		// Wait until there's enough samples to pop
-		while (self->samples->size() < maxSamples) {
-			// If audio output is disabled from the emulator thread, make sure that this callback will return and not hang
-			if (!self->running) {
-				return;
-			}
+		if (!self->running) {
+			return;
 		}
 
-		self->samples->pop(output, maxSamples);
+		s16* output = reinterpret_cast<ma_int16*>(out);
+		usize samplesWritten = 0;
+		samplesWritten += self->samples->pop(output, frameCount * channelCount);
+
+		// Get the last sample for underrun handling
+		if (samplesWritten != 0) {
+			std::memcpy(&self->lastStereoSample[0], &output[(samplesWritten - 1) * 2], sizeof(lastStereoSample));
+		}
+
+		// If underruning, copy the last output sample
+		{
+			s16* pointer = &output[samplesWritten * 2];
+			s16 l = self->lastStereoSample[0];
+			s16 r = self->lastStereoSample[1];
+
+			for (usize i = samplesWritten; i < frameCount; i++) {
+				*pointer++ = l;
+				*pointer++ = r;
+			}
+		}
 	};
 
 	if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {

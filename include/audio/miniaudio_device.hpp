@@ -3,11 +3,12 @@
 #include <string>
 #include <vector>
 
+#include "helpers.hpp"
 #include "miniaudio.h"
 #include "ring_buffer.hpp"
 
 class MiniAudioDevice {
-	using Samples = Common::RingBuffer<ma_int16, 1024>;
+	using Samples = Common::RingBuffer<ma_int16, 0x2000 * 2>;
 	static constexpr ma_uint32 sampleRate = 32768;  // 3DS sample rate
 	static constexpr ma_uint32 channelCount = 2;    // Audio output is stereo
 
@@ -20,6 +21,8 @@ class MiniAudioDevice {
 	bool initialized = false;
 	bool running = false;
 
+	// Store the last stereo sample we output. We play this when underruning to avoid pops.
+	std::array<s16, 2> lastStereoSample;
 	std::vector<std::string> audioDevices;
 
   public:
