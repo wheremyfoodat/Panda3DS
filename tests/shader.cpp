@@ -32,7 +32,6 @@ static std::unique_ptr<PICAShader> assembleVertexShader(std::initializer_list<ni
 	for (const nihstro::SwizzlePattern& swizzle : shaderBinary.swizzle_table) {
 		newShader->uploadDescriptor(swizzle.hex);
 	}
-	newShader->finalize();
 	return newShader;
 }
 
