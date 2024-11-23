@@ -455,9 +455,11 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	const u8 depthFunc = Helpers::getBits<4, 3>(depthControl);
 	const u8 colorMask = Helpers::getBits<8, 4>(depthControl);
 
-	Metal::DepthStencilHash depthStencilHash{false, 1};
+	Metal::DepthStencilHash depthStencilHash;
 	depthStencilHash.stencilConfig = regs[PICA::InternalRegs::StencilTest];
 	depthStencilHash.stencilOpConfig = regs[PICA::InternalRegs::StencilOp];
+	depthStencilHash.depthStencilWrite = false;
+	depthStencilHash.depthFunc = 1;
 	const bool stencilEnable = Helpers::getBit<0>(depthStencilHash.stencilConfig);
 
 	std::optional<Metal::DepthStencilRenderTarget> depthStencilRenderTarget = std::nullopt;
@@ -485,9 +487,12 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	depthUniforms.depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
 	// -------- Pipeline --------
-	Metal::DrawPipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
+	Metal::DrawPipelineHash pipelineHash;
+	pipelineHash.colorFmt = colorRenderTarget->format;
 	if (depthStencilRenderTarget) {
 		pipelineHash.depthFmt = depthStencilRenderTarget->format;
+	} else {
+		pipelineHash.depthFmt = DepthFmt::Unknown1;
 	}
 	pipelineHash.fragHash.lightingEnabled = regs[0x008F] & 1;
 	pipelineHash.fragHash.lightingNumLights = regs[0x01C2] & 0x7;
