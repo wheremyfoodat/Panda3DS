@@ -58,7 +58,7 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	emu.setOutputSize(windowWidth, windowHeight);
 
 	if (needOpenGL) {
-		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 anywhere else
+		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
 		// MacOS gets mad if we don't explicitly demand a core profile
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::OpenGL ? 4 : 3);
