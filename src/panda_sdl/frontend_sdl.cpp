@@ -29,8 +29,8 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	}
 
 	const EmulatorConfig& config = emu.getConfig();
-	// We need OpenGL for software rendering or for OpenGL if it's enabled
-	bool needOpenGL = config.rendererType == RendererType::Software;
+	// We need OpenGL for software rendering/null renderer or for the OpenGL renderer if it's enabled.
+	bool needOpenGL = config.rendererType == RendererType::Software || config.rendererType == RendererType::Null;
 #ifdef PANDA3DS_ENABLE_OPENGL
 	needOpenGL = needOpenGL || (config.rendererType == RendererType::OpenGL);
 #endif
@@ -58,11 +58,11 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	emu.setOutputSize(windowWidth, windowHeight);
 
 	if (needOpenGL) {
-		// Demand 3.3 core for software renderer, or 4.1 core for OpenGL renderer (max available on MacOS)
+		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
 		// MacOS gets mad if we don't explicitly demand a core profile
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::Software ? 3 : 4);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::Software ? 3 : 1);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::OpenGL ? 4 : 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::OpenGL ? 1 : 3);
 		window = SDL_CreateWindow(windowTitle, windowX, windowY, windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		if (window == nullptr) {
