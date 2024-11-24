@@ -189,6 +189,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND MSVC)
     add_subdirectory(third_party/cryptoppwin)
     include_directories(third_party/cryptoppwin/include)
     target_link_libraries(AlberCore PRIVATE cryptoppwin)
+
+    # Also silence some of clang-cl's more... intrusive warnings
+    set(WARNING_FLAGS "/W1 -Wno-unused-function -Wno-unused-but-set-variable -Wno-reorder-ctor")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_FLAGS}")
 else()
     set(CRYPTOPP_BUILD_TESTING OFF)
 
