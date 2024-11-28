@@ -172,12 +172,16 @@ static void configInit() {
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
 		{"panda3ds_dsp_emulation", "DSP emulation; HLE|LLE|Null"},
 		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
+		{"panda3ds_audio_volume", "Audio volume; 100|0|10|20|40|60|80|90|100|120|140|150|180|200"},
+		{"panda3ds_mute_audio", "Mute audio; disabled|enabled"},
+		{"panda3ds_enable_aac", "Enable AAC audio; enabled|disabled"},
+
+		{"panda3ds_ubershader_lighting_override", "Force shadergen when rendering lights; enabled|disabled"},
+		{"panda3ds_ubershader_lighting_override_threshold", "Light threshold for forcing shadergen; 1|2|3|4|5|6|7|8"},
 		{"panda3ds_use_virtual_sd", "Enable virtual SD card; enabled|disabled"},
 		{"panda3ds_write_protect_virtual_sd", "Write protect virtual SD card; disabled|enabled"},
 		{"panda3ds_battery_level", "Battery percentage; 5|10|20|30|50|70|90|100"},
 		{"panda3ds_use_charger", "Charger plugged; enabled|disabled"},
-		{"panda3ds_ubershader_lighting_override", "Force shadergen when rendering lights; enabled|disabled"},
-		{"panda3ds_ubershader_lighting_override_threshold", "Light threshold for forcing shadergen; 1|2|3|4|5|6|7|8"},
 		{nullptr, nullptr},
 	};
 
@@ -194,6 +198,10 @@ static void configUpdate() {
 	config.batteryPercentage = fetchVariableRange("panda3ds_battery_level", 5, 100);
 	config.dspType = Audio::DSPCore::typeFromString(fetchVariable("panda3ds_dsp_emulation", "null"));
 	config.audioEnabled = fetchVariableBool("panda3ds_use_audio", false);
+	config.aacEnabled = fetchVariableBool("panda3ds_enable_aac", true);
+	config.audioDeviceConfig.muteAudio = fetchVariableBool("panda3ds_mute_audio", false);
+	config.audioDeviceConfig.volumeRaw = float(fetchVariableRange("panda3ds_audio_volume", 0, 200)) / 100.0f;
+
 	config.sdCardInserted = fetchVariableBool("panda3ds_use_virtual_sd", true);
 	config.sdWriteProtected = fetchVariableBool("panda3ds_write_protect_virtual_sd", false);
 	config.accurateShaderMul = fetchVariableBool("panda3ds_accurate_shader_mul", false);

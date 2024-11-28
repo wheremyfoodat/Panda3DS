@@ -20,7 +20,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
-	  cheats(memory, kernel.getServiceManager().getHID()), lua(*this), running(false)
+	  cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this), running(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
@@ -28,7 +28,7 @@ Emulator::Emulator()
 {
 	DSPService& dspService = kernel.getServiceManager().getDSP();
 
-	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
+	dsp = Audio::makeDSPCore(config, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());

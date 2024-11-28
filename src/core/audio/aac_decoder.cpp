@@ -5,7 +5,7 @@
 #include <vector>
 using namespace Audio;
 
-void AAC::Decoder::decode(AAC::Message& response, const AAC::Message& request, AAC::Decoder::PaddrCallback paddrCallback) {
+void AAC::Decoder::decode(AAC::Message& response, const AAC::Message& request, AAC::Decoder::PaddrCallback paddrCallback, bool enableAudio) {
 	// Copy the command and mode fields of the request to the response
 	response.command = request.command;
 	response.mode = request.mode;
@@ -95,9 +95,16 @@ void AAC::Decoder::decode(AAC::Message& response, const AAC::Message& request, A
 				}
 			}
 
-			for (int sample = 0; sample < info->frameSize; sample++) {
+			if (enableAudio) {
+				for (int sample = 0; sample < info->frameSize; sample++) {
+					for (int stream = 0; stream < channels; stream++) {
+						audioStreams[stream].push_back(frame[(sample * channels) + stream]);
+					}
+				}
+			} else {
+				// If audio is not enabled, push 0s
 				for (int stream = 0; stream < channels; stream++) {
-					audioStreams[stream].push_back(frame[(sample * channels) + stream]);
+					audioStreams[stream].resize(audioStreams[stream].size() + info->frameSize, 0);
 				}
 			}
 		} else {

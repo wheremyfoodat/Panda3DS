@@ -8,6 +8,7 @@
 
 #include "audio/aac_decoder.hpp"
 #include "audio/dsp_simd.hpp"
+#include "config.hpp"
 #include "services/dsp.hpp"
 
 namespace Audio {
@@ -20,7 +21,8 @@ namespace Audio {
 		};
 	}
 
-	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {
+	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
+		: DSPCore(mem, scheduler, dspService, config) {
 		// Set up source indices
 		for (int i = 0; i < sources.size(); i++) {
 			sources[i].index = i;
@@ -702,24 +704,9 @@ namespace Audio {
 		AAC::Message response;
 
 		switch (request.command) {
-			case AAC::Command::EncodeDecode: {
-				// Dummy response to stop games from hanging
-				response.resultCode = AAC::ResultCode::Success;
-				response.decodeResponse.channelCount = 2;
-				response.decodeResponse.sampleCount = 1024;
-				response.decodeResponse.size = 0;
-				response.decodeResponse.sampleRate = AAC::SampleRate::Rate48000;
-
-				response.command = request.command;
-				response.mode = request.mode;
-
-				// TODO: Make this a toggle in config.toml. Currently we have it on by default.
-				constexpr bool enableAAC = true;
-				if (enableAAC) {
-					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
-				}
+			case AAC::Command::EncodeDecode:
+				aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); }, settings.aacEnabled);
 				break;
-			}
 
 			case AAC::Command::Init:
 			case AAC::Command::Shutdown:

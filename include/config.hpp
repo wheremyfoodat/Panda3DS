@@ -4,6 +4,19 @@
 #include "audio/dsp_core.hpp"
 #include "renderer.hpp"
 
+struct AudioDeviceConfig {
+	float volumeRaw = 1.0f;
+	bool muteAudio = false;
+
+	float getVolume() const {
+		if (muteAudio) {
+			return 0.0f;
+		}
+
+		return volumeRaw;
+	}
+};
+
 // Remember to initialize every field here to its default value otherwise bad things will happen
 struct EmulatorConfig {
 	// Only enable the shader JIT by default on platforms where it's completely tested
@@ -41,6 +54,7 @@ struct EmulatorConfig {
 
 	bool audioEnabled = false;
 	bool vsyncEnabled = true;
+	bool aacEnabled = true;  // Enable AAC audio?
 
 	bool enableRenderdoc = false;
 	bool printAppVersion = true;
@@ -70,6 +84,7 @@ struct EmulatorConfig {
 	};
 
 	WindowSettings windowSettings;
+	AudioDeviceConfig audioDeviceConfig;
 
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();

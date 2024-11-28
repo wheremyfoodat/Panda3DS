@@ -23,7 +23,7 @@ namespace Audio {
 		bool loaded = false;  // Have we loaded a component?
 
 	  public:
-		NullDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
+		NullDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config) : DSPCore(mem, scheduler, dspService, config) {}
 		~NullDSP() override {}
 
 		void reset() override;
