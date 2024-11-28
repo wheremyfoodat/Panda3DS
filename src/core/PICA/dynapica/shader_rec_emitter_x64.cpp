@@ -370,12 +370,11 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	} else if (haveSSE4_1) {
 		// Bit reverse the write mask because that is what blendps expects
 		u32 adjustedMask = ((writeMask >> 3) & 0b1) | ((writeMask >> 1) & 0b10) | ((writeMask << 1) & 0b100) | ((writeMask << 3) & 0b1000);
-		// Don't accidentally overwrite scratch1 if that is what we're writing derp
-		Xmm temp = (source == scratch1) ? scratch2 : scratch1;
 
-		movaps(temp, xword[statePointer + offset]);     // Read current value of dest
-		blendps(temp, source, adjustedMask);            // Blend with source
-		movaps(xword[statePointer + offset], temp);     // Write back
+		// Blend current value of dest with source. We have to invert the bits of the mask, as we do blendps source, dest instead of dest, source
+		// Note: This destroys source
+		blendps(source, xword[statePointer + offset], adjustedMask ^ 0xF);
+		movaps(xword[statePointer + offset], source);     // Write back
 	} else {
 		// Blend algo referenced from Citra
 		const u8 selector = (((writeMask & 0b1000) ? 1 : 0) << 0) |
