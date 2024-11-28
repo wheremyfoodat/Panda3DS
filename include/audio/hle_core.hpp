@@ -206,7 +206,7 @@ namespace Audio {
 		SampleBuffer decodeADPCM(const u8* data, usize sampleCount, Source& source);
 
 	  public:
-		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
+		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config);
 		~HLE_DSP() override {}
 
 		void reset() override;

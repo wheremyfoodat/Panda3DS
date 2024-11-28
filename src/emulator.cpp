@@ -28,7 +28,7 @@ Emulator::Emulator()
 {
 	DSPService& dspService = kernel.getServiceManager().getDSP();
 
-	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
+	dsp = Audio::makeDSPCore(config, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());

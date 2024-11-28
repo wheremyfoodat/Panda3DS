@@ -41,6 +41,7 @@ struct EmulatorConfig {
 
 	bool audioEnabled = false;
 	bool vsyncEnabled = true;
+	bool aacEnabled = true;  // Enable AAC audio?
 
 	bool enableRenderdoc = false;
 	bool printAppVersion = true;

@@ -96,7 +96,9 @@ void EmulatorConfig::load() {
 
 			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "HLE");
 			dspType = Audio::DSPCore::typeFromString(dspCoreName);
+			
 			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", false);
+			aacEnabled = toml::find_or<toml::boolean>(audio, "EnableAACAudio", true);
 		}
 	}
 
@@ -167,6 +169,7 @@ void EmulatorConfig::save() {
 
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;
+	data["Audio"]["EnableAACAudio"] = aacEnabled;
 
 	data["Battery"]["ChargerPlugged"] = chargerPlugged;
 	data["Battery"]["BatteryPercentage"] = batteryPercentage;

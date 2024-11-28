@@ -172,6 +172,7 @@ static void configInit() {
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
 		{"panda3ds_dsp_emulation", "DSP emulation; HLE|LLE|Null"},
 		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
+		{"panda3ds_enable_aac", "Enable AAC audio; enabled|disabled"},
 		{"panda3ds_use_virtual_sd", "Enable virtual SD card; enabled|disabled"},
 		{"panda3ds_write_protect_virtual_sd", "Write protect virtual SD card; disabled|enabled"},
 		{"panda3ds_battery_level", "Battery percentage; 5|10|20|30|50|70|90|100"},
@@ -194,6 +195,8 @@ static void configUpdate() {
 	config.batteryPercentage = fetchVariableRange("panda3ds_battery_level", 5, 100);
 	config.dspType = Audio::DSPCore::typeFromString(fetchVariable("panda3ds_dsp_emulation", "null"));
 	config.audioEnabled = fetchVariableBool("panda3ds_use_audio", false);
+	config.aacEnabled = fetchVariableBool("panda3ds_enable_aac", true);
+
 	config.sdCardInserted = fetchVariableBool("panda3ds_use_virtual_sd", true);
 	config.sdWriteProtected = fetchVariableBool("panda3ds_write_protect_virtual_sd", false);
 	config.accurateShaderMul = fetchVariableBool("panda3ds_accurate_shader_mul", false);

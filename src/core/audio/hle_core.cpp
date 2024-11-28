@@ -8,6 +8,7 @@
 
 #include "audio/aac_decoder.hpp"
 #include "audio/dsp_simd.hpp"
+#include "config.hpp"
 #include "services/dsp.hpp"
 
 namespace Audio {
@@ -20,7 +21,8 @@ namespace Audio {
 		};
 	}
 
-	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {
+	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
+		: DSPCore(mem, scheduler, dspService, config) {
 		// Set up source indices
 		for (int i = 0; i < sources.size(); i++) {
 			sources[i].index = i;
@@ -713,9 +715,8 @@ namespace Audio {
 				response.command = request.command;
 				response.mode = request.mode;
 
-				// TODO: Make this a toggle in config.toml. Currently we have it on by default.
-				constexpr bool enableAAC = true;
-				if (enableAAC) {
+				// We allow disabling AAC audio. Mostly useful for debugging & figuring out if an audio track is AAC or not.
+				if (settings.aacEnabled) {
 					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
 				}
 				break;

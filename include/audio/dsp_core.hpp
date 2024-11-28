@@ -14,6 +14,7 @@
 // The DSP core must have access to the DSP service to be able to trigger interrupts properly
 class DSPService;
 class Memory;
+struct EmulatorConfig;
 
 namespace Audio {
 	// There are 160 stereo samples in 1 audio frame, so 320 samples total
@@ -31,6 +32,7 @@ namespace Audio {
 		Memory& mem;
 		Scheduler& scheduler;
 		DSPService& dspService;
+		EmulatorConfig& settings;
 
 		Samples sampleBuffer;
 		bool audioEnabled = false;
@@ -39,7 +41,8 @@ namespace Audio {
 
 	  public:
 		enum class Type { Null, Teakra, HLE };
-		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService) : mem(mem), scheduler(scheduler), dspService(dspService) {}
+		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& settings)
+			: mem(mem), scheduler(scheduler), dspService(dspService), settings(settings) {}
 		virtual ~DSPCore() {}
 
 		virtual void reset() = 0;
@@ -62,5 +65,5 @@ namespace Audio {
 		virtual void setAudioEnabled(bool enable) { audioEnabled = enable; }
 	};
 
-	std::unique_ptr<DSPCore> makeDSPCore(DSPCore::Type type, Memory& mem, Scheduler& scheduler, DSPService& dspService);
+	std::unique_ptr<DSPCore> makeDSPCore(EmulatorConfig& config, Memory& mem, Scheduler& scheduler, DSPService& dspService);
 }  // namespace Audio
