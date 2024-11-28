@@ -5,6 +5,7 @@
 
 #include <cstdlib>
 
+#include "compiler_builtins.hpp"
 #include "helpers.hpp"
 
 #ifdef _WIN32

@@ -11,6 +11,8 @@
 
 #include "host_memory/dynamic_library.h"
 
+#define ASSERT
+#define UNIMPLEMENTED_MSG
 
 #elif defined(__linux__) || defined(__FreeBSD__)  // ^^^ Windows ^^^ vvv Linux vvv
 
@@ -84,7 +86,7 @@ namespace Common {
 	template <typename T>
 	static void GetFuncAddress(Common::DynamicLibrary& dll, const char* name, T& pfn) {
 		if (!dll.GetSymbol(name, &pfn)) {
-			LOG_CRITICAL(HW_Memory, "Failed to load {}", name);
+			Helpers::warn("Failed to load %s", name);
 			throw std::bad_alloc{};
 		}
 	}
@@ -94,7 +96,7 @@ namespace Common {
 		explicit Impl(size_t backing_size_, size_t virtual_size_)
 			: backing_size{backing_size_}, virtual_size{virtual_size_}, process{GetCurrentProcess()}, kernelbase_dll("Kernelbase") {
 			if (!kernelbase_dll.IsOpen()) {
-				LOG_CRITICAL(HW_Memory, "Failed to load Kernelbase.dll");
+				Helpers::warn("Failed to load Kernelbase.dll");
 				throw std::bad_alloc{};
 			}
 			GetFuncAddress(kernelbase_dll, "CreateFileMapping2", pfn_CreateFileMapping2);
@@ -107,7 +109,7 @@ namespace Common {
 				INVALID_HANDLE_VALUE, nullptr, FILE_MAP_WRITE | FILE_MAP_READ, PAGE_READWRITE, SEC_COMMIT, backing_size, nullptr, nullptr, 0
 			);
 			if (!backing_handle) {
-				LOG_CRITICAL(HW_Memory, "Failed to allocate {} MiB of backing memory", backing_size >> 20);
+				Helpers::warn("Failed to allocate %X MiB of backing memory", backing_size >> 20);
 				throw std::bad_alloc{};
 			}
 			// Allocate a virtual memory for the backing file map as placeholder
@@ -115,7 +117,7 @@ namespace Common {
 				static_cast<u8*>(pfn_VirtualAlloc2(process, nullptr, backing_size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0));
 			if (!backing_base) {
 				Release();
-				LOG_CRITICAL(HW_Memory, "Failed to reserve {} MiB of virtual memory", backing_size >> 20);
+				Helpers::warn("Failed to reserve %X MiB of virtual memory", backing_size >> 20);
 				throw std::bad_alloc{};
 			}
 			// Map backing placeholder
@@ -123,7 +125,7 @@ namespace Common {
 				pfn_MapViewOfFile3(backing_handle, process, backing_base, 0, backing_size, MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, nullptr, 0);
 			if (ret != backing_base) {
 				Release();
-				LOG_CRITICAL(HW_Memory, "Failed to map {} MiB of virtual memory", backing_size >> 20);
+				Helpers::warn("Failed to map %X MiB of virtual memory", backing_size >> 20);
 				throw std::bad_alloc{};
 			}
 			// Allocate virtual address placeholder
@@ -131,7 +133,7 @@ namespace Common {
 				static_cast<u8*>(pfn_VirtualAlloc2(process, nullptr, virtual_size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0));
 			if (!virtual_base) {
 				Release();
-				LOG_CRITICAL(HW_Memory, "Failed to reserve {} GiB of virtual memory", virtual_size >> 30);
+				Helpers::warn("Failed to reserve %X GiB of virtual memory", virtual_size >> 30);
 				throw std::bad_alloc{};
 			}
 		}
@@ -177,7 +179,7 @@ namespace Common {
 				const size_t protect_length = std::min(it->upper(), virtual_end) - offset;
 				DWORD old_flags{};
 				if (!VirtualProtect(virtual_base + offset, protect_length, new_flags, &old_flags)) {
-					LOG_CRITICAL(HW_Memory, "Failed to change virtual memory protect rules");
+					Helpers::warn("Failed to change virtual memory protect rules");
 				}
 				++it;
 			}
@@ -190,7 +192,7 @@ namespace Common {
 
 		void EnableDirectMappedAddress() {
 			// TODO
-			UNREACHABLE();
+			Helpers::panic("Unimplemented: EnableDirectMappedAddress on Windows");
 		}
 
 		const size_t backing_size;  ///< Size of the backing memory in bytes
@@ -205,26 +207,26 @@ namespace Common {
 			if (!placeholders.empty()) {
 				for (const auto& placeholder : placeholders) {
 					if (!pfn_UnmapViewOfFile2(process, virtual_base + placeholder.lower(), MEM_PRESERVE_PLACEHOLDER)) {
-						LOG_CRITICAL(HW_Memory, "Failed to unmap virtual memory placeholder");
+						Helpers::warn("Failed to unmap virtual memory placeholder");
 					}
 				}
 				Coalesce(0, virtual_size);
 			}
 			if (virtual_base) {
 				if (!VirtualFree(virtual_base, 0, MEM_RELEASE)) {
-					LOG_CRITICAL(HW_Memory, "Failed to free virtual memory");
+					Helpers::warn("Failed to free virtual memory");
 				}
 			}
 			if (backing_base) {
 				if (!pfn_UnmapViewOfFile2(process, backing_base, MEM_PRESERVE_PLACEHOLDER)) {
-					LOG_CRITICAL(HW_Memory, "Failed to unmap backing memory placeholder");
+					Helpers::warn("Failed to unmap backing memory placeholder");
 				}
 				if (!VirtualFreeEx(process, backing_base, 0, MEM_RELEASE)) {
-					LOG_CRITICAL(HW_Memory, "Failed to free backing memory");
+					Helpers::warn("Failed to free backing memory");
 				}
 			}
 			if (!CloseHandle(backing_handle)) {
-				LOG_CRITICAL(HW_Memory, "Failed to free backing memory file handle");
+				Helpers::warn("Failed to free backing memory file handle");
 			}
 		}
 
@@ -252,7 +254,7 @@ namespace Common {
 			const bool split_right = unmap_end < placeholder_end;
 
 			if (!pfn_UnmapViewOfFile2(process, virtual_base + placeholder_begin, MEM_PRESERVE_PLACEHOLDER)) {
-				LOG_CRITICAL(HW_Memory, "Failed to unmap placeholder");
+				Helpers::warn("Failed to unmap placeholder");
 			}
 			// If we have to remap memory regions due to partial unmaps, we are in a data race as
 			// Windows doesn't support remapping memory without unmapping first. Avoid adding any extra
@@ -302,19 +304,19 @@ namespace Common {
 			if (!pfn_MapViewOfFile3(
 					backing_handle, process, virtual_base + virtual_offset, host_offset, length, MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, nullptr, 0
 				)) {
-				LOG_CRITICAL(HW_Memory, "Failed to map placeholder");
+				Helpers::warn("Failed to map placeholder");
 			}
 		}
 
 		void Split(size_t virtual_offset, size_t length) {
 			if (!VirtualFreeEx(process, reinterpret_cast<LPVOID>(virtual_base + virtual_offset), length, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER)) {
-				LOG_CRITICAL(HW_Memory, "Failed to split placeholder");
+				Helpers::warn("Failed to split placeholder");
 			}
 		}
 
 		void Coalesce(size_t virtual_offset, size_t length) {
 			if (!VirtualFreeEx(process, reinterpret_cast<LPVOID>(virtual_base + virtual_offset), length, MEM_RELEASE | MEM_COALESCE_PLACEHOLDERS)) {
-				LOG_CRITICAL(HW_Memory, "Failed to coalesce placeholders");
+				Helpers::warn("Failed to coalesce placeholders");
 			}
 		}
 
@@ -422,7 +424,7 @@ namespace Common {
 
 			long page_size = sysconf(_SC_PAGESIZE);
 			if (page_size != 0x1000) {
-				LOG_CRITICAL(HW_Memory, "page size {:#x} is incompatible with 4K paging", page_size);
+				Helpers::warn("page size {:#x} is incompatible with 4K paging", page_size);
 				throw std::bad_alloc{};
 			}
 
@@ -434,27 +436,27 @@ namespace Common {
 			fd = memfd_create("HostMemory", 0);
 #endif
 			if (fd < 0) {
-				LOG_CRITICAL(HW_Memory, "memfd_create failed: {}", strerror(errno));
+				Helpers::warn("memfd_create failed: {}", strerror(errno));
 				throw std::bad_alloc{};
 			}
 
 			// Defined to extend the file with zeros
 			int ret = ftruncate(fd, backing_size);
 			if (ret != 0) {
-				LOG_CRITICAL(HW_Memory, "ftruncate failed with {}, are you out-of-memory?", strerror(errno));
+				Helpers::warn("ftruncate failed with {}, are you out-of-memory?", strerror(errno));
 				throw std::bad_alloc{};
 			}
 
 			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
 			if (backing_base == MAP_FAILED) {
-				LOG_CRITICAL(HW_Memory, "mmap failed: {}", strerror(errno));
+				Helpers::warn("mmap failed: {}", strerror(errno));
 				throw std::bad_alloc{};
 			}
 
 			// Virtual memory initialization
 			virtual_base = virtual_map_base = static_cast<u8*>(ChooseVirtualBase(virtual_size));
 			if (virtual_base == MAP_FAILED) {
-				LOG_CRITICAL(HW_Memory, "mmap failed: {}", strerror(errno));
+				Helpers::warn("mmap failed: {}", strerror(errno));
 				throw std::bad_alloc{};
 			}
 #if defined(__linux__)
