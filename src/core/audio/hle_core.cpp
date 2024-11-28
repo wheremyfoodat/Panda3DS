@@ -704,20 +704,9 @@ namespace Audio {
 		AAC::Message response;
 
 		switch (request.command) {
-			case AAC::Command::EncodeDecode: {
-				// Dummy response to stop games from hanging
-				response.resultCode = AAC::ResultCode::Success;
-				response.decodeResponse.channelCount = 2;
-				response.decodeResponse.sampleCount = 1024;
-				response.decodeResponse.size = 0;
-				response.decodeResponse.sampleRate = AAC::SampleRate::Rate48000;
-
-				response.command = request.command;
-				response.mode = request.mode;
-
+			case AAC::Command::EncodeDecode:
 				aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); }, settings.aacEnabled);
 				break;
-			}
 
 			case AAC::Command::Init:
 			case AAC::Command::Shutdown:
