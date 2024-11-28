@@ -165,7 +165,7 @@ include_directories(third_party/toml11)
 include_directories(third_party/glm)
 include_directories(third_party/renderdoc)
 include_directories(third_party/duckstation)
-include_directories(third_party/pcsx2/include)
+include_directories(third_party/host_memory/include)
 
 add_subdirectory(third_party/cmrc)
 
@@ -379,11 +379,11 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
 
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
-)
 
-if(WIN32)
-    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/pcsx2/WinHostSys.cpp)
-endif()
+                             third_party/host_memory/host_memory.cpp
+                             third_party/host_memory/virtual_buffer.cpp
+                             third_party/host_memory/dynamic_library.cpp
+)
 
 if(ENABLE_LUAJIT AND NOT ANDROID)
     # Build luv and libuv for Lua TCP server usage if we're not on Android
