@@ -542,6 +542,10 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 }
 
 void RendererGL::display() {
+
+	static u32 lastWidth = outputWindowWidth;
+	static u32 lastHeight = outputWindowHeight;
+
 	gl.disableScissor();
 	gl.disableBlend();
 	gl.disableDepth();
@@ -580,9 +584,18 @@ void RendererGL::display() {
 	}
 
 	if constexpr (!Helpers::isHydraCore()) {
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);	
 		screenFramebuffer.bind(OpenGL::ReadFramebuffer);
-		glBlitFramebuffer(0, 0, 400, 480, 0, 0, outputWindowWidth, outputWindowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	
+		const u32  newX0 = (outputWindowWidth - 400) / 2;
+		const u32  newY0 = (outputWindowHeight - 480) / 2;
+		if(lastWidth != outputWindowWidth || lastHeight != outputWindowHeight) {
+			lastHeight = outputWindowHeight;
+			lastWidth = outputWindowWidth;
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
+		
+		glBlitFramebuffer(0, 0, 400, 480, newX0, newY0, newX0 + 400, newY0 + 480, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 	}
 }
 

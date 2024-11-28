@@ -101,6 +101,8 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	}
 #endif
 
+	SDL_SetWindowMinimumSize(window, 400, 480);
+
 	emu.initGraphicsContext(window);
 }
 
