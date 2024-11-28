@@ -7,7 +7,7 @@
 
 #include "helpers.hpp"
 
-MiniAudioDevice::MiniAudioDevice(AudioDeviceConfig& audioSettings)
+MiniAudioDevice::MiniAudioDevice(const AudioDeviceConfig& audioSettings)
 	: initialized(false), running(false), samples(nullptr), audioSettings(audioSettings) {}
 
 void MiniAudioDevice::init(Samples& samples, bool safe) {

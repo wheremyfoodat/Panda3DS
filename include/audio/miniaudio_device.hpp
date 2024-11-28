@@ -16,10 +16,9 @@ class MiniAudioDevice {
 	ma_device device;
 	ma_context context;
 	ma_device_config deviceConfig;
-	ma_resampler resampler;
 	Samples* samples = nullptr;
 
-	AudioDeviceConfig& audioSettings;
+	const AudioDeviceConfig& audioSettings;
 
 	bool initialized = false;
 	bool running = false;
@@ -29,7 +28,7 @@ class MiniAudioDevice {
 	std::vector<std::string> audioDevices;
 
   public:
-	MiniAudioDevice(AudioDeviceConfig& audioSettings);
+	MiniAudioDevice(const AudioDeviceConfig& audioSettings);
 
 	// If safe is on, we create a null audio device
 	void init(Samples& samples, bool safe = false);
