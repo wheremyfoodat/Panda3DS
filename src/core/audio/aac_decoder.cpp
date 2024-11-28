@@ -103,10 +103,8 @@ void AAC::Decoder::decode(AAC::Message& response, const AAC::Message& request, A
 				}
 			} else {
 				// If audio is not enabled, push 0s
-				for (int sample = 0; sample < info->frameSize; sample++) {
-					for (int stream = 0; stream < channels; stream++) {
-						audioStreams[stream].push_back(0);
-					}
+				for (int stream = 0; stream < channels; stream++) {
+					audioStreams[stream].resize(audioStreams[stream].size() + info->frameSize, 0);
 				}
 			}
 		} else {

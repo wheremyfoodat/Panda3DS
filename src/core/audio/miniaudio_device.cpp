@@ -1,10 +1,14 @@
 #include "audio/miniaudio_device.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
+#include <limits>
 
 #include "helpers.hpp"
 
-MiniAudioDevice::MiniAudioDevice() : initialized(false), running(false), samples(nullptr) {}
+MiniAudioDevice::MiniAudioDevice(AudioDeviceConfig& audioSettings)
+	: initialized(false), running(false), samples(nullptr), audioSettings(audioSettings) {}
 
 void MiniAudioDevice::init(Samples& samples, bool safe) {
 	this->samples = &samples;
@@ -104,6 +108,40 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 		// Get the last sample for underrun handling
 		if (samplesWritten != 0) {
 			std::memcpy(&self->lastStereoSample[0], &output[(samplesWritten - 1) * 2], sizeof(lastStereoSample));
+		}
+
+		// Adjust the volume of our samples based on the emulator's volume slider
+		float audioVolume = self->audioSettings.getVolume();
+		// If volume is 1.0 we don't need to do anything
+		if (audioVolume != 1.0f) {
+			s16* sample = output;
+
+			// If our volume is > 1.0 then we boost samples using a logarithmic scale,
+			// In this case we also have to clamp samples to make sure they don't wrap around
+			if (audioVolume > 1.0f) {
+				audioVolume = 0.6 + 20 * std::log10(audioVolume);
+
+				constexpr s32 min = s32(std::numeric_limits<s16>::min());
+				constexpr s32 max = s32(std::numeric_limits<s16>::max());
+
+				for (usize i = 0; i < samplesWritten; i += 2) {
+					s16 l = s16(std::clamp<s32>(s32(float(sample[0]) * audioVolume), min, max));
+					s16 r = s16(std::clamp<s32>(s32(float(sample[1]) * audioVolume), min, max));
+
+					*sample++ = l;
+					*sample++ = r;
+				}
+			} else {
+				// If our volume is in [0.0, 1.0) then just multiply by the volume. No need to clamp, since there is no danger of our samples wrapping
+				// around due to overflow
+				for (usize i = 0; i < samplesWritten; i += 2) {
+					s16 l = s16(float(sample[0]) * audioVolume);
+					s16 r = s16(float(sample[1]) * audioVolume);
+
+					*sample++ = l;
+					*sample++ = r;
+				}
+			}
 		}
 
 		// If underruning, copy the last output sample

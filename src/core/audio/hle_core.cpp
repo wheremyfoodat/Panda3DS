@@ -715,10 +715,7 @@ namespace Audio {
 				response.command = request.command;
 				response.mode = request.mode;
 
-				// We allow disabling AAC audio. Mostly useful for debugging & figuring out if an audio track is AAC or not.
-				if (settings.aacEnabled) {
-					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
-				}
+				aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); }, settings.aacEnabled);
 				break;
 			}
 

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "config.hpp"
 #include "helpers.hpp"
 #include "miniaudio.h"
 #include "ring_buffer.hpp"
@@ -12,11 +13,13 @@ class MiniAudioDevice {
 	static constexpr ma_uint32 sampleRate = 32768;  // 3DS sample rate
 	static constexpr ma_uint32 channelCount = 2;    // Audio output is stereo
 
+	ma_device device;
 	ma_context context;
 	ma_device_config deviceConfig;
-	ma_device device;
 	ma_resampler resampler;
 	Samples* samples = nullptr;
+
+	AudioDeviceConfig& audioSettings;
 
 	bool initialized = false;
 	bool running = false;
@@ -26,7 +29,8 @@ class MiniAudioDevice {
 	std::vector<std::string> audioDevices;
 
   public:
-	MiniAudioDevice();
+	MiniAudioDevice(AudioDeviceConfig& audioSettings);
+
 	// If safe is on, we create a null audio device
 	void init(Samples& samples, bool safe = false);
 	void close();
