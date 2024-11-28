@@ -5,9 +5,9 @@
 
 #include <memory>
 
-#include "common/common_funcs.h"
-#include "host_memory/virtual_buffer.h"
+#include "enum_flag_ops.hpp"
 #include "helpers.hpp"
+#include "host_memory/virtual_buffer.h"
 
 namespace Common {
 
