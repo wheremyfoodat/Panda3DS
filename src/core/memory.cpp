@@ -20,6 +20,31 @@ Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks)
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
 	memoryInfo.reserve(32);  // Pre-allocate some room for memory allocation info to avoid dynamic allocs
+
+#ifdef PANDA3DS_HARDWARE_FASTMEM
+	u8* arenaFcram = nullptr;
+	u8* arenaDSPRam = nullptr;
+
+	constexpr size_t BACKING_SIZE = FCRAM_SIZE + DSP_RAM_SIZE;
+	constexpr size_t VIRTUAL_SIZE = 4_GB;  // Total size of the virtual address space we will occupy (4GB)
+
+	try {
+		arena.reset(new Common::HostMemory(BACKING_SIZE, VIRTUAL_SIZE));
+		arenaFcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
+		// arenaDSPRam = arena->VirtualBasePointer() + FASTMEM_DSP_RAM_OFFSET;
+
+		useFastmem = true;
+		delete[] fcram;
+
+		fcram = arenaFcram;
+	} catch (...) {
+		useFastmem = false;
+	}
+#else
+	useFastmem = false;
+	fastmemArenaBase = nullptr;
+#endif
+
 }
 
 void Memory::reset() {
@@ -69,6 +94,7 @@ void Memory::reset() {
 		readTable[i + initialPage] = pointer;
 		writeTable[i + initialPage] = pointer;
 	}
+	// addFastmemView(VirtualAddrs::DSPMemStart, FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false);  // Allocate RW mapping for DSP RAM
 
 	// Later adjusted based on ROM header when possible
 	region = Regions::USA;
@@ -357,6 +383,9 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 
 		// Mark FCRAM page as allocated and go on
 		usedFCRAMPages[physPage] = true;
+		// Add mapping to the fastmem arena
+		addFastmemView(size_t(virtualPage) * pageSize, FASTMEM_FCRAM_OFFSET + size_t(physPage) * pageSize, pageSize, w, false);
+
 		virtualPage++;
 		physPage++;
 	}

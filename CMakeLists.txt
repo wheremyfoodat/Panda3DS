@@ -63,6 +63,7 @@ option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
+option(ENABLE_FASTMEM "Build with support for hardware fastmem (Can significantly improve performance)" ON)
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -627,6 +628,10 @@ endif()
 
 if(ENABLE_HTTP_SERVER)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
+endif()
+
+if(ENABLE_FASTMEM)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HARDWARE_FASTMEM=1)
 endif()
 
 # Configure frontend

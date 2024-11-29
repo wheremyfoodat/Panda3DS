@@ -15,6 +15,12 @@ CPU::CPU(Memory& mem, Kernel& kernel, Emulator& emu) : mem(mem), emu(emu), sched
 	config.global_monitor = &exclusiveMonitor;
 	config.processor_id = 0;
 
+	if (mem.isFastmemEnabled()) {
+		config.fastmem_pointer = u64(mem.getFastmemArenaBase());
+	} else {
+		config.fastmem_pointer = std::nullopt;
+	}
+
 	jit = std::make_unique<Dynarmic::A32::Jit>(config);
 }
 

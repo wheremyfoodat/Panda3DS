@@ -3,6 +3,7 @@
 #include <bitset>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -10,8 +11,9 @@
 #include "crypto/aes_engine.hpp"
 #include "handles.hpp"
 #include "helpers.hpp"
-#include "loader/ncsd.hpp"
+#include "host_memory/host_memory.h"
 #include "loader/3dsx.hpp"
+#include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
 
 namespace PhysicalAddrs {
@@ -141,6 +143,37 @@ public:
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
 private:
+	// We also use MMU-accelerated fastmem for fast memory emulation
+	// This means that we've got a 4GB memory arena which is organized the same way as the emulated 3DS' memory map
+	// And we can access this directly instead of calling the memory read/write functions, which would be slower
+	// Regions that are not mapped or can't be accelerated this way will segfault, and the caller (eg dynarmic), will
+	// handle this segfault and call the Slower memory read/write functions
+	bool useFastmem = false;
+	static constexpr size_t FASTMEM_FCRAM_OFFSET = 0;                                    // Offset of FCRAM in the fastmem arena
+	static constexpr size_t FASTMEM_DSP_RAM_OFFSET = FASTMEM_FCRAM_OFFSET + FCRAM_SIZE;  // Offset of DSP RAM
+
+#ifdef PANDA3DS_HARDWARE_FASTMEM
+	std::unique_ptr<Common::HostMemory> arena;
+
+	void addFastmemView(u32 guestVaddr, size_t arenaOffset, size_t size, bool w, bool x = false) {
+		if (useFastmem) {
+			Common::MemoryPermission perms = Common::MemoryPermission::Read;
+			if (w) {
+				perms |= Common::MemoryPermission::Write;
+			}
+
+			if (x) {
+				//perms |= Common::MemoryPermission::Execute;
+			}
+
+			arena->Map(guestVaddr, arenaOffset, size, perms, false);
+		}
+	}
+#else
+	void resetFastmemViews() {}
+	void addFastmemView(u32 guestVaddr, size_t arenaOffset, size_t size, bool r, bool w, bool x = false) {}
+#endif
+
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
@@ -299,4 +332,12 @@ private:
 	bool allocateMainThreadStack(u32 size);
 	Regions getConsoleRegion();
 	void copySharedFont(u8* ptr, u32 vaddr);
+
+#ifdef PANDA3DS_HARDWARE_FASTMEM
+	bool isFastmemEnabled() { return useFastmem; }
+	u8* getFastmemArenaBase() { return arena->VirtualBasePointer(); }
+#else
+	bool isFastmemEnabled() { return false; }
+	u8* getFastmemArenaBase() { return nullptr; }
+#endif
 };
