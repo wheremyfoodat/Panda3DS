@@ -14,6 +14,10 @@
 #define ASSERT
 #define UNIMPLEMENTED_MSG
 
+#if defined(_M_ARM64) || defined(__aarch64__)
+#define ARCHITECTURE_arm64
+#endif
+
 #elif defined(__linux__) || defined(__FreeBSD__)  // ^^^ Windows ^^^ vvv Linux vvv
 
 #ifndef _GNU_SOURCE
