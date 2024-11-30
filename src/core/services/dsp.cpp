@@ -5,12 +5,13 @@
 #include <fmt/ranges.h>
 
 #include <algorithm>
-#include <array>
+#include <cstring>
 #include <fstream>
 
 #include "config.hpp"
 #include "ipc.hpp"
 #include "kernel.hpp"
+#include "services/dsp_firmware_db.hpp"
 
 namespace DSPCommands {
 	enum : u32 {
@@ -316,11 +317,26 @@ void DSPService::triggerInterrupt1() {
 	}
 }
 
+struct FirmwareInfo {
+	using Hash = std::array<u8, 32>;
+
+	Hash hash;  // Firmware hash (SHA-256)
+	u32 size;   // Firmware size in bytes
+
+	bool supportsAAC;   // Does this firmware support AAC decoding?
+	const char* notes;  // Miscellaneous notes about the firmware
+
+	explicit constexpr FirmwareInfo(const Hash& hash, u32 size, bool supportsAAC, const char* notes)
+		: hash(hash), size(size), supportsAAC(supportsAAC), notes(notes) {}
+};
+
 void DSPService::printFirmwareInfo() {
 	// No component has been loaded, do nothing.
 	if (!loadedComponent.size()) {
 		return;
 	}
+
+	const auto& firmwareDB = DSP::firmwareDB;
 	const usize firmwareSize = loadedComponent.size();
 	std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
 
@@ -330,5 +346,26 @@ void DSPService::printFirmwareInfo() {
 	fmt::print("\nLoaded DSP firmware\n");
 	fmt::print("DSP firmware hash: {:X}\n", fmt::join(hash, ""));
 	fmt::print("Size: {} bytes ({} KB)\n", firmwareSize, firmwareSize / 1024);
+
+	bool knownFirmware = false;
+
+	for (int i = 0; i < firmwareDB.size(); i++) {
+		const auto& entry = firmwareDB[i];
+		if (entry.size == firmwareSize && std::memcmp(hash.data(), entry.hash.data(), hash.size()) == 0) {
+			knownFirmware = true;
+			fmt::print(
+				"Firmware found in DSP firmware DB.\nFeatures AAC decoder: {}\nOther notes: {}\n", entry.supportsAAC ? "yes" : "no", entry.notes
+			);
+
+			break;
+		}
+	}
+
+	if (!knownFirmware) {
+		fmt::print("Firmware not found in DSP firmware DB.\nHash in case you want to add it to the DB: {{{:#X}}}\n", fmt::join(hash, ", "));
+		// DSP firmwares that feature AAC decoding are usually around 210KB as opposed to the average DSP firmware which is around 48KB
+		fmt::print("Features AAC decoder: {}\n", firmwareSize >= 200_KB ? "probably yes" : "probably not");
+	}
+
 	fmt::print("\n");
 }
