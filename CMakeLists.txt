@@ -630,7 +630,7 @@ if(ENABLE_HTTP_SERVER)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
 endif()
 
-if(ENABLE_FASTMEM AND NOT ANDROID)
+if(ENABLE_FASTMEM)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HARDWARE_FASTMEM=1)
 endif()
 

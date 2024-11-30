@@ -5,6 +5,10 @@
 #define ARCHITECTURE_arm64
 #endif
 
+#ifndef __ANDROID__
+#define USING_FD
+#endif
+
 #ifdef _WIN32
 
 #include <windows.h>
@@ -34,11 +38,14 @@
 #define MAP_NORESERVE 0
 #endif
 
-#endif  // ^^^ Linux ^^^
 
-#ifndef __ANDROID__
-#define USING_FD
+#ifdef USING_FD
+#define MAYBE_ANONYMOUS(flags) (flags)
+#else
+#define MAYBE_ANONYMOUS(flags) (flags) | MAP_ANONYMOUS
 #endif
+
+#endif  // ^^^ Linux ^^^
 
 #include <cstring>
 #include <mutex>
@@ -460,7 +467,7 @@ namespace Common {
 				throw std::bad_alloc{};
 			}
 #endif
-			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAYBE_ANONYMOUS(MAP_SHARED), fd, 0));
 
 			if (backing_base == MAP_FAILED) {
 				Helpers::warn("mmap failed: {}", strerror(errno));
@@ -504,7 +511,7 @@ namespace Common {
 			}
 #endif
 
-			void* ret = mmap(virtual_base + virtual_offset, length, flags, MAP_SHARED | MAP_FIXED, fd, host_offset);
+			void* ret = mmap(virtual_base + virtual_offset, length, flags, MAYBE_ANONYMOUS(MAP_SHARED | MAP_FIXED), fd, host_offset);
 			ASSERT_MSG(ret != MAP_FAILED, "mmap failed: {}", strerror(errno));
 		}
 
