@@ -58,6 +58,7 @@ struct EmulatorConfig {
 
 	bool enableRenderdoc = false;
 	bool printAppVersion = true;
+	bool printDSPFirmware = false;
 
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer

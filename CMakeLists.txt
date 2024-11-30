@@ -363,7 +363,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
                  include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
-                 include/enum_flag_ops.hpp
+                 include/enum_flag_ops.hpp include/services/dsp_firmware_db.hpp
 )
 
 cmrc_add_resource_library(

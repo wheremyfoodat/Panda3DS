@@ -1,9 +1,17 @@
 #include "services/dsp.hpp"
-#include "ipc.hpp"
-#include "kernel.hpp"
+
+#include <cryptopp/sha.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>
+#include <cstring>
 #include <fstream>
+
+#include "config.hpp"
+#include "ipc.hpp"
+#include "kernel.hpp"
+#include "services/dsp_firmware_db.hpp"
 
 namespace DSPCommands {
 	enum : u32 {
@@ -91,6 +99,10 @@ void DSPService::loadComponent(u32 messagePointer) {
 
 	log("DSP::LoadComponent (size = %08X, program mask = %X, data mask = %X\n", size, programMask, dataMask);
 	dsp->loadComponent(loadedComponent, programMask, dataMask);
+
+	if (config.printDSPFirmware) {
+		printFirmwareInfo();
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -303,4 +315,44 @@ void DSPService::triggerInterrupt1() {
 	if (interrupt1.has_value()) {
 		kernel.signalEvent(*interrupt1);
 	}
+}
+
+void DSPService::printFirmwareInfo() {
+	// No component has been loaded, do nothing.
+	if (!loadedComponent.size()) {
+		return;
+	}
+
+	const auto& firmwareDB = DSP::firmwareDB;
+	const usize firmwareSize = loadedComponent.size();
+	std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
+
+	CryptoPP::SHA256 sha;
+	sha.CalculateDigest(hash.data(), loadedComponent.data(), firmwareSize);
+
+	fmt::print("\nLoaded DSP firmware\n");
+	fmt::print("Firmware SHA-256 hash: {:X}\n", fmt::join(hash, ""));
+	fmt::print("Size: {} bytes ({} KB)\n", firmwareSize, firmwareSize / 1024);
+
+	bool knownFirmware = false;
+
+	for (int i = 0; i < firmwareDB.size(); i++) {
+		const auto& entry = firmwareDB[i];
+		if (entry.size == firmwareSize && std::memcmp(hash.data(), entry.hash.data(), hash.size()) == 0) {
+			knownFirmware = true;
+			fmt::print(
+				"Firmware found in DSP firmware DB.\nFeatures AAC decoder: {}\nOther notes: {}\n", entry.supportsAAC ? "yes" : "no", entry.notes
+			);
+
+			break;
+		}
+	}
+
+	if (!knownFirmware) {
+		fmt::print("Firmware not found in DSP firmware DB.\nHash in case you want to add it to the DB: {{{:#X}}}\n", fmt::join(hash, ", "));
+		// DSP firmwares that feature AAC decoding are usually around 210KB as opposed to the average DSP firmware which is around 48KB
+		fmt::print("Features AAC decoder: {}\n", firmwareSize >= 200_KB ? "probably yes" : "probably not");
+	}
+
+	fmt::print("\n");
 }

@@ -94,6 +94,7 @@ public class PandaGlRenderer implements GLSurfaceView.Renderer, ConsoleRenderer 
 		AlberDriver.Initialize();
 		AlberDriver.setShaderJitEnabled(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
 		AlberDriver.setAccurateShaderMulEnable(GlobalConfig.get(GlobalConfig.KEY_ACCURATE_SHADER_MULTIPLY));
+		AlberDriver.setAudioEnabled(GlobalConfig.get(GlobalConfig.KEY_ENABLE_AUDIO));
 
 		// If loading the ROM failed, display an error message and early exit
 		if (!AlberDriver.LoadRom(romPath)) {
