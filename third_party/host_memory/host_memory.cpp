@@ -45,7 +45,7 @@
 
 #include "align.hpp"
 #include <host_memory/host_memory.h>
-// #include "common/free_region_manager.h"
+#include <host_memory/free_region_manager.h>
 
 namespace Common {
 
