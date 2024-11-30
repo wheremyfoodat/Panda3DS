@@ -344,7 +344,7 @@ void DSPService::printFirmwareInfo() {
 	sha.CalculateDigest(hash.data(), loadedComponent.data(), firmwareSize);
 
 	fmt::print("\nLoaded DSP firmware\n");
-	fmt::print("DSP firmware hash: {:X}\n", fmt::join(hash, ""));
+	fmt::print("Firmware SHA-256 hash: {:X}\n", fmt::join(hash, ""));
 	fmt::print("Size: {} bytes ({} KB)\n", firmwareSize, firmwareSize / 1024);
 
 	bool knownFirmware = false;
