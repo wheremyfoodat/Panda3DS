@@ -30,7 +30,7 @@
 
 #include <boost/icl/interval_set.hpp>
 
-#include "common/scope_exit.h"
+#include <host_memory/scope_exit.h>
 
 
 #ifndef MAP_NORESERVE
