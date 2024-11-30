@@ -5,6 +5,10 @@
 #define ARCHITECTURE_arm64
 #endif
 
+#ifndef __ANDROID__
+#define USING_FD
+#endif
+
 #ifdef _WIN32
 
 #include <windows.h>
@@ -21,33 +25,34 @@
 #define _GNU_SOURCE
 #endif
 #include <fcntl.h>
+#include <host_memory/scope_exit.h>
 #include <sys/mman.h>
 #include <sys/random.h>
 #include <unistd.h>
 
 #include <boost/icl/interval_set.hpp>
 
-#include <host_memory/scope_exit.h>
-
-
 #ifndef MAP_NORESERVE
 #define MAP_NORESERVE 0
 #endif
 
-#endif  // ^^^ Linux ^^^
-
-#ifdef __ANDROID__
-#include <android/sharedmem.h>
+#ifdef USING_FD
+#define MAYBE_ANONYMOUS(flags) (flags)
+#else
+#define MAYBE_ANONYMOUS(flags) (flags) | MAP_ANONYMOUS
 #endif
 
+#endif  // ^^^ Linux ^^^
+
+#include <host_memory/free_region_manager.h>
+#include <host_memory/host_memory.h>
+
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <random>
-#include <memory>
 
 #include "align.hpp"
-#include <host_memory/host_memory.h>
-#include <host_memory/free_region_manager.h>
 
 #define ASSERT(...)
 #define UNIMPLEMENTED_MSG(...)
@@ -441,10 +446,10 @@ namespace Common {
 #if defined(__FreeBSD__) && __FreeBSD__ < 13
 			// XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
 			fd = shm_open(SHM_ANON, O_RDWR, 0600);
-#elif defined(__ANDROID__)
-			fd = ASharedMemory_create("HostMemory", 0);
-#else
+#elif defined(USING_FD)
 			fd = memfd_create("HostMemory", 0);
+#else
+			fd = -1;
 #endif
 
 #ifdef USING_FD
@@ -460,7 +465,7 @@ namespace Common {
 				throw std::bad_alloc{};
 			}
 #endif
-			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAYBE_ANONYMOUS(MAP_SHARED), fd, 0));
 
 			if (backing_base == MAP_FAILED) {
 				Helpers::warn("mmap failed: {}", strerror(errno));
@@ -504,7 +509,7 @@ namespace Common {
 			}
 #endif
 
-			void* ret = mmap(virtual_base + virtual_offset, length, flags, MAP_SHARED | MAP_FIXED, fd, host_offset);
+			void* ret = mmap(virtual_base + virtual_offset, length, flags, MAYBE_ANONYMOUS(MAP_SHARED | MAP_FIXED), fd, host_offset);
 			ASSERT_MSG(ret != MAP_FAILED, "mmap failed: {}", strerror(errno));
 		}
 
@@ -634,7 +639,9 @@ namespace Common {
 		try {
 			// Try to allocate a fastmem arena.
 			// The implementation will fail with std::bad_alloc on errors.
-			impl = std::make_unique<HostMemory::Impl>(Common::alignUp(backing_size, PageAlignment), Common::alignUp(virtual_size, PageAlignment) + HugePageSize);
+			impl = std::make_unique<HostMemory::Impl>(
+				Common::alignUp(backing_size, PageAlignment), Common::alignUp(virtual_size, PageAlignment) + HugePageSize
+			);
 			backing_base = impl->backing_base;
 			virtual_base = impl->virtual_base;
 
