@@ -442,9 +442,9 @@ namespace Common {
 			// XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
 			fd = shm_open(SHM_ANON, O_RDWR, 0600);
 #elif defined(__ANDROID__)
-			fd = memfd_create("HostMemory", 0);
-#else
 			fd = ASharedMemory_create("HostMemory", 0);
+#else
+			fd = memfd_create("HostMemory", 0);
 #endif
 
 #ifdef USING_FD
