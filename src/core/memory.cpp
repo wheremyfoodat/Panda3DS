@@ -53,6 +53,11 @@ void Memory::reset() {
 	usedUserMemory = u32(0_MB);
 	usedSystemMemory = u32(0_MB);
 
+	if (useFastmem) {
+		// Unmap any mappings when resetting
+		arena->Unmap(0, 4_GB, false);
+	}
+
 	for (u32 i = 0; i < totalPageCount; i++) {
 		readTable[i] = 0;
 		writeTable[i] = 0;
