@@ -99,6 +99,7 @@ void EmulatorConfig::load() {
 			
 			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", false);
 			aacEnabled = toml::find_or<toml::boolean>(audio, "EnableAACAudio", true);
+			printDSPFirmware = toml::find_or<toml::boolean>(audio, "PrintDSPFirmware", false);
 
 			audioDeviceConfig.muteAudio = toml::find_or<toml::boolean>(audio, "MuteAudio", false);
 			// Our volume ranges from 0.0 (muted) to 2.0 (boosted, using a logarithmic scale). 1.0 is the "default" volume, ie we don't adjust the PCM
@@ -177,6 +178,7 @@ void EmulatorConfig::save() {
 	data["Audio"]["EnableAACAudio"] = aacEnabled;
 	data["Audio"]["MuteAudio"] = audioDeviceConfig.muteAudio;
 	data["Audio"]["AudioVolume"] = double(audioDeviceConfig.volumeRaw);
+	data["Audio"]["PrintDSPFirmware"] = printDSPFirmware;
 
 	data["Battery"]["ChargerPlugged"] = chargerPlugged;
 	data["Battery"]["BatteryPercentage"] = batteryPercentage;
