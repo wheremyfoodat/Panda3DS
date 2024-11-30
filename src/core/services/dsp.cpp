@@ -1,9 +1,16 @@
 #include "services/dsp.hpp"
-#include "ipc.hpp"
-#include "kernel.hpp"
+
+#include <cryptopp/sha.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>
+#include <array>
 #include <fstream>
+
+#include "config.hpp"
+#include "ipc.hpp"
+#include "kernel.hpp"
 
 namespace DSPCommands {
 	enum : u32 {
@@ -91,6 +98,10 @@ void DSPService::loadComponent(u32 messagePointer) {
 
 	log("DSP::LoadComponent (size = %08X, program mask = %X, data mask = %X\n", size, programMask, dataMask);
 	dsp->loadComponent(loadedComponent, programMask, dataMask);
+
+	if (config.printDSPFirmware) {
+		printFirmwareInfo();
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -303,4 +314,21 @@ void DSPService::triggerInterrupt1() {
 	if (interrupt1.has_value()) {
 		kernel.signalEvent(*interrupt1);
 	}
+}
+
+void DSPService::printFirmwareInfo() {
+	// No component has been loaded, do nothing.
+	if (!loadedComponent.size()) {
+		return;
+	}
+	const usize firmwareSize = loadedComponent.size();
+	std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
+
+	CryptoPP::SHA256 sha;
+	sha.CalculateDigest(hash.data(), loadedComponent.data(), firmwareSize);
+
+	fmt::print("\nLoaded DSP firmware\n");
+	fmt::print("DSP firmware hash: {:X}\n", fmt::join(hash, ""));
+	fmt::print("Size: {} bytes ({} KB)\n", firmwareSize, firmwareSize / 1024);
+	fmt::print("\n");
 }

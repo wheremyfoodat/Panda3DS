@@ -10,6 +10,7 @@
 #include "memory.hpp"
 #include "result/result.hpp"
 
+struct EmulatorConfig;
 // Circular dependencies!
 class Kernel;
 
@@ -19,7 +20,9 @@ class DSPService {
 	Handle handle = KernelHandles::DSP;
 	Memory& mem;
 	Kernel& kernel;
+	const EmulatorConfig& config;
 	Audio::DSPCore* dsp = nullptr;
+
 	MAKE_LOG_FUNCTION(log, dspServiceLogger)
 
 	// Number of DSP pipes
@@ -58,7 +61,7 @@ class DSPService {
 	void writeProcessPipe(u32 messagePointer);
 
   public:
-	DSPService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
+	DSPService(Memory& mem, Kernel& kernel, const EmulatorConfig& config) : mem(mem), kernel(kernel), config(config) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	void setDSPCore(Audio::DSPCore* pointer) { dsp = pointer; }
@@ -84,4 +87,5 @@ class DSPService {
 	void triggerInterrupt1();
 
 	ComponentDumpResult dumpComponent(const std::filesystem::path& path);
+	void printFirmwareInfo();
 };
