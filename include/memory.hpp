@@ -16,6 +16,8 @@
 #include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
 
+#define PANDA3DS_HARDWARE_FASTMEM
+
 namespace PhysicalAddrs {
 	enum : u32 {
 		VRAM = 0x18000000,
