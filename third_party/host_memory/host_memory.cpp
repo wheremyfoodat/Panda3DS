@@ -36,6 +36,7 @@
 
 #endif  // ^^^ Linux ^^^
 
+#include <cstring>
 #include <mutex>
 #include <random>
 #include <memory>
@@ -44,8 +45,9 @@
 #include <host_memory/host_memory.h>
 #include <host_memory/free_region_manager.h>
 
-#define ASSERT
-#define UNIMPLEMENTED_MSG
+#define ASSERT(...)
+#define UNIMPLEMENTED_MSG(...)
+#define ASSERT_MSG(...)
 
 namespace Common {
 
