@@ -36,6 +36,10 @@
 
 #endif  // ^^^ Linux ^^^
 
+#ifndef __ANDROID__
+#define USING_FD
+#endif
+
 #include <cstring>
 #include <mutex>
 #include <random>
@@ -50,7 +54,6 @@
 #define ASSERT_MSG(...)
 
 namespace Common {
-
 	constexpr size_t PageAlignment = 0x1000;
 	constexpr size_t HugePageSize = 0x200000;
 
@@ -438,9 +441,13 @@ namespace Common {
 #if defined(__FreeBSD__) && __FreeBSD__ < 13
 			// XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
 			fd = shm_open(SHM_ANON, O_RDWR, 0600);
-#else
+#elif defined(USING_FD)
 			fd = memfd_create("HostMemory", 0);
+#else
+			fd = -1;
 #endif
+
+#ifdef USING_FD
 			if (fd < 0) {
 				Helpers::warn("memfd_create failed: {}", strerror(errno));
 				throw std::bad_alloc{};
@@ -452,8 +459,9 @@ namespace Common {
 				Helpers::warn("ftruncate failed with {}, are you out-of-memory?", strerror(errno));
 				throw std::bad_alloc{};
 			}
-
+#endif
 			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+
 			if (backing_base == MAP_FAILED) {
 				Helpers::warn("mmap failed: {}", strerror(errno));
 				throw std::bad_alloc{};
