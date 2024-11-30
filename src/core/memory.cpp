@@ -14,7 +14,7 @@ CMRC_DECLARE(ConsoleFonts);
 
 using namespace KernelMemoryTypes;
 
-Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks), config(config) {
+Memory::Memory(const EmulatorConfig& config) : config(config) {
 	fcram = new uint8_t[FCRAM_SIZE]();
 
 	readTable.resize(totalPageCount, 0);
@@ -44,7 +44,6 @@ Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks)
 	useFastmem = false;
 	fastmemArenaBase = nullptr;
 #endif
-
 }
 
 void Memory::reset() {
@@ -189,8 +188,8 @@ u32 Memory::read32(u32 vaddr) {
 			case ConfigMem::Datetime0 + 4:
 				return u32(timeSince3DSEpoch() >> 32);  // top 32 bits
 			// Ticks since time was last updated. For now we return the current tick count
-			case ConfigMem::Datetime0 + 8: return u32(cpuTicks);
-			case ConfigMem::Datetime0 + 12: return u32(cpuTicks >> 32);
+			case ConfigMem::Datetime0 + 8: return u32(*cpuTicks);
+			case ConfigMem::Datetime0 + 12: return u32(*cpuTicks >> 32);
 			case ConfigMem::Datetime0 + 16: return 0xFFB0FF0;  // Unknown, set by PTM
 			case ConfigMem::Datetime0 + 20:
 			case ConfigMem::Datetime0 + 24:

@@ -16,8 +16,6 @@
 #include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
 
-#define PANDA3DS_HARDWARE_FASTMEM
-
 namespace PhysicalAddrs {
 	enum : u32 {
 		VRAM = 0x18000000,
@@ -112,7 +110,7 @@ class Memory {
 	u8* dspRam;  // Provided to us by Audio
 	u8* vram;    // Provided to the memory class by the GPU class
 
-	u64& cpuTicks; // Reference to the CPU tick counter
+	const u64* cpuTicks = nullptr; // Pointer to the CPU tick counter, provided to us by the CPU class
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
@@ -207,7 +205,7 @@ private:
 	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
 	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
 
-	Memory(u64& cpuTicks, const EmulatorConfig& config);
+	Memory(const EmulatorConfig& config);
 	void reset();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
@@ -330,6 +328,7 @@ private:
 
 	void setVRAM(u8* pointer) { vram = pointer; }
 	void setDSPMem(u8* pointer) { dspRam = pointer; }
+	void setCPUTicks(const u64& ticks) { cpuTicks = &ticks; }
 
 	bool allocateMainThreadStack(u32 size);
 	Regions getConsoleRegion();
