@@ -45,4 +45,6 @@
             app:title="@string/pref_enable_audio_title"
             app:summary="@string/pref_enable_audio_desc"
             app:iconSpaceReserved="false" />
+        
+    </PreferenceCategory>
 </PreferenceScreen>
