@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#if defined(_M_ARM64) || defined(__aarch64__)
+#define ARCHITECTURE_arm64
+#endif
+
 #ifdef _WIN32
 
 #include <windows.h>
@@ -10,10 +14,6 @@
 #include <unordered_map>
 
 #include "host_memory/dynamic_library.h"
-
-#if defined(_M_ARM64) || defined(__aarch64__)
-#define ARCHITECTURE_arm64
-#endif
 
 #elif defined(__linux__) || defined(__FreeBSD__)  // ^^^ Windows ^^^ vvv Linux vvv
 
