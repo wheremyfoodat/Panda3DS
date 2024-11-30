@@ -5,10 +5,6 @@
 #define ARCHITECTURE_arm64
 #endif
 
-#ifndef __ANDROID__
-#define USING_FD
-#endif
-
 #ifdef _WIN32
 
 #include <windows.h>
@@ -38,14 +34,11 @@
 #define MAP_NORESERVE 0
 #endif
 
-
-#ifdef USING_FD
-#define MAYBE_ANONYMOUS(flags) (flags)
-#else
-#define MAYBE_ANONYMOUS(flags) (flags) | MAP_ANONYMOUS
-#endif
-
 #endif  // ^^^ Linux ^^^
+
+#ifdef __ANDROID__
+#include <android/sharedmem.h>
+#endif
 
 #include <cstring>
 #include <mutex>
@@ -448,10 +441,10 @@ namespace Common {
 #if defined(__FreeBSD__) && __FreeBSD__ < 13
 			// XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
 			fd = shm_open(SHM_ANON, O_RDWR, 0600);
-#elif defined(USING_FD)
+#elif defined(__ANDROID__)
 			fd = memfd_create("HostMemory", 0);
 #else
-			fd = -1;
+			fd = ASharedMemory_create("HostMemory", 0);
 #endif
 
 #ifdef USING_FD
