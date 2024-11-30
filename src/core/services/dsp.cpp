@@ -317,19 +317,6 @@ void DSPService::triggerInterrupt1() {
 	}
 }
 
-struct FirmwareInfo {
-	using Hash = std::array<u8, 32>;
-
-	Hash hash;  // Firmware hash (SHA-256)
-	u32 size;   // Firmware size in bytes
-
-	bool supportsAAC;   // Does this firmware support AAC decoding?
-	const char* notes;  // Miscellaneous notes about the firmware
-
-	explicit constexpr FirmwareInfo(const Hash& hash, u32 size, bool supportsAAC, const char* notes)
-		: hash(hash), size(size), supportsAAC(supportsAAC), notes(notes) {}
-};
-
 void DSPService::printFirmwareInfo() {
 	// No component has been loaded, do nothing.
 	if (!loadedComponent.size()) {
