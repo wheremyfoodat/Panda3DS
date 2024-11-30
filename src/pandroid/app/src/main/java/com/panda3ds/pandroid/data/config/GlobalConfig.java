@@ -23,6 +23,7 @@ public class GlobalConfig {
 
     public static final Key<Boolean> KEY_SHADER_JIT = new Key<>("emu.shader_jit", true);
     public static final Key<Boolean> KEY_ACCURATE_SHADER_MULTIPLY = new Key<>("emu.accurate_shader_mul", false);
+    public static final Key<Boolean> KEY_ENABLE_AUDIO = new Key<>("emu.enable_audio", true);
     public static final Key<Boolean> KEY_PICTURE_IN_PICTURE = new Key<>("app.behavior.pictureInPicture", false);
     public static final Key<Boolean> KEY_SHOW_PERFORMANCE_OVERLAY = new Key<>("dev.performanceOverlay", false);
     public static final Key<Boolean> KEY_LOGGER_SERVICE = new Key<>("dev.loggerService", false);

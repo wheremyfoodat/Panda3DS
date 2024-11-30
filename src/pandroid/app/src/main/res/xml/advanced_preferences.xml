@@ -35,4 +35,14 @@
             app:iconSpaceReserved="false"/>
 
     </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/audio" >
+
+        <SwitchPreferenceCompat
+            app:key="enableAudio"
+            app:title="@string/pref_enable_audio_title"
+            app:summary="@string/pref_enable_audio_desc"
+            app:iconSpaceReserved="false" />
 </PreferenceScreen>

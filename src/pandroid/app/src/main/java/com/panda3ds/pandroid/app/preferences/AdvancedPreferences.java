@@ -23,6 +23,7 @@ public class AdvancedPreferences extends BasePreferenceFragment {
         setItemClick("performanceMonitor", pref -> GlobalConfig.set(GlobalConfig.KEY_SHOW_PERFORMANCE_OVERLAY, ((SwitchPreferenceCompat) pref).isChecked()));
         setItemClick("shaderJit", pref -> GlobalConfig.set(GlobalConfig.KEY_SHADER_JIT, ((SwitchPreferenceCompat) pref).isChecked()));
         setItemClick("accurateShaderMul", pref -> GlobalConfig.set(GlobalConfig.KEY_ACCURATE_SHADER_MULTIPLY, ((SwitchPreferenceCompat) pref).isChecked()));
+        setItemClick("enableAudio", pref -> GlobalConfig.set(GlobalConfig.KEY_ENABLE_AUDIO, ((SwitchPreferenceCompat) pref).isChecked()));
         setItemClick("loggerService", pref -> {
             boolean checked = ((SwitchPreferenceCompat) pref).isChecked();
             Context ctx = PandroidApplication.getAppContext();
@@ -48,5 +49,6 @@ public class AdvancedPreferences extends BasePreferenceFragment {
         ((SwitchPreferenceCompat) findPreference("loggerService")).setChecked(GlobalConfig.get(GlobalConfig.KEY_LOGGER_SERVICE));
         ((SwitchPreferenceCompat) findPreference("shaderJit")).setChecked(GlobalConfig.get(GlobalConfig.KEY_SHADER_JIT));
         ((SwitchPreferenceCompat) findPreference("accurateShaderMul")).setChecked(GlobalConfig.get(GlobalConfig.KEY_ACCURATE_SHADER_MULTIPLY));
+        ((SwitchPreferenceCompat) findPreference("enableAudio")).setChecked(GlobalConfig.get(GlobalConfig.KEY_ENABLE_AUDIO));
     }
 }
