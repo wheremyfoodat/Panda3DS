@@ -11,9 +11,6 @@
 
 #include "host_memory/dynamic_library.h"
 
-#define ASSERT
-#define UNIMPLEMENTED_MSG
-
 #if defined(_M_ARM64) || defined(__aarch64__)
 #define ARCHITECTURE_arm64
 #endif
@@ -46,6 +43,9 @@
 #include "align.hpp"
 #include <host_memory/host_memory.h>
 #include <host_memory/free_region_manager.h>
+
+#define ASSERT
+#define UNIMPLEMENTED_MSG
 
 namespace Common {
 
