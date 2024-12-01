@@ -9,6 +9,7 @@ using namespace Zep;
 
 TextEditorWindow::TextEditorWindow(QWidget* parent, const std::string& filename, const std::string& initialText)
 	: QDialog(parent), zepWidget(this, qApp->applicationDirPath().toStdString(), fontSize) {
+	setWindowTitle("Lua Editor");
 	resize(600, 600);
 
 	// Register our extensions
