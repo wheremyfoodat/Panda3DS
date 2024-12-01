@@ -77,42 +77,6 @@ ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), em
 	});
 	guiLayout->addRow(rememberPosition);
 
-	QSpinBox *windowPosX = new QSpinBox;
-	windowPosX->setMinimum(0);
-	windowPosX->setValue(config.windowSettings.x);
-	connect(windowPosX, &QSpinBox::valueChanged, this, [&](int value) {
-		config.windowSettings.x = static_cast<int>(value);
-		config.save();
-	});
-	guiLayout->addRow(tr("Window X position"), windowPosX);
-
-	QSpinBox *windowPosY = new QSpinBox;
-	windowPosY->setMinimum(0);
-	windowPosY->setValue(config.windowSettings.y);
-	connect(windowPosY, &QSpinBox::valueChanged, this, [&](int value) {
-		config.windowSettings.y = static_cast<int>(value);
-		config.save();
-	});
-	guiLayout->addRow(tr("Window Y position"), windowPosY);
-
-	QSpinBox *windowWidth = new QSpinBox;
-	windowWidth->setMinimum(0);
-	windowWidth->setValue(config.windowSettings.width);
-	connect(windowWidth, &QSpinBox::valueChanged, this, [&](int value) {
-		config.windowSettings.width = static_cast<int>(value);
-		config.save();
-	});
-	guiLayout->addRow(tr("Window width"), windowWidth);
-
-	QSpinBox *windowHeight = new QSpinBox;
-	windowHeight->setMinimum(0);
-	windowHeight->setValue(config.windowSettings.height);
-	connect(windowHeight, &QSpinBox::valueChanged, this, [&](int value) {
-		config.windowSettings.height = static_cast<int>(value);
-		config.save();
-	});
-	guiLayout->addRow(tr("Window height"), windowHeight);
-
 	// General settings
 	QGroupBox *genGroupBox = new QGroupBox(tr("General Settings"), this);
 	QFormLayout *genLayout = new QFormLayout(genGroupBox);
@@ -120,7 +84,7 @@ ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), em
 	genLayout->setVerticalSpacing(10);
 
 	QLineEdit *defaultRomPath = new QLineEdit;
-	defaultRomPath->setText(config.defaultRomPath.c_str());
+	defaultRomPath->setText(QString::fromStdU16String(config.defaultRomPath.u16string()));
 	connect(defaultRomPath, &QLineEdit::textChanged, this, [&](const QString &text) {
 		config.defaultRomPath = text.toStdString();
 		config.save();
@@ -129,7 +93,7 @@ ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), em
 	browseRomPath->setAutoDefault(false);
 	connect(browseRomPath, &QPushButton::pressed, this, [&, defaultRomPath]() {
 		QString newPath = QFileDialog::getExistingDirectory(
-			this, tr("Select Directory"), config.defaultRomPath.c_str(),
+			this, tr("Select Directory"), QString::fromStdU16String(config.defaultRomPath.u16string()),
 			QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
 		);
 		if (!newPath.isEmpty()) {
