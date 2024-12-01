@@ -30,6 +30,13 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 		helpText->setText(helpTexts[row]);
 	});
 
+	auto connectCheckbox = [&](QCheckBox* checkbox, bool& setting) {
+		connect(checkbox, &QCheckBox::toggled, this, [&](bool checked) {
+			setting = checked;
+			updateConfig();
+		});
+	};
+
 	QVBoxLayout* mainLayout = new QVBoxLayout;
 	QHBoxLayout* hLayout = new QHBoxLayout;
 
@@ -62,18 +69,12 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 
 	QCheckBox* showAppVersion = new QCheckBox(tr("Show version on window title"));
 	showAppVersion->setChecked(config.windowSettings.showAppVersion);
-	connect(showAppVersion, &QCheckBox::toggled, this, [&](bool checked) {
-		config.windowSettings.showAppVersion = checked;
-		updateConfig();
-	});
+	connectCheckbox(showAppVersion, config.windowSettings.showAppVersion);
 	guiLayout->addRow(showAppVersion);
 
 	QCheckBox* rememberPosition = new QCheckBox(tr("Remember window position"));
 	rememberPosition->setChecked(config.windowSettings.rememberPosition);
-	connect(rememberPosition, &QCheckBox::toggled, this, [&](bool checked) {
-		config.windowSettings.rememberPosition = checked;
-		updateConfig();
-	});
+	connectCheckbox(rememberPosition, config.windowSettings.rememberPosition);
 	guiLayout->addRow(rememberPosition);
 
 	// General settings
@@ -107,26 +108,17 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 
 	QCheckBox* discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
 	discordRpcEnabled->setChecked(config.discordRpcEnabled);
-	connect(discordRpcEnabled, &QCheckBox::toggled, this, [&](bool checked) {
-		config.discordRpcEnabled = checked;
-		updateConfig();
-	});
+	connectCheckbox(discordRpcEnabled, config.discordRpcEnabled);
 	genLayout->addRow(discordRpcEnabled);
 
 	QCheckBox* usePortableBuild = new QCheckBox(tr("Use portable build"));
 	usePortableBuild->setChecked(config.usePortableBuild);
-	connect(usePortableBuild, &QCheckBox::toggled, this, [&](bool checked) {
-		config.usePortableBuild = checked;
-		updateConfig();
-	});
+	connectCheckbox(usePortableBuild, config.usePortableBuild);
 	genLayout->addRow(usePortableBuild);
 
 	QCheckBox* printAppVersion = new QCheckBox(tr("Print version in console output"));
 	printAppVersion->setChecked(config.printAppVersion);
-	connect(printAppVersion, &QCheckBox::toggled, this, [&](bool checked) {
-		config.printAppVersion = checked;
-		updateConfig();
-	});
+	connectCheckbox(printAppVersion, config.printAppVersion);
 	genLayout->addRow(printAppVersion);
 
 	// Graphics settings
@@ -148,57 +140,36 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 
 	QCheckBox* enableRenderdoc = new QCheckBox(tr("Enable Renderdoc"));
 	enableRenderdoc->setChecked(config.enableRenderdoc);
-	connect(enableRenderdoc, &QCheckBox::toggled, this, [&](bool checked) {
-		config.enableRenderdoc = checked;
-		updateConfig();
-	});
+	connectCheckbox(enableRenderdoc, config.enableRenderdoc);
 	gpuLayout->addRow(enableRenderdoc);
 
 	QCheckBox* shaderJitEnabled = new QCheckBox(tr("Enable shader JIT"));
 	shaderJitEnabled->setChecked(config.shaderJitEnabled);
-	connect(shaderJitEnabled, &QCheckBox::toggled, this, [&](bool checked) {
-		config.shaderJitEnabled = checked;
-		updateConfig();
-	});
+	connectCheckbox(shaderJitEnabled, config.shaderJitEnabled);
 	gpuLayout->addRow(shaderJitEnabled);
 
 	QCheckBox* vsyncEnabled = new QCheckBox(tr("Enable VSync"));
 	vsyncEnabled->setChecked(config.vsyncEnabled);
-	connect(vsyncEnabled, &QCheckBox::toggled, this, [&](bool checked) {
-		config.vsyncEnabled = checked;
-		updateConfig();
-	});
+	connectCheckbox(vsyncEnabled, config.vsyncEnabled);
 	gpuLayout->addRow(vsyncEnabled);
 
 	QCheckBox* useUbershaders = new QCheckBox(tr("Use ubershaders (No stutter, maybe slower)"));
 	useUbershaders->setChecked(config.useUbershaders);
-	connect(useUbershaders, &QCheckBox::toggled, this, [&](bool checked) {
-		config.useUbershaders = checked;
-		updateConfig();
-	});
+	connectCheckbox(useUbershaders, config.useUbershaders);
 	gpuLayout->addRow(useUbershaders);
 
 	QCheckBox* accurateShaderMul = new QCheckBox(tr("Accurate shader multiplication"));
 	accurateShaderMul->setChecked(config.accurateShaderMul);
-	connect(accurateShaderMul, &QCheckBox::toggled, this, [&](bool checked) {
-		config.accurateShaderMul = checked;
-		updateConfig();
-	});
+	connectCheckbox(accurateShaderMul, config.accurateShaderMul);
 	gpuLayout->addRow(accurateShaderMul);
 
 	QCheckBox* accelerateShaders = new QCheckBox(tr("Accelerate shaders"));
 	accelerateShaders->setChecked(config.accelerateShaders);
-	connect(accelerateShaders, &QCheckBox::toggled, this, [&](bool checked) {
-		config.accelerateShaders = checked;
-		updateConfig();
-	});
+	connectCheckbox(accelerateShaders, config.accelerateShaders);
 	gpuLayout->addRow(accelerateShaders);
 
 	QCheckBox* forceShadergenForLights = new QCheckBox(tr("Force shadergen when rendering lights"));
-	connect(forceShadergenForLights, &QCheckBox::toggled, this, [&](bool checked) {
-		config.forceShadergenForLights = checked;
-		updateConfig();
-	});
+	connectCheckbox(forceShadergenForLights, config.forceShadergenForLights);
 	gpuLayout->addRow(forceShadergenForLights);
 
 	QSpinBox* lightShadergenThreshold = new QSpinBox;
@@ -229,34 +200,22 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 
 	QCheckBox* audioEnabled = new QCheckBox(tr("Enable audio"));
 	audioEnabled->setChecked(config.audioEnabled);
-	connect(audioEnabled, &QCheckBox::toggled, this, [&](bool checked) {
-		config.audioEnabled = checked;
-		updateConfig();
-	});
+	connectCheckbox(audioEnabled, config.audioEnabled);
 	spuLayout->addRow(audioEnabled);
 
 	QCheckBox* aacEnabled = new QCheckBox(tr("Enable AAC audio"));
 	aacEnabled->setChecked(config.aacEnabled);
-	connect(aacEnabled, &QCheckBox::toggled, this, [&](bool checked) {
-		config.aacEnabled = checked;
-		updateConfig();
-	});
+	connectCheckbox(aacEnabled, config.aacEnabled);
 	spuLayout->addRow(aacEnabled);
 
 	QCheckBox* printDSPFirmware = new QCheckBox(tr("Print DSP firmware"));
 	printDSPFirmware->setChecked(config.printDSPFirmware);
-	connect(printDSPFirmware, &QCheckBox::toggled, this, [&](bool checked) {
-		config.printDSPFirmware = checked;
-		updateConfig();
-	});
+	connectCheckbox(printDSPFirmware, config.printDSPFirmware);
 	spuLayout->addRow(printDSPFirmware);
 
 	QCheckBox* muteAudio = new QCheckBox(tr("Mute audio device"));
 	muteAudio->setChecked(config.audioDeviceConfig.muteAudio);
-	connect(muteAudio, &QCheckBox::toggled, this, [&](bool checked) {
-		config.audioDeviceConfig.muteAudio = checked;
-		updateConfig();
-	});
+	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
 	spuLayout->addRow(muteAudio);
 
 	QSpinBox* volumeRaw = new QSpinBox;
@@ -285,10 +244,7 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 
 	QCheckBox* chargerPlugged = new QCheckBox(tr("Charger plugged"));
 	chargerPlugged->setChecked(config.chargerPlugged);
-	connect(chargerPlugged, &QCheckBox::toggled, this, [&](bool checked) {
-		config.chargerPlugged = checked;
-		updateConfig();
-	});
+	connectCheckbox(chargerPlugged, config.chargerPlugged);
 	batLayout->addRow(chargerPlugged);
 
 	// SD Card settings
@@ -299,18 +255,12 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 
 	QCheckBox* sdCardInserted = new QCheckBox(tr("Enable virtual SD card"));
 	sdCardInserted->setChecked(config.sdCardInserted);
-	connect(sdCardInserted, &QCheckBox::toggled, this, [&](bool checked) {
-		config.sdCardInserted = checked;
-		updateConfig();
-	});
+	connectCheckbox(sdCardInserted, config.sdCardInserted);
 	sdcLayout->addRow(sdCardInserted);
 
 	QCheckBox* sdWriteProtected = new QCheckBox(tr("Write protect virtual SD card"));
 	sdWriteProtected->setChecked(config.sdWriteProtected);
-	connect(sdWriteProtected, &QCheckBox::toggled, this, [&](bool checked) {
-		config.sdWriteProtected = checked;
-		updateConfig();
-	});
+	connectCheckbox(sdWriteProtected, config.sdWriteProtected);
 	sdcLayout->addRow(sdWriteProtected);
 
 	// Add all our settings widgets to our widget list
