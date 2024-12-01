@@ -183,9 +183,9 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 
 	// Audio settings
 	QGroupBox* spuGroupBox = new QGroupBox(tr("Audio Settings"), this);
-	QFormLayout* spuLayout = new QFormLayout(spuGroupBox);
-	spuLayout->setHorizontalSpacing(20);
-	spuLayout->setVerticalSpacing(10);
+	QFormLayout* audioLayout = new QFormLayout(spuGroupBox);
+	audioLayout->setHorizontalSpacing(20);
+	audioLayout->setVerticalSpacing(10);
 
 	QComboBox* dspType = new QComboBox;
 	dspType->addItem(tr("Null"));
@@ -196,27 +196,27 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 		config.dspType = static_cast<Audio::DSPCore::Type>(index);
 		updateConfig();
 	});
-	spuLayout->addRow(tr("DSP emulation"), dspType);
+	audioLayout->addRow(tr("DSP emulation"), dspType);
 
 	QCheckBox* audioEnabled = new QCheckBox(tr("Enable audio"));
 	audioEnabled->setChecked(config.audioEnabled);
 	connectCheckbox(audioEnabled, config.audioEnabled);
-	spuLayout->addRow(audioEnabled);
+	audioLayout->addRow(audioEnabled);
 
 	QCheckBox* aacEnabled = new QCheckBox(tr("Enable AAC audio"));
 	aacEnabled->setChecked(config.aacEnabled);
 	connectCheckbox(aacEnabled, config.aacEnabled);
-	spuLayout->addRow(aacEnabled);
+	audioLayout->addRow(aacEnabled);
 
 	QCheckBox* printDSPFirmware = new QCheckBox(tr("Print DSP firmware"));
 	printDSPFirmware->setChecked(config.printDSPFirmware);
 	connectCheckbox(printDSPFirmware, config.printDSPFirmware);
-	spuLayout->addRow(printDSPFirmware);
+	audioLayout->addRow(printDSPFirmware);
 
 	QCheckBox* muteAudio = new QCheckBox(tr("Mute audio device"));
 	muteAudio->setChecked(config.audioDeviceConfig.muteAudio);
 	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
-	spuLayout->addRow(muteAudio);
+	audioLayout->addRow(muteAudio);
 
 	QSpinBox* volumeRaw = new QSpinBox;
 	volumeRaw->setRange(0, 200);
@@ -225,7 +225,7 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 		config.audioDeviceConfig.volumeRaw = static_cast<float>(value) / 100.0f;
 		updateConfig();
 	});
-	spuLayout->addRow(tr("Audio device volume"), volumeRaw);
+	audioLayout->addRow(tr("Audio device volume"), volumeRaw);
 
 	// Battery settings
 	QGroupBox* batGroupBox = new QGroupBox(tr("Battery Settings"), this);
