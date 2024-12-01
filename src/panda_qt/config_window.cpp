@@ -1,15 +1,19 @@
 #include "panda_qt/config_window.hpp"
 
-ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallback, const EmulatorConfig& emuConfig, QWidget* parent)
-	: QDialog(parent), config(emuConfig) {
-	setWindowTitle(tr("Configuration"));
+#include "version.hpp"
 
-	updateConfig = std::move(configCallback);
-	updateIcon = std::move(iconCallback);
+ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback windowCallback, const EmulatorConfig& emuConfig, QWidget* parent)
+	: QDialog(parent), config(emuConfig), updateConfig(std::move(configCallback)), getMainWindow(std::move(windowCallback)) {
+	setWindowTitle(tr("Configuration"));
 
 	// Set up theme selection
 	setTheme(config.frontendSettings.theme);
 	setIcon(config.frontendSettings.icon);
+
+	// Set the window title of the main window appropriately if we enable showing the app version on the window
+	if (config.windowSettings.showAppVersion) {
+		getMainWindow()->setWindowTitle("Alber v" PANDA3DS_VERSION);
+	}
 
 	// Initialize the widget list and the widget container widgets
 	widgetList = new QListWidget(this);
@@ -92,6 +96,14 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	guiLayout->addRow(tr("Window icon"), iconSelect);
 
 	QCheckBox* showAppVersion = new QCheckBox(tr("Show version on window title"));
+	showAppVersion->setChecked(config.windowSettings.showAppVersion);
+	connect(showAppVersion, &QCheckBox::toggled, this, [&](bool checked) {
+		config.windowSettings.showAppVersion = checked;
+		updateConfig();
+
+		// Update main window title
+		getMainWindow()->setWindowTitle(checked ? "Alber v" PANDA3DS_VERSION : "Alber");
+	});
 	connectCheckbox(showAppVersion, config.windowSettings.showAppVersion);
 	guiLayout->addRow(showAppVersion);
 
@@ -229,7 +241,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 
 	QSpinBox* volumeRaw = new QSpinBox();
 	volumeRaw->setRange(0, 200);
-	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw*  100);
+	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw * 100);
 	connect(volumeRaw, &QSpinBox::valueChanged, this, [&](int value) {
 		config.audioDeviceConfig.volumeRaw = static_cast<float>(value) / 100.0f;
 		updateConfig();
@@ -380,6 +392,8 @@ void ConfigWindow::setTheme(Theme theme) {
 }
 
 void ConfigWindow::setIcon(WindowIcon icon) {
+	auto updateIcon = [&](const QString& iconPath) { getMainWindow()->setWindowIcon(QIcon(iconPath)); };
+
 	switch (icon) {
 		case WindowIcon::Rsyn: updateIcon(":/docs/img/rsyn_icon.png"); break;
 		case WindowIcon::Rnap: updateIcon(":/docs/img/rnap_icon.png"); break;

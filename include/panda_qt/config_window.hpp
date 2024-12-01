@@ -22,7 +22,7 @@ class ConfigWindow : public QDialog {
 
   private:
 	using ConfigCallback = std::function<void()>;
-	using IconCallback = std::function<void(const QString&)>;
+	using MainWindowCallback = std::function<QWidget*()>;
 
 	using Theme = FrontendSettings::Theme;
 	using WindowIcon = FrontendSettings::WindowIcon;
@@ -39,14 +39,14 @@ class ConfigWindow : public QDialog {
 	EmulatorConfig config;
 
 	ConfigCallback updateConfig;
-	IconCallback updateIcon;
+	MainWindowCallback getMainWindow;
 
 	void addWidget(QWidget* widget, QString title, QString icon, QString helpText);
 	void setTheme(FrontendSettings::Theme theme);
 	void setIcon(FrontendSettings::WindowIcon icon);
 
   public:
-	ConfigWindow(ConfigCallback configCallback, IconCallback iconCallback, const EmulatorConfig& config, QWidget* parent = nullptr);
+	ConfigWindow(ConfigCallback configCallback, MainWindowCallback windowCallback, const EmulatorConfig& config, QWidget* parent = nullptr);
 	~ConfigWindow();
 
 	EmulatorConfig& getConfig() { return config; }

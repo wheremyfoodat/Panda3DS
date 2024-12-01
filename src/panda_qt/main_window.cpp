@@ -7,11 +7,11 @@
 #include <cstdio>
 #include <fstream>
 
-#include "version.hpp"
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 #include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
+#include "version.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	setWindowTitle("Alber");
@@ -95,7 +95,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			EmulatorMessage message{.type = MessageType::UpdateConfig};
 			sendMessage(message);
 		},
-		[&](const QString& icon) { setWindowIcon(QIcon(icon)); }, emu->getConfig(), this
+		[&]() { return this; }, emu->getConfig(), this
 	);
 
 	auto args = QCoreApplication::arguments();
@@ -111,10 +111,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	{
 		auto& config = emu->getConfig();
 		auto& windowSettings = config.windowSettings;
-
-		if (windowSettings.showAppVersion) {
-			setWindowTitle("Alber v" PANDA3DS_VERSION);
-		}
 
 		if (windowSettings.rememberPosition) {
 			setGeometry(windowSettings.x, windowSettings.y, windowSettings.width, config.windowSettings.height);
@@ -236,7 +232,7 @@ void MainWindow::selectLuaFile() {
 }
 
 // Stop emulator thread when the main window closes
-void MainWindow::closeEvent(QCloseEvent *event) {
+void MainWindow::closeEvent(QCloseEvent* event) {
 	appRunning = false;  // Set our running atomic to false in order to make the emulator thread stop, and join it
 
 	if (emuThread.joinable()) {
@@ -319,8 +315,7 @@ void MainWindow::dumpDspFirmware() {
 		case DSPService::ComponentDumpResult::Success: break;
 		case DSPService::ComponentDumpResult::NotLoaded: {
 			QMessageBox messageBox(
-				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"),
-				tr("The currently loaded app has not uploaded a firmware to the DSP")
+				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"), tr("The currently loaded app has not uploaded a firmware to the DSP")
 			);
 
 			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
