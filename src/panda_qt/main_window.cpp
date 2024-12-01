@@ -15,7 +15,6 @@
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	setWindowTitle("Alber");
-	setWindowIcon(QIcon(":/docs/img/rpog_icon.png"));
 
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
@@ -96,7 +95,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			EmulatorMessage message{.type = MessageType::UpdateConfig};
 			sendMessage(message);
 		},
-		emu->getConfig(), this
+		[&](const QString& icon) { setWindowIcon(QIcon(icon)); }, emu->getConfig(), this
 	);
 
 	auto args = QCoreApplication::arguments();

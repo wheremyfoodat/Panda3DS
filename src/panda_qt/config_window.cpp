@@ -1,11 +1,15 @@
 #include "panda_qt/config_window.hpp"
 
-ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuConfig, QWidget* parent) : QDialog(parent), config(emuConfig) {
+ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallback, const EmulatorConfig& emuConfig, QWidget* parent)
+	: QDialog(parent), config(emuConfig) {
 	setWindowTitle(tr("Configuration"));
-	updateConfig = std::move(callback);
+
+	updateConfig = std::move(configCallback);
+	updateIcon = std::move(iconCallback);
 
 	// Set up theme selection
 	setTheme(Theme::Dark);
+	setIcon(WindowIcon::Rpog);
 
 	// Initialize the widget list and the widget container widgets
 	widgetList = new QListWidget(this);
@@ -37,8 +41,8 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 		});
 	};
 
-	QVBoxLayout* mainLayout = new QVBoxLayout;
-	QHBoxLayout* hLayout = new QHBoxLayout;
+	QVBoxLayout* mainLayout = new QVBoxLayout();
+	QHBoxLayout* hLayout = new QHBoxLayout();
 
 	// Set up widget layouts
 	setLayout(mainLayout);
@@ -55,7 +59,7 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 	guiLayout->setHorizontalSpacing(20);
 	guiLayout->setVerticalSpacing(10);
 
-	QComboBox* themeSelect = new QComboBox;
+	QComboBox* themeSelect = new QComboBox();
 	themeSelect->addItem(tr("System"));
 	themeSelect->addItem(tr("Light"));
 	themeSelect->addItem(tr("Dark"));
@@ -66,6 +70,13 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 		setTheme(static_cast<Theme>(index));
 	});
 	guiLayout->addRow(tr("Color theme"), themeSelect);
+
+	QComboBox* iconSelect = new QComboBox();
+	iconSelect->addItem(tr("Happy panda"));
+	iconSelect->addItem(tr("Happy panda (colourful)"));
+	iconSelect->setCurrentIndex(static_cast<int>(currentIcon));
+	connect(iconSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setIcon(static_cast<WindowIcon>(index)); });
+	guiLayout->addRow(tr("Window icon"), iconSelect);
 
 	QCheckBox* showAppVersion = new QCheckBox(tr("Show version on window title"));
 	showAppVersion->setChecked(config.windowSettings.showAppVersion);
@@ -218,7 +229,7 @@ ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuCon
 	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
 	audioLayout->addRow(muteAudio);
 
-	QSpinBox* volumeRaw = new QSpinBox;
+	QSpinBox* volumeRaw = new QSpinBox();
 	volumeRaw->setRange(0, 200);
 	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw*  100);
 	connect(volumeRaw, &QSpinBox::valueChanged, this, [&](int value) {
@@ -372,6 +383,15 @@ void ConfigWindow::setTheme(Theme theme) {
 			qApp->setStyleSheet("");
 			break;
 		}
+	}
+}
+
+void ConfigWindow::setIcon(WindowIcon icon) {
+	switch (icon) {
+		case WindowIcon::Rsyn: updateIcon(":/docs/img/rsyn_icon.png"); break;
+
+		case WindowIcon::Rpog:
+		default: updateIcon(":/docs/img/rpog_icon.png"); break;
 	}
 }
 
