@@ -35,6 +35,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	});
 
 	auto connectCheckbox = [&](QCheckBox* checkbox, bool& setting) {
+		checkbox->setChecked(setting);
+
 		connect(checkbox, &QCheckBox::toggled, this, [&](bool checked) {
 			setting = checked;
 			updateConfig();
@@ -90,12 +92,10 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	guiLayout->addRow(tr("Window icon"), iconSelect);
 
 	QCheckBox* showAppVersion = new QCheckBox(tr("Show version on window title"));
-	showAppVersion->setChecked(config.windowSettings.showAppVersion);
 	connectCheckbox(showAppVersion, config.windowSettings.showAppVersion);
 	guiLayout->addRow(showAppVersion);
 
 	QCheckBox* rememberPosition = new QCheckBox(tr("Remember window position"));
-	rememberPosition->setChecked(config.windowSettings.rememberPosition);
 	connectCheckbox(rememberPosition, config.windowSettings.rememberPosition);
 	guiLayout->addRow(rememberPosition);
 
@@ -129,17 +129,14 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	genLayout->addRow(tr("Default ROMs path"), romLayout);
 
 	QCheckBox* discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
-	discordRpcEnabled->setChecked(config.discordRpcEnabled);
 	connectCheckbox(discordRpcEnabled, config.discordRpcEnabled);
 	genLayout->addRow(discordRpcEnabled);
 
 	QCheckBox* usePortableBuild = new QCheckBox(tr("Use portable build"));
-	usePortableBuild->setChecked(config.usePortableBuild);
 	connectCheckbox(usePortableBuild, config.usePortableBuild);
 	genLayout->addRow(usePortableBuild);
 
 	QCheckBox* printAppVersion = new QCheckBox(tr("Print version in console output"));
-	printAppVersion->setChecked(config.printAppVersion);
 	connectCheckbox(printAppVersion, config.printAppVersion);
 	genLayout->addRow(printAppVersion);
 
@@ -161,32 +158,26 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	gpuLayout->addRow(tr("GPU renderer"), rendererType);
 
 	QCheckBox* enableRenderdoc = new QCheckBox(tr("Enable Renderdoc"));
-	enableRenderdoc->setChecked(config.enableRenderdoc);
 	connectCheckbox(enableRenderdoc, config.enableRenderdoc);
 	gpuLayout->addRow(enableRenderdoc);
 
 	QCheckBox* shaderJitEnabled = new QCheckBox(tr("Enable shader JIT"));
-	shaderJitEnabled->setChecked(config.shaderJitEnabled);
 	connectCheckbox(shaderJitEnabled, config.shaderJitEnabled);
 	gpuLayout->addRow(shaderJitEnabled);
 
 	QCheckBox* vsyncEnabled = new QCheckBox(tr("Enable VSync"));
-	vsyncEnabled->setChecked(config.vsyncEnabled);
 	connectCheckbox(vsyncEnabled, config.vsyncEnabled);
 	gpuLayout->addRow(vsyncEnabled);
 
 	QCheckBox* useUbershaders = new QCheckBox(tr("Use ubershaders (No stutter, maybe slower)"));
-	useUbershaders->setChecked(config.useUbershaders);
 	connectCheckbox(useUbershaders, config.useUbershaders);
 	gpuLayout->addRow(useUbershaders);
 
 	QCheckBox* accurateShaderMul = new QCheckBox(tr("Accurate shader multiplication"));
-	accurateShaderMul->setChecked(config.accurateShaderMul);
 	connectCheckbox(accurateShaderMul, config.accurateShaderMul);
 	gpuLayout->addRow(accurateShaderMul);
 
 	QCheckBox* accelerateShaders = new QCheckBox(tr("Accelerate shaders"));
-	accelerateShaders->setChecked(config.accelerateShaders);
 	connectCheckbox(accelerateShaders, config.accelerateShaders);
 	gpuLayout->addRow(accelerateShaders);
 
@@ -221,22 +212,18 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	audioLayout->addRow(tr("DSP emulation"), dspType);
 
 	QCheckBox* audioEnabled = new QCheckBox(tr("Enable audio"));
-	audioEnabled->setChecked(config.audioEnabled);
 	connectCheckbox(audioEnabled, config.audioEnabled);
 	audioLayout->addRow(audioEnabled);
 
 	QCheckBox* aacEnabled = new QCheckBox(tr("Enable AAC audio"));
-	aacEnabled->setChecked(config.aacEnabled);
 	connectCheckbox(aacEnabled, config.aacEnabled);
 	audioLayout->addRow(aacEnabled);
 
 	QCheckBox* printDSPFirmware = new QCheckBox(tr("Print DSP firmware"));
-	printDSPFirmware->setChecked(config.printDSPFirmware);
 	connectCheckbox(printDSPFirmware, config.printDSPFirmware);
 	audioLayout->addRow(printDSPFirmware);
 
 	QCheckBox* muteAudio = new QCheckBox(tr("Mute audio device"));
-	muteAudio->setChecked(config.audioDeviceConfig.muteAudio);
 	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
 	audioLayout->addRow(muteAudio);
 
@@ -265,7 +252,6 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	batLayout->addRow(tr("Battery percentage"), batteryPercentage);
 
 	QCheckBox* chargerPlugged = new QCheckBox(tr("Charger plugged"));
-	chargerPlugged->setChecked(config.chargerPlugged);
 	connectCheckbox(chargerPlugged, config.chargerPlugged);
 	batLayout->addRow(chargerPlugged);
 
@@ -276,12 +262,10 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	sdcLayout->setVerticalSpacing(10);
 
 	QCheckBox* sdCardInserted = new QCheckBox(tr("Enable virtual SD card"));
-	sdCardInserted->setChecked(config.sdCardInserted);
 	connectCheckbox(sdCardInserted, config.sdCardInserted);
 	sdcLayout->addRow(sdCardInserted);
 
 	QCheckBox* sdWriteProtected = new QCheckBox(tr("Write protect virtual SD card"));
-	sdWriteProtected->setChecked(config.sdWriteProtected);
 	connectCheckbox(sdWriteProtected, config.sdWriteProtected);
 	sdcLayout->addRow(sdWriteProtected);
 
