@@ -264,7 +264,7 @@ ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), em
 	volumeRaw->setRange(0, 200);
 	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw * 100);
 	connect(volumeRaw, &QSpinBox::valueChanged, this, [&](int value) {
-		config.audioDeviceConfig.volumeRaw = static_cast<int>(value) / 100;
+		config.audioDeviceConfig.volumeRaw = static_cast<float>(value) / 100.0f;
 		config.save();
 	});
 	spuLayout->addRow(tr("Audio device volume"), volumeRaw);
