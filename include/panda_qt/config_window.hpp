@@ -19,7 +19,9 @@
 class ConfigWindow : public QDialog {
 	Q_OBJECT
 
-	private:
+  private:
+	using ConfigCallback = std::function<void()>;
+
 	enum class Theme : int {
 		System = 0,
 		Light = 1,
@@ -36,13 +38,20 @@ class ConfigWindow : public QDialog {
 	static constexpr size_t settingWidgetCount = 6;
 	std::array<QString, settingWidgetCount> helpTexts;
 
+	// The config class holds a copy of the emulator config which it edits and sends
+	// over to the emulator in a thread-safe manner
+	EmulatorConfig config;
+	ConfigCallback updateConfig;
+
 	void addWidget(QWidget* widget, QString title, QString icon, QString helpText);
 	void setTheme(Theme theme);
 
-	public:
-	ConfigWindow(Emulator* emu, QWidget* parent = nullptr);
+  public:
+	ConfigWindow(ConfigCallback callback, const EmulatorConfig& config, QWidget* parent = nullptr);
 	~ConfigWindow();
 
-	private:
+	EmulatorConfig& getConfig() { return config; }
+
+  private:
 	Emulator* emu;
 };

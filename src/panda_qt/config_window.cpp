@@ -1,9 +1,8 @@
 #include "panda_qt/config_window.hpp"
 
-ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), emu(emu) {
+ConfigWindow::ConfigWindow(ConfigCallback callback, const EmulatorConfig& emuConfig, QWidget* parent) : QDialog(parent), config(emuConfig) {
 	setWindowTitle(tr("Configuration"));
-
-	EmulatorConfig& config = emu->getConfig();
+	updateConfig = std::move(callback);
 
 	// Set up theme selection
 	setTheme(Theme::Dark);
@@ -44,12 +43,12 @@ ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), em
 	hLayout->addWidget(widgetContainer);
 
 	// Interface settings
-	QGroupBox *guiGroupBox = new QGroupBox(tr("Interface Settings"), this);
-	QFormLayout *guiLayout = new QFormLayout(guiGroupBox);
+	QGroupBox* guiGroupBox = new QGroupBox(tr("Interface Settings"), this);
+	QFormLayout* guiLayout = new QFormLayout(guiGroupBox);
 	guiLayout->setHorizontalSpacing(20);
 	guiLayout->setVerticalSpacing(10);
 
-	QComboBox *themeSelect = new QComboBox;
+	QComboBox* themeSelect = new QComboBox;
 	themeSelect->addItem(tr("System"));
 	themeSelect->addItem(tr("Light"));
 	themeSelect->addItem(tr("Dark"));
@@ -61,35 +60,35 @@ ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), em
 	});
 	guiLayout->addRow(tr("Color theme"), themeSelect);
 
-	QCheckBox *showAppVersion = new QCheckBox(tr("Show version on window title"));
+	QCheckBox* showAppVersion = new QCheckBox(tr("Show version on window title"));
 	showAppVersion->setChecked(config.windowSettings.showAppVersion);
 	connect(showAppVersion, &QCheckBox::toggled, this, [&](bool checked) {
 		config.windowSettings.showAppVersion = checked;
-		config.save();
+		updateConfig();
 	});
 	guiLayout->addRow(showAppVersion);
 
-	QCheckBox *rememberPosition = new QCheckBox(tr("Remember window position"));
+	QCheckBox* rememberPosition = new QCheckBox(tr("Remember window position"));
 	rememberPosition->setChecked(config.windowSettings.rememberPosition);
 	connect(rememberPosition, &QCheckBox::toggled, this, [&](bool checked) {
 		config.windowSettings.rememberPosition = checked;
-		config.save();
+		updateConfig();
 	});
 	guiLayout->addRow(rememberPosition);
 
 	// General settings
-	QGroupBox *genGroupBox = new QGroupBox(tr("General Settings"), this);
-	QFormLayout *genLayout = new QFormLayout(genGroupBox);
+	QGroupBox* genGroupBox = new QGroupBox(tr("General Settings"), this);
+	QFormLayout* genLayout = new QFormLayout(genGroupBox);
 	genLayout->setHorizontalSpacing(20);
 	genLayout->setVerticalSpacing(10);
 
-	QLineEdit *defaultRomPath = new QLineEdit;
+	QLineEdit* defaultRomPath = new QLineEdit;
 	defaultRomPath->setText(QString::fromStdU16String(config.defaultRomPath.u16string()));
 	connect(defaultRomPath, &QLineEdit::textChanged, this, [&](const QString &text) {
 		config.defaultRomPath = text.toStdString();
-		config.save();
+		updateConfig();
 	});
-	QPushButton *browseRomPath = new QPushButton(tr("Browse..."));
+	QPushButton* browseRomPath = new QPushButton(tr("Browse..."));
 	browseRomPath->setAutoDefault(false);
 	connect(browseRomPath, &QPushButton::pressed, this, [&, defaultRomPath]() {
 		QString newPath = QFileDialog::getExistingDirectory(
@@ -100,217 +99,217 @@ ConfigWindow::ConfigWindow(Emulator* emu, QWidget* parent) : QDialog(parent), em
 			defaultRomPath->setText(newPath);
 		}
 	});
-	QHBoxLayout *romLayout = new QHBoxLayout;
+	QHBoxLayout* romLayout = new QHBoxLayout;
 	romLayout->setSpacing(4);
 	romLayout->addWidget(defaultRomPath);
 	romLayout->addWidget(browseRomPath);
 	genLayout->addRow(tr("Default ROMs path"), romLayout);
 
-	QCheckBox *discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
+	QCheckBox* discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
 	discordRpcEnabled->setChecked(config.discordRpcEnabled);
 	connect(discordRpcEnabled, &QCheckBox::toggled, this, [&](bool checked) {
 		config.discordRpcEnabled = checked;
-		config.save();
+		updateConfig();
 	});
 	genLayout->addRow(discordRpcEnabled);
 
-	QCheckBox *usePortableBuild = new QCheckBox(tr("Use portable build"));
+	QCheckBox* usePortableBuild = new QCheckBox(tr("Use portable build"));
 	usePortableBuild->setChecked(config.usePortableBuild);
 	connect(usePortableBuild, &QCheckBox::toggled, this, [&](bool checked) {
 		config.usePortableBuild = checked;
-		config.save();
+		updateConfig();
 	});
 	genLayout->addRow(usePortableBuild);
 
-	QCheckBox *printAppVersion = new QCheckBox(tr("Print version in console output"));
+	QCheckBox* printAppVersion = new QCheckBox(tr("Print version in console output"));
 	printAppVersion->setChecked(config.printAppVersion);
 	connect(printAppVersion, &QCheckBox::toggled, this, [&](bool checked) {
 		config.printAppVersion = checked;
-		config.save();
+		updateConfig();
 	});
 	genLayout->addRow(printAppVersion);
 
 	// Graphics settings
-	QGroupBox *gpuGroupBox = new QGroupBox(tr("Graphics Settings"), this);
-	QFormLayout *gpuLayout = new QFormLayout(gpuGroupBox);
+	QGroupBox* gpuGroupBox = new QGroupBox(tr("Graphics Settings"), this);
+	QFormLayout* gpuLayout = new QFormLayout(gpuGroupBox);
 	gpuLayout->setHorizontalSpacing(20);
 	gpuLayout->setVerticalSpacing(10);
 
-	QComboBox *rendererType = new QComboBox;
+	QComboBox* rendererType = new QComboBox;
 	rendererType->addItem(tr("Null"));
 	rendererType->addItem(tr("OpenGL"));
 	rendererType->addItem(tr("Vulkan"));
 	rendererType->setCurrentIndex(static_cast<int>(config.rendererType));
 	connect(rendererType, &QComboBox::currentIndexChanged, this, [&](int index) {
 		config.rendererType = static_cast<RendererType>(index);
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(tr("GPU renderer"), rendererType);
 
-	QCheckBox *enableRenderdoc = new QCheckBox(tr("Enable Renderdoc"));
+	QCheckBox* enableRenderdoc = new QCheckBox(tr("Enable Renderdoc"));
 	enableRenderdoc->setChecked(config.enableRenderdoc);
 	connect(enableRenderdoc, &QCheckBox::toggled, this, [&](bool checked) {
 		config.enableRenderdoc = checked;
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(enableRenderdoc);
 
-	QCheckBox *shaderJitEnabled = new QCheckBox(tr("Enable shader JIT"));
+	QCheckBox* shaderJitEnabled = new QCheckBox(tr("Enable shader JIT"));
 	shaderJitEnabled->setChecked(config.shaderJitEnabled);
 	connect(shaderJitEnabled, &QCheckBox::toggled, this, [&](bool checked) {
 		config.shaderJitEnabled = checked;
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(shaderJitEnabled);
 
-	QCheckBox *vsyncEnabled = new QCheckBox(tr("Enable VSync"));
+	QCheckBox* vsyncEnabled = new QCheckBox(tr("Enable VSync"));
 	vsyncEnabled->setChecked(config.vsyncEnabled);
 	connect(vsyncEnabled, &QCheckBox::toggled, this, [&](bool checked) {
 		config.vsyncEnabled = checked;
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(vsyncEnabled);
 
-	QCheckBox *useUbershaders = new QCheckBox(tr("Use ubershaders (No stutter, maybe slower)"));
+	QCheckBox* useUbershaders = new QCheckBox(tr("Use ubershaders (No stutter, maybe slower)"));
 	useUbershaders->setChecked(config.useUbershaders);
 	connect(useUbershaders, &QCheckBox::toggled, this, [&](bool checked) {
 		config.useUbershaders = checked;
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(useUbershaders);
 
-	QCheckBox *accurateShaderMul = new QCheckBox(tr("Accurate shader multiplication"));
+	QCheckBox* accurateShaderMul = new QCheckBox(tr("Accurate shader multiplication"));
 	accurateShaderMul->setChecked(config.accurateShaderMul);
 	connect(accurateShaderMul, &QCheckBox::toggled, this, [&](bool checked) {
 		config.accurateShaderMul = checked;
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(accurateShaderMul);
 
-	QCheckBox *accelerateShaders = new QCheckBox(tr("Accelerate shaders"));
+	QCheckBox* accelerateShaders = new QCheckBox(tr("Accelerate shaders"));
 	accelerateShaders->setChecked(config.accelerateShaders);
 	connect(accelerateShaders, &QCheckBox::toggled, this, [&](bool checked) {
 		config.accelerateShaders = checked;
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(accelerateShaders);
 
-	QCheckBox *forceShadergenForLights = new QCheckBox(tr("Force shadergen when rendering lights"));
+	QCheckBox* forceShadergenForLights = new QCheckBox(tr("Force shadergen when rendering lights"));
 	connect(forceShadergenForLights, &QCheckBox::toggled, this, [&](bool checked) {
 		config.forceShadergenForLights = checked;
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(forceShadergenForLights);
 
-	QSpinBox *lightShadergenThreshold = new QSpinBox;
+	QSpinBox* lightShadergenThreshold = new QSpinBox;
 	lightShadergenThreshold->setRange(1, 8);
 	lightShadergenThreshold->setValue(config.lightShadergenThreshold);
 	connect(lightShadergenThreshold, &QSpinBox::valueChanged, this, [&](int value) {
 		config.lightShadergenThreshold = static_cast<int>(value);
-		config.save();
+		updateConfig();
 	});
 	gpuLayout->addRow(tr("Light threshold for forcing shadergen"), lightShadergenThreshold);
 
 	// Audio settings
-	QGroupBox *spuGroupBox = new QGroupBox(tr("Audio Settings"), this);
-	QFormLayout *spuLayout = new QFormLayout(spuGroupBox);
+	QGroupBox* spuGroupBox = new QGroupBox(tr("Audio Settings"), this);
+	QFormLayout* spuLayout = new QFormLayout(spuGroupBox);
 	spuLayout->setHorizontalSpacing(20);
 	spuLayout->setVerticalSpacing(10);
 
-	QComboBox *dspType = new QComboBox;
+	QComboBox* dspType = new QComboBox;
 	dspType->addItem(tr("Null"));
 	dspType->addItem(tr("LLE"));
 	dspType->addItem(tr("HLE"));
 	dspType->setCurrentIndex(static_cast<int>(config.dspType));
 	connect(dspType, &QComboBox::currentIndexChanged, this, [&](int index) {
 		config.dspType = static_cast<Audio::DSPCore::Type>(index);
-		config.save();
+		updateConfig();
 	});
 	spuLayout->addRow(tr("DSP emulation"), dspType);
 
-	QCheckBox *audioEnabled = new QCheckBox(tr("Enable audio"));
+	QCheckBox* audioEnabled = new QCheckBox(tr("Enable audio"));
 	audioEnabled->setChecked(config.audioEnabled);
 	connect(audioEnabled, &QCheckBox::toggled, this, [&](bool checked) {
 		config.audioEnabled = checked;
-		config.save();
+		updateConfig();
 	});
 	spuLayout->addRow(audioEnabled);
 
-	QCheckBox *aacEnabled = new QCheckBox(tr("Enable AAC audio"));
+	QCheckBox* aacEnabled = new QCheckBox(tr("Enable AAC audio"));
 	aacEnabled->setChecked(config.aacEnabled);
 	connect(aacEnabled, &QCheckBox::toggled, this, [&](bool checked) {
 		config.aacEnabled = checked;
-		config.save();
+		updateConfig();
 	});
 	spuLayout->addRow(aacEnabled);
 
-	QCheckBox *printDSPFirmware = new QCheckBox(tr("Print DSP firmware"));
+	QCheckBox* printDSPFirmware = new QCheckBox(tr("Print DSP firmware"));
 	printDSPFirmware->setChecked(config.printDSPFirmware);
 	connect(printDSPFirmware, &QCheckBox::toggled, this, [&](bool checked) {
 		config.printDSPFirmware = checked;
-		config.save();
+		updateConfig();
 	});
 	spuLayout->addRow(printDSPFirmware);
 
-	QCheckBox *muteAudio = new QCheckBox(tr("Mute audio device"));
+	QCheckBox* muteAudio = new QCheckBox(tr("Mute audio device"));
 	muteAudio->setChecked(config.audioDeviceConfig.muteAudio);
 	connect(muteAudio, &QCheckBox::toggled, this, [&](bool checked) {
 		config.audioDeviceConfig.muteAudio = checked;
-		config.save();
+		updateConfig();
 	});
 	spuLayout->addRow(muteAudio);
 
-	QSpinBox *volumeRaw = new QSpinBox;
+	QSpinBox* volumeRaw = new QSpinBox;
 	volumeRaw->setRange(0, 200);
-	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw * 100);
+	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw*  100);
 	connect(volumeRaw, &QSpinBox::valueChanged, this, [&](int value) {
 		config.audioDeviceConfig.volumeRaw = static_cast<float>(value) / 100.0f;
-		config.save();
+		updateConfig();
 	});
 	spuLayout->addRow(tr("Audio device volume"), volumeRaw);
 
 	// Battery settings
-	QGroupBox *batGroupBox = new QGroupBox(tr("Battery Settings"), this);
-	QFormLayout *batLayout = new QFormLayout(batGroupBox);
+	QGroupBox* batGroupBox = new QGroupBox(tr("Battery Settings"), this);
+	QFormLayout* batLayout = new QFormLayout(batGroupBox);
 	batLayout->setHorizontalSpacing(20);
 	batLayout->setVerticalSpacing(10);
 
-	QSpinBox *batteryPercentage = new QSpinBox;
+	QSpinBox* batteryPercentage = new QSpinBox;
 	batteryPercentage->setRange(1, 100);
 	batteryPercentage->setValue(config.batteryPercentage);
 	connect(batteryPercentage, &QSpinBox::valueChanged, this, [&](int value) {
 		config.batteryPercentage = static_cast<int>(value);
-		config.save();
+		updateConfig();
 	});
 	batLayout->addRow(tr("Battery percentage"), batteryPercentage);
 
-	QCheckBox *chargerPlugged = new QCheckBox(tr("Charger plugged"));
+	QCheckBox* chargerPlugged = new QCheckBox(tr("Charger plugged"));
 	chargerPlugged->setChecked(config.chargerPlugged);
 	connect(chargerPlugged, &QCheckBox::toggled, this, [&](bool checked) {
 		config.chargerPlugged = checked;
-		config.save();
+		updateConfig();
 	});
 	batLayout->addRow(chargerPlugged);
 
 	// SD Card settings
-	QGroupBox *sdcGroupBox = new QGroupBox(tr("SD Card Settings"), this);
-	QFormLayout *sdcLayout = new QFormLayout(sdcGroupBox);
+	QGroupBox* sdcGroupBox = new QGroupBox(tr("SD Card Settings"), this);
+	QFormLayout* sdcLayout = new QFormLayout(sdcGroupBox);
 	sdcLayout->setHorizontalSpacing(20);
 	sdcLayout->setVerticalSpacing(10);
 
-	QCheckBox *sdCardInserted = new QCheckBox(tr("Enable virtual SD card"));
+	QCheckBox* sdCardInserted = new QCheckBox(tr("Enable virtual SD card"));
 	sdCardInserted->setChecked(config.sdCardInserted);
 	connect(sdCardInserted, &QCheckBox::toggled, this, [&](bool checked) {
 		config.sdCardInserted = checked;
-		config.save();
+		updateConfig();
 	});
 	sdcLayout->addRow(sdCardInserted);
 
-	QCheckBox *sdWriteProtected = new QCheckBox(tr("Write protect virtual SD card"));
+	QCheckBox* sdWriteProtected = new QCheckBox(tr("Write protect virtual SD card"));
 	sdWriteProtected->setChecked(config.sdWriteProtected);
 	connect(sdWriteProtected, &QCheckBox::toggled, this, [&](bool checked) {
 		config.sdWriteProtected = checked;
-		config.save();
+		updateConfig();
 	});
 	sdcLayout->addRow(sdWriteProtected);
 

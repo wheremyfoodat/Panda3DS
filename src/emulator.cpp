@@ -444,3 +444,11 @@ void Emulator::loadRenderdoc() {
 	Renderdoc::loadRenderdoc();
 	Renderdoc::setOutputDir(capturePath, "");
 }
+
+void Emulator::reloadSettings() {
+	setAudioEnabled(config.audioEnabled);
+
+	if (Renderdoc::isSupported() && config.enableRenderdoc && !Renderdoc::isLoaded()) {
+		loadRenderdoc();
+	}
+}

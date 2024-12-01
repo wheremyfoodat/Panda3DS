@@ -23,6 +23,8 @@ namespace Renderdoc {
 	};
 
 	static CaptureState captureState{CaptureState::Idle};
+	static bool renderdocLoaded{false};
+
 	RENDERDOC_API_1_6_0* rdocAPI{};
 
 	void loadRenderdoc() {
@@ -73,6 +75,8 @@ namespace Renderdoc {
 		}
 #endif
 		if (rdocAPI) {
+			renderdocLoaded = true;
+
 			// Disable default capture keys as they suppose to trigger present-to-present capturing
 			// and it is not what we want
 			rdocAPI->SetCaptureKeys(nullptr, 0);
@@ -115,5 +119,7 @@ namespace Renderdoc {
 			rdocAPI->SetCaptureFilePathTemplate((path + '\\' + prefix).c_str());
 		}
 	}
+
+	bool isLoaded() { return renderdocLoaded; }
 }  // namespace Renderdoc
 #endif
