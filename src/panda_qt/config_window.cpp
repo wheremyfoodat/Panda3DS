@@ -8,8 +8,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	updateIcon = std::move(iconCallback);
 
 	// Set up theme selection
-	setTheme(Theme::Dark);
-	setIcon(WindowIcon::Rpog);
+	setTheme(config.frontendSettings.theme);
+	setIcon(config.frontendSettings.icon);
 
 	// Initialize the widget list and the widget container widgets
 	widgetList = new QListWidget(this);
@@ -65,17 +65,25 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	themeSelect->addItem(tr("Dark"));
 	themeSelect->addItem(tr("Greetings Cat"));
 	themeSelect->addItem(tr("Cream"));
-	themeSelect->setCurrentIndex(static_cast<int>(currentTheme));
+	themeSelect->setCurrentIndex(static_cast<int>(config.frontendSettings.theme));
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) {
+		config.frontendSettings.theme = static_cast<Theme>(index);
 		setTheme(static_cast<Theme>(index));
+
+		updateConfig();
 	});
 	guiLayout->addRow(tr("Color theme"), themeSelect);
 
 	QComboBox* iconSelect = new QComboBox();
 	iconSelect->addItem(tr("Happy panda"));
 	iconSelect->addItem(tr("Happy panda (colourful)"));
-	iconSelect->setCurrentIndex(static_cast<int>(currentIcon));
-	connect(iconSelect, &QComboBox::currentIndexChanged, this, [&](int index) { setIcon(static_cast<WindowIcon>(index)); });
+	iconSelect->setCurrentIndex(static_cast<int>(config.frontendSettings.icon));
+	connect(iconSelect, &QComboBox::currentIndexChanged, this, [&](int index) {
+		config.frontendSettings.icon = static_cast<WindowIcon>(index);
+		setIcon(static_cast<WindowIcon>(index));
+
+		updateConfig();
+	});
 	guiLayout->addRow(tr("Window icon"), iconSelect);
 
 	QCheckBox* showAppVersion = new QCheckBox(tr("Show version on window title"));
@@ -286,8 +294,6 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 }
 
 void ConfigWindow::setTheme(Theme theme) {
-	currentTheme = theme;
-
 	switch (theme) {
 		case Theme::Dark: {
 			QApplication::setStyle(QStyleFactory::create("Fusion"));

@@ -420,6 +420,9 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 		case MessageType::UpdateConfig:
 			emu->getConfig() = configWindow->getConfig();
 			emu->reloadSettings();
+
+			// Save new settings to disk
+			emu->getConfig().save();
 			break;
 	}
 }

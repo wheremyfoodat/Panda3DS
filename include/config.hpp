@@ -3,6 +3,7 @@
 
 #include "audio/dsp_core.hpp"
 #include "renderer.hpp"
+#include "frontend_settings.hpp"
 
 struct AudioDeviceConfig {
 	float volumeRaw = 1.0f;
@@ -86,6 +87,7 @@ struct EmulatorConfig {
 
 	WindowSettings windowSettings;
 	AudioDeviceConfig audioDeviceConfig;
+	FrontendSettings frontendSettings;
 
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
