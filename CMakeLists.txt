@@ -695,6 +695,8 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
             PREFIX "/"
             FILES
                 docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/img/rpog_icon.png docs/img/rsyn_icon.png
+                docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
+                docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
         )
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)

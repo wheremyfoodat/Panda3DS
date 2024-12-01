@@ -81,7 +81,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
-	configWindow = new ConfigWindow(this);
+	configWindow = new ConfigWindow(emu, this);
 	cheatsEditor = new CheatsWindow(emu, {}, this);
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
