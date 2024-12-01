@@ -32,8 +32,10 @@
 #define MAP_NORESERVE 0
 #endif
 
-// On Android, include ioctl for the shared memory ioctls
+// On Android, include ioctl for shared memory ioctls, dlfcn for loading libandroid and linux/ashmem for ashmem defines
 #ifdef __ANDROID__
+#include <dlfcn.h>
+#include <linux/ashmem.h>
 #include <sys/ioctl.h>
 #endif
 
@@ -491,7 +493,7 @@ namespace Common {
 				throw std::bad_alloc{};
 			}
 
-			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAYBE_ANONYMOUS(MAP_SHARED), fd, 0));
+			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
 
 			if (backing_base == MAP_FAILED) {
 				Helpers::warn("mmap failed: {}", strerror(errno));
@@ -535,7 +537,7 @@ namespace Common {
 			}
 #endif
 
-			void* ret = mmap(virtual_base + virtual_offset, length, flags, MAYBE_ANONYMOUS(MAP_SHARED | MAP_FIXED), fd, host_offset);
+			void* ret = mmap(virtual_base + virtual_offset, length, flags, MAP_SHARED | MAP_FIXED, fd, host_offset);
 			ASSERT_MSG(ret != MAP_FAILED, "mmap failed: {}", strerror(errno));
 		}
 
