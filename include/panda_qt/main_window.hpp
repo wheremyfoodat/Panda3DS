@@ -51,6 +51,7 @@ class MainWindow : public QMainWindow {
 		ReleaseTouchscreen,
 		ReloadUbershader,
 		SetScreenSize,
+		UpdateConfig,
 	};
 
 	// Tagged union representing our message queue messages

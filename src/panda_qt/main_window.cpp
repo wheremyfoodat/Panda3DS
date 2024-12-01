@@ -15,7 +15,6 @@
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	setWindowTitle("Alber");
-	setWindowIcon(QIcon(":/docs/img/rpog_icon.png"));
 
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
@@ -81,7 +80,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
-	configWindow = new ConfigWindow(this);
 	cheatsEditor = new CheatsWindow(emu, {}, this);
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
@@ -91,6 +89,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	if (shaderEditor->supported) {
 		shaderEditor->setText(emu->getRenderer()->getUbershader());
 	}
+
+	configWindow = new ConfigWindow(
+		[&]() {
+			EmulatorMessage message{.type = MessageType::UpdateConfig};
+			sendMessage(message);
+		},
+		[&](const QString& icon) { setWindowIcon(QIcon(icon)); }, emu->getConfig(), this
+	);
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -410,6 +416,14 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			screen->resizeSurface(width, height);
 			break;
 		}
+
+		case MessageType::UpdateConfig:
+			emu->getConfig() = configWindow->getConfig();
+			emu->reloadSettings();
+
+			// Save new settings to disk
+			emu->getConfig().save();
+			break;
 	}
 }
 

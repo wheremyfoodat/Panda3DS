@@ -23,6 +23,9 @@ namespace Renderdoc {
 	// Sets output directory for captures
 	void setOutputDir(const std::string& path, const std::string& prefix);
 
+	// Returns whether Renderdoc has been loaded
+	bool isLoaded();
+
 	// Returns whether we've compiled with Renderdoc support
 	static constexpr bool isSupported() { return true; }
 }  // namespace Renderdoc
@@ -34,6 +37,7 @@ namespace Renderdoc {
 	static void triggerCapture() { Helpers::panic("Tried to trigger a Renderdoc capture while support for renderdoc is disabled"); }
 	static void setOutputDir(const std::string& path, const std::string& prefix) {}
 	static constexpr bool isSupported() { return false; }
+	static constexpr bool isLoaded() { return false; }
 }  // namespace Renderdoc
 #endif
 

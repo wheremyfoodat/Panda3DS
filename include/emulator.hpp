@@ -118,6 +118,9 @@ class Emulator {
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
+	// Reloads some settings that require special handling, such as audio enable
+	void reloadSettings();
+
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }

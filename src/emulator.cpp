@@ -444,3 +444,24 @@ void Emulator::loadRenderdoc() {
 	Renderdoc::loadRenderdoc();
 	Renderdoc::setOutputDir(capturePath, "");
 }
+
+void Emulator::reloadSettings() {
+	setAudioEnabled(config.audioEnabled);
+
+	if (Renderdoc::isSupported() && config.enableRenderdoc && !Renderdoc::isLoaded()) {
+		loadRenderdoc();
+	}
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	// Reload RPC setting if we're compiling with RPC support
+
+	if (discordRpc.running() != config.discordRpcEnabled) {
+		if (config.discordRpcEnabled) {
+			discordRpc.init();
+			updateDiscord();
+		} else {
+			discordRpc.stop();
+		}
+	}
+#endif
+}

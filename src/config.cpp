@@ -130,6 +130,16 @@ void EmulatorConfig::load() {
 			sdWriteProtected = toml::find_or<toml::boolean>(sd, "WriteProtectVirtualSD", false);
 		}
 	}
+
+	if (data.contains("UI")) {
+		auto uiResult = toml::expect<toml::value>(data.at("UI"));
+		if (uiResult.is_ok()) {
+			auto ui = uiResult.unwrap();
+
+			frontendSettings.theme = FrontendSettings::themeFromString(toml::find_or<std::string>(ui, "Theme", "dark"));
+			frontendSettings.icon = FrontendSettings::iconFromString(toml::find_or<std::string>(ui, "WindowIcon", "rpog"));
+		}
+	}
 }
 
 void EmulatorConfig::save() {
@@ -185,6 +195,9 @@ void EmulatorConfig::save() {
 
 	data["SD"]["UseVirtualSD"] = sdCardInserted;
 	data["SD"]["WriteProtectVirtualSD"] = sdWriteProtected;
+
+	data["UI"]["Theme"] = std::string(FrontendSettings::themeToString(frontendSettings.theme));
+	data["UI"]["WindowIcon"] = std::string(FrontendSettings::iconToString(frontendSettings.icon));
 
 	std::ofstream file(path, std::ios::out);
 	file << data;
