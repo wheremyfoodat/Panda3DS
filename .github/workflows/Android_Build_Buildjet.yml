@@ -1,0 +1,74 @@
+name: Android Build (Buildjet)
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  arm64:
+    runs-on: buildjet-32vcpu-ubuntu-2204
+
+    strategy:
+      matrix:
+        build_type:
+          - release
+
+    steps:
+    - name: Set BUILD_TYPE variable
+      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v4
+    - name: Fetch submodules
+      run: git submodule update --init --recursive
+
+    - name: Set up gradle caches
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-pandroid-arm64-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-pandroid-arm64-
+
+    - name: Setup Vulkan SDK
+      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      with:
+        vulkan-query-version: latest
+        vulkan-use-cache: true
+        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_CXX_FLAGS="-march=armv8-a+crypto"
+
+    - name: Build
+      run: |
+        # Apply patch for GLES compatibility
+        git apply ./.github/gles.patch
+        # Build the project with CMake
+        cmake --build ${{github.workspace}}/build --config RelWithDebInfo
+
+        # Strip the generated library and move it to the appropriate location
+        ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded ./build/libAlber.so
+        mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/arm64-v8a/
+        
+        # Build the Android app with Gradle
+        cd src/pandroid
+        ./gradlew assembleDebug
+        ls -R app/build/outputs
+        cd ../..
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Android APKs (arm64)
+        path: |
+          ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
