@@ -5,10 +5,6 @@
 #define ARCHITECTURE_arm64
 #endif
 
-#ifndef __ANDROID__
-#define USING_FD
-#endif
-
 #ifdef _WIN32
 
 #include <windows.h>
@@ -36,10 +32,9 @@
 #define MAP_NORESERVE 0
 #endif
 
-#ifdef USING_FD
-#define MAYBE_ANONYMOUS(flags) (flags)
-#else
-#define MAYBE_ANONYMOUS(flags) (flags) | MAP_ANONYMOUS
+// On Android, include ioctl for the shared memory ioctls
+#ifdef __ANDROID__
+#include <sys/ioctl.h>
 #endif
 
 #endif  // ^^^ Linux ^^^
@@ -370,8 +365,40 @@ namespace Common {
 
 #elif defined(__linux__) || defined(__FreeBSD__)  // ^^^ Windows ^^^ vvv Linux vvv
 
-#ifdef ARCHITECTURE_arm64
+#ifdef __ANDROID__
+#define ASHMEM_DEVICE "/dev/ashmem"
+	// Android shared memory creation code from Dolphin
+	static int AshmemCreateFileMapping(const char* name, size_t size) {
+		// ASharedMemory path - works on API >= 26 and falls through on API < 26:
 
+		// We can't call ASharedMemory_create the normal way without increasing the
+		// minimum version requirement to API 26, so we use dlopen/dlsym instead
+		static void* libandroid = dlopen("libandroid.so", RTLD_LAZY | RTLD_LOCAL);
+		static auto sharedMemoryCreate = reinterpret_cast<int (*)(const char*, size_t)>(dlsym(libandroid, "ASharedMemory_create"));
+		if (sharedMemoryCreate) {
+			return sharedMemoryCreate(name, size);
+		}
+
+		// /dev/ashmem path - works on API < 29:
+
+		int fd, ret;
+		fd = open(ASHMEM_DEVICE, O_RDWR);
+		if (fd < 0) return fd;
+
+		// We don't really care if we can't set the name, it is optional
+		ioctl(fd, ASHMEM_SET_NAME, name);
+
+		ret = ioctl(fd, ASHMEM_SET_SIZE, size);
+		if (ret < 0) {
+			close(fd);
+			Helpers::warn("Ashmem allocation failed");
+			return ret;
+		}
+		return fd;
+	}
+#endif
+
+#ifdef ARCHITECTURE_arm64
 	static void* ChooseVirtualBase(size_t virtual_size) {
 		constexpr uintptr_t Map39BitSize = (1ULL << 39);
 		constexpr uintptr_t Map36BitSize = (1ULL << 36);
@@ -446,13 +473,12 @@ namespace Common {
 #if defined(__FreeBSD__) && __FreeBSD__ < 13
 			// XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
 			fd = shm_open(SHM_ANON, O_RDWR, 0600);
-#elif defined(USING_FD)
-			fd = memfd_create("HostMemory", 0);
+#elif defined(__ANDROID__)
+			fd = AshmemCreateFileMapping("HostMemory", 0);
 #else
-			fd = -1;
+			fd = memfd_create("HostMemory", 0);
 #endif
 
-#ifdef USING_FD
 			if (fd < 0) {
 				Helpers::warn("memfd_create failed: {}", strerror(errno));
 				throw std::bad_alloc{};
@@ -464,7 +490,7 @@ namespace Common {
 				Helpers::warn("ftruncate failed with {}, are you out-of-memory?", strerror(errno));
 				throw std::bad_alloc{};
 			}
-#endif
+
 			backing_base = static_cast<u8*>(mmap(nullptr, backing_size, PROT_READ | PROT_WRITE, MAYBE_ANONYMOUS(MAP_SHARED), fd, 0));
 
 			if (backing_base == MAP_FAILED) {
