@@ -17,6 +17,8 @@ struct FrontendSettings {
 	enum class WindowIcon : int {
 		Rpog = 0,
 		Rsyn = 1,
+		Rnap = 2,
+		Rcow = 3,
 	};
 
 	Theme theme = Theme::Dark;

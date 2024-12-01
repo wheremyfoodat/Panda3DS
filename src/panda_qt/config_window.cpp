@@ -77,7 +77,10 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, IconCallback iconCallb
 	QComboBox* iconSelect = new QComboBox();
 	iconSelect->addItem(tr("Happy panda"));
 	iconSelect->addItem(tr("Happy panda (colourful)"));
+	iconSelect->addItem(tr("Sleepy panda"));
+	iconSelect->addItem(tr("Cow panda"));
 	iconSelect->setCurrentIndex(static_cast<int>(config.frontendSettings.icon));
+
 	connect(iconSelect, &QComboBox::currentIndexChanged, this, [&](int index) {
 		config.frontendSettings.icon = static_cast<WindowIcon>(index);
 		setIcon(static_cast<WindowIcon>(index));
@@ -395,6 +398,8 @@ void ConfigWindow::setTheme(Theme theme) {
 void ConfigWindow::setIcon(WindowIcon icon) {
 	switch (icon) {
 		case WindowIcon::Rsyn: updateIcon(":/docs/img/rsyn_icon.png"); break;
+		case WindowIcon::Rnap: updateIcon(":/docs/img/rnap_icon.png"); break;
+		case WindowIcon::Rcow: updateIcon(":/docs/img/rcow_icon.png"); break;
 
 		case WindowIcon::Rpog:
 		default: updateIcon(":/docs/img/rpog_icon.png"); break;

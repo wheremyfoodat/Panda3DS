@@ -38,7 +38,10 @@ FrontendSettings::WindowIcon FrontendSettings::iconFromString(std::string inStri
 	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
 
 	static const std::unordered_map<std::string, WindowIcon> map = {
-		{"rpog", WindowIcon::Rpog}, {"rsyn", WindowIcon::Rsyn},
+		{"rpog", WindowIcon::Rpog},
+		{"rsyn", WindowIcon::Rsyn},
+		{"rcow", WindowIcon::Rcow},
+		{"rnap", WindowIcon::Rnap},
 	};
 
 	if (auto search = map.find(inString); search != map.end()) {
@@ -52,6 +55,8 @@ FrontendSettings::WindowIcon FrontendSettings::iconFromString(std::string inStri
 const char* FrontendSettings::iconToString(WindowIcon icon) {
 	switch (icon) {
 		case WindowIcon::Rsyn: return "rsyn";
+		case WindowIcon::Rcow: return "rcow";
+		case WindowIcon::Rnap: return "rnap";
 
 		case WindowIcon::Rpog:
 		default: return "rpog";
