@@ -19,6 +19,7 @@ struct FrontendSettings {
 		Rsyn = 1,
 		Rnap = 2,
 		Rcow = 3,
+		SkyEmu = 4,
 	};
 
 	Theme theme = Theme::Dark;
