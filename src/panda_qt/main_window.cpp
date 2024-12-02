@@ -7,15 +7,14 @@
 #include <cstdio>
 #include <fstream>
 
-#include "version.hpp"
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 #include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
+#include "version.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	setWindowTitle("Alber");
-	setWindowIcon(QIcon(":/docs/img/rpog_icon.png"));
 
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
@@ -81,7 +80,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
-	configWindow = new ConfigWindow(this);
 	cheatsEditor = new CheatsWindow(emu, {}, this);
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
@@ -91,6 +89,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	if (shaderEditor->supported) {
 		shaderEditor->setText(emu->getRenderer()->getUbershader());
 	}
+
+	configWindow = new ConfigWindow(
+		[&]() {
+			EmulatorMessage message{.type = MessageType::UpdateConfig};
+			sendMessage(message);
+		},
+		[&]() { return this; }, emu->getConfig(), this
+	);
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -105,10 +111,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	{
 		auto& config = emu->getConfig();
 		auto& windowSettings = config.windowSettings;
-
-		if (windowSettings.showAppVersion) {
-			setWindowTitle("Alber v" PANDA3DS_VERSION);
-		}
 
 		if (windowSettings.rememberPosition) {
 			setGeometry(windowSettings.x, windowSettings.y, windowSettings.width, config.windowSettings.height);
@@ -230,7 +232,7 @@ void MainWindow::selectLuaFile() {
 }
 
 // Stop emulator thread when the main window closes
-void MainWindow::closeEvent(QCloseEvent *event) {
+void MainWindow::closeEvent(QCloseEvent* event) {
 	appRunning = false;  // Set our running atomic to false in order to make the emulator thread stop, and join it
 
 	if (emuThread.joinable()) {
@@ -313,8 +315,7 @@ void MainWindow::dumpDspFirmware() {
 		case DSPService::ComponentDumpResult::Success: break;
 		case DSPService::ComponentDumpResult::NotLoaded: {
 			QMessageBox messageBox(
-				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"),
-				tr("The currently loaded app has not uploaded a firmware to the DSP")
+				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"), tr("The currently loaded app has not uploaded a firmware to the DSP")
 			);
 
 			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
@@ -410,6 +411,14 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			screen->resizeSurface(width, height);
 			break;
 		}
+
+		case MessageType::UpdateConfig:
+			emu->getConfig() = configWindow->getConfig();
+			emu->reloadSettings();
+
+			// Save new settings to disk
+			emu->getConfig().save();
+			break;
 	}
 }
 
