@@ -14,7 +14,7 @@
 #include "version.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
-	setWindowTitle("Alber");
+	setWindowTitle(tr("Alber"));
 
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
