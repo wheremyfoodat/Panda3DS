@@ -63,6 +63,7 @@ option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
+option(ENABLE_FASTMEM "Build with support for hardware fastmem" ON)
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -165,6 +166,7 @@ include_directories(third_party/toml11)
 include_directories(third_party/glm)
 include_directories(third_party/renderdoc)
 include_directories(third_party/duckstation)
+include_directories(third_party/host_memory/include)
 
 add_subdirectory(third_party/cmrc)
 
@@ -280,7 +282,7 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
                  src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp src/renderdoc.cpp
-                 src/frontend_settings.cpp
+                 src/frontend_settings.cpp src/dynamic_library.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -362,7 +364,8 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
                  include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
-                 include/services/dsp_firmware_db.hpp include/frontend_settings.hpp
+                 include/enum_flag_ops.hpp include/services/dsp_firmware_db.hpp include/frontend_settings.hpp
+                 include/dynamic_library.hpp
 )
 
 cmrc_add_resource_library(
@@ -380,6 +383,9 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
 
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
+
+                             third_party/host_memory/host_memory.cpp
+                             third_party/host_memory/virtual_buffer.cpp
 )
 
 if(ENABLE_LUAJIT AND NOT ANDROID)
@@ -623,6 +629,10 @@ endif()
 
 if(ENABLE_HTTP_SERVER)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
+endif()
+
+if(ENABLE_FASTMEM)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HARDWARE_FASTMEM=1)
 endif()
 
 # Configure frontend

@@ -3,6 +3,7 @@
 #include <bitset>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -10,8 +11,9 @@
 #include "crypto/aes_engine.hpp"
 #include "handles.hpp"
 #include "helpers.hpp"
-#include "loader/ncsd.hpp"
+#include "host_memory/host_memory.h"
 #include "loader/3dsx.hpp"
+#include "loader/ncsd.hpp"
 #include "services/region_codes.hpp"
 
 namespace PhysicalAddrs {
@@ -108,7 +110,7 @@ class Memory {
 	u8* dspRam;  // Provided to us by Audio
 	u8* vram;    // Provided to the memory class by the GPU class
 
-	u64& cpuTicks; // Reference to the CPU tick counter
+	const u64* cpuTicks = nullptr; // Pointer to the CPU tick counter, provided to us by the CPU class
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
@@ -141,6 +143,36 @@ public:
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
 private:
+	// We also use MMU-accelerated fastmem for fast memory emulation
+	// This means that we've got a 4GB memory arena which is organized the same way as the emulated 3DS' memory map
+	// And we can access this directly instead of calling the memory read/write functions, which would be slower
+	// Regions that are not mapped or can't be accelerated this way will segfault, and the caller (eg dynarmic), will
+	// handle this segfault and call the Slower memory read/write functions
+	bool useFastmem = false;
+	static constexpr size_t FASTMEM_FCRAM_OFFSET = 0;                                    // Offset of FCRAM in the fastmem arena
+	static constexpr size_t FASTMEM_DSP_RAM_OFFSET = FASTMEM_FCRAM_OFFSET + FCRAM_SIZE;  // Offset of DSP RAM
+
+	static constexpr size_t FASTMEM_BACKING_SIZE = FCRAM_SIZE + DSP_RAM_SIZE;
+	// Total size of the virtual address space we will occupy (4GB)
+	static constexpr size_t FASTMEM_VIRTUAL_SIZE = 4_GB;
+
+	Common::HostMemory* arena;
+
+	void addFastmemView(u32 guestVaddr, size_t arenaOffset, size_t size, bool w, bool x = false) {
+		if (useFastmem) {
+			Common::MemoryPermission perms = Common::MemoryPermission::Read;
+			if (w) {
+				perms |= Common::MemoryPermission::Write;
+			}
+
+			if (x) {
+				//perms |= Common::MemoryPermission::Execute;
+			}
+
+			arena->Map(guestVaddr, arenaOffset, size, perms, false);
+		}
+	}
+
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
@@ -172,7 +204,7 @@ private:
 	u32 usedUserMemory = u32(0_MB); // How much of the APPLICATION FCRAM range is used (allocated to the appcore)
 	u32 usedSystemMemory = u32(0_MB); // Similar for the SYSTEM range (reserved for the syscore)
 
-	Memory(u64& cpuTicks, const EmulatorConfig& config);
+	Memory(const EmulatorConfig& config);
 	void reset();
 	void* getReadPointer(u32 address);
 	void* getWritePointer(u32 address);
@@ -295,8 +327,12 @@ private:
 
 	void setVRAM(u8* pointer) { vram = pointer; }
 	void setDSPMem(u8* pointer) { dspRam = pointer; }
+	void setCPUTicks(const u64& ticks) { cpuTicks = &ticks; }
 
 	bool allocateMainThreadStack(u32 size);
 	Regions getConsoleRegion();
 	void copySharedFont(u8* ptr, u32 vaddr);
+
+	bool isFastmemEnabled() { return useFastmem; }
+	u8* getFastmemArenaBase() { return arena->VirtualBasePointer(); }
 };

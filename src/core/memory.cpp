@@ -14,12 +14,17 @@ CMRC_DECLARE(ConsoleFonts);
 
 using namespace KernelMemoryTypes;
 
-Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks), config(config) {
-	fcram = new uint8_t[FCRAM_SIZE]();
+Memory::Memory(const EmulatorConfig& config) : config(config) {
+	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE, false);
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
 	memoryInfo.reserve(32);  // Pre-allocate some room for memory allocation info to avoid dynamic allocs
+
+	fcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
+	// arenaDSPRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
+
+	useFastmem = arena->VirtualBasePointer() != nullptr;
 }
 
 void Memory::reset() {
@@ -28,6 +33,11 @@ void Memory::reset() {
 	usedFCRAMPages.reset();
 	usedUserMemory = u32(0_MB);
 	usedSystemMemory = u32(0_MB);
+
+	if (useFastmem) {
+		// Unmap any mappings when resetting
+		arena->Unmap(0, 4_GB, false);
+	}
 
 	for (u32 i = 0; i < totalPageCount; i++) {
 		readTable[i] = 0;
@@ -69,6 +79,9 @@ void Memory::reset() {
 		readTable[i + initialPage] = pointer;
 		writeTable[i + initialPage] = pointer;
 	}
+
+	// Allocate RW mapping for DSP RAM
+	// addFastmemView(VirtualAddrs::DSPMemStart, FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false);
 
 	// Later adjusted based on ROM header when possible
 	region = Regions::USA;
@@ -163,8 +176,8 @@ u32 Memory::read32(u32 vaddr) {
 			case ConfigMem::Datetime0 + 4:
 				return u32(timeSince3DSEpoch() >> 32);  // top 32 bits
 			// Ticks since time was last updated. For now we return the current tick count
-			case ConfigMem::Datetime0 + 8: return u32(cpuTicks);
-			case ConfigMem::Datetime0 + 12: return u32(cpuTicks >> 32);
+			case ConfigMem::Datetime0 + 8: return u32(*cpuTicks);
+			case ConfigMem::Datetime0 + 12: return u32(*cpuTicks >> 32);
 			case ConfigMem::Datetime0 + 16: return 0xFFB0FF0;  // Unknown, set by PTM
 			case ConfigMem::Datetime0 + 20:
 			case ConfigMem::Datetime0 + 24:
@@ -357,6 +370,9 @@ std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool l
 
 		// Mark FCRAM page as allocated and go on
 		usedFCRAMPages[physPage] = true;
+		// Add mapping to the fastmem arena
+		addFastmemView(size_t(virtualPage) * pageSize, FASTMEM_FCRAM_OFFSET + size_t(physPage) * pageSize, pageSize, w, false);
+
 		virtualPage++;
 		physPage++;
 	}
@@ -481,6 +497,10 @@ void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
 
 	const u32 pageCount = size / pageSize;  // How many pages we need to mirror
 	for (u32 i = 0; i < pageCount; i++) {
+		if (useFastmem) {
+			Helpers::panic("Unimplemented: Mirror mapping with fastmem enabled");
+		}
+
 		// Redo the shift here to "properly" handle wrapping around the address space instead of reading OoB
 		const u32 sourcePage = sourceAddress / pageSize;
 		const u32 destPage = destAddress / pageSize;
