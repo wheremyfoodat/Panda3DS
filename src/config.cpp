@@ -1,5 +1,7 @@
 #include "config.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <map>
@@ -105,6 +107,7 @@ void EmulatorConfig::load() {
 			// Our volume ranges from 0.0 (muted) to 2.0 (boosted, using a logarithmic scale). 1.0 is the "default" volume, ie we don't adjust the PCM
 			// samples at all.
 			audioDeviceConfig.volumeRaw = float(std::clamp(toml::find_or<toml::floating>(audio, "AudioVolume", 1.0), 0.0, 2.0));
+			audioDeviceConfig.volumeCurve = AudioDeviceConfig::volumeCurveFromString(toml::find_or<std::string>(audio, "VolumeCurve", "cubic"));
 		}
 	}
 
@@ -188,6 +191,7 @@ void EmulatorConfig::save() {
 	data["Audio"]["EnableAACAudio"] = aacEnabled;
 	data["Audio"]["MuteAudio"] = audioDeviceConfig.muteAudio;
 	data["Audio"]["AudioVolume"] = double(audioDeviceConfig.volumeRaw);
+	data["Audio"]["VolumeCurve"] = std::string(AudioDeviceConfig::volumeCurveToString(audioDeviceConfig.volumeCurve));
 	data["Audio"]["PrintDSPFirmware"] = printDSPFirmware;
 
 	data["Battery"]["ChargerPlugged"] = chargerPlugged;
@@ -202,4 +206,27 @@ void EmulatorConfig::save() {
 	std::ofstream file(path, std::ios::out);
 	file << data;
 	file.close();
+}
+
+AudioDeviceConfig::VolumeCurve AudioDeviceConfig::volumeCurveFromString(std::string inString) {
+	// Transform to lower-case to make the setting case-insensitive
+	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
+
+	if (inString == "cubic") {
+		return VolumeCurve::Cubic;
+	} else if (inString == "linear") {
+		return VolumeCurve::Linear;
+	}
+
+	// Default to cubic curve
+	return VolumeCurve::Cubic;
+}
+
+const char* AudioDeviceConfig::volumeCurveToString(AudioDeviceConfig::VolumeCurve curve) {
+	switch (curve) {
+		case VolumeCurve::Linear: return "linear";
+
+		case VolumeCurve::Cubic:
+		default: return "cubic";
+	}
 }

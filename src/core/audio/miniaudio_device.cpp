@@ -134,6 +134,12 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 			} else {
 				// If our volume is in [0.0, 1.0) then just multiply by the volume. No need to clamp, since there is no danger of our samples wrapping
 				// around due to overflow
+
+				// If we're applying cubic volume curve, raise volume to the power of 3
+				if (self->audioSettings.volumeCurve == AudioDeviceConfig::VolumeCurve::Cubic) {
+					audioVolume = audioVolume * audioVolume * audioVolume;
+				}
+
 				for (usize i = 0; i < samplesWritten; i += 2) {
 					s16 l = s16(float(sample[0]) * audioVolume);
 					s16 r = s16(float(sample[1]) * audioVolume);

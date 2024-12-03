@@ -1,12 +1,21 @@
 #pragma once
 #include <filesystem>
+#include <string>
 
 #include "audio/dsp_core.hpp"
-#include "renderer.hpp"
 #include "frontend_settings.hpp"
+#include "renderer.hpp"
 
 struct AudioDeviceConfig {
+	// Audio curve to use for volumes between 0-100
+	enum class VolumeCurve : int {
+		Cubic = 0,   // Samples are scaled by volume ^ 3
+		Linear = 1,  // Samples are scaled by volume
+	};
+
 	float volumeRaw = 1.0f;
+	VolumeCurve volumeCurve = VolumeCurve::Cubic;
+
 	bool muteAudio = false;
 
 	float getVolume() const {
@@ -16,6 +25,9 @@ struct AudioDeviceConfig {
 
 		return volumeRaw;
 	}
+
+	static VolumeCurve volumeCurveFromString(std::string inString);
+	static const char* volumeCurveToString(VolumeCurve curve);
 };
 
 // Remember to initialize every field here to its default value otherwise bad things will happen
