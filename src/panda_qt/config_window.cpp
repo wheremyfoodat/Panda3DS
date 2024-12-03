@@ -135,7 +135,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 			defaultRomPath->setText(newPath);
 		}
 	});
-	QHBoxLayout* romLayout = new QHBoxLayout;
+
+	QHBoxLayout* romLayout = new QHBoxLayout();
 	romLayout->setSpacing(4);
 	romLayout->addWidget(defaultRomPath);
 	romLayout->addWidget(browseRomPath);
@@ -250,14 +251,23 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	});
 	audioLayout->addRow(tr("Volume curve"), volumeCurveType);
 
-	QSpinBox* volumeRaw = new QSpinBox();
-	volumeRaw->setRange(0, 200);
-	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw * 100);
-	connect(volumeRaw, &QSpinBox::valueChanged, this, [&](int value) {
+	QLabel* volumeLabel = new QLabel(QString::number(int(config.audioDeviceConfig.volumeRaw * 100)));
+
+	QSlider* volumeSlider = new QSlider(Qt::Horizontal);
+	volumeSlider->setRange(0, 200);
+	volumeSlider->setValue(int(config.audioDeviceConfig.volumeRaw * 100));
+	connect(volumeSlider, &QSlider::valueChanged, this, [this, volumeLabel](int value) {
 		config.audioDeviceConfig.volumeRaw = static_cast<float>(value) / 100.0f;
+		volumeLabel->setText(QString::number(value));
+
 		updateConfig();
 	});
-	audioLayout->addRow(tr("Audio device volume"), volumeRaw);
+
+	QHBoxLayout* volumeLayout = new QHBoxLayout();
+	volumeLayout->setSpacing(4);
+	volumeLayout->addWidget(volumeSlider);
+	volumeLayout->addWidget(volumeLabel);
+	audioLayout->addRow(tr("Audio device volume"), volumeLayout);
 
 	// Battery settings
 	QGroupBox* batGroupBox = new QGroupBox(tr("Battery Settings"), this);
