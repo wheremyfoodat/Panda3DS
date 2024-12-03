@@ -3,6 +3,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QString>
+#include <QTranslator>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -77,6 +78,30 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	emu = new Emulator();
 	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
+
+	QTranslator* translator = nullptr;
+	auto language = QString::fromStdString("el");
+	const QString baseDir = QStringLiteral(":/translations");
+	QString basePath = QStringLiteral("%1/%2.qm").arg(baseDir).arg(language);
+
+	if (QFile::exists(basePath)) {
+		if (translator != nullptr) {
+			qApp->removeTranslator(translator);
+		}
+
+		translator = new QTranslator(qApp);
+		if (!translator->load(basePath)) {
+			QMessageBox::warning(
+				nullptr, QStringLiteral("Translation Error"),
+				QStringLiteral("Failed to find load translation file for '%1':\n%2").arg(language).arg(basePath)
+			);
+			delete translator;
+		} else {
+			qApp->installTranslator(translator);
+		}
+	} else {
+		printf("%s does not exist\n", basePath.toStdString().c_str());
+	}
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);

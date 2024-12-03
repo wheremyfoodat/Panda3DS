@@ -637,7 +637,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
     if(ENABLE_QT_GUI)
-        find_package(Qt6 REQUIRED COMPONENTS Widgets)
+        find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)
         if(NOT ENABLE_OPENGL)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
@@ -700,6 +700,24 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
                 docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png
         )
+
+        set(QT_TRANSLATIONS "${PROJECT_SOURCE_DIR}/docs/translations")
+        file(GLOB_RECURSE TRANSLATIONS_TS ${QT_TRANSLATIONS}/*.ts)
+
+        set_source_files_properties(${TRANSLATIONS_TS} PROPERTIES OUTPUT_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/translations")
+        qt_add_translation(TRANSLATIONS_QM ${TRANSLATIONS_TS})
+
+        set(TRANSLATIONS_QRC ${CMAKE_CURRENT_BINARY_DIR}/translations/translations.qrc)
+        file(WRITE ${TRANSLATIONS_QRC} "<RCC><qresource prefix=\"translations\">\n")
+        foreach (QM ${TRANSLATIONS_QM})
+            message("${QM}")
+            get_filename_component(QM_FILE ${QM} NAME)
+            file(APPEND ${TRANSLATIONS_QRC} "<file>${QM_FILE}</file>\n")
+        endforeach (QM)
+        file(APPEND ${TRANSLATIONS_QRC} "</qresource></RCC>")
+
+        qt_add_resources(TRANSLATIONS ${TRANSLATIONS_QRC})
+        set(APP_RESOURCES ${APP_RESOURCES} ${TRANSLATIONS})
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
         set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")
