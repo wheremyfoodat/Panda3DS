@@ -85,6 +85,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	iconSelect->addItem(tr("Happy panda (colourful)"));
 	iconSelect->addItem(tr("Sleepy panda"));
 	iconSelect->addItem(tr("Cow panda"));
+	iconSelect->addItem(tr("The penguin from SkyEmu"));
 	iconSelect->setCurrentIndex(static_cast<int>(config.frontendSettings.icon));
 
 	connect(iconSelect, &QComboBox::currentIndexChanged, this, [&](int index) {
@@ -238,6 +239,16 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	QCheckBox* muteAudio = new QCheckBox(tr("Mute audio device"));
 	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
 	audioLayout->addRow(muteAudio);
+
+	QComboBox* volumeCurveType = new QComboBox;
+	volumeCurveType->addItem(tr("Cubic"));
+	volumeCurveType->addItem(tr("Linear"));
+	volumeCurveType->setCurrentIndex(static_cast<int>(config.audioDeviceConfig.volumeCurve));
+	connect(volumeCurveType, &QComboBox::currentIndexChanged, this, [&](int index) {
+		config.audioDeviceConfig.volumeCurve = static_cast<AudioDeviceConfig::VolumeCurve>(index);
+		updateConfig();
+	});
+	audioLayout->addRow(tr("Volume curve"), volumeCurveType);
 
 	QSpinBox* volumeRaw = new QSpinBox();
 	volumeRaw->setRange(0, 200);
@@ -398,6 +409,7 @@ void ConfigWindow::setIcon(WindowIcon icon) {
 		case WindowIcon::Rsyn: updateIcon(":/docs/img/rsyn_icon.png"); break;
 		case WindowIcon::Rnap: updateIcon(":/docs/img/rnap_icon.png"); break;
 		case WindowIcon::Rcow: updateIcon(":/docs/img/rcow_icon.png"); break;
+		case WindowIcon::SkyEmu: updateIcon(":/docs/img/skyemu_icon.png"); break;
 
 		case WindowIcon::Rpog:
 		default: updateIcon(":/docs/img/rpog_icon.png"); break;
