@@ -240,6 +240,16 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
 	audioLayout->addRow(muteAudio);
 
+	QComboBox* volumeCurveType = new QComboBox;
+	volumeCurveType->addItem(tr("Cubic"));
+	volumeCurveType->addItem(tr("Linear"));
+	volumeCurveType->setCurrentIndex(static_cast<int>(config.audioDeviceConfig.volumeCurve));
+	connect(volumeCurveType, &QComboBox::currentIndexChanged, this, [&](int index) {
+		config.audioDeviceConfig.volumeCurve = static_cast<AudioDeviceConfig::VolumeCurve>(index);
+		updateConfig();
+	});
+	audioLayout->addRow(tr("Volume curve"), volumeCurveType);
+
 	QSpinBox* volumeRaw = new QSpinBox();
 	volumeRaw->setRange(0, 200);
 	volumeRaw->setValue(config.audioDeviceConfig.volumeRaw * 100);
