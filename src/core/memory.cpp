@@ -15,7 +15,7 @@ CMRC_DECLARE(ConsoleFonts);
 using namespace KernelMemoryTypes;
 
 Memory::Memory(const EmulatorConfig& config) : config(config) {
-	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE);
+	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE, false);
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);

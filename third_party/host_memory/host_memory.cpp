@@ -16,7 +16,7 @@
 #include <iterator>
 #include <unordered_map>
 
-#include "host_memory/dynamic_library.h"
+#include "dynamic_library.hpp"
 
 #elif defined(__linux__) || defined(__FreeBSD__)  // ^^^ Windows ^^^ vvv Linux vvv
 
@@ -99,7 +99,7 @@ namespace Common {
 
 	template <typename T>
 	static void GetFuncAddress(Common::DynamicLibrary& dll, const char* name, T& pfn) {
-		if (!dll.GetSymbol(name, &pfn)) {
+		if (!dll.getSymbol(name, &pfn)) {
 			Helpers::warn("Failed to load %s", name);
 			throw std::bad_alloc{};
 		}
@@ -109,7 +109,7 @@ namespace Common {
 	  public:
 		explicit Impl(size_t backing_size_, size_t virtual_size_)
 			: backing_size{backing_size_}, virtual_size{virtual_size_}, process{GetCurrentProcess()}, kernelbase_dll("Kernelbase") {
-			if (!kernelbase_dll.IsOpen()) {
+			if (!kernelbase_dll.isOpen()) {
 				Helpers::warn("Failed to load Kernelbase.dll");
 				throw std::bad_alloc{};
 			}
@@ -666,8 +666,13 @@ namespace Common {
 
 #endif  // ^^^ Generic ^^^
 
-	HostMemory::HostMemory(size_t backing_size_, size_t virtual_size_) : backing_size(backing_size_), virtual_size(virtual_size_) {
+	HostMemory::HostMemory(size_t backing_size_, size_t virtual_size_, bool enableFastmem) : backing_size(backing_size_), virtual_size(virtual_size_) {
 		try {
+			// Fastmem is disabled, just throw bad alloc and use the VirtualBuffer fallback.
+			if (!enableFastmem) {
+				throw std::bad_alloc{};
+			}
+
 			// Try to allocate a fastmem arena.
 			// The implementation will fail with std::bad_alloc on errors.
 			impl = std::make_unique<HostMemory::Impl>(
@@ -683,7 +688,10 @@ namespace Common {
 			}
 
 		} catch (const std::bad_alloc&) {
-			Helpers::warn("Fastmem unavailable, falling back to VirtualBuffer for memory allocation");
+			if (enableFastmem) {
+				Helpers::warn("Fastmem unavailable, falling back to VirtualBuffer for memory allocation");
+			}
+
 			fallback_buffer = std::make_unique<Common::VirtualBuffer<u8>>(backing_size);
 			backing_base = fallback_buffer->data();
 			virtual_base = nullptr;

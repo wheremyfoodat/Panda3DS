@@ -25,7 +25,7 @@ namespace Common {
 	 */
 	class HostMemory {
 	  public:
-		explicit HostMemory(size_t backing_size_, size_t virtual_size_);
+		explicit HostMemory(size_t backing_size_, size_t virtual_size_, bool useFastmem);
 		~HostMemory();
 
 		/**

@@ -282,7 +282,7 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
                  src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp src/renderdoc.cpp
-                 src/frontend_settings.cpp
+                 src/frontend_settings.cpp src/dynamic_library.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -365,6 +365,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
                  include/enum_flag_ops.hpp include/services/dsp_firmware_db.hpp include/frontend_settings.hpp
+                 include/dynamic_library.hpp
 )
 
 cmrc_add_resource_library(
@@ -385,7 +386,6 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
 
                              third_party/host_memory/host_memory.cpp
                              third_party/host_memory/virtual_buffer.cpp
-                             third_party/host_memory/dynamic_library.cpp
 )
 
 if(ENABLE_LUAJIT AND NOT ANDROID)

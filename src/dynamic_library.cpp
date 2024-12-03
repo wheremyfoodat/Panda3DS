@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2019 Dolphin Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-#include "host_memory/dynamic_library.h"
+#include "dynamic_library.hpp"
 
 #include <fmt/format.h>
 
@@ -15,21 +15,20 @@
 #endif
 
 namespace Common {
-
 	DynamicLibrary::DynamicLibrary() = default;
-	DynamicLibrary::DynamicLibrary(const char* filename) { void(Open(filename)); }
+	DynamicLibrary::DynamicLibrary(const char* filename) { void(open(filename)); }
 	DynamicLibrary::DynamicLibrary(void* handle_) : handle{handle_} {}
 	DynamicLibrary::DynamicLibrary(DynamicLibrary&& rhs) noexcept : handle{std::exchange(rhs.handle, nullptr)} {}
 
 	DynamicLibrary& DynamicLibrary::operator=(DynamicLibrary&& rhs) noexcept {
-		Close();
+		close();
 		handle = std::exchange(rhs.handle, nullptr);
 		return *this;
 	}
 
-	DynamicLibrary::~DynamicLibrary() { Close(); }
+	DynamicLibrary::~DynamicLibrary() { close(); }
 
-	std::string DynamicLibrary::GetUnprefixedFilename(const char* filename) {
+	std::string DynamicLibrary::getUnprefixedFilename(const char* filename) {
 #if defined(_WIN32)
 		return std::string(filename) + ".dll";
 #elif defined(__APPLE__)
@@ -39,7 +38,7 @@ namespace Common {
 #endif
 	}
 
-	std::string DynamicLibrary::GetVersionedFilename(const char* libname, int major, int minor) {
+	std::string DynamicLibrary::getVersionedFilename(const char* libname, int major, int minor) {
 #if defined(_WIN32)
 		if (major >= 0 && minor >= 0)
 			return fmt::format("{}-{}-{}.dll", libname, major, minor);
@@ -66,7 +65,7 @@ namespace Common {
 #endif
 	}
 
-	bool DynamicLibrary::Open(const char* filename) {
+	bool DynamicLibrary::open(const char* filename) {
 #ifdef _WIN32
 		handle = reinterpret_cast<void*>(LoadLibraryA(filename));
 #else
@@ -75,8 +74,8 @@ namespace Common {
 		return handle != nullptr;
 	}
 
-	void DynamicLibrary::Close() {
-		if (!IsOpen()) return;
+	void DynamicLibrary::close() {
+		if (!isOpen()) return;
 
 #ifdef _WIN32
 		FreeLibrary(reinterpret_cast<HMODULE>(handle));
@@ -86,7 +85,7 @@ namespace Common {
 		handle = nullptr;
 	}
 
-	void* DynamicLibrary::GetSymbolAddress(const char* name) const {
+	void* DynamicLibrary::getSymbolAddress(const char* name) const {
 #ifdef _WIN32
 		return reinterpret_cast<void*>(GetProcAddress(reinterpret_cast<HMODULE>(handle), name));
 #else

@@ -6,7 +6,6 @@
 #include <string>
 
 namespace Common {
-
 	/**
 	 * Provides a platform-independent interface for loading a dynamic library and retrieving symbols.
 	 * The interface maintains an internal reference count to allow one handle to be shared between
@@ -35,7 +34,7 @@ namespace Common {
 		~DynamicLibrary();
 
 		/// Returns the specified library name with the platform-specific suffix added.
-		[[nodiscard]] static std::string GetUnprefixedFilename(const char* filename);
+		[[nodiscard]] static std::string getUnprefixedFilename(const char* filename);
 
 		/// Returns the specified library name in platform-specific format.
 		/// Major/minor versions will not be included if set to -1.
@@ -43,27 +42,27 @@ namespace Common {
 		/// Windows: LIBNAME-MAJOR-MINOR.dll
 		/// Linux: libLIBNAME.so.MAJOR.MINOR
 		/// Mac: libLIBNAME.MAJOR.MINOR.dylib
-		[[nodiscard]] static std::string GetVersionedFilename(const char* libname, int major = -1, int minor = -1);
+		[[nodiscard]] static std::string getVersionedFilename(const char* libname, int major = -1, int minor = -1);
 
 		/// Returns true if a module is loaded, otherwise false.
-		[[nodiscard]] bool IsOpen() const { return handle != nullptr; }
+		[[nodiscard]] bool isOpen() const { return handle != nullptr; }
 
 		/// Loads (or replaces) the handle with the specified library file name.
 		/// Returns true if the library was loaded and can be used.
-		[[nodiscard]] bool Open(const char* filename);
+		[[nodiscard]] bool open(const char* filename);
 
 		/// Unloads the library, any function pointers from this library are no longer valid.
-		void Close();
+		void close();
 
 		/// Returns the address of the specified symbol (function or variable) as an untyped pointer.
 		/// If the specified symbol does not exist in this library, nullptr is returned.
-		[[nodiscard]] void* GetSymbolAddress(const char* name) const;
+		[[nodiscard]] void* getSymbolAddress(const char* name) const;
 
 		/// Obtains the address of the specified symbol, automatically casting to the correct type.
 		/// Returns true if the symbol was found and assigned, otherwise false.
 		template <typename T>
-		[[nodiscard]] bool GetSymbol(const char* name, T* ptr) const {
-			*ptr = reinterpret_cast<T>(GetSymbolAddress(name));
+		[[nodiscard]] bool getSymbol(const char* name, T* ptr) const {
+			*ptr = reinterpret_cast<T>(getSymbolAddress(name));
 			return *ptr != nullptr;
 		}
 
@@ -71,5 +70,4 @@ namespace Common {
 		/// Platform-dependent data type representing a dynamic library handle.
 		void* handle = nullptr;
 	};
-
 }  // namespace Common
