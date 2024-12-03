@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: Copyright 2021 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+// Copyright 2008 Dolphin Emulator Project
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #if defined(_M_ARM64) || defined(__aarch64__)
 #define ARCHITECTURE_arm64
 #endif
@@ -59,7 +62,7 @@ namespace Common {
 	constexpr size_t PageAlignment = 0x1000;
 	constexpr size_t HugePageSize = 0x200000;
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(PANDA3DS_HARDWARE_FASTMEM)
 
 // Manually imported for MinGW compatibility
 #ifndef MEM_RESERVE_PLACEHOLDER
@@ -365,7 +368,7 @@ namespace Common {
 		std::unordered_map<size_t, size_t> placeholder_host_pointers;  ///< Placeholder backing offset
 	};
 
-#elif defined(__linux__) || defined(__FreeBSD__)  // ^^^ Windows ^^^ vvv Linux vvv
+#elif (defined(__linux__) || defined(__FreeBSD__)) && defined(PANDA3DS_HARDWARE_FASTMEM)  // ^^^ Windows ^^^ vvv Linux vvv
 
 #ifdef __ANDROID__
 #define ASHMEM_DEVICE "/dev/ashmem"

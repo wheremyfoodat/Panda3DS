@@ -152,8 +152,11 @@ private:
 	static constexpr size_t FASTMEM_FCRAM_OFFSET = 0;                                    // Offset of FCRAM in the fastmem arena
 	static constexpr size_t FASTMEM_DSP_RAM_OFFSET = FASTMEM_FCRAM_OFFSET + FCRAM_SIZE;  // Offset of DSP RAM
 
-#ifdef PANDA3DS_HARDWARE_FASTMEM
-	std::unique_ptr<Common::HostMemory> arena;
+	static constexpr size_t FASTMEM_BACKING_SIZE = FCRAM_SIZE + DSP_RAM_SIZE;
+	// Total size of the virtual address space we will occupy (4GB)
+	static constexpr size_t FASTMEM_VIRTUAL_SIZE = 4_GB;
+
+	Common::HostMemory* arena;
 
 	void addFastmemView(u32 guestVaddr, size_t arenaOffset, size_t size, bool w, bool x = false) {
 		if (useFastmem) {
@@ -169,10 +172,6 @@ private:
 			arena->Map(guestVaddr, arenaOffset, size, perms, false);
 		}
 	}
-#else
-	void resetFastmemViews() {}
-	void addFastmemView(u32 guestVaddr, size_t arenaOffset, size_t size, bool r, bool w, bool x = false) {}
-#endif
 
 	std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
 	std::optional<u32> findPaddr(u32 size);
@@ -334,11 +333,6 @@ private:
 	Regions getConsoleRegion();
 	void copySharedFont(u8* ptr, u32 vaddr);
 
-#ifdef PANDA3DS_HARDWARE_FASTMEM
 	bool isFastmemEnabled() { return useFastmem; }
 	u8* getFastmemArenaBase() { return arena->VirtualBasePointer(); }
-#else
-	bool isFastmemEnabled() { return false; }
-	u8* getFastmemArenaBase() { return nullptr; }
-#endif
 };

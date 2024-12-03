@@ -15,35 +15,16 @@ CMRC_DECLARE(ConsoleFonts);
 using namespace KernelMemoryTypes;
 
 Memory::Memory(const EmulatorConfig& config) : config(config) {
-	fcram = new uint8_t[FCRAM_SIZE]();
+	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE);
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
 	memoryInfo.reserve(32);  // Pre-allocate some room for memory allocation info to avoid dynamic allocs
 
-#ifdef PANDA3DS_HARDWARE_FASTMEM
-	u8* arenaFcram = nullptr;
-	u8* arenaDSPRam = nullptr;
+	fcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
+	// arenaDSPRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
 
-	constexpr size_t BACKING_SIZE = FCRAM_SIZE + DSP_RAM_SIZE;
-	constexpr size_t VIRTUAL_SIZE = 4_GB;  // Total size of the virtual address space we will occupy (4GB)
-
-	try {
-		arena.reset(new Common::HostMemory(BACKING_SIZE, VIRTUAL_SIZE));
-		arenaFcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
-		// arenaDSPRam = arena->VirtualBasePointer() + FASTMEM_DSP_RAM_OFFSET;
-
-		useFastmem = true;
-		delete[] fcram;
-
-		fcram = arenaFcram;
-	} catch (...) {
-		useFastmem = false;
-	}
-#else
-	useFastmem = false;
-	fastmemArenaBase = nullptr;
-#endif
+	useFastmem = arena->VirtualBasePointer() != nullptr;
 }
 
 void Memory::reset() {
@@ -98,7 +79,9 @@ void Memory::reset() {
 		readTable[i + initialPage] = pointer;
 		writeTable[i + initialPage] = pointer;
 	}
-	// addFastmemView(VirtualAddrs::DSPMemStart, FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false);  // Allocate RW mapping for DSP RAM
+
+	// Allocate RW mapping for DSP RAM
+	// addFastmemView(VirtualAddrs::DSPMemStart, FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false);
 
 	// Later adjusted based on ROM header when possible
 	region = Regions::USA;
@@ -514,6 +497,10 @@ void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
 
 	const u32 pageCount = size / pageSize;  // How many pages we need to mirror
 	for (u32 i = 0; i < pageCount; i++) {
+		if (useFastmem) {
+			Helpers::panic("Unimplemented: Mirror mapping with fastmem enabled");
+		}
+
 		// Redo the shift here to "properly" handle wrapping around the address space instead of reading OoB
 		const u32 sourcePage = sourceAddress / pageSize;
 		const u32 destPage = destAddress / pageSize;
