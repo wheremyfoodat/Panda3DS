@@ -12,7 +12,7 @@
 #include "io_file.hpp"
 
 PatchWindow::PatchWindow(QWidget* parent) : QWidget(parent, Qt::Window) {
-	setWindowTitle("ROM patcher");
+	setWindowTitle(tr("ROM patcher"));
 
 	QVBoxLayout* layout = new QVBoxLayout;
 	layout->setContentsMargins(6, 6, 6, 6);
