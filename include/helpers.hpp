@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <thread>
+#include <chrono>
 
 #include "termcolor.hpp"
 
@@ -47,7 +49,7 @@ namespace Helpers {
 		std::cout << termcolor::on_red << "[FATAL] ";
 		std::printf(fmt, args...);
 		std::cout << termcolor::reset << "\n";
-
+		std::this_thread::sleep_for(std::chrono::minutes(5));
 		exit(1);
 	}
 	
