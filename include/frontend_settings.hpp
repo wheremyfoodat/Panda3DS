@@ -24,6 +24,7 @@ struct FrontendSettings {
 
 	Theme theme = Theme::Dark;
 	WindowIcon icon = WindowIcon::Rpog;
+	std::string language = "en";
 
 	static Theme themeFromString(std::string inString);
 	static const char* themeToString(Theme theme);

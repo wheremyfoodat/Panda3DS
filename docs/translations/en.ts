@@ -136,371 +136,397 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="99"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="100"/>
+        <source>Language</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/config_window.cpp" line="102"/>
         <source>Show version on window title</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="106"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="15"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="109"/>
         <source>Alber v%1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="106"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="109"/>
         <source>Alber</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="111"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="114"/>
         <source>Remember window position</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="116"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="119"/>
         <source>General Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="127"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="130"/>
         <source>Browse...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="131"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="134"/>
         <source>Select Directory</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="143"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="146"/>
         <source>Default ROMs path</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="145"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="148"/>
         <source>Enable Discord RPC</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="149"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="152"/>
         <source>Use portable build</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="153"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="156"/>
         <source>Print version in console output</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="158"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="161"/>
         <source>Graphics Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="164"/>
-        <location filename="../../src/panda_qt/config_window.cpp" line="218"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="167"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="221"/>
         <source>Null</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="165"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="168"/>
         <source>OpenGL</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="166"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="169"/>
         <source>Vulkan</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="172"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="175"/>
         <source>GPU renderer</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="174"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="177"/>
         <source>Enable Renderdoc</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="178"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="181"/>
         <source>Enable shader JIT</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="182"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="185"/>
         <source>Enable VSync</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="186"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="189"/>
         <source>Use ubershaders (No stutter, maybe slower)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="190"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="193"/>
         <source>Accurate shader multiplication</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="194"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="197"/>
         <source>Accelerate shaders</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="198"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="201"/>
         <source>Force shadergen when rendering lights</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="209"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="212"/>
         <source>Light threshold for forcing shadergen</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="212"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="215"/>
         <source>Audio Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="219"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="222"/>
         <source>LLE</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="220"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="223"/>
         <source>HLE</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="226"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="229"/>
         <source>DSP emulation</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="228"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="231"/>
         <source>Enable audio</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="232"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="235"/>
         <source>Enable AAC audio</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="236"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="239"/>
         <source>Print DSP firmware</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="240"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="243"/>
         <source>Mute audio device</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="245"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="248"/>
         <source>Cubic</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="246"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="249"/>
         <source>Linear</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="252"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="255"/>
         <source>Volume curve</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="270"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="273"/>
         <source>Audio device volume</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="273"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="276"/>
         <source>Battery Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="285"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="288"/>
         <source>Battery percentage</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="287"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="290"/>
         <source>Charger plugged</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="292"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="295"/>
         <source>SD Card Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="297"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="300"/>
         <source>Enable virtual SD card</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="301"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="304"/>
         <source>Write protect virtual SD card</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="306"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
         <source>Interface</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="306"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
         <source>User Interface settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="307"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
         <source>General</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="307"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
         <source>General emulator settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="308"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
         <source>Graphics</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="308"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
         <source>Graphics emulation and output settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="312"/>
         <source>Audio</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="312"/>
         <source>Audio emulation and output settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="313"/>
         <source>Battery</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="313"/>
         <source>Battery emulation settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="314"/>
         <source>SD Card</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="314"/>
         <source>SD Card emulation settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="75"/>
+        <source>Language change successful</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="76"/>
+        <source>Restart Panda3DS for the new language to be used.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="82"/>
+        <source>Language change failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="83"/>
+        <source>The language you selected is not included in Panda3DS. If you&apos;re seeing this, someone messed up the language UI code...</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="19"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="20"/>
         <source>Alber</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="37"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="38"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="38"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="39"/>
         <source>Emulation</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="39"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="40"/>
         <source>Tools</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="40"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="41"/>
         <source>About</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="43"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="44"/>
         <source>Load game</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="44"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="45"/>
         <source>Load Lua script</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="45"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="46"/>
         <source>Open Panda3DS folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="54"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="55"/>
         <source>Pause</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="55"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="56"/>
         <source>Resume</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="56"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="57"/>
         <source>Reset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="57"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="58"/>
         <source>Configure</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="63"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="64"/>
         <source>Dump RomFS</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="64"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="65"/>
         <source>Open Lua Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="65"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="66"/>
         <source>Open Cheats Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="66"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="67"/>
         <source>Open Patch Window</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="67"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="68"/>
         <source>Open Shader Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="68"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="69"/>
         <source>Dump loaded DSP firmware</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="77"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="78"/>
         <source>About Panda3DS</source>
         <translation type="unfinished"></translation>
     </message>

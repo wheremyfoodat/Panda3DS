@@ -134,371 +134,396 @@
         <translation>Εικονίδιο Παραθύρου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="99"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="100"/>
+        <source>Language</source>
+        <translation>Γλώσσα</translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/config_window.cpp" line="102"/>
         <source>Show version on window title</source>
         <translation>Εμφάνιση έκδοσης στον τίτλο του παραθύρου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="106"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="109"/>
         <source>Alber v%1</source>
         <translation>Αλβέρτος v%1</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="106"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="109"/>
         <source>Alber</source>
         <translation>Αλβέρτος</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="111"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="114"/>
         <source>Remember window position</source>
         <translation>Αποθήκευση θέσης παραθύρου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="116"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="119"/>
         <source>General Settings</source>
         <translation>Γενικές Ρυθμίσεις</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="127"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="130"/>
         <source>Browse...</source>
         <translation>Περιήγηση</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="131"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="134"/>
         <source>Select Directory</source>
         <translation>Επιλογή φακέλου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="143"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="146"/>
         <source>Default ROMs path</source>
         <translation>Προεπιλεγμένος φάκελος ROM</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="145"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="148"/>
         <source>Enable Discord RPC</source>
         <translation>Ενεργοποίηση Discord RPC</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="149"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="152"/>
         <source>Use portable build</source>
         <translation>Ενεργοποίηση φορητής εγκατάστασης</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="153"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="156"/>
         <source>Print version in console output</source>
         <translation>Εκτύπωση έκδοσης στην κονσόλα</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="158"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="161"/>
         <source>Graphics Settings</source>
         <translation>Ρυθμίσεις Γραφικών</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="164"/>
-        <location filename="../../src/panda_qt/config_window.cpp" line="218"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="167"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="221"/>
         <source>Null</source>
         <translation>Κανένα</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="165"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="168"/>
         <source>OpenGL</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="166"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="169"/>
         <source>Vulkan</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="172"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="175"/>
         <source>GPU renderer</source>
         <translation>Πυρήνας GPU</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="174"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="177"/>
         <source>Enable Renderdoc</source>
         <translation>Ενεργοποίηση Renderdoc</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="178"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="181"/>
         <source>Enable shader JIT</source>
         <translation>Ενεργοποίηση μεταγλωττιστή shaders</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="182"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="185"/>
         <source>Enable VSync</source>
         <translation>Ενεργοποίηση VSync</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="186"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="189"/>
         <source>Use ubershaders (No stutter, maybe slower)</source>
         <translation>Χρήση ubershaders (Χωρίς stutter, ίσως πιο αργό)</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="190"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="193"/>
         <source>Accurate shader multiplication</source>
         <translation>Ακριβής πολλαπλασιασμός στα shaders</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="194"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="197"/>
         <source>Accelerate shaders</source>
         <translation>Επιτάχυνση shaders</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="198"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="201"/>
         <source>Force shadergen when rendering lights</source>
         <translation>Εξαναγκασμός shadergen όταν υπάρχουν φώτα</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="209"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="212"/>
         <source>Light threshold for forcing shadergen</source>
         <translation>Αριθμός φωτών για εξαναγκασμό shadergen</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="212"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="215"/>
         <source>Audio Settings</source>
         <translation>Ρυθμίσεις Ήχου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="219"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="222"/>
         <source>LLE</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="220"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="223"/>
         <source>HLE</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="226"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="229"/>
         <source>DSP emulation</source>
         <translation>Εξομοίωση DSP</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="228"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="231"/>
         <source>Enable audio</source>
         <translation>Ενεργοποίηση ήχου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="232"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="235"/>
         <source>Enable AAC audio</source>
         <translation>Ενεργοποίηση ήχου AAC</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="236"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="239"/>
         <source>Print DSP firmware</source>
         <translation>Εκτύπωση λογισμικού DSP</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="240"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="243"/>
         <source>Mute audio device</source>
         <translation>Σίγαση συσκευής ήχου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="245"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="248"/>
         <source>Cubic</source>
         <translation>Κυβική</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="246"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="249"/>
         <source>Linear</source>
         <translation>Γραμμική</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="252"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="255"/>
         <source>Volume curve</source>
         <translation>Κλίμακα ήχου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="270"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="273"/>
         <source>Audio device volume</source>
         <translation>Ένταση ήχου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="273"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="276"/>
         <source>Battery Settings</source>
         <translation>Ρυθμίσεις μπαταρίας</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="285"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="288"/>
         <source>Battery percentage</source>
         <translation>Ποσοστό μπαταρίας</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="287"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="290"/>
         <source>Charger plugged</source>
         <translation>Φορτιστής</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="292"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="295"/>
         <source>SD Card Settings</source>
         <translation>Ρυθμίσης κάρτας SD</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="297"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="300"/>
         <source>Enable virtual SD card</source>
         <translation>Ενεργοποίηση εικονικής SD</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="301"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="304"/>
         <source>Write protect virtual SD card</source>
         <translation>Προστασία της SD από εγγραφή</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="306"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
         <source>Interface</source>
         <translation>Διεπαφή</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="306"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
         <source>User Interface settings</source>
         <translation>Ρυθμίσεις διεπαφής</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="307"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
         <source>General</source>
         <translation>Γενικά</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="307"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
         <source>General emulator settings</source>
         <translation>Γενικές ρυθμίσεις εξομοιωτή</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="308"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
         <source>Graphics</source>
         <translation>Γραφικά</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="308"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
         <source>Graphics emulation and output settings</source>
         <translation>Ρυθμίσεις εξομοίωσης γραφικών</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="312"/>
         <source>Audio</source>
         <translation>Ήχος</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="309"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="312"/>
         <source>Audio emulation and output settings</source>
         <translation>Ρυθμίσεις εξομοίωσης ήχου</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="313"/>
         <source>Battery</source>
         <translation>Μπαταρία</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="310"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="313"/>
         <source>Battery emulation settings</source>
         <translation>Ρυθμίσεις εξομοίωσης μπαταρίας</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="314"/>
         <source>SD Card</source>
         <translation>Κάρτα SD</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/config_window.cpp" line="311"/>
+        <location filename="../../src/panda_qt/config_window.cpp" line="314"/>
         <source>SD Card emulation settings</source>
         <translation>Ρυθμίσεις εξομοίωσης κάρτας SD</translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="75"/>
+        <source>Language change successful</source>
+        <translation>Επιτυχία αλλαγής γλώσσας</translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="76"/>
+        <source>Restart Panda3DS for the new language to be used.</source>
+        <translation>Επανεκκινήστε το Panda3DS για να εφαρμοστεί η νέα γλώσσα.</translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="82"/>
+        <source>Language change failed</source>
+        <translation>Αποτυχία αλλαγής γλώσσας</translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/translations.cpp" line="83"/>
+        <source>The language you selected is not included in Panda3DS. If you&apos;re seeing this, someone messed up the language UI code...</source>
+        <translation>Το Panda3DS δεν υποστηρίζει τον γλώσσα που επιλέξατε. Αν το βλέπετε αυτό, κάποιος έκανε λάθος στον κώδικα, κατηγορήστε τον Πάρη...</translation>
     </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="19"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="20"/>
         <source>Alber</source>
         <translation>Αλβέρτος</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="37"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="38"/>
         <source>File</source>
-        <translation>Αρχείο</translation>
+        <translation>Αρχεία</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="38"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="39"/>
         <source>Emulation</source>
         <translation>Εξομοίωση</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="39"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="40"/>
         <source>Tools</source>
         <translation>Εργαλεία</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="40"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="41"/>
         <source>About</source>
         <translation>Σχετικά</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="43"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="44"/>
         <source>Load game</source>
         <translation>Φόρτωση παιχνιδιού</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="44"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="45"/>
         <source>Load Lua script</source>
         <translation>Φόρτωση αρχείου Lua</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="45"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="46"/>
         <source>Open Panda3DS folder</source>
         <translation>Άνοιγμα φακέλου Panda3DS</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="54"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="55"/>
         <source>Pause</source>
         <translation>Παύση</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="55"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="56"/>
         <source>Resume</source>
         <translation>Συνέχεια</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="56"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="57"/>
         <source>Reset</source>
         <translation>Επανέναρξη</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="57"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="58"/>
         <source>Configure</source>
         <translation>Ρύθμιση</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="63"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="64"/>
         <source>Dump RomFS</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="64"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="65"/>
         <source>Open Lua Editor</source>
         <translation>Άνοιγμα Lua Editor</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="65"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="66"/>
         <source>Open Cheats Editor</source>
         <translation>Άνοιγμα Editor κωδικών</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="66"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="67"/>
         <source>Open Patch Window</source>
         <translation>Άνοιγμα παραθύρου για patching</translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="67"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="68"/>
         <source>Open Shader Editor</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="68"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="69"/>
         <source>Dump loaded DSP firmware</source>
         <translation type="unfinished"/>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="77"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="78"/>
         <source>About Panda3DS</source>
         <translation>Σχετικά με το Panda3DS</translation>
     </message>
@@ -552,7 +577,7 @@
     <message>
         <location filename="../../src/panda_qt/main_window.cpp" line="299"/>
         <source>No RomFS partition was found in the loaded app</source>
-        <translation type="unfinished"/>
+        <translation>Δεν βρέθηκε RomFS στην εφαρμογή που έχει φορτωθεί</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/main_window.cpp" line="305"/>
@@ -567,7 +592,7 @@
     <message>
         <location filename="../../src/panda_qt/main_window.cpp" line="320"/>
         <source>No DSP firmware loaded</source>
-        <translation type="unfinished"/>
+        <translation>Δεν έχει φορτωθεί DSP firmware</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/main_window.cpp" line="320"/>
@@ -577,7 +602,7 @@
     <message>
         <location filename="../../src/panda_qt/main_window.cpp" line="331"/>
         <source>Failed to open output file</source>
-        <translation type="unfinished"/>
+        <translation>Αποτυχία ανοίγματος του αρχείου εξόδου</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/main_window.cpp" line="332"/>
@@ -638,7 +663,7 @@
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="71"/>
         <source>Please provide paths for both the input file and the patch file</source>
-        <translation type="unfinished"/>
+        <translation>Παρακαλούμε διαλέξτε και αρχείο εισόδου και αρχείο patch</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="80"/>
@@ -648,32 +673,32 @@
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="84"/>
         <source>No output path</source>
-        <translation type="unfinished"/>
+        <translation>Δεν επιλέχθηκε φάκελος εξόδου</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="84"/>
         <source>No path was provided for the output file, no patching was done</source>
-        <translation type="unfinished"/>
+        <translation>Δεν επιλέχθηκε αρχείο εξόδου. Δεν έγινε patching</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="99"/>
         <source>Unknown patch format</source>
-        <translation type="unfinished"/>
+        <translation>Άγνωστο είδος patch</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="99"/>
         <source>Unknown format for patch file. Currently IPS, UPS and BPS are supported</source>
-        <translation type="unfinished"/>
+        <translation>Άγνωστο είδος αρχείου patch. Υποστηρίζονται αρχεία IPS, UPS και BPS</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="108"/>
         <source>Failed to open input files</source>
-        <translation type="unfinished"/>
+        <translation>Αποτυχία ανοίγματος των αρχείων εισόδου</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="108"/>
         <source>Make sure they&apos;re in a directory Panda3DS has access to</source>
-        <translation type="unfinished"/>
+        <translation>Βεβαιωθείτε ότι είναι σε φάκελο που έχει πρόσβαση το Panda3DS</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="135"/>
@@ -693,17 +718,17 @@
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="142"/>
         <source>Patch was applied successfully but a checksum mismatch was detected. The input or output files might not be correct</source>
-        <translation type="unfinished"/>
+        <translation>Το patch εφαρμόστηκε με επιτυχία αλλά ανιχνεύτηκε σφάλμα στο checksum. Ενδέχεται τα αρχεία εισόδου η εξόδου να είναι λανθασμένα</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="146"/>
         <source>Patching error</source>
-        <translation type="unfinished"/>
+        <translation>Σφάλμα στο patching</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/patch_window.cpp" line="146"/>
         <source>An error occured while patching</source>
-        <translation type="unfinished"/>
+        <translation>Προέκυψε σφάλμα στο patching</translation>
     </message>
 </context>
 <context>
@@ -719,7 +744,7 @@
     <message>
         <location filename="../../src/panda_qt/shader_editor.cpp" line="26"/>
         <source>Reload shader</source>
-        <translation type="unfinished"/>
+        <translation>Επαναφόρτωση shader</translation>
     </message>
 </context>
 <context>

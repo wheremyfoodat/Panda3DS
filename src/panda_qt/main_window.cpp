@@ -3,7 +3,6 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QString>
-#include <QTranslator>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -15,6 +14,8 @@
 #include "version.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+	emu = new Emulator();
+
 	loadTranslation();
 	setWindowTitle(tr("Alber"));
 
@@ -77,7 +78,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
-	emu = new Emulator();
 	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
 
 	// Set up misc objects
@@ -679,33 +679,5 @@ void MainWindow::setupControllerSensors(SDL_GameController* controller) {
 
 	if (haveAccelerometer) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
-	}
-}
-
-void MainWindow::loadTranslation() {
-	// TODO: This should become a member variable when we allow changing language at runtime.
-	QTranslator* translator = nullptr;
-
-	auto language = QString::fromStdString("el");
-	const QString baseDir = QStringLiteral(":/translations");
-	QString basePath = QStringLiteral("%1/%2.qm").arg(baseDir).arg(language);
-
-	if (QFile::exists(basePath)) {
-		if (translator != nullptr) {
-			qApp->removeTranslator(translator);
-		}
-
-		translator = new QTranslator(qApp);
-		if (!translator->load(basePath)) {
-			QMessageBox::warning(
-				nullptr, QStringLiteral("Translation Error"),
-				QStringLiteral("Failed to find load translation file for '%1':\n%2").arg(language).arg(basePath)
-			);
-			delete translator;
-		} else {
-			qApp->installTranslator(translator);
-		}
-	} else {
-		printf("Language file %s does not exist\n", basePath.toStdString().c_str());
 	}
 }
