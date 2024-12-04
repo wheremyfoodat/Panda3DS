@@ -428,6 +428,10 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 }
 
 void Emulator::setAudioEnabled(bool enable) {
+	// Don't enable audio if we didn't manage to find an audio device and initialize it properly, otherwise audio sync will break,
+	// because the emulator will expect the audio device to drain the sample buffer, but there's no audio device running...
+	enable = enable && audioDevice.isInitialized();
+
 	if (!enable) {
 		audioDevice.stop();
 	} else if (enable && romType != ROMType::None && running) {
