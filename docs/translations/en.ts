@@ -141,6 +141,16 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../../src/panda_qt/config_window.cpp" line="106"/>
+        <source>Alber v%1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../src/panda_qt/config_window.cpp" line="106"/>
+        <source>Alber</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../../src/panda_qt/config_window.cpp" line="111"/>
         <source>Remember window position</source>
         <translation type="unfinished"></translation>
@@ -400,179 +410,179 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="17"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="19"/>
         <source>Alber</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="35"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="37"/>
         <source>File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="36"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="38"/>
         <source>Emulation</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="37"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="39"/>
         <source>Tools</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="38"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="40"/>
         <source>About</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="41"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="43"/>
         <source>Load game</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="42"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="44"/>
         <source>Load Lua script</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="43"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="45"/>
         <source>Open Panda3DS folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="52"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="54"/>
         <source>Pause</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="53"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="55"/>
         <source>Resume</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="54"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="56"/>
         <source>Reset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="55"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="57"/>
         <source>Configure</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="61"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="63"/>
         <source>Dump RomFS</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="62"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="64"/>
         <source>Open Lua Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="63"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="65"/>
         <source>Open Cheats Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="64"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="66"/>
         <source>Open Patch Window</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="65"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="67"/>
         <source>Open Shader Editor</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="66"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="68"/>
         <source>Dump loaded DSP firmware</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="75"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="77"/>
         <source>About Panda3DS</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="193"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="195"/>
         <source>Select 3DS ROM to load</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="194"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="196"/>
         <source>Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.ncch *.3dsx *.elf *.axf)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="207"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="209"/>
         <source>Select Lua script to load</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="207"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="209"/>
         <source>Lua scripts (*.lua *.txt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="270"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="272"/>
         <source>Select folder to dump RomFS files to</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="286"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="288"/>
         <source>Invalid format for RomFS dumping</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="287"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="289"/>
         <source>The currently loaded app is not in a format that supports RomFS</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="290"/>
-        <location filename="../../src/panda_qt/main_window.cpp" line="321"/>
-        <location filename="../../src/panda_qt/main_window.cpp" line="334"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="292"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="323"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="336"/>
         <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="297"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="299"/>
         <source>No RomFS found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="297"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="299"/>
         <source>No RomFS partition was found in the loaded app</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="303"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="305"/>
         <source>Select file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="303"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="305"/>
         <source>DSP firmware file (*.cdc)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="318"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="320"/>
         <source>No DSP firmware loaded</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="318"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="320"/>
         <source>The currently loaded app has not uploaded a firmware to the DSP</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="329"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="331"/>
         <source>Failed to open output file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../src/panda_qt/main_window.cpp" line="330"/>
+        <location filename="../../src/panda_qt/main_window.cpp" line="332"/>
         <source>The currently loaded DSP firmware could not be written to the selected file. Please make sure you have permission to access this file</source>
         <translation type="unfinished"></translation>
     </message>
