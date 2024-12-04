@@ -126,6 +126,7 @@ class MainWindow : public QMainWindow {
 	void setupControllerSensors(SDL_GameController* controller);
 	void sendMessage(const EmulatorMessage& message);
 	void dispatchMessage(const EmulatorMessage& message);
+	void loadTranslation();
 
 	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
 	bool usingGL = false;

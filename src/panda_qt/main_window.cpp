@@ -15,6 +15,7 @@
 #include "version.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+	loadTranslation();
 	setWindowTitle(tr("Alber"));
 
 	// Enable drop events for loading ROMs
@@ -78,30 +79,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	emu = new Emulator();
 	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
-
-	QTranslator* translator = nullptr;
-	auto language = QString::fromStdString("el");
-	const QString baseDir = QStringLiteral(":/translations");
-	QString basePath = QStringLiteral("%1/%2.qm").arg(baseDir).arg(language);
-
-	if (QFile::exists(basePath)) {
-		if (translator != nullptr) {
-			qApp->removeTranslator(translator);
-		}
-
-		translator = new QTranslator(qApp);
-		if (!translator->load(basePath)) {
-			QMessageBox::warning(
-				nullptr, QStringLiteral("Translation Error"),
-				QStringLiteral("Failed to find load translation file for '%1':\n%2").arg(language).arg(basePath)
-			);
-			delete translator;
-		} else {
-			qApp->installTranslator(translator);
-		}
-	} else {
-		printf("%s does not exist\n", basePath.toStdString().c_str());
-	}
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
@@ -702,5 +679,33 @@ void MainWindow::setupControllerSensors(SDL_GameController* controller) {
 
 	if (haveAccelerometer) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
+	}
+}
+
+void MainWindow::loadTranslation() {
+	// TODO: This should become a member variable when we allow changing language at runtime.
+	QTranslator* translator = nullptr;
+
+	auto language = QString::fromStdString("el");
+	const QString baseDir = QStringLiteral(":/translations");
+	QString basePath = QStringLiteral("%1/%2.qm").arg(baseDir).arg(language);
+
+	if (QFile::exists(basePath)) {
+		if (translator != nullptr) {
+			qApp->removeTranslator(translator);
+		}
+
+		translator = new QTranslator(qApp);
+		if (!translator->load(basePath)) {
+			QMessageBox::warning(
+				nullptr, QStringLiteral("Translation Error"),
+				QStringLiteral("Failed to find load translation file for '%1':\n%2").arg(language).arg(basePath)
+			);
+			delete translator;
+		} else {
+			qApp->installTranslator(translator);
+		}
+	} else {
+		printf("Language file %s does not exist\n", basePath.toStdString().c_str());
 	}
 }

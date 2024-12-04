@@ -103,7 +103,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 		updateConfig();
 
 		// Update main window title
-		getMainWindow()->setWindowTitle(checked ? "Alber v" PANDA3DS_VERSION : "Alber");
+		getMainWindow()->setWindowTitle(checked ? tr("Alber v%1").arg(PANDA3DS_VERSION) : tr("Alber"));
 	});
 	connectCheckbox(showAppVersion, config.windowSettings.showAppVersion);
 	guiLayout->addRow(showAppVersion);
