@@ -14,6 +14,9 @@
 #include "version.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+	emu = new Emulator();
+
+	loadTranslation();
 	setWindowTitle(tr("Alber"));
 
 	// Enable drop events for loading ROMs
@@ -75,7 +78,6 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
-	emu = new Emulator();
 	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
 
 	// Set up misc objects

@@ -637,7 +637,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
     if(ENABLE_QT_GUI)
-        find_package(Qt6 REQUIRED COMPONENTS Widgets)
+        find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)
         if(NOT ENABLE_OPENGL)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
@@ -647,7 +647,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
 
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
-            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp
+            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
@@ -700,6 +700,24 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
                 docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png
         )
+
+        # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable
+        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts)
+
+        set_source_files_properties(${TRANSLATIONS_TS} PROPERTIES OUTPUT_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/translations")
+        qt_add_translation(TRANSLATIONS_QM ${TRANSLATIONS_TS})
+
+        set(TRANSLATIONS_QRC ${CMAKE_CURRENT_BINARY_DIR}/translations/translations.qrc)
+        file(WRITE ${TRANSLATIONS_QRC} "<RCC><qresource prefix=\"translations\">\n")
+        foreach (QM ${TRANSLATIONS_QM})
+            message("${QM}")
+            get_filename_component(QM_FILE ${QM} NAME)
+            file(APPEND ${TRANSLATIONS_QRC} "<file>${QM_FILE}</file>\n")
+        endforeach (QM)
+        file(APPEND ${TRANSLATIONS_QRC} "</qresource></RCC>")
+
+        qt_add_resources(TRANSLATIONS ${TRANSLATIONS_QRC})
+        set(APP_RESOURCES ${APP_RESOURCES} ${TRANSLATIONS})
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
         set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")

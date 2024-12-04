@@ -45,6 +45,8 @@ class ConfigWindow : public QDialog {
 	void setTheme(FrontendSettings::Theme theme);
 	void setIcon(FrontendSettings::WindowIcon icon);
 
+	QComboBox* createLanguageSelect();
+
   public:
 	ConfigWindow(ConfigCallback configCallback, MainWindowCallback windowCallback, const EmulatorConfig& config, QWidget* parent = nullptr);
 	~ConfigWindow();

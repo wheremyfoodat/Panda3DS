@@ -107,7 +107,7 @@ jobs:
       run: |
        sudo apt-get update && sudo apt install libx11-dev libgl1 libglx-mesa0 mesa-common-dev libfuse2 libwayland-dev libgl1-mesa-dev
        sudo apt update
-       sudo apt install qt6-base-dev qt6-base-private-dev
+       sudo apt install qt6-base-dev qt6-base-private-dev qt6-tools-dev
 
     - name: Install newer Clang
       run: |
