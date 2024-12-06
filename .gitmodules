@@ -40,9 +40,6 @@
 [submodule "third_party/zep"]
 	path = third_party/zep
 	url = https://github.com/Panda3DS-emu/zep
-[submodule "third_party/oaknut"]
-	path = third_party/oaknut
-	url = https://github.com/merryhime/oaknut
 [submodule "third_party/luv"]
 	path = third_party/luv
 	url = https://github.com/luvit/luv
@@ -85,3 +82,6 @@
 [submodule "third_party/cryptoppwin"]
 	path = third_party/cryptoppwin
 	url = https://github.com/shadps4-emu/ext-cryptoppwin
+[submodule "third_party/oaknut"]
+	path = third_party/oaknut
+	url = https://github.com/panda3ds-emu/oaknut
