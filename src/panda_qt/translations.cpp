@@ -46,9 +46,10 @@ struct LanguageInfo {
 // Please keep this list mostly in alphabetical order.
 // Also, for Unicode characters in language names, use Unicode keycodes instead of writing out the name,
 // as some compilers/toolchains may not enjoy Unicode in source files.
-static std::array<LanguageInfo, 2> languages = {
+static std::array<LanguageInfo, 3> languages = {
 	LanguageInfo(QStringLiteral(u"English"), "en"),                                           // English
 	LanguageInfo(QStringLiteral(u"\u0395\u03BB\u03BB\u03B7\u03BD\u03B9\u03BA\u03AC"), "el"),  // Greek
+	LanguageInfo(QStringLiteral(u"Espa\u00F1ol"), "es"),                                      // Spanish
 };
 
 QComboBox* ConfigWindow::createLanguageSelect() {
