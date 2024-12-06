@@ -35,11 +35,13 @@ class FSService {
 	UserSaveDataArchive userSaveData1;
 	UserSaveDataArchive userSaveData2;
 
-	ExtSaveDataArchive extSaveData_sdmc;
-	ExtSaveDataArchive sharedExtSaveData_nand;
+	std::unordered_map<u64, ExtSaveDataArchive> extSaveData_sdmc;
+	std::unordered_map<u64, ExtSaveDataArchive> nandExtSaveData_nand;
 	SystemSaveDataArchive systemSaveData;
 
 	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
+	ExtSaveDataArchive* getExtArchiveFromID(u64 saveId, bool isShared);
+	ExtSaveDataArchive* getNANDExtArchiveFromID(u64 saveId, bool isShared);
 	Rust::Result<Handle, HorizonResult> openArchiveHandle(u32 archiveID, const FSPath& path);
 	Rust::Result<Handle, HorizonResult> openDirectoryHandle(ArchiveBase* archive, const FSPath& path);
 	std::optional<Handle> openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms);
@@ -56,6 +58,7 @@ class FSService {
 	void closeArchive(u32 messagePointer);
 	void controlArchive(u32 messagePointer);
 	void deleteDirectory(u32 messagePointer);
+	void deleteDirectoryRecursively(u32 messagePointer);
 	void deleteExtSaveData(u32 messagePointer);
 	void deleteFile(u32 messagePointer);
 	void formatSaveData(u32 messagePointer);
@@ -79,13 +82,14 @@ class FSService {
 	void setArchivePriority(u32 messagePointer);
 	void setPriority(u32 messagePointer);
 	void setThisSaveDataSecureValue(u32 messagePointer);
+	void readExtSaveDataIcon(u32 messagePointer);
 
 	// Used for set/get priority: Not sure what sort of priority this is referring to
 	u32 priority;
 
   public:
 	FSService(Memory& mem, Kernel& kernel, const EmulatorConfig& config)
-		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem),
+		: mem(mem), saveData(mem), sdmc(mem),
 		  sdmcWriteOnly(mem, true), selfNcch(mem), ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1),
 		  userSaveData2(mem, ArchiveID::UserSaveData2), kernel(kernel), config(config), systemSaveData(mem) {}
 

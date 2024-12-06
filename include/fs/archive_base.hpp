@@ -57,6 +57,14 @@ namespace ArchiveID {
     }
 }
 
+namespace MediaType {
+	enum : u8 {
+		NAND = 0,
+		SD = 1,
+		Gamecard = 2,
+	};
+};
+
 struct FSPath {
     u32 type = PathType::Invalid;
 
@@ -222,16 +230,26 @@ public:
     virtual HorizonResult createFile(const FSPath& path, u64 size) = 0;
     virtual HorizonResult deleteFile(const FSPath& path) = 0;
 
-    virtual Rust::Result<FormatInfo, HorizonResult> getFormatInfo(const FSPath& path) {
-        Helpers::panic("Unimplemented GetFormatInfo for %s archive", name().c_str());
-        // Return a dummy struct just to avoid the UB of not returning anything, even if we panic
-        return Ok(FormatInfo{ .size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false });
-    }
+	virtual Rust::Result<FormatInfo, HorizonResult> getFormatInfo(const FSPath& path) {
+		Helpers::panic("Unimplemented GetFormatInfo for %s archive", name().c_str());
+		// Return a dummy struct just to avoid the UB of not returning anything, even if we panic
+		return Ok(FormatInfo{.size = 0, .numOfDirectories = 0, .numOfFiles = 0, .duplicateData = false});
+	}
 
-    virtual HorizonResult createDirectory(const FSPath& path) {
-        Helpers::panic("Unimplemented CreateDirectory for %s archive", name().c_str());
-        return Result::FS::AlreadyExists;
-    }
+	virtual HorizonResult createDirectory(const FSPath& path) {
+		Helpers::panic("Unimplemented CreateDirectory for %s archive", name().c_str());
+		return Result::FS::AlreadyExists;
+	}
+
+	virtual HorizonResult deleteDirectory(const FSPath& path) {
+		Helpers::warn("Stubbed DeleteDirectory for %s archive", name().c_str());
+		return Result::Success;
+	}
+
+	virtual HorizonResult deleteDirectoryRecursively(const FSPath& path) {
+		Helpers::warn("Stubbed DeleteDirectoryRecursively for %s archive", name().c_str());
+		return Result::Success;
+	}
 
     // Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)
     virtual FileDescriptor openFile(const FSPath& path, const FilePerms& perms) = 0;
