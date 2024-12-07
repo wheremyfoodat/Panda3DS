@@ -217,26 +217,51 @@ if(ENABLE_LUAJIT)
     target_link_libraries(AlberCore PRIVATE libluajit)
 endif()
 
-# Check for x64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+# Detect target architecture
+if (NOT APPLE OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+  # Normal target detection
+  if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
+  else()
+    set(HOST_X64 FALSE)
+  endif()
+
+  if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    set(HOST_ARM64 TRUE)
+  else()
+    set(HOST_ARM64 FALSE)
+  endif()
+else()
+  # Apple target detection
+  if("x86_64" IN_LIST CMAKE_OSX_ARCHITECTURES)
+    set(HOST_X64 TRUE)
+  else()
+    set(HOST_X64 FALSE)
+  endif()
+
+  if("arm64" IN_LIST CMAKE_OSX_ARCHITECTURES)
+    set(HOST_ARM64 TRUE)
+  else()
+    set(HOST_ARM64 FALSE)
+  endif()
+
+  if (HOST_ARM64 AND HOST_X64)
+    message(FATAL_ERROR "Universal builds not supported like this! Please compile separately and stitch together")
+  endif()
+endif()
+
+if (HOST_X64)
     add_subdirectory(third_party/xbyak) # Add xbyak submodule for x86 JITs
     include_directories(third_party/xbyak)
     add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
     add_compile_definitions(PANDA3DS_X64_HOST)
-else()
-    set(HOST_X64 FALSE)
 endif()
 
-# Check for arm64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-    set(HOST_ARM64 TRUE)
+if (HOST_ARM64)
     add_subdirectory(third_party/oaknut) # Add Oaknut submodule for arm64 JITs
     include_directories(third_party/oaknut/include)
     add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
     add_compile_definitions(PANDA3DS_ARM64_HOST)
-else()
-    set(HOST_ARM64 FALSE)
 endif()
 
 # Enable SSE4.1 if it's not explicitly disabled
