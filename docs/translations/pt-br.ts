@@ -257,7 +257,7 @@
     <message>
         <location filename="../../src/panda_qt/config_window.cpp" line="212"/>
         <source>Light threshold for forcing shadergen</source>
-        <translation>Usar limear de luzes para forçar shadergen</translation>
+        <translation>Limear de luzes para forçar shadergen</translation>
     </message>
     <message>
         <location filename="../../src/panda_qt/config_window.cpp" line="215"/>
