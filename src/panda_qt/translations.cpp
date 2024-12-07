@@ -50,7 +50,7 @@ static std::array<LanguageInfo, 4> languages = {
 	LanguageInfo(QStringLiteral(u"English"), "en"),                                           // English
 	LanguageInfo(QStringLiteral(u"\u0395\u03BB\u03BB\u03B7\u03BD\u03B9\u03BA\u03AC"), "el"),  // Greek
 	LanguageInfo(QStringLiteral(u"Espa\u00F1ol"), "es"),                                      // Spanish
-	LanguageInfo(QStringLiteral(u"Portugu\uC3AAs (Brasil)"), "pt-br")                                      // Portuguese ( Brazillian )
+	LanguageInfo(QStringLiteral(u"Portugu\u00EAs (Brasil)"), "pt-br")                                      // Portuguese ( Brazillian )
 };
 
 QComboBox* ConfigWindow::createLanguageSelect() {
