@@ -87,7 +87,7 @@ HorizonResult SystemSaveDataArchive::createFile(const FSPath& path, u64 size) {
 HorizonResult SystemSaveDataArchive::createDirectory(const FSPath& path) {
 	if (path.type == PathType::UTF16) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
-			Helpers::panic("Unsafe path in SystemSaveData::OpenFile");
+			Helpers::panic("Unsafe path in SystemSaveData::CreateDirectory");
 		}
 
 		fs::path p = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
