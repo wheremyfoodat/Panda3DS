@@ -19,14 +19,14 @@ SDL builds (No GUI):
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Windows_Build/master/Windows%20executable.zip)|
-|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle%20(universal).zip)|
 |Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Linux_AppImage_Build/master/Linux%20executable.zip)|
 
 Qt and Android builds:
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Windows%20executable.zip)|
-|MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle%20(universal).zip)|
 |Linux build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Linux%20executable.zip)|
 |Android build (arm64)|[![Android Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml)|[Android APK](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Android_Build/master/Android%20APKs%20(arm64).zip)|
 
