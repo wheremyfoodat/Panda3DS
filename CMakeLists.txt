@@ -729,7 +729,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         )
 
         # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable
-        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts)
+        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts docs/translations/nl.ts)
         set_source_files_properties(${TRANSLATIONS_TS} PROPERTIES OUTPUT_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/translations")
         qt_add_translation(TRANSLATIONS_QM ${TRANSLATIONS_TS})
 
