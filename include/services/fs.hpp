@@ -6,6 +6,7 @@
 #include "fs/archive_sdmc.hpp"
 #include "fs/archive_self_ncch.hpp"
 #include "fs/archive_system_save_data.hpp"
+#include "fs/archive_twl_photo.hpp"
 #include "fs/archive_user_save_data.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
@@ -38,6 +39,8 @@ class FSService {
 	ExtSaveDataArchive extSaveData_sdmc;
 	ExtSaveDataArchive sharedExtSaveData_nand;
 	SystemSaveDataArchive systemSaveData;
+
+	TWLPhotoArchive twlPhoto;
 
 	ArchiveBase* getArchiveFromID(u32 id, const FSPath& archivePath);
 	Rust::Result<Handle, HorizonResult> openArchiveHandle(u32 archiveID, const FSPath& path);
@@ -87,7 +90,7 @@ class FSService {
 	FSService(Memory& mem, Kernel& kernel, const EmulatorConfig& config)
 		: mem(mem), saveData(mem), sharedExtSaveData_nand(mem, "../SharedFiles/NAND", true), extSaveData_sdmc(mem, "SDMC"), sdmc(mem),
 		  sdmcWriteOnly(mem, true), selfNcch(mem), ncch(mem), userSaveData1(mem, ArchiveID::UserSaveData1),
-		  userSaveData2(mem, ArchiveID::UserSaveData2), kernel(kernel), config(config), systemSaveData(mem) {}
+		  userSaveData2(mem, ArchiveID::UserSaveData2), systemSaveData(mem), twlPhoto(mem), kernel(kernel), config(config) {}
 
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
