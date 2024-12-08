@@ -56,7 +56,7 @@ jobs:
         arch: [x86_64, arm64]
 
     name: MacOS-${{ matrix.arch }}
-    runs-on: macos-latest
+    runs-on: macos-13
 
     steps:
     - uses: actions/checkout@v4
@@ -109,7 +109,7 @@ jobs:
   MacOS-Universal:
     name: MacOS-Universal
     needs: [MacOS]
-    runs-on: macos-latest
+    runs-on: macos-13
 
     steps:
       - name: Download x86_64
