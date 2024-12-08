@@ -51,6 +51,11 @@ jobs:
         path: upload
 
   MacOS:
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+
+    name: MacOS-${{ matrix.arch }}
     runs-on: macos-13
 
     steps:
@@ -69,11 +74,17 @@ jobs:
       run: |
         brew install dylibbundler imagemagick
 
-    - name: Install qt
-      run: brew install qt && which macdeployqt
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        aqtversion: '==3.1.*'
+        version: '6.8.1'
+        host: 'mac'
+        target: 'desktop'
+        arch: 'clang_64'
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -87,13 +98,48 @@ jobs:
       run: codesign --force -s - -vvvv Alber.app
 
     - name: Zip it up
-      run: zip -r Alber Alber.app
+      run: zip -r Alber-${{ matrix.arch }} Alber.app
 
     - name: Upload MacOS App
       uses: actions/upload-artifact@v4
       with:
-        name: MacOS Alber App Bundle
-        path: 'Alber.zip'
+        name: MacOS Alber App Bundle (${{ matrix.arch }})
+        path: Alber-${{ matrix.arch }}.zip
+
+  MacOS-Universal:
+    name: MacOS-Universal
+    needs: [MacOS]
+    runs-on: macos-13
+
+    steps:
+      - name: Download x86_64
+        uses: actions/download-artifact@v4
+        with:
+          name: MacOS Alber App Bundle (x86_64)
+          path: x86_64
+      - name: Download ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: MacOS Alber App Bundle (arm64)
+          path: arm64
+      - name: Combine app bundles
+        shell: bash
+        run: |
+          set -x
+          unzip x86_64/*.zip -d x86_64
+          unzip arm64/*.zip -d arm64
+          lipo {x86_64,arm64}/Alber.app/Contents/MacOS/Alber -create -output Alber
+          cp -v -a arm64/Alber.app Alber.app
+          cp -v Alber Alber.app/Contents/MacOS/Alber
+          # Mix in x86_64 files that do not appear in the ARM64 build (e.g. libvulkan)
+          cp -v -R -n x86_64/Alber.app/* Alber.app/ || true
+          codesign --force -s - -vvvv Alber.app
+          zip -r -y Alber-universal.zip Alber.app
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MacOS Alber App Bundle (universal)
+          path: Alber-universal.zip
 
   Linux:
     runs-on: ubuntu-24.04
