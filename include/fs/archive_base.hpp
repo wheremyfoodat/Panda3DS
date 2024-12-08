@@ -42,7 +42,8 @@ namespace ArchiveID {
 		// 3DBrew: Similar to 0x567890B2 but can only access Accessible Save specified in exheader?
 		UserSaveData2 = 0x567890B4,
 
-		TwlPhoto = 0x567890AC
+		TwlPhoto = 0x567890AC,
+		TwlSound = 0x567890AD,
 	};
 
 	static std::string toString(u32 id) {
@@ -56,6 +57,7 @@ namespace ArchiveID {
 			case SDMCWriteOnly: return "SDMC (Write-only)";
 			case SavedataAndNcch: return "Savedata & NCCH (archive 0x2345678A)";
 			case TwlPhoto: return "TWL_PHOTO";
+			case TwlSound: return "TWL_SOUND";
 			default: return "Unknown archive";
 		}
 	}
