@@ -65,15 +65,18 @@ class APTService {
 	void checkNew3DSApp(u32 messagePointer);
 	void enable(u32 messagePointer);
 	void getAppletInfo(u32 messagePointer);
+	void getCaptureInfo(u32 messagePointer);
 	void getSharedFont(u32 messagePointer);
 	void getWirelessRebootInfo(u32 messagePointer);
 	void glanceParameter(u32 messagePointer);
 	void initialize(u32 messagePointer);
 	void inquireNotification(u32 messagePointer);
 	void isRegistered(u32 messagePointer);
+	void loadSysMenuArg(u32 messagePointer);
 	void notifyToWait(u32 messagePointer);
 	void preloadLibraryApplet(u32 messagePointer);
 	void prepareToStartLibraryApplet(u32 messagePointer);
+	void receiveDeliverArg(u32 messagePointer);
 	void receiveParameter(u32 messagePointer);
 	void replySleepQuery(u32 messagePointer);
 	void setApplicationCpuTimeLimit(u32 messagePointer);

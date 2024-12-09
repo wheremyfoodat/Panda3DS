@@ -12,11 +12,16 @@ namespace PTMCommands {
 		GetStepHistoryAll = 0x000F0084,
 		ConfigureNew3DSCPU = 0x08180040,
 
+		// ptm:gets functions
+		GetSystemTime = 0x04010000,
+
 		// ptm:play functions
 		GetPlayHistory = 0x08070082,
 		GetPlayHistoryStart = 0x08080000,
 		GetPlayHistoryLength = 0x08090000,
 		CalcPlayHistoryStart = 0x080B0080,
+		GetSoftwareClosedFlag = 0x080F0000,
+		ClearSoftwareClosedFlag = 0x08100000,
 	};
 }
 
@@ -50,10 +55,23 @@ void PTMService::handleSyncRequest(u32 messagePointer, PTMService::Type type) {
 
 						default: Helpers::panic("PTM PLAY service requested. Command: %08X\n", command); break;
 					}
+				} else if (type == Type::GETS) {
+					switch (command) {
+						case PTMCommands::GetSystemTime: getSystemTime(messagePointer); break;
+
+						default: Helpers::panic("PTM GETS service requested. Command: %08X\n", command); break;
+					}
+				} else if (type == Type::SYSM) {
+					switch (command) {
+						case PTMCommands::GetSoftwareClosedFlag: getSoftwareClosedFlag(messagePointer); break;
+						case PTMCommands::ClearSoftwareClosedFlag: clearSoftwareClosedFlag(messagePointer); break;
+
+						default: Helpers::panic("PTM SYSM service requested. Command: %08X\n", command); break;
+					}
 				} else {
 					Helpers::panic("PTM service requested. Command: %08X\n", command);
 				}
-		}
+	}
 }
 
 void PTMService::getAdapterState(u32 messagePointer) {
@@ -113,5 +131,25 @@ void PTMService::getTotalStepCount(u32 messagePointer) {
 void PTMService::configureNew3DSCPU(u32 messagePointer) {
 	log("PTM::ConfigureNew3DSCPU [stubbed]\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x818, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void PTMService::getSystemTime(u32 messagePointer) {
+	log("PTM::GetSystemTime [stubbed]\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x401, 3, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write64(messagePointer + 8, 0);  // Milliseconds since 2000?
+}
+
+void PTMService::getSoftwareClosedFlag(u32 messagePointer) {
+	log("PTM::GetSoftwareClosedFlag\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x80F, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0);  // Show software closed dialog
+}
+
+void PTMService::clearSoftwareClosedFlag(u32 messagePointer) {
+	log("PTM::ClearSoftwareClosedFlag\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x810, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
