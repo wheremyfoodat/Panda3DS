@@ -7,12 +7,13 @@ HorizonResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 	if (size == 0)
 		Helpers::panic("ExtSaveData file does not support size == 0");
 
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
-			Helpers::panic("Unsafe path in ExtSaveData::CreateFile");
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path)) {
+			Helpers::panic("Unsafe path in ExtSaveData::OpenFile");
+		}
 
 		fs::path p = IOFile::getAppData() / backingFolder;
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
 		if (fs::exists(p))
 			return Result::FS::AlreadyExists;
@@ -28,17 +29,17 @@ HorizonResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 		return Result::FS::FileTooLarge;
 	}
 
-	Helpers::panic("ExtSaveDataArchive::OpenFile: Failed");
+	Helpers::panic("ExtSaveDataArchive::CreateFile: Failed");
 	return Result::Success;
 }
 
 HorizonResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path))
 			Helpers::panic("Unsafe path in ExtSaveData::DeleteFile");
 
 		fs::path p = IOFile::getAppData() / backingFolder;
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
 		if (fs::is_directory(p)) {
 			Helpers::panic("ExtSaveData::DeleteFile: Tried to delete directory");
@@ -65,15 +66,16 @@ HorizonResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 }
 
 FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path)) {
 			Helpers::panic("Unsafe path in ExtSaveData::OpenFile");
+		}
 
 		if (perms.create())
 			Helpers::panic("[ExtSaveData] Can't open file with create flag");
 
 		fs::path p = IOFile::getAppData() / backingFolder;
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
 		if (fs::exists(p)) { // Return file descriptor if the file exists
 			IOFile file(p.string().c_str(), "r+b"); // According to Citra, this ignores the OpenFlags field and always opens as r+b? TODO: Check
@@ -88,7 +90,7 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 }
 
 HorizonResult ExtSaveDataArchive::renameFile(const FSPath& oldPath, const FSPath& newPath) {
-	if (oldPath.type != PathType::UTF16 || newPath.type != PathType::UTF16) {
+	if (!oldPath.isUTF16() || !newPath.isUTF16()) {
 		Helpers::panic("Invalid path type for ExtSaveData::RenameFile");
 	}
 
@@ -125,15 +127,18 @@ HorizonResult ExtSaveDataArchive::renameFile(const FSPath& oldPath, const FSPath
 }
 
 HorizonResult ExtSaveDataArchive::createDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path)) {
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path)) {
 			Helpers::panic("Unsafe path in ExtSaveData::OpenFile");
 		}
 
 		fs::path p = IOFile::getAppData() / backingFolder;
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
-		if (fs::is_directory(p)) return Result::FS::AlreadyExists;
+		if (fs::is_directory(p)) {
+			return Result::FS::AlreadyExists;
+		}
+
 		if (fs::is_regular_file(p)) {
 			Helpers::panic("File path passed to ExtSaveData::CreateDirectory");
 		}
@@ -156,7 +161,7 @@ std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path)
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Binary || path.binary.size() != 12) {
+	if (!path.isBinary() || path.binary.size() != 12) {
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
@@ -172,12 +177,12 @@ Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const 
 }
 
 Rust::Result<DirectorySession, HorizonResult> ExtSaveDataArchive::openDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path))
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path))
 			Helpers::panic("Unsafe path in ExtSaveData::OpenDirectory");
 
 		fs::path p = IOFile::getAppData() / backingFolder;
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
 		if (fs::is_regular_file(p)) {
 			printf("ExtSaveData: OpenArchive used with a file path");

@@ -26,7 +26,7 @@ FileDescriptor CardSPIArchive::openFile(const FSPath& path, const FilePerms& per
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> CardSPIArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Empty) {
+	if (!path.isEmptyType()) {
 		Helpers::panic("Unimplemented path type for CardSPIArchive::OpenArchive");
 	}
 

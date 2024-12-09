@@ -6,13 +6,15 @@
 namespace fs = std::filesystem;
 
 HorizonResult UserSaveDataArchive::createFile(const FSPath& path, u64 size) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) Helpers::panic("Unsafe path in UserSaveData::CreateFile");
 
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
 
-		if (fs::exists(p)) return Result::FS::AlreadyExists;
+		if (fs::exists(p)) {
+			return Result::FS::AlreadyExists;
+		}
 
 		IOFile file(p.string().c_str(), "wb");
 
@@ -37,8 +39,10 @@ HorizonResult UserSaveDataArchive::createFile(const FSPath& path, u64 size) {
 }
 
 HorizonResult UserSaveDataArchive::createDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path)) Helpers::panic("Unsafe path in UserSaveData::OpenFile");
+	if (path.isUTF16()) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in UserSaveData::OpenFile");
+		}
 
 		fs::path p = IOFile::getAppData() / "SaveData";
 		p += fs::path(path.utf16_string).make_preferred();
@@ -56,7 +60,7 @@ HorizonResult UserSaveDataArchive::createDirectory(const FSPath& path) {
 }
 
 HorizonResult UserSaveDataArchive::deleteFile(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) Helpers::panic("Unsafe path in UserSaveData::DeleteFile");
 
 		fs::path p = IOFile::getAppData() / "SaveData";
@@ -87,7 +91,7 @@ HorizonResult UserSaveDataArchive::deleteFile(const FSPath& path) {
 }
 
 FileDescriptor UserSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) Helpers::panic("Unsafe path in UserSaveData::OpenFile");
 
 		if (perms.raw == 0 || (perms.create() && !perms.write())) Helpers::panic("[UserSaveData] Unsupported flags for OpenFile");
@@ -119,7 +123,7 @@ FileDescriptor UserSaveDataArchive::openFile(const FSPath& path, const FilePerms
 }
 
 Rust::Result<DirectorySession, HorizonResult> UserSaveDataArchive::openDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) Helpers::panic("Unsafe path in UserSaveData::OpenDirectory");
 
 		fs::path p = IOFile::getAppData() / "SaveData";

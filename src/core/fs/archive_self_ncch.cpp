@@ -26,7 +26,7 @@ FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& pe
 		return FileError;
 	}
 
-	if (path.type != PathType::Binary || path.binary.size() != 12) {
+	if (!path.isBinary() || path.binary.size() != 12) {
 		printf("Invalid SelfNCCH path type\n");
 		return FileError;
 	}
@@ -42,7 +42,7 @@ FileDescriptor SelfNCCHArchive::openFile(const FSPath& path, const FilePerms& pe
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> SelfNCCHArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Empty) {
+	if (!path.isEmptyType()) {
 		Helpers::panic("Invalid path type for SelfNCCH archive: %d\n", path.type);
 		return Err(Result::FS::NotFoundInvalid);
 	}

@@ -5,7 +5,7 @@
 namespace fs = std::filesystem;
 
 HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path))
 			Helpers::panic("Unsafe path in SaveData::CreateFile");
 
@@ -39,7 +39,7 @@ HorizonResult SaveDataArchive::createFile(const FSPath& path, u64 size) {
 }
 
 HorizonResult SaveDataArchive::createDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::OpenFile");
 		}
@@ -63,7 +63,7 @@ HorizonResult SaveDataArchive::createDirectory(const FSPath& path) {
 }
 
 HorizonResult SaveDataArchive::deleteFile(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::DeleteFile");
 		}
@@ -96,7 +96,7 @@ HorizonResult SaveDataArchive::deleteFile(const FSPath& path) {
 }
 
 FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::OpenFile");
 		}
@@ -132,7 +132,7 @@ FileDescriptor SaveDataArchive::openFile(const FSPath& path, const FilePerms& pe
 }
 
 Rust::Result<DirectorySession, HorizonResult> SaveDataArchive::openDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SaveData::OpenDirectory");
 		}
@@ -193,7 +193,7 @@ void SaveDataArchive::format(const FSPath& path, const ArchiveBase::FormatInfo& 
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> SaveDataArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Empty) {
+	if (!path.isEmptyType()) {
 		Helpers::panic("Unimplemented path type for SaveData archive: %d\n", path.type);
 		return Err(Result::FS::NotFoundInvalid);
 	}
