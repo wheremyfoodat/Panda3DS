@@ -35,6 +35,7 @@ namespace ArchiveID {
 		SDMC = 9,
 		SDMCWriteOnly = 0xA,
 
+		CardSPI = 0x12345679,
 		SavedataAndNcch = 0x2345678A,
 		// 3DBrew: This is the same as the regular SaveData archive, except with this the savedata ID and mediatype is loaded from the input archive
 		// lowpath.

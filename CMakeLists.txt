@@ -338,7 +338,7 @@ set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/cor
 set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
                     src/core/fs/archive_ext_save_data.cpp src/core/fs/archive_ncch.cpp src/core/fs/romfs.cpp
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp src/core/fs/archive_system_save_data.cpp
-                    src/core/fs/archive_twl_photo.cpp src/core/fs/archive_twl_sound.cpp
+                    src/core/fs/archive_twl_photo.cpp src/core/fs/archive_twl_sound.cpp src/core/fs/archive_card_spi.cpp
 )
 
 set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
@@ -389,7 +389,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
                  include/services/dsp_firmware_db.hpp include/frontend_settings.hpp include/fs/archive_twl_photo.hpp
-                 include/fs/archive_twl_sound.hpp
+                 include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp
 )
 
 cmrc_add_resource_library(
