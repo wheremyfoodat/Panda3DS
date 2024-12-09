@@ -12,10 +12,11 @@ env:
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+
+    name: MacOS-${{ matrix.arch }}
     runs-on: macos-13
 
     steps:
@@ -33,7 +34,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
 
     - name: Build
       # Build your program with the given configuration
@@ -49,10 +50,45 @@ jobs:
       run: codesign --force -s - -vvvv Alber.app
 
     - name: Zip it up
-      run: zip -r Alber Alber.app
+      run: zip -r Alber-${{ matrix.arch }} Alber.app
 
     - name: Upload MacOS App
       uses: actions/upload-artifact@v4
       with:
-        name: MacOS Alber App Bundle
-        path: 'Alber.zip'
+        name: MacOS Alber App Bundle (${{ matrix.arch }})
+        path: Alber-${{ matrix.arch }}.zip
+
+  MacOS-Universal:
+    name: MacOS-Universal
+    needs: [build]
+    runs-on: macos-13
+
+    steps:
+      - name: Download x86_64
+        uses: actions/download-artifact@v4
+        with:
+          name: MacOS Alber App Bundle (x86_64)
+          path: x86_64
+      - name: Download ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: MacOS Alber App Bundle (arm64)
+          path: arm64
+      - name: Combine app bundles
+        shell: bash
+        run: |
+          set -x
+          unzip x86_64/*.zip -d x86_64
+          unzip arm64/*.zip -d arm64
+          lipo {x86_64,arm64}/Alber.app/Contents/MacOS/Alber -create -output Alber
+          cp -v -a arm64/Alber.app Alber.app
+          cp -v Alber Alber.app/Contents/MacOS/Alber
+          # Mix in x86_64 files that do not appear in the ARM64 build (e.g. libvulkan)
+          cp -v -R -n x86_64/Alber.app/* Alber.app/ || true
+          codesign --force -s - -vvvv Alber.app
+          zip -r -y Alber-universal.zip Alber.app
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MacOS Alber App Bundle (universal)
+          path: Alber-universal.zip

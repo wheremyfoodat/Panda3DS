@@ -36,4 +36,6 @@ class MiniAudioDevice {
 
 	void start();
 	void stop();
+
+	bool isInitialized() const { return initialized; }
 };

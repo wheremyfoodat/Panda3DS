@@ -14,6 +14,7 @@ namespace ServiceCommands {
 		WriteHwRegsWithMask = 0x00020084,
 		SetBufferSwap = 0x00050200,
 		FlushDataCache = 0x00080082,
+		InvalidateDataCache = 0x00090082,
 		SetLCDForceBlack = 0x000B0040,
 		TriggerCmdReqQueue = 0x000C0000,
 		ReleaseRight = 0x00170000,
@@ -21,7 +22,7 @@ namespace ServiceCommands {
 		SaveVramSysArea = 0x00190000,
 		RestoreVramSysArea = 0x001A0000,
 		SetInternalPriorities = 0x001E0080,
-		StoreDataCache = 0x001F0082
+		StoreDataCache = 0x001F0082,
 	};
 }
 
@@ -63,6 +64,7 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::ReadHwRegs: readHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
+		case ServiceCommands::InvalidateDataCache: invalidateDataCache(messagePointer); break;
 		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
 	}
 }
@@ -275,6 +277,16 @@ void GPUService::flushDataCache(u32 messagePointer) {
 	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void GPUService::invalidateDataCache(u32 messagePointer) {
+	u32 address = mem.read32(messagePointer + 4);
+	u32 size = mem.read32(messagePointer + 8);
+	u32 processHandle = handle = mem.read32(messagePointer + 16);
+	log("GSP::GPU::InvalidateDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

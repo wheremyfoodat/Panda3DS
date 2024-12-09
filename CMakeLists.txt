@@ -219,26 +219,51 @@ if(ENABLE_LUAJIT)
     target_link_libraries(AlberCore PRIVATE libluajit)
 endif()
 
-# Check for x64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+# Detect target architecture
+if (NOT APPLE OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+  # Normal target detection
+  if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
+  else()
+    set(HOST_X64 FALSE)
+  endif()
+
+  if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    set(HOST_ARM64 TRUE)
+  else()
+    set(HOST_ARM64 FALSE)
+  endif()
+else()
+  # Apple target detection
+  if("x86_64" IN_LIST CMAKE_OSX_ARCHITECTURES)
+    set(HOST_X64 TRUE)
+  else()
+    set(HOST_X64 FALSE)
+  endif()
+
+  if("arm64" IN_LIST CMAKE_OSX_ARCHITECTURES)
+    set(HOST_ARM64 TRUE)
+  else()
+    set(HOST_ARM64 FALSE)
+  endif()
+
+  if (HOST_ARM64 AND HOST_X64)
+    message(FATAL_ERROR "Universal builds not supported like this! Please compile separately and stitch together")
+  endif()
+endif()
+
+if (HOST_X64)
     add_subdirectory(third_party/xbyak) # Add xbyak submodule for x86 JITs
     include_directories(third_party/xbyak)
     add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
     add_compile_definitions(PANDA3DS_X64_HOST)
-else()
-    set(HOST_X64 FALSE)
 endif()
 
-# Check for arm64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-    set(HOST_ARM64 TRUE)
+if (HOST_ARM64)
     add_subdirectory(third_party/oaknut) # Add Oaknut submodule for arm64 JITs
     include_directories(third_party/oaknut/include)
     add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
     add_compile_definitions(PANDA3DS_ARM64_HOST)
-else()
-    set(HOST_ARM64 FALSE)
 endif()
 
 # Enable SSE4.1 if it's not explicitly disabled
@@ -315,6 +340,7 @@ set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/cor
 set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
                     src/core/fs/archive_ext_save_data.cpp src/core/fs/archive_ncch.cpp src/core/fs/romfs.cpp
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp src/core/fs/archive_system_save_data.cpp
+                    src/core/fs/archive_twl_photo.cpp src/core/fs/archive_twl_sound.cpp src/core/fs/archive_card_spi.cpp
 )
 
 set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
@@ -364,8 +390,8 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
                  include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
-                 include/enum_flag_ops.hpp include/services/dsp_firmware_db.hpp include/frontend_settings.hpp
-                 include/dynamic_library.hpp
+                 include/services/dsp_firmware_db.hpp include/frontend_settings.hpp include/fs/archive_twl_photo.hpp
+                 include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/enum_flag_ops.hpp include/dynamic_library.hpp
 )
 
 cmrc_add_resource_library(
@@ -647,7 +673,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
     if(ENABLE_QT_GUI)
-        find_package(Qt6 REQUIRED COMPONENTS Widgets)
+        find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)
         if(NOT ENABLE_OPENGL)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
@@ -657,7 +683,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
 
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
-            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp
+            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
@@ -710,6 +736,23 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
                 docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png
         )
+
+        # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable
+        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts docs/translations/nl.ts)
+        set_source_files_properties(${TRANSLATIONS_TS} PROPERTIES OUTPUT_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/translations")
+        qt_add_translation(TRANSLATIONS_QM ${TRANSLATIONS_TS})
+
+        set(TRANSLATIONS_QRC ${CMAKE_CURRENT_BINARY_DIR}/translations/translations.qrc)
+        file(WRITE ${TRANSLATIONS_QRC} "<RCC><qresource prefix=\"translations\">\n")
+        foreach (QM ${TRANSLATIONS_QM})
+            message("${QM}")
+            get_filename_component(QM_FILE ${QM} NAME)
+            file(APPEND ${TRANSLATIONS_QRC} "<file>${QM_FILE}</file>\n")
+        endforeach (QM)
+        file(APPEND ${TRANSLATIONS_QRC} "</qresource></RCC>")
+
+        qt_add_resources(TRANSLATIONS ${TRANSLATIONS_QRC})
+        set(APP_RESOURCES ${APP_RESOURCES} ${TRANSLATIONS})
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
         set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")

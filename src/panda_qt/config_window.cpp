@@ -12,7 +12,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 
 	// Set the window title of the main window appropriately if we enable showing the app version on the window
 	if (config.windowSettings.showAppVersion) {
-		getMainWindow()->setWindowTitle("Alber v" PANDA3DS_VERSION);
+		getMainWindow()->setWindowTitle(tr("Alber v%1").arg(PANDA3DS_VERSION));
 	}
 
 	// Initialize the widget list and the widget container widgets
@@ -96,6 +96,9 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	});
 	guiLayout->addRow(tr("Window icon"), iconSelect);
 
+	QComboBox* languageSelect = createLanguageSelect();
+	guiLayout->addRow(tr("Language"), languageSelect);
+
 	QCheckBox* showAppVersion = new QCheckBox(tr("Show version on window title"));
 	showAppVersion->setChecked(config.windowSettings.showAppVersion);
 	connect(showAppVersion, &QCheckBox::toggled, this, [&](bool checked) {
@@ -103,7 +106,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 		updateConfig();
 
 		// Update main window title
-		getMainWindow()->setWindowTitle(checked ? "Alber v" PANDA3DS_VERSION : "Alber");
+		getMainWindow()->setWindowTitle(checked ? tr("Alber v%1").arg(PANDA3DS_VERSION) : tr("Alber"));
 	});
 	connectCheckbox(showAppVersion, config.windowSettings.showAppVersion);
 	guiLayout->addRow(showAppVersion);

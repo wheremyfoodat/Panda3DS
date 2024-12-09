@@ -17,6 +17,7 @@ namespace MCU {
 
 		// Service commands
 		void getBatteryLevel(u32 messagePointer);
+		void setInfoLEDPattern(u32 messagePointer);
 
 	  public:
 		HWCService(Memory& mem, const EmulatorConfig& config) : mem(mem), config(config) {}

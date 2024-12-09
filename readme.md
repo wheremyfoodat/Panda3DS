@@ -19,14 +19,14 @@ SDL builds (No GUI):
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Windows_Build/master/Windows%20executable.zip)|
-|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle%20(universal).zip)|
 |Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Linux_AppImage_Build/master/Linux%20executable.zip)|
 
 Qt and Android builds:
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Windows%20executable.zip)|
-|MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle%20(universal).zip)|
 |Linux build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Linux%20executable.zip)|
 |Android build (arm64)|[![Android Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml)|[Android APK](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Android_Build/master/Android%20APKs%20(arm64).zip)|
 
@@ -118,7 +118,7 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
 - [shadPS4](https://github.com/shadps4-emu/shadPS4): Work-in-progress PS4 emulator by the founder of PCSX, PCSX2 and more
 - [Hydra](https://github.com/hydra-emu/hydra): Cross-platform GameBoy, NES, N64 and Chip-8 emulator
-
+- [Tanuki3DS](https://github.com/burhanr13/Tanuki3DS/): A new 3DS emulator for MacOS and Linux
 # Support
 If you find this project exciting and want to support the founder, check out [his Patreon](https://www.patreon.com/wheremyfoodat) or [Ko-fi](https://ko-fi.com/wheremyfoodat)
 <br>

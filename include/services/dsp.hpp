@@ -44,9 +44,12 @@ class DSPService {
 	size_t totalEventCount;
 	std::vector<u8> loadedComponent;
 
+	bool headphonesInserted = true;
+
 	// Service functions
 	void convertProcessAddressFromDspDram(u32 messagePointer);  // Nice function name
 	void flushDataCache(u32 messagePointer);
+	void forceHeadphoneOut(u32 messagePointer);
 	void getHeadphoneStatus(u32 messagePointer);
 	void getSemaphoreEventHandle(u32 messagePointer);
 	void invalidateDCache(u32 messagePointer);
