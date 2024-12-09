@@ -55,6 +55,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto resumeAction = emulationMenu->addAction(tr("Resume"));
 	auto resetAction = emulationMenu->addAction(tr("Reset"));
 	auto configureAction = emulationMenu->addAction(tr("Configure"));
+	configureAction->setMenuRole(QAction::PreferencesRole);
+
 	connect(pauseAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Pause}); });
 	connect(resumeAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Resume}); });
 	connect(resetAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Reset}); });
@@ -75,7 +77,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
+	aboutAction->setMenuRole(QAction::AboutRole);
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
+
 	setMenuBar(menuBar);
 
 	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
