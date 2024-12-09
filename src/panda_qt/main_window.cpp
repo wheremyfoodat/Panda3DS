@@ -487,35 +487,46 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 
 void MainWindow::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::MouseButton::LeftButton) {
-		const QPointF clickPos = event->globalPosition();
-		const QPointF widgetPos = screen->mapFromGlobal(clickPos);
+		// We handle actual mouse press & movement logic inside the mouseMoveEvent handler
+		handleTouchscreenPress(event);
+	}
+}
 
-		// Press is inside the screen area
-		if (widgetPos.x() >= 0 && widgetPos.x() < screen->width() && widgetPos.y() >= 0 && widgetPos.y() < screen->height()) {
-			// Go from widget positions to [0, 400) for x and [0, 480) for y
-			uint x = (uint)std::round(widgetPos.x() / screen->width() * 400.f);
-			uint y = (uint)std::round(widgetPos.y() / screen->height() * 480.f);
-
-			// Check if touch falls in the touch screen area
-			if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-				// Convert to 3DS coordinates
-				u16 x_converted = static_cast<u16>(x) - 40;
-				u16 y_converted = static_cast<u16>(y) - 240;
-
-				EmulatorMessage message{.type = MessageType::PressTouchscreen};
-				message.touchscreen.x = x_converted;
-				message.touchscreen.y = y_converted;
-				sendMessage(message);
-			} else {
-				sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
-			}
-		}
+void MainWindow::mouseMoveEvent(QMouseEvent* event) {
+	if (event->buttons().testFlag(Qt::MouseButton::LeftButton)) {
+		handleTouchscreenPress(event);
 	}
 }
 
 void MainWindow::mouseReleaseEvent(QMouseEvent* event) {
 	if (event->button() == Qt::MouseButton::LeftButton) {
 		sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
+	}
+}
+
+void MainWindow::handleTouchscreenPress(QMouseEvent* event) {
+	const QPointF clickPos = event->globalPosition();
+	const QPointF widgetPos = screen->mapFromGlobal(clickPos);
+
+	// Press is inside the screen area
+	if (widgetPos.x() >= 0 && widgetPos.x() < screen->width() && widgetPos.y() >= 0 && widgetPos.y() < screen->height()) {
+		// Go from widget positions to [0, 400) for x and [0, 480) for y
+		uint x = (uint)std::round(widgetPos.x() / screen->width() * 400.f);
+		uint y = (uint)std::round(widgetPos.y() / screen->height() * 480.f);
+
+		// Check if touch falls in the touch screen area
+		if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
+			// Convert to 3DS coordinates
+			u16 x_converted = static_cast<u16>(x) - 40;
+			u16 y_converted = static_cast<u16>(y) - 240;
+
+			EmulatorMessage message{.type = MessageType::PressTouchscreen};
+			message.touchscreen.x = x_converted;
+			message.touchscreen.y = y_converted;
+			sendMessage(message);
+		} else {
+			sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
+		}
 	}
 }
 
