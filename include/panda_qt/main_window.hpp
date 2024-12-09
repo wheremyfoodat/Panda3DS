@@ -146,12 +146,15 @@ class MainWindow : public QMainWindow {
 	void closeEvent(QCloseEvent* event) override;
 	void keyPressEvent(QKeyEvent* event) override;
 	void keyReleaseEvent(QKeyEvent* event) override;
+
 	void mousePressEvent(QMouseEvent* event) override;
 	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
 
 	void loadLuaScript(const std::string& code);
 	void reloadShader(const std::string& shader);
 	void editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback);
 
 	void handleScreenResize(u32 width, u32 height);
+	void handleTouchscreenPress(QMouseEvent* event);
 };
