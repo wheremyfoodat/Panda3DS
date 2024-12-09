@@ -26,7 +26,7 @@ FileDescriptor TWLPhotoArchive::openFile(const FSPath& path, const FilePerms& pe
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> TWLPhotoArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Empty) {
+	if (!path.isEmptyType()) {
 		Helpers::panic("Unimplemented path type for TWLPhotoArchive::OpenArchive");
 	}
 
