@@ -283,10 +283,7 @@ void DSPService::invalidateDCache(u32 messagePointer) {
 }
 
 void DSPService::forceHeadphoneOut(u32 messagePointer) {
-	const bool force = mem.read8(messagePointer + 4) != 0;
-	if (force) {
-		headphonesInserted = false;
-	}
+	headphonesInserted = mem.read8(messagePointer + 4) != 0;
 
 	log("DSP::ForceHeadphoneOut\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x20, 1, 0));
