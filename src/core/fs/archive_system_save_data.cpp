@@ -4,7 +4,7 @@
 namespace fs = std::filesystem;
 
 Rust::Result<ArchiveBase*, HorizonResult> SystemSaveDataArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Binary) {
+	if (!path.isBinary()) {
 		Helpers::panic("Unimplemented path type for SystemSaveData::OpenArchive");
 	}
 
@@ -14,7 +14,7 @@ Rust::Result<ArchiveBase*, HorizonResult> SystemSaveDataArchive::openArchive(con
 FileDescriptor SystemSaveDataArchive::openFile(const FSPath& path, const FilePerms& perms) {
 	// TODO: Validate this. Temporarily copied from SaveData archive
 
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SystemSaveData::OpenFile");
 		}
@@ -50,7 +50,7 @@ FileDescriptor SystemSaveDataArchive::openFile(const FSPath& path, const FilePer
 }
 
 HorizonResult SystemSaveDataArchive::createFile(const FSPath& path, u64 size) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SystemSaveData::CreateFile");
 		}
@@ -85,7 +85,7 @@ HorizonResult SystemSaveDataArchive::createFile(const FSPath& path, u64 size) {
 }
 
 HorizonResult SystemSaveDataArchive::createDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SystemSaveData::CreateDirectory");
 		}
@@ -110,7 +110,7 @@ HorizonResult SystemSaveDataArchive::createDirectory(const FSPath& path) {
 
 
 HorizonResult SystemSaveDataArchive::deleteFile(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::panic("Unsafe path in SystemSaveData::DeleteFile");
 		}
@@ -143,7 +143,7 @@ HorizonResult SystemSaveDataArchive::deleteFile(const FSPath& path) {
 }
 
 Rust::Result<DirectorySession, HorizonResult> SystemSaveDataArchive::openDirectory(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
+	if (path.isUTF16()) {
 		if (!isPathSafe<PathType::UTF16>(path)) {
 			Helpers::warn("Unsafe path in SystemSaveData::OpenDirectory");
 			return Err(Result::FS::FileNotFoundAlt);
