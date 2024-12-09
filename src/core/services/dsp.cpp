@@ -28,7 +28,8 @@ namespace DSPCommands {
 		RegisterInterruptEvents = 0x00150082,
 		GetSemaphoreEventHandle = 0x00160000,
 		SetSemaphoreMask = 0x00170040,
-		GetHeadphoneStatus = 0x001F0000
+		GetHeadphoneStatus = 0x001F0000,
+		ForceHeadphoneOut = 0x00200040,
 	};
 }
 
@@ -42,6 +43,7 @@ namespace Result {
 void DSPService::reset() {
 	totalEventCount = 0;
 	semaphoreMask = 0;
+	headphonesInserted = true;
 
 	semaphoreEvent = std::nullopt;
 	interrupt0 = std::nullopt;
@@ -60,6 +62,7 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 		case DSPCommands::ConvertProcessAddressFromDspDram: convertProcessAddressFromDspDram(messagePointer); break;
 		case DSPCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case DSPCommands::InvalidateDataCache: invalidateDCache(messagePointer); break;
+		case DSPCommands::ForceHeadphoneOut: forceHeadphoneOut(messagePointer); break;
 		case DSPCommands::GetHeadphoneStatus: getHeadphoneStatus(messagePointer); break;
 		case DSPCommands::GetSemaphoreEventHandle: getSemaphoreEventHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
@@ -210,7 +213,8 @@ void DSPService::getHeadphoneStatus(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1F, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, Result::HeadphonesInserted); // This should be toggleable for shits and giggles
+	// This should be toggleable for shits and giggles
+	mem.write32(messagePointer + 8, headphonesInserted ? Result::HeadphonesInserted : Result::HeadphonesNotInserted);
 }
 
 void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
@@ -275,6 +279,14 @@ void DSPService::invalidateDCache(u32 messagePointer) {
 
 	log("DSP::InvalidateDataCache (addr = %08X, size = %08X, process = %X)\n", address, size, process);
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void DSPService::forceHeadphoneOut(u32 messagePointer) {
+	headphonesInserted = mem.read8(messagePointer + 4) != 0;
+
+	log("DSP::ForceHeadphoneOut\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x20, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

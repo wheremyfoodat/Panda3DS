@@ -102,6 +102,7 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 
 		case ArchiveID::TwlPhoto: return &twlPhoto;
 		case ArchiveID::TwlSound: return &twlSound;
+		case ArchiveID::CardSPI: return &cardSpi;
 
 		default:
 			Helpers::panic("Unknown archive. ID: %d\n", id);
