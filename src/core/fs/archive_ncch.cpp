@@ -32,7 +32,7 @@ HorizonResult NCCHArchive::deleteFile(const FSPath& path) {
 }
 
 FileDescriptor NCCHArchive::openFile(const FSPath& path, const FilePerms& perms) {
-	if (path.type != PathType::Binary || path.binary.size() != 20) {
+	if (!path.isBinary() || path.binary.size() != 20) {
 		Helpers::panic("NCCHArchive::OpenFile: Invalid path");
 	}
 
@@ -49,7 +49,7 @@ FileDescriptor NCCHArchive::openFile(const FSPath& path, const FilePerms& perms)
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> NCCHArchive::openArchive(const FSPath& path) {
-	if (path.type != PathType::Binary || path.binary.size() != 16) {
+	if (!path.isBinary() || path.binary.size() != 16) {
 		Helpers::panic("NCCHArchive::OpenArchive: Invalid path");
 	}
 

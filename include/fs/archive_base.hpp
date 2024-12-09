@@ -90,6 +90,14 @@ struct FSPath {
 			};
 		}
 	}
+
+	bool isUTF16() const { return type == PathType::UTF16; }
+	bool isASCII() const { return type == PathType::ASCII; }
+	bool isBinary() const { return type == PathType::Binary; }
+	// This is not called "isEmpty()" to make obvious that we're talking about an empty-type path, NOT an empty text path
+	bool isEmptyType() const { return type == PathType::Empty; }
+
+	bool isTextPath() const { return isUTF16() || isASCII(); }
 };
 
 struct FilePerms {
@@ -259,6 +267,27 @@ class ArchiveBase {
 	virtual std::optional<u32> readFile(FileSession* file, u64 offset, u32 size, u32 dataPointer) = 0;
 
 	ArchiveBase(Memory& mem) : mem(mem) {}
+
+	bool isSafeTextPath(const FSPath& path) {
+		if (path.type == PathType::UTF16) {
+			return isPathSafe<PathType::UTF16>(path);
+		} else if (path.type == PathType::ASCII){
+			return isPathSafe<PathType::ASCII>(path);
+		}
+
+		Helpers::panic("ArchiveBase::IsSafeTextPath: Invalid path");
+	}
+
+	// Appends a 3DS path to an std::filesystem::path
+	void appendPath(std::filesystem::path& diskPath, const FSPath& guestPath) {
+		if (guestPath.type == PathType::UTF16) {
+			diskPath += std::filesystem::path(guestPath.utf16_string).make_preferred();
+		} else if (guestPath.type == PathType::ASCII) {
+			diskPath += std::filesystem::path(guestPath.string).make_preferred();
+		} else [[unlikely]] {
+			Helpers::panic("ArchiveBase::AppendPath: Invalid 3DS path");
+		}
+	}
 };
 
 struct ArchiveResource {
