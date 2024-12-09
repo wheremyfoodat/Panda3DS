@@ -88,7 +88,10 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 
-		default: Helpers::panic("BOSS service requested. Command: %08X\n", command);
+		default:
+			mem.write32(messagePointer + 4, Result::Success);
+			Helpers::warn("BOSS service requested. Command: %08X\n", command);
+			break;
 	}
 }
 

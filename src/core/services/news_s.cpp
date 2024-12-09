@@ -11,6 +11,9 @@ void NewsSService::reset() {}
 void NewsSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
-		default: Helpers::panic("news:s service requested. Command: %08X\n", command);
+		default:
+			mem.write32(messagePointer + 4, Result::Success);
+			Helpers::warn("news:s service requested. Command: %08X\n", command);
+			break;
 	}
 }

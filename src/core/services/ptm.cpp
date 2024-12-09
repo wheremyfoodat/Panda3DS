@@ -66,7 +66,10 @@ void PTMService::handleSyncRequest(u32 messagePointer, PTMService::Type type) {
 						case PTMCommands::GetSoftwareClosedFlag: getSoftwareClosedFlag(messagePointer); break;
 						case PTMCommands::ClearSoftwareClosedFlag: clearSoftwareClosedFlag(messagePointer); break;
 
-						default: Helpers::panic("PTM SYSM service requested. Command: %08X\n", command); break;
+						default:
+							mem.write32(messagePointer + 4, Result::Success);
+							Helpers::warn("PTM SYSM service requested. Command: %08X\n", command);
+							break;
 					}
 				} else {
 					Helpers::panic("PTM service requested. Command: %08X\n", command);

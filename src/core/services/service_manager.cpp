@@ -101,6 +101,7 @@ static std::map<std::string, HorizonHandle> serviceMap = {
 	{ "act:a", KernelHandles::ACT },
 	{ "act:u", KernelHandles::ACT },
 	{ "am:app", KernelHandles::AM },
+	{ "am:sys", KernelHandles::AM },
 	{ "APT:S", KernelHandles::APT }, // TODO: APT:A, APT:S and APT:U are slightly different
 	{ "APT:A", KernelHandles::APT },
 	{ "APT:U", KernelHandles::APT },
@@ -236,6 +237,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::NIM_AOC: nim.handleSyncRequest(messagePointer, NIMService::Type::AOC); break;
 		case KernelHandles::NIM_U: nim.handleSyncRequest(messagePointer, NIMService::Type::U); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
+		case KernelHandles::NEWS_S: news_s.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NEWS_U: news_u.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NS_S: ns.handleSyncRequest(messagePointer, NSService::Type::S); break;
 		case KernelHandles::NWM_UDS: nwm_uds.handleSyncRequest(messagePointer); break;

@@ -32,7 +32,10 @@ void NIMService::handleSyncRequest(u32 messagePointer, Type type) {
 					case NIMCommands::GetTaskInfos: getTaskInfos(messagePointer); break;
 					case NIMCommands::IsPendingAutoTitleDownloadTasks: isPendingAutoTitleDownloadTasks(messagePointer); break;
 
-					default: Helpers::panic("NIM U service requested. Command: %08X\n", command);
+					default:
+						mem.write32(messagePointer + 4, Result::Success);
+						Helpers::warn("NIM U service requested. Command: %08X\n", command);
+						break;
 				}
 			} else {
 				Helpers::panic("NIM service requested. Command: %08X\n", command);

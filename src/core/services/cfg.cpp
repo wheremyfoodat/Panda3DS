@@ -176,6 +176,8 @@ void CFGService::getConfigInfo(u32 output, u32 blockID, u32 size, u32 permission
 	} else if (size == 4 && blockID == 0x180000) {
 		// Infrared LED related?
 		mem.write32(output, 0);
+	} else if (size == 1 && blockID == 0xE0000) {
+		mem.write8(output, 0);
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}
