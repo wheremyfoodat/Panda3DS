@@ -1,4 +1,5 @@
 #include "services/ac.hpp"
+
 #include "ipc.hpp"
 
 namespace ACCommands {
@@ -10,6 +11,7 @@ namespace ACCommands {
 		GetStatus = 0x000C0000,
 		GetWifiStatus = 0x000D0000,
 		GetConnectingInfraPriority = 0x000F0000,
+		GetNZoneBeaconNotFoundEvent = 0x002F0004,
 		RegisterDisconnectEvent = 0x00300004,
 		IsConnected = 0x003E0042,
 		SetClientVersion = 0x00400042,
@@ -29,12 +31,17 @@ void ACService::handleSyncRequest(u32 messagePointer) {
 		case ACCommands::CreateDefaultConfig: createDefaultConfig(messagePointer); break;
 		case ACCommands::GetConnectingInfraPriority: getConnectingInfraPriority(messagePointer); break;
 		case ACCommands::GetLastErrorCode: getLastErrorCode(messagePointer); break;
+		case ACCommands::GetNZoneBeaconNotFoundEvent: getNZoneBeaconNotFoundEvent(messagePointer); break;
 		case ACCommands::GetStatus: getStatus(messagePointer); break;
 		case ACCommands::GetWifiStatus: getWifiStatus(messagePointer); break;
 		case ACCommands::IsConnected: isConnected(messagePointer); break;
 		case ACCommands::RegisterDisconnectEvent: registerDisconnectEvent(messagePointer); break;
 		case ACCommands::SetClientVersion: setClientVersion(messagePointer); break;
-		default: Helpers::panic("AC service requested. Command: %08X\n", command);
+
+		default:
+			mem.write32(messagePointer + 4, Result::Success);
+			Helpers::warn("AC service requested. Command: %08X\n", command);
+			break;
 	}
 }
 
@@ -72,7 +79,7 @@ void ACService::getLastErrorCode(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0A, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Hopefully this means no error?
+	mem.write32(messagePointer + 8, 0);  // Hopefully this means no error?
 }
 
 void ACService::getConnectingInfraPriority(u32 messagePointer) {
@@ -135,5 +142,14 @@ void ACService::registerDisconnectEvent(u32 messagePointer) {
 	disconnectEvent = eventHandle;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x30, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void ACService::getNZoneBeaconNotFoundEvent(u32 messagePointer) {
+	const u32 processID = mem.read32(messagePointer + 8);
+	const Handle event = mem.read32(messagePointer + 16);
+	log("AC::GetNZoneBeaconNotFoundEvent (process ID = %X, event = %X) (stubbed)\n", processID, event);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
