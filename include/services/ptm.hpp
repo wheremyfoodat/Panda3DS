@@ -24,6 +24,7 @@ class PTMService {
 
   public:
 	enum class Type {
+		GETS,  // ptm:gets
 		U,     // ptm:u
 		SYSM,  // ptm:sysm
 		PLAY,  // ptm:play

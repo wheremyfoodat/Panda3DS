@@ -18,7 +18,7 @@ class CFGService {
 
 	// Service functions
 	void getConfigInfoBlk2(u32 messagePointer);
-	void getConfigInfoBlk8(u32 messagePointer);
+	void getConfigInfoBlk8(u32 messagePointer, u32 commandWord);
 	void getCountryCodeID(u32 messagePointer);
 	void getLocalFriendCodeSeed(u32 messagePointer);
 	void getRegionCanadaUSA(u32 messagePointer);
@@ -26,7 +26,14 @@ class CFGService {
 	void genUniqueConsoleHash(u32 messagePointer);
 	void secureInfoGetByte101(u32 messagePointer);
 	void secureInfoGetRegion(u32 messagePointer);
+	void setConfigInfoBlk4(u32 messagePointer);
+	void updateConfigNANDSavegame(u32 messagePointer);
 	void translateCountryInfo(u32 messagePointer);
+	void isFangateSupported(u32 messagePointer);
+
+	// cfg:nor functions
+	void norInitialize(u32 messagePointer);
+	void norReadData(u32 messagePointer);
 
 	void getConfigInfo(u32 output, u32 blockID, u32 size, u32 permissionMask);
 
