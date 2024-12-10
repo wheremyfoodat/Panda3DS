@@ -140,7 +140,7 @@ void CFGService::getConfigInfo(u32 output, u32 blockID, u32 size, u32 permission
 	if (size == 1 && blockID == 0x70001) {  // Sound output mode
 		mem.write8(output, static_cast<u8>(DSPService::SoundOutputMode::Stereo));
 	} else if (size == 1 && blockID == 0xA0002) {  // System language
-		mem.write8(output, static_cast<u8>(LanguageCodes::English));
+		mem.write8(output, static_cast<u8>(settings.systemLanguage));
 	} else if (size == 4 && blockID == 0xB0000) {          // Country info
 		mem.write8(output, 0);                             // Unknown
 		mem.write8(output + 1, 0);                         // Unknown

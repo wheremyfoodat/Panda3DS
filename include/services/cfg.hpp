@@ -1,6 +1,7 @@
 #pragma once
 #include <cstring>
 
+#include "config.hpp"
 #include "helpers.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
@@ -11,6 +12,8 @@ class CFGService {
 	using Handle = HorizonHandle;
 
 	Memory& mem;
+	const EmulatorConfig& settings;
+
 	CountryCodes country = CountryCodes::US;  // Default to USA
 	MAKE_LOG_FUNCTION(log, cfgLogger)
 
@@ -45,7 +48,7 @@ class CFGService {
 		NOR,  // cfg:nor
 	};
 
-	CFGService(Memory& mem) : mem(mem) {}
+	CFGService(Memory& mem, const EmulatorConfig& settings) : mem(mem), settings(settings) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer, Type type);
 };
