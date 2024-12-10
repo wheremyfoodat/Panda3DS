@@ -55,7 +55,7 @@ jobs:
           ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
 
   MacOS:
-    runs-on: macos-13
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
