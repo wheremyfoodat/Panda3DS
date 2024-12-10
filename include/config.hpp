@@ -5,6 +5,7 @@
 #include "audio/dsp_core.hpp"
 #include "frontend_settings.hpp"
 #include "renderer.hpp"
+#include "services/region_codes.hpp"
 
 struct AudioDeviceConfig {
 	// Audio curve to use for volumes between 0-100
@@ -77,6 +78,8 @@ struct EmulatorConfig {
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;
 
+	LanguageCodes systemLanguage = LanguageCodes::English;
+
 	// Default ROM path to open in Qt and misc frontends
 	std::filesystem::path defaultRomPath = "";
 	std::filesystem::path filePath;
@@ -104,4 +107,7 @@ struct EmulatorConfig {
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
 	void save();
+
+	static LanguageCodes languageCodeFromString(std::string inString);
+	static const char* languageCodeToString(LanguageCodes code);
 };

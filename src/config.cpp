@@ -6,6 +6,7 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <unordered_map>
 
 #include "helpers.hpp"
 #include "toml.hpp"
@@ -45,6 +46,7 @@ void EmulatorConfig::load() {
 			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
 
 			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
+			systemLanguage = languageCodeFromString(toml::find_or<std::string>(general, "SystemLanguage", "en"));
 		}
 	}
 
@@ -169,6 +171,7 @@ void EmulatorConfig::save() {
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
 	data["General"]["PrintAppVersion"] = printAppVersion;
+	data["General"]["SystemLanguage"] = languageCodeToString(systemLanguage);
 
 	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
 	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;
@@ -230,5 +233,35 @@ const char* AudioDeviceConfig::volumeCurveToString(AudioDeviceConfig::VolumeCurv
 
 		case VolumeCurve::Cubic:
 		default: return "cubic";
+	}
+}
+
+LanguageCodes EmulatorConfig::languageCodeFromString(std::string inString) {  // Transform to lower-case to make the setting case-insensitive
+	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
+
+	static const std::unordered_map<std::string, LanguageCodes> map = {
+		{"ja", LanguageCodes::Japanese}, {"en", LanguageCodes::English},    {"fr", LanguageCodes::French},  {"de", LanguageCodes::German},
+		{"it", LanguageCodes::Italian},  {"es", LanguageCodes::Spanish},    {"zh", LanguageCodes::Chinese}, {"ko", LanguageCodes::Korean},
+		{"nl", LanguageCodes::Dutch},    {"pt", LanguageCodes::Portuguese}, {"ru", LanguageCodes::Russian}, {"tw", LanguageCodes::Taiwanese},
+	};
+
+	if (auto search = map.find(inString); search != map.end()) {
+		return search->second;
+	}
+
+	// Default to English if no language code in our map matches
+	return LanguageCodes::English;
+}
+
+const char* EmulatorConfig::languageCodeToString(LanguageCodes code) {
+	static constexpr std::array<const char*, 12> codes = {
+		"ja", "en", "fr", "de", "it", "es", "zh", "ko", "nl", "pt", "ru", "tw",
+	};
+
+	// Invalid country code, return english
+	if (static_cast<u32>(code) > static_cast<u32>(LanguageCodes::Taiwanese)) {
+		return "en";
+	} else {
+		return codes[static_cast<u32>(code)];
 	}
 }

@@ -145,6 +145,27 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	romLayout->addWidget(browseRomPath);
 	genLayout->addRow(tr("Default ROMs path"), romLayout);
 
+	QComboBox* systemLanguage = new QComboBox();
+	systemLanguage->addItem(tr("Japanese"));
+	systemLanguage->addItem(tr("English"));
+	systemLanguage->addItem(tr("French"));
+	systemLanguage->addItem(tr("German"));
+	systemLanguage->addItem(tr("Italian"));
+	systemLanguage->addItem(tr("Spanish"));
+	systemLanguage->addItem(tr("Chinese"));
+	systemLanguage->addItem(tr("Korean"));
+	systemLanguage->addItem(tr("Dutch"));
+	systemLanguage->addItem(tr("Portuguese"));
+	systemLanguage->addItem(tr("Russian"));
+	systemLanguage->addItem(tr("Taiwanese"));
+
+	systemLanguage->setCurrentIndex(static_cast<int>(config.systemLanguage));
+	connect(systemLanguage, &QComboBox::currentIndexChanged, this, [&](int index) {
+		config.systemLanguage = static_cast<LanguageCodes>(index);
+		updateConfig();
+	});
+	genLayout->addRow(tr("System language"), systemLanguage);
+
 	QCheckBox* discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
 	connectCheckbox(discordRpcEnabled, config.discordRpcEnabled);
 	genLayout->addRow(discordRpcEnabled);
@@ -163,7 +184,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	gpuLayout->setHorizontalSpacing(20);
 	gpuLayout->setVerticalSpacing(10);
 
-	QComboBox* rendererType = new QComboBox;
+	QComboBox* rendererType = new QComboBox();
 	rendererType->addItem(tr("Null"));
 	rendererType->addItem(tr("OpenGL"));
 	rendererType->addItem(tr("Vulkan"));
@@ -217,7 +238,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	audioLayout->setHorizontalSpacing(20);
 	audioLayout->setVerticalSpacing(10);
 
-	QComboBox* dspType = new QComboBox;
+	QComboBox* dspType = new QComboBox();
 	dspType->addItem(tr("Null"));
 	dspType->addItem(tr("LLE"));
 	dspType->addItem(tr("HLE"));
@@ -244,7 +265,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
 	audioLayout->addRow(muteAudio);
 
-	QComboBox* volumeCurveType = new QComboBox;
+	QComboBox* volumeCurveType = new QComboBox();
 	volumeCurveType->addItem(tr("Cubic"));
 	volumeCurveType->addItem(tr("Linear"));
 	volumeCurveType->setCurrentIndex(static_cast<int>(config.audioDeviceConfig.volumeCurve));
