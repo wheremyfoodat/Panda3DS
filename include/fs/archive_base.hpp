@@ -64,6 +64,14 @@ namespace ArchiveID {
 	}
 }  // namespace ArchiveID
 
+namespace MediaType {
+	enum : u8 {
+		NAND = 0,
+		SD = 1,
+		Gamecard = 2,
+	};
+};
+
 struct FSPath {
 	u32 type = PathType::Invalid;
 
@@ -244,6 +252,16 @@ class ArchiveBase {
 	virtual HorizonResult createDirectory(const FSPath& path) {
 		Helpers::panic("Unimplemented CreateDirectory for %s archive", name().c_str());
 		return Result::FS::AlreadyExists;
+	}
+
+	virtual HorizonResult deleteDirectory(const FSPath& path) {
+		Helpers::warn("Stubbed DeleteDirectory for %s archive", name().c_str());
+		return Result::Success;
+	}
+
+	virtual HorizonResult deleteDirectoryRecursively(const FSPath& path) {
+		Helpers::warn("Stubbed DeleteDirectoryRecursively for %s archive", name().c_str());
+		return Result::Success;
 	}
 
 	// Returns nullopt if opening the file failed, otherwise returns a file descriptor to it (nullptr if none is needed)

@@ -13,14 +13,6 @@ namespace PathType {
 	};
 };
 
-namespace MediaType {
-	enum : u8 {
-		NAND = 0,
-		SD = 1,
-		Gamecard = 2
-	};
-};
-
 HorizonResult NCCHArchive::createFile(const FSPath& path, u64 size) {
 	Helpers::panic("[NCCH] CreateFile not yet supported");
 	return Result::Success;

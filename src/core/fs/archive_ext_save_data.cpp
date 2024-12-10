@@ -1,4 +1,7 @@
 #include "fs/archive_ext_save_data.hpp"
+
+#include <fmt/format.h>
+
 #include <memory>
 
 namespace fs = std::filesystem;
@@ -38,7 +41,7 @@ HorizonResult ExtSaveDataArchive::deleteFile(const FSPath& path) {
 		if (!isSafeTextPath(path))
 			Helpers::panic("Unsafe path in ExtSaveData::DeleteFile");
 
-		fs::path p = IOFile::getAppData() / backingFolder;
+		fs::path p = getUserDataPath();
 		appendPath(p, path);
 
 		if (fs::is_directory(p)) {
@@ -74,7 +77,7 @@ FileDescriptor ExtSaveDataArchive::openFile(const FSPath& path, const FilePerms&
 		if (perms.create())
 			Helpers::panic("[ExtSaveData] Can't open file with create flag");
 
-		fs::path p = IOFile::getAppData() / backingFolder;
+		fs::path p = getUserDataPath();
 		appendPath(p, path);
 
 		if (fs::exists(p)) { // Return file descriptor if the file exists
@@ -99,7 +102,7 @@ HorizonResult ExtSaveDataArchive::renameFile(const FSPath& oldPath, const FSPath
 	}
 
 	// Construct host filesystem paths
-	fs::path sourcePath = IOFile::getAppData() / backingFolder;
+	fs::path sourcePath = getUserDataPath();
 	fs::path destPath = sourcePath;
 
 	sourcePath += fs::path(oldPath.utf16_string).make_preferred();
@@ -132,7 +135,7 @@ HorizonResult ExtSaveDataArchive::createDirectory(const FSPath& path) {
 			Helpers::panic("Unsafe path in ExtSaveData::OpenFile");
 		}
 
-		fs::path p = IOFile::getAppData() / backingFolder;
+		fs::path p = getUserDataPath();
 		appendPath(p, path);
 
 		if (fs::is_directory(p)) {
@@ -150,14 +153,132 @@ HorizonResult ExtSaveDataArchive::createDirectory(const FSPath& path) {
 	}
 }
 
-std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path) {
-	// TODO: Remove punning here
-	const u32 mediaType = *(u32*)&path.binary[0];
-	const u32 saveLow = *(u32*)&path.binary[4];
-	const u32 saveHigh = *(u32*)&path.binary[8];
+HorizonResult ExtSaveDataArchive::deleteDirectory(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in ExtSaveData::DeleteDirectory");
+		}
 
-	// TODO: Should the media type be used here
-	return backingFolder + std::to_string(saveLow) + std::to_string(saveHigh);
+		fs::path p = getUserDataPath();
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (!fs::is_directory(p)) {
+			return Result::FS::NotFoundInvalid;
+		}
+
+		if (fs::is_regular_file(p)) {
+			Helpers::panic("File path passed to ExtSaveData::DeleteDirectory");
+		}
+
+		Helpers::warn("Stubbed DeleteDirectory for %s archive", name().c_str());
+		bool success = fs::remove(p);
+		return success ? Result::Success : Result::FS::UnexpectedFileOrDir;
+	} else {
+		Helpers::panic("Unimplemented ExtSaveData::DeleteDirectory");
+	}
+}
+
+HorizonResult ExtSaveDataArchive::deleteDirectoryRecursively(const FSPath& path) {
+	if (path.type == PathType::UTF16) {
+		if (!isPathSafe<PathType::UTF16>(path)) {
+			Helpers::panic("Unsafe path in ExtSaveData::DeleteDirectoryRecursively");
+		}
+
+		fs::path p = getUserDataPath();
+		p += fs::path(path.utf16_string).make_preferred();
+
+		if (!fs::is_directory(p)) {
+			return Result::FS::NotFoundInvalid;
+		}
+
+		if (fs::is_regular_file(p)) {
+			Helpers::panic("File path passed to ExtSaveData::DeleteDirectoryRecursively");
+		}
+
+		Helpers::warn("Stubbed DeleteDirectoryRecursively for %s archive", name().c_str());
+		bool success = fs::remove_all(p);
+		return success ? Result::Success : Result::FS::UnexpectedFileOrDir;
+	} else {
+		Helpers::panic("Unimplemented ExtSaveData::DeleteDirectoryRecursively");
+	}
+}
+
+void ExtSaveDataArchive::format(const FSPath& path, const FormatInfo& info) {
+	const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
+	const fs::path formatInfoPath = getFormatInfoPath(path);
+
+	if (!isShared) {
+		// Delete all contents by deleting the directory then recreating it
+		fs::remove_all(saveDataPath);
+		fs::create_directories(saveDataPath);
+		fs::create_directories(saveDataPath / "user");
+		fs::create_directories(saveDataPath / "boss");
+	}
+
+	// Write format info on disk
+	IOFile file(formatInfoPath, "wb");
+	file.writeBytes(&info, sizeof(info));
+	file.flush();
+	file.close();
+}
+
+void ExtSaveDataArchive::clear(const FSPath& path) const {
+	const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
+	const fs::path formatInfoPath = getFormatInfoPath(path);
+
+	fs::remove_all(saveDataPath);
+	fs::remove(formatInfoPath);
+}
+
+std::filesystem::path ExtSaveDataArchive::getFormatInfoPath(const FSPath& path) const {
+	return IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
+}
+
+std::filesystem::path ExtSaveDataArchive::getUserDataPath() const {
+	fs::path p = IOFile::getAppData() / getExtSaveDataPath();
+	if (!isShared) {  // todo: "boss"?
+		p /= "user";
+	}
+	return p;
+}
+
+Rust::Result<ArchiveBase::FormatInfo, HorizonResult> ExtSaveDataArchive::getFormatInfo(const FSPath& path) {
+	const fs::path formatInfoPath = getFormatInfoPath(path);
+	IOFile file(formatInfoPath, "rb");
+
+	// If the file failed to open somehow, we return that the archive is not formatted
+	if (!file.isOpen()) {
+		return Err(Result::FS::NotFormatted);
+	}
+
+	FormatInfo ret = {};
+	auto [success, bytesRead] = file.readBytes(&ret, sizeof(FormatInfo));
+	file.close();
+
+	if (!success || bytesRead != sizeof(FormatInfo)) {
+		Helpers::warn("ExtSaveDataArchive::GetFormatInfo: Format file exists but was not properly read into the FormatInfo struct");
+		return Err(Result::FS::NotFormatted);
+	}
+
+	ret.size = 0;
+	return Ok(ret);
+}
+
+std::string ExtSaveDataArchive::getExtSaveDataPathFromBinary(const FSPath& path) const {
+	if (!path.isBinary()) {
+		Helpers::panic("GetExtSaveDataPathFromBinary called without a Binary FSPath!");
+	}
+
+	const ExtSaveDataInfo info = *reinterpret_cast<const ExtSaveDataInfo*>(&path.binary[0]);
+	return fs::path(backingFolder).filename().string() + "_" + std::to_string(info.save_id);
+}
+
+std::string ExtSaveDataArchive::getExtSaveDataPath() const {
+	if (isShared) {
+		return backingFolder + "/" + std::to_string(mem.getProgramID().value_or(0)) + "/" + std::to_string(archiveSaveId);
+	}
+
+	return backingFolder + "/" + std::to_string(archiveSaveId);
 }
 
 Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const FSPath& path) {
@@ -165,13 +286,18 @@ Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const 
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
-	// TODO: Readd the format check. I didn't manage to fix it sadly
+	if (isShared) {
+		const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
+		if (!fs::exists(saveDataPath)) fs::create_directories(saveDataPath);
+		return Ok((ArchiveBase*)this);
+	}
+
 	// Create a format info path in the style of AppData/FormatInfo/Cartridge10390390194.format
-	// fs::path formatInfopath = IOFile::getAppData() / "FormatInfo" / (getExtSaveDataPathFromBinary(path) + ".format");
+	const fs::path formatInfoPath = getFormatInfoPath(path);
 	// Format info not found so the archive is not formatted
-	// if (!fs::is_regular_file(formatInfopath)) {
-	//	return isShared ? Err(Result::FS::NotFormatted) : Err(Result::FS::NotFoundInvalid);
-	//}
+	if (!fs::is_regular_file(formatInfoPath)) {
+		return isNAND ? Err(Result::FS::NotFormatted) : Err(Result::FS::NotFoundInvalid);
+	}
 
 	return Ok((ArchiveBase*)this);
 }
@@ -181,7 +307,7 @@ Rust::Result<DirectorySession, HorizonResult> ExtSaveDataArchive::openDirectory(
 		if (!isSafeTextPath(path))
 			Helpers::panic("Unsafe path in ExtSaveData::OpenDirectory");
 
-		fs::path p = IOFile::getAppData() / backingFolder;
+		fs::path p = getUserDataPath();
 		appendPath(p, path);
 
 		if (fs::is_regular_file(p)) {
