@@ -190,8 +190,18 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	rendererType->addItem(tr("Vulkan"));
 	rendererType->setCurrentIndex(static_cast<int>(config.rendererType));
 	connect(rendererType, &QComboBox::currentIndexChanged, this, [&](int index) {
-		config.rendererType = static_cast<RendererType>(index);
-		updateConfig();
+		auto type = static_cast<RendererType>(index);
+
+		if (type == RendererType::Vulkan) {
+			QMessageBox messageBox(
+				QMessageBox::Icon::Critical, tr("Vulkan renderer unavailable"),
+				tr("Qt UI doesn't currently support Vulkan, try again at a later time")
+			);
+			messageBox.exec();
+		} else {
+			config.rendererType = type;
+			updateConfig();
+		}
 	});
 	gpuLayout->addRow(tr("GPU renderer"), rendererType);
 
