@@ -210,10 +210,11 @@ void ExtSaveDataArchive::format(const FSPath& path, const FormatInfo& info) {
 	if (!isShared) {
 		// Delete all contents by deleting the directory then recreating it
 		fs::remove_all(saveDataPath);
-		fs::create_directories(saveDataPath);
-		fs::create_directories(saveDataPath / "user");
-		fs::create_directories(saveDataPath / "boss");
 	}
+
+	fs::create_directories(saveDataPath);
+	fs::create_directories(saveDataPath / "user");
+	fs::create_directories(saveDataPath / "boss");
 
 	// Write format info on disk
 	IOFile file(formatInfoPath, "wb");
@@ -248,7 +249,7 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> ExtSaveDataArchive::getForm
 
 	// If the file failed to open somehow, we return that the archive is not formatted
 	if (!file.isOpen()) {
-		return Err(Result::FS::NotFormatted);
+		return isShared ? Err(Result::FS::NotFormatted) : Err(Result::FS::NotFoundInvalid);
 	}
 
 	FormatInfo ret = {};
