@@ -88,7 +88,7 @@ endif()
 
 # Generate versioning files
 find_package(Git)
-set(PANDA3DS_VERSION "0.8")
+set(PANDA3DS_VERSION "0.9")
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/include/version.hpp.in)
     file(WRITE ${CMAKE_BINARY_DIR}/include/version.hpp.in "#define PANDA3DS_VERSION \"\${PANDA3DS_VERSION}\"")
