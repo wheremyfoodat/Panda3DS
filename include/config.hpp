@@ -48,7 +48,12 @@ struct EmulatorConfig {
 	static constexpr bool ubershaderDefault = true;
 #endif
 	static constexpr bool accelerateShadersDefault = true;
+
+#if defined(__LIBRETRO__)
 	static constexpr bool audioEnabledDefault = true;
+#else
+	static constexpr bool audioEnabledDefault = false;
+#endif
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
