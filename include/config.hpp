@@ -48,6 +48,7 @@ struct EmulatorConfig {
 	static constexpr bool ubershaderDefault = true;
 #endif
 	static constexpr bool accelerateShadersDefault = true;
+	static constexpr bool audioEnabledDefault = true;
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
@@ -66,7 +67,7 @@ struct EmulatorConfig {
 	bool sdWriteProtected = false;
 	bool usePortableBuild = false;
 
-	bool audioEnabled = false;
+	bool audioEnabled = audioEnabledDefault;
 	bool vsyncEnabled = true;
 	bool aacEnabled = true;  // Enable AAC audio?
 
