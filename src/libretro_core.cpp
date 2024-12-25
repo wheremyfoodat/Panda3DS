@@ -170,8 +170,9 @@ static void configInit() {
 		{"panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
 																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
+		{"panda3ds_system_language", "System language; En|Fr|Es|De|It|Pt|Nl|Ru|Ja|Zh|Ko|Tw"},
 		{"panda3ds_dsp_emulation", "DSP emulation; HLE|LLE|Null"},
-		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
+		{"panda3ds_use_audio", EmulatorConfig::audioEnabledDefault ? "Enable audio; enabled|disabled" : "Enable audio; disabled|enabled"},
 		{"panda3ds_audio_volume", "Audio volume; 100|0|10|20|40|60|80|90|100|120|140|150|180|200"},
 		{"panda3ds_mute_audio", "Mute audio; disabled|enabled"},
 		{"panda3ds_enable_aac", "Enable AAC audio; enabled|disabled"},
@@ -196,6 +197,8 @@ static void configUpdate() {
 	config.shaderJitEnabled = fetchVariableBool("panda3ds_use_shader_jit", EmulatorConfig::shaderJitDefault);
 	config.chargerPlugged = fetchVariableBool("panda3ds_use_charger", true);
 	config.batteryPercentage = fetchVariableRange("panda3ds_battery_level", 5, 100);
+	config.systemLanguage = EmulatorConfig::languageCodeFromString(fetchVariable("panda3ds_system_language", "en"));
+
 	config.dspType = Audio::DSPCore::typeFromString(fetchVariable("panda3ds_dsp_emulation", "null"));
 	config.audioEnabled = fetchVariableBool("panda3ds_use_audio", false);
 	config.aacEnabled = fetchVariableBool("panda3ds_enable_aac", true);
