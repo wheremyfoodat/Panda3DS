@@ -14,7 +14,10 @@
 #include "version.hpp"
 
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
-	emu = new Emulator();
+	QCoreApplication::setApplicationName("Alber");
+
+	const std::filesystem::path appData(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString());
+	emu = new Emulator({ std::filesystem::current_path() / EmulatorConfigFilename, appData / EmulatorConfigFilename }, appData);
 
 	loadTranslation();
 	setWindowTitle(tr("Alber"));

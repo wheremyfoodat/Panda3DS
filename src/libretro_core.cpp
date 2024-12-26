@@ -15,20 +15,11 @@ static retro_input_poll_t inputPollCallback;
 static retro_input_state_t inputStateCallback;
 
 static retro_hw_render_callback hwRender;
-static std::filesystem::path savePath;
 
 static bool screenTouched;
 
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
-
-std::filesystem::path Emulator::getConfigPath() {
-	return std::filesystem::path(savePath / "config.toml");
-}
-
-std::filesystem::path Emulator::getAppDataRoot() {
-	return std::filesystem::path(savePath / "Emulator Files");
-}
 
 static void* getGLProcAddress(const char* name) {
 	return (void*)hwRender.get_proc_address(name);
@@ -276,15 +267,14 @@ void retro_init() {
 	envCallback(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &xrgb888);
 
 	char* saveDir = nullptr;
+	std::filesystem::path savePath = std::filesystem::path(saveDir);
 
 	if (!envCallback(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &saveDir) || saveDir == nullptr) {
 		Helpers::warn("No save directory provided by LibRetro.");
 		savePath = std::filesystem::current_path();
-	} else {
-		savePath = std::filesystem::path(saveDir);
 	}
 
-	emulator = std::make_unique<Emulator>();
+	emulator = std::make_unique<Emulator>(({ std::filesystem::path(savePath / EmulatorConfigFilename) }, std::filesystem::path(savePath / "Emulator Files")));
 }
 
 void retro_deinit() {

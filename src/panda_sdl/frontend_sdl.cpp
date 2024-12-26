@@ -6,7 +6,14 @@
 #include "sdl_sensors.hpp"
 #include "version.hpp"
 
-FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+std::filesystem::path getAppDataPath() {
+	auto appData = SDL_GetPrefPath(nullptr, "Alber");
+	auto appDataPath = std::filesystem::path(appData);
+	SDL_free(appData);
+	return appDataPath;
+}
+
+FrontendSDL::FrontendSDL() : emu({ std::filesystem::current_path() / EmulatorConfigFilename, getAppDataPath() / EmulatorConfigFilename }, getAppDataPath()), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}

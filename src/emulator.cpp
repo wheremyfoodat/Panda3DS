@@ -18,14 +18,29 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
-Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
-	  cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this), running(false)
+std::filesystem::path findConfig(std::vector<std::filesystem::path> paths) {
+	for (std::filesystem::path p: paths) {
+		if (std::filesystem::exists(p)) {
+			return p;
+		}
+	}
+	return paths.back();
+}
+
+Emulator::Emulator(std::vector<std::filesystem::path> configSearchPaths, std::filesystem::path appDataPath)
+	: config(findConfig(configSearchPaths)), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
+	  cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this), running(false), appDataPath(appDataPath)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
 #endif
 {
+	if (config.usePortableBuild) {
+		auto appData = SDL_GetBasePath();
+		appDataPath = std::filesystem::path(appData) / "Emulator Files";
+		SDL_free(appData);
+	}
+
 	DSPService& dspService = kernel.getServiceManager().getDSP();
 
 	dsp = Audio::makeDSPCore(config, memory, scheduler, dspService);
@@ -90,25 +105,6 @@ void Emulator::reset(ReloadOption reload) {
 		}
 	}
 }
-
-#ifndef __LIBRETRO__
-std::filesystem::path Emulator::getAndroidAppPath() {
-	// SDL_GetPrefPath fails to get the path due to no JNI environment
-	std::ifstream cmdline("/proc/self/cmdline");
-	std::string applicationName;
-	std::getline(cmdline, applicationName, '\0');
-
-	return std::filesystem::path("/data") / "data" / applicationName / "files";
-}
-
-std::filesystem::path Emulator::getConfigPath() {
-	if constexpr (Helpers::isAndroid()) {
-		return getAndroidAppPath() / "config.toml";
-	} else {
-		return std::filesystem::current_path() / "config.toml";
-	}
-}
-#endif
 
 void Emulator::step() {}
 void Emulator::render() {}
@@ -188,31 +184,13 @@ void Emulator::pollScheduler() {
 	}
 }
 
-#ifndef __LIBRETRO__
 // Get path for saving files (AppData on Windows, /home/user/.local/share/ApplicationName on Linux, etc)
 // Inside that path, we be use a game-specific folder as well. Eg if we were loading a ROM called PenguinDemo.3ds, the savedata would be in
 // %APPDATA%/Alber/PenguinDemo/SaveData on Windows, and so on. We do this because games save data in their own filesystem on the cart.
 // If the portable build setting is enabled, then those saves go in the executable directory instead
 std::filesystem::path Emulator::getAppDataRoot() {
-	std::filesystem::path appDataPath;
-
-#ifdef __ANDROID__
-	appDataPath = getAndroidAppPath();
-#else
-	char* appData;
-	if (!config.usePortableBuild) {
-		appData = SDL_GetPrefPath(nullptr, "Alber");
-		appDataPath = std::filesystem::path(appData);
-	} else {
-		appData = SDL_GetBasePath();
-		appDataPath = std::filesystem::path(appData) / "Emulator Files";
-	}
-	SDL_free(appData);
-#endif
-
 	return appDataPath;
 }
-#endif
 
 bool Emulator::loadROM(const std::filesystem::path& path) {
 	// Reset the emulator if we've already loaded a ROM

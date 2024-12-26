@@ -50,7 +50,7 @@ class HC_GLOBAL HydraCore final : public hydra::IBase,
 	void* getProcAddress = nullptr;
 };
 
-HydraCore::HydraCore() : emulator(new Emulator) {
+HydraCore::HydraCore() : emulator(new Emulator({ std::filesystem::current_path() / EmulatorConfigFilename }, std::filesystem::current_path())) {
 	if (emulator->getRendererType() != RendererType::OpenGL) {
 		throw std::runtime_error("HydraCore: Renderer is not OpenGL");
 	}

@@ -38,6 +38,15 @@ JNIEnv* jniEnv() {
 	return env;
 }
 
+std::filesystem::path getAndroidAppPath() {
+	// SDL_GetPrefPath fails to get the path due to no JNI environment
+	std::ifstream cmdline("/proc/self/cmdline");
+	std::string applicationName;
+	std::getline(cmdline, applicationName, '\0');
+
+	return std::filesystem::path("/data") / "data" / applicationName / "files";
+}
+
 extern "C" {
 
 #define MAKE_SETTING(functionName, type, settingName) \
@@ -64,7 +73,8 @@ AlberFunction(void, Pause)(JNIEnv* env, jobject obj) { emulator->pause(); }
 AlberFunction(void, Resume)(JNIEnv* env, jobject obj) { emulator->resume(); }
 
 AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
-	emulator = std::make_unique<Emulator>();
+	auto appPath = getAndroidAppPath();
+	emulator = std::make_unique<Emulator>({ appPath / EmulatorConfigFilename }, appPath);
 
 	if (emulator->getRendererType() != RendererType::OpenGL) {
 		return throwException(env, "Renderer type is not OpenGL");

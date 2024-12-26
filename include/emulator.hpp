@@ -28,6 +28,8 @@
 #include "gl/context.h"
 #endif
 
+static const std::string EmulatorConfigFilename = "config.toml";
+
 struct SDL_Window;
 
 enum class ROMType {
@@ -50,6 +52,8 @@ class Emulator {
 	Crypto::AESEngine aesEngine;
 	MiniAudioDevice audioDevice;
 	Cheats cheats;
+
+	std::filesystem::path appDataPath;
 
   public:
 	static constexpr u32 width = 400;
@@ -85,7 +89,7 @@ class Emulator {
 	// Used in CPU::runFrame
 	bool frameDone = false;
 
-	Emulator();
+	Emulator(std::vector<std::filesystem::path> configSearchPaths, std::filesystem::path appDataPath);
 	~Emulator();
 
 	void step();
