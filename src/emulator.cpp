@@ -105,8 +105,10 @@ std::filesystem::path Emulator::getConfigPath() {
 	if constexpr (Helpers::isAndroid()) {
 		return getAndroidAppPath() / "config.toml";
 	} else {
-		if (std::filesystem::exists(std::filesystem::current_path() / "config.toml")) {
-			return std::filesystem::current_path() / "config.toml";
+		std::filesystem::path localPath = std::filesystem::current_path() / "config.toml");
+
+		if (std::filesystem::exists(localPath)) {
+			return localPath;
 		} else {
 			return getAppDataRoot() / "config.toml";
 		}
