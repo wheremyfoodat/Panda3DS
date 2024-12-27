@@ -50,6 +50,7 @@ option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
 option(ENABLE_METAL "Enable Metal rendering backend (if available)" ON)
+option(ENABLE_WAYLAND "Enable Wayland support on Linux platforms" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_TESTS "Compile unit-tests" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
@@ -139,6 +140,10 @@ include_directories(third_party/mio/single_include)
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
+
+if(ENABLE_WAYLAND)
+    add_compile_definitions(WAYLAND_ENABLED)
+endif()
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)

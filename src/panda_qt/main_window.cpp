@@ -24,7 +24,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	resize(800, 240 * 4);
 
 	// We pass a callback to the screen widget that will be triggered every time we resize the screen
-	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, nullptr);
 	setCentralWidget(screen);
 
 	screen->show();
