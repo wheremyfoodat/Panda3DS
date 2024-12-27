@@ -51,17 +51,16 @@ void RendererGL::reset() {
 
 		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
-
-#ifdef USING_GLES
-	fragShaderGen.setTarget(PICA::ShaderGen::API::GLES, PICA::ShaderGen::Language::GLSL);
-#endif
 }
 
 void RendererGL::initGraphicsContextInternal() {
 	gl.reset();
 
-	auto gl_resources = cmrc::RendererGL::get_filesystem();
+#if defined(USING_GLES) || defined(__ANDROID__)
+	driverInfo.usingGLES = true;
+#endif
 
+	auto gl_resources = cmrc::RendererGL::get_filesystem();
 	auto vertexShaderSource = gl_resources.open("opengl_vertex_shader.vert");
 	auto fragmentShaderSource = gl_resources.open("opengl_fragment_shader.frag");
 
@@ -191,6 +190,7 @@ void RendererGL::initGraphicsContextInternal() {
 	}
 
 	reset();
+	fragShaderGen.setTarget(driverInfo.usingGLES ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL);
 
 	// Populate our driver info structure
 	driverInfo.supportsExtFbFetch = (GLAD_GL_EXT_shader_framebuffer_fetch != 0);
@@ -850,9 +850,9 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	PICA::FragmentConfig fsConfig(regs);
 	// If we're not on GLES, ignore the logic op configuration and don't generate redundant shaders for it, since we use hw logic ops
-#ifndef USING_GLES
-	fsConfig.outConfig.logicOpMode = PICA::LogicOpMode(0);
-#endif
+	if (!driverInfo.usingGLES) {
+		fsConfig.outConfig.logicOpMode = PICA::LogicOpMode(0);
+	}
 
 	OpenGL::Shader& fragShader = shaderCache.fragmentShaderCache[fsConfig];
 	if (!fragShader.exists()) {
@@ -1010,7 +1010,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 
 			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
 				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint,
-				Helpers::isAndroid() ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
+				driverInfo.usingGLES ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
 			);
 
 			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and upload
