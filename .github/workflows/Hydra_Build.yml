@@ -121,23 +121,11 @@ jobs:
         vulkan-query-version: latest
         vulkan-use-cache: true
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
-
-    - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DBUILD_HYDRA_CORE=ON
-
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-    
-    - name: Upload core
-      uses: actions/upload-artifact@v4
-      with:
-        name: Linux Hydra core
-        path: '${{github.workspace}}/build/libAlber.so'
-
+  
     - name: Configure CMake (Again)
       run: |
-        rm -rf ${{github.workspace}}/build
-        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON
+        git apply ./.github/gles.patch
+        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON -DOPENGL_PROFILE=OpenGLES
 
     - name: Build (Again)
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -145,7 +133,7 @@ jobs:
     - name: Upload Libretro core
       uses: actions/upload-artifact@v4
       with:
-        name: Linux Libretro core
+        name: Linux Libretro core (RPi)
         path: |
           ${{github.workspace}}/build/panda3ds_libretro.so
           ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
