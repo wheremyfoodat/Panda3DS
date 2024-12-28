@@ -89,7 +89,6 @@ class Emulator {
 	~Emulator();
 
 	void step();
-	void render();
 	void reset(ReloadOption reload);
 	void runFrame();
 	// Poll the scheduler for events

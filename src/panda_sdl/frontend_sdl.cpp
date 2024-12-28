@@ -71,11 +71,27 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 		glContext = SDL_GL_CreateContext(window);
 		if (glContext == nullptr) {
-			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
-		}
+			Helpers::warn("OpenGL context creation failed: %s\nTrying again with OpenGL ES.", SDL_GetError());
 
-		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
-			Helpers::panic("OpenGL init failed");
+			// Some low end devices (eg RPi, emulation handhelds) don't support desktop GL, but only OpenGL ES, so fall back to that if GL context
+			// creation failed
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+			glContext = SDL_GL_CreateContext(window);
+			if (glContext == nullptr) {
+				Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+			}
+
+			if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+				Helpers::panic("OpenGL init failed");
+			}
+
+			emu.getRenderer()->setupGLES();
+		} else {
+			if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+				Helpers::panic("OpenGL init failed");
+			}
 		}
 
 		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);

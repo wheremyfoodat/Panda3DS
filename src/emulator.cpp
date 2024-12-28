@@ -117,7 +117,6 @@ std::filesystem::path Emulator::getConfigPath() {
 #endif
 
 void Emulator::step() {}
-void Emulator::render() {}
 
 // Only resume if a ROM is properly loaded
 void Emulator::resume() {

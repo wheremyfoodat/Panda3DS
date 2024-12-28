@@ -17,7 +17,8 @@ static retro_input_state_t inputStateCallback;
 static retro_hw_render_callback hwRender;
 static std::filesystem::path savePath;
 
-static bool screenTouched;
+static bool screenTouched = false;
+static bool usingGLES = false;
 
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
@@ -35,15 +36,19 @@ static void* getGLProcAddress(const char* name) {
 }
 
 static void videoResetContext() {
-#ifdef USING_GLES
-	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
-		Helpers::panic("OpenGL ES init failed");
+	if (usingGLES) {
+		if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
+			Helpers::panic("OpenGL ES init failed");
+		}
+
+		emulator->getRenderer()->setupGLES();
 	}
-#else
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
-		Helpers::panic("OpenGL init failed");
+
+	else {
+		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
+			Helpers::panic("OpenGL init failed");
+		}
 	}
-#endif
 
 	emulator->initGraphicsContext(nullptr);
 }
@@ -73,6 +78,7 @@ static bool setHWRender(retro_hw_context_type type) {
 			hwRender.version_minor = 1;
 
 			if (envCallback(RETRO_ENVIRONMENT_SET_HW_RENDER, &hwRender)) {
+				usingGLES = true;
 				return true;
 			}
 			break;

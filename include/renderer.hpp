@@ -81,6 +81,10 @@ class Renderer {
 	virtual std::string getUbershader() { return ""; }
 	virtual void setUbershader(const std::string& shader) {}
 
+	// Only relevant for OpenGL renderer and other OpenGL-based backends (eg software)
+	// Called to notify the core to use OpenGL ES and not desktop GL
+	virtual void setupGLES() {}
+
 	// This function is called on every draw call before parsing vertex data.
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between
 	// ubershaders and shadergen, and so on.

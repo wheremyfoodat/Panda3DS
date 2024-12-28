@@ -40,7 +40,7 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexArray hwShaderVAO;
 	OpenGL::VertexBuffer vbo;
 
-	// Data 
+	// Data
 	struct {
 		// TEV configuration uniform locations
 		GLint textureEnvSourceLoc = -1;
@@ -157,6 +157,7 @@ class RendererGL final : public Renderer {
 	void initGraphicsContextInternal();
 
 	void accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel);
+	void compileDisplayShader();
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
@@ -169,14 +170,15 @@ class RendererGL final : public Renderer {
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
-	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
+	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;  // Draw the given vertices
 	void deinitGraphicsContext() override;
 
 	virtual bool supportsShaderReload() override { return true; }
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
 	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) override;
-	
+	virtual void setupGLES() override;
+
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this
