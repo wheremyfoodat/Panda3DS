@@ -28,9 +28,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
 	setCentralWidget(screen);
 
-	screen->show();
 	appRunning = true;
-
 	// Set our menu bar up
 	menuBar = new QMenuBar(nullptr);
 
