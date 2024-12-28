@@ -29,6 +29,7 @@ ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWi
 	setAttribute(Qt::WA_KeyCompression, false);
 	setFocusPolicy(Qt::StrongFocus);
 	setMouseTracking(true);
+	show();
 
 	if (!createGLContext()) {
 		Helpers::panic("Failed to create GL context for display");
@@ -84,7 +85,7 @@ bool ScreenWidget::createGLContext() {
 }
 
 qreal ScreenWidget::devicePixelRatioFromScreen() const {
-	const QScreen* screenForRatio = window()->windowHandle()->screen();
+	const QScreen* screenForRatio = windowHandle()->screen();
 	if (!screenForRatio) {
 		screenForRatio = QGuiApplication::primaryScreen();
 	}
