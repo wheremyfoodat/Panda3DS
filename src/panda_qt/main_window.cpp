@@ -140,6 +140,10 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			glContext->MakeCurrent();
 			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
 
+			if (glContext->IsGLES()) {
+				emu->getRenderer()->setupGLES();
+			}
+
 			emu->initGraphicsContext(glContext);
 		} else if (usingVk) {
 			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");

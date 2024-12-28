@@ -56,10 +56,6 @@ void RendererGL::reset() {
 void RendererGL::initGraphicsContextInternal() {
 	gl.reset();
 
-#if defined(USING_GLES) || defined(__ANDROID__)
-	driverInfo.usingGLES = true;
-#endif
-
 	auto gl_resources = cmrc::RendererGL::get_filesystem();
 	auto vertexShaderSource = gl_resources.open("opengl_vertex_shader.vert");
 	auto fragmentShaderSource = gl_resources.open("opengl_fragment_shader.frag");
@@ -69,16 +65,7 @@ void RendererGL::initGraphicsContextInternal() {
 	triangleProgram.create({vert, frag});
 	initUbershader(triangleProgram);
 
-	auto displayVertexShaderSource = gl_resources.open("opengl_display.vert");
-	auto displayFragmentShaderSource = gl_resources.open("opengl_display.frag");
-
-	OpenGL::Shader vertDisplay({displayVertexShaderSource.begin(), displayVertexShaderSource.size()}, OpenGL::Vertex);
-	OpenGL::Shader fragDisplay({displayFragmentShaderSource.begin(), displayFragmentShaderSource.size()}, OpenGL::Fragment);
-	displayProgram.create({vertDisplay, fragDisplay});
-
-	gl.useProgram(displayProgram);
-	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
-
+	compileDisplayShader();
 	// Create stream buffers for vertex, index and uniform buffers
 	static constexpr usize hwIndexBufferSize = 2_MB;
 	static constexpr usize hwVertexBufferSize = 16_MB;
@@ -1156,6 +1143,19 @@ void RendererGL::initUbershader(OpenGL::Program& program) {
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 }
 
+void RendererGL::compileDisplayShader() {
+	auto gl_resources = cmrc::RendererGL::get_filesystem();
+	auto displayVertexShaderSource = driverInfo.usingGLES ? gl_resources.open("opengl_es_display.vert") : gl_resources.open("opengl_display.vert");
+	auto displayFragmentShaderSource = driverInfo.usingGLES ? gl_resources.open("opengl_es_display.frag") : gl_resources.open("opengl_display.frag");
+
+	OpenGL::Shader vertDisplay({displayVertexShaderSource.begin(), displayVertexShaderSource.size()}, OpenGL::Vertex);
+	OpenGL::Shader fragDisplay({displayFragmentShaderSource.begin(), displayFragmentShaderSource.size()}, OpenGL::Fragment);
+	displayProgram.create({vertDisplay, fragDisplay});
+
+	gl.useProgram(displayProgram);
+	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
+}
+
 void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) {
 	u32 buffer = 0;  // Vertex buffer index for non-fixed attributes
 	u32 attrCount = 0;
@@ -1250,4 +1250,18 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 			);
 		}
 	}
+}
+
+void RendererGL::setupGLES() {
+	driverInfo.usingGLES = true;
+
+	// OpenGL ES hardware is typically way too slow to use the ubershader (eg RPi, mobile phones, handhelds) or has other issues with it.
+	// So, display a warning and turn them off on OpenGL ES.
+	if (emulatorConfig->useUbershaders) {
+		emulatorConfig->useUbershaders = false;
+		Helpers::warn("Ubershaders enabled on OpenGL ES. This usually results in a worse experience, turning it off...");
+	}
+
+	// Stub out logic operations so that calling them doesn't crash the emulator
+	glLogicOp = [](GLenum) {};
 }

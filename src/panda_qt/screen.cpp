@@ -60,11 +60,12 @@ void ScreenWidget::resizeSurface(u32 width, u32 height) {
 }
 
 bool ScreenWidget::createGLContext() {
-	// List of GL context versions we will try. Anything 4.1+ is good
-	static constexpr std::array<GL::Context::Version, 6> versionsToTry = {
+	// List of GL context versions we will try. Anything 4.1+ is good for desktop OpenGL, and 3.1+ for OpenGL ES
+	static constexpr std::array<GL::Context::Version, 8> versionsToTry = {
 		GL::Context::Version{GL::Context::Profile::Core, 4, 6}, GL::Context::Version{GL::Context::Profile::Core, 4, 5},
 		GL::Context::Version{GL::Context::Profile::Core, 4, 4}, GL::Context::Version{GL::Context::Profile::Core, 4, 3},
 		GL::Context::Version{GL::Context::Profile::Core, 4, 2}, GL::Context::Version{GL::Context::Profile::Core, 4, 1},
+		GL::Context::Version{GL::Context::Profile::ES, 3, 2},   GL::Context::Version{GL::Context::Profile::ES, 3, 1},
 	};
 
 	std::optional<WindowInfo> windowInfo = getWindowInfo();
@@ -72,6 +73,10 @@ bool ScreenWidget::createGLContext() {
 		this->windowInfo = *windowInfo;
 
 		glContext = GL::Context::Create(*getWindowInfo(), versionsToTry);
+		if (glContext == nullptr) {
+			return false;
+		}
+
 		glContext->DoneCurrent();
 	}
 

@@ -78,6 +78,7 @@ AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	}
 
 	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "OpenGL ES %d.%d", GLVersion.major, GLVersion.minor);
+	emulator->getRenderer()->setupGLES();
 	emulator->initGraphicsContext(nullptr);
 }
 
@@ -153,7 +154,6 @@ int AndroidUtils::openDocument(const char* path, const char* perms) {
 
     jstring uri = env->NewStringUTF(path);
     jstring jmode = env->NewStringUTF(perms);
-
     jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
 
     env->DeleteLocalRef(uri);
