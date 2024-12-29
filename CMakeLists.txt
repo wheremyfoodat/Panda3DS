@@ -98,22 +98,29 @@ endif()
 if(GIT_FOUND AND ENABLE_GIT_VERSIONING)
     execute_process(
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
-        OUTPUT_VARIABLE PANDA3DS_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    execute_process(
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags
         OUTPUT_VARIABLE git_version_tag OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    if(NOT PANDA3DS_VERSION STREQUAL git_version_tag)
-      execute_process(
-          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --always --abbrev=7
-          OUTPUT_VARIABLE git_version_rev OUTPUT_STRIP_TRAILING_WHITESPACE
-      )
-      set(PANDA3DS_VERSION "${PANDA3DS_VERSION}.${git_version_rev}")
-      unset(git_version_rev)
+    execute_process(
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse --short=7 HEAD
+        OUTPUT_VARIABLE git_version_rev OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT git_version_tag STREQUAL "")
+        set(PANDA3DS_VERSION "${git_version_tag}")
+        execute_process(
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags
+            OUTPUT_VARIABLE git_version_desc OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(git_version_tag STREQUAL git_version_desc)
+            set(git_version_rev "")
+        endif()
+        unset(git_version_desc)
+    endif()
+    if(NOT git_version_rev STREQUAL "")
+        set(PANDA3DS_VERSION "${PANDA3DS_VERSION}.${git_version_rev}")
     endif()
     string(REGEX REPLACE "^v" "" PANDA3DS_VERSION "${PANDA3DS_VERSION}")
     unset(git_version_tag)
+    unset(git_version_rev)
 endif()
 configure_file(${CMAKE_BINARY_DIR}/include/version.hpp.in ${CMAKE_BINARY_DIR}/include/version.hpp)
 include_directories(${CMAKE_BINARY_DIR}/include/)
