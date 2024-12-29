@@ -1263,5 +1263,7 @@ void RendererGL::setupGLES() {
 	}
 
 	// Stub out logic operations so that calling them doesn't crash the emulator
-	glLogicOp = [](GLenum) {};
+	if (!glLogicOp) {
+		glLogicOp = [](GLenum) {};
+	}
 }
