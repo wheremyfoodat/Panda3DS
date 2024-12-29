@@ -427,16 +427,22 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
     target_link_libraries(AlberCore PRIVATE uv_a)
 endif()
 
+set(GL_CONTEXT_SOURCE_FILES "")
+
 if(ENABLE_QT_GUI)
-    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
+    set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
 
     if(APPLE)
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
     elseif(WIN32)
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
     else()
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_wayland.cpp
-        third_party/duckstation/gl/context_egl_x11.cpp third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_x11.cpp
+        third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+
+        if(ENABLE_WAYLAND)
+            set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_egl_wayland.cpp)
+        endif()
     endif()
 endif()
 
@@ -450,7 +456,7 @@ source_group("Source Files\\Core\\Applets" FILES ${APPLET_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
 source_group("Source Files\\Core\\Audio" FILES ${AUDIO_SOURCE_FILES})
 source_group("Source Files\\Core\\Software Renderer" FILES ${RENDERER_SW_SOURCE_FILES})
-source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
+source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES} ${GL_CONTEXT_SOURCE_FILES})
 
 set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with the GL renderer
 set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
@@ -759,7 +765,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)
-    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${APP_RESOURCES})
+    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${GL_CONTEXT_SOURCE_FILES} ${APP_RESOURCES})
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
