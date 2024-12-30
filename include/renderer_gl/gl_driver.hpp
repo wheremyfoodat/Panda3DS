@@ -4,6 +4,7 @@
 // Stuff like whether specific extensions are supported, and potentially things like OpenGL context information
 namespace OpenGL {
 	struct Driver {
+		bool usingGLES = false;
 		bool supportsExtFbFetch = false;
 		bool supportsArmFbFetch = false;
 

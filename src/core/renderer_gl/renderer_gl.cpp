@@ -51,17 +51,12 @@ void RendererGL::reset() {
 
 		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
-
-#ifdef USING_GLES
-	fragShaderGen.setTarget(PICA::ShaderGen::API::GLES, PICA::ShaderGen::Language::GLSL);
-#endif
 }
 
 void RendererGL::initGraphicsContextInternal() {
 	gl.reset();
 
 	auto gl_resources = cmrc::RendererGL::get_filesystem();
-
 	auto vertexShaderSource = gl_resources.open("opengl_vertex_shader.vert");
 	auto fragmentShaderSource = gl_resources.open("opengl_fragment_shader.frag");
 
@@ -70,16 +65,7 @@ void RendererGL::initGraphicsContextInternal() {
 	triangleProgram.create({vert, frag});
 	initUbershader(triangleProgram);
 
-	auto displayVertexShaderSource = gl_resources.open("opengl_display.vert");
-	auto displayFragmentShaderSource = gl_resources.open("opengl_display.frag");
-
-	OpenGL::Shader vertDisplay({displayVertexShaderSource.begin(), displayVertexShaderSource.size()}, OpenGL::Vertex);
-	OpenGL::Shader fragDisplay({displayFragmentShaderSource.begin(), displayFragmentShaderSource.size()}, OpenGL::Fragment);
-	displayProgram.create({vertDisplay, fragDisplay});
-
-	gl.useProgram(displayProgram);
-	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
-
+	compileDisplayShader();
 	// Create stream buffers for vertex, index and uniform buffers
 	static constexpr usize hwIndexBufferSize = 2_MB;
 	static constexpr usize hwVertexBufferSize = 16_MB;
@@ -191,6 +177,7 @@ void RendererGL::initGraphicsContextInternal() {
 	}
 
 	reset();
+	fragShaderGen.setTarget(driverInfo.usingGLES ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL);
 
 	// Populate our driver info structure
 	driverInfo.supportsExtFbFetch = (GLAD_GL_EXT_shader_framebuffer_fetch != 0);
@@ -850,9 +837,9 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	PICA::FragmentConfig fsConfig(regs);
 	// If we're not on GLES, ignore the logic op configuration and don't generate redundant shaders for it, since we use hw logic ops
-#ifndef USING_GLES
-	fsConfig.outConfig.logicOpMode = PICA::LogicOpMode(0);
-#endif
+	if (!driverInfo.usingGLES) {
+		fsConfig.outConfig.logicOpMode = PICA::LogicOpMode(0);
+	}
 
 	OpenGL::Shader& fragShader = shaderCache.fragmentShaderCache[fsConfig];
 	if (!fragShader.exists()) {
@@ -1010,7 +997,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 
 			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
 				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint,
-				Helpers::isAndroid() ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
+				driverInfo.usingGLES ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
 			);
 
 			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and upload
@@ -1156,6 +1143,19 @@ void RendererGL::initUbershader(OpenGL::Program& program) {
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 }
 
+void RendererGL::compileDisplayShader() {
+	auto gl_resources = cmrc::RendererGL::get_filesystem();
+	auto displayVertexShaderSource = driverInfo.usingGLES ? gl_resources.open("opengl_es_display.vert") : gl_resources.open("opengl_display.vert");
+	auto displayFragmentShaderSource = driverInfo.usingGLES ? gl_resources.open("opengl_es_display.frag") : gl_resources.open("opengl_display.frag");
+
+	OpenGL::Shader vertDisplay({displayVertexShaderSource.begin(), displayVertexShaderSource.size()}, OpenGL::Vertex);
+	OpenGL::Shader fragDisplay({displayFragmentShaderSource.begin(), displayFragmentShaderSource.size()}, OpenGL::Fragment);
+	displayProgram.create({vertDisplay, fragDisplay});
+
+	gl.useProgram(displayProgram);
+	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
+}
+
 void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) {
 	u32 buffer = 0;  // Vertex buffer index for non-fixed attributes
 	u32 attrCount = 0;
@@ -1249,5 +1249,21 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 				reinterpret_cast<GLvoid*>(vertexBufferOffset + attrib.offset)
 			);
 		}
+	}
+}
+
+void RendererGL::setupGLES() {
+	driverInfo.usingGLES = true;
+
+	// OpenGL ES hardware is typically way too slow to use the ubershader (eg RPi, mobile phones, handhelds) or has other issues with it.
+	// So, display a warning and turn them off on OpenGL ES.
+	if (emulatorConfig->useUbershaders) {
+		emulatorConfig->useUbershaders = false;
+		Helpers::warn("Ubershaders enabled on OpenGL ES. This usually results in a worse experience, turning it off...");
+	}
+
+	// Stub out logic operations so that calling them doesn't crash the emulator
+	if (!glLogicOp) {
+		glLogicOp = [](GLenum) {};
 	}
 }

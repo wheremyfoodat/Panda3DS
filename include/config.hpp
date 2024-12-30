@@ -49,6 +49,12 @@ struct EmulatorConfig {
 #endif
 	static constexpr bool accelerateShadersDefault = true;
 
+#if defined(__LIBRETRO__)
+	static constexpr bool audioEnabledDefault = true;
+#else
+	static constexpr bool audioEnabledDefault = false;
+#endif
+
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
@@ -66,7 +72,7 @@ struct EmulatorConfig {
 	bool sdWriteProtected = false;
 	bool usePortableBuild = false;
 
-	bool audioEnabled = false;
+	bool audioEnabled = audioEnabledDefault;
 	bool vsyncEnabled = true;
 	bool aacEnabled = true;  // Enable AAC audio?
 

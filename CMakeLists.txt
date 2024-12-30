@@ -50,6 +50,7 @@ option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
 option(ENABLE_METAL "Enable Metal rendering backend (if available)" ON)
+option(ENABLE_WAYLAND "Enable Wayland support on Linux platforms" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_TESTS "Compile unit-tests" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
@@ -88,7 +89,7 @@ endif()
 
 # Generate versioning files
 find_package(Git)
-set(PANDA3DS_VERSION "0.8")
+set(PANDA3DS_VERSION "0.9")
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/include/version.hpp.in)
     file(WRITE ${CMAKE_BINARY_DIR}/include/version.hpp.in "#define PANDA3DS_VERSION \"\${PANDA3DS_VERSION}\"")
@@ -97,22 +98,29 @@ endif()
 if(GIT_FOUND AND ENABLE_GIT_VERSIONING)
     execute_process(
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
-        OUTPUT_VARIABLE PANDA3DS_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    execute_process(
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags
         OUTPUT_VARIABLE git_version_tag OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    if(NOT PANDA3DS_VERSION STREQUAL git_version_tag)
-      execute_process(
-          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --always --abbrev=7
-          OUTPUT_VARIABLE git_version_rev OUTPUT_STRIP_TRAILING_WHITESPACE
-      )
-      set(PANDA3DS_VERSION "${PANDA3DS_VERSION}.${git_version_rev}")
-      unset(git_version_rev)
+    execute_process(
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse --short=7 HEAD
+        OUTPUT_VARIABLE git_version_rev OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT git_version_tag STREQUAL "")
+        set(PANDA3DS_VERSION "${git_version_tag}")
+        execute_process(
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags
+            OUTPUT_VARIABLE git_version_desc OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(git_version_tag STREQUAL git_version_desc)
+            set(git_version_rev "")
+        endif()
+        unset(git_version_desc)
+    endif()
+    if(NOT git_version_rev STREQUAL "")
+        set(PANDA3DS_VERSION "${PANDA3DS_VERSION}.${git_version_rev}")
     endif()
     string(REGEX REPLACE "^v" "" PANDA3DS_VERSION "${PANDA3DS_VERSION}")
     unset(git_version_tag)
+    unset(git_version_rev)
 endif()
 configure_file(${CMAKE_BINARY_DIR}/include/version.hpp.in ${CMAKE_BINARY_DIR}/include/version.hpp)
 include_directories(${CMAKE_BINARY_DIR}/include/)
@@ -139,6 +147,10 @@ include_directories(third_party/mio/single_include)
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
+
+if(ENABLE_WAYLAND)
+    add_compile_definitions(WAYLAND_ENABLED)
+endif()
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
@@ -422,16 +434,22 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
     target_link_libraries(AlberCore PRIVATE uv_a)
 endif()
 
+set(GL_CONTEXT_SOURCE_FILES "")
+
 if(ENABLE_QT_GUI)
-    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
+    set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
 
     if(APPLE)
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
     elseif(WIN32)
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
     else()
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_wayland.cpp
-        third_party/duckstation/gl/context_egl_x11.cpp third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_x11.cpp
+        third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+
+        if(ENABLE_WAYLAND)
+            set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_egl_wayland.cpp)
+        endif()
     endif()
 endif()
 
@@ -445,7 +463,7 @@ source_group("Source Files\\Core\\Applets" FILES ${APPLET_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
 source_group("Source Files\\Core\\Audio" FILES ${AUDIO_SOURCE_FILES})
 source_group("Source Files\\Core\\Software Renderer" FILES ${RENDERER_SW_SOURCE_FILES})
-source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
+source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES} ${GL_CONTEXT_SOURCE_FILES})
 
 set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with the GL renderer
 set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
@@ -460,8 +478,9 @@ if(ENABLE_OPENGL)
 
     set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
         src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
-        src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.frag
-        src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
+        src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.vert
+        src/host_shaders/opengl_display.frag src/host_shaders/opengl_es_display.vert
+        src/host_shaders/opengl_es_display.frag src/host_shaders/opengl_vertex_shader.vert
         src/host_shaders/opengl_fragment_shader.frag
     )
 
@@ -474,8 +493,10 @@ if(ENABLE_OPENGL)
         resources_renderer_gl
         NAMESPACE RendererGL
         WHENCE "src/host_shaders/"
-        "src/host_shaders/opengl_display.frag"
         "src/host_shaders/opengl_display.vert"
+        "src/host_shaders/opengl_display.frag"
+        "src/host_shaders/opengl_es_display.vert"
+        "src/host_shaders/opengl_es_display.frag"
         "src/host_shaders/opengl_vertex_shader.vert"
         "src/host_shaders/opengl_fragment_shader.frag"
     )
@@ -751,7 +772,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)
-    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${APP_RESOURCES})
+    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${GL_CONTEXT_SOURCE_FILES} ${APP_RESOURCES})
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)

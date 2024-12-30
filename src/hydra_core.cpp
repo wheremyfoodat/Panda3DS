@@ -118,6 +118,7 @@ void HydraCore::resetContext() {
 	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL ES init failed");
 	}
+	emulator->getRenderer()->setupGLES();
 #else
 	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL init failed");

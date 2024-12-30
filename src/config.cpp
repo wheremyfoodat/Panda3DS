@@ -27,6 +27,7 @@ void EmulatorConfig::load() {
 		return;
 	}
 
+	printf("Loading existing configuration file %s\n", path.string().c_str());
 	toml::value data;
 
 	try {
@@ -101,7 +102,7 @@ void EmulatorConfig::load() {
 			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "HLE");
 			dspType = Audio::DSPCore::typeFromString(dspCoreName);
 			
-			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", false);
+			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", audioEnabledDefault);
 			aacEnabled = toml::find_or<toml::boolean>(audio, "EnableAACAudio", true);
 			printDSPFirmware = toml::find_or<toml::boolean>(audio, "PrintDSPFirmware", false);
 
