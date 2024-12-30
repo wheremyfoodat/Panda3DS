@@ -25,8 +25,6 @@ jobs:
 
     - name: Setup CCache
       uses: hendrikmuhs/ccache-action@v1.2
-      with:
-        max-size: 2Gi
 
     - name: Set up gradle caches
       uses: actions/cache@v4
@@ -52,7 +50,7 @@ jobs:
         java-version: '17'
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DANDROID_ABI=x86_64 -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON
+      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=x86_64 -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
     - name: Build
       run: |
@@ -95,8 +93,6 @@ jobs:
 
     - name: Setup CCache
       uses: hendrikmuhs/ccache-action@v1.2
-      with:
-        max-size: 2Gi
 
     - name: Set up gradle caches
       uses: actions/cache@v4
@@ -122,7 +118,7 @@ jobs:
         java-version: '17'
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DANDROID_ABI=arm64-v8a -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_CXX_FLAGS="-march=armv8-a+crypto"
+      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_CXX_FLAGS="-march=armv8-a+crypto" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
     - name: Build
       run: |
