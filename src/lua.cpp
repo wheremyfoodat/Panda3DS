@@ -444,7 +444,9 @@ void LuaManager::initializeThunks() {
 	};
 
 	luaL_register(L, "GLOBALS", functions);
+#ifdef __ANDROID__
 	Haptics::registerFunctions(L);
+#endif
 
 	// Add values for event enum
 	addIntConstant(LuaEvent::Frame, "__Frame");
