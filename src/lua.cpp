@@ -444,7 +444,7 @@ void LuaManager::initializeThunks() {
 	};
 
 	luaL_register(L, "GLOBALS", functions);
-#ifdef __ANDROID__
+#ifndef __ANDROID__
 	Haptics::registerFunctions(L);
 #endif
 
