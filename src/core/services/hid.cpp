@@ -35,6 +35,7 @@ void HIDService::reset() {
 	circlePadX = circlePadY = 0;
 	touchScreenX = touchScreenY = 0;
 	roll = pitch = yaw = 0;
+	accelX = accelY = accelZ = 0;
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
@@ -103,7 +104,6 @@ void HIDService::getGyroscopeLowCalibrateParam(u32 messagePointer) {
 void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 	log("HID::GetGyroscopeLowRawToDpsCoefficient\n");
 
-	constexpr float gyroscopeCoeff = 14.375f; // Same as retail 3DS
 	mem.write32(messagePointer, IPC::responseHeader(0x15, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, Helpers::bit_cast<u32, float>(gyroscopeCoeff));
@@ -190,6 +190,20 @@ void HIDService::updateInputs(u64 currentTick) {
 			writeSharedMem<u64>(0x108, currentTick);             // Write new tick count
 		}
 		writeSharedMem<u32>(0x118, nextAccelerometerIndex); // Index last updated by the HID module
+		const size_t accelEntryOffset = 0x128 + (nextAccelerometerIndex * 6);  // Offset in the array of 8 accelerometer entries
+
+		// Raw data of current accelerometer entry
+		// TODO: How is the "raw" data actually calculated?
+		s16* accelerometerDataRaw = getSharedMemPointer<s16>(0x120);
+		accelerometerDataRaw[0] = accelX;
+		accelerometerDataRaw[1] = accelY;
+		accelerometerDataRaw[2] = accelZ;
+
+		// Accelerometer entry in entry table
+		s16* accelerometerData = getSharedMemPointer<s16>(accelEntryOffset);
+		accelerometerData[0] = accelX;
+		accelerometerData[1] = accelY;
+		accelerometerData[2] = accelZ;
 		nextAccelerometerIndex = (nextAccelerometerIndex + 1) % 8; // Move to next entry
 
 		// Next, update gyro state
@@ -198,9 +212,10 @@ void HIDService::updateInputs(u64 currentTick) {
 			writeSharedMem<u64>(0x158, currentTick);             // Write new tick count
 		}
 		const size_t gyroEntryOffset = 0x178 + (nextGyroIndex * 6);  // Offset in the array of 8 touchscreen entries
-		writeSharedMem<u16>(gyroEntryOffset, pitch);
-		writeSharedMem<u16>(gyroEntryOffset + 2, yaw);
-		writeSharedMem<u16>(gyroEntryOffset + 4, roll);
+		s16* gyroData = getSharedMemPointer<s16>(gyroEntryOffset);
+		gyroData[0] = pitch;
+		gyroData[1] = yaw;
+		gyroData[2] = roll;
 
 		// Since gyroscope euler angles are relative, we zero them out here and the frontend will update them again when we receive a new rotation
 		roll = pitch = yaw = 0;

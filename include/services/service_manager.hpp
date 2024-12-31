@@ -28,10 +28,11 @@
 #include "services/mcu/mcu_hwc.hpp"
 #include "services/mic.hpp"
 #include "services/ndm.hpp"
-#include "services/nwm_uds.hpp"
 #include "services/news_u.hpp"
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
+#include "services/ns.hpp"
+#include "services/nwm_uds.hpp"
 #include "services/ptm.hpp"
 #include "services/soc.hpp"
 #include "services/ssl.hpp"
@@ -42,6 +43,8 @@ struct EmulatorConfig;
 class Kernel;
 
 class ServiceManager {
+	using Handle = HorizonHandle;
+
 	std::span<u32, 16> regs;
 	Memory& mem;
 	Kernel& kernel;
@@ -50,11 +53,11 @@ class ServiceManager {
 
 	MAKE_LOG_FUNCTION(log, srvLogger)
 
-    ACService ac;
+	ACService ac;
 	ACTService act;
-    AMService am;
+	AMService am;
 	APTService apt;
-    BOSSService boss;
+	BOSSService boss;
 	CAMService cam;
 	CECDService cecd;
 	CFGService cfg;
@@ -74,7 +77,8 @@ class ServiceManager {
 	NewsUService news_u;
 	NFCService nfc;
 	NwmUdsService nwm_uds;
-    NIMService nim;
+	NIMService nim;
+	NSService ns;
 	PTMService ptm;
 	SOCService soc;
 	SSLService ssl;

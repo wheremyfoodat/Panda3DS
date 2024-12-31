@@ -1,6 +1,7 @@
 #pragma once
 #include <cstring>
 #include <optional>
+
 #include "PICA/gpu.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
@@ -9,12 +10,12 @@
 #include "result/result.hpp"
 
 enum class GPUInterrupt : u8 {
-	PSC0 = 0, // Memory fill completed
-	PSC1 = 1, // ?
-	VBlank0 = 2, // ?
-	VBlank1 = 3, // ?
-	PPF = 4, // Display transfer finished
-	P3D = 5, // Command list processing finished
+	PSC0 = 0,     // Memory fill completed
+	PSC1 = 1,     // ?
+	VBlank0 = 2,  // ?
+	VBlank1 = 3,  // ?
+	PPF = 4,      // Display transfer finished
+	P3D = 5,      // Command list processing finished
 	DMA = 6
 };
 
@@ -22,12 +23,14 @@ enum class GPUInterrupt : u8 {
 class Kernel;
 
 class GPUService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::GPU;
 	Memory& mem;
 	GPU& gpu;
 	Kernel& kernel;
-	u32& currentPID; // Process ID of the current process
-	u8* sharedMem; // Pointer to GSP shared memory
+	u32& currentPID;  // Process ID of the current process
+	u8* sharedMem;    // Pointer to GSP shared memory
 
 	// At any point in time only 1 process has privileges to use rendering functions
 	// This is the PID of that process
@@ -62,8 +65,8 @@ class GPUService {
 
 	// Used for saving and restoring GPU state via ImportDisplayCaptureInfo
 	struct CaptureInfo {
-		u32 leftFramebuffer; // Left framebuffer VA
-		u32 rightFramebuffer; // Right framebuffer VA (Top screen only)
+		u32 leftFramebuffer;   // Left framebuffer VA
+		u32 rightFramebuffer;  // Right framebuffer VA (Top screen only)
 		u32 format;
 		u32 stride;
 	};
@@ -72,6 +75,7 @@ class GPUService {
 	// Service commands
 	void acquireRight(u32 messagePointer);
 	void flushDataCache(u32 messagePointer);
+	void invalidateDataCache(u32 messagePointer);
 	void importDisplayCaptureInfo(u32 messagePointer);
 	void readHwRegs(u32 messagePointer);
 	void registerInterruptRelayQueue(u32 messagePointer);
@@ -106,15 +110,14 @@ class GPUService {
 	FramebufferUpdate* getTopFramebufferInfo() { return getFramebufferInfo(0); }
 	FramebufferUpdate* getBottomFramebufferInfo() { return getFramebufferInfo(1); }
 
-public:
-	GPUService(Memory& mem, GPU& gpu, Kernel& kernel, u32& currentPID) : mem(mem), gpu(gpu),
-		kernel(kernel), currentPID(currentPID) {}
+  public:
+	GPUService(Memory& mem, GPU& gpu, Kernel& kernel, u32& currentPID) : mem(mem), gpu(gpu), kernel(kernel), currentPID(currentPID) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	void requestInterrupt(GPUInterrupt type);
 	void setSharedMem(u8* ptr) {
 		sharedMem = ptr;
-		if (ptr != nullptr) { // Zero-fill shared memory in case the process tries to read stale service data or vice versa
+		if (ptr != nullptr) {  // Zero-fill shared memory in case the process tries to read stale service data or vice versa
 			std::memset(ptr, 0, 0x1000);
 		}
 	}

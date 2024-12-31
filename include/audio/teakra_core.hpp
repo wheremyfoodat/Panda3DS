@@ -77,13 +77,13 @@ namespace Audio {
 		}
 
 	  public:
-		TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
+		TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config);
 		~TeakraDSP() override {}
 
 		void reset() override;
 
 		// Run 1 slice of DSP instructions and schedule the next audio frame
-		void runAudioFrame() override {
+		void runAudioFrame(u64 eventTimestamp) override {
 			runSlice();
 			scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::lleSlice * 2);
 		}

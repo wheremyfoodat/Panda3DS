@@ -74,6 +74,9 @@ void PICAShader::run() {
 				break;
 			}
 
+			// Undocumented, implementation based on 3DBrew and hw testing (see tests/PICA_LITP)
+			case ShaderOpcodes::LITP: [[unlikely]] litp(instruction); break;
+
 			default: Helpers::panic("Unimplemented PICA instruction %08X (Opcode = %02X)", instruction, opcode);
 		}
 
@@ -753,4 +756,33 @@ void PICAShader::jmpu(u32 instruction) {
 
 	if (((boolUniform >> bit) & 1) == test)  // Jump if the bool uniform is the value we want
 		pc = dest;
+}
+
+void PICAShader::litp(u32 instruction) {
+	const u32 operandDescriptor = operandDescriptors[instruction & 0x7f];
+	u32 src = getBits<12, 7>(instruction);
+	const u32 idx = getBits<19, 2>(instruction);
+	const u32 dest = getBits<21, 5>(instruction);
+
+	src = getIndexedSource(src, idx);
+	vec4f srcVec = getSourceSwizzled<1>(src, operandDescriptor);
+	vec4f& destVector = getDest(dest);
+
+	// Compare registers are set based on whether src.x and src.w are >= 0.0
+	cmpRegister[0] = (srcVec[0].toFloat32() >= 0.0f);
+	cmpRegister[1] = (srcVec[3].toFloat32() >= 0.0f);
+
+	vec4f result;
+	// TODO: Does max here have the same non-IEEE NaN behavior as the max instruction?
+	result[0] = f24::fromFloat32(std::max(srcVec[0].toFloat32(), 0.0f));
+	result[1] = f24::fromFloat32(std::clamp(srcVec[1].toFloat32(), -127.9961f, 127.9961f));
+	result[2] = f24::zero();
+	result[3] = f24::fromFloat32(std::max(srcVec[3].toFloat32(), 0.0f));
+
+	u32 componentMask = operandDescriptor & 0xf;
+	for (int i = 0; i < 4; i++) {
+		if (componentMask & (1 << i)) {
+			destVector[3 - i] = result[3 - i];
+		}
+	}
 }

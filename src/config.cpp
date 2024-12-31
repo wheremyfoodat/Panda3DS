@@ -1,9 +1,12 @@
 #include "config.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <map>
 #include <string>
+#include <unordered_map>
 
 #include "helpers.hpp"
 #include "toml.hpp"
@@ -24,6 +27,7 @@ void EmulatorConfig::load() {
 		return;
 	}
 
+	printf("Loading existing configuration file %s\n", path.string().c_str());
 	toml::value data;
 
 	try {
@@ -41,6 +45,24 @@ void EmulatorConfig::load() {
 			discordRpcEnabled = toml::find_or<toml::boolean>(general, "EnableDiscordRPC", false);
 			usePortableBuild = toml::find_or<toml::boolean>(general, "UsePortableBuild", false);
 			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
+
+			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
+			systemLanguage = languageCodeFromString(toml::find_or<std::string>(general, "SystemLanguage", "en"));
+		}
+	}
+
+	if (data.contains("Window")) {
+		auto windowResult = toml::expect<toml::value>(data.at("Window"));
+		if (windowResult.is_ok()) {
+			auto window = windowResult.unwrap();
+
+			windowSettings.showAppVersion = toml::find_or<toml::boolean>(window, "AppVersionOnWindow", false);
+			windowSettings.rememberPosition = toml::find_or<toml::boolean>(window, "RememberWindowPosition", false);
+
+			windowSettings.x = toml::find_or<toml::integer>(window, "WindowPosX", WindowSettings::defaultX);
+			windowSettings.y = toml::find_or<toml::integer>(window, "WindowPosY", WindowSettings::defaultY);
+			windowSettings.width = toml::find_or<toml::integer>(window, "WindowWidth", WindowSettings::defaultWidth);
+			windowSettings.height = toml::find_or<toml::integer>(window, "WindowHeight", WindowSettings::defaultHeight);
 		}
 	}
 
@@ -62,6 +84,13 @@ void EmulatorConfig::load() {
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
 			vsyncEnabled = toml::find_or<toml::boolean>(gpu, "EnableVSync", true);
+			useUbershaders = toml::find_or<toml::boolean>(gpu, "UseUbershaders", ubershaderDefault);
+			accurateShaderMul = toml::find_or<toml::boolean>(gpu, "AccurateShaderMultiplication", false);
+			accelerateShaders = toml::find_or<toml::boolean>(gpu, "AccelerateShaders", accelerateShadersDefault);
+
+			forceShadergenForLights = toml::find_or<toml::boolean>(gpu, "ForceShadergenForLighting", true);
+			lightShadergenThreshold = toml::find_or<toml::integer>(gpu, "ShadergenLightThreshold", 1);
+			enableRenderdoc = toml::find_or<toml::boolean>(gpu, "EnableRenderdoc", false);
 		}
 	}
 
@@ -70,9 +99,18 @@ void EmulatorConfig::load() {
 		if (audioResult.is_ok()) {
 			auto audio = audioResult.unwrap();
 
-			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "Null");
+			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "HLE");
 			dspType = Audio::DSPCore::typeFromString(dspCoreName);
-			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", false);
+			
+			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", audioEnabledDefault);
+			aacEnabled = toml::find_or<toml::boolean>(audio, "EnableAACAudio", true);
+			printDSPFirmware = toml::find_or<toml::boolean>(audio, "PrintDSPFirmware", false);
+
+			audioDeviceConfig.muteAudio = toml::find_or<toml::boolean>(audio, "MuteAudio", false);
+			// Our volume ranges from 0.0 (muted) to 2.0 (boosted, using a logarithmic scale). 1.0 is the "default" volume, ie we don't adjust the PCM
+			// samples at all.
+			audioDeviceConfig.volumeRaw = float(std::clamp(toml::find_or<toml::floating>(audio, "AudioVolume", 1.0), 0.0, 2.0));
+			audioDeviceConfig.volumeCurve = AudioDeviceConfig::volumeCurveFromString(toml::find_or<std::string>(audio, "VolumeCurve", "cubic"));
 		}
 	}
 
@@ -96,6 +134,17 @@ void EmulatorConfig::load() {
 
 			sdCardInserted = toml::find_or<toml::boolean>(sd, "UseVirtualSD", true);
 			sdWriteProtected = toml::find_or<toml::boolean>(sd, "WriteProtectVirtualSD", false);
+		}
+	}
+
+	if (data.contains("UI")) {
+		auto uiResult = toml::expect<toml::value>(data.at("UI"));
+		if (uiResult.is_ok()) {
+			auto ui = uiResult.unwrap();
+
+			frontendSettings.theme = FrontendSettings::themeFromString(toml::find_or<std::string>(ui, "Theme", "dark"));
+			frontendSettings.icon = FrontendSettings::iconFromString(toml::find_or<std::string>(ui, "WindowIcon", "rpog"));
+			frontendSettings.language = toml::find_or<std::string>(ui, "Language", "en");
 		}
 	}
 }
@@ -122,11 +171,33 @@ void EmulatorConfig::save() {
 	data["General"]["EnableDiscordRPC"] = discordRpcEnabled;
 	data["General"]["UsePortableBuild"] = usePortableBuild;
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
+	data["General"]["PrintAppVersion"] = printAppVersion;
+	data["General"]["SystemLanguage"] = languageCodeToString(systemLanguage);
+
+	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
+	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;
+	data["Window"]["WindowPosX"] = windowSettings.x;
+	data["Window"]["WindowPosY"] = windowSettings.y;
+	data["Window"]["WindowWidth"] = windowSettings.width;
+	data["Window"]["WindowHeight"] = windowSettings.height;
+	
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 	data["GPU"]["EnableVSync"] = vsyncEnabled;
+	data["GPU"]["AccurateShaderMultiplication"] = accurateShaderMul;
+	data["GPU"]["UseUbershaders"] = useUbershaders;
+	data["GPU"]["ForceShadergenForLighting"] = forceShadergenForLights;
+	data["GPU"]["ShadergenLightThreshold"] = lightShadergenThreshold;
+	data["GPU"]["AccelerateShaders"] = accelerateShaders;
+	data["GPU"]["EnableRenderdoc"] = enableRenderdoc;
+
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;
+	data["Audio"]["EnableAACAudio"] = aacEnabled;
+	data["Audio"]["MuteAudio"] = audioDeviceConfig.muteAudio;
+	data["Audio"]["AudioVolume"] = double(audioDeviceConfig.volumeRaw);
+	data["Audio"]["VolumeCurve"] = std::string(AudioDeviceConfig::volumeCurveToString(audioDeviceConfig.volumeCurve));
+	data["Audio"]["PrintDSPFirmware"] = printDSPFirmware;
 
 	data["Battery"]["ChargerPlugged"] = chargerPlugged;
 	data["Battery"]["BatteryPercentage"] = batteryPercentage;
@@ -134,7 +205,64 @@ void EmulatorConfig::save() {
 	data["SD"]["UseVirtualSD"] = sdCardInserted;
 	data["SD"]["WriteProtectVirtualSD"] = sdWriteProtected;
 
+	data["UI"]["Theme"] = std::string(FrontendSettings::themeToString(frontendSettings.theme));
+	data["UI"]["WindowIcon"] = std::string(FrontendSettings::iconToString(frontendSettings.icon));
+	data["UI"]["Language"] = frontendSettings.language;
+
 	std::ofstream file(path, std::ios::out);
 	file << data;
 	file.close();
+}
+
+AudioDeviceConfig::VolumeCurve AudioDeviceConfig::volumeCurveFromString(std::string inString) {
+	// Transform to lower-case to make the setting case-insensitive
+	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
+
+	if (inString == "cubic") {
+		return VolumeCurve::Cubic;
+	} else if (inString == "linear") {
+		return VolumeCurve::Linear;
+	}
+
+	// Default to cubic curve
+	return VolumeCurve::Cubic;
+}
+
+const char* AudioDeviceConfig::volumeCurveToString(AudioDeviceConfig::VolumeCurve curve) {
+	switch (curve) {
+		case VolumeCurve::Linear: return "linear";
+
+		case VolumeCurve::Cubic:
+		default: return "cubic";
+	}
+}
+
+LanguageCodes EmulatorConfig::languageCodeFromString(std::string inString) {  // Transform to lower-case to make the setting case-insensitive
+	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
+
+	static const std::unordered_map<std::string, LanguageCodes> map = {
+		{"ja", LanguageCodes::Japanese}, {"en", LanguageCodes::English},    {"fr", LanguageCodes::French},  {"de", LanguageCodes::German},
+		{"it", LanguageCodes::Italian},  {"es", LanguageCodes::Spanish},    {"zh", LanguageCodes::Chinese}, {"ko", LanguageCodes::Korean},
+		{"nl", LanguageCodes::Dutch},    {"pt", LanguageCodes::Portuguese}, {"ru", LanguageCodes::Russian}, {"tw", LanguageCodes::Taiwanese},
+	};
+
+	if (auto search = map.find(inString); search != map.end()) {
+		return search->second;
+	}
+
+	// Default to English if no language code in our map matches
+	return LanguageCodes::English;
+}
+
+const char* EmulatorConfig::languageCodeToString(LanguageCodes code) {
+	static constexpr std::array<const char*, 12> codes = {
+		"ja", "en", "fr", "de", "it", "es", "zh", "ko", "nl", "pt", "ru", "tw",
+	};
+
+	// Invalid country code, return english
+	if (static_cast<u32>(code) > static_cast<u32>(LanguageCodes::Taiwanese)) {
+		return "en";
+	} else {
+		return codes[static_cast<u32>(code)];
+	}
 }

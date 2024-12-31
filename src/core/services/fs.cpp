@@ -99,13 +99,18 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SDMCWriteOnly: return &sdmcWriteOnly;
 		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
+
+		case ArchiveID::TwlPhoto: return &twlPhoto;
+		case ArchiveID::TwlSound: return &twlSound;
+		case ArchiveID::CardSPI: return &cardSpi;
+
 		default:
 			Helpers::panic("Unknown archive. ID: %d\n", id);
 			return nullptr;
 	}
 }
 
-std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms) {
+std::optional<HorizonHandle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms) {
 	FileDescriptor opened = archive->openFile(path, perms);
 	if (opened.has_value()) { // If opened doesn't have a value, we failed to open the file
 		auto handle = kernel.makeObject(KernelObjectType::File);
@@ -119,7 +124,7 @@ std::optional<Handle> FSService::openFileHandle(ArchiveBase* archive, const FSPa
 	}
 }
 
-Rust::Result<Handle, Result::HorizonResult> FSService::openDirectoryHandle(ArchiveBase* archive, const FSPath& path) {
+Rust::Result<HorizonHandle, Result::HorizonResult> FSService::openDirectoryHandle(ArchiveBase* archive, const FSPath& path) {
 	Rust::Result<DirectorySession, Result::HorizonResult> opened = archive->openDirectory(path);
 	if (opened.isOk()) { // If opened doesn't have a value, we failed to open the directory
 		auto handle = kernel.makeObject(KernelObjectType::Directory);
@@ -132,7 +137,7 @@ Rust::Result<Handle, Result::HorizonResult> FSService::openDirectoryHandle(Archi
 	}
 }
 
-Rust::Result<Handle, Result::HorizonResult> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
+Rust::Result<HorizonHandle, Result::HorizonResult> FSService::openArchiveHandle(u32 archiveID, const FSPath& path) {
 	ArchiveBase* archive = getArchiveFromID(archiveID, path);
 
 	if (archive == nullptr) [[unlikely]] {

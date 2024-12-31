@@ -50,6 +50,7 @@ struct NCCH {
 
 	static constexpr u64 mediaUnit = 0x200;
 	u64 size = 0;  // Size of NCCH converted to bytes
+	u64 saveDataSize = 0;
 	u32 stackSize = 0;
 	u32 bssSize = 0;
 	u32 exheaderSize = 0;
@@ -64,8 +65,6 @@ struct NCCH {
 
 	// Contents of the .code file in the ExeFS
 	std::vector<u8> codeFile;
-	// Contains of the cart's save data
-	std::vector<u8> saveData;
 	// The cart region. Only the CXI's region matters to us. Necessary to get past region locking
 	std::optional<Regions> region = std::nullopt;
 	std::vector<u8> smdh;
@@ -78,7 +77,7 @@ struct NCCH {
 	bool hasExeFS() { return exeFS.size != 0; }
 	bool hasRomFS() { return romFS.size != 0; }
 	bool hasCode() { return codeFile.size() != 0; }
-	bool hasSaveData() { return saveData.size() != 0; }
+	bool hasSaveData() { return saveDataSize != 0; }
 
 	// Parse SMDH for region info and such. Returns false on failure, true on success
 	bool parseSMDH(const std::vector<u8> &smdh);

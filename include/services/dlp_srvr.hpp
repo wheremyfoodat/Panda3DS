@@ -8,6 +8,8 @@
 // Please forgive me for how everything in this file is named
 // "dlp:SRVR" is not a nice name to work with
 class DlpSrvrService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::DLP_SRVR;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, dlpSrvrLogger)
@@ -15,7 +17,7 @@ class DlpSrvrService {
 	// Service commands
 	void isChild(u32 messagePointer);
 
-public:
+  public:
 	DlpSrvrService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

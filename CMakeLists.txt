@@ -19,19 +19,38 @@ endif()
 
 project(Alber)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if(APPLE)
     enable_language(OBJC)
 endif()
 
+# Enable RC support in order to use resource files for application icons
+if(WIN32)
+    enable_language(RC)
+    set(APP_RESOURCES docs/img/windows_icon.rc)
+endif()
+
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security")
-endif() 
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-nonliteral -Wno-format-security -Wno-invalid-offsetof")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-interference-size")
+endif()
+
+if(ANDROID)
+    set(DEFAULT_OPENGL_PROFILE OpenGLES)
+else()
+    set(DEFAULT_OPENGL_PROFILE OpenGL)
+endif()
 
 option(DISABLE_PANIC_DEV "Make a build with fewer and less intrusive asserts" ON)
 option(GPU_DEBUG_INFO "Enable additional GPU debugging info" OFF)
 option(ENABLE_OPENGL "Enable OpenGL rendering backend" ON)
 option(ENABLE_VULKAN "Enable Vulkan rendering backend" ON)
+option(ENABLE_METAL "Enable Metal rendering backend (if available)" ON)
+option(ENABLE_WAYLAND "Enable Wayland support on Linux platforms" ON)
 option(ENABLE_LTO "Enable link-time optimization" OFF)
 option(ENABLE_TESTS "Compile unit-tests" OFF)
 option(ENABLE_USER_BUILD "Make a user-facing build. These builds have various assertions disabled, LTO, and more" OFF)
@@ -39,8 +58,20 @@ option(ENABLE_HTTP_SERVER "Enable HTTP server. Used for Discord bot support" OFF
 option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default)" ON)
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
+option(USE_SYSTEM_SDL2 "Use the system's SDL2 package" OFF)
+option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
+option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
+option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
+
+set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
+set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
+
+if(ENABLE_OPENGL AND (OPENGL_PROFILE STREQUAL "OpenGLES"))
+    message(STATUS "Building with OpenGLES support")
+    add_compile_definitions(USING_GLES)
+endif()
 
 if(BUILD_HYDRA_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -50,6 +81,49 @@ if(BUILD_LIBRETRO_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     add_compile_definitions(__LIBRETRO__)
 endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND ENABLE_USER_BUILD)
+    # Disable stack buffer overflow checks in user builds
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GS-")
+endif()
+
+# Generate versioning files
+find_package(Git)
+set(PANDA3DS_VERSION "0.9")
+
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/include/version.hpp.in)
+    file(WRITE ${CMAKE_BINARY_DIR}/include/version.hpp.in "#define PANDA3DS_VERSION \"\${PANDA3DS_VERSION}\"")
+endif()
+
+if(GIT_FOUND AND ENABLE_GIT_VERSIONING)
+    execute_process(
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
+        OUTPUT_VARIABLE git_version_tag OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    execute_process(
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} rev-parse --short=7 HEAD
+        OUTPUT_VARIABLE git_version_rev OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT git_version_tag STREQUAL "")
+        set(PANDA3DS_VERSION "${git_version_tag}")
+        execute_process(
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} COMMAND ${GIT_EXECUTABLE} describe --tags
+            OUTPUT_VARIABLE git_version_desc OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(git_version_tag STREQUAL git_version_desc)
+            set(git_version_rev "")
+        endif()
+        unset(git_version_desc)
+    endif()
+    if(NOT git_version_rev STREQUAL "")
+        set(PANDA3DS_VERSION "${PANDA3DS_VERSION}.${git_version_rev}")
+    endif()
+    string(REGEX REPLACE "^v" "" PANDA3DS_VERSION "${PANDA3DS_VERSION}")
+    unset(git_version_tag)
+    unset(git_version_rev)
+endif()
+configure_file(${CMAKE_BINARY_DIR}/include/version.hpp.in ${CMAKE_BINARY_DIR}/include/version.hpp)
+include_directories(${CMAKE_BINARY_DIR}/include/)
 
 add_library(AlberCore STATIC)
 
@@ -61,7 +135,6 @@ include_directories(third_party/elfio/)
 include_directories(third_party/hips/include/)
 include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
-include_directories(third_party/cryptopp/)
 include_directories(third_party/cityhash/include)
 include_directories(third_party/result/include)
 include_directories(third_party/xxhash/include)
@@ -75,24 +148,35 @@ add_compile_definitions(NOMINMAX)             # Make windows.h not define min/ma
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
 add_compile_definitions(SDL_MAIN_HANDLED)
 
+if(ENABLE_WAYLAND)
+    add_compile_definitions(WAYLAND_ENABLED)
+endif()
+
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
 endif()
 
-set(SDL_STATIC ON CACHE BOOL "" FORCE)
-set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-set(SDL_TEST OFF CACHE BOOL "" FORCE)
 
 if (NOT ANDROID)
-    add_subdirectory(third_party/SDL2)
-    target_link_libraries(AlberCore PUBLIC SDL2-static)
+    if (USE_SYSTEM_SDL2)
+        find_package(SDL2 CONFIG REQUIRED)
+        target_link_libraries(AlberCore PUBLIC SDL2::SDL2)
+    else()
+        set(SDL_STATIC ON CACHE BOOL "" FORCE)
+        set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+        set(SDL_TEST OFF CACHE BOOL "" FORCE)
+        add_subdirectory(third_party/SDL2)
+        target_link_libraries(AlberCore PUBLIC SDL2-static)
+    endif()
 endif()
 
+add_subdirectory(third_party/fmt)
 add_subdirectory(third_party/toml11)
-include_directories(${SDL2_INCLUDE_DIR})
 include_directories(third_party/toml11)
 include_directories(third_party/glm)
+include_directories(third_party/renderdoc)
+include_directories(third_party/duckstation)
 
 add_subdirectory(third_party/cmrc)
 
@@ -110,9 +194,25 @@ if(ANDROID)
     target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
 
-set(CRYPTOPP_BUILD_TESTING OFF)
-add_subdirectory(third_party/cryptopp)
 add_subdirectory(third_party/glad)
+
+# Cryptopp doesn't support compiling under clang-cl, so we have to include it as a prebuilt MSVC static library
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND MSVC)
+    add_subdirectory(third_party/cryptoppwin)
+    include_directories(third_party/cryptoppwin/include)
+    target_link_libraries(AlberCore PRIVATE cryptoppwin)
+
+    # Also silence some of clang-cl's more... intrusive warnings
+    set(WARNING_FLAGS "/W1 -Wno-unused-function -Wno-unused-but-set-variable -Wno-reorder-ctor")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_FLAGS}")
+else()
+    set(CRYPTOPP_BUILD_TESTING OFF)
+
+    add_subdirectory(third_party/cryptopp)
+    include_directories(third_party/cryptopp)
+    target_link_libraries(AlberCore PRIVATE cryptopp)
+endif()
 
 if(ENABLE_LUAJIT)
     add_subdirectory(third_party/LuaJIT luajit)
@@ -129,26 +229,68 @@ if(ENABLE_LUAJIT)
     target_link_libraries(AlberCore PRIVATE libluajit)
 endif()
 
-# Check for x64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+# Detect target architecture
+if (NOT APPLE OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+  # Normal target detection
+  if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
+  else()
+    set(HOST_X64 FALSE)
+  endif()
+
+  if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    set(HOST_ARM64 TRUE)
+  else()
+    set(HOST_ARM64 FALSE)
+  endif()
+else()
+  # Apple target detection
+  if("x86_64" IN_LIST CMAKE_OSX_ARCHITECTURES)
+    set(HOST_X64 TRUE)
+  else()
+    set(HOST_X64 FALSE)
+  endif()
+
+  if("arm64" IN_LIST CMAKE_OSX_ARCHITECTURES)
+    set(HOST_ARM64 TRUE)
+  else()
+    set(HOST_ARM64 FALSE)
+  endif()
+
+  if (HOST_ARM64 AND HOST_X64)
+    message(FATAL_ERROR "Universal builds not supported like this! Please compile separately and stitch together")
+  endif()
+endif()
+
+if (HOST_X64)
     add_subdirectory(third_party/xbyak) # Add xbyak submodule for x86 JITs
     include_directories(third_party/xbyak)
     add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
     add_compile_definitions(PANDA3DS_X64_HOST)
-else()
-    set(HOST_X64 FALSE)
 endif()
 
-# Check for arm64
-if (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-    set(HOST_ARM64 TRUE)
+if (HOST_ARM64)
     add_subdirectory(third_party/oaknut) # Add Oaknut submodule for arm64 JITs
     include_directories(third_party/oaknut/include)
     add_compile_definitions(PANDA3DS_DYNAPICA_SUPPORTED)
     add_compile_definitions(PANDA3DS_ARM64_HOST)
-else()
-    set(HOST_ARM64 FALSE)
+endif()
+
+# Enable SSE4.1 if it's not explicitly disabled
+# Annoyingly, we can't easily do this if we're using MSVC cause there's no SSE4.1 flag, only SSE4.1
+if(NOT MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT DISABLE_SSE4 AND HOST_X64)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse4.1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1")
+elseif(MSVC AND NOT DISABLE_SSE4)
+    # Tell our SIMD code to use SSE4.1 by defining the relevant macros.
+    # Clang defines these macros, MSVC does not.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D__SSE3__ /D__SSE4_1__")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D__SSE3__ /D__SSE4_1__")
+endif()
+
+if(ENABLE_RENDERDOC_API)
+    find_package(RenderDoc 1.6.0 MODULE REQUIRED)
+    add_compile_definitions(PANDA3DS_ENABLE_RENDERDOC)
 endif()
 
 if(HOST_X64 OR HOST_ARM64)
@@ -162,6 +304,7 @@ else()
 endif()
 
 add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/fdk-aac)
 
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
 set(CAPSTONE_ARM_SUPPORT ON)
@@ -173,7 +316,8 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp src/renderdoc.cpp
+                 src/frontend_settings.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -193,25 +337,29 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
                          src/core/services/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
-                         src/core/services/csnd.cpp src/core/services/nwm_uds.cpp
+                         src/core/services/csnd.cpp src/core/services/nwm_uds.cpp src/core/services/fonts.cpp
+                         src/core/services/ns.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
                       src/core/PICA/dynapica/shader_rec_emitter_x64.cpp src/core/PICA/pica_hash.cpp
-                      src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp
+                      src/core/PICA/dynapica/shader_rec_emitter_arm64.cpp src/core/PICA/shader_gen_glsl.cpp
+                      src/core/PICA/shader_decompiler.cpp src/core/PICA/draw_acceleration.cpp
 )
 
 set(LOADER_SOURCE_FILES src/core/loader/elf.cpp src/core/loader/ncsd.cpp src/core/loader/ncch.cpp src/core/loader/3dsx.cpp src/core/loader/lz77.cpp)
 set(FS_SOURCE_FILES src/core/fs/archive_self_ncch.cpp src/core/fs/archive_save_data.cpp src/core/fs/archive_sdmc.cpp
                     src/core/fs/archive_ext_save_data.cpp src/core/fs/archive_ncch.cpp src/core/fs/romfs.cpp
                     src/core/fs/ivfc.cpp src/core/fs/archive_user_save_data.cpp src/core/fs/archive_system_save_data.cpp
+                    src/core/fs/archive_twl_photo.cpp src/core/fs/archive_twl_sound.cpp src/core/fs/archive_card_spi.cpp
 )
 
 set(APPLET_SOURCE_FILES src/core/applets/applet.cpp src/core/applets/mii_selector.cpp src/core/applets/software_keyboard.cpp src/core/applets/applet_manager.cpp
                         src/core/applets/error_applet.cpp
 )
 set(AUDIO_SOURCE_FILES src/core/audio/dsp_core.cpp src/core/audio/null_core.cpp src/core/audio/teakra_core.cpp
-                       src/core/audio/miniaudio_device.cpp src/core/audio/hle_core.cpp
+                       src/core/audio/miniaudio_device.cpp src/core/audio/hle_core.cpp src/core/audio/aac_decoder.cpp
+                       src/core/audio/audio_interpolation.cpp
 )
 set(RENDERER_SW_SOURCE_FILES src/core/renderer_sw/renderer_sw.cpp)
 
@@ -230,7 +378,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/services/mic.hpp include/services/cecd.hpp include/services/ac.hpp
                  include/services/am.hpp include/services/boss.hpp include/services/frd.hpp include/services/nim.hpp
                  include/fs/archive_ext_save_data.hpp include/fs/archive_ncch.hpp include/services/mcu/mcu_hwc.hpp
-                 include/colour.hpp include/services/y2r.hpp include/services/cam.hpp include/services/ssl.hpp 
+                 include/colour.hpp include/services/y2r.hpp include/services/cam.hpp include/services/ssl.hpp
                  include/services/ldr_ro.hpp include/ipc.hpp include/services/act.hpp include/services/nfc.hpp
                  include/system_models.hpp include/services/dlp_srvr.hpp include/PICA/dynapica/pica_recs.hpp
                  include/PICA/dynapica/x64_regs.hpp include/PICA/dynapica/vertex_loader_rec.hpp include/PICA/dynapica/shader_rec.hpp
@@ -241,21 +389,28 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
-                 include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp 
+                 include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
                  include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
-                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp
+                 include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp include/PICA/shader_gen.hpp
                  include/audio/dsp_core.hpp include/audio/null_core.hpp include/audio/teakra_core.hpp
                  include/audio/miniaudio_device.hpp include/ring_buffer.hpp include/bitfield.hpp include/audio/dsp_shared_mem.hpp
-                 include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/external_haptics_manager.hpp
+                 include/audio/hle_core.hpp include/capstone.hpp include/audio/aac.hpp include/PICA/pica_frag_config.hpp
+                 include/PICA/pica_frag_uniforms.hpp include/PICA/shader_gen_types.hpp include/PICA/shader_decompiler.hpp
+                 include/PICA/pica_vert_config.hpp include/sdl_sensors.hpp include/PICA/draw_acceleration.hpp include/renderdoc.hpp
+                 include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
+                 include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
+                 include/services/dsp_firmware_db.hpp include/frontend_settings.hpp include/fs/archive_twl_photo.hpp
+                 include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp
+                 include/external_haptics_manager.hpp
 )
 
 cmrc_add_resource_library(
     resources_console_fonts
     NAMESPACE ConsoleFonts
     WHENCE "src/core/services/fonts/"
-    "src/core/services/fonts/CitraSharedFontUSRelocated.bin"
+    "src/core/services/fonts/SharedFontReplacement.bin"
 )
 
 set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
@@ -285,17 +440,22 @@ if(ENABLE_LUAJIT AND NOT ANDROID)
     target_link_libraries(AlberCore PRIVATE buttplugCpp)
 endif()
 
+set(GL_CONTEXT_SOURCE_FILES "")
+
 if(ENABLE_QT_GUI)
-    include_directories(third_party/duckstation)
-    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
+    set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/window_info.cpp third_party/duckstation/gl/context.cpp)
 
     if(APPLE)
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_agl.mm)
     elseif(WIN32)
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_wgl.cpp)
     else()
-        set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_wayland.cpp
-        third_party/duckstation/gl/context_egl_x11.cpp third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+        set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_egl.cpp third_party/duckstation/gl/context_egl_x11.cpp
+        third_party/duckstation/gl/context_glx.cpp third_party/duckstation/gl/x11_window.cpp)
+
+        if(ENABLE_WAYLAND)
+            set(GL_CONTEXT_SOURCE_FILES ${GL_CONTEXT_SOURCE_FILES} third_party/duckstation/gl/context_egl_wayland.cpp)
+        endif()
     endif()
 endif()
 
@@ -309,7 +469,7 @@ source_group("Source Files\\Core\\Applets" FILES ${APPLET_SOURCE_FILES})
 source_group("Source Files\\Core\\PICA" FILES ${PICA_SOURCE_FILES})
 source_group("Source Files\\Core\\Audio" FILES ${AUDIO_SOURCE_FILES})
 source_group("Source Files\\Core\\Software Renderer" FILES ${RENDERER_SW_SOURCE_FILES})
-source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES})
+source_group("Source Files\\Third Party" FILES ${THIRD_PARTY_SOURCE_FILES} ${GL_CONTEXT_SOURCE_FILES})
 
 set(RENDERER_GL_SOURCE_FILES "") # Empty by default unless we are compiling with the GL renderer
 set(RENDERER_VK_SOURCE_FILES "") # Empty by default unless we are compiling with the VK renderer
@@ -319,15 +479,18 @@ if(ENABLE_OPENGL)
     set(RENDERER_GL_INCLUDE_FILES third_party/opengl/opengl.hpp
         include/renderer_gl/renderer_gl.hpp include/renderer_gl/textures.hpp
         include/renderer_gl/surfaces.hpp include/renderer_gl/surface_cache.hpp
-        include/renderer_gl/gl_state.hpp
+        include/renderer_gl/gl_state.hpp include/renderer_gl/gl_driver.hpp
     )
 
     set(RENDERER_GL_SOURCE_FILES src/core/renderer_gl/renderer_gl.cpp
         src/core/renderer_gl/textures.cpp src/core/renderer_gl/etc1.cpp
-        src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.frag
-        src/host_shaders/opengl_display.vert src/host_shaders/opengl_vertex_shader.vert
+        src/core/renderer_gl/gl_state.cpp src/host_shaders/opengl_display.vert
+        src/host_shaders/opengl_display.frag src/host_shaders/opengl_es_display.vert
+        src/host_shaders/opengl_es_display.frag src/host_shaders/opengl_vertex_shader.vert
         src/host_shaders/opengl_fragment_shader.frag
     )
+
+    set(THIRD_PARTY_SOURCE_FILES ${THIRD_PARTY_SOURCE_FILES} third_party/duckstation/gl/stream_buffer.cpp)
 
     set(HEADER_FILES ${HEADER_FILES} ${RENDERER_GL_INCLUDE_FILES})
     source_group("Source Files\\Core\\OpenGL Renderer" FILES ${RENDERER_GL_SOURCE_FILES})
@@ -336,8 +499,10 @@ if(ENABLE_OPENGL)
         resources_renderer_gl
         NAMESPACE RendererGL
         WHENCE "src/host_shaders/"
-        "src/host_shaders/opengl_display.frag"
         "src/host_shaders/opengl_display.vert"
+        "src/host_shaders/opengl_display.frag"
+        "src/host_shaders/opengl_es_display.vert"
+        "src/host_shaders/opengl_es_display.frag"
         "src/host_shaders/opengl_vertex_shader.vert"
         "src/host_shaders/opengl_fragment_shader.frag"
     )
@@ -411,14 +576,88 @@ if(ENABLE_VULKAN)
     target_link_libraries(AlberCore PRIVATE Vulkan::Vulkan resources_renderer_vk)
 endif()
 
+if(ENABLE_METAL AND APPLE)
+    set(RENDERER_MTL_INCLUDE_FILES include/renderer_mtl/renderer_mtl.hpp
+        include/renderer_mtl/mtl_depth_stencil_cache.hpp
+        include/renderer_mtl/mtl_blit_pipeline_cache.hpp
+        include/renderer_mtl/mtl_draw_pipeline_cache.hpp
+        include/renderer_mtl/mtl_render_target.hpp
+        include/renderer_mtl/mtl_texture.hpp
+        include/renderer_mtl/mtl_vertex_buffer_cache.hpp
+        include/renderer_mtl/mtl_lut_texture.hpp
+        include/renderer_mtl/mtl_command_encoder.hpp
+        include/renderer_mtl/mtl_common.hpp
+        include/renderer_mtl/pica_to_mtl.hpp
+        include/renderer_mtl/objc_helper.hpp
+    )
+
+    set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
+        src/core/renderer_mtl/renderer_mtl.cpp
+        src/core/renderer_mtl/mtl_texture.cpp
+        src/core/renderer_mtl/mtl_etc1.cpp
+        src/core/renderer_mtl/mtl_lut_texture.cpp
+        src/core/renderer_mtl/objc_helper.mm
+        src/host_shaders/metal_shaders.metal
+        src/host_shaders/metal_blit.metal
+        #src/host_shaders/metal_copy_to_lut_texture.metal
+    )
+
+    set(HEADER_FILES ${HEADER_FILES} ${RENDERER_MTL_INCLUDE_FILES})
+    source_group("Source Files\\Core\\Metal Renderer" FILES ${RENDERER_MTL_SOURCE_FILES})
+
+    set(RENDERER_MTL_HOST_SHADERS_SOURCES)
+    function (add_metal_shader SHADER)
+        set(SHADER_SOURCE "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metal")
+        set(SHADER_IR "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.ir")
+        set(SHADER_METALLIB "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metallib")
+        # TODO: only include sources in debug builds
+        add_custom_command(
+            OUTPUT ${SHADER_IR}
+            COMMAND xcrun -sdk macosx metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
+            DEPENDS ${SHADER_SOURCE}
+            VERBATIM)
+        add_custom_command(
+            OUTPUT ${SHADER_METALLIB}
+            COMMAND xcrun -sdk macosx metallib -o ${SHADER_METALLIB} ${SHADER_IR}
+            DEPENDS ${SHADER_IR}
+            VERBATIM)
+        set(RENDERER_MTL_HOST_SHADERS_SOURCES ${RENDERER_MTL_HOST_SHADERS_SOURCES} ${SHADER_METALLIB})
+    endfunction()
+
+    add_metal_shader(metal_shaders)
+    add_metal_shader(metal_blit)
+    #add_metal_shader(metal_copy_to_lut_texture)
+
+    add_custom_target(
+        compile_msl_shaders
+        DEPENDS ${RENDERER_MTL_HOST_SHADERS_SOURCES}
+    )
+
+    cmrc_add_resource_library(
+        resources_renderer_mtl
+        NAMESPACE RendererMTL
+        WHENCE "src/host_shaders/"
+        "src/host_shaders/metal_shaders.metallib"
+        "src/host_shaders/metal_blit.metallib"
+        #"src/host_shaders/metal_copy_to_lut_texture.metallib"
+    )
+    add_dependencies(resources_renderer_mtl compile_msl_shaders)
+
+    target_sources(AlberCore PRIVATE ${RENDERER_MTL_SOURCE_FILES})
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
+    target_include_directories(AlberCore PRIVATE third_party/metal-cpp)
+    # TODO: check if all of them are needed
+    target_link_libraries(AlberCore PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
+endif()
+
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
-set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES} 
+set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERNEL_SOURCE_FILES}
     ${LOADER_SOURCE_FILES} ${SERVICE_SOURCE_FILES} ${APPLET_SOURCE_FILES} ${RENDERER_SW_SOURCE_FILES} ${PICA_SOURCE_FILES} ${THIRD_PARTY_SOURCE_FILES}
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic cryptopp glad resources_console_fonts teakra)
-target_link_libraries(AlberCore PUBLIC glad capstone)
+target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts teakra fdk-aac)
+target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
@@ -453,14 +692,17 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
     if(ENABLE_QT_GUI)
-        find_package(Qt6 REQUIRED COMPONENTS Widgets)
+        find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)
         if(NOT ENABLE_OPENGL)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
 
+        option(GENERATE_QT_TRANSLATION "Generate Qt translation file" OFF)
+        set(QT_LANGUAGES docs/translations)
+
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
-            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp
+            src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
@@ -494,18 +736,49 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
             endif()
         endif()
 
+        # Generates an en.ts file for translations
+        # To update the file, use cmake --build --target Alber_lupdate
+        if(GENERATE_QT_TRANSLATION)
+            find_package(Qt6 REQUIRED COMPONENTS LinguistTools)
+            qt_add_lupdate(Alber TS_FILES ${QT_LANGUAGES}/en.ts
+                SOURCES ${FRONTEND_SOURCE_FILES}
+                INCLUDE_DIRECTORIES ${FRONTEND_HEADER_FILES}
+                NO_GLOBAL_TARGET
+            )
+        endif()
+
         qt_add_resources(AlberCore "app_images"
             PREFIX "/"
             FILES
-                docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/img/rpog_icon.png
+                docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/img/rpog_icon.png docs/img/rsyn_icon.png
+                docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
+                docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
+                docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png
         )
+
+        # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable
+        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts docs/translations/nl.ts)
+        set_source_files_properties(${TRANSLATIONS_TS} PROPERTIES OUTPUT_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/translations")
+        qt_add_translation(TRANSLATIONS_QM ${TRANSLATIONS_TS})
+
+        set(TRANSLATIONS_QRC ${CMAKE_CURRENT_BINARY_DIR}/translations/translations.qrc)
+        file(WRITE ${TRANSLATIONS_QRC} "<RCC><qresource prefix=\"translations\">\n")
+        foreach (QM ${TRANSLATIONS_QM})
+            message("${QM}")
+            get_filename_component(QM_FILE ${QM} NAME)
+            file(APPEND ${TRANSLATIONS_QRC} "<file>${QM_FILE}</file>\n")
+        endforeach (QM)
+        file(APPEND ${TRANSLATIONS_QRC} "</qresource></RCC>")
+
+        qt_add_resources(TRANSLATIONS ${TRANSLATIONS_QRC})
+        set(APP_RESOURCES ${APP_RESOURCES} ${TRANSLATIONS})
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
-        set(FRONTEND_HEADER_FILES "")
+        set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)
-    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES})
+    target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${GL_CONTEXT_SOURCE_FILES} ${APP_RESOURCES})
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
@@ -513,17 +786,17 @@ elseif(BUILD_HYDRA_CORE)
     target_link_libraries(Alber PUBLIC AlberCore)
 elseif(BUILD_LIBRETRO_CORE)
     include_directories(third_party/libretro/include)
-    add_library(Alber SHARED src/libretro_core.cpp)
-    target_link_libraries(Alber PUBLIC AlberCore)
-
-    set_target_properties(Alber PROPERTIES
-      OUTPUT_NAME "panda3ds_libretro"
-      PREFIX ""
-    )
+    add_library(panda3ds_libretro SHARED src/libretro_core.cpp)
+    target_link_libraries(panda3ds_libretro PUBLIC AlberCore)
+    set_target_properties(panda3ds_libretro PROPERTIES PREFIX "")
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
-    set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    if (NOT BUILD_LIBRETRO_CORE)
+        set_target_properties(Alber PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        set_target_properties(panda3ds_libretro PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
 endif()
 
 if(ENABLE_TESTS)

@@ -8,6 +8,8 @@
 #include "result/result.hpp"
 
 class ACService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::AC;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, acLogger)
@@ -17,6 +19,7 @@ class ACService {
 	void closeAsync(u32 messagePointer);
 	void createDefaultConfig(u32 messagePointer);
 	void getConnectingInfraPriority(u32 messagePointer);
+	void getNZoneBeaconNotFoundEvent(u32 messagePointer);
 	void getStatus(u32 messagePointer);
 	void getLastErrorCode(u32 messagePointer);
 	void getWifiStatus(u32 messagePointer);

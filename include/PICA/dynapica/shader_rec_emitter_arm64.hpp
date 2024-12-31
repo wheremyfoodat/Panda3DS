@@ -37,6 +37,8 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	// Shows whether the loaded shader has any log2 and exp2 instructions
 	bool codeHasLog2 = false;
 	bool codeHasExp2 = false;
+	// Whether to compile this shader using accurate, safe, non-IEEE multiplication (slow) or faster but less accurate mul
+	bool useSafeMUL = false;
 
 	oaknut::Label log2Func, exp2Func;
 	oaknut::Label emitLog2Func();
@@ -123,7 +125,7 @@ class ShaderEmitter : private oaknut::CodeBlock, public oaknut::CodeGenerator {
 	PrologueCallback prologueCb = nullptr;
 
 	// Initialize our emitter with "allocSize" bytes of memory allocated for the code buffer
-	ShaderEmitter() : oaknut::CodeBlock(allocSize), oaknut::CodeGenerator(oaknut::CodeBlock::ptr()) {}
+	ShaderEmitter(bool useSafeMUL) : oaknut::CodeBlock(allocSize), oaknut::CodeGenerator(oaknut::CodeBlock::ptr()), useSafeMUL(useSafeMUL) {}
 
 	// PC must be a valid entrypoint here. It doesn't have that much overhead in this case, so we use std::array<>::at() to assert it does
 	InstructionCallback getInstructionCallback(u32 pc) { return getLabelPointer<InstructionCallback>(instructionLabels.at(pc)); }

@@ -1,19 +1,24 @@
 #include <stdexcept>
 #include <cstdio>
+#include <regex>
 
 #include <libretro.h>
 
+#include <version.hpp>
 #include <emulator.hpp>
 #include <renderer_gl/renderer_gl.hpp>
 
-static retro_environment_t envCallbacks;
-static retro_video_refresh_t videoCallbacks;
+static retro_environment_t envCallback;
+static retro_video_refresh_t videoCallback;
 static retro_audio_sample_batch_t audioBatchCallback;
 static retro_input_poll_t inputPollCallback;
 static retro_input_state_t inputStateCallback;
 
-static retro_hw_render_callback hw_render;
+static retro_hw_render_callback hwRender;
 static std::filesystem::path savePath;
+
+static bool screenTouched = false;
+static bool usingGLES = false;
 
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
@@ -26,49 +31,54 @@ std::filesystem::path Emulator::getAppDataRoot() {
 	return std::filesystem::path(savePath / "Emulator Files");
 }
 
-static void* GetGLProcAddress(const char* name) {
-	return (void*)hw_render.get_proc_address(name);
+static void* getGLProcAddress(const char* name) {
+	return (void*)hwRender.get_proc_address(name);
 }
 
-static void VideoResetContext() {
-#ifdef USING_GLES
-	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(GetGLProcAddress))) {
-		Helpers::panic("OpenGL ES init failed");
+static void videoResetContext() {
+	if (usingGLES) {
+		if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
+			Helpers::panic("OpenGL ES init failed");
+		}
+
+		emulator->getRenderer()->setupGLES();
 	}
-#else
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(GetGLProcAddress))) {
-		Helpers::panic("OpenGL init failed");
+
+	else {
+		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
+			Helpers::panic("OpenGL init failed");
+		}
 	}
-#endif
 
 	emulator->initGraphicsContext(nullptr);
 }
 
-static void VideoDestroyContext() {
-  emulator->deinitGraphicsContext();
+static void videoDestroyContext() {
+	emulator->deinitGraphicsContext();
 }
 
-static bool SetHWRender(retro_hw_context_type type) {
-	hw_render.context_type = type;
-	hw_render.context_reset = VideoResetContext;
-	hw_render.context_destroy = VideoDestroyContext;
-	hw_render.bottom_left_origin = true;
+static bool setHWRender(retro_hw_context_type type) {
+	hwRender.context_type = type;
+	hwRender.context_reset = videoResetContext;
+	hwRender.context_destroy = videoDestroyContext;
+	hwRender.bottom_left_origin = true;
 
 	switch (type) {
 		case RETRO_HW_CONTEXT_OPENGL_CORE:
-			hw_render.version_major = 4;
-			hw_render.version_minor = 1;
+			hwRender.version_major = 4;
+			hwRender.version_minor = 1;
 
-			if (envCallbacks(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render)) {
+			if (envCallback(RETRO_ENVIRONMENT_SET_HW_RENDER, &hwRender)) {
 				return true;
 			}
 			break;
 		case RETRO_HW_CONTEXT_OPENGLES3:
 		case RETRO_HW_CONTEXT_OPENGL:
-			hw_render.version_major = 3;
-			hw_render.version_minor = 1;
+			hwRender.version_major = 3;
+			hwRender.version_minor = 1;
 
-			if (envCallbacks(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render)) {
+			if (envCallback(RETRO_ENVIRONMENT_SET_HW_RENDER, &hwRender)) {
+				usingGLES = true;
 				return true;
 			}
 			break;
@@ -80,18 +90,18 @@ static bool SetHWRender(retro_hw_context_type type) {
 
 static void videoInit() {
 	retro_hw_context_type preferred = RETRO_HW_CONTEXT_NONE;
-	envCallbacks(RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER, &preferred);
+	envCallback(RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER, &preferred);
 
-	if (preferred && SetHWRender(preferred)) return;
-	if (SetHWRender(RETRO_HW_CONTEXT_OPENGL_CORE)) return;
-	if (SetHWRender(RETRO_HW_CONTEXT_OPENGL)) return;
-	if (SetHWRender(RETRO_HW_CONTEXT_OPENGLES3)) return;
+	if (preferred && setHWRender(preferred)) return;
+	if (setHWRender(RETRO_HW_CONTEXT_OPENGL_CORE)) return;
+	if (setHWRender(RETRO_HW_CONTEXT_OPENGL)) return;
+	if (setHWRender(RETRO_HW_CONTEXT_OPENGLES3)) return;
 
-	hw_render.context_type = RETRO_HW_CONTEXT_NONE;
+	hwRender.context_type = RETRO_HW_CONTEXT_NONE;
 }
 
-static bool GetButtonState(uint id) { return inputStateCallback(0, RETRO_DEVICE_JOYPAD, 0, id); }
-static float GetAxisState(uint index, uint id) { return inputStateCallback(0, RETRO_DEVICE_ANALOG, index, id); }
+static bool getButtonState(uint id) { return inputStateCallback(0, RETRO_DEVICE_JOYPAD, 0, id); }
+static float getAxisState(uint index, uint id) { return inputStateCallback(0, RETRO_DEVICE_ANALOG, index, id); }
 
 static void inputInit() {
 	static const retro_controller_description controllers[] = {
@@ -104,7 +114,7 @@ static void inputInit() {
 		{NULL, 0},
 	};
 
-	envCallbacks(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+	envCallback(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
 	retro_input_descriptor desc[] = {
 		{0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left"},
@@ -124,14 +134,14 @@ static void inputInit() {
 		{0},
 	};
 
-	envCallbacks(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &desc);
+	envCallback(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &desc);
 }
 
-static std::string FetchVariable(std::string key, std::string def) {
+static std::string fetchVariable(std::string key, std::string def) {
 	retro_variable var = {nullptr};
 	var.key = key.c_str();
 
-	if (!envCallbacks(RETRO_ENVIRONMENT_GET_VARIABLE, &var) || var.value == nullptr) {
+	if (!envCallback(RETRO_ENVIRONMENT_GET_VARIABLE, &var) || var.value == nullptr) {
 		Helpers::warn("Fetching variable %s failed.", key.c_str());
 		return def;
 	}
@@ -139,46 +149,86 @@ static std::string FetchVariable(std::string key, std::string def) {
 	return std::string(var.value);
 }
 
-static bool FetchVariableBool(std::string key, bool def) {
-	return FetchVariable(key, def ? "enabled" : "disabled") == "enabled";
+static int fetchVariableInt(std::string key, int def) {
+	std::string value = fetchVariable(key, std::to_string(def));
+
+	if (!value.empty() && std::isdigit(value[0])) {
+		return std::stoi(value);
+	}
+
+	return 0;
+}
+
+static bool fetchVariableBool(std::string key, bool def) {
+	return fetchVariable(key, def ? "enabled" : "disabled") == "enabled";
+}
+
+static int fetchVariableRange(std::string key, int min, int max) {
+	return std::clamp(fetchVariableInt(key, min), min, max);
 }
 
 static void configInit() {
 	static const retro_variable values[] = {
-		{"panda3ds_use_shader_jit", "Enable shader JIT; enabled|disabled"},
+		{"panda3ds_use_shader_jit", EmulatorConfig::shaderJitDefault ? "Enable shader JIT; enabled|disabled" : "Enable shader JIT; disabled|enabled"},
+		{"panda3ds_accelerate_shaders",
+		 EmulatorConfig::accelerateShadersDefault ? "Run 3DS shaders on the GPU; enabled|disabled" : "Run 3DS shaders on the GPU; disabled|enabled"},
+		{"panda3ds_accurate_shader_mul", "Enable accurate shader multiplication; disabled|enabled"},
+		{"panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
+																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
-		{"panda3ds_dsp_emulation", "DSP emulation; Null|HLE|LLE"},
-		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
+		{"panda3ds_system_language", "System language; En|Fr|Es|De|It|Pt|Nl|Ru|Ja|Zh|Ko|Tw"},
+		{"panda3ds_dsp_emulation", "DSP emulation; HLE|LLE|Null"},
+		{"panda3ds_use_audio", EmulatorConfig::audioEnabledDefault ? "Enable audio; enabled|disabled" : "Enable audio; disabled|enabled"},
+		{"panda3ds_audio_volume", "Audio volume; 100|0|10|20|40|60|80|90|100|120|140|150|180|200"},
+		{"panda3ds_mute_audio", "Mute audio; disabled|enabled"},
+		{"panda3ds_enable_aac", "Enable AAC audio; enabled|disabled"},
+
+		{"panda3ds_ubershader_lighting_override", "Force shadergen when rendering lights; enabled|disabled"},
+		{"panda3ds_ubershader_lighting_override_threshold", "Light threshold for forcing shadergen; 1|2|3|4|5|6|7|8"},
 		{"panda3ds_use_virtual_sd", "Enable virtual SD card; enabled|disabled"},
 		{"panda3ds_write_protect_virtual_sd", "Write protect virtual SD card; disabled|enabled"},
 		{"panda3ds_battery_level", "Battery percentage; 5|10|20|30|50|70|90|100"},
 		{"panda3ds_use_charger", "Charger plugged; enabled|disabled"},
-		{nullptr, nullptr}
+		{nullptr, nullptr},
 	};
 
-	envCallbacks(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)values);
+	envCallback(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)values);
 }
 
 static void configUpdate() {
 	EmulatorConfig& config = emulator->getConfig();
 
 	config.rendererType = RendererType::OpenGL;
-	config.vsyncEnabled = FetchVariableBool("panda3ds_use_vsync", true);
-	config.shaderJitEnabled = FetchVariableBool("panda3ds_use_shader_jit", true);
-	config.chargerPlugged = FetchVariableBool("panda3ds_use_charger", true);
-	config.batteryPercentage = std::clamp(std::stoi(FetchVariable("panda3ds_battery_level", "5")), 0, 100);
-	config.dspType = Audio::DSPCore::typeFromString(FetchVariable("panda3ds_dsp_emulation", "null"));
-	config.audioEnabled = FetchVariableBool("panda3ds_use_audio", false);
-	config.sdCardInserted = FetchVariableBool("panda3ds_use_virtual_sd", true);
-	config.sdWriteProtected = FetchVariableBool("panda3ds_write_protect_virtual_sd", false);
+	config.vsyncEnabled = fetchVariableBool("panda3ds_use_vsync", true);
+	config.shaderJitEnabled = fetchVariableBool("panda3ds_use_shader_jit", EmulatorConfig::shaderJitDefault);
+	config.chargerPlugged = fetchVariableBool("panda3ds_use_charger", true);
+	config.batteryPercentage = fetchVariableRange("panda3ds_battery_level", 5, 100);
+	config.systemLanguage = EmulatorConfig::languageCodeFromString(fetchVariable("panda3ds_system_language", "en"));
+
+	config.dspType = Audio::DSPCore::typeFromString(fetchVariable("panda3ds_dsp_emulation", "null"));
+	config.audioEnabled = fetchVariableBool("panda3ds_use_audio", false);
+	config.aacEnabled = fetchVariableBool("panda3ds_enable_aac", true);
+	config.audioDeviceConfig.muteAudio = fetchVariableBool("panda3ds_mute_audio", false);
+	config.audioDeviceConfig.volumeRaw = float(fetchVariableRange("panda3ds_audio_volume", 0, 200)) / 100.0f;
+
+	config.sdCardInserted = fetchVariableBool("panda3ds_use_virtual_sd", true);
+	config.sdWriteProtected = fetchVariableBool("panda3ds_write_protect_virtual_sd", false);
+	config.accurateShaderMul = fetchVariableBool("panda3ds_accurate_shader_mul", false);
+	config.useUbershaders = fetchVariableBool("panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault);
+	config.accelerateShaders = fetchVariableBool("panda3ds_accelerate_shaders", EmulatorConfig::accelerateShadersDefault);
+
+	config.forceShadergenForLights = fetchVariableBool("panda3ds_ubershader_lighting_override", true);
+	config.lightShadergenThreshold = fetchVariableRange("panda3ds_ubershader_lighting_override_threshold", 1, 8);
 	config.discordRpcEnabled = false;
 
+	// Handle any settings that might need the emulator core to be notified when they're changed, and save the config.
+	emulator->setAudioEnabled(config.audioEnabled);
 	config.save();
 }
 
-static void ConfigCheckVariables() {
+static void configCheckVariables() {
 	bool updated = false;
-	envCallbacks(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated);
+	envCallback(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated);
 
 	if (updated) {
 		configUpdate();
@@ -188,9 +238,9 @@ static void ConfigCheckVariables() {
 void retro_get_system_info(retro_system_info* info) {
 	info->need_fullpath = true;
 	info->valid_extensions = "3ds|3dsx|elf|axf|cci|cxi|app";
-	info->library_version = "0.8";
+	info->library_version = PANDA3DS_VERSION;
 	info->library_name = "Panda3DS";
-	info->block_extract = true;
+	info->block_extract = false;
 }
 
 void retro_get_system_av_info(retro_system_av_info* info) {
@@ -206,11 +256,11 @@ void retro_get_system_av_info(retro_system_av_info* info) {
 }
 
 void retro_set_environment(retro_environment_t cb) {
-	envCallbacks = cb;
+	envCallback = cb;
 }
 
 void retro_set_video_refresh(retro_video_refresh_t cb) {
-	videoCallbacks = cb;
+	videoCallback = cb;
 }
 
 void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb) {
@@ -229,15 +279,15 @@ void retro_set_input_state(retro_input_state_t cb) {
 
 void retro_init() {
 	enum retro_pixel_format xrgb888 = RETRO_PIXEL_FORMAT_XRGB8888;
-	envCallbacks(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &xrgb888);
+	envCallback(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &xrgb888);
 
-	char* save_dir = nullptr;
+	char* saveDir = nullptr;
 
-	if (!envCallbacks(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) || save_dir == nullptr) {
+	if (!envCallback(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &saveDir) || saveDir == nullptr) {
 		Helpers::warn("No save directory provided by LibRetro.");
 		savePath = std::filesystem::current_path();
 	} else {
-		savePath = std::filesystem::path(save_dir);
+		savePath = std::filesystem::path(saveDir);
 	}
 
 	emulator = std::make_unique<Emulator>();
@@ -276,36 +326,37 @@ void retro_reset() {
 }
 
 void retro_run() {
-	ConfigCheckVariables();
+	configCheckVariables();
 
-	renderer->setFBO(hw_render.get_current_framebuffer());
+	renderer->setFBO(hwRender.get_current_framebuffer());
 	renderer->resetStateManager();
 
 	inputPollCallback();
 
 	HIDService& hid = emulator->getServiceManager().getHID();
 
-	hid.setKey(HID::Keys::A, GetButtonState(RETRO_DEVICE_ID_JOYPAD_A));
-	hid.setKey(HID::Keys::B, GetButtonState(RETRO_DEVICE_ID_JOYPAD_B));
-	hid.setKey(HID::Keys::X, GetButtonState(RETRO_DEVICE_ID_JOYPAD_X));
-	hid.setKey(HID::Keys::Y, GetButtonState(RETRO_DEVICE_ID_JOYPAD_Y));
-	hid.setKey(HID::Keys::L, GetButtonState(RETRO_DEVICE_ID_JOYPAD_L));
-	hid.setKey(HID::Keys::R, GetButtonState(RETRO_DEVICE_ID_JOYPAD_R));
-	hid.setKey(HID::Keys::Start, GetButtonState(RETRO_DEVICE_ID_JOYPAD_START));
-	hid.setKey(HID::Keys::Select, GetButtonState(RETRO_DEVICE_ID_JOYPAD_SELECT));
-	hid.setKey(HID::Keys::Up, GetButtonState(RETRO_DEVICE_ID_JOYPAD_UP));
-	hid.setKey(HID::Keys::Down, GetButtonState(RETRO_DEVICE_ID_JOYPAD_DOWN));
-	hid.setKey(HID::Keys::Left, GetButtonState(RETRO_DEVICE_ID_JOYPAD_LEFT));
-	hid.setKey(HID::Keys::Right, GetButtonState(RETRO_DEVICE_ID_JOYPAD_RIGHT));
+	hid.setKey(HID::Keys::A, getButtonState(RETRO_DEVICE_ID_JOYPAD_A));
+	hid.setKey(HID::Keys::B, getButtonState(RETRO_DEVICE_ID_JOYPAD_B));
+	hid.setKey(HID::Keys::X, getButtonState(RETRO_DEVICE_ID_JOYPAD_X));
+	hid.setKey(HID::Keys::Y, getButtonState(RETRO_DEVICE_ID_JOYPAD_Y));
+	hid.setKey(HID::Keys::L, getButtonState(RETRO_DEVICE_ID_JOYPAD_L));
+	hid.setKey(HID::Keys::R, getButtonState(RETRO_DEVICE_ID_JOYPAD_R));
+	hid.setKey(HID::Keys::Start, getButtonState(RETRO_DEVICE_ID_JOYPAD_START));
+	hid.setKey(HID::Keys::Select, getButtonState(RETRO_DEVICE_ID_JOYPAD_SELECT));
+	hid.setKey(HID::Keys::Up, getButtonState(RETRO_DEVICE_ID_JOYPAD_UP));
+	hid.setKey(HID::Keys::Down, getButtonState(RETRO_DEVICE_ID_JOYPAD_DOWN));
+	hid.setKey(HID::Keys::Left, getButtonState(RETRO_DEVICE_ID_JOYPAD_LEFT));
+	hid.setKey(HID::Keys::Right, getButtonState(RETRO_DEVICE_ID_JOYPAD_RIGHT));
 
 	// Get analog values for the left analog stick (Right analog stick is N3DS-only and unimplemented)
-	float xLeft = GetAxisState(RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
-	float yLeft = GetAxisState(RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
+	float xLeft = getAxisState(RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+	float yLeft = getAxisState(RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
 
 	hid.setCirclepadX((xLeft / +32767) * 0x9C);
 	hid.setCirclepadY((yLeft / -32767) * 0x9C);
 
-	bool touch = inputStateCallback(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+	bool touchScreen = false;
+
 	const int posX = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
 	const int posY = inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 
@@ -315,22 +366,29 @@ void retro_run() {
 	const int offsetX = 40;
 	const int offsetY = emulator->height / 2;
 
-	const bool inScreenX = newX >= offsetX && newX < emulator->width - offsetX;
+	const bool inScreenX = newX >= offsetX && newX <= emulator->width - offsetX;
 	const bool inScreenY = newY >= offsetY && newY <= emulator->height;
 
-	if (touch && inScreenX && inScreenY) {
+	if (inScreenX && inScreenY) {
+		touchScreen |= inputStateCallback(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+		touchScreen |= inputStateCallback(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
+	}
+
+	if (touchScreen) {
 		u16 x = static_cast<u16>(newX - offsetX);
 		u16 y = static_cast<u16>(newY - offsetY);
 
 		hid.setTouchScreenPress(x, y);
-	} else {
+		screenTouched = true;
+	} else if (screenTouched) {
 		hid.releaseTouchScreen();
+		screenTouched = false;
 	}
 
 	hid.updateInputs(emulator->getTicks());
 	emulator->runFrame();
 
-	videoCallbacks(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
+	videoCallback(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
 }
 
 void retro_set_controller_port_device(uint port, uint device) {}
@@ -348,7 +406,7 @@ uint retro_api_version() { return RETRO_API_VERSION; }
 
 usize retro_get_memory_size(uint id) {
 	if (id == RETRO_MEMORY_SYSTEM_RAM) {
-		return 0;
+		return Memory::FCRAM_SIZE;
 	}
 
 	return 0;
@@ -356,11 +414,30 @@ usize retro_get_memory_size(uint id) {
 
 void* retro_get_memory_data(uint id) {
 	if (id == RETRO_MEMORY_SYSTEM_RAM) {
-		return 0;
+		return emulator->getMemory().getFCRAM();
 	}
 
 	return nullptr;
 }
 
-void retro_cheat_set(uint index, bool enabled, const char* code) {}
-void retro_cheat_reset() {}
+void retro_cheat_set(uint index, bool enabled, const char* code) {
+	std::string cheatCode = std::regex_replace(code, std::regex("[^0-9a-fA-F]"), "");
+	std::vector<u8> bytes;
+
+	for (usize i = 0; i < cheatCode.size(); i += 2) {
+		std::string hex = cheatCode.substr(i, 2);
+		bytes.push_back((u8)std::stoul(hex, nullptr, 16));
+	}
+
+	u32 id = emulator->getCheats().addCheat(bytes.data(), bytes.size());
+
+	if (enabled) {
+		emulator->getCheats().enableCheat(id);
+	} else {
+		emulator->getCheats().disableCheat(id);
+	}
+}
+
+void retro_cheat_reset() {
+	emulator->getCheats().reset();
+}

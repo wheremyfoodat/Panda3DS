@@ -20,14 +20,14 @@ namespace Audio {
 		std::array<u8, Memory::DSP_RAM_SIZE> dspRam;
 
 		void resetAudioPipe();
-		bool loaded = false; // Have we loaded a component?
+		bool loaded = false;  // Have we loaded a component?
 
 	  public:
-		NullDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {}
+		NullDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config) : DSPCore(mem, scheduler, dspService, config) {}
 		~NullDSP() override {}
 
 		void reset() override;
-		void runAudioFrame() override;
+		void runAudioFrame(u64 eventTimestamp) override;
 
 		u8* getDspMemory() override { return dspRam.data(); }
 

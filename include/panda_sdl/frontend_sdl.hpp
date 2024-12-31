@@ -23,6 +23,8 @@ class FrontendSDL {
 	SDL_GameController* gameController = nullptr;
 	InputMappings keyboardMappings;
 
+	u32 windowWidth = 400;
+	u32 windowHeight = 480;
 	int gameControllerID;
 	bool programRunning = true;
 	
@@ -35,4 +37,6 @@ class FrontendSDL {
 	// And so the user can still use the keyboard to control the analog
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
+
+	void setupControllerSensors(SDL_GameController* controller);
 };

@@ -66,7 +66,6 @@ class Emulator {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	Discord::RPC discordRpc;
 #endif
-	void setAudioEnabled(bool enable);
 	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
@@ -90,7 +89,6 @@ class Emulator {
 	~Emulator();
 
 	void step();
-	void render();
 	void reset(ReloadOption reload);
 	void runFrame();
 	// Poll the scheduler for events
@@ -99,6 +97,7 @@ class Emulator {
 	void resume();  // Resume the emulator
 	void pause();   // Pause the emulator
 	void togglePause();
+	void setAudioEnabled(bool enable);
 
 	bool loadAmiibo(const std::filesystem::path& path);
 	bool loadROM(const std::filesystem::path& path);
@@ -118,6 +117,9 @@ class Emulator {
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
+	// Reloads some settings that require special handling, such as audio enable
+	void reloadSettings();
+
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
@@ -135,4 +137,7 @@ class Emulator {
 	std::filesystem::path getAppDataRoot();
 
 	std::span<u8> getSMDH();
+
+  private:
+	void loadRenderdoc();
 };

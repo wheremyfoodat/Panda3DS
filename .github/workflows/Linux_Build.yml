@@ -16,15 +16,15 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
     - name: Install misc packages
-      run: sudo apt-get update && sudo apt install libx11-dev libgl1-mesa-glx mesa-common-dev
+      run: sudo apt-get update && sudo apt install libx11-dev libgl1 libglx-mesa0 mesa-common-dev libwayland-dev
 
     - name: Install newer Clang
       run: |
@@ -49,7 +49,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Upload executable
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: Linux executable
         path: './build/Alber'

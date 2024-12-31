@@ -36,8 +36,8 @@ struct Dsp1 {
 	Segment segments[10];
 };
 
-TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService)
-	: DSPCore(mem, scheduler, dspService), pipeBaseAddr(0), running(false) {
+TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
+	: DSPCore(mem, scheduler, dspService, config), pipeBaseAddr(0), running(false) {
 	// Set up callbacks for Teakra
 	Teakra::AHBMCallback ahbm;
 

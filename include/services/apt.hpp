@@ -12,7 +12,8 @@
 class Kernel;
 
 enum class ConsoleModel : u32 {
-	Old3DS, New3DS
+	Old3DS,
+	New3DS,
 };
 
 // https://www.3dbrew.org/wiki/NS_and_APT_Services#Command
@@ -41,6 +42,8 @@ namespace APT::Transitions {
 }
 
 class APTService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::APT;
 	Memory& mem;
 	Kernel& kernel;
@@ -99,7 +102,7 @@ class APTService {
 
 	u32 screencapPostPermission;
 
-public:
+  public:
 	APTService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel), appletManager(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

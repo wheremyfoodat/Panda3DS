@@ -1,6 +1,7 @@
 #pragma once
-#include "PICA/float_types.hpp"
 #include <array>
+
+#include "PICA/float_types.hpp"
 
 namespace PICA {
 	// A representation of the output vertex as it comes out of the vertex shader, with padding and all

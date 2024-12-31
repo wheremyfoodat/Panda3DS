@@ -1,9 +1,10 @@
 #pragma once
 #include <array>
+#include <optional>
 #include <span>
 #include <string>
-#include <optional>
 
+#include "PICA/draw_acceleration.hpp"
 #include "PICA/pica_vertex.hpp"
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
@@ -17,11 +18,15 @@ enum class RendererType : s8 {
 	Null = 0,
 	OpenGL = 1,
 	Vulkan = 2,
-	Software = 3,
+	Metal = 3,
+	Software = 4,
 };
 
-class GPU;
+struct EmulatorConfig;
 struct SDL_Window;
+
+class GPU;
+class ShaderUnit;
 
 class Renderer {
   protected:
@@ -45,6 +50,8 @@ class Renderer {
 	// We initialize it to the 3DS resolution by default and the frontend can notify us if it changes via the setOutputSize function
 	u32 outputWindowWidth = 400;
 	u32 outputWindowHeight = 240 * 2;
+
+	EmulatorConfig* emulatorConfig = nullptr;
 
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
@@ -74,6 +81,16 @@ class Renderer {
 	virtual std::string getUbershader() { return ""; }
 	virtual void setUbershader(const std::string& shader) {}
 
+	// Only relevant for OpenGL renderer and other OpenGL-based backends (eg software)
+	// Called to notify the core to use OpenGL ES and not desktop GL
+	virtual void setupGLES() {}
+
+	// This function is called on every draw call before parsing vertex data.
+	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between
+	// ubershaders and shadergen, and so on.
+	// Returns whether this draw is eligible for using hardware-accelerated shaders or if shaders should run on the CPU
+	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) { return false; }
+
 	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
 #ifdef PANDA3DS_FRONTEND_QT
 	virtual void initGraphicsContext(GL::Context* context) { Helpers::panic("Tried to initialize incompatible renderer with GL context"); }
@@ -99,4 +116,6 @@ class Renderer {
 		outputWindowWidth = width;
 		outputWindowHeight = height;
 	}
+
+	void setConfig(EmulatorConfig* config) { emulatorConfig = config; }
 };

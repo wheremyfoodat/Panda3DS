@@ -8,6 +8,7 @@
 #include "renderer_gl/renderer_gl.hpp"
 #include "services/hid.hpp"
 #include "android_utils.hpp"
+#include "sdl_sensors.hpp"
 
 std::unique_ptr<Emulator> emulator = nullptr;
 HIDService* hidService = nullptr;
@@ -43,8 +44,14 @@ extern "C" {
 AlberFunction(void, functionName) (JNIEnv* env, jobject obj, type value) { emulator->getConfig().settingName = value; }
 
 MAKE_SETTING(setShaderJitEnabled, jboolean, shaderJitEnabled)
+MAKE_SETTING(setAccurateShaderMulEnable, jboolean, accurateShaderMul)
 
 #undef MAKE_SETTING
+
+AlberFunction(void, setAudioEnabled)(JNIEnv* env, jobject obj, jboolean value) {
+	emulator->getConfig().audioEnabled = value;
+	emulator->setAudioEnabled(value);
+}
 
 AlberFunction(void, Setup)(JNIEnv* env, jobject obj) {
     env->GetJavaVM(&jvm);
@@ -71,6 +78,7 @@ AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	}
 
 	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "OpenGL ES %d.%d", GLVersion.major, GLVersion.minor);
+	emulator->getRenderer()->setupGLES();
 	emulator->initGraphicsContext(nullptr);
 }
 
@@ -87,6 +95,7 @@ AlberFunction(void, Finalize)(JNIEnv* env, jobject obj) {
 	emulator = nullptr;
 	hidService = nullptr;
 	renderer = nullptr;
+	romLoaded = false;
 }
 
 AlberFunction(jboolean, HasRomLoaded)(JNIEnv* env, jobject obj) { return romLoaded; }
@@ -110,6 +119,19 @@ AlberFunction(void, TouchScreenUp)(JNIEnv* env, jobject obj) { hidService->relea
 AlberFunction(void, KeyUp)(JNIEnv* env, jobject obj, jint keyCode) { hidService->releaseKey((u32)keyCode); }
 AlberFunction(void, KeyDown)(JNIEnv* env, jobject obj, jint keyCode) { hidService->pressKey((u32)keyCode); }
 
+AlberFunction(void, SetGyro)(JNIEnv* env, jobject obj, jfloat roll, jfloat pitch, jfloat yaw) {
+    auto rotation = Sensors::SDL::convertRotation({ float(roll), float(pitch), float(yaw) });
+    hidService->setPitch(s16(rotation.x));
+    hidService->setRoll(s16(rotation.y));
+    hidService->setYaw(s16(rotation.z));
+}
+
+AlberFunction(void, SetAccel)(JNIEnv* env, jobject obj, jfloat rawX, jfloat rawY, jfloat rawZ) {
+    float data[3] = { float(rawX), float(rawY), float(rawZ) };
+    auto accel = Sensors::SDL::convertAcceleration(data);
+    hidService->setAccel(accel.x, accel.y, accel.z);
+}
+
 AlberFunction(void, SetCirclepadAxis)(JNIEnv* env, jobject obj, jint x, jint y) {
 	hidService->setCirclepadX((s16)x);
 	hidService->setCirclepadY((s16)y);
@@ -132,7 +154,6 @@ int AndroidUtils::openDocument(const char* path, const char* perms) {
 
     jstring uri = env->NewStringUTF(path);
     jstring jmode = env->NewStringUTF(perms);
-
     jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
 
     env->DeleteLocalRef(uri);

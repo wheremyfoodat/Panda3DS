@@ -9,20 +9,28 @@
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
+#include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
+#include "version.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()), screen(this) {
-	setWindowTitle("Alber");
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+	emu = new Emulator();
+
+	loadTranslation();
+	setWindowTitle(tr("Alber"));
+
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
-	screen.show();
+	show();
+
+	// We pass a callback to the screen widget that will be triggered every time we resize the screen
+	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	setCentralWidget(screen);
 
 	appRunning = true;
-
 	// Set our menu bar up
-	menuBar = new QMenuBar(this);
-	setMenuBar(menuBar);
+	menuBar = new QMenuBar(nullptr);
 
 	// Create menu bar menus
 	auto fileMenu = menuBar->addMenu(tr("File"));
@@ -46,6 +54,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto resumeAction = emulationMenu->addAction(tr("Resume"));
 	auto resetAction = emulationMenu->addAction(tr("Reset"));
 	auto configureAction = emulationMenu->addAction(tr("Configure"));
+	configureAction->setMenuRole(QAction::PreferencesRole);
+
 	connect(pauseAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Pause}); });
 	connect(resumeAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Resume}); });
 	connect(resetAction, &QAction::triggered, this, [this]() { sendMessage(EmulatorMessage{.type = MessageType::Reset}); });
@@ -66,14 +76,15 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
+	aboutAction->setMenuRole(QAction::AboutRole);
 	connect(aboutAction, &QAction::triggered, this, &MainWindow::showAboutMenu);
 
-	emu = new Emulator();
-	emu->setOutputSize(screen.surfaceWidth, screen.surfaceHeight);
+	setMenuBar(menuBar);
+
+	emu->setOutputSize(screen->surfaceWidth, screen->surfaceHeight);
 
 	// Set up misc objects
 	aboutWindow = new AboutWindow(nullptr);
-	configWindow = new ConfigWindow(this);
 	cheatsEditor = new CheatsWindow(emu, {}, this);
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
@@ -84,6 +95,14 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		shaderEditor->setText(emu->getRenderer()->getUbershader());
 	}
 
+	configWindow = new ConfigWindow(
+		[&]() {
+			EmulatorMessage message{.type = MessageType::UpdateConfig};
+			sendMessage(message);
+		},
+		[&]() { return this; }, emu->getConfig(), this
+	);
+
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
 		auto romPath = std::filesystem::current_path() / args.at(1).toStdU16String();
@@ -93,21 +112,42 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		}
 	}
 
+	// Handle UI configs before setting up the emulator thread
+	{
+		auto& config = emu->getConfig();
+		auto& windowSettings = config.windowSettings;
+
+		if (windowSettings.rememberPosition) {
+			setGeometry(windowSettings.x, windowSettings.y, windowSettings.width, config.windowSettings.height);
+		}
+
+		if (config.printAppVersion) {
+			printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
+		}
+	}
+
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
 	emuThread = std::thread([this]() {
 		const RendererType rendererType = emu->getConfig().rendererType;
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
 		usingVk = (rendererType == RendererType::Vulkan);
+		usingMtl = (rendererType == RendererType::Metal);
 
 		if (usingGL) {
 			// Make GL context current for this thread, enable VSync
-			GL::Context* glContext = screen.getGLContext();
+			GL::Context* glContext = screen->getGLContext();
 			glContext->MakeCurrent();
 			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
+
+			if (glContext->IsGLES()) {
+				emu->getRenderer()->setupGLES();
+			}
 
 			emu->initGraphicsContext(glContext);
 		} else if (usingVk) {
 			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
+		} else if (usingMtl) {
+			Helpers::panic("Metal on Qt currently doesn't work, try the SDL frontend instead!");
 		} else {
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
@@ -145,13 +185,13 @@ void MainWindow::emuThreadMainLoop() {
 
 	// Unbind GL context if we're using GL, otherwise some setups seem to be unable to join this thread
 	if (usingGL) {
-		screen.getGLContext()->DoneCurrent();
+		screen->getGLContext()->DoneCurrent();
 	}
 }
 
 void MainWindow::swapEmuBuffer() {
 	if (usingGL) {
-		screen.getGLContext()->SwapBuffers();
+		screen->getGLContext()->SwapBuffers();
 	} else {
 		Helpers::panic("[Qt] Don't know how to swap buffers for the current rendering backend :(");
 	}
@@ -160,7 +200,7 @@ void MainWindow::swapEmuBuffer() {
 void MainWindow::selectROM() {
 	auto path = QFileDialog::getOpenFileName(
 		this, tr("Select 3DS ROM to load"), QString::fromStdU16String(emu->getConfig().defaultRomPath.u16string()),
-		tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.3dsx *.elf *.axf)")
+		tr("Nintendo 3DS ROMs (*.3ds *.cci *.cxi *.app *.ncch *.3dsx *.elf *.axf)")
 	);
 
 	if (!path.isEmpty()) {
@@ -200,14 +240,26 @@ void MainWindow::selectLuaFile() {
 	}
 }
 
-// Cleanup when the main window closes
-MainWindow::~MainWindow() {
+// Stop emulator thread when the main window closes
+void MainWindow::closeEvent(QCloseEvent* event) {
 	appRunning = false;  // Set our running atomic to false in order to make the emulator thread stop, and join it
 
 	if (emuThread.joinable()) {
 		emuThread.join();
 	}
 
+	// Cache window position/size in config file to restore next time
+	const QRect& windowGeometry = geometry();
+	auto& windowConfig = emu->getConfig().windowSettings;
+
+	windowConfig.x = windowGeometry.x();
+	windowConfig.y = windowGeometry.y();
+	windowConfig.width = windowGeometry.width();
+	windowConfig.height = windowGeometry.height();
+}
+
+// Cleanup when the main window closes
+MainWindow::~MainWindow() {
 	delete emu;
 	delete menuBar;
 	delete aboutWindow;
@@ -272,8 +324,7 @@ void MainWindow::dumpDspFirmware() {
 		case DSPService::ComponentDumpResult::Success: break;
 		case DSPService::ComponentDumpResult::NotLoaded: {
 			QMessageBox messageBox(
-				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"),
-				tr("The currently loaded app has not uploaded a firmware to the DSP")
+				QMessageBox::Icon::Warning, tr("No DSP firmware loaded"), tr("The currently loaded app has not uploaded a firmware to the DSP")
 			);
 
 			QAbstractButton* button = messageBox.addButton(tr("OK"), QMessageBox::ButtonRole::YesRole);
@@ -360,6 +411,23 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			emu->getRenderer()->setUbershader(*message.string.str);
 			delete message.string.str;
 			break;
+
+		case MessageType::SetScreenSize: {
+			const u32 width = message.screenSize.width;
+			const u32 height = message.screenSize.height;
+
+			emu->setOutputSize(width, height);
+			screen->resizeSurface(width, height);
+			break;
+		}
+
+		case MessageType::UpdateConfig:
+			emu->getConfig() = configWindow->getConfig();
+			emu->reloadSettings();
+
+			// Save new settings to disk
+			emu->getConfig().save();
+			break;
 	}
 }
 
@@ -422,35 +490,46 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 
 void MainWindow::mousePressEvent(QMouseEvent* event) {
 	if (event->button() == Qt::MouseButton::LeftButton) {
-		const QPointF clickPos = event->globalPosition();
-		const QPointF widgetPos = screen.mapFromGlobal(clickPos);
+		// We handle actual mouse press & movement logic inside the mouseMoveEvent handler
+		handleTouchscreenPress(event);
+	}
+}
 
-		// Press is inside the screen area
-		if (widgetPos.x() >= 0 && widgetPos.x() < screen.width() && widgetPos.y() >= 0 && widgetPos.y() < screen.height()) {
-			// Go from widget positions to [0, 400) for x and [0, 480) for y
-			uint x = (uint)std::round(widgetPos.x() / screen.width() * 400.f);
-			uint y = (uint)std::round(widgetPos.y() / screen.height() * 480.f);
-
-			// Check if touch falls in the touch screen area
-			if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-				// Convert to 3DS coordinates
-				u16 x_converted = static_cast<u16>(x) - 40;
-				u16 y_converted = static_cast<u16>(y) - 240;
-
-				EmulatorMessage message{.type = MessageType::PressTouchscreen};
-				message.touchscreen.x = x_converted;
-				message.touchscreen.y = y_converted;
-				sendMessage(message);
-			} else {
-				sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
-			}
-		}
+void MainWindow::mouseMoveEvent(QMouseEvent* event) {
+	if (event->buttons().testFlag(Qt::MouseButton::LeftButton)) {
+		handleTouchscreenPress(event);
 	}
 }
 
 void MainWindow::mouseReleaseEvent(QMouseEvent* event) {
 	if (event->button() == Qt::MouseButton::LeftButton) {
 		sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
+	}
+}
+
+void MainWindow::handleTouchscreenPress(QMouseEvent* event) {
+	const QPointF clickPos = event->globalPosition();
+	const QPointF widgetPos = screen->mapFromGlobal(clickPos);
+
+	// Press is inside the screen area
+	if (widgetPos.x() >= 0 && widgetPos.x() < screen->width() && widgetPos.y() >= 0 && widgetPos.y() < screen->height()) {
+		// Go from widget positions to [0, 400) for x and [0, 480) for y
+		uint x = (uint)std::round(widgetPos.x() / screen->width() * 400.f);
+		uint y = (uint)std::round(widgetPos.y() / screen->height() * 480.f);
+
+		// Check if touch falls in the touch screen area
+		if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
+			// Convert to 3DS coordinates
+			u16 x_converted = static_cast<u16>(x) - 40;
+			u16 y_converted = static_cast<u16>(y) - 240;
+
+			EmulatorMessage message{.type = MessageType::PressTouchscreen};
+			message.touchscreen.x = x_converted;
+			message.touchscreen.y = y_converted;
+			sendMessage(message);
+		} else {
+			sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
+		}
 	}
 }
 
@@ -482,6 +561,14 @@ void MainWindow::editCheat(u32 handle, const std::vector<uint8_t>& cheat, const 
 	sendMessage(message);
 }
 
+void MainWindow::handleScreenResize(u32 width, u32 height) {
+	EmulatorMessage message{.type = MessageType::SetScreenSize};
+	message.screenSize.width = width;
+	message.screenSize.height = height;
+
+	sendMessage(message);
+}
+
 void MainWindow::initControllers() {
 	// Make SDL use consistent positional button mapping
 	SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
@@ -497,6 +584,8 @@ void MainWindow::initControllers() {
 			SDL_Joystick* stick = SDL_GameControllerGetJoystick(gameController);
 			gameControllerID = SDL_JoystickInstanceID(stick);
 		}
+
+		setupControllerSensors(gameController);
 	}
 }
 
@@ -534,6 +623,8 @@ void MainWindow::pollControllers() {
 				if (gameController == nullptr) {
 					gameController = SDL_GameControllerOpen(event.cdevice.which);
 					gameControllerID = event.cdevice.which;
+
+					setupControllerSensors(gameController);
 				}
 				break;
 
@@ -574,6 +665,37 @@ void MainWindow::pollControllers() {
 				}
 				break;
 			}
+
+			case SDL_CONTROLLERSENSORUPDATE: {
+				if (event.csensor.sensor == SDL_SENSOR_GYRO) {
+					auto rotation = Sensors::SDL::convertRotation({
+						event.csensor.data[0],
+						event.csensor.data[1],
+						event.csensor.data[2],
+					});
+
+					hid.setPitch(s16(rotation.x));
+					hid.setRoll(s16(rotation.y));
+					hid.setYaw(s16(rotation.z));
+				} else if (event.csensor.sensor == SDL_SENSOR_ACCEL) {
+					auto accel = Sensors::SDL::convertAcceleration(event.csensor.data);
+					hid.setAccel(accel.x, accel.y, accel.z);
+				}
+				break;
+			}
 		}
+	}
+}
+
+void MainWindow::setupControllerSensors(SDL_GameController* controller) {
+	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;
+	bool haveAccelerometer = SDL_GameControllerHasSensor(controller, SDL_SENSOR_ACCEL) == SDL_TRUE;
+
+	if (haveGyro) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_GYRO, SDL_TRUE);
+	}
+
+	if (haveAccelerometer) {
+		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
 	}
 }

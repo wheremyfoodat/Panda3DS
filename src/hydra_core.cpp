@@ -1,3 +1,4 @@
+#include <version.hpp>
 #include <emulator.hpp>
 #include <hydra/core.hxx>
 #include <renderer_gl/renderer_gl.hpp>
@@ -113,10 +114,11 @@ hydra::Size HydraCore::getNativeSize() { return {400, 480}; }
 void HydraCore::setOutputSize(hydra::Size size) {}
 
 void HydraCore::resetContext() {
-#ifdef __ANDROID__
+#ifdef USING_GLES
 	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL ES init failed");
 	}
+	emulator->getRenderer()->setupGLES();
 #else
 	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getProcAddress))) {
 		Helpers::panic("OpenGL init failed");
@@ -150,7 +152,7 @@ HC_API const char* getInfo(hydra::InfoType type) {
 		case hydra::InfoType::SystemName: return "Nintendo 3DS";
 		case hydra::InfoType::Description: return "HLE 3DS emulator. There's a little Alber in your computer and he runs Nintendo 3DS games.";
 		case hydra::InfoType::Author: return "wheremyfoodat (Peach)";
-		case hydra::InfoType::Version: return "0.7";
+		case hydra::InfoType::Version: return PANDA3DS_VERSION;
 		case hydra::InfoType::License: return "GPLv3";
 		case hydra::InfoType::Website: return "https://panda3ds.com/";
 		case hydra::InfoType::Extensions: return "3ds,cci,cxi,app,3dsx,elf,axf";

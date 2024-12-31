@@ -59,6 +59,9 @@
     <string name="graphics">Graphics</string>
     <string name="pref_shader_jit_title">Shader JIT</string>
     <string name="pref_shader_jit_summary">Use shader recompiler.</string>
+    <string name="audio">Audio</string>
+    <string name="pref_enable_audio_title">Enable Audio</string>
+    <string name="pref_enable_audio_desc">Audio will be enabled</string>
     <string name="tools">Tools</string>
     <string name="pref_logger_service_title">Logger</string>
     <string name="pref_logger_service_summary">Store application logs to file.</string>
@@ -96,4 +99,12 @@
     <string name="region_taiwan">Taiwan</string>
     <string name="behavior">Behavior</string>
     <string name="invalid_game">Invalid game</string>
+    <string name="pref_accurate_shader_title">Accurate shader multiplication</string>
+    <string name="pref_accurate_shader_summary">Can improve rendering at a small performance loss</string>
+    <string name="pref_game_crypto_keys">Import keys</string>
+    <string name="file_imported">%s imported</string>
+    <string name="file_available">%s available</string>
+    <string name="file_not_available">%s not available</string>
+    <string name="pref_game_seed_db_keys">Import SeedDB</string>
+    <string name="invalid_file">Invalid file</string>
 </resources>

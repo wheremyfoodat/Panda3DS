@@ -2,9 +2,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <thread>
 #include <utility>
 
+#include "audio/aac_decoder.hpp"
+#include "audio/dsp_simd.hpp"
+#include "config.hpp"
 #include "services/dsp.hpp"
 
 namespace Audio {
@@ -17,11 +21,14 @@ namespace Audio {
 		};
 	}
 
-	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {
+	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
+		: DSPCore(mem, scheduler, dspService, config) {
 		// Set up source indices
 		for (int i = 0; i < sources.size(); i++) {
 			sources[i].index = i;
 		}
+
+		aacDecoder.reset(new Audio::AAC::Decoder());
 	}
 
 	void HLE_DSP::resetAudioPipe() {
@@ -72,6 +79,7 @@ namespace Audio {
 			source.reset();
 		}
 
+		mixer.reset();
 		// Note: Reset audio pipe AFTER resetting all pipes, otherwise the new data will be yeeted
 		resetAudioPipe();
 	}
@@ -94,7 +102,7 @@ namespace Audio {
 		scheduler.removeEvent(Scheduler::EventType::RunDSP);
 	}
 
-	void HLE_DSP::runAudioFrame() {
+	void HLE_DSP::runAudioFrame(u64 eventTimestamp) {
 		// Signal audio pipe when an audio frame is done
 		if (dspState == DSPState::On) [[likely]] {
 			dspService.triggerPipeEvent(DSPPipeType::Audio);
@@ -102,7 +110,10 @@ namespace Audio {
 
 		// TODO: Should this be called if dspState != DSPState::On?
 		outputFrame();
-		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame);
+
+		// How many cycles we were late
+		const u64 cycleDrift = scheduler.currentTimestamp - eventTimestamp;
+		scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::cyclesPerFrame - cycleDrift);
 	}
 
 	u16 HLE_DSP::recvData(u32 regId) {
@@ -110,7 +121,7 @@ namespace Audio {
 			Helpers::panic("Audio: invalid register in HLE frontend");
 		}
 
-		return dspState == DSPState::On;
+		return dspState != DSPState::On;
 	}
 
 	void HLE_DSP::writeProcessPipe(u32 channel, u32 size, u32 buffer) {
@@ -203,11 +214,11 @@ namespace Audio {
 
 		if (audioEnabled) {
 			// Wait until we've actually got room to push our frame
-			while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+			while (sampleBuffer.size() + frame.size() * 2 > sampleBuffer.Capacity()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds{1});
 			}
 
-			sampleBuffer.push(frame.data(), frame.size());
+			sampleBuffer.push(frame.data(), frame.size() * 2);
 		}
 	}
 
@@ -215,6 +226,14 @@ namespace Audio {
 		using namespace Audio::HLE;
 		SharedMemory& read = readRegion();
 		SharedMemory& write = writeRegion();
+
+		// TODO: Properly implement mixers
+		// The DSP checks the DSP configuration dirty bits on every frame, applies them, and clears them
+		read.dspConfiguration.dirtyRaw = 0;
+		read.dspConfiguration.dirtyRaw2 = 0;
+
+		// The intermediate mix buffer is aligned to 16 for SIMD purposes
+		alignas(16) std::array<IntermediateMix, 3> mixes{};
 
 		for (int i = 0; i < sourceCount; i++) {
 			// Update source configuration from the read region of shared memory
@@ -231,20 +250,53 @@ namespace Audio {
 			auto& status = write.sourceStatuses.status[i];
 			status.enabled = source.enabled;
 			status.syncCount = source.syncCount;
-			status.currentBufferIDDirty = source.isBufferIDDirty ? 1 : 0;
+			status.currentBufferIDDirty = (source.isBufferIDDirty ? 1 : 0);
 			status.currentBufferID = source.currentBufferID;
 			status.previousBufferID = source.previousBufferID;
-			// TODO: Properly update sample position
 			status.samplePosition = source.samplePosition;
 
 			source.isBufferIDDirty = false;
+
+			// If the source is still enabled, mix its output into the intermediate mix buffers
+			if (source.enabled) {
+				for (int mix = 0; mix < mixes.size(); mix++) {
+					// Check if this stage is passthrough, and if it is, then skip it
+					if ((source.enabledMixStages & (1u << mix)) == 0) {
+						continue;
+					}
+
+					IntermediateMix& intermediateMix = mixes[mix];
+					const std::array<float, 4>& gains = source.gains[mix];
+
+					DSP::MixIntoQuad::mix(intermediateMix, source.currentFrame, gains.data());
+				}
+			}
 		}
+
+		for (int i = 0; i < Audio::samplesInFrame; i++) {
+			auto& mix0 = mixes[0];
+			auto& sample = mix0[i];
+			frame[i] = {s16(sample[0]), s16(sample[1])};
+		}
+
+		performMix(read, write);
 	}
 
 	void HLE_DSP::updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients) {
 		// Check if the any dirty bit is set, otherwise exit early
 		if (!config.dirtyRaw) {
 			return;
+		}
+
+		// The reset flags take priority, as you can reset a source and set it up to be played again at the same time
+		if (config.resetFlag) {
+			config.resetFlag = 0;
+			source.reset();
+		}
+
+		if (config.partialResetFlag) {
+			config.partialResetFlag = 0;
+			source.buffers = {};
 		}
 
 		if (config.enableDirty) {
@@ -266,16 +318,6 @@ namespace Audio {
 			);
 		}
 
-		if (config.resetFlag) {
-			config.resetFlag = 0;
-			source.reset();
-		}
-
-		if (config.partialResetFlag) {
-			config.partialResetFlag = 0;
-			source.buffers = {};
-		}
-
 		// TODO: Should we check bufferQueueDirty here too?
 		if (config.formatDirty || config.embeddedBufferDirty) {
 			source.sampleFormat = config.format;
@@ -285,7 +327,18 @@ namespace Audio {
 			source.sourceType = config.monoOrStereo;
 		}
 
+		if (config.interpolationDirty) {
+			source.interpolationMode = config.interpolationMode;
+		}
+
+		if (config.rateMultiplierDirty) {
+			source.rateMultiplier = (config.rateMultiplier > 0.f) ? config.rateMultiplier : 1.f;
+		}
+
 		if (config.embeddedBufferDirty) {
+			// Annoyingly, and only for embedded buffer, whether we use config.playPosition depends on the relevant dirty bit
+			const u32 playPosition = config.playPositionDirty ? config.playPosition : 0;
+
 			config.embeddedBufferDirty = 0;
 			if (s32(config.length) >= 0) [[likely]] {
 				// TODO: Add sample format and channel count
@@ -297,7 +350,7 @@ namespace Audio {
 					.adpcmDirty = config.adpcmDirty != 0,
 					.looping = config.isLooping != 0,
 					.bufferID = config.bufferID,
-					.playPosition = config.playPosition,
+					.playPosition = playPosition,
 					.format = source.sampleFormat,
 					.sourceType = source.sourceType,
 					.fromQueue = false,
@@ -316,9 +369,63 @@ namespace Audio {
 		}
 
 		if (config.bufferQueueDirty) {
+			// printf("Buffer queue dirty for voice %d\n", source.index);
+
+			u16 dirtyBuffers = config.buffersDirty;
 			config.bufferQueueDirty = 0;
-			printf("Buffer queue dirty for voice %d\n", source.index);
+			config.buffersDirty = 0;
+
+			for (int i = 0; i < 4; i++) {
+				bool dirty = ((dirtyBuffers >> i) & 1) != 0;
+				if (dirty) {
+					const auto& buffer = config.buffers[i];
+
+					if (s32(buffer.length) >= 0) [[likely]] {
+						// TODO: Add sample format and channel count
+						Source::Buffer newBuffer{
+							.paddr = buffer.physicalAddress,
+							.sampleCount = buffer.length,
+							.adpcmScale = u8(buffer.adpcm_ps),
+							.previousSamples = {s16(buffer.adpcm_yn[0]), s16(buffer.adpcm_yn[1])},
+							.adpcmDirty = buffer.adpcmDirty != 0,
+							.looping = buffer.isLooping != 0,
+							.bufferID = buffer.bufferID,
+							.playPosition = 0,
+							.format = source.sampleFormat,
+							.sourceType = source.sourceType,
+							.fromQueue = true,
+							.hasPlayedOnce = false,
+						};
+
+						source.buffers.emplace(std::move(newBuffer));
+					} else {
+						printf("Buffer queue dirty: Invalid buffer size for DSP voice %d\n", source.index);
+					}
+				}
+			}
 		}
+
+#define CONFIG_GAIN(index)                                                          \
+	if (config.gain##index##Dirty) {                                                \
+		auto& dest = source.gains[index];                                           \
+		auto& sourceGain = config.gain[index];                                      \
+                                                                                    \
+		dest[0] = float(sourceGain[0]);                                             \
+		dest[1] = float(sourceGain[1]);                                             \
+		dest[2] = float(sourceGain[2]);                                             \
+		dest[3] = float(sourceGain[3]);                                             \
+                                                                                    \
+		if (dest[0] == 0.f && dest[1] == 0.f && dest[2] == 0.f && dest[3] == 0.f) { \
+			source.enabledMixStages &= ~(1u << index);                              \
+		} else {                                                                    \
+			source.enabledMixStages |= (1u << index);                               \
+		}                                                                           \
+	}
+
+		CONFIG_GAIN(0);
+		CONFIG_GAIN(1);
+		CONFIG_GAIN(2);
+#undef CONFIG_GAIN
 
 		config.dirtyRaw = 0;
 	}
@@ -369,9 +476,20 @@ namespace Audio {
 		if (buffer.looping) {
 			source.pushBuffer(buffer);
 		}
+
+		// We're skipping the first samplePosition samples, so remove them from the buffer so as not to consume them later
+		if (source.samplePosition > 0) {
+			auto start = source.currentSamples.begin();
+			auto end = std::next(start, source.samplePosition);
+			source.currentSamples.erase(start, end);
+		}
 	}
 
 	void HLE_DSP::generateFrame(DSPSource& source) {
+		// Zero out all output samples at first. TODO: Don't zero out the entire frame initially, rather only zero-out the "unwritten" samples when
+		// the frame is done being processed.
+		source.currentFrame = {};
+
 		if (source.currentSamples.empty()) {
 			// There's no audio left to play, turn the voice off
 			if (source.buffers.empty()) {
@@ -385,10 +503,10 @@ namespace Audio {
 
 			decodeBuffer(source);
 		} else {
-			constexpr uint maxSampleCount = Audio::samplesInFrame;
-			uint outputCount = 0;
+			usize outputCount = 0;
+			static constexpr usize maxSamples = Audio::samplesInFrame;
 
-			while (outputCount < maxSampleCount) {
+			while (outputCount < maxSamples) {
 				if (source.currentSamples.empty()) {
 					if (source.buffers.empty()) {
 						break;
@@ -397,13 +515,73 @@ namespace Audio {
 					}
 				}
 
-				const uint sampleCount = std::min<s32>(maxSampleCount - outputCount, source.currentSamples.size());
-				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
-				source.currentSamples.erase(source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
+				switch (source.interpolationMode) {
+					case Source::InterpolationMode::Linear:
+						Audio::Interpolation::linear(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
+					case Source::InterpolationMode::None:
+						Audio::Interpolation::none(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
 
-				outputCount += sampleCount;
+					case Source::InterpolationMode::Polyphase:
+						// Currently stubbed to be the same as linear
+						Audio::Interpolation::polyphase(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
+				}
 			}
+
+			source.samplePosition += u32(outputCount * source.rateMultiplier);
 		}
+	}
+
+	void HLE_DSP::performMix(Audio::HLE::SharedMemory& readRegion, Audio::HLE::SharedMemory& writeRegion) {
+		updateMixerConfig(readRegion);
+		// TODO: Do the actual audio mixing
+
+		auto& dspStatus = writeRegion.dspStatus;
+		// Stub the DSP status. It's unknown what the "unknown" field is but Citra sets it to 0, so we do too to be safe
+		dspStatus.droppedFrames = 0;
+		dspStatus.unknown = 0;
+	}
+
+	void HLE_DSP::updateMixerConfig(Audio::HLE::SharedMemory& sharedMem) {
+		auto& config = sharedMem.dspConfiguration;
+		// No configs have been changed, so there's nothing to update
+		if (config.dirtyRaw == 0) {
+			return;
+		}
+
+		if (config.outputFormatDirty) {
+			mixer.channelFormat = config.outputFormat;
+		}
+
+		if (config.masterVolumeDirty) {
+			mixer.volumes[0] = config.masterVolume;
+		}
+
+		if (config.auxVolume0Dirty) {
+			mixer.volumes[1] = config.auxVolumes[0];
+		}
+
+		if (config.auxVolume1Dirty) {
+			mixer.volumes[2] = config.auxVolumes[1];
+		}
+
+		if (config.auxBusEnable0Dirty) {
+			mixer.enableAuxStages[0] = config.auxBusEnable[0] != 0;
+		}
+
+		if (config.auxBusEnable1Dirty) {
+			mixer.enableAuxStages[1] = config.auxBusEnable[1] != 0;
+		}
+
+		config.dirtyRaw = 0;
 	}
 
 	HLE_DSP::SampleBuffer HLE_DSP::decodePCM8(const u8* data, usize sampleCount, Source& source) {
@@ -527,16 +705,7 @@ namespace Audio {
 
 		switch (request.command) {
 			case AAC::Command::EncodeDecode:
-				// Dummy response to stop games from hanging
-				// TODO: Fix this when implementing AAC
-				response.resultCode = AAC::ResultCode::Success;
-				response.decodeResponse.channelCount = 2;
-				response.decodeResponse.sampleCount = 1024;
-				response.decodeResponse.size = 0;
-				response.decodeResponse.sampleRate = AAC::SampleRate::Rate48000;
-
-				response.command = request.command;
-				response.mode = request.mode;
+				aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); }, settings.aacEnabled);
 				break;
 
 			case AAC::Command::Init:
@@ -546,7 +715,7 @@ namespace Audio {
 				response = request;
 				response.resultCode = AAC::ResultCode::Success;
 				break;
-				
+
 			default: Helpers::warn("Unknown AAC command type"); break;
 		}
 
@@ -563,12 +732,19 @@ namespace Audio {
 		// Initialize these to some sane defaults
 		sampleFormat = SampleFormat::ADPCM;
 		sourceType = SourceType::Stereo;
+		interpolationMode = InterpolationMode::Linear;
 
 		samplePosition = 0;
 		previousBufferID = 0;
 		currentBufferID = 0;
 		syncCount = 0;
+		rateMultiplier = 1.f;
 
 		buffers = {};
+		interpolationState = {};
+		currentSamples.clear();
+
+		gains.fill({});
+		enabledMixStages = 0;
 	}
 }  // namespace Audio

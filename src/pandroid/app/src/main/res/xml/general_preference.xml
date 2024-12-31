@@ -23,6 +23,16 @@
             app:title="@string/pref_game_folders"
             app:summary="@string/pref_game_folders_summary"
             app:iconSpaceReserved="false"/>
+        <Preference
+            android:key="games.aes_key"
+            app:title="@string/pref_game_crypto_keys"
+            app:summary="@string/pref_game_crypto_keys"
+            app:iconSpaceReserved="false"/>
+        <Preference
+            android:key="games.seed_db"
+            app:title="@string/pref_game_seed_db_keys"
+            app:summary="@string/pref_game_crypto_keys"
+            app:iconSpaceReserved="false"/>
     </PreferenceCategory>
     <PreferenceCategory
         app:title="@string/behavior"

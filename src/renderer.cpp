@@ -17,6 +17,7 @@ std::optional<RendererType> Renderer::typeFromString(std::string inString) {
 		{"null", RendererType::Null},         {"nil", RendererType::Null},      {"none", RendererType::Null},
 		{"gl", RendererType::OpenGL},         {"ogl", RendererType::OpenGL},    {"opengl", RendererType::OpenGL},
 		{"vk", RendererType::Vulkan},         {"vulkan", RendererType::Vulkan}, {"vulcan", RendererType::Vulkan},
+		{"mtl", RendererType::Metal},         {"metal", RendererType::Metal},
 		{"sw", RendererType::Software},       {"soft", RendererType::Software}, {"software", RendererType::Software},
 		{"softrast", RendererType::Software},
 	};
@@ -33,6 +34,7 @@ const char* Renderer::typeToString(RendererType rendererType) {
 		case RendererType::Null: return "null";
 		case RendererType::OpenGL: return "opengl";
 		case RendererType::Vulkan: return "vulkan";
+		case RendererType::Metal: return "metal";
 		case RendererType::Software: return "software";
 		default: return "Invalid";
 	}

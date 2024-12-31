@@ -10,6 +10,8 @@
 class Kernel;
 
 class CSNDService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::CSND;
 	Memory& mem;
 	Kernel& kernel;
@@ -30,7 +32,5 @@ class CSNDService {
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 
-	void setSharedMemory(u8* ptr) {
-		sharedMemory = ptr;
-	}
+	void setSharedMemory(u8* ptr) { sharedMemory = ptr; }
 };

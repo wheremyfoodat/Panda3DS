@@ -38,6 +38,8 @@ namespace HID::Keys {
 class Kernel;
 
 class HIDService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::HID;
 	Memory& mem;
 	Kernel& kernel;
@@ -54,6 +56,7 @@ class HIDService {
 	s16 circlePadX, circlePadY;      // Circlepad state
 	s16 touchScreenX, touchScreenY;  // Touchscreen state
 	s16 roll, pitch, yaw;            // Gyroscope state
+	s16 accelX, accelY, accelZ;      // Accelerometer state
 
 	bool accelerometerEnabled;
 	bool eventsInitialized;
@@ -85,7 +88,14 @@ class HIDService {
 		*(T*)&sharedMem[offset] = value;
 	}
 
+	template <typename T>
+	T* getSharedMemPointer(size_t offset) {
+		return (T*)&sharedMem[offset];
+	}
+
   public:
+	static constexpr float gyroscopeCoeff = 14.375f;  // Same as retail 3DS
+
 	HIDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
@@ -125,6 +135,12 @@ class HIDService {
 	void setRoll(s16 value) { roll = value; }
 	void setPitch(s16 value) { pitch = value; }
 	void setYaw(s16 value) { yaw = value; }
+
+	void setAccel(s16 x, s16 y, s16 z) {
+		accelX = x;
+		accelY = y;
+		accelZ = z;
+	}
 
 	void updateInputs(u64 currentTimestamp);
 

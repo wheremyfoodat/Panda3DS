@@ -45,6 +45,16 @@ void ShaderEmitter::compile(const PICAShader& shaderUnit) {
 	L(onesVector);
 	dd(0x3f800000); dd(0x3f800000); dd(0x3f800000); dd(0x3f800000); // 1.0 4 times
 
+	if (useSafeMUL) {
+		// When doing safe mul, we need a vector to set only the w component to 0 for DP3
+		L(dp3Vector);
+
+		dd(0xFFFFFFFF);
+		dd(0xFFFFFFFF);
+		dd(0xFFFFFFFF);
+		dd(0);
+	}
+
 	// Emit prologue first
 	align(16);
 	prologueCb = getCurr<PrologueCallback>();
@@ -360,12 +370,11 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	} else if (haveSSE4_1) {
 		// Bit reverse the write mask because that is what blendps expects
 		u32 adjustedMask = ((writeMask >> 3) & 0b1) | ((writeMask >> 1) & 0b10) | ((writeMask << 1) & 0b100) | ((writeMask << 3) & 0b1000);
-		// Don't accidentally overwrite scratch1 if that is what we're writing derp
-		Xmm temp = (source == scratch1) ? scratch2 : scratch1;
 
-		movaps(temp, xword[statePointer + offset]);     // Read current value of dest
-		blendps(temp, source, adjustedMask);            // Blend with source
-		movaps(xword[statePointer + offset], temp);     // Write back
+		// Blend current value of dest with source. We have to invert the bits of the mask, as we do blendps source, dest instead of dest, source
+		// Note: This destroys source
+		blendps(source, xword[statePointer + offset], adjustedMask ^ 0xF);
+		movaps(xword[statePointer + offset], source);     // Write back
 	} else {
 		// Blend algo referenced from Citra
 		const u8 selector = (((writeMask & 0b1000) ? 1 : 0) << 0) |
@@ -523,24 +532,60 @@ void ShaderEmitter::recDP3(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	dpps(src1_xmm, src2_xmm, 0b01111111); // 3-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+
+	if (!useSafeMUL) {
+		dpps(src1_xmm, src2_xmm, 0b01111111);
+	} else {
+		const u32 writeMask = operandDescriptor & 0xf;
+
+		// Set w component to 0 and do a DP4
+		andps(src1_xmm, xword[rip + dp3Vector]);
+
+		// Set src1 to src1 * src2, then get the dot product by doing 2 horizontal adds
+		emitSafeMUL(src1_xmm, src2_xmm, scratch1);
+		haddps(src1_xmm, src1_xmm);
+		haddps(src1_xmm, src1_xmm);
+
+		// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
+		// Otherwise we do
+		if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
+			shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
+		}
+	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
 void ShaderEmitter::recDP4(const PICAShader& shader, u32 instruction) {
 	const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x7f];
 	const u32 src1 = getBits<12, 7>(instruction);
-	const u32 src2 = getBits<7, 5>(instruction); // src2 coming first because PICA moment
+	const u32 src2 = getBits<7, 5>(instruction);  // src2 coming first because PICA moment
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	dpps(src1_xmm, src2_xmm, 0b11111111); // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA 
+
+	if (!useSafeMUL) {
+		// 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA
+		dpps(src1_xmm, src2_xmm, 0b11111111);
+	} else {
+		const u32 writeMask = operandDescriptor & 0xf;
+
+		// Set src1 to src1 * src2, then get the dot product by doing 2 horizontal adds
+		emitSafeMUL(src1_xmm, src2_xmm, scratch1);
+		haddps(src1_xmm, src1_xmm);
+		haddps(src1_xmm, src1_xmm);
+
+		// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
+		// Otherwise we do
+		if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
+			shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
+		}
+	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -553,7 +598,6 @@ void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, isDPHI ? 0 : idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, isDPHI ? idx : 0, operandDescriptor);
 
@@ -566,7 +610,25 @@ void ShaderEmitter::recDPH(const PICAShader& shader, u32 instruction) {
 		unpcklpd(src1_xmm, scratch1);
 	}
 
-	dpps(src1_xmm, src2_xmm, 0b11111111);  // 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA
+    // Now perform a DP4
+	if (!useSafeMUL) {
+		// 4-lane dot product between the 2 registers, store the result in all lanes of scratch1 similarly to PICA
+		dpps(src1_xmm, src2_xmm, 0b11111111);
+	} else {
+		const u32 writeMask = operandDescriptor & 0xf;
+
+		// Set src1 to src1 * src2, then get the dot product by doing 2 horizontal adds
+		emitSafeMUL(src1_xmm, src2_xmm, scratch1);
+		haddps(src1_xmm, src1_xmm);
+		haddps(src1_xmm, src1_xmm);
+
+		// If we only write back the x component to the result, we needn't perform a shuffle to do res = res.xxxx
+		// Otherwise we do
+		if (writeMask != 0x8) {             // Copy bottom lane to all lanes if we're not simply writing back x
+			shufps(src1_xmm, src1_xmm, 0);  // src1_xmm = src1_xmm.xxxx
+		}
+	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -603,10 +665,15 @@ void ShaderEmitter::recMUL(const PICAShader& shader, u32 instruction) {
 	const u32 idx = getBits<19, 2>(instruction);
 	const u32 dest = getBits<21, 5>(instruction);
 
-	// TODO: Safe multiplication equivalent (Multiplication is not IEEE compliant on the PICA)
 	loadRegister<1>(src1_xmm, shader, src1, idx, operandDescriptor);
 	loadRegister<2>(src2_xmm, shader, src2, 0, operandDescriptor);
-	mulps(src1_xmm, src2_xmm);
+
+	if (!useSafeMUL) {
+		mulps(src1_xmm, src2_xmm);
+	} else {
+		emitSafeMUL(src1_xmm, src2_xmm, scratch1);
+	}
+
 	storeRegister(src1_xmm, shader, dest, operandDescriptor);
 }
 
@@ -662,22 +729,30 @@ void ShaderEmitter::recMAD(const PICAShader& shader, u32 instruction) {
 	loadRegister<2>(src2_xmm, shader, src2, isMADI ? 0 : idx, operandDescriptor);
 	loadRegister<3>(src3_xmm, shader, src3, isMADI ? idx : 0, operandDescriptor);
 
-	// TODO: Implement safe PICA mul
 	// If we have FMA3, optimize MAD to use FMA
-	if (haveFMA3) {
-		vfmadd213ps(src1_xmm, src2_xmm, src3_xmm);
-		storeRegister(src1_xmm, shader, dest, operandDescriptor);
-	}
-	
-	// If we don't have FMA3, do a multiplication and addition
-	else {
-		// Multiply src1 * src2
-		if (haveAVX) {
-			vmulps(scratch1, src1_xmm, src2_xmm);
-		} else {
-			movaps(scratch1, src1_xmm);
-			mulps(scratch1, src2_xmm);
+	if (!useSafeMUL) {
+		if (haveFMA3) {
+			vfmadd213ps(src1_xmm, src2_xmm, src3_xmm);
+			storeRegister(src1_xmm, shader, dest, operandDescriptor);
 		}
+
+		// If we don't have FMA3, do a multiplication and addition
+		else {
+			// Multiply src1 * src2
+			if (haveAVX) {
+				vmulps(scratch1, src1_xmm, src2_xmm);
+			} else {
+				movaps(scratch1, src1_xmm);
+				mulps(scratch1, src2_xmm);
+			}
+
+			// Add src3
+			addps(scratch1, src3_xmm);
+			storeRegister(scratch1, shader, dest, operandDescriptor);
+		}
+	} else {
+		movaps(scratch1, src1_xmm);
+		emitSafeMUL(scratch1, src2_xmm, src1_xmm);
 
 		// Add src3
 		addps(scratch1, src3_xmm);
@@ -1113,6 +1188,41 @@ Xbyak::Label ShaderEmitter::emitLog2Func() {
 
 	ret();
 	return subroutine;
+}
+
+void ShaderEmitter::emitSafeMUL(Xmm src1, Xmm src2, Xmm scratch) {
+	// 0 * inf and inf * 0 in the PICA should return 0 instead of NaN
+	// This can be done by checking for NaNs before and after a multiplication
+	// To do this we can create a mask of which components of src1/src2 are NOT NaN using cmpordsps (cmpps with imm = 7)
+	// Then we multiply src1 and src2 and reate a mask of which components of the result ARE NaN using cmpunordps
+	// If the NaNs didn't exist (ie they were created by 0 * inf) before then we set them to 0 by XORing the 2 masks and ANDing the multiplication
+	// result with the xor result
+	// Based on Citra implementation, particularly the AVX-512 version
+
+	if (cpuCaps.has(Cpu::tAVX512F | Cpu::tAVX512VL)) {
+		const Xbyak::Opmask zeroMask = k1;
+
+		vmulps(scratch, src1, src2);
+		// Mask of any NaN values found in the result
+		vcmpunordps(zeroMask, scratch, scratch);
+		// Mask of any non-NaN inputs producing NaN results
+		vcmpordps(zeroMask | zeroMask, src1, src2);
+
+		knotb(zeroMask, zeroMask);
+		vmovaps(src1 | zeroMask | T_z, scratch);
+	} else {
+		if (haveAVX) {
+			vcmpordps(scratch, src1, src2);
+		} else {
+			movaps(scratch, src1);
+			cmpordps(scratch, src2);
+		}
+
+		mulps(src1, src2);
+		cmpunordps(src2, src1);
+		xorps(src2, scratch);
+		andps(src1, src2);
+	}
 }
 
 Xbyak::Label ShaderEmitter::emitExp2Func() {

@@ -1,9 +1,17 @@
 #include "services/dsp.hpp"
-#include "ipc.hpp"
-#include "kernel.hpp"
+
+#include <cryptopp/sha.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>
+#include <cstring>
 #include <fstream>
+
+#include "config.hpp"
+#include "ipc.hpp"
+#include "kernel.hpp"
+#include "services/dsp_firmware_db.hpp"
 
 namespace DSPCommands {
 	enum : u32 {
@@ -20,7 +28,8 @@ namespace DSPCommands {
 		RegisterInterruptEvents = 0x00150082,
 		GetSemaphoreEventHandle = 0x00160000,
 		SetSemaphoreMask = 0x00170040,
-		GetHeadphoneStatus = 0x001F0000
+		GetHeadphoneStatus = 0x001F0000,
+		ForceHeadphoneOut = 0x00200040,
 	};
 }
 
@@ -34,6 +43,7 @@ namespace Result {
 void DSPService::reset() {
 	totalEventCount = 0;
 	semaphoreMask = 0;
+	headphonesInserted = true;
 
 	semaphoreEvent = std::nullopt;
 	interrupt0 = std::nullopt;
@@ -52,6 +62,7 @@ void DSPService::handleSyncRequest(u32 messagePointer) {
 		case DSPCommands::ConvertProcessAddressFromDspDram: convertProcessAddressFromDspDram(messagePointer); break;
 		case DSPCommands::FlushDataCache: flushDataCache(messagePointer); break;
 		case DSPCommands::InvalidateDataCache: invalidateDCache(messagePointer); break;
+		case DSPCommands::ForceHeadphoneOut: forceHeadphoneOut(messagePointer); break;
 		case DSPCommands::GetHeadphoneStatus: getHeadphoneStatus(messagePointer); break;
 		case DSPCommands::GetSemaphoreEventHandle: getSemaphoreEventHandle(messagePointer); break;
 		case DSPCommands::LoadComponent: loadComponent(messagePointer); break;
@@ -91,6 +102,10 @@ void DSPService::loadComponent(u32 messagePointer) {
 
 	log("DSP::LoadComponent (size = %08X, program mask = %X, data mask = %X\n", size, programMask, dataMask);
 	dsp->loadComponent(loadedComponent, programMask, dataMask);
+
+	if (config.printDSPFirmware) {
+		printFirmwareInfo();
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -198,7 +213,8 @@ void DSPService::getHeadphoneStatus(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1F, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, Result::HeadphonesInserted); // This should be toggleable for shits and giggles
+	// This should be toggleable for shits and giggles
+	mem.write32(messagePointer + 8, headphonesInserted ? Result::HeadphonesInserted : Result::HeadphonesNotInserted);
 }
 
 void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
@@ -266,6 +282,14 @@ void DSPService::invalidateDCache(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void DSPService::forceHeadphoneOut(u32 messagePointer) {
+	headphonesInserted = mem.read8(messagePointer + 4) != 0;
+
+	log("DSP::ForceHeadphoneOut\n");
+	mem.write32(messagePointer, IPC::responseHeader(0x20, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 DSPService::ComponentDumpResult DSPService::dumpComponent(const std::filesystem::path& path) {
 	if (loadedComponent.empty()) {
 		return ComponentDumpResult::NotLoaded;
@@ -303,4 +327,44 @@ void DSPService::triggerInterrupt1() {
 	if (interrupt1.has_value()) {
 		kernel.signalEvent(*interrupt1);
 	}
+}
+
+void DSPService::printFirmwareInfo() {
+	// No component has been loaded, do nothing.
+	if (!loadedComponent.size()) {
+		return;
+	}
+
+	const auto& firmwareDB = DSP::firmwareDB;
+	const usize firmwareSize = loadedComponent.size();
+	std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
+
+	CryptoPP::SHA256 sha;
+	sha.CalculateDigest(hash.data(), loadedComponent.data(), firmwareSize);
+
+	fmt::print("\nLoaded DSP firmware\n");
+	fmt::print("Firmware SHA-256 hash: {:X}\n", fmt::join(hash, ""));
+	fmt::print("Size: {} bytes ({} KB)\n", firmwareSize, firmwareSize / 1024);
+
+	bool knownFirmware = false;
+
+	for (int i = 0; i < firmwareDB.size(); i++) {
+		const auto& entry = firmwareDB[i];
+		if (entry.size == firmwareSize && std::memcmp(hash.data(), entry.hash.data(), hash.size()) == 0) {
+			knownFirmware = true;
+			fmt::print(
+				"Firmware found in DSP firmware DB.\nFeatures AAC decoder: {}\nOther notes: {}\n", entry.supportsAAC ? "yes" : "no", entry.notes
+			);
+
+			break;
+		}
+	}
+
+	if (!knownFirmware) {
+		fmt::print("Firmware not found in DSP firmware DB.\nHash in case you want to add it to the DB: {{{:#X}}}\n", fmt::join(hash, ", "));
+		// DSP firmwares that feature AAC decoding are usually around 210KB as opposed to the average DSP firmware which is around 48KB
+		fmt::print("Features AAC decoder: {}\n", firmwareSize >= 200_KB ? "probably yes" : "probably not");
+	}
+
+	fmt::print("\n");
 }

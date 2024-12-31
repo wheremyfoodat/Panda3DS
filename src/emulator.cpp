@@ -1,10 +1,12 @@
 #include "emulator.hpp"
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__LIBRETRO__)
 #include <SDL_filesystem.h>
 #endif
 
 #include <fstream>
+
+#include "renderdoc.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,7 +20,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(cpu.getTicksRef(), config),
-	  cheats(memory, kernel.getServiceManager().getHID()), lua(*this), running(false)
+	  cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this), running(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
@@ -26,11 +28,15 @@ Emulator::Emulator()
 {
 	DSPService& dspService = kernel.getServiceManager().getDSP();
 
-	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
+	dsp = Audio::makeDSPCore(config, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());
 	setAudioEnabled(config.audioEnabled);
+
+	if (Renderdoc::isSupported() && config.enableRenderdoc) {
+		loadRenderdoc();
+	}
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
@@ -44,6 +50,7 @@ Emulator::Emulator()
 Emulator::~Emulator() {
 	config.save();
 	lua.close();
+	audioDevice.close();
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	discordRpc.stop();
@@ -98,13 +105,18 @@ std::filesystem::path Emulator::getConfigPath() {
 	if constexpr (Helpers::isAndroid()) {
 		return getAndroidAppPath() / "config.toml";
 	} else {
-		return std::filesystem::current_path() / "config.toml";
+		std::filesystem::path localPath = std::filesystem::current_path() / "config.toml";
+
+		if (std::filesystem::exists(localPath)) {
+			return localPath;
+		} else {
+			return getAppDataRoot() / "config.toml";
+		}
 	}
 }
 #endif
 
 void Emulator::step() {}
-void Emulator::render() {}
 
 // Only resume if a ROM is properly loaded
 void Emulator::resume() {
@@ -167,7 +179,7 @@ void Emulator::pollScheduler() {
 
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
 			case Scheduler::EventType::RunDSP: {
-				dsp->runAudioFrame();
+				dsp->runAudioFrame(time);
 				break;
 			}
 
@@ -220,6 +232,8 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	const std::filesystem::path appDataPath = getAppDataRoot();
 	const std::filesystem::path dataPath = appDataPath / path.filename().stem();
 	const std::filesystem::path aesKeysPath = appDataPath / "sysdata" / "aes_keys.txt";
+	const std::filesystem::path seedDBPath = appDataPath / "sysdata" / "seeddb.bin";
+
 	IOFile::setAppDataDir(dataPath);
 
 	// Open the text file containing our AES keys if it exists. We use the std::filesystem::exists overload that takes an error code param to
@@ -227,6 +241,10 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	std::error_code ec;
 	if (std::filesystem::exists(aesKeysPath, ec) && !ec) {
 		aesEngine.loadKeys(aesKeysPath);
+	}
+
+	if (std::filesystem::exists(seedDBPath, ec) && !ec) {
+		aesEngine.setSeedPath(seedDBPath);
 	}
 
 	kernel.initializeFS();
@@ -237,7 +255,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		success = loadELF(path);
 	else if (extension == ".3ds" || extension == ".cci")
 		success = loadNCSD(path, ROMType::NCSD);
-	else if (extension == ".cxi" || extension == ".app")
+	else if (extension == ".cxi" || extension == ".app" || extension == ".ncch")
 		success = loadNCSD(path, ROMType::CXI);
 	else if (extension == ".3dsx")
 		success = load3DSX(path);
@@ -299,6 +317,11 @@ bool Emulator::load3DSX(const std::filesystem::path& path) {
 }
 
 bool Emulator::loadELF(const std::filesystem::path& path) {
+	// We can't open a new file with this ifstream if it's associated with a file
+	if (loadedELF.is_open()) {
+		loadedELF.close();
+	}
+
 	loadedELF.open(path, std::ios_base::binary);  // Open ROM in binary mode
 	romType = ROMType::ELF;
 
@@ -410,6 +433,10 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 }
 
 void Emulator::setAudioEnabled(bool enable) {
+	// Don't enable audio if we didn't manage to find an audio device and initialize it properly, otherwise audio sync will break,
+	// because the emulator will expect the audio device to drain the sample buffer, but there's no audio device running...
+	enable = enable && audioDevice.isInitialized();
+
 	if (!enable) {
 		audioDevice.stop();
 	} else if (enable && romType != ROMType::None && running) {
@@ -419,4 +446,31 @@ void Emulator::setAudioEnabled(bool enable) {
 	}
 
 	dsp->setAudioEnabled(enable);
+}
+
+void Emulator::loadRenderdoc() {
+	std::string capturePath = (std::filesystem::current_path() / "RenderdocCaptures").generic_string();
+	Renderdoc::loadRenderdoc();
+	Renderdoc::setOutputDir(capturePath, "");
+}
+
+void Emulator::reloadSettings() {
+	setAudioEnabled(config.audioEnabled);
+
+	if (Renderdoc::isSupported() && config.enableRenderdoc && !Renderdoc::isLoaded()) {
+		loadRenderdoc();
+	}
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	// Reload RPC setting if we're compiling with RPC support
+
+	if (discordRpc.running() != config.discordRpcEnabled) {
+		if (config.discordRpcEnabled) {
+			discordRpc.init();
+			updateDiscord();
+		} else {
+			discordRpc.stop();
+		}
+	}
+#endif
 }

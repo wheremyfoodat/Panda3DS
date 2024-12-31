@@ -95,7 +95,7 @@ public class AppDataDocumentProvider extends DocumentsProvider {
     private void includeFile(MatrixCursor cursor, File file) {
         int flags = 0;
         if (file.isDirectory()) {
-            flags = Document.FLAG_DIR_SUPPORTS_CREATE;
+            flags = Document.FLAG_DIR_SUPPORTS_CREATE | Document.FLAG_SUPPORTS_DELETE;
         } else {
             flags = Document.FLAG_SUPPORTS_WRITE | Document.FLAG_SUPPORTS_REMOVE | Document.FLAG_SUPPORTS_DELETE;
         }

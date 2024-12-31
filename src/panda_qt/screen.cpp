@@ -18,7 +18,7 @@
 // and https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
 
 #ifdef PANDA3DS_ENABLE_OPENGL
-ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
+ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWidget(parent), resizeCallback(resizeCallback) {
 	// Create a native window for use with our graphics API of choice
 	resize(800, 240 * 4);
 	
@@ -29,23 +29,55 @@ ScreenWidget::ScreenWidget(QWidget* parent) : QWidget(parent) {
 	setAttribute(Qt::WA_KeyCompression, false);
 	setFocusPolicy(Qt::StrongFocus);
 	setMouseTracking(true);
+	show();
 
 	if (!createGLContext()) {
 		Helpers::panic("Failed to create GL context for display");
 	}
 }
 
+void ScreenWidget::resizeEvent(QResizeEvent* event) {
+	previousWidth = surfaceWidth;
+	previousHeight = surfaceHeight;
+	QWidget::resizeEvent(event);
+
+	// Update surfaceWidth/surfaceHeight following the resize
+	std::optional<WindowInfo> windowInfo = getWindowInfo();
+	if (windowInfo) {
+		this->windowInfo = *windowInfo;
+	}
+
+	// This will call take care of calling resizeSurface from the emulator thread
+	resizeCallback(surfaceWidth, surfaceHeight);
+}
+
+// Note: This will run on the emulator thread, we don't want any Qt calls happening there.
+void ScreenWidget::resizeSurface(u32 width, u32 height) {
+	if (previousWidth != width || previousHeight != height) {
+		if (glContext) {
+			glContext->ResizeSurface(width, height);
+		}
+	}
+}
+
 bool ScreenWidget::createGLContext() {
-	// List of GL context versions we will try. Anything 4.1+ is good
-	static constexpr std::array<GL::Context::Version, 6> versionsToTry = {
+	// List of GL context versions we will try. Anything 4.1+ is good for desktop OpenGL, and 3.1+ for OpenGL ES
+	static constexpr std::array<GL::Context::Version, 8> versionsToTry = {
 		GL::Context::Version{GL::Context::Profile::Core, 4, 6}, GL::Context::Version{GL::Context::Profile::Core, 4, 5},
 		GL::Context::Version{GL::Context::Profile::Core, 4, 4}, GL::Context::Version{GL::Context::Profile::Core, 4, 3},
 		GL::Context::Version{GL::Context::Profile::Core, 4, 2}, GL::Context::Version{GL::Context::Profile::Core, 4, 1},
+		GL::Context::Version{GL::Context::Profile::ES, 3, 2},   GL::Context::Version{GL::Context::Profile::ES, 3, 1},
 	};
 
 	std::optional<WindowInfo> windowInfo = getWindowInfo();
 	if (windowInfo.has_value()) {
+		this->windowInfo = *windowInfo;
+
 		glContext = GL::Context::Create(*getWindowInfo(), versionsToTry);
+		if (glContext == nullptr) {
+			return false;
+		}
+
 		glContext->DoneCurrent();
 	}
 
@@ -53,7 +85,7 @@ bool ScreenWidget::createGLContext() {
 }
 
 qreal ScreenWidget::devicePixelRatioFromScreen() const {
-	const QScreen* screenForRatio = window()->windowHandle()->screen();
+	const QScreen* screenForRatio = windowHandle()->screen();
 	if (!screenForRatio) {
 		screenForRatio = QGuiApplication::primaryScreen();
 	}

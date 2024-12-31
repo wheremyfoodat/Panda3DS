@@ -1,15 +1,9 @@
 #include "panda_qt/cheats_window.hpp"
 
-#include <QCheckBox>
-#include <QDialog>
 #include <QDialogButtonBox>
-#include <QLabel>
-#include <QLineEdit>
-#include <QListWidget>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <functional>
 
 #include "cheats.hpp"
@@ -18,70 +12,16 @@
 
 MainWindow* mainWindow = nullptr;
 
-struct CheatMetadata {
-	u32 handle = Cheats::badCheatHandle;
-	std::string name = "New cheat";
-	std::string code;
-	bool enabled = true;
-};
-
 void dispatchToMainThread(std::function<void()> callback) {
-    QTimer* timer = new QTimer();
-    timer->moveToThread(qApp->thread());
-    timer->setSingleShot(true);
-    QObject::connect(timer, &QTimer::timeout, [=]()
-    {
-        callback();
-        timer->deleteLater();
-    });
-    QMetaObject::invokeMethod(timer, "start", Qt::QueuedConnection, Q_ARG(int, 0));
+	QTimer* timer = new QTimer();
+	timer->moveToThread(qApp->thread());
+	timer->setSingleShot(true);
+	QObject::connect(timer, &QTimer::timeout, [=]() {
+		callback();
+		timer->deleteLater();
+	});
+	QMetaObject::invokeMethod(timer, "start", Qt::QueuedConnection, Q_ARG(int, 0));
 }
-
-class CheatEntryWidget : public QWidget {
-  public:
-	CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListWidget* parent);
-
-	void Update() {
-		name->setText(metadata.name.c_str());
-		enabled->setChecked(metadata.enabled);
-		update();
-	}
-
-	void Remove() {
-		emu->getCheats().removeCheat(metadata.handle);
-		cheatList->takeItem(cheatList->row(listItem));
-		deleteLater();
-	}
-
-	const CheatMetadata& getMetadata() { return metadata; }
-	void setMetadata(const CheatMetadata& metadata) { this->metadata = metadata; }
-
-  private:
-	void checkboxChanged(int state);
-	void editClicked();
-
-	Emulator* emu;
-	CheatMetadata metadata;
-	u32 handle;
-	QLabel* name;
-	QCheckBox* enabled;
-	QListWidget* cheatList;
-	QListWidgetItem* listItem;
-};
-
-class CheatEditDialog : public QDialog {
-  public:
-	CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry);
-
-	void accepted();
-	void rejected();
-
-  private:
-	Emulator* emu;
-	CheatEntryWidget& cheatEntry;
-	QTextEdit* codeEdit;
-	QLineEdit* nameEdit;
-};
 
 CheatEntryWidget::CheatEntryWidget(Emulator* emu, CheatMetadata metadata, QListWidget* parent)
 	: QWidget(), emu(emu), metadata(metadata), cheatList(parent) {
@@ -129,6 +69,8 @@ void CheatEntryWidget::editClicked() {
 }
 
 CheatEditDialog::CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry) : QDialog(), emu(emu), cheatEntry(cheatEntry) {
+	setWindowTitle(tr("Edit Cheat"));
+
 	setAttribute(Qt::WA_DeleteOnClose);
 	setModal(true);
 
@@ -219,7 +161,8 @@ void CheatEditDialog::rejected() {
 
 CheatsWindow::CheatsWindow(Emulator* emu, const std::filesystem::path& cheatPath, QWidget* parent)
 	: QWidget(parent, Qt::Window), emu(emu), cheatPath(cheatPath) {
-    mainWindow = static_cast<MainWindow*>(parent);
+	setWindowTitle(tr("Cheats"));
+	mainWindow = static_cast<MainWindow*>(parent);
 
 	QVBoxLayout* layout = new QVBoxLayout;
 	layout->setContentsMargins(6, 6, 6, 6);

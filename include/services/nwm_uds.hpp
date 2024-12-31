@@ -10,6 +10,8 @@
 class Kernel;
 
 class NwmUdsService {
+	using Handle = HorizonHandle;
+
 	Handle handle = KernelHandles::NWM_UDS;
 	Memory& mem;
 	Kernel& kernel;

@@ -6,7 +6,14 @@
 #include "result/result.hpp"
 
 class NDMService {
-	enum class ExclusiveState : u32 { None = 0, Infrastructure = 1, LocalComms = 2, StreetPass = 3, StreetPassData = 4 };
+	using Handle = HorizonHandle;
+	enum class ExclusiveState : u32 {
+		None = 0,
+		Infrastructure = 1,
+		LocalComms = 2,
+		StreetPass = 3,
+		StreetPassData = 4,
+	};
 
 	Handle handle = KernelHandles::NDM;
 	Memory& mem;
@@ -25,7 +32,7 @@ class NDMService {
 
 	ExclusiveState exclusiveState = ExclusiveState::None;
 
-public:
+  public:
 	NDMService(Memory& mem) : mem(mem) {}
 	void reset();
 	void handleSyncRequest(u32 messagePointer);

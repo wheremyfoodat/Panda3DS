@@ -7,6 +7,8 @@
 
 namespace MCU {
 	class HWCService {
+		using Handle = HorizonHandle;
+
 		Handle handle = KernelHandles::MCU_HWC;
 		Memory& mem;
 		MAKE_LOG_FUNCTION(log, mcuLogger)
@@ -15,6 +17,7 @@ namespace MCU {
 
 		// Service commands
 		void getBatteryLevel(u32 messagePointer);
+		void setInfoLEDPattern(u32 messagePointer);
 
 	  public:
 		HWCService(Memory& mem, const EmulatorConfig& config) : mem(mem), config(config) {}

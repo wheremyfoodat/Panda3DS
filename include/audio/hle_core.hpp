@@ -2,18 +2,19 @@
 #include <array>
 #include <cassert>
 #include <deque>
+#include <memory>
 #include <queue>
 #include <vector>
 
 #include "audio/aac.hpp"
+#include "audio/aac_decoder.hpp"
+#include "audio/audio_interpolation.hpp"
 #include "audio/dsp_core.hpp"
 #include "audio/dsp_shared_mem.hpp"
+#include "audio/hle_mixer.hpp"
 #include "memory.hpp"
 
 namespace Audio {
-	using SampleFormat = HLE::SourceConfiguration::Configuration::Format;
-	using SourceType = HLE::SourceConfiguration::Configuration::MonoOrStereo;
-
 	struct DSPSource {
 		// Audio buffer information
 		// https://www.3dbrew.org/wiki/DSP_Memory_Region
@@ -33,8 +34,8 @@ namespace Audio {
 			SampleFormat format;
 			SourceType sourceType;
 
-			bool fromQueue = false;        // Is this buffer from the buffer queue or an embedded buffer?
-			bool hasPlayedOnce = false;    // Has the buffer been played at least once before?
+			bool fromQueue = false;      // Is this buffer from the buffer queue or an embedded buffer?
+			bool hasPlayedOnce = false;  // Has the buffer been played at least once before?
 
 			bool operator<(const Buffer& other) const {
 				// Lower ID = Higher priority
@@ -42,17 +43,34 @@ namespace Audio {
 				return this->bufferID > other.bufferID;
 			}
 		};
+
 		// Buffer of decoded PCM16 samples. TODO: Are there better alternatives to use over deque?
 		using SampleBuffer = std::deque<std::array<s16, 2>>;
-
 		using BufferQueue = std::priority_queue<Buffer>;
+		using InterpolationMode = HLE::SourceConfiguration::Configuration::InterpolationMode;
+		using InterpolationState = Audio::Interpolation::State;
+
+		// The samples this voice output for this audio frame.
+		// Aligned to 4 for SIMD purposes.
+		alignas(4) DSPMixer::StereoFrame<s16> currentFrame;
 		BufferQueue buffers;
 
 		SampleFormat sampleFormat = SampleFormat::ADPCM;
 		SourceType sourceType = SourceType::Stereo;
+		InterpolationMode interpolationMode = InterpolationMode::Linear;
+		InterpolationState interpolationState;
 
-		std::array<float, 3> gain0, gain1, gain2;
+		// There's one gain configuration for each of the 3 intermediate mixing stages
+		// And each gain configuration is composed of 4 gain values, one for each sample in a quad-channel sample
+		// Aligned to 16 for SIMD purposes
+		alignas(16) std::array<std::array<float, 4>, 3> gains;
+		// Of the 3 intermediate mix stages, typically only the first one is actually enabled and the other ones do nothing
+		// Ie their gain is vec4(0.0). We track which stages are disabled (have a gain of all 0s) using this bitfield and skip them
+		// In order to save up on CPU time.
+		uint enabledMixStages = 0;
+
 		u32 samplePosition;  // Sample number into the current audio buffer
+		float rateMultiplier;
 		u16 syncCount;
 		u16 currentBufferID;
 		u16 previousBufferID;
@@ -95,22 +113,23 @@ namespace Audio {
 		// The audio frame types are public in case we want to use them for unit tests
 	  public:
 		template <typename T, usize channelCount = 1>
-		using Sample = std::array<T, channelCount>;
+		using Sample = DSPMixer::Sample<T, channelCount>;
 
 		template <typename T, usize channelCount>
-		using Frame = std::array<Sample<T, channelCount>, 160>;
+		using Frame = DSPMixer::Frame<T, channelCount>;
 
 		template <typename T>
-		using MonoFrame = Frame<T, 1>;
+		using MonoFrame = DSPMixer::MonoFrame<T>;
 
 		template <typename T>
-		using StereoFrame = Frame<T, 2>;
+		using StereoFrame = DSPMixer::StereoFrame<T>;
 
 		template <typename T>
-		using QuadFrame = Frame<T, 4>;
+		using QuadFrame = DSPMixer::QuadFrame<T>;
 
 		using Source = Audio::DSPSource;
 		using SampleBuffer = Source::SampleBuffer;
+		using IntermediateMix = DSPMixer::IntermediateMix;
 
 	  private:
 		enum class DSPState : u32 {
@@ -127,6 +146,9 @@ namespace Audio {
 		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
 		Audio::HLE::DspMemory dspRam;
 
+		Audio::DSPMixer mixer;
+		std::unique_ptr<Audio::AAC::Decoder> aacDecoder;
+
 		void resetAudioPipe();
 		bool loaded = false;  // Have we loaded a component?
 
@@ -142,7 +164,7 @@ namespace Audio {
 			} else if (counter1 == 0xffff && counter0 != 0xfffe) {
 				return 0;
 			} else {
-				return counter0 > counter1 ? 0 : 0;
+				return (counter0 > counter1) ? 0 : 1;
 			}
 		}
 
@@ -169,9 +191,12 @@ namespace Audio {
 
 		void handleAACRequest(const AAC::Message& request);
 		void updateSourceConfig(Source& source, HLE::SourceConfiguration::Configuration& config, s16_le* adpcmCoefficients);
+		void updateMixerConfig(HLE::SharedMemory& sharedMem);
 		void generateFrame(StereoFrame<s16>& frame);
 		void generateFrame(DSPSource& source);
 		void outputFrame();
+		// Perform the final mix, mixing the quadraphonic samples from all voices into the output audio frame
+		void performMix(Audio::HLE::SharedMemory& readRegion, Audio::HLE::SharedMemory& writeRegion);
 
 		// Decode an entire buffer worth of audio
 		void decodeBuffer(DSPSource& source);
@@ -181,11 +206,11 @@ namespace Audio {
 		SampleBuffer decodeADPCM(const u8* data, usize sampleCount, Source& source);
 
 	  public:
-		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService);
+		HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config);
 		~HLE_DSP() override {}
 
 		void reset() override;
-		void runAudioFrame() override;
+		void runAudioFrame(u64 eventTimestamp) override;
 
 		u8* getDspMemory() override { return dspRam.rawMemory.data(); }
 
@@ -199,5 +224,4 @@ namespace Audio {
 		void setSemaphore(u16 value) override {}
 		void setSemaphoreMask(u16 value) override {}
 	};
-
 }  // namespace Audio

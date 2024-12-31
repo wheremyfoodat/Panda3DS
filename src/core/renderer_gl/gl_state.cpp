@@ -5,9 +5,20 @@ void GLStateManager::resetBlend() {
 	logicOpEnabled = false;
 	logicOp = GL_COPY;
 
+	blendEquationRGB = GL_FUNC_ADD;
+	blendEquationAlpha = GL_FUNC_ADD;
+
+	blendFuncSourceRGB = GL_SRC_COLOR;
+	blendFuncDestRGB = GL_DST_COLOR;
+	blendFuncSourceAlpha = GL_SRC_ALPHA;
+	blendFuncDestAlpha = GL_DST_ALPHA;
+
 	OpenGL::disableBlend();
 	OpenGL::disableLogicOp();
 	OpenGL::setLogicOp(GL_COPY);
+
+	glBlendEquationSeparate(blendEquationRGB, blendEquationAlpha);
+	glBlendFuncSeparate(blendFuncSourceRGB, blendFuncDestRGB, blendFuncSourceAlpha, blendFuncDestAlpha);
 }
 
 void GLStateManager::resetClearing() {
@@ -61,9 +72,9 @@ void GLStateManager::resetVAO() {
 	glBindVertexArray(0);
 }
 
-void GLStateManager::resetVBO() {
-	boundVBO = 0;
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+void GLStateManager::resetBuffers() {
+	boundUBO = 0;
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 void GLStateManager::resetProgram() {
@@ -79,7 +90,7 @@ void GLStateManager::reset() {
 	resetDepth();
 
 	resetVAO();
-	resetVBO();
+	resetBuffers();
 	resetProgram();
 	resetScissor();
 	resetStencil();
