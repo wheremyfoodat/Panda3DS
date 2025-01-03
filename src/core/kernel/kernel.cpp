@@ -307,12 +307,15 @@ void Kernel::clearInstructionCacheRange(u32 start, u32 size) { cpu.clearCacheRan
 void Kernel::svcInvalidateInstructionCacheRange() {
 	const u32 start = regs[0];
 	const u32 size = regs[1];
+	logSVC("svcInvalidateInstructionCacheRange(start = %08X, size = %08X)\n", start, size);
 
 	clearInstructionCacheRange(start, size);
 	regs[0] = Result::Success;
 }
 
 void Kernel::svcInvalidateEntireInstructionCache() {
+	logSVC("svcInvalidateEntireInstructionCache()\n");
+
 	clearInstructionCache();
 	regs[0] = Result::Success;
 }
