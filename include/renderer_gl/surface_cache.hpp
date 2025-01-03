@@ -104,4 +104,19 @@ public:
     const SurfaceType& operator[](size_t i) const {
         return buffer[i];
     }
+
+	void invalidateRegion(u32 start, u32 size) {
+		if (size == 0) {
+			return;
+		}
+
+		boost::icl::right_open_interval<u32> interval(start, start + size);
+
+		for (auto& e : buffer) {
+			if (e.valid && boost::icl::intersects(e.range, interval)) {
+				e.valid = false;
+				e.free();
+			}
+		}
+	}
 };

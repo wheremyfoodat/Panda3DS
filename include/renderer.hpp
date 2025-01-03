@@ -68,6 +68,7 @@ class Renderer {
 	virtual void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) = 0;  // Perform display transfer
 	virtual void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) = 0;
 	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;  // Draw the given vertices
+	virtual void invalidateRegion(u32 start, u32 size) {}
 
 	virtual void screenshot(const std::string& name) = 0;
 	// Some frontends and platforms may require that we delete our GL or misc context and obtain a new one for things like exclusive fullscreen

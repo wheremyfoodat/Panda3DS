@@ -440,6 +440,8 @@ void GPU::fireDMA(u32 dest, u32 source, u32 size) {
 		// Valid, optimized FCRAM->VRAM DMA. TODO: Is VRAM->VRAM DMA allowed?
 		u8* fcram = mem.getFCRAM();
 		std::memcpy(&vram[dest - vramStart], &fcram[source - fcramStart], size);
+
+		renderer->invalidateRegion(dest - vramStart + PhysicalAddrs::VRAM, size);
 	} else {
 		printf("Non-trivially optimizable GPU DMA. Falling back to byte-by-byte transfer\n");
 

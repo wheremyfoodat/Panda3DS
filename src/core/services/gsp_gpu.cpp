@@ -276,6 +276,9 @@ void GPUService::flushDataCache(u32 messagePointer) {
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
 	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
+	printf("Flush data cache\n");
+	gpu.getRenderer()->invalidateRegion(address, size);
+
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
@@ -286,6 +289,7 @@ void GPUService::invalidateDataCache(u32 messagePointer) {
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
 	log("GSP::GPU::InvalidateDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
+	printf("Invalidate data cache\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
@@ -296,6 +300,7 @@ void GPUService::storeDataCache(u32 messagePointer) {
 	u32 processHandle = handle = mem.read32(messagePointer + 16);
 	log("GSP::GPU::StoreDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
 
+	printf("Store data cache\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x1F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
@@ -453,7 +458,11 @@ void GPUService::triggerDMARequest(u32* cmd) {
 	requestInterrupt(GPUInterrupt::DMA);
 }
 
-void GPUService::flushCacheRegions(u32* cmd) { log("GSP::GPU::FlushCacheRegions (Stubbed)\n"); }
+void GPUService::flushCacheRegions(u32* cmd) {
+	printf("FlushCacheRegions\n");
+
+	log("GSP::GPU::FlushCacheRegions (Stubbed)\n");
+}
 
 void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
 	using namespace PICA::ExternalRegs;

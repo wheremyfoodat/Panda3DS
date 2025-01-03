@@ -172,6 +172,7 @@ class RendererGL final : public Renderer {
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;  // Draw the given vertices
 	void deinitGraphicsContext() override;
+	void invalidateRegion(u32 start, u32 size) override;
 
 	virtual bool supportsShaderReload() override { return true; }
 	virtual std::string getUbershader() override;
