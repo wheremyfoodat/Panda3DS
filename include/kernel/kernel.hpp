@@ -250,4 +250,5 @@ public:
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
 	void clearInstructionCache();
+	void clearInstructionCacheRange(u32 start, u32 size);
 };

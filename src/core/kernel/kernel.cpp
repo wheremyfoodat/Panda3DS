@@ -298,6 +298,7 @@ void Kernel::duplicateHandle() {
 }
 
 void Kernel::clearInstructionCache() { cpu.clearCache(); }
+void Kernel::clearInstructionCacheRange(u32 start, u32 size) { cpu.clearCacheRange(start, size); }
 
 namespace SystemInfoType {
 	enum : u32 {
