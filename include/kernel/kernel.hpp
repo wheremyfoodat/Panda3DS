@@ -175,6 +175,8 @@ public:
 	void svcSignalEvent();
 	void svcSetTimer();
 	void svcSleepThread();
+	void svcInvalidateInstructionCacheRange();
+	void svcInvalidateEntireInstructionCache();
 	void connectToPort();
 	void outputDebugString();
 	void waitSynchronization1();
