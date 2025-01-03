@@ -53,6 +53,7 @@ class Renderer {
 
 	EmulatorConfig* emulatorConfig = nullptr;
 
+	void doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize, u32 inputWidth, u32 inputGap, u32 outputWidth, u32 outputGap);
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	virtual ~Renderer();

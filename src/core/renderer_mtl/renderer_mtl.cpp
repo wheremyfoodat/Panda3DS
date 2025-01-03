@@ -426,7 +426,7 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 	// Find the source surface.
 	auto srcFramebuffer = getColorRenderTarget(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
 	if (!srcFramebuffer) {
-		Helpers::warn("RendererMTL::TextureCopy failed to locate src framebuffer!\n");
+		doSoftwareTextureCopy(inputAddr, outputAddr, copySize, inputWidth, inputGap, outputWidth, outputGap);
 		return;
 	}
 	nextRenderPassName = "Clear before texture copy";
