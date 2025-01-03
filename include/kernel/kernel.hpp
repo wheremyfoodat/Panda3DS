@@ -175,6 +175,8 @@ public:
 	void svcSignalEvent();
 	void svcSetTimer();
 	void svcSleepThread();
+	void svcInvalidateInstructionCacheRange();
+	void svcInvalidateEntireInstructionCache();
 	void connectToPort();
 	void outputDebugString();
 	void waitSynchronization1();
@@ -250,4 +252,5 @@ public:
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
 	void clearInstructionCache();
+	void clearInstructionCacheRange(u32 start, u32 size);
 };

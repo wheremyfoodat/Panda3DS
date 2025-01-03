@@ -22,6 +22,7 @@ namespace CROHeader {
 		NameOffset = 0x084,
 		NextCRO = 0x088,
 		PrevCRO = 0x08C,
+		FixedSize = 0x98,
 		OnUnresolved = 0x0AC,
 		CodeOffset = 0x0B0,
 		DataOffset = 0x0B8,
@@ -165,6 +166,10 @@ public:
 	
 	u32 getPrevCRO() {
 		return mem.read32(croPointer + CROHeader::PrevCRO);
+	}
+
+	u32 getFixedSize() {
+		return mem.read32(croPointer + CROHeader::FixedSize);
 	}
 
 	void setNextCRO(u32 nextCRO) {
@@ -1248,8 +1253,7 @@ void LDRService::initialize(u32 messagePointer) {
 		Helpers::panic("Failed to rebase CRS");
 	}
 
-	kernel.clearInstructionCache();
-
+	kernel.clearInstructionCacheRange(mapVaddr, size);
 	loadedCRS = mapVaddr;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
@@ -1277,8 +1281,6 @@ void LDRService::linkCRO(u32 messagePointer) {
 	if (!cro.link(loadedCRS, false)) {
 		Helpers::panic("Failed to link CRO");
 	}
-
-	kernel.clearInstructionCache();
 
 	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -1346,8 +1348,7 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 
 	// TODO: add fixing
 	cro.fix(fixLevel);
-
-	kernel.clearInstructionCache();
+	kernel.clearInstructionCacheRange(mapVaddr, size);
 
 	if (isNew) {
 		mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 0));
@@ -1377,7 +1378,6 @@ void LDRService::unloadCRO(u32 messagePointer) {
 	}
 
 	CRO cro(mem, mapVaddr, true);
-
 	cro.unregisterCRO(loadedCRS);
 
 	if (!cro.unlink(loadedCRS)) {
@@ -1388,8 +1388,7 @@ void LDRService::unloadCRO(u32 messagePointer) {
 		Helpers::panic("Failed to unrebase CRO");
 	}
 
-	kernel.clearInstructionCache();
-
+	kernel.clearInstructionCacheRange(mapVaddr, cro.getFixedSize());
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
