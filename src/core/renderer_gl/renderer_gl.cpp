@@ -793,6 +793,7 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 			printf("RendererGL::TextureCopy failed to locate src framebuffer!\n");
 		}
 
+		invalidateRegion(outputAddr, copySize);
 		doSoftwareTextureCopy(inputAddr, outputAddr, copySize, inputWidth, inputGap, outputWidth, outputGap);
 		return;
 	}
