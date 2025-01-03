@@ -793,26 +793,7 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 			printf("RendererGL::TextureCopy failed to locate src framebuffer!\n");
 		}
 
-		invalidateRegion(outputAddr, copySize);
-		u8* inputPointer = gpu.getPointerPhys<u8>(inputAddr);
-		u8* outputPointer = gpu.getPointerPhys<u8>(outputAddr);
-
-		u32 counter = 0;
-		u32 line = 0;
-
-		while (counter < copySize) {
-			const u32 bytes = inputWidth;
-			std::memcpy(outputPointer, inputPointer, bytes);
-			counter += bytes;
-			line += bytes;
-
-			inputPointer += inputWidth + inputGap;
-			if (line >= outputWidth) {
-				outputPointer += outputWidth + outputGap;
-				line = 0;
-			}
-		}
-
+		doSoftwareTextureCopy(inputAddr, outputAddr, copySize, inputWidth, inputGap, outputWidth, outputGap);
 		return;
 	}
 

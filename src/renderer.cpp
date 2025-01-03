@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include "PICA/gpu.hpp"
+
 Renderer::Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
 	: gpu(gpu), regs(internalRegs), externalRegs(externalRegs) {}
 Renderer::~Renderer() {}
@@ -37,5 +39,41 @@ const char* Renderer::typeToString(RendererType rendererType) {
 		case RendererType::Metal: return "metal";
 		case RendererType::Software: return "software";
 		default: return "Invalid";
+	}
+}
+
+void Renderer::doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize, u32 inputWidth, u32 inputGap, u32 outputWidth, u32 outputGap) {
+	u8* inputPointer = gpu.getPointerPhys<u8>(inputAddr);
+	u8* outputPointer = gpu.getPointerPhys<u8>(outputAddr);
+
+	if (inputPointer == nullptr || outputPointer == nullptr) {
+		return;
+	}
+
+	u32 inputBytesLeft = inputWidth;
+	u32 outputBytesLeft = outputWidth;
+	u32 copyBytesLeft = copySize;
+
+	while (copyBytesLeft > 0) {
+		const u32 bytes = std::min<u32>({inputBytesLeft, outputBytesLeft, copyBytesLeft});
+		std::memcpy(outputPointer, inputPointer, bytes);
+
+		inputPointer += bytes;
+		outputPointer += bytes;
+
+		inputBytesLeft -= bytes;
+		outputBytesLeft -= bytes;
+		copyBytesLeft -= bytes;
+
+		// Apply input and output gap when an input or output line ends
+		if (inputBytesLeft == 0) {
+			inputBytesLeft = inputWidth;
+			inputPointer += inputGap;
+		}
+
+		if (outputBytesLeft == 0) {
+			outputBytesLeft = outputWidth;
+			outputPointer += outputGap;
+		}
 	}
 }
