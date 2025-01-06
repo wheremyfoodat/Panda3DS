@@ -888,7 +888,7 @@ void RendererVK::display() {
 void RendererVK::initGraphicsContext(SDL_Window* window) {
 	targetWindow = window;
 	// Resolve all instance function pointers
-	static vk::DynamicLoader dl;
+	static vk::detail::DynamicLoader dl;
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
 
 	// Create Instance
