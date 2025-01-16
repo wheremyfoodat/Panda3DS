@@ -127,4 +127,4 @@ Keep in mind that funding is only aimed to cover various life costs and support 
 Nintendo 3DS is a registered trademark of Nintendo Co., Ltd.
 
 ![panda](docs/img/panda.jpg)
-Here's a panda it go blep
+Here's a panda
