@@ -82,3 +82,7 @@
 [submodule "third_party/oaknut"]
 	path = third_party/oaknut
 	url = https://github.com/panda3ds-emu/oaknut
+[submodule "third_party/teakra"]
+	path = third_party/teakra
+	url = https://github.com/Tachi107/teakra
+	branch = cmake-improvements
