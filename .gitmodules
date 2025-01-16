@@ -49,9 +49,6 @@
 [submodule "third_party/miniaudio"]
 	path = third_party/miniaudio
 	url = https://github.com/mackron/miniaudio
-[submodule "third_party/teakra"]
-	path = third_party/teakra
-	url = https://github.com/wwylele/teakra
 [submodule "third_party/boost"]
 	path = third_party/boost
 	url = https://github.com/Panda3DS-emu/ext-boost
