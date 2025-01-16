@@ -887,7 +887,7 @@ void RendererVK::display() {
 
 // DynamicLoader is in a different namespace in different versions of Vulkan-Hpp
 #if VK_HEADER_VERSION >= 301
-using VulkanDynamicLoader = vk::detail::DynamicLoader
+using VulkanDynamicLoader = vk::detail::DynamicLoader;
 #else
 using VulkanDynamicLoader = vk::DynamicLoader;
 #endif
