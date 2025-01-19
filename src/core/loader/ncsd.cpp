@@ -13,6 +13,31 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 
 	static constexpr std::array<const char*, 7> regionNames = {"Japan", "North America", "Europe", "Australia", "China", "Korea", "Taiwan" };
 
+	// The application RAM sizes for Old 3DS titles, chosen based on flag0 of the exheader
+	static constexpr std::array<u32, 16> applicationRamSizes_O3DS = {
+		64_MB,  // Prod
+		64_MB,  // Unused
+		96_MB,  // Dev1
+		80_MB,  // Dev2
+		72_MB,  // Dev3
+		32_MB,  // Dev4
+		64_MB, 64_MB, 64_MB, 64_MB, 64_MB, 64_MB, 64_MB, 64_MB, 64_MB, 64_MB,
+	};
+
+	// Similar for New 3DS titles chosed based on flag2 from exheader. Index 0 isn't actually used, and denotes that this should use the Old3DS setting
+	[[maybe_unused]] static constexpr std::array<u32, 16> applicationRamSizes_New3DS = {
+		64_MB,   // Legacy mode
+		124_MB,  // Prod
+		178_MB,  // Dev1
+		124_MB,  // Dev2
+		124_MB, 124_MB, 124_MB, 124_MB, 124_MB, 124_MB, 124_MB, 124_MB, 124_MB, 124_MB, 124_MB, 124_MB,
+	};
+
+	// TODO: Handle N3DS FCRAM here
+	const u32 memorySize = applicationRamSizes_O3DS[Helpers::getBits<4, 4>(cxi.flag0)];
+	setApplicationRamSize(memorySize);
+	printf("Set application RAM size to %dMB\n", u32(memorySize / 1_MB));
+
 	// Set autodetected 3DS region to one of the values allowed by the CXI's SMDH
 	region = cxi.region.value();
 	printf("Console region autodetected to: %s\n", regionNames[static_cast<size_t>(region)]);

@@ -248,6 +248,8 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	}
 
 	kernel.initializeFS();
+	memory.setApplicationRamSize(64_MB); // Set the application RAM size to a default 64MB that loaded apps can override if needed
+
 	auto extension = path.extension();
 	bool success;  // Tracks if we loaded the ROM successfully
 
