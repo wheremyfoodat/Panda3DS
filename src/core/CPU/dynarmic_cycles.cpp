@@ -98,6 +98,23 @@ namespace {
         return 1 + std::popcount(i.template Get<"x">()) / 2;
     }
 
+    u64 LoadStoreVectorMultiple(auto i, bool is64Bit) {
+		const size_t rd = i.template Get<"d">();
+		size_t regs = i.template Get<"v">();
+		if (is64Bit) {
+			regs /= 2;
+		}
+
+		// Invalid configuration
+		if (regs == 0 || rd + regs > 32) {
+			return 1;
+		}
+
+		// 1 cycle base cost and then + 1 cycle per every 2 registers in the rlist
+		// See FLDM/FSTM here https://developer.arm.com/documentation/ddi0274/h/instruction-execution/execution-timing
+		return 1 + regs / 2;
+	}
+
     u64 SupervisorCall(auto i) {
         // Consume extra cycles for the GetSystemTick SVC since some games wait with it in a loop rather than
         // Properly sleeping until a VBlank interrupt
@@ -388,6 +405,21 @@ namespace {
         INST("MSR (reg)",           "cccc00010010mmmm111100000000nnnn",  (i.template Get<"m">() == 0b1000 ? 1 : 4)) // v3
         INST("RFE",                 "1111100--0-1----0000101000000000",  9) // v6
         INST("SRS",                 "1111100--1-0110100000101000-----",  1) // v6
+
+        // We attempt to emulate VFP timings sort-of. We assume a penalty for VFP memory loads and stores.
+        // However we still consider arithmetic instructions to be 1 cycle, even for relatively slow ones like vdiv
+        // This is because it's likely VFP arithmetic instructions run asynchronously to the core integer ISA, which
+        // means that a vdiv will possibly not stall. If we did apply a cycle penalty, the emulated CPU would likely run slower than hw.
+        // Attempting to approximate VFP timings will likely require a lot of baremetal research.
+        INST("VLDM.64",             "cccc110pudw1nnnndddd1011vvvvvvvv", LoadStoreVectorMultiple(i, true)) // VFP v2
+        INST("VLDM.32",             "cccc110pudw1nnnndddd1010vvvvvvvv", LoadStoreVectorMultiple(i, false)) // VFP v2
+        INST("VSTM.64",             "cccc110pudw0nnnndddd1011vvvvvvvv", LoadStoreVectorMultiple(i, true)) // VFP v2
+        INST("VSTM.32",             "cccc110pudw0nnnndddd1010vvvvvvvv", LoadStoreVectorMultiple(i, false)) // VFP v2
+
+        INST("VLDR.64",             "cccc1101ud01nnnndddd1011vvvvvvvv", 2) // VFP v2
+        INST("VLDR.32",             "cccc1101ud01nnnndddd1010vvvvvvvv", 2) // VFP v2
+        INST("VSTR.64",             "cccc1101ud00nnnndddd1011vvvvvvvv", 2) // VFP v2
+        INST("VSTR.32",             "cccc1101ud00nnnndddd1010vvvvvvvv", 2) // VFP v2
 
         // clang-format on
     };
