@@ -10,6 +10,7 @@
 MiniAudioDevice::MiniAudioDevice(const AudioDeviceConfig& audioSettings)
 	: initialized(false), running(false), samples(nullptr), audioSettings(audioSettings) {}
 
+#ifndef __LIBRETRO__
 void MiniAudioDevice::init(Samples& samples, bool safe) {
 	this->samples = &samples;
 	running = false;
@@ -213,3 +214,4 @@ void MiniAudioDevice::close() {
 		ma_context_uninit(&context);
 	}
 }
+#endif

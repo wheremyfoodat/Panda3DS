@@ -22,6 +22,7 @@ static bool usingGLES = false;
 
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
+MiniAudioDevice* audioDevice;
 
 std::filesystem::path Emulator::getConfigPath() {
 	return std::filesystem::path(savePath / "config.toml");
@@ -29,6 +30,27 @@ std::filesystem::path Emulator::getConfigPath() {
 
 std::filesystem::path Emulator::getAppDataRoot() {
 	return std::filesystem::path(savePath / "Emulator Files");
+}
+
+void MiniAudioDevice::init(Samples& samples, bool safe) {
+	this->samples = &samples;
+	initialized = true;
+	running = false;
+
+	audioDevice = this;
+}
+
+void MiniAudioDevice::start() {
+	running = true;
+}
+
+void MiniAudioDevice::stop() {
+	running = false;
+}
+
+void MiniAudioDevice::close() {
+	running = false;
+	initialized = false;
 }
 
 static void* getGLProcAddress(const char* name) {
@@ -389,6 +411,38 @@ void retro_run() {
 	emulator->runFrame();
 
 	videoCallback(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
+
+	if (audioDevice->running) {
+		static constexpr int frameCount = 547;
+		static constexpr int channelCount = 2;
+		static int16_t audioBuffer[frameCount * channelCount];
+
+		usize samplesWritten = 0;
+		samplesWritten += audioDevice->samples->pop(audioBuffer, frameCount * channelCount);
+
+		// Get the last sample for underrun handling
+		if (samplesWritten != 0) {
+			std::memcpy(
+				&audioDevice->lastStereoSample[0],
+				&audioBuffer[(samplesWritten - 1) * 2],
+				sizeof(audioDevice->lastStereoSample)
+			);
+		}
+
+		// If underruning, copy the last output sample
+		{
+			s16* pointer = &audioBuffer[samplesWritten * 2];
+			s16 l = audioDevice->lastStereoSample[0];
+			s16 r = audioDevice->lastStereoSample[1];
+
+			for (usize i = samplesWritten; i < frameCount; i++) {
+				*pointer++ = l;
+				*pointer++ = r;
+			}
+		}
+
+		audioBatchCallback(audioBuffer, sizeof(audioBuffer) / (2 * sizeof(int16_t)));
+	}
 }
 
 void retro_set_controller_port_device(uint port, uint device) {}

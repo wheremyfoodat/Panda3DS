@@ -9,6 +9,7 @@
 #include "ring_buffer.hpp"
 
 class MiniAudioDevice {
+	public:
 	using Samples = Common::RingBuffer<ma_int16, 0x2000 * 2>;
 	static constexpr ma_uint32 sampleRate = 32768;  // 3DS sample rate
 	static constexpr ma_uint32 channelCount = 2;    // Audio output is stereo
