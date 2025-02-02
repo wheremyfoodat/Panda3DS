@@ -58,6 +58,7 @@ class Kernel {
 	// Top 8 bits are the major version, bottom 8 are the minor version
 	u16 kernelVersion = 0;
 
+	u64 nextScheduledWakeupTick = std::numeric_limits<u64>::max();
 	// Shows whether a reschedule will be need
 	bool needReschedule = false;
 
@@ -214,6 +215,8 @@ public:
 		}
 	}
 
+	void addWakeupEvent(u64 tick);
+
 	Handle makeObject(KernelObjectType type) {
 		if (handleCounter > KernelHandles::Max) [[unlikely]] {
 			Helpers::panic("Hlep we somehow created enough kernel objects to overflow this thing");
@@ -253,5 +256,7 @@ public:
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
 	void clearInstructionCache();
 	void clearInstructionCacheRange(u32 start, u32 size);
+	void pollThreadWakeups();
+
 	u32 getSharedFontVaddr();
 };

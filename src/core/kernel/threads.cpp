@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <bit>
 #include <cassert>
 #include <cstring>
+#include <limits>
 
 #include "arm_defs.hpp"
 #include "kernel.hpp"
@@ -396,6 +398,7 @@ void Kernel::sleepThread(s64 ns) {
 		t.status = ThreadStatus::WaitSleep;
 		t.wakeupTick = getWakeupTick(ns);
 
+		addWakeupEvent(t.wakeupTick);
 		requireReschedule();
 	}
 }
@@ -695,5 +698,40 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 		default:
 			Helpers::panic("Not sure whether to wait on object (type: %s)", object->getTypeName());
 			return true;
+	}
+}
+
+void Kernel::pollThreadWakeups() {
+	rescheduleThreads();
+	bool haveSleepingThread = false;
+	u64 nextWakeupTick = std::numeric_limits<u64>::max();
+
+	for (auto index : threadIndices) {
+		const Thread& t = threads[index];
+
+		if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
+			nextWakeupTick = std::min<u64>(nextWakeupTick, t.wakeupTick);
+			haveSleepingThread = true;
+		}
+	}
+
+	auto& scheduler = cpu.getScheduler();
+
+	if (haveSleepingThread && nextWakeupTick > scheduler.currentTimestamp) {
+		nextScheduledWakeupTick = nextWakeupTick;
+		scheduler.addEvent(Scheduler::EventType::ThreadWakeup, nextWakeupTick);
+	} else {
+		nextScheduledWakeupTick = std::numeric_limits<u64>::max();
+	}
+}
+
+void Kernel::addWakeupEvent(u64 tick) {
+	// We only need to queue the event if the tick of the wakeup is coming sooner than our next scheduled wakeup.
+	if (nextScheduledWakeupTick > tick) {
+		nextScheduledWakeupTick = tick;
+		auto& scheduler = cpu.getScheduler();
+
+		scheduler.removeEvent(Scheduler::EventType::ThreadWakeup);
+		scheduler.addEvent(Scheduler::EventType::ThreadWakeup, tick);
 	}
 }
