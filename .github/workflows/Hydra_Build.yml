@@ -180,3 +180,36 @@ jobs:
       with:
         name: Android Hydra core
         path: '${{github.workspace}}/build/libAlber.so'
+
+  ARM-Libretro:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Fetch submodules
+      run: git submodule update --init --recursive
+
+    - name: Install misc packages
+      run: |
+       sudo apt-get update && sudo apt install libx11-dev libxext-dev libgl1 libglx-mesa0 mesa-common-dev libfuse2 libwayland-dev
+      
+    - name: Install newer Clang
+      run: |
+       wget https://apt.llvm.org/llvm.sh
+       chmod +x ./llvm.sh
+       sudo ./llvm.sh 17
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DBUILD_LIBRETRO_CORE=ON -DENABLE_VULKAN=OFF -DCRYPTOPP_OPT_DISABLE_ASM=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Upload Libretro core
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linux arm64 Libretro core
+        path: |
+          ${{github.workspace}}/build/panda3ds_libretro.so
+          ${{github.workspace}}/docs/libretro/panda3ds_libretro.info
