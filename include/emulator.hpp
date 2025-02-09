@@ -8,6 +8,7 @@
 
 #include "PICA/gpu.hpp"
 #include "audio/dsp_core.hpp"
+#include "audio/libretro_audio_device.hpp"
 #include "audio/miniaudio_device.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
@@ -48,7 +49,11 @@ class Emulator {
 	Scheduler scheduler;
 
 	Crypto::AESEngine aesEngine;
+#ifndef __LIBRETRO__
 	MiniAudioDevice audioDevice;
+#else
+	LibretroAudioDevice audioDevice;
+#endif
 	Cheats cheats;
 
   public:
@@ -126,6 +131,7 @@ class Emulator {
 	LuaManager& getLua() { return lua; }
 	Scheduler& getScheduler() { return scheduler; }
 	Memory& getMemory() { return memory; }
+	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }

@@ -7,10 +7,10 @@
 
 #include "helpers.hpp"
 
-MiniAudioDevice::MiniAudioDevice(const AudioDeviceConfig& audioSettings)
-	: initialized(false), running(false), samples(nullptr), audioSettings(audioSettings) {}
+MiniAudioDevice::MiniAudioDevice(const AudioDeviceConfig& audioSettings) : AudioDeviceInterface(nullptr, audioSettings), initialized(false) {
+	running = false;
+}
 
-#ifndef __LIBRETRO__
 void MiniAudioDevice::init(Samples& samples, bool safe) {
 	this->samples = &samples;
 	running = false;
@@ -214,4 +214,3 @@ void MiniAudioDevice::close() {
 		ma_context_uninit(&context);
 	}
 }
-#endif
