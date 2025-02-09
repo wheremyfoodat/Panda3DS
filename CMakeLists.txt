@@ -64,6 +64,7 @@ option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
+option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -80,6 +81,10 @@ endif()
 if(BUILD_LIBRETRO_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     add_compile_definitions(__LIBRETRO__)
+
+    if(USE_LIBRETRO_AUDIO)
+        add_compile_definitions(USE_LIBRETRO_AUDIO_DEVICE)
+    endif()
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND ENABLE_USER_BUILD)
@@ -156,7 +161,6 @@ if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
 endif()
-
 
 if (NOT ANDROID)
     if (USE_SYSTEM_SDL2)
