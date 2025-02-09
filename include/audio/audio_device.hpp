@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef __LIBRETRO__
+#if defined(__LIBRETRO__) && defined(USE_LIBRETRO_AUDIO_DEVICE)
 #include "audio/libretro_audio_device.hpp"
 using AudioDevice = LibretroAudioDevice;
 #else
