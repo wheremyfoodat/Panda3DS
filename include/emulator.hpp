@@ -7,8 +7,8 @@
 #include <span>
 
 #include "PICA/gpu.hpp"
+#include "audio/audio_device.hpp"
 #include "audio/dsp_core.hpp"
-#include "audio/miniaudio_device.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
@@ -48,14 +48,14 @@ class Emulator {
 	Scheduler scheduler;
 
 	Crypto::AESEngine aesEngine;
-	MiniAudioDevice audioDevice;
+	AudioDevice audioDevice;
 	Cheats cheats;
 
   public:
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
-	bool running = false;         // Is the emulator running a game?
+	bool running = false;  // Is the emulator running a game?
 
   private:
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
@@ -126,6 +126,7 @@ class Emulator {
 	LuaManager& getLua() { return lua; }
 	Scheduler& getScheduler() { return scheduler; }
 	Memory& getMemory() { return memory; }
+	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
