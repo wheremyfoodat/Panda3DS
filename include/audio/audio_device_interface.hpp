@@ -7,7 +7,9 @@
 
 class AudioDeviceInterface {
   protected:
-	using Samples = Common::RingBuffer<s16, 0x2000 * 2>;
+	static constexpr usize maxFrameCount = 0x2000;
+
+	using Samples = Common::RingBuffer<s16, maxFrameCount * 2>;
 	using RenderBatchCallback = usize (*)(const s16*, usize);
 
 	Samples* samples = nullptr;

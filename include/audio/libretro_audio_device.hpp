@@ -28,7 +28,7 @@ class LibretroAudioDevice : public AudioDeviceInterface {
 
 	void renderBatch(RenderBatchCallback callback) override {
 		if (running) {
-			static constexpr int frameCount = 547;
+			static constexpr int frameCount = maxFrameCount;
 			static constexpr int channelCount = 2;
 			static s16 audioBuffer[frameCount * channelCount];
 
