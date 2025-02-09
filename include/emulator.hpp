@@ -48,11 +48,7 @@ class Emulator {
 	Scheduler scheduler;
 
 	Crypto::AESEngine aesEngine;
-#ifndef __LIBRETRO__
-	MiniAudioDevice audioDevice;
-#else
-	LibretroAudioDevice audioDevice;
-#endif
+	AudioDevice audioDevice;
 	Cheats cheats;
 
   public:
