@@ -35,7 +35,7 @@ Panda3DS is still in the early stages of development. Many games boot, many don'
 
 For documenting game compatibility, make sure to visit the [games list repository](https://github.com/Panda3DS-emu/Panda3DS-Games-List). For miscellaneous issues or more technical issues, feel free to use this repo's issues tab.
 # Why?
-The 3DS emulation scene is already pretty mature, with offerings such as [Citra](https://github.com/citra-emu/citra) which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
+The 3DS emulation scene is already pretty mature, with offerings such as Citra which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
 
 - Virtualization. What motivated the creation of this emulator was actually a discussion on whether it is possible to get fast 3DS emulation on low-end hardware such as the Raspberry Pi 4, using the KVM API. At the moment, Panda3DS is powered by Dynarmic rather than using virtualization, but this is definitely a concept I want to explore in the future.
 

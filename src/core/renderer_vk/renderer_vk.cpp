@@ -885,10 +885,17 @@ void RendererVK::display() {
 	}
 }
 
+// DynamicLoader is in a different namespace in different versions of Vulkan-Hpp
+#if VK_HEADER_VERSION >= 301
+using VulkanDynamicLoader = vk::detail::DynamicLoader;
+#else
+using VulkanDynamicLoader = vk::DynamicLoader;
+#endif
+
 void RendererVK::initGraphicsContext(SDL_Window* window) {
 	targetWindow = window;
 	// Resolve all instance function pointers
-	static vk::DynamicLoader dl;
+	static VulkanDynamicLoader dl;
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
 
 	// Create Instance

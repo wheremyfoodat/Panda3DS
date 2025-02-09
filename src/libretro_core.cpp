@@ -389,6 +389,8 @@ void retro_run() {
 	emulator->runFrame();
 
 	videoCallback(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
+	// Call audio batch callback
+	emulator->getAudioDevice().renderBatch(audioBatchCallback);
 }
 
 void retro_set_controller_port_device(uint port, uint device) {}

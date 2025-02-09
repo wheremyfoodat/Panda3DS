@@ -69,6 +69,10 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x3A: getResourceLimitCurrentValues(); break;
 		case 0x3B: getThreadContext(); break;
 		case 0x3D: outputDebugString(); break;
+
+		// Luma SVCs
+		case 0x93: svcInvalidateInstructionCacheRange(); break;
+		case 0x94: svcInvalidateEntireInstructionCache(); break;
 		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
 
@@ -298,6 +302,23 @@ void Kernel::duplicateHandle() {
 }
 
 void Kernel::clearInstructionCache() { cpu.clearCache(); }
+void Kernel::clearInstructionCacheRange(u32 start, u32 size) { cpu.clearCacheRange(start, size); }
+
+void Kernel::svcInvalidateInstructionCacheRange() {
+	const u32 start = regs[0];
+	const u32 size = regs[1];
+	logSVC("svcInvalidateInstructionCacheRange(start = %08X, size = %08X)\n", start, size);
+
+	clearInstructionCacheRange(start, size);
+	regs[0] = Result::Success;
+}
+
+void Kernel::svcInvalidateEntireInstructionCache() {
+	logSVC("svcInvalidateEntireInstructionCache()\n");
+
+	clearInstructionCache();
+	regs[0] = Result::Success;
+}
 
 namespace SystemInfoType {
 	enum : u32 {
