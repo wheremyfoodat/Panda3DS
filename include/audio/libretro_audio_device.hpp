@@ -3,7 +3,7 @@
 
 #include "audio/audio_device_interface.hpp"
 
-class LibretroAudioDevice : public AudioDeviceInterface {
+class LibretroAudioDevice final : public AudioDeviceInterface {
 	bool initialized = false;
 
   public:

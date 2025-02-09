@@ -6,7 +6,7 @@
 #include "audio/audio_device_interface.hpp"
 #include "miniaudio.h"
 
-class MiniAudioDevice : public AudioDeviceInterface {
+class MiniAudioDevice final : public AudioDeviceInterface {
 	static constexpr ma_uint32 sampleRate = 32768;  // 3DS sample rate
 	static constexpr ma_uint32 channelCount = 2;    // Audio output is stereo
 
