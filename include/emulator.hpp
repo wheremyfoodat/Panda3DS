@@ -60,7 +60,7 @@ class Emulator {
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
-	bool running = false;         // Is the emulator running a game?
+	bool running = false;  // Is the emulator running a game?
 
   private:
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER

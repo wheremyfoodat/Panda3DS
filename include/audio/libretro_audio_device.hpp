@@ -1,7 +1,5 @@
 #pragma once
-#include <atomic>
-#include <string>
-#include <vector>
+#include <cstring>
 
 #include "audio/audio_device.hpp"
 
@@ -28,6 +26,35 @@ class LibretroAudioDevice : public AudioDeviceInterface {
 	void start() override { running = true; }
 	void stop() override { running = false; };
 
+	void renderBatch(RenderBatchCallback callback) override {
+		if (running) {
+			static constexpr int frameCount = 547;
+			static constexpr int channelCount = 2;
+			static s16 audioBuffer[frameCount * channelCount];
+
+			usize samplesWritten = 0;
+			samplesWritten += samples->pop(audioBuffer, frameCount * channelCount);
+
+			// Get the last sample for underrun handling
+			if (samplesWritten != 0) {
+				std::memcpy(&lastStereoSample[0], &audioBuffer[(samplesWritten - 1) * 2], sizeof(lastStereoSample));
+			}
+
+			// If underruning, copy the last output sample
+			{
+				s16* pointer = &audioBuffer[samplesWritten * 2];
+				s16 l = lastStereoSample[0];
+				s16 r = lastStereoSample[1];
+
+				for (usize i = samplesWritten; i < frameCount; i++) {
+					*pointer++ = l;
+					*pointer++ = r;
+				}
+			}
+
+			callback(audioBuffer, sizeof(audioBuffer) / (2 * sizeof(s16)));
+		}
+	}
+
 	bool isInitialized() const { return initialized; }
-	bool isRunning() const { return running; }
 };

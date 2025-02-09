@@ -389,39 +389,8 @@ void retro_run() {
 	emulator->runFrame();
 
 	videoCallback(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
-	auto& audioDevice = emulator->getAudioDevice();
-
-	if (audioDevice.running) {
-		static constexpr int frameCount = 547;
-		static constexpr int channelCount = 2;
-		static int16_t audioBuffer[frameCount * channelCount];
-
-		usize samplesWritten = 0;
-		samplesWritten += audioDevice.getSamples()->pop(audioBuffer, frameCount * channelCount);
-
-		// Get the last sample for underrun handling
-		if (samplesWritten != 0) {
-			std::memcpy(
-				&audioDevice.lastStereoSample[0],
-				&audioBuffer[(samplesWritten - 1) * 2],
-				sizeof(audioDevice.lastStereoSample)
-			);
-		}
-
-		// If underruning, copy the last output sample
-		{
-			s16* pointer = &audioBuffer[samplesWritten * 2];
-			s16 l = audioDevice.lastStereoSample[0];
-			s16 r = audioDevice.lastStereoSample[1];
-
-			for (usize i = samplesWritten; i < frameCount; i++) {
-				*pointer++ = l;
-				*pointer++ = r;
-			}
-		}
-
-		audioBatchCallback(audioBuffer, sizeof(audioBuffer) / (2 * sizeof(int16_t)));
-	}
+	// Call audio batch callback
+	emulator->getAudioDevice().renderBatch(audioBatchCallback);
 }
 
 void retro_set_controller_port_device(uint port, uint device) {}

@@ -8,16 +8,16 @@
 class AudioDeviceInterface {
   protected:
 	using Samples = Common::RingBuffer<s16, 0x2000 * 2>;
+	using RenderBatchCallback = usize (*)(const s16*, usize);
+
 	Samples* samples = nullptr;
 
 	const AudioDeviceConfig& audioSettings;
+	// Store the last stereo sample we output. We play this when underruning to avoid pops.
+	std::array<s16, 2> lastStereoSample{};
 
   public:
 	AudioDeviceInterface(Samples* samples, const AudioDeviceConfig& audioSettings) : samples(samples), audioSettings(audioSettings) {}
-
-	// Store the last stereo sample we output. We play this when underruning to avoid pops.
-	// TODO: Make this protected again before merging!!!
-	std::array<s16, 2> lastStereoSample{};
 
 	bool running = false;
 	Samples* getSamples() { return samples; }
@@ -28,4 +28,7 @@ class AudioDeviceInterface {
 
 	virtual void start() = 0;
 	virtual void stop() = 0;
+
+	// Only used for audio devices that render multiple audio frames in one go, eg the libretro audio device.
+	virtual void renderBatch(RenderBatchCallback callback) {}
 };
