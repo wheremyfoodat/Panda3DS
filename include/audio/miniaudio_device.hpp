@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "audio/audio_device.hpp"
+#include "audio/audio_device_interface.hpp"
 #include "miniaudio.h"
 
 class MiniAudioDevice : public AudioDeviceInterface {

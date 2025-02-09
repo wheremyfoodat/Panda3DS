@@ -403,7 +403,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
                  include/services/dsp_firmware_db.hpp include/frontend_settings.hpp include/fs/archive_twl_photo.hpp
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
-                 include/audio/libretro_audio_device.hpp
+                 include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp
 )
 
 cmrc_add_resource_library(

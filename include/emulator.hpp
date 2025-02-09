@@ -7,9 +7,8 @@
 #include <span>
 
 #include "PICA/gpu.hpp"
+#include "audio/audio_device.hpp"
 #include "audio/dsp_core.hpp"
-#include "audio/libretro_audio_device.hpp"
-#include "audio/miniaudio_device.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"

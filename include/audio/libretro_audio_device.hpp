@@ -1,7 +1,7 @@
 #pragma once
 #include <cstring>
 
-#include "audio/audio_device.hpp"
+#include "audio/audio_device_interface.hpp"
 
 class LibretroAudioDevice : public AudioDeviceInterface {
 	bool initialized = false;
