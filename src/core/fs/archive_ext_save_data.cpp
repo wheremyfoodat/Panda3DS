@@ -15,7 +15,7 @@ HorizonResult ExtSaveDataArchive::createFile(const FSPath& path, u64 size) {
 			Helpers::panic("Unsafe path in ExtSaveData::OpenFile");
 		}
 
-		fs::path p = IOFile::getAppData() / backingFolder;
+		fs::path p = getUserDataPath();
 		appendPath(p, path);
 
 		if (fs::exists(p))
