@@ -261,7 +261,6 @@ Rust::Result<ArchiveBase::FormatInfo, HorizonResult> ExtSaveDataArchive::getForm
 		return Err(Result::FS::NotFormatted);
 	}
 
-	ret.size = 0;
 	return Ok(ret);
 }
 
@@ -287,17 +286,21 @@ Rust::Result<ArchiveBase*, HorizonResult> ExtSaveDataArchive::openArchive(const 
 		Helpers::panic("ExtSaveData accessed with an invalid path in OpenArchive");
 	}
 
-	if (isShared) {
-		const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
-		if (!fs::exists(saveDataPath)) fs::create_directories(saveDataPath);
-		return Ok((ArchiveBase*)this);
-	}
-
 	// Create a format info path in the style of AppData/FormatInfo/Cartridge10390390194.format
 	const fs::path formatInfoPath = getFormatInfoPath(path);
 	// Format info not found so the archive is not formatted
 	if (!fs::is_regular_file(formatInfoPath)) {
 		return isNAND ? Err(Result::FS::NotFormatted) : Err(Result::FS::NotFoundInvalid);
+	}
+
+	// TODO: Do shared archives need to be formatted?
+	if (isShared) {
+		const fs::path saveDataPath = IOFile::getAppData() / getExtSaveDataPath();
+		if (!fs::exists(saveDataPath)) {
+			fs::create_directories(saveDataPath);
+		}
+
+		return Ok((ArchiveBase*)this);
 	}
 
 	return Ok((ArchiveBase*)this);

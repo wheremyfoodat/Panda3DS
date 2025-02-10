@@ -590,7 +590,12 @@ void FSService::createExtSaveData(u32 messagePointer) {
 	const u32 smdhSize = mem.read32(messagePointer + 36);
 	const u32 smdhPointer = mem.read32(messagePointer + 44);
 
-	ArchiveBase::FormatInfo info{.size = 0, .numOfDirectories = numOfDirectories, .numOfFiles = numOfFiles, .duplicateData = false};
+	ArchiveBase::FormatInfo info{
+		.size = u32(sizeLimit),
+		.numOfDirectories = numOfDirectories,
+		.numOfFiles = numOfFiles,
+		.duplicateData = false,
+	};
 	FSPath path = readPath(PathType::Binary, messagePointer + 4, 32);
 
 	ExtSaveDataArchive* selected = nullptr;
