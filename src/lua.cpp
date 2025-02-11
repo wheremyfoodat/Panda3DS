@@ -13,6 +13,8 @@ extern "C" {
 }
 #endif
 
+void LoadImguiBindings(lua_State* lState);
+
 void LuaManager::initialize() {
 	L = luaL_newstate();  // Open Lua
 
@@ -30,6 +32,8 @@ void LuaManager::initialize() {
 #endif
 
 	initializeThunks();
+	LoadImguiBindings(L);
+
 	initialized = true;
 	haveScript = false;
 }
@@ -108,7 +112,6 @@ void LuaManager::reset() {
 
 // Initialize C++ thunks for Lua code to call here
 // All code beyond this point is terrible and full of global state, don't judge
-
 Emulator* LuaManager::g_emulator = nullptr;
 
 #define MAKE_MEMORY_FUNCTIONS(size)                                               \

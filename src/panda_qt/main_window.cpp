@@ -13,6 +13,14 @@
 #include "services/dsp.hpp"
 #include "version.hpp"
 
+#include "imgui.h"
+#include "backends/imgui_impl_sdl2.h"
+#include "backends/imgui_impl_opengl3.h"
+#include <SDL.h>
+
+SDL_Window* windowSDL;
+SDL_GLContext glContextSDL;
+
 MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
 	emu = new Emulator();
 
@@ -128,6 +136,73 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
 	emuThread = std::thread([this]() {
+		// Setup SDL
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
+			printf("Error: %s\n", SDL_GetError());
+			return -1;
+		}
+
+		// Decide GL+GLSL versions
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+		// GL ES 2.0 + GLSL 100
+		const char* glslVersion = "#version 100";
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#elif defined(__APPLE__)
+		// GL 3.2 Core + GLSL 150
+		const char* glslVersion = "#version 150";
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);  // Always required on Mac
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+#else
+		// GL 3.0 + GLSL 130
+		const char* glslVersion = "#version 130";
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
+
+		// From 2.0.18: Enable native IME.
+#ifdef SDL_HINT_IME_SHOW_UI
+		SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+#endif
+
+		// Create window with graphics context
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+		SDL_WindowFlags windowFlags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+		windowSDL = SDL_CreateWindow("ImGuiWindow", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, windowFlags);
+		if (windowSDL == nullptr) {
+			printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
+			return -1;
+		}
+
+		glContextSDL = SDL_GL_CreateContext(windowSDL);
+		SDL_GL_MakeCurrent(windowSDL, glContextSDL);
+		SDL_GL_SetSwapInterval(1);  // Enable vsync
+
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable keyboard controls
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable gamepad controls
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;      // Enable docking
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;    // Enable multi-viewport
+		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
+		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
+
+		// Setup Dear ImGui style
+		ImGui::StyleColorsDark();
+		// ImGui::StyleColorsLight();
+
+		// Setup Platform/Renderer backends
+		ImGui_ImplSDL2_InitForOpenGL(windowSDL, glContextSDL);
+		ImGui_ImplOpenGL3_Init(glslVersion);
+
 		const RendererType rendererType = emu->getConfig().rendererType;
 		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
 		usingVk = (rendererType == RendererType::Vulkan);
@@ -173,6 +248,14 @@ void MainWindow::emuThreadMainLoop() {
 			}
 		}
 
+		SDL_GL_MakeCurrent(nullptr, nullptr);
+		SDL_GL_MakeCurrent(windowSDL, glContextSDL);
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame(windowSDL);
+		ImGui::NewFrame();
+		screen->getGLContext()->MakeCurrent();
+
 		emu->runFrame();
 		pollControllers();
 
@@ -181,6 +264,29 @@ void MainWindow::emuThreadMainLoop() {
 		}
 
 		swapEmuBuffer();
+
+		// Poll and handle events (inputs, window resize, etc.)
+		// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+		// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse
+		// data.
+		// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the
+		// keyboard data. Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+		SDL_GL_MakeCurrent(nullptr, nullptr);
+		SDL_GL_MakeCurrent(windowSDL, glContextSDL);
+
+		bool show_demo_window = true;
+		ImGui::ShowDemoWindow(&show_demo_window);
+		ImGui::Render();
+
+		ImGuiIO& io = ImGui::GetIO();
+		glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+		glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+		glClear(GL_COLOR_BUFFER_BIT);
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		SDL_GL_SwapWindow(windowSDL);
+
+		screen->getGLContext()->MakeCurrent();
 	}
 
 	// Unbind GL context if we're using GL, otherwise some setups seem to be unable to join this thread
@@ -615,6 +721,8 @@ void MainWindow::pollControllers() {
 
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
+		ImGui_ImplSDL2_ProcessEvent(&event);
+
 		HIDService& hid = emu->getServiceManager().getHID();
 		using namespace HID;
 
