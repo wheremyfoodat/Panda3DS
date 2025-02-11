@@ -79,6 +79,14 @@ void Kernel::arbitrateAddress() {
 			break;
 		}
 
+		case ArbitrationType::WaitIfLessTimeout: {
+			s32 word = static_cast<s32>(mem.read32(address));  // Yes this is meant to be signed
+			if (word < value) {
+				sleepThreadOnArbiterWithTimeout(address, ns);
+			}
+			break;
+		}
+
 		case ArbitrationType::Signal:
 			signalArbiter(address, value);
 			break;

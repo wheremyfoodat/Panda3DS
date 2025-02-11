@@ -52,8 +52,7 @@ void Kernel::sortThreads() {
 bool Kernel::canThreadRun(const Thread& t) {
 	if (t.status == ThreadStatus::Ready) {
 		return true;
-	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1
-		|| t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
+	} else if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll || t.status == ThreadStatus::WaitArbiterTimeout) {
 		// TODO: Set r0 to the correct error code on timeout for WaitSync{1/Any/All}
 		return cpu.getTicks() >= t.wakeupTick;
 	}
@@ -218,6 +217,23 @@ void Kernel::sleepThreadOnArbiter(u32 waitingAddress) {
 	requireReschedule();
 }
 
+void Kernel::sleepThreadOnArbiterWithTimeout(u32 waitingAddress, s64 timeoutNs) {
+	regs[0] = Result::OS::Timeout;  // This will be overwritten with success if we don't timeout
+
+	// Timeout is 0, don't bother waiting, instantly timeout
+	if (timeoutNs == 0) {
+		return;
+	}
+
+	Thread& t = threads[currentThreadIndex];
+	t.status = ThreadStatus::WaitArbiterTimeout;
+	t.waitingAddress = waitingAddress;
+	t.wakeupTick = getWakeupTick(timeoutNs);
+
+	addWakeupEvent(t.wakeupTick);
+	requireReschedule();
+}
+
 // Acquires an object that is **ready to be acquired** without waiting on it
 void Kernel::acquireSyncObject(KernelObject* object, const Thread& thread) {
 	switch (object->type) {
@@ -311,6 +327,11 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 			}
 			break;
 
+		case ThreadStatus::WaitArbiterTimeout:
+			t.status = ThreadStatus::Ready;
+			t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
+			break;
+
 		case ThreadStatus::WaitSyncAll:
 			Helpers::panic("WakeupOneThread: Thread on WaitSyncAll");
 			break;
@@ -344,6 +365,11 @@ void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
 					break;
 				}
 			}
+			break;
+			
+		case ThreadStatus::WaitArbiterTimeout:
+			t.status = ThreadStatus::Ready;
+			t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
 			break;
 
 		case ThreadStatus::WaitSyncAll:
@@ -709,7 +735,8 @@ void Kernel::pollThreadWakeups() {
 	for (auto index : threadIndices) {
 		const Thread& t = threads[index];
 
-		if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny || t.status == ThreadStatus::WaitSyncAll) {
+		if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny ||
+			t.status == ThreadStatus::WaitSyncAll || t.status == ThreadStatus::WaitArbiterTimeout) {
 			nextWakeupTick = std::min<u64>(nextWakeupTick, t.wakeupTick);
 			haveSleepingThread = true;
 		}

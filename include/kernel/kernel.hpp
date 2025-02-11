@@ -95,6 +95,8 @@ public:
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThread(s64 ns);
 	void sleepThreadOnArbiter(u32 waitingAddress);
+	void sleepThreadOnArbiterWithTimeout(u32 waitingAddress, s64 timeoutNs);
+
 	void switchThread(int newThreadIndex);
 	void sortThreads();
 	std::optional<int> getNextThread();
