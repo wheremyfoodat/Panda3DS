@@ -79,6 +79,14 @@ void Kernel::arbitrateAddress() {
 			break;
 		}
 
+		case ArbitrationType::WaitIfLessTimeout: {
+			s32 word = static_cast<s32>(mem.read32(address));  // Yes this is meant to be signed
+			if (word < value) {
+				sleepThreadOnArbiterWithTimeout(address, ns);
+			}
+			break;
+		}
+
 		case ArbitrationType::Signal:
 			signalArbiter(address, value);
 			break;
@@ -98,8 +106,9 @@ void Kernel::signalArbiter(u32 waitingAddress, s32 threadCount) {
 	// Wake threads with the highest priority threads being woken up first
 	for (auto index : threadIndices) {
 		Thread& t = threads[index];
-		if (t.status == ThreadStatus::WaitArbiter && t.waitingAddress == waitingAddress) {
+		if ((t.status == ThreadStatus::WaitArbiter || t.status == ThreadStatus::WaitArbiterTimeout) && t.waitingAddress == waitingAddress) {
 			t.status = ThreadStatus::Ready;
+			t.gprs[0] = Result::Success;  // Return that the arbiter was actually signalled and that we didn't timeout
 			count += 1;
 
 			// Check if we've reached the max number of. If count < 0 then all threads are released.

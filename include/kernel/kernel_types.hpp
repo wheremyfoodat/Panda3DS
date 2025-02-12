@@ -98,16 +98,17 @@ struct Session {
 };
 
 enum class ThreadStatus {
-	Running,      // Currently running
-	Ready,        // Ready to run
-	WaitArbiter,  // Waiting on an address arbiter
-	WaitSleep,    // Waiting due to a SleepThread SVC
-	WaitSync1,    // Waiting for the single object in the wait list to be ready
-	WaitSyncAny,  // Wait for one object of the many that might be in the wait list to be ready
-	WaitSyncAll,  // Waiting for ALL sync objects in its wait list to be ready
-	WaitIPC,      // Waiting for the reply from an IPC request
-	Dormant,      // Created but not yet made ready
-	Dead          // Run to completion, or forcefully terminated
+	Running,             // Currently running
+	Ready,               // Ready to run
+	WaitArbiter,         // Waiting on an address arbiter
+	WaitArbiterTimeout,  // Waiting on an address arbiter with timeout
+	WaitSleep,           // Waiting due to a SleepThread SVC
+	WaitSync1,           // Waiting for the single object in the wait list to be ready
+	WaitSyncAny,         // Wait for one object of the many that might be in the wait list to be ready
+	WaitSyncAll,         // Waiting for ALL sync objects in its wait list to be ready
+	WaitIPC,             // Waiting for the reply from an IPC request
+	Dormant,             // Created but not yet made ready
+	Dead                 // Run to completion, or forcefully terminated
 };
 
 struct Thread {

@@ -1,7 +1,10 @@
-#include <cassert>
 #include "kernel.hpp"
-#include "kernel_types.hpp"
+
+#include <cassert>
+#include <limits>
+
 #include "cpu.hpp"
+#include "kernel_types.hpp"
 
 Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config)
 	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config) {
@@ -159,6 +162,7 @@ void Kernel::reset() {
 	threadIndices.clear();
 	serviceManager.reset();
 
+	nextScheduledWakeupTick = std::numeric_limits<u64>::max();
 	needReschedule = false;
 
 	// Allocate handle #0 to a dummy object and make a main process object
