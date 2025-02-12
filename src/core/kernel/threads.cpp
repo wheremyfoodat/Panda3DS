@@ -327,11 +327,6 @@ int Kernel::wakeupOneThread(u64 waitlist, Handle handle) {
 			}
 			break;
 
-		case ThreadStatus::WaitArbiterTimeout:
-			t.status = ThreadStatus::Ready;
-			t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
-			break;
-
 		case ThreadStatus::WaitSyncAll:
 			Helpers::panic("WakeupOneThread: Thread on WaitSyncAll");
 			break;
@@ -365,11 +360,6 @@ void Kernel::wakeupAllThreads(u64 waitlist, Handle handle) {
 					break;
 				}
 			}
-			break;
-			
-		case ThreadStatus::WaitArbiterTimeout:
-			t.status = ThreadStatus::Ready;
-			t.gprs[0] = Result::Success;  // The thread did not timeout, so write success to r0
 			break;
 
 		case ThreadStatus::WaitSyncAll:
