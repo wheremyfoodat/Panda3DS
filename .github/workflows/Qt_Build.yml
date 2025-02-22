@@ -1,18 +1,13 @@
 name: Qt Build
 
-on:
-  push:
-    branches:
-      - master
-  pull_request:
+on: [push, pull_request]
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
 jobs:
   Windows:
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
     - uses: actions/checkout@v4
@@ -20,10 +15,12 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Setup Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        arch: win64_msvc2019_64
-        version: 6.2.0
+        version: 6.9.0
+        host: windows
+        target: desktop
+        arch: win64_msvc2022_64
 
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@main
@@ -33,7 +30,7 @@ jobs:
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
+      run: cmake --fresh -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE=ON -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -74,17 +71,16 @@ jobs:
       run: |
         brew install dylibbundler imagemagick
 
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+    - name: Setup Qt
+      uses: jurplel/install-qt-action@v4
       with:
-        aqtversion: '==3.1.*'
-        version: '6.8.1'
-        host: 'mac'
-        target: 'desktop'
-        arch: 'clang_64'
+        version: 6.9.0
+        host: mac
+        target: desktop
+        arch: clang_64
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
+      run: cmake --fresh -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE=ON -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -169,7 +165,7 @@ jobs:
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
+      run: cmake --fresh -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE=ON -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
