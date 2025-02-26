@@ -11,6 +11,7 @@ struct FrontendSettings {
 		Dark = 2,
 		GreetingsCat = 3,
 		Cream = 4,
+		Oled = 5,
 	};
 
 	// Different panda-themed window icons
