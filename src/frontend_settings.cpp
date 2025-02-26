@@ -11,7 +11,7 @@ FrontendSettings::Theme FrontendSettings::themeFromString(std::string inString) 
 	std::transform(inString.begin(), inString.end(), inString.begin(), [](unsigned char c) { return std::tolower(c); });
 
 	static const std::unordered_map<std::string, Theme> map = {
-		{"system", Theme::System}, {"light", Theme::Light}, {"dark", Theme::Dark}, {"greetingscat", Theme::GreetingsCat}, {"cream", Theme::Cream},
+		{"system", Theme::System}, {"light", Theme::Light}, {"dark", Theme::Dark}, {"greetingscat", Theme::GreetingsCat}, {"cream", Theme::Cream}, {"oled", Theme::Oled}
 	};
 
 	if (auto search = map.find(inString); search != map.end()) {
@@ -28,6 +28,7 @@ const char* FrontendSettings::themeToString(Theme theme) {
 		case Theme::Light: return "light";
 		case Theme::GreetingsCat: return "greetingscat";
 		case Theme::Cream: return "cream";
+		case Theme::Oled: return "oled";
 
 		case Theme::Dark:
 		default: return "dark";
