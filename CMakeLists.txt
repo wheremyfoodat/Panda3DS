@@ -151,6 +151,7 @@ include_directories(third_party/mio/single_include)
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
+add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 add_compile_definitions(SDL_MAIN_HANDLED)
 
 if(ENABLE_WAYLAND)
