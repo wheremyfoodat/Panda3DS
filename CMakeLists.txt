@@ -66,6 +66,12 @@ option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for 
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
 
+# Discord RPC & LuaJIT are currently not supported on iOS
+if(IOS)
+    set(ENABLE_DISCORD_RPC OFF)
+    set(ENABLE_LUAJIT OFF)
+endif()
+
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
 
@@ -320,8 +326,8 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp src/renderdoc.cpp
-                 src/frontend_settings.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/renderdoc.cpp
+                 src/frontend_settings.cpp src/miniaudio/miniaudio.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -409,6 +415,11 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
                  include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp
 )
+
+if(IOS)
+    set(SOURCE_FILES ${SOURCE_FILES} src/miniaudio/miniaudio.m)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS=1")
+endif()
 
 cmrc_add_resource_library(
     resources_console_fonts

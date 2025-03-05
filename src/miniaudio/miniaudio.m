@@ -4,4 +4,5 @@
 #define MA_NO_ENCODING
 #define MINIAUDIO_IMPLEMENTATION
 
+// On iOS we have to compile miniaudio as Obj-C
 #include "miniaudio.h"
