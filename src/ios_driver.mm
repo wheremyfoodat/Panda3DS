@@ -15,7 +15,7 @@ extern "C" {
 std::unique_ptr<Emulator> emulator = nullptr;
 HIDService* hidService = nullptr;
 
-extern "C" __attribute__((visibility("default"))) void iosCreateEmulator() {
+IOS_EXPORT void iosCreateEmulator() {
 	printf("Creating emulator\n");
 
 	emulator = std::make_unique<Emulator>();
@@ -23,12 +23,14 @@ extern "C" __attribute__((visibility("default"))) void iosCreateEmulator() {
 	emulator->initGraphicsContext(nullptr);
 
 	// auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
+	// auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
+
 	auto path = emulator->getAppDataRoot() / "SimplerTri.elf";
 	emulator->loadROM(path);
-
-	while (1) {
-		emulator->runFrame();
-	}
-
 	printf("Created emulator\n");
+}
+
+IOS_EXPORT void iosRunFrame(void* drawable, void* drawableTexture) {
+	emulator->getRenderer()->setMTKDrawable(drawable, drawableTexture);
+	emulator->runFrame();
 }

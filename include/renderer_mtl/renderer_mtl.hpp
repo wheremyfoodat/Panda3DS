@@ -42,11 +42,16 @@ class RendererMTL final : public Renderer {
 	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override {}
 #endif
 
-  private:
-	CA::MetalLayer* metalLayer;
+	virtual void setMTKDrawable(void* drawable, void* drawableTexture) override;
 
-	MTL::Device* device;
-	MTL::CommandQueue* commandQueue;
+  private:
+	CA::MetalLayer* metalLayer = nullptr;
+
+	CA::MetalDrawable* metalDrawable = nullptr;
+	MTL::Texture* drawableTexture = nullptr;
+
+	MTL::Device* device = nullptr;
+	MTL::CommandQueue* commandQueue = nullptr;
 
 	Metal::CommandEncoder commandEncoder;
 

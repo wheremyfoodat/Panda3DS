@@ -655,7 +655,7 @@ float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]], constant uint2& lutSlices [[buffer(3)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture2d_array<float> texLightingLut [[texture(3)]], texture1d_array<float> texFogLut [[texture(4)]], sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]], constant uint2& lutSlices [[buffer(3)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture2d_array<float> texLightingLut [[texture(3)]], texture1d_array<float> texFogLut [[texture(4)]], sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
     Globals globals;
 
     // HACK
@@ -755,5 +755,5 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 		}
 	}
 
-	return performLogicOp(logicOp, color, prevColor);
+	return performLogicOp(logicOp, color, float4(1.0, 0.0, 0.0, 1.0));
 }
