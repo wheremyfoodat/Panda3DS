@@ -57,6 +57,10 @@ void RendererMTL::reset() {
 }
 
 void RendererMTL::display() {
+#ifdef PANDA3DS_IOS
+	return;
+#endif
+
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 	if (!drawable) {
 		return;
@@ -126,11 +130,17 @@ void RendererMTL::display() {
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	// TODO: what should be the type of the view?
+
+#ifdef PANDA3DS_IOS
+	// On iOS, the SwiftUI side handles device<->MTKView interaction
+	device = MTL::CreateSystemDefaultDevice();
+#else
 	void* view = SDL_Metal_CreateView(window);
 	metalLayer = (CA::MetalLayer*)SDL_Metal_GetLayer(view);
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
 	commandQueue = device->newCommandQueue();
+#endif
 
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();

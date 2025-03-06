@@ -65,6 +65,7 @@ option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
+option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
 
 # Discord RPC & LuaJIT are currently not supported on iOS
 if(IOS)
@@ -419,6 +420,10 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
 if(IOS)
     set(SOURCE_FILES ${SOURCE_FILES} src/miniaudio/miniaudio.m)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS=1")
+    
+    if (IOS_SIMULATOR_BUILD)
+        target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS_SIMULATOR=1")
+    endif()
 endif()
 
 cmrc_add_resource_library(
@@ -620,15 +625,26 @@ if(ENABLE_METAL AND APPLE)
         set(SHADER_SOURCE "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metal")
         set(SHADER_IR "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.ir")
         set(SHADER_METALLIB "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metallib")
+
+        # MacOS, iOS and the iOS simulator all use different compilation options for shaders
+        set(MetalSDK "macosx")
+        if(IOS)
+            if (IOS_SIMULATOR_BUILD)
+                set(MetalSDK "iphonesimulator")
+            else()
+                set(MetalSDK "iphoneos")
+            endif()
+        endif()
+
         # TODO: only include sources in debug builds
         add_custom_command(
             OUTPUT ${SHADER_IR}
-            COMMAND xcrun -sdk macosx metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
+            COMMAND xcrun -sdk ${MetalSDK} metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
             DEPENDS ${SHADER_SOURCE}
             VERBATIM)
         add_custom_command(
             OUTPUT ${SHADER_METALLIB}
-            COMMAND xcrun -sdk macosx metallib -o ${SHADER_METALLIB} ${SHADER_IR}
+            COMMAND xcrun -sdk ${MetalSDK} metallib -o ${SHADER_METALLIB} ${SHADER_IR}
             DEPENDS ${SHADER_IR}
             VERBATIM)
         set(RENDERER_MTL_HOST_SHADERS_SOURCES ${RENDERER_MTL_HOST_SHADERS_SOURCES} ${SHADER_METALLIB})
@@ -792,7 +808,13 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
-    add_library(Alber SHARED src/hydra_core.cpp)
+    
+    set(SHARED_SOURCE_FILES src/hydra_core.cpp)
+    if(IOS)
+        set(SHARED_SOURCE_FILES ${SHARED_SOURCE_FILES} src/ios_driver.mm)
+    endif()
+
+    add_library(Alber SHARED ${SHARED_SOURCE_FILES})
     target_link_libraries(Alber PUBLIC AlberCore)
 elseif(BUILD_LIBRETRO_CORE)
     include_directories(third_party/libretro/include)
