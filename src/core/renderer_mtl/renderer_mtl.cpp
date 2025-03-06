@@ -845,7 +845,7 @@ void RendererMTL::beginRenderPassIfNeeded(
 ) {
 	createCommandBufferIfNeeded();
 
-	if (1 ||doesClears || !renderCommandEncoder || colorTexture != lastColorTexture ||
+	if (doesClears || !renderCommandEncoder || colorTexture != lastColorTexture ||
 		(depthTexture != lastDepthTexture && !(lastDepthTexture && !depthTexture))) {
 		endRenderPass();
 
