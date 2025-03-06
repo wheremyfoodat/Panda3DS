@@ -101,7 +101,7 @@ public class AppDataDocumentProvider extends DocumentsProvider {
         }
         cursor.newRow()
                 .add(Document.COLUMN_DOCUMENT_ID, obtainDocumentId(file))
-                .add(Document.COLUMN_MIME_TYPE, file.isDirectory() ? Document.MIME_TYPE_DIR : "application/octect-stream")
+                .add(Document.COLUMN_MIME_TYPE, file.isDirectory() ? Document.MIME_TYPE_DIR : "application/octet-stream")
                 .add(Document.COLUMN_FLAGS, flags)
                 .add(Document.COLUMN_LAST_MODIFIED, file.lastModified())
                 .add(Document.COLUMN_DISPLAY_NAME, file.getName())
