@@ -1,4 +1,4 @@
 #pragma once
 
 void iosCreateEmulator();
-void iosRunFrame(void* drawable, void* drawableTexture);
+void iosRunFrame(void* drawable);

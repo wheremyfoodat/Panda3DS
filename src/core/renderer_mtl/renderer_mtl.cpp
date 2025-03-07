@@ -55,39 +55,29 @@ void RendererMTL::reset() {
 	colorRenderTargetCache.reset();
 }
 
-void RendererMTL::setMTKDrawable(void* drawable, void* tex) {
-	this->metalDrawable = (CA::MetalDrawable*)drawable;
-	this->drawableTexture = (MTL::Texture*)tex;
+void RendererMTL::setMTKDrawable(void* drawable) {
+	metalDrawable = (CA::MetalDrawable*)drawable;
 }
 
 void RendererMTL::display() {
-	static int frameCount = 0;
-	frameCount++;
-
-	auto manager = MTL::CaptureManager::sharedCaptureManager();
-	auto captureDescriptor = MTL::CaptureDescriptor::alloc()->init();
-	if (frameCount == 200) {
-		captureDescriptor->setCaptureObject(device);
-		manager->startCapture(captureDescriptor, nullptr);
-	}
-
 #ifdef PANDA3DS_IOS
 	CA::MetalDrawable* drawable = metalDrawable;
 	if (!drawable) {
 		return;
 	}
 
-	MTL::Texture* texture = drawableTexture;
+	MTL::Texture* texture = drawable->texture();
 #else
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 	if (!drawable) {
 		return;
 	}
 
-	MTL::Texture* texture = drawable->getTexture();
+	MTL::Texture* texture = drawable->texture();
 #endif
 
 	using namespace PICA::ExternalRegs;
+	printf("Device pointer: %p\nDrawable pointer: %p\nTexture pointer: %p\n", device, drawable, texture);
 
 	// Top screen
 	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
@@ -149,11 +139,6 @@ void RendererMTL::display() {
 #ifndef PANDA3DS_IOS
 	drawable->release();
 #endif
-
-	if (frameCount == 200) {
-		manager->stopCapture();
-	}
-	captureDescriptor->release();
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {

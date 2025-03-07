@@ -30,7 +30,9 @@ IOS_EXPORT void iosCreateEmulator() {
 	printf("Created emulator\n");
 }
 
-IOS_EXPORT void iosRunFrame(void* drawable, void* drawableTexture) {
-	emulator->getRenderer()->setMTKDrawable(drawable, drawableTexture);
+IOS_EXPORT void iosRunFrame(void* drawable) {
+	printf("Running a frame\n");
+	emulator->getRenderer()->setMTKDrawable(drawable);
 	emulator->runFrame();
+	printf("Ran a frame\n");
 }

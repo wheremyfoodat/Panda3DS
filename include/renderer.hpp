@@ -87,8 +87,8 @@ class Renderer {
 	virtual void setupGLES() {}
 
 	// Only relevant for Metal renderer on iOS
-	// Passes a SwiftUI MTKView Drawable & its texture to the renderer
-	virtual void setMTKDrawable(void* drawable, void* drawableTexture) {};
+	// Passes a SwiftUI MTKView Drawable to the renderer
+	virtual void setMTKDrawable(void* drawable) {};
 
 	// This function is called on every draw call before parsing vertex data.
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between

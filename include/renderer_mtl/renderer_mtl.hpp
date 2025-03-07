@@ -42,13 +42,11 @@ class RendererMTL final : public Renderer {
 	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override {}
 #endif
 
-	virtual void setMTKDrawable(void* drawable, void* drawableTexture) override;
+	virtual void setMTKDrawable(void* drawable) override;
 
   private:
 	CA::MetalLayer* metalLayer = nullptr;
-
 	CA::MetalDrawable* metalDrawable = nullptr;
-	MTL::Texture* drawableTexture = nullptr;
 
 	MTL::Device* device = nullptr;
 	MTL::CommandQueue* commandQueue = nullptr;
@@ -103,6 +101,7 @@ class RendererMTL final : public Renderer {
 	void endRenderPass() {
 		if (renderCommandEncoder) {
 			renderCommandEncoder->endEncoding();
+			renderCommandEncoder->release();
 			renderCommandEncoder = nullptr;
 		}
 	}
