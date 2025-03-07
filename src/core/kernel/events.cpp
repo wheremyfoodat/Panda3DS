@@ -137,6 +137,7 @@ void Kernel::waitSynchronization1() {
 		// Add the current thread to the object's wait list
 		object->getWaitlist() |= (1ull << currentThreadIndex);
 
+		addWakeupEvent(t.wakeupTick);
 		requireReschedule();
 	}
 }
@@ -231,6 +232,7 @@ void Kernel::waitSynchronizationN() {
 			waitObjects[i].second->getWaitlist() |= (1ull << currentThreadIndex); // And add the thread to the object's waitlist
 		}
 
+		addWakeupEvent(t.wakeupTick);
 		requireReschedule();
 	} else {
 		Helpers::panic("WaitSynchronizationN with waitAll");
