@@ -55,29 +55,21 @@ void RendererMTL::reset() {
 	colorRenderTargetCache.reset();
 }
 
-void RendererMTL::setMTKDrawable(void* drawable) {
-	metalDrawable = (CA::MetalDrawable*)drawable;
+void RendererMTL::setMTKLayer(void* layer) {
+	metalLayer = (CA::MetalLayer*)layer;
+    // metalLayer->retain();
 }
 
 void RendererMTL::display() {
-#ifdef PANDA3DS_IOS
-	CA::MetalDrawable* drawable = metalDrawable;
-	if (!drawable) {
-		return;
-	}
-
-	MTL::Texture* texture = drawable->texture();
-#else
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 	if (!drawable) {
 		return;
 	}
 
 	MTL::Texture* texture = drawable->texture();
-#endif
 
 	using namespace PICA::ExternalRegs;
-	printf("Device pointer: %p\nDrawable pointer: %p\nTexture pointer: %p\n", device, drawable, texture);
+	printf("Layer pointer: %p\nDevice pointer: %p\nDrawable pointer: %p\nTexture pointer: %p\n", metalLayer, device, drawable, texture);
 
 	// Top screen
 	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
@@ -134,10 +126,9 @@ void RendererMTL::display() {
 
 	// Inform the vertex buffer cache that the frame ended
 	vertexBufferCache.endFrame();
-
-	// Release the drawable (not on iOS cause SwiftUI handles it there)
-#ifndef PANDA3DS_IOS
 	drawable->release();
+#ifdef PANDA3DS_IOS
+    // metalLayer->release();
 #endif
 }
 
