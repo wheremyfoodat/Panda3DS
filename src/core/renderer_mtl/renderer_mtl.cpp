@@ -57,7 +57,6 @@ void RendererMTL::reset() {
 
 void RendererMTL::setMTKLayer(void* layer) {
 	metalLayer = (CA::MetalLayer*)layer;
-    // metalLayer->retain();
 }
 
 void RendererMTL::display() {
@@ -127,8 +126,9 @@ void RendererMTL::display() {
 	// Inform the vertex buffer cache that the frame ended
 	vertexBufferCache.endFrame();
 	drawable->release();
+
 #ifdef PANDA3DS_IOS
-    // metalLayer->release();
+    // metalLayer->autorelease();
 #endif
 }
 

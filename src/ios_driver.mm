@@ -30,9 +30,15 @@ IOS_EXPORT void iosCreateEmulator() {
 	printf("Created emulator\n");
 }
 
-IOS_EXPORT void iosRunFrame(void* layer) {
+IOS_EXPORT void iosRunFrame(CAMetalLayer* layer) {
 	printf("Running a frame\n");
-	emulator->getRenderer()->setMTKLayer(layer);
+	// void* layerBridged = (void*)CFBridgingRetain(layer);
+	void* layerBridged = (__bridge void*)layer;
+
+	emulator->getRenderer()->setMTKLayer(layerBridged);
 	emulator->runFrame();
+	CFRelease(layerBridged);
+
+	// CFBridgingAutorelease(layerBridged);
 	printf("Ran a frame\n");
 }

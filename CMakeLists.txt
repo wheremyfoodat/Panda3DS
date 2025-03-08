@@ -673,7 +673,7 @@ if(ENABLE_METAL AND APPLE)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
     target_include_directories(AlberCore PRIVATE third_party/metal-cpp)
     # TODO: check if all of them are needed
-    target_link_libraries(AlberCore PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
+    target_link_libraries(AlberCore PUBLIC "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
