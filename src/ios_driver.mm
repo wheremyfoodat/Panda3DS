@@ -37,7 +37,7 @@ IOS_EXPORT void iosRunFrame(CAMetalLayer* layer) {
 
 	emulator->getRenderer()->setMTKLayer(layerBridged);
 	emulator->runFrame();
-	CFRelease(layerBridged);
+	// CFRelease(layerBridged);
 
 	// CFBridgingAutorelease(layerBridged);
 	printf("Ran a frame\n");
