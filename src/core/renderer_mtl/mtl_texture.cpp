@@ -251,6 +251,53 @@ namespace Metal {
 				return (alpha << 24) | (b << 16) | (g << 8) | r;
 			}
 
+			case PICA::TextureFmt::ETC1: return getTexelETC(false, u, v, size.u(), data);
+			case PICA::TextureFmt::ETC1A4: return getTexelETC(true, u, v, size.u(), data);
+
+			case PICA::TextureFmt::RGBA4: {
+				u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+				u16 texel = u16(data[offset]) | (u16(data[offset + 1]) << 8);
+
+				u8 alpha = Colour::convert4To8Bit(getBits<0, 4, u8>(texel));
+				u8 b = Colour::convert4To8Bit(getBits<4, 4, u8>(texel));
+				u8 g = Colour::convert4To8Bit(getBits<8, 4, u8>(texel));
+				u8 r = Colour::convert4To8Bit(getBits<12, 4, u8>(texel));
+
+				return (alpha << 24) | (b << 16) | (g << 8) | r;
+			}
+
+			case PICA::TextureFmt::I4: {
+				u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
+
+				// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
+				u8 intensity = data[offset] >> ((u % 2) ? 4 : 0);
+				intensity = Colour::convert4To8Bit(getBits<0, 4>(intensity));
+
+				// Intensity formats just copy the intensity value to every colour channel
+				return (0xff << 24) | (intensity << 16) | (intensity << 8) | intensity;
+			}
+
+			case PICA::TextureFmt::IA4: {
+				const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+				const u8 texel = data[offset];
+				const u8 alpha = Colour::convert4To8Bit(texel & 0xf);
+				const u8 intensity = Colour::convert4To8Bit(texel >> 4);
+
+				// Intensity formats just copy the intensity value to every colour channel
+				return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
+			}
+
+			case PICA::TextureFmt::A4: {
+				const u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
+
+				// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
+				u8 alpha = data[offset] >> ((u % 2) ? 4 : 0);
+				alpha = Colour::convert4To8Bit(getBits<0, 4>(alpha));
+
+				// A8 sets RGB to 0
+				return (alpha << 24) | (0 << 16) | (0 << 8) | 0;
+			}
+
 			case PICA::TextureFmt::I8: {
 				u32 offset = getSwizzledOffset(u, v, size.u(), 1);
 				const u8 intensity = data[offset];
@@ -270,8 +317,16 @@ namespace Metal {
 				return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
 			}
 
-			case PICA::TextureFmt::ETC1: return getTexelETC(false, u, v, size.u(), data);
-			case PICA::TextureFmt::ETC1A4: return getTexelETC(true, u, v, size.u(), data);
+			case PICA::TextureFmt::RGB565: {
+				const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+				const u16 texel = u16(data[offset]) | (u16(data[offset + 1]) << 8);
+
+				const u8 b = Colour::convert5To8Bit(getBits<0, 5, u8>(texel));
+				const u8 g = Colour::convert6To8Bit(getBits<5, 6, u8>(texel));
+				const u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
+
+				return (0xff << 24) | (b << 16) | (g << 8) | r;
+			}
 
 			default: Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
 		}

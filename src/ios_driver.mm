@@ -23,9 +23,9 @@ IOS_EXPORT void iosCreateEmulator() {
 	emulator->initGraphicsContext(nullptr);
 
 	// auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
-	// auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
+	auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
 
-	auto path = emulator->getAppDataRoot() / "toon_shading.elf";
+	//auto path = emulator->getAppDataRoot() / "toon_shading.elf";
 	emulator->loadROM(path);
 	printf("Created emulator\n");
 }

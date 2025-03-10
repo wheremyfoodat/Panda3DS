@@ -10,6 +10,8 @@ namespace PICA {
 		size_t bytesPerTexel;
 	};
 
+// iOS, at least on simulator, doesn't support a lot of more "exotic" texture formats, so we avoid them tehre
+#ifndef PANDA3DS_IOS
 	constexpr PixelFormatInfo pixelFormatInfos[14] = {
 		{MTL::PixelFormatRGBA8Unorm, 4},   // RGBA8
 		{MTL::PixelFormatRGBA8Unorm, 4},   // RGB8
@@ -26,6 +28,24 @@ namespace PICA {
 		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1
 		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1A4
 	};
+#else
+	constexpr PixelFormatInfo pixelFormatInfos[14] = {
+		{MTL::PixelFormatRGBA8Unorm, 4},   // RGBA8
+		{MTL::PixelFormatRGBA8Unorm, 4},   // RGB8
+		{MTL::PixelFormatBGR5A1Unorm, 2},  // RGBA5551
+		{MTL::PixelFormatRGBA8Unorm, 4},   // RGB565
+		{MTL::PixelFormatRGBA8Unorm, 4},   // RGBA4
+		{MTL::PixelFormatRGBA8Unorm, 4},   // IA8
+		{MTL::PixelFormatRG8Unorm, 2},     // RG8
+		{MTL::PixelFormatRGBA8Unorm, 4},   // I8
+		{MTL::PixelFormatA8Unorm, 1},      // A8
+		{MTL::PixelFormatRGBA8Unorm, 4},   // IA4
+		{MTL::PixelFormatRGBA8Unorm, 4},   // I4
+		{MTL::PixelFormatA8Unorm, 1},      // A4
+		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1
+		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1A4
+	};
+#endif
 
 	inline PixelFormatInfo getPixelFormatInfo(TextureFmt format) { return pixelFormatInfos[static_cast<int>(format)]; }
 
@@ -35,7 +55,11 @@ namespace PICA {
 			case ColorFmt::RGB8: return MTL::PixelFormatRGBA8Unorm;
 			case ColorFmt::RGBA5551: return MTL::PixelFormatRGBA8Unorm;  // TODO: use MTL::PixelFormatBGR5A1Unorm?
 			case ColorFmt::RGB565: return MTL::PixelFormatRGBA8Unorm;    // TODO: use MTL::PixelFormatB5G6R5Unorm?
+#ifdef PANDA3DS_IOS
+			case ColorFmt::RGBA4: return MTL::PixelFormatRGBA8Unorm; // IOS + Metal doesn't support AGBR4 properly, at least on simulator
+#else
 			case ColorFmt::RGBA4: return MTL::PixelFormatABGR4Unorm;
+#endif
 		}
 	}
 
