@@ -68,7 +68,6 @@ void RendererMTL::display() {
 	MTL::Texture* texture = drawable->texture();
 
 	using namespace PICA::ExternalRegs;
-	printf("Layer pointer: %p\nDevice pointer: %p\nDrawable pointer: %p\nTexture pointer: %p\n", metalLayer, device, drawable, texture);
 
 	// Top screen
 	const u32 topActiveFb = externalRegs[Framebuffer0Select] & 1;
@@ -103,16 +102,19 @@ void RendererMTL::display() {
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
+    const int xMultiplier = 2;
+    const int yMultiplier = 2;
+
 	// Top screen
 	if (topScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400 * xMultiplier, 240 * yMultiplier, 0.0f, 1.0f});
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	// Bottom screen
 	if (bottomScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(MTL::Viewport{40 * xMultiplier, 240 * yMultiplier, 320 * xMultiplier, 240 * yMultiplier, 0.0f, 1.0f});
 		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
