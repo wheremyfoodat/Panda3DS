@@ -126,10 +126,6 @@ void RendererMTL::display() {
 	// Inform the vertex buffer cache that the frame ended
 	vertexBufferCache.endFrame();
 	drawable->release();
-
-#ifdef PANDA3DS_IOS
-    // metalLayer->autorelease();
-#endif
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {

@@ -25,20 +25,16 @@ IOS_EXPORT void iosCreateEmulator() {
 	// auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
 	// auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
 
-	auto path = emulator->getAppDataRoot() / "SimplerTri.elf";
+	auto path = emulator->getAppDataRoot() / "toon_shading.elf";
 	emulator->loadROM(path);
 	printf("Created emulator\n");
 }
 
 IOS_EXPORT void iosRunFrame(CAMetalLayer* layer) {
 	printf("Running a frame\n");
-	// void* layerBridged = (void*)CFBridgingRetain(layer);
 	void* layerBridged = (__bridge void*)layer;
 
 	emulator->getRenderer()->setMTKLayer(layerBridged);
 	emulator->runFrame();
-	// CFRelease(layerBridged);
-
-	// CFBridgingAutorelease(layerBridged);
 	printf("Ran a frame\n");
 }
