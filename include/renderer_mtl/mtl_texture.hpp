@@ -29,6 +29,7 @@ namespace Metal {
 		Interval<u32> range;
 
 		PICA::PixelFormatInfo formatInfo;
+		MTL::Texture* base = nullptr;
 		MTL::Texture* texture = nullptr;
 		MTL::SamplerState* sampler = nullptr;
 

@@ -12,7 +12,7 @@ namespace PICA {
 		size_t bytesPerTexel;
 		void (*decoder)(OpenGL::uvec2, u32, u32, std::span<const u8>, std::vector<u8>&);
 		bool needsSwizzle{false};
-		// TODO: swizzle
+		MTL::TextureSwizzleChannels swizzle{.red = MTL::TextureSwizzleRed, .green = MTL::TextureSwizzleGreen, .blue = MTL::TextureSwizzleBlue, .alpha = MTL::TextureSwizzleAlpha};
 	};
 
 	extern PixelFormatInfo pixelFormatInfos[14];

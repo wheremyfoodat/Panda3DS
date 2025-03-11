@@ -21,9 +21,14 @@ namespace Metal {
 		descriptor->setStorageMode(MTL::StorageModeShared);  // TODO: use private + staging buffers?
 		texture = device->newTexture(descriptor);
 		texture->setLabel(toNSString(
-			"Texture " + std::string(PICA::textureFormatToString(format)) + " " + std::to_string(size.u()) + "x" + std::to_string(size.v())
+			"Base texture " + std::string(PICA::textureFormatToString(format)) + " " + std::to_string(size.u()) + "x" + std::to_string(size.v())
 		));
 		descriptor->release();
+
+		if (formatInfo.needsSwizzle) {
+		    base = texture;
+		    texture = base->newTextureView(formatInfo.pixelFormat, MTL::TextureType2D, NS::Range(0, 1), NS::Range(0, 1), formatInfo.swizzle);
+		}
 
 		setNewConfig(config);
 	}
@@ -57,6 +62,9 @@ namespace Metal {
 
 		if (texture) {
 			texture->release();
+		}
+		if (base) {
+		    base->release();
 		}
 		if (sampler) {
 			sampler->release();
@@ -98,212 +106,6 @@ namespace Metal {
 			default: Helpers::panic("[PICA] Attempted to get size of invalid texture type");
 		}
 	}
-
-	/*
-	u8 Texture::decodeTexelU8(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data) {
-		switch (fmt) {
-			case PICA::TextureFmt::A4: {
-				const u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
-
-				// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
-				u8 alpha = data[offset] >> ((u % 2) ? 4 : 0);
-				alpha = Colour::convert4To8Bit(getBits<0, 4>(alpha));
-
-				// A8
-				return alpha;
-			}
-
-			case PICA::TextureFmt::A8: {
-				u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-				const u8 alpha = data[offset];
-
-				// A8
-				return alpha;
-			}
-
-			default: Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
-		}
-	}
-
-	u16 Texture::decodeTexelU16(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data) {
-		switch (fmt) {
-			case PICA::TextureFmt::RG8: {
-				u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-				constexpr u8 b = 0;
-				const u8 g = data[offset];
-				const u8 r = data[offset + 1];
-
-				// RG8
-				return (g << 8) | r;
-			}
-
-			case PICA::TextureFmt::RGBA4: {
-				u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-				u16 texel = u16(data[offset]) | (u16(data[offset + 1]) << 8);
-
-				u8 alpha = getBits<0, 4, u8>(texel);
-				u8 b = getBits<4, 4, u8>(texel);
-				u8 g = getBits<8, 4, u8>(texel);
-				u8 r = getBits<12, 4, u8>(texel);
-
-				// ABGR4
-				return (r << 12) | (g << 8) | (b << 4) | alpha;
-			}
-
-			case PICA::TextureFmt::RGBA5551: {
-				const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-				const u16 texel = u16(data[offset]) | (u16(data[offset + 1]) << 8);
-
-				u8 alpha = getBit<0>(texel) ? 0xff : 0;
-				u8 b = getBits<1, 5, u8>(texel);
-				u8 g = getBits<6, 5, u8>(texel);
-				u8 r = getBits<11, 5, u8>(texel);
-
-				// BGR5A1
-				return (alpha << 15) | (r << 10) | (g << 5) | b;
-			}
-
-			case PICA::TextureFmt::RGB565: {
-				const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-				const u16 texel = u16(data[offset]) | (u16(data[offset + 1]) << 8);
-
-				const u8 b = getBits<0, 5, u8>(texel);
-				const u8 g = getBits<5, 6, u8>(texel);
-				const u8 r = getBits<11, 5, u8>(texel);
-
-				// B5G6R5
-				return (r << 11) | (g << 5) | b;
-			}
-
-			case PICA::TextureFmt::IA4: {
-				const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-				const u8 texel = data[offset];
-				const u8 alpha = texel & 0xf;
-				const u8 intensity = texel >> 4;
-
-				// ABGR4
-				return (intensity << 12) | (intensity << 8) | (intensity << 4) | alpha;
-			}
-
-			case PICA::TextureFmt::I4: {
-				u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
-
-				// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
-				u8 intensity = data[offset] >> ((u % 2) ? 4 : 0);
-				intensity = getBits<0, 4>(intensity);
-
-				// ABGR4
-				return (intensity << 12) | (intensity << 8) | (intensity << 4) | 0xff;
-			}
-
-			default: Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
-		}
-	}
-
-	u32 Texture::decodeTexelU32(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data) {
-		switch (fmt) {
-			case PICA::TextureFmt::RGB8: {
-				const u32 offset = getSwizzledOffset(u, v, size.u(), 3);
-				const u8 b = data[offset];
-				const u8 g = data[offset + 1];
-				const u8 r = data[offset + 2];
-
-				// RGBA8
-				return (0xff << 24) | (b << 16) | (g << 8) | r;
-			}
-
-			case PICA::TextureFmt::RGBA8: {
-				const u32 offset = getSwizzledOffset(u, v, size.u(), 4);
-				const u8 alpha = data[offset];
-				const u8 b = data[offset + 1];
-				const u8 g = data[offset + 2];
-				const u8 r = data[offset + 3];
-
-				// RGBA8
-				return (alpha << 24) | (b << 16) | (g << 8) | r;
-			}
-
-			case PICA::TextureFmt::ETC1: return getTexelETC(false, u, v, size.u(), data);
-			case PICA::TextureFmt::ETC1A4: return getTexelETC(true, u, v, size.u(), data);
-
-			case PICA::TextureFmt::RGBA4: {
-				u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-				u16 texel = u16(data[offset]) | (u16(data[offset + 1]) << 8);
-
-				u8 alpha = Colour::convert4To8Bit(getBits<0, 4, u8>(texel));
-				u8 b = Colour::convert4To8Bit(getBits<4, 4, u8>(texel));
-				u8 g = Colour::convert4To8Bit(getBits<8, 4, u8>(texel));
-				u8 r = Colour::convert4To8Bit(getBits<12, 4, u8>(texel));
-
-				return (alpha << 24) | (b << 16) | (g << 8) | r;
-			}
-
-			case PICA::TextureFmt::I4: {
-				u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
-
-				// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
-				u8 intensity = data[offset] >> ((u % 2) ? 4 : 0);
-				intensity = Colour::convert4To8Bit(getBits<0, 4>(intensity));
-
-				// Intensity formats just copy the intensity value to every colour channel
-				return (0xff << 24) | (intensity << 16) | (intensity << 8) | intensity;
-			}
-
-			case PICA::TextureFmt::IA4: {
-				const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-				const u8 texel = data[offset];
-				const u8 alpha = Colour::convert4To8Bit(texel & 0xf);
-				const u8 intensity = Colour::convert4To8Bit(texel >> 4);
-
-				// Intensity formats just copy the intensity value to every colour channel
-				return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
-			}
-
-			case PICA::TextureFmt::A4: {
-				const u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
-
-				// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
-				u8 alpha = data[offset] >> ((u % 2) ? 4 : 0);
-				alpha = Colour::convert4To8Bit(getBits<0, 4>(alpha));
-
-				// A8 sets RGB to 0
-				return (alpha << 24) | (0 << 16) | (0 << 8) | 0;
-			}
-
-			case PICA::TextureFmt::I8: {
-				u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-				const u8 intensity = data[offset];
-
-				// RGBA8
-				return (0xff << 24) | (intensity << 16) | (intensity << 8) | intensity;
-			}
-
-			case PICA::TextureFmt::IA8: {
-				u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-
-				// Same as I8 except each pixel gets its own alpha value too
-				const u8 alpha = data[offset];
-				const u8 intensity = data[offset + 1];
-
-				// RGBA8
-				return (alpha << 24) | (intensity << 16) | (intensity << 8) | intensity;
-			}
-
-			case PICA::TextureFmt::RGB565: {
-				const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-				const u16 texel = u16(data[offset]) | (u16(data[offset + 1]) << 8);
-
-				const u8 b = Colour::convert5To8Bit(getBits<0, 5, u8>(texel));
-				const u8 g = Colour::convert6To8Bit(getBits<5, 6, u8>(texel));
-				const u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
-
-				return (0xff << 24) | (b << 16) | (g << 8) | r;
-			}
-
-			default: Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
-		}
-	}
-	*/
 
 	void Texture::decodeTexture(std::span<const u8> data) {
 		std::vector<u8> decoded;
