@@ -16,6 +16,7 @@ void decodeTexelAI8ToRG8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> i
 void decodeTexelGR8ToRG8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData);
 void decodeTexelI8ToR8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData);
 void decodeTexelA8ToA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData);
+void decodeTexelAI4ToABGR4(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData);
 void decodeTexelAI4ToRG8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData);
 void decodeTexelI4ToR8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData);
 void decodeTexelA4ToA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData);

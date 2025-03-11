@@ -16,7 +16,7 @@ namespace PICA {
 		{MTL::PixelFormatRG8Unorm, 2, decodeTexelGR8ToRG8},          // RG8
 		{MTL::PixelFormatR8Unorm, 1, decodeTexelI8ToR8},             // I8
 		{MTL::PixelFormatA8Unorm, 1, decodeTexelA8ToA8},             // A8
-		{MTL::PixelFormatRG8Unorm, 2, decodeTexelAI4ToRG8},          // IA4
+		{MTL::PixelFormatABGR4Unorm, 2, decodeTexelAI4ToABGR4},      // IA4
 		{MTL::PixelFormatR8Unorm, 1, decodeTexelI4ToR8},             // I4
 		{MTL::PixelFormatA8Unorm, 1, decodeTexelA4ToA8},             // A4
 		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelETC1ToRGBA8},     // ETC1
@@ -25,8 +25,10 @@ namespace PICA {
 
 	void checkForPixelFormatSupport(MTL::Device* device) {
 	    if (!device->supportsFamily(MTL::GPUFamilyApple1)) {
-			// TODO
-			throw;
+			pixelFormatInfos[2] = {MTL::PixelFormatRGBA8Unorm, 4, decodeTexelA1BGR5ToRGBA8};
+			pixelFormatInfos[3] = {MTL::PixelFormatRGBA8Unorm, 4, decodeTexelB5G6R5ToRGBA8};
+			pixelFormatInfos[4] = {MTL::PixelFormatRGBA8Unorm, 4, decodeTexelABGR4ToRGBA8};
+			pixelFormatInfos[9] = {MTL::PixelFormatRG8Unorm, 2, decodeTexelAI4ToRG8};
 		}
 	}
 

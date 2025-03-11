@@ -176,6 +176,16 @@ void decodeTexelA8ToA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inD
    	outData.push_back(alpha);
 }
 
+void decodeTexelAI4ToABGR4(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
+    const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+   	const u8 texel = inData[offset];
+   	const u8 alpha = texel & 0xf;
+   	const u8 intensity = texel >> 4;
+
+   	outData.push_back((intensity << 4) | intensity);
+   	outData.push_back((alpha << 4) | intensity);
+}
+
 void decodeTexelAI4ToRG8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
     const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
    	const u8 texel = inData[offset];
