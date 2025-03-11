@@ -99,35 +99,7 @@ namespace Metal {
 		}
 	}
 
-	// u and v are the UVs of the relevant texel
-	// Texture data is stored interleaved in Morton order, ie in a Z - order curve as shown here
-	// https://en.wikipedia.org/wiki/Z-order_curve
-	// Textures are split into 8x8 tiles.This function returns the in - tile offset depending on the u & v of the texel
-	// The in - tile offset is the sum of 2 offsets, one depending on the value of u % 8 and the other on the value of y % 8
-	// As documented in this picture https ://en.wikipedia.org/wiki/File:Moser%E2%80%93de_Bruijn_addition.svg
-	u32 Texture::mortonInterleave(u32 u, u32 v) {
-		static constexpr u32 xOffsets[] = {0, 1, 4, 5, 16, 17, 20, 21};
-		static constexpr u32 yOffsets[] = {0, 2, 8, 10, 32, 34, 40, 42};
-
-		return xOffsets[u & 7] + yOffsets[v & 7];
-	}
-
-	// Get the byte offset of texel (u, v) in the texture
-	u32 Texture::getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel) {
-		u32 offset = ((u & ~7) * 8) + ((v & ~7) * width);  // Offset of the 8x8 tile the texel belongs to
-		offset += mortonInterleave(u, v);                  // Add the in-tile offset of the texel
-
-		return offset * bytesPerPixel;
-	}
-
-	// Same as the above code except we need to divide by 2 because 4 bits is smaller than a byte
-	u32 Texture::getSwizzledOffset_4bpp(u32 u, u32 v, u32 width) {
-		u32 offset = ((u & ~7) * 8) + ((v & ~7) * width);  // Offset of the 8x8 tile the texel belongs to
-		offset += mortonInterleave(u, v);                  // Add the in-tile offset of the texel
-
-		return offset / 2;
-	}
-
+	/*
 	u8 Texture::decodeTexelU8(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data) {
 		switch (fmt) {
 			case PICA::TextureFmt::A4: {
@@ -331,32 +303,18 @@ namespace Metal {
 			default: Helpers::panic("[Texture::DecodeTexel] Unimplemented format = %d", static_cast<int>(fmt));
 		}
 	}
+	*/
 
 	void Texture::decodeTexture(std::span<const u8> data) {
 		std::vector<u8> decoded;
 		decoded.reserve(u64(size.u()) * u64(size.v()) * formatInfo.bytesPerTexel);
 
-		// Decode texels line by line
-		for (u32 v = 0; v < size.v(); v++) {
-			for (u32 u = 0; u < size.u(); u++) {
-				if (formatInfo.bytesPerTexel == 1) {
-					u8 texel = decodeTexelU8(u, v, format, data);
-					decoded.push_back(texel);
-				} else if (formatInfo.bytesPerTexel == 2) {
-					u16 texel = decodeTexelU16(u, v, format, data);
-					decoded.push_back((texel & 0x00ff) >> 0);
-					decoded.push_back((texel & 0xff00) >> 8);
-				} else if (formatInfo.bytesPerTexel == 4) {
-					u32 texel = decodeTexelU32(u, v, format, data);
-					decoded.push_back((texel & 0x000000ff) >> 0);
-					decoded.push_back((texel & 0x0000ff00) >> 8);
-					decoded.push_back((texel & 0x00ff0000) >> 16);
-					decoded.push_back((texel & 0xff000000) >> 24);
-				} else {
-					Helpers::panic("[Texture::decodeTexture] Unimplemented bytesPerTexel (%u)", formatInfo.bytesPerTexel);
-				}
-			}
-		}
+  		// Decode texels line by line
+  		for (u32 v = 0; v < size.v(); v++) {
+ 			for (u32 u = 0; u < size.u(); u++) {
+                formatInfo.decoder(size, u, v, data, decoded);
+ 			}
+  		}
 
 		texture->replaceRegion(MTL::Region(0, 0, size.u(), size.v()), 0, 0, decoded.data(), formatInfo.bytesPerTexel * size.u(), 0);
 	}

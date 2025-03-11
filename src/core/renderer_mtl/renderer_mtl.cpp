@@ -141,9 +141,9 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
 #endif
+    checkForPixelFormatSupport(device);
 
 	commandQueue = device->newCommandQueue();
-	printf("C++ device pointer: %p\n", device);
 
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();

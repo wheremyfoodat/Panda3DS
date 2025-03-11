@@ -3,49 +3,21 @@
 #include <Metal/Metal.hpp>
 
 #include "PICA/regs.hpp"
+// TODO: remove dependency on OpenGL
+#include "opengl.hpp"
 
 namespace PICA {
 	struct PixelFormatInfo {
 		MTL::PixelFormat pixelFormat;
 		size_t bytesPerTexel;
+		void (*decoder)(OpenGL::uvec2, u32, u32, std::span<const u8>, std::vector<u8>&);
+		bool needsSwizzle{false};
+		// TODO: swizzle
 	};
 
-// iOS, at least on simulator, doesn't support a lot of more "exotic" texture formats, so we avoid them tehre
-#ifndef PANDA3DS_IOS
-	constexpr PixelFormatInfo pixelFormatInfos[14] = {
-		{MTL::PixelFormatRGBA8Unorm, 4},   // RGBA8
-		{MTL::PixelFormatRGBA8Unorm, 4},   // RGB8
-		{MTL::PixelFormatBGR5A1Unorm, 2},  // RGBA5551
-		{MTL::PixelFormatB5G6R5Unorm, 2},  // RGB565
-		{MTL::PixelFormatABGR4Unorm, 2},   // RGBA4
-		{MTL::PixelFormatRGBA8Unorm, 4},   // IA8
-		{MTL::PixelFormatRG8Unorm, 2},     // RG8
-		{MTL::PixelFormatRGBA8Unorm, 4},   // I8
-		{MTL::PixelFormatA8Unorm, 1},      // A8
-		{MTL::PixelFormatABGR4Unorm, 2},   // IA4
-		{MTL::PixelFormatABGR4Unorm, 2},   // I4
-		{MTL::PixelFormatA8Unorm, 1},      // A4
-		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1
-		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1A4
-	};
-#else
-	constexpr PixelFormatInfo pixelFormatInfos[14] = {
-		{MTL::PixelFormatRGBA8Unorm, 4},   // RGBA8
-		{MTL::PixelFormatRGBA8Unorm, 4},   // RGB8
-		{MTL::PixelFormatBGR5A1Unorm, 2},  // RGBA5551
-		{MTL::PixelFormatRGBA8Unorm, 4},   // RGB565
-		{MTL::PixelFormatRGBA8Unorm, 4},   // RGBA4
-		{MTL::PixelFormatRGBA8Unorm, 4},   // IA8
-		{MTL::PixelFormatRG8Unorm, 2},     // RG8
-		{MTL::PixelFormatRGBA8Unorm, 4},   // I8
-		{MTL::PixelFormatA8Unorm, 1},      // A8
-		{MTL::PixelFormatRGBA8Unorm, 4},   // IA4
-		{MTL::PixelFormatRGBA8Unorm, 4},   // I4
-		{MTL::PixelFormatA8Unorm, 1},      // A4
-		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1
-		{MTL::PixelFormatRGBA8Unorm, 4},   // ETC1A4
-	};
-#endif
+	extern PixelFormatInfo pixelFormatInfos[14];
+
+	void checkForPixelFormatSupport(MTL::Device* device);
 
 	inline PixelFormatInfo getPixelFormatInfo(TextureFmt format) { return pixelFormatInfos[static_cast<int>(format)]; }
 

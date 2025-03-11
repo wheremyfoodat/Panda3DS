@@ -1,0 +1,33 @@
+#include "renderer_mtl/pica_to_mtl.hpp"
+
+#include "renderer_mtl/texture_decoder.hpp"
+
+using namespace Helpers;
+
+namespace PICA {
+
+    PixelFormatInfo pixelFormatInfos[14] = {
+		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelABGR8ToRGBA8},    // RGBA8
+		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelBGR8ToRGBA8},     // RGB8
+		{MTL::PixelFormatBGR5A1Unorm, 2, decodeTexelA1BGR5ToBGR5A1}, // RGBA5551
+		{MTL::PixelFormatB5G6R5Unorm, 2, decodeTexelB5G6R5ToB5G6R5}, // RGB565
+		{MTL::PixelFormatABGR4Unorm, 2, decodeTexelABGR4ToABGR4},    // RGBA4
+		{MTL::PixelFormatRG8Unorm, 2, decodeTexelAI8ToRG8},          // IA8
+		{MTL::PixelFormatRG8Unorm, 2, decodeTexelGR8ToRG8},          // RG8
+		{MTL::PixelFormatR8Unorm, 1, decodeTexelI8ToR8},             // I8
+		{MTL::PixelFormatA8Unorm, 1, decodeTexelA8ToA8},             // A8
+		{MTL::PixelFormatRG8Unorm, 2, decodeTexelAI4ToRG8},          // IA4
+		{MTL::PixelFormatR8Unorm, 1, decodeTexelI4ToR8},             // I4
+		{MTL::PixelFormatA8Unorm, 1, decodeTexelA4ToA8},             // A4
+		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelETC1ToRGBA8},     // ETC1
+		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelETC1A4ToRGBA8},   // ETC1A4
+	};
+
+	void checkForPixelFormatSupport(MTL::Device* device) {
+	    if (!device->supportsFamily(MTL::GPUFamilyApple1)) {
+			// TODO
+			throw;
+		}
+	}
+
+}
