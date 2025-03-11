@@ -54,18 +54,6 @@ namespace Metal {
 		void free();
 		u64 sizeInBytes();
 
-		u8 decodeTexelBGR8ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelA1BGR5ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelB5G6R5ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelABGR4ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelAI8ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelI8ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelAI4ToRGBA4(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelAI4ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelI4ToRGBA4(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelI4ToRGBA8(u32 u, u32 v, std::span<const u8> data);
-		u8 decodeTexelA4ToA8(u32 u, u32 v, std::span<const u8> data);
-
 		// Returns the format of this texture as a string
 		std::string_view formatToString() { return PICA::textureFormatToString(format); }
 	};
