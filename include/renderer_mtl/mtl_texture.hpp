@@ -28,7 +28,7 @@ namespace Metal {
 		// Range of VRAM taken up by buffer
 		Interval<u32> range;
 
-		PICA::PixelFormatInfo formatInfo;
+		PICA::MTLPixelFormatInfo formatInfo;
 		MTL::Texture* base = nullptr;
 		MTL::Texture* texture = nullptr;
 		MTL::SamplerState* sampler = nullptr;

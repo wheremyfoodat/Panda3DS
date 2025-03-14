@@ -7,19 +7,24 @@
 #include "opengl.hpp"
 
 namespace PICA {
-	struct PixelFormatInfo {
+	struct MTLPixelFormatInfo {
 		MTL::PixelFormat pixelFormat;
 		size_t bytesPerTexel;
 		void (*decoder)(OpenGL::uvec2, u32, u32, std::span<const u8>, std::vector<u8>&);
-		bool needsSwizzle{false};
-		MTL::TextureSwizzleChannels swizzle{.red = MTL::TextureSwizzleRed, .green = MTL::TextureSwizzleGreen, .blue = MTL::TextureSwizzleBlue, .alpha = MTL::TextureSwizzleAlpha};
+
+		bool needsSwizzle = false;
+		MTL::TextureSwizzleChannels swizzle{
+			.red = MTL::TextureSwizzleRed,
+			.green = MTL::TextureSwizzleGreen,
+			.blue = MTL::TextureSwizzleBlue,
+			.alpha = MTL::TextureSwizzleAlpha,
+		};
 	};
 
-	extern PixelFormatInfo pixelFormatInfos[14];
+	extern MTLPixelFormatInfo mtlPixelFormatInfos[14];
 
-	void checkForPixelFormatSupport(MTL::Device* device);
-
-	inline PixelFormatInfo getPixelFormatInfo(TextureFmt format) { return pixelFormatInfos[static_cast<int>(format)]; }
+	void checkForMTLPixelFormatSupport(MTL::Device* device);
+	inline MTLPixelFormatInfo getMTLPixelFormatInfo(TextureFmt format) { return mtlPixelFormatInfos[static_cast<int>(format)]; }
 
 	inline MTL::PixelFormat toMTLPixelFormatColor(ColorFmt format) {
 		switch (format) {

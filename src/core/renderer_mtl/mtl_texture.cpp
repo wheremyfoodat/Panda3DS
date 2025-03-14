@@ -1,16 +1,17 @@
 #include "renderer_mtl/mtl_texture.hpp"
 
+#include <fmt/format.h>
+
 #include <array>
 
 #include "colour.hpp"
 #include "renderer_mtl/objc_helper.hpp"
 
-
 using namespace Helpers;
 
 namespace Metal {
 	void Texture::allocate() {
-		formatInfo = PICA::getPixelFormatInfo(format);
+		formatInfo = PICA::getMTLPixelFormatInfo(format);
 
 		MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::alloc()->init();
 		descriptor->setTextureType(MTL::TextureType2D);
@@ -20,9 +21,7 @@ namespace Metal {
 		descriptor->setUsage(MTL::TextureUsageShaderRead);
 		descriptor->setStorageMode(MTL::StorageModeShared);  // TODO: use private + staging buffers?
 		texture = device->newTexture(descriptor);
-		texture->setLabel(toNSString(
-			"Base texture " + std::string(PICA::textureFormatToString(format)) + " " + std::to_string(size.u()) + "x" + std::to_string(size.v())
-		));
+		texture->setLabel(toNSString(fmt::format("Base texture {} {}x{}", std::string(PICA::textureFormatToString(format)), size.u(), size.v())));
 		descriptor->release();
 
 		if (formatInfo.needsSwizzle) {
@@ -63,9 +62,11 @@ namespace Metal {
 		if (texture) {
 			texture->release();
 		}
+
 		if (base) {
-		    base->release();
+			base->release();
 		}
+
 		if (sampler) {
 			sampler->release();
 		}

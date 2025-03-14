@@ -3,8 +3,8 @@
 #include <array>
 #include <string>
 
-#include "math_util.hpp"
 #include "colour.hpp"
+#include "math_util.hpp"
 
 using namespace Helpers;
 
@@ -38,187 +38,185 @@ u32 getSwizzledOffset_4bpp(u32 u, u32 v, u32 width) {
 }
 
 void decodeTexelABGR8ToRGBA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 4);
-   	const u8 alpha = inData[offset];
-   	const u8 b = inData[offset + 1];
-   	const u8 g = inData[offset + 2];
-   	const u8 r = inData[offset + 3];
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 4);
+	const u8 alpha = inData[offset];
+	const u8 b = inData[offset + 1];
+	const u8 g = inData[offset + 2];
+	const u8 r = inData[offset + 3];
 
-    outData.push_back(r);
-    outData.push_back(g);
-    outData.push_back(b);
-    outData.push_back(alpha);
+	outData.push_back(r);
+	outData.push_back(g);
+	outData.push_back(b);
+	outData.push_back(alpha);
 }
 
 void decodeTexelBGR8ToRGBA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 3);
-   	const u8 b = inData[offset];
-   	const u8 g = inData[offset + 1];
-   	const u8 r = inData[offset + 2];
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 3);
+	const u8 b = inData[offset];
+	const u8 g = inData[offset + 1];
+	const u8 r = inData[offset + 2];
 
-    outData.push_back(r);
-    outData.push_back(g);
-    outData.push_back(b);
-    outData.push_back(0xff);
+	outData.push_back(r);
+	outData.push_back(g);
+	outData.push_back(b);
+	outData.push_back(0xff);
 }
 
 void decodeTexelA1BGR5ToBGR5A1(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-   	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
 
-   	u8 alpha = getBit<0>(texel);
-   	u8 b = getBits<1, 5, u8>(texel);
-   	u8 g = getBits<6, 5, u8>(texel);
-   	u8 r = getBits<11, 5, u8>(texel);
+	u8 alpha = getBit<0>(texel);
+	u8 b = getBits<1, 5, u8>(texel);
+	u8 g = getBits<6, 5, u8>(texel);
+	u8 r = getBits<11, 5, u8>(texel);
 
-   	u16 outTexel = (alpha << 15) | (r << 10) | (g << 5) | b;
-    outData.push_back(outTexel & 0xff);
-    outData.push_back((outTexel >> 8) & 0xff);
+	u16 outTexel = (alpha << 15) | (r << 10) | (g << 5) | b;
+	outData.push_back(outTexel & 0xff);
+	outData.push_back((outTexel >> 8) & 0xff);
 }
 
 void decodeTexelA1BGR5ToRGBA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-   	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
 
-   	u8 alpha = getBit<0>(texel) ? 0xff : 0;
-   	u8 b = Colour::convert5To8Bit(getBits<1, 5, u8>(texel));
-   	u8 g = Colour::convert5To8Bit(getBits<6, 5, u8>(texel));
-   	u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
+	u8 alpha = getBit<0>(texel) ? 0xff : 0;
+	u8 b = Colour::convert5To8Bit(getBits<1, 5, u8>(texel));
+	u8 g = Colour::convert5To8Bit(getBits<6, 5, u8>(texel));
+	u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
 
-    outData.push_back(r);
-    outData.push_back(g);
-    outData.push_back(b);
-    outData.push_back(alpha);
+	outData.push_back(r);
+	outData.push_back(g);
+	outData.push_back(b);
+	outData.push_back(alpha);
 }
 
 void decodeTexelB5G6R5ToB5G6R5(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-   	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
 
-    outData.push_back(texel & 0xff);
-    outData.push_back((texel >> 8) & 0xff);
+	outData.push_back(texel & 0xff);
+	outData.push_back((texel >> 8) & 0xff);
 }
 
 void decodeTexelB5G6R5ToRGBA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-   	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	const u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
 
-   	const u8 b = Colour::convert5To8Bit(getBits<0, 5, u8>(texel));
-   	const u8 g = Colour::convert6To8Bit(getBits<5, 6, u8>(texel));
-   	const u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
+	const u8 b = Colour::convert5To8Bit(getBits<0, 5, u8>(texel));
+	const u8 g = Colour::convert6To8Bit(getBits<5, 6, u8>(texel));
+	const u8 r = Colour::convert5To8Bit(getBits<11, 5, u8>(texel));
 
-    outData.push_back(r);
-    outData.push_back(g);
-    outData.push_back(b);
-    outData.push_back(0xff);
+	outData.push_back(r);
+	outData.push_back(g);
+	outData.push_back(b);
+	outData.push_back(0xff);
 }
 
 void decodeTexelABGR4ToABGR4(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-   	u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
+	u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
 
-   	u8 alpha = getBits<0, 4, u8>(texel);
-   	u8 b = getBits<4, 4, u8>(texel);
-   	u8 g = getBits<8, 4, u8>(texel);
-   	u8 r = getBits<12, 4, u8>(texel);
+	u8 alpha = getBits<0, 4, u8>(texel);
+	u8 b = getBits<4, 4, u8>(texel);
+	u8 g = getBits<8, 4, u8>(texel);
+	u8 r = getBits<12, 4, u8>(texel);
 
-    outData.push_back((b << 4) | alpha);
-    outData.push_back((r << 4) | g);
+	outData.push_back((b << 4) | alpha);
+	outData.push_back((r << 4) | g);
 }
 
 void decodeTexelABGR4ToRGBA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-   	u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
+	u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	u16 texel = u16(inData[offset]) | (u16(inData[offset + 1]) << 8);
 
-   	u8 alpha = Colour::convert4To8Bit(getBits<0, 4, u8>(texel));
-   	u8 b = Colour::convert4To8Bit(getBits<4, 4, u8>(texel));
-   	u8 g = Colour::convert4To8Bit(getBits<8, 4, u8>(texel));
-   	u8 r = Colour::convert4To8Bit(getBits<12, 4, u8>(texel));
+	u8 alpha = Colour::convert4To8Bit(getBits<0, 4, u8>(texel));
+	u8 b = Colour::convert4To8Bit(getBits<4, 4, u8>(texel));
+	u8 g = Colour::convert4To8Bit(getBits<8, 4, u8>(texel));
+	u8 r = Colour::convert4To8Bit(getBits<12, 4, u8>(texel));
 
-    outData.push_back(r);
-    outData.push_back(g);
-    outData.push_back(b);
-    outData.push_back(alpha);
+	outData.push_back(r);
+	outData.push_back(g);
+	outData.push_back(b);
+	outData.push_back(alpha);
 }
 
 void decodeTexelAI8ToRG8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	u32 offset = getSwizzledOffset(u, v, size.u(), 2);
 
-   	// Same as I8 except each pixel gets its own alpha value too
-   	const u8 alpha = inData[offset];
-   	const u8 intensity = inData[offset + 1];
+	// Same as I8 except each pixel gets its own alpha value too
+	const u8 alpha = inData[offset];
+	const u8 intensity = inData[offset + 1];
 
-    outData.push_back(intensity);
-    outData.push_back(alpha);
+	outData.push_back(intensity);
+	outData.push_back(alpha);
 }
 
 void decodeTexelGR8ToRG8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    u32 offset = getSwizzledOffset(u, v, size.u(), 2);
-   	constexpr u8 b = 0;
-   	const u8 g = inData[offset];
-   	const u8 r = inData[offset + 1];
+	u32 offset = getSwizzledOffset(u, v, size.u(), 2);
+	constexpr u8 b = 0;
+	const u8 g = inData[offset];
+	const u8 r = inData[offset + 1];
 
-    outData.push_back(r);
-    outData.push_back(g);
+	outData.push_back(r);
+	outData.push_back(g);
 }
 
 void decodeTexelI8ToR8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-   	const u8 intensity = inData[offset];
+	u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+	const u8 intensity = inData[offset];
 
-    outData.push_back(intensity);
+	outData.push_back(intensity);
 }
 
 void decodeTexelA8ToA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-   	const u8 alpha = inData[offset];
+	u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+	const u8 alpha = inData[offset];
 
-   	outData.push_back(alpha);
+	outData.push_back(alpha);
 }
 
 void decodeTexelAI4ToABGR4(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-   	const u8 texel = inData[offset];
-   	const u8 alpha = texel & 0xf;
-   	const u8 intensity = texel >> 4;
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+	const u8 texel = inData[offset];
+	const u8 alpha = texel & 0xf;
+	const u8 intensity = texel >> 4;
 
-   	outData.push_back((intensity << 4) | intensity);
-   	outData.push_back((alpha << 4) | intensity);
+	outData.push_back((intensity << 4) | intensity);
+	outData.push_back((alpha << 4) | intensity);
 }
 
 void decodeTexelAI4ToRG8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
-   	const u8 texel = inData[offset];
-   	const u8 alpha = Colour::convert4To8Bit(texel & 0xf);
-   	const u8 intensity = Colour::convert4To8Bit(texel >> 4);
+	const u32 offset = getSwizzledOffset(u, v, size.u(), 1);
+	const u8 texel = inData[offset];
+	const u8 alpha = Colour::convert4To8Bit(texel & 0xf);
+	const u8 intensity = Colour::convert4To8Bit(texel >> 4);
 
-   	outData.push_back(intensity);
-   	outData.push_back(alpha);
+	outData.push_back(intensity);
+	outData.push_back(alpha);
 }
 
 void decodeTexelI4ToR8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
+	u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
 
-   	// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
-   	u8 intensity = inData[offset] >> ((u % 2) ? 4 : 0);
-   	intensity = Colour::convert4To8Bit(getBits<0, 4>(intensity));
+	// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
+	u8 intensity = inData[offset] >> ((u % 2) ? 4 : 0);
+	intensity = Colour::convert4To8Bit(getBits<0, 4>(intensity));
 
-   	outData.push_back(intensity);
+	outData.push_back(intensity);
 }
 
 void decodeTexelA4ToA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    const u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
+	const u32 offset = getSwizzledOffset_4bpp(u, v, size.u());
 
-   	// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
-   	u8 alpha = inData[offset] >> ((u % 2) ? 4 : 0);
-   	alpha = Colour::convert4To8Bit(getBits<0, 4>(alpha));
+	// For odd U coordinates, grab the top 4 bits, and the low 4 bits for even coordinates
+	u8 alpha = inData[offset] >> ((u % 2) ? 4 : 0);
+	alpha = Colour::convert4To8Bit(getBits<0, 4>(alpha));
 
-   	outData.push_back(alpha);
+	outData.push_back(alpha);
 }
 
-static constexpr u32 signExtend3To32(u32 val) {
-    return (u32)(s32(val) << 29 >> 29);
-}
+static constexpr u32 signExtend3To32(u32 val) { return (u32)(s32(val) << 29 >> 29); }
 
 void decodeETC(u32 u, u32 v, u64 colourData, u32 alpha, std::vector<u8>& outData) {
 	static constexpr u32 modifiers[8][2] = {
@@ -328,9 +326,9 @@ void getTexelETC(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, s
 }
 
 void decodeTexelETC1ToRGBA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    getTexelETC<false>(size, u, v, inData, outData);
+	getTexelETC<false>(size, u, v, inData, outData);
 }
 
 void decodeTexelETC1A4ToRGBA8(OpenGL::uvec2 size, u32 u, u32 v, std::span<const u8> inData, std::vector<u8>& outData) {
-    getTexelETC<true>(size, u, v, inData, outData);
+	getTexelETC<true>(size, u, v, inData, outData);
 }
