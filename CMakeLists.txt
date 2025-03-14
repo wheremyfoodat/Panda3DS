@@ -420,7 +420,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
 if(IOS)
     set(SOURCE_FILES ${SOURCE_FILES} src/miniaudio/miniaudio.m)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS=1")
-    
+
     if (IOS_SIMULATOR_BUILD)
         target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS_SIMULATOR=1")
     endif()
@@ -604,14 +604,16 @@ if(ENABLE_METAL AND APPLE)
         include/renderer_mtl/mtl_common.hpp
         include/renderer_mtl/pica_to_mtl.hpp
         include/renderer_mtl/objc_helper.hpp
+        include/renderer_mtl/texture_decoder.hpp
     )
 
     set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
         src/core/renderer_mtl/renderer_mtl.cpp
         src/core/renderer_mtl/mtl_texture.cpp
-        src/core/renderer_mtl/mtl_etc1.cpp
         src/core/renderer_mtl/mtl_lut_texture.cpp
+        src/core/renderer_mtl/pica_to_mtl.cpp
         src/core/renderer_mtl/objc_helper.mm
+        src/core/renderer_mtl/texture_decoder.cpp
         src/host_shaders/metal_shaders.metal
         src/host_shaders/metal_blit.metal
         #src/host_shaders/metal_copy_to_lut_texture.metal
@@ -808,7 +810,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
-    
+
     set(SHARED_SOURCE_FILES src/hydra_core.cpp)
     if(IOS)
         set(SHARED_SOURCE_FILES ${SHARED_SOURCE_FILES} src/ios_driver.mm)
