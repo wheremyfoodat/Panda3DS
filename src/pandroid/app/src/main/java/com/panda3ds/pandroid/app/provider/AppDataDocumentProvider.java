@@ -159,7 +159,7 @@ public class AppDataDocumentProvider extends DocumentsProvider {
     }
 
     @Override
-    public void removeDocument(String documentId, String parentDocumentId) {
+    public void removeDocument(String documentId, String parentDocumentId) throws FileNotFoundException {
         deleteDocument(documentId);
     }
 
