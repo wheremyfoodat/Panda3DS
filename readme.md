@@ -113,11 +113,12 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [SkyEmu](https://github.com/skylersaleh/SkyEmu): A seagull-themed low-level GameBoy, GameBoy Color, GameBoy Advance and Nintendo DS emulator that is designed to be easy to use, cross platform and accurate.
 - [NanoBoyAdvance](https://github.com/nba-emu/NanoBoyAdvance): A Game Boy Advance emulator focusing on hardware research and cycle-accurate emulation
 - [Dust](https://github.com/kelpsyberry/dust): Nintendo DS emulator for desktop devices and the web
+- [felix86](https://github.com/OFFTKP/felix86): A new x86-64 → RISC-V Linux userspace emulator
+- [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
+- [ChonkyStation 3](https://github.com/liuk7071/ChonkyStation3): Experimental HLE PS3 emulator for Windows, MacOS and Linux
 - [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
 - [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
-- [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
 - [shadPS4](https://github.com/shadps4-emu/shadPS4): Work-in-progress PS4 emulator by the founder of PCSX, PCSX2 and more
-- [felix86](https://github.com/OFFTKP/felix86): A new x86-64 → RISC-V Linux userspace emulator
 - [Tanuki3DS](https://github.com/burhanr13/Tanuki3DS/): A new 3DS emulator for MacOS and Linux
 # Support
 If you find this project exciting and want to support the founder, check out [his Patreon](https://www.patreon.com/wheremyfoodat) or [Ko-fi](https://ko-fi.com/wheremyfoodat)
