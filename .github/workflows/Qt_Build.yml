@@ -20,7 +20,7 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Setup Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         arch: win64_msvc2019_64
         version: 6.2.0
@@ -42,7 +42,7 @@ jobs:
       run: |
         mkdir upload
         move build/Release/Alber.exe upload
-        windeployqt --dir upload upload/Alber.exe
+        windeployqt --no-compiler-runtime --no-system-d3d-compiler --dir upload upload/Alber.exe
 
     - name: Upload executable
       uses: actions/upload-artifact@v4
@@ -74,8 +74,8 @@ jobs:
       run: |
         brew install dylibbundler imagemagick
 
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v3
+    - name: Setup Qt
+      uses: jurplel/install-qt-action@v4
       with:
         aqtversion: '==3.1.*'
         version: '6.8.1'
