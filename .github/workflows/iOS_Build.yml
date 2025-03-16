@@ -29,6 +29,9 @@ jobs:
         vulkan-query-version: 1.3.296.0
         vulkan-use-cache: true
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
-
+    
+    - name: Update Xcode tools
+      run: sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install
+      
     - name: Build core and frontend
       run: cd src/pandios && ./build.sh
