@@ -31,7 +31,7 @@ jobs:
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
     
     - name: Update Xcode tools
-      run: sudo rm -rf /Library/Developer/CommandLineTools && xcode-select --install
+      run: sudo xcode-select --switch /Library/Developer/CommandLineTools/
       
     - name: Build core and frontend
       run: cd src/pandios && ./build.sh
