@@ -23,12 +23,17 @@ jobs:
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
+    - name: Update Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest
+
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@main
       with:
         vulkan-query-version: 1.3.296.0
         vulkan-use-cache: true
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
-      
+
     - name: Build core and frontend
       run: cd src/pandios && ./build.sh
