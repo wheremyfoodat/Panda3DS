@@ -11,6 +11,9 @@ EMULATOR_BUILD_TYPE=Release
 # Simulator settings
 RUN_SIMULATOR=false
 
+# Fail on error
+set -e
+
 # Go to the parent directory and build the emulator core
 cd ../..
 cmake -B build -DENABLE_VULKAN=OFF -DBUILD_HYDRA_CORE=ON -DENABLE_USER_BUILD=ON -DCMAKE_TOOLCHAIN_FILE=third_party/ios_toolchain/ios.toolchain.cmake -DPLATFORM=SIMULATORARM64 -DDEPLOYMENT_TARGET="13.0"
