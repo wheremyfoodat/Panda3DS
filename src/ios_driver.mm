@@ -22,12 +22,8 @@ IOS_EXPORT void iosCreateEmulator() {
 	hidService = &emulator->getServiceManager().getHID();
 	emulator->initGraphicsContext(nullptr);
 
-	// auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
-	auto path = emulator->getAppDataRoot() / "Kirb Demo.3ds";
-
-	//auto path = emulator->getAppDataRoot() / "toon_shading.elf";
+	auto path = emulator->getAppDataRoot() / "toon_shading.elf";
 	emulator->loadROM(path);
-	printf("Created emulator\n");
 }
 
 IOS_EXPORT void iosRunFrame(CAMetalLayer* layer) {
