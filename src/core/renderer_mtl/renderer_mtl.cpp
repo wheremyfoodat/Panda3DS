@@ -128,7 +128,7 @@ void RendererMTL::display() {
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
-	// On iOS, the SwiftUI side handles MetalLayer & the CommandQueue
+	// On iOS, the SwiftUI side handles the MetalLayer
 #ifdef PANDA3DS_IOS
 	device = MTL::CreateSystemDefaultDevice();
 #else
@@ -138,7 +138,7 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
 #endif
-    checkForMTLPixelFormatSupport(device);
+	checkForMTLPixelFormatSupport(device);
 
 	commandQueue = device->newCommandQueue();
 

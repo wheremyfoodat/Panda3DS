@@ -3,6 +3,7 @@
 #include <fmt/format.h>
 
 #include <array>
+#include <memory>
 
 #include "colour.hpp"
 #include "renderer_mtl/objc_helper.hpp"
@@ -109,16 +110,18 @@ namespace Metal {
 	}
 
 	void Texture::decodeTexture(std::span<const u8> data) {
-		std::vector<u8> decoded;
-		decoded.reserve(u64(size.u()) * u64(size.v()) * formatInfo.bytesPerTexel);
+		std::unique_ptr<u8[]> decodedData(new u8[u64(size.u()) * u64(size.v()) * formatInfo.bytesPerTexel]);
+		// This pointer will be incremented by our texture decoders
+		u8* decodePtr = decodedData.get();
 
-  		// Decode texels line by line
-  		for (u32 v = 0; v < size.v(); v++) {
- 			for (u32 u = 0; u < size.u(); u++) {
-                formatInfo.decoder(size, u, v, data, decoded);
- 			}
-  		}
+		// Decode texels line by line
+		for (u32 v = 0; v < size.v(); v++) {
+			for (u32 u = 0; u < size.u(); u++) {
+				formatInfo.decoder(size, u, v, data, decodePtr);
+				decodePtr += formatInfo.bytesPerTexel;
+			}
+		}
 
-		texture->replaceRegion(MTL::Region(0, 0, size.u(), size.v()), 0, 0, decoded.data(), formatInfo.bytesPerTexel * size.u(), 0);
+		texture->replaceRegion(MTL::Region(0, 0, size.u(), size.v()), 0, 0, decodedData.get(), formatInfo.bytesPerTexel * size.u(), 0);
 	}
 }  // namespace Metal

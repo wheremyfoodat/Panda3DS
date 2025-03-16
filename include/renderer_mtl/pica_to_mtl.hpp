@@ -10,7 +10,7 @@ namespace PICA {
 	struct MTLPixelFormatInfo {
 		MTL::PixelFormat pixelFormat;
 		size_t bytesPerTexel;
-		void (*decoder)(OpenGL::uvec2, u32, u32, std::span<const u8>, std::vector<u8>&);
+		void (*decoder)(OpenGL::uvec2, u32, u32, std::span<const u8>, u8*);
 
 		bool needsSwizzle = false;
 		MTL::TextureSwizzleChannels swizzle{
