@@ -102,19 +102,16 @@ void RendererMTL::display() {
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
-    const int xMultiplier = 2;
-    const int yMultiplier = 2;
-
 	// Top screen
 	if (topScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400 * xMultiplier, 240 * yMultiplier, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	// Bottom screen
 	if (bottomScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{40 * xMultiplier, 240 * yMultiplier, 320 * xMultiplier, 240 * yMultiplier, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
 		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
@@ -131,7 +128,7 @@ void RendererMTL::display() {
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
-	// On iOS, the SwiftUI side handles MetalLayer & the CommandQueue
+	// On iOS, the SwiftUI side handles the MetalLayer
 #ifdef PANDA3DS_IOS
 	device = MTL::CreateSystemDefaultDevice();
 #else
@@ -141,9 +138,9 @@ void RendererMTL::initGraphicsContext(SDL_Window* window) {
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
 #endif
+	checkForMTLPixelFormatSupport(device);
 
 	commandQueue = device->newCommandQueue();
-	printf("C++ device pointer: %p\n", device);
 
 	// Textures
 	MTL::TextureDescriptor* textureDescriptor = MTL::TextureDescriptor::alloc()->init();

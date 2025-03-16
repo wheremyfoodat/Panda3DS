@@ -8,8 +8,9 @@
 #include "boost/icl/interval.hpp"
 #include "helpers.hpp"
 #include "math_util.hpp"
-#include "opengl.hpp"
 #include "renderer_mtl/pica_to_mtl.hpp"
+// TODO: remove dependency on OpenGL
+#include "opengl.hpp"
 
 template <typename T>
 using Interval = boost::icl::right_open_interval<T>;
@@ -27,7 +28,8 @@ namespace Metal {
 		// Range of VRAM taken up by buffer
 		Interval<u32> range;
 
-		PICA::PixelFormatInfo formatInfo;
+		PICA::MTLPixelFormatInfo formatInfo;
+		MTL::Texture* base = nullptr;
 		MTL::Texture* texture = nullptr;
 		MTL::SamplerState* sampler = nullptr;
 
@@ -52,22 +54,7 @@ namespace Metal {
 		void free();
 		u64 sizeInBytes();
 
-		u8 decodeTexelU8(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
-		u16 decodeTexelU16(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
-		u32 decodeTexelU32(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8> data);
-
-		// Get the morton interleave offset of a texel based on its U and V values
-		static u32 mortonInterleave(u32 u, u32 v);
-		// Get the byte offset of texel (u, v) in the texture
-		static u32 getSwizzledOffset(u32 u, u32 v, u32 width, u32 bytesPerPixel);
-		static u32 getSwizzledOffset_4bpp(u32 u, u32 v, u32 width);
-
 		// Returns the format of this texture as a string
 		std::string_view formatToString() { return PICA::textureFormatToString(format); }
-
-		// Returns the texel at coordinates (u, v) of an ETC1(A4) texture
-		// TODO: Make hasAlpha a template parameter
-		u32 getTexelETC(bool hasAlpha, u32 u, u32 v, u32 width, std::span<const u8> data);
-		u32 decodeETC(u32 alpha, u32 u, u32 v, u64 colourData);
 	};
 }  // namespace Metal
