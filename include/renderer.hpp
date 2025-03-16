@@ -86,6 +86,10 @@ class Renderer {
 	// Called to notify the core to use OpenGL ES and not desktop GL
 	virtual void setupGLES() {}
 
+	// Only relevant for Metal renderer on iOS
+	// Passes a SwiftUI MTKView's layer (CAMetalLayer) to the renderer
+	virtual void setMTKLayer(void* layer) {};
+
 	// This function is called on every draw call before parsing vertex data.
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between
 	// ubershaders and shadergen, and so on.
