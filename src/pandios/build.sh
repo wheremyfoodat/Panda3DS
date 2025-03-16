@@ -16,8 +16,9 @@ cd ../..
 cmake -B build -DENABLE_VULKAN=OFF -DBUILD_HYDRA_CORE=ON -DENABLE_USER_BUILD=ON -DCMAKE_TOOLCHAIN_FILE=third_party/ios_toolchain/ios.toolchain.cmake -DPLATFORM=SIMULATORARM64 -DDEPLOYMENT_TARGET="13.0"
 cmake --build build --config ${EMULATOR_BUILD_TYPE}
 
-# Copy the bridging header from the emulator source to the Swift interop module folder
+# Copy the bridging header and emulator dylib to the iOS folder
 cp ./include/ios_driver.h ./src/pandios/Alber/Headers/ios_driver.h
+cp ./build/libAlber.dylib ./src/pandios/
 
 # Come back to the iOS directory, build the SwiftUI xcode project and link them together
 cd src/pandios
