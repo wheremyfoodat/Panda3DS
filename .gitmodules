@@ -1,9 +1,6 @@
 [submodule "third_party/elfio"]
 	path = third_party/elfio
 	url = https://github.com/serge1/ELFIO
-[submodule "third_party/SDL2"]
-	path = third_party/SDL2
-	url = https://github.com/libsdl-org/SDL
 [submodule "third_party/cryptopp/cryptopp"]
 	path = third_party/cryptopp/cryptopp
 	url = https://github.com/weidai11/cryptopp
@@ -85,3 +82,7 @@
 [submodule "third_party/oaknut"]
 	path = third_party/oaknut
 	url = https://github.com/panda3ds-emu/oaknut
+[submodule "third_party/SDL2"]
+	path = third_party/SDL2
+	url = https://github.com/libsdl-org/SDL
+	branch = SDL2
