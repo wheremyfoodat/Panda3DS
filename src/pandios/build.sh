@@ -3,7 +3,7 @@
 # Settings for the SwiftUI frontend
 ARCH=arm64
 CONFIGURATION=Release
-SDK=iphonesimulator18.2
+SDK=iphonesimulator
 
 # Settings for the emulator core
 EMULATOR_BUILD_TYPE=Release
