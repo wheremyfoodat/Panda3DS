@@ -159,6 +159,11 @@ public class AppDataDocumentProvider extends DocumentsProvider {
     }
 
     @Override
+    public void removeDocument(String documentId, String parentDocumentId) throws FileNotFoundException {
+        deleteDocument(documentId);
+    }
+
+    @Override
     public ParcelFileDescriptor openDocument(String documentId, String mode, @Nullable CancellationSignal signal) throws FileNotFoundException {
         return ParcelFileDescriptor.open(obtainFile(documentId), ParcelFileDescriptor.parseMode(mode));
     }
