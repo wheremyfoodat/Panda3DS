@@ -23,10 +23,6 @@ IOS_EXPORT void iosCreateEmulator() {
 	emulator = std::make_unique<Emulator>();
 	hidService = &emulator->getServiceManager().getHID();
 	emulator->initGraphicsContext(nullptr);
-
-	// TODO: Add game selection on iOS frontend
-	auto path = emulator->getAppDataRoot() / "toon_shading.elf";
-	emulator->loadROM(path);
 }
 
 IOS_EXPORT void iosRunFrame(CAMetalLayer* layer) {
@@ -34,4 +30,9 @@ IOS_EXPORT void iosRunFrame(CAMetalLayer* layer) {
 
 	emulator->getRenderer()->setMTKLayer(layerBridged);
 	emulator->runFrame();
+}
+
+IOS_EXPORT void iosLoadROM(NSString* pathNS) {
+    auto path = std::filesystem::path([pathNS UTF8String]);
+    emulator->loadROM(path);
 }
