@@ -51,11 +51,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4F6E8FC42D77C0120025DD0D /* Pandios */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Pandios;
-			sourceTree = "<group>";
-		};
+		4F6E8FC42D77C0120025DD0D /* Pandios */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Pandios; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -202,6 +198,7 @@
 				};
 			};
 			buildConfigurationList = 4F6E8FBD2D77C0120025DD0D /* Build configuration list for PBXProject "Pandios" */;
+			compatibilityVersion = "Xcode 16.0.Superseded.1";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -210,7 +207,6 @@
 			);
 			mainGroup = 4F6E8FB92D77C0120025DD0D;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 70;
 			productRefGroup = 4F6E8FC32D77C0120025DD0D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
