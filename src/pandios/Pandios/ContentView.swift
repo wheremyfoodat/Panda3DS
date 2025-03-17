@@ -22,8 +22,8 @@ class DocumentViewController: UIViewController, DocumentDelegate {
         if let pickedDoc = document {
             let fileURL = pickedDoc.fileURL
             
-            emulatorLock.lock()
             print("Loading ROM", fileURL)
+            emulatorLock.lock()
             iosLoadROM(fileURL.path(percentEncoded: false))
             emulatorLock.unlock()
         }
