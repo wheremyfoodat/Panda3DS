@@ -87,6 +87,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	iconSelect->addItem(tr("Sleepy panda"));
 	iconSelect->addItem(tr("Cow panda"));
 	iconSelect->addItem(tr("The penguin from SkyEmu"));
+	iconSelect->addItem(tr("Unpog"));
 	iconSelect->setCurrentIndex(static_cast<int>(config.frontendSettings.icon));
 
 	connect(iconSelect, &QComboBox::currentIndexChanged, this, [&](int index) {
@@ -483,6 +484,7 @@ void ConfigWindow::setIcon(WindowIcon icon) {
 		case WindowIcon::Rnap: updateIcon(":/docs/img/rnap_icon.png"); break;
 		case WindowIcon::Rcow: updateIcon(":/docs/img/rcow_icon.png"); break;
 		case WindowIcon::SkyEmu: updateIcon(":/docs/img/skyemu_icon.png"); break;
+		case WindowIcon::Runpog: updateIcon(":/docs/img/runpog_icon.png"); break;
 
 		case WindowIcon::Rpog:
 		default: updateIcon(":/docs/img/rpog_icon.png"); break;
