@@ -11,8 +11,9 @@ struct Scheduler {
 		VBlank = 0,          // End of frame event
 		UpdateTimers = 1,    // Update kernel timer objects
 		RunDSP = 2,          // Make the emulated DSP run for one audio frame
-		SignalY2R = 3,       // Signal that a Y2R conversion has finished
-		Panic = 4,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
+		ThreadWakeup = 3,    // A thread is going to wake up and we need to reschedule threads
+		SignalY2R = 4,       // Signal that a Y2R conversion has finished
+		Panic = 5,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
 		TotalNumberOfEvents  // How many event types do we have in total?
 	};
 	static constexpr usize totalNumberOfEvents = static_cast<usize>(EventType::TotalNumberOfEvents);
