@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 
+#include "PICA/pica_hash.hpp"
 #include "PICA/regs.hpp"
 #include "boost/icl/interval.hpp"
 #include "helpers.hpp"
@@ -17,10 +18,14 @@ using Interval = boost::icl::right_open_interval<T>;
 
 namespace Metal {
 	struct Texture {
+		using Hash = PICAHash::HashType;
+
 		MTL::Device* device;
 
 		u32 location;
 		u32 config;  // Magnification/minification filter, wrapping configs, etc
+		Hash hash = Hash(0);
+
 		PICA::TextureFmt format;
 		OpenGL::uvec2 size;
 		bool valid;
@@ -45,7 +50,8 @@ namespace Metal {
 		// For 2 textures to "match" we only care about their locations, formats, and dimensions to match
 		// For other things, such as filtering mode, etc, we can just switch the attributes of the cached texture
 		bool matches(Texture& other) {
-			return location == other.location && format == other.format && size.x() == other.size.x() && size.y() == other.size.y();
+			return location == other.location && hash == other.hash && format == other.format && size.x() == other.size.x() &&
+				   size.y() == other.size.y();
 		}
 
 		void allocate();

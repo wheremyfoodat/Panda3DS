@@ -32,18 +32,14 @@ Emulator::Emulator()
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());
-	setAudioEnabled(config.audioEnabled);
-
-	if (Renderdoc::isSupported() && config.enableRenderdoc) {
-		loadRenderdoc();
-	}
-
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
 		updateDiscord();
 	}
 #endif
+
+	reloadSettings();
 	reset(ReloadOption::NoReload);
 }
 
@@ -460,6 +456,8 @@ void Emulator::reloadSettings() {
 	if (Renderdoc::isSupported() && config.enableRenderdoc && !Renderdoc::isLoaded()) {
 		loadRenderdoc();
 	}
+
+    gpu.getRenderer()->setHashTextures(config.hashTextures);
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	// Reload RPC setting if we're compiling with RPC support
