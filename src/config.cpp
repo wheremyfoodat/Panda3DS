@@ -72,14 +72,14 @@ void EmulatorConfig::load() {
 			auto gpu = gpuResult.unwrap();
 
 			// Get renderer
-			auto rendererName = toml::find_or<std::string>(gpu, "Renderer", "OpenGL");
+			auto rendererName = toml::find_or<std::string>(gpu, "Renderer", Renderer::typeToString(rendererDefault));
 			auto configRendererType = Renderer::typeFromString(rendererName);
 
 			if (configRendererType.has_value()) {
 				rendererType = configRendererType.value();
 			} else {
 				Helpers::warn("Invalid renderer specified: %s\n", rendererName.c_str());
-				rendererType = RendererType::OpenGL;
+				rendererType = rendererDefault;
 			}
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);

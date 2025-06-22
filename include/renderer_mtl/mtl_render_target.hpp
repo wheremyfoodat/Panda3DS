@@ -57,7 +57,7 @@ namespace Metal {
 			} else if (std::is_same<Format_t, PICA::DepthFmt>::value) {
 				pixelFormat = PICA::toMTLPixelFormatDepth((PICA::DepthFmt)format);
 			} else {
-				panic("Invalid format type");
+				Helpers::panic("Invalid format type");
 			}
 
 			MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::alloc()->init();
