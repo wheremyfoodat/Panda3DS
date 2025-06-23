@@ -17,15 +17,12 @@ namespace CFGCommands {
 		GetRegionCanadaUSA = 0x00040000,
 		GetSystemModel = 0x00050000,
 		TranslateCountryInfo = 0x00080080,
-		GetCountryCodeID = 0x000A0040,
-		SetConfigInfoBlk4 = 0x04020082,
 		UpdateConfigNANDSavegame = 0x04030000,
 
 		GetCountryCodeString = 0x00090040,
 		GetCountryCodeID = 0x000A0040,
 		IsFangateSupported = 0x000B0000,
 		SetConfigInfoBlk4 = 0x04020082,
-		UpdateConfigNANDSavegame = 0x04030000,
 		GetLocalFriendCodeSeed = 0x04050000,
 		SecureInfoGetByte101 = 0x04070000,
 	};
