@@ -1,4 +1,5 @@
 #include "services/boss.hpp"
+
 #include "ipc.hpp"
 
 namespace BOSSCommands {
@@ -39,9 +40,7 @@ namespace BOSSCommands {
 	};
 }
 
-void BOSSService::reset() {
-	optoutFlag = 0;
-}
+void BOSSService::reset() { optoutFlag = 0; }
 
 void BOSSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
@@ -84,7 +83,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case 0x04500102:  // Home Menu uses this command, what is this?
 			Helpers::warn("BOSS command 0x04500102");
 
-			mem.write32(messagePointer, IPC::responseHeader(0x450, 1, 0));
+      mem.write32(messagePointer, IPC::responseHeader(0x450, 1, 0));
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 
@@ -126,7 +125,7 @@ void BOSSService::getTaskState(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, 0);    // TaskStatus: Report the task finished successfully
 	mem.write32(messagePointer + 12, 0);  // Current state value for task PropertyID 0x4
-	mem.write8(messagePointer + 16, 0);  // TODO: Figure out what this should be
+	mem.write8(messagePointer + 16, 0);   // TODO: Figure out what this should be
 }
 
 void BOSSService::getTaskStatus(u32 messagePointer) {
@@ -177,15 +176,15 @@ void BOSSService::getErrorCode(u32 messagePointer) {
 	log("BOSS::GetErrorCode (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x2E, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, Result::Success); // No error code
+	mem.write32(messagePointer + 8, Result::Success);  // No error code
 }
 
 void BOSSService::getStorageEntryInfo(u32 messagePointer) {
 	log("BOSS::GetStorageEntryInfo (undocumented)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x30, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // u32, unknown meaning
-	mem.write16(messagePointer + 12, 0); // s16, unknown meaning
+	mem.write32(messagePointer + 8, 0);   // u32, unknown meaning
+	mem.write16(messagePointer + 12, 0);  // s16, unknown meaning
 }
 
 void BOSSService::sendProperty(u32 messagePointer) {
@@ -200,7 +199,6 @@ void BOSSService::sendProperty(u32 messagePointer) {
 	// TODO: Should this do anything else?
 }
 
-
 void BOSSService::receiveProperty(u32 messagePointer) {
 	const u32 id = mem.read32(messagePointer + 4);
 	const u32 size = mem.read32(messagePointer + 8);
@@ -209,13 +207,13 @@ void BOSSService::receiveProperty(u32 messagePointer) {
 	log("BOSS::ReceiveProperty (id = %d, size = %08X, ptr = %08X) (stubbed)\n", id, size, ptr);
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Read size
+	mem.write32(messagePointer + 8, 0);  // Read size
 }
 
 // This seems to accept a KEvent as a parameter and register it for something Spotpass related
 // I need to update the 3DBrew page when it's known what it does properly
 void BOSSService::registerNewArrivalEvent(u32 messagePointer) {
-	const Handle eventHandle = mem.read32(messagePointer + 4); // Kernel event handle to register
+	const Handle eventHandle = mem.read32(messagePointer + 4);  // Kernel event handle to register
 	log("BOSS::RegisterNewArrivalEvent (handle = %X)\n", eventHandle);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
@@ -279,7 +277,7 @@ void BOSSService::getNewArrivalFlag(u32 messagePointer) {
 	log("BOSS::GetNewArrivalFlag (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x7, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, 0); // Flag
+	mem.write8(messagePointer + 8, 0);  // Flag
 }
 
 void BOSSService::startBgImmediate(u32 messagePointer) {

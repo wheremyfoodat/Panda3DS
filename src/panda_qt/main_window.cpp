@@ -22,14 +22,13 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
+	show();
 
 	// We pass a callback to the screen widget that will be triggered every time we resize the screen
 	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
 	setCentralWidget(screen);
 
-	screen->show();
 	appRunning = true;
-
 	// Set our menu bar up
 	menuBar = new QMenuBar(nullptr);
 
@@ -139,6 +138,10 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 			GL::Context* glContext = screen->getGLContext();
 			glContext->MakeCurrent();
 			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
+
+			if (glContext->IsGLES()) {
+				emu->getRenderer()->setupGLES();
+			}
 
 			emu->initGraphicsContext(glContext);
 		} else if (usingVk) {

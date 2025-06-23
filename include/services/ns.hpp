@@ -6,20 +6,20 @@
 #include "result/result.hpp"
 
 class NSService {
-    Memory& mem;
+	Memory& mem;
 	MAKE_LOG_FUNCTION(log, nsLogger)
 
-    // Service commands
-    void launchTitle(u32 messagePointer);
+	// Service commands
+	void launchTitle(u32 messagePointer);
 
-public:
-    enum class Type {
-        S,  // ns:s
-        P,  // ns:p
-        C,  // ns:c
-    };
+  public:
+	enum class Type {
+		S,  // ns:s
+		P,  // ns:p
+		C,  // ns:c
+	};
 
-    NSService(Memory& mem) : mem(mem) {}
-    void reset();
+	NSService(Memory& mem) : mem(mem) {}
+	void reset();
 	void handleSyncRequest(u32 messagePointer, Type type);
 };

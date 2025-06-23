@@ -397,7 +397,7 @@ void APTService::setScreencapPostPermission(u32 messagePointer) {
 void APTService::getSharedFont(u32 messagePointer) {
 	log("APT::GetSharedFont\n");
 
-	constexpr u32 fontVaddr = 0x18000000;
+	const u32 fontVaddr = kernel.getSharedFontVaddr();
 	mem.write32(messagePointer, IPC::responseHeader(0x44, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, fontVaddr);

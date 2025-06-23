@@ -5,6 +5,7 @@
 #include "audio/dsp_core.hpp"
 #include "frontend_settings.hpp"
 #include "renderer.hpp"
+#include "services/region_codes.hpp"
 
 struct AudioDeviceConfig {
 	// Audio curve to use for volumes between 0-100
@@ -48,9 +49,26 @@ struct EmulatorConfig {
 #endif
 	static constexpr bool accelerateShadersDefault = true;
 
+#if defined(__LIBRETRO__)
+	static constexpr bool audioEnabledDefault = true;
+#else
+	static constexpr bool audioEnabledDefault = false;
+#endif
+
+	// We default to OpenGL on all platforms other than iOS
+#if defined(PANDA3DS_IOS)
+	static constexpr RendererType rendererDefault = RendererType::Metal;
+#else
+	static constexpr RendererType rendererDefault = RendererType::OpenGL;
+#endif
+
+	static constexpr bool hashTexturesDefault = true;
+
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
+	bool hashTextures = hashTexturesDefault;
+
 	bool accurateShaderMul = false;
 	bool discordRpcEnabled = false;
 
@@ -58,14 +76,14 @@ struct EmulatorConfig {
 	bool forceShadergenForLights = true;
 	int lightShadergenThreshold = 1;
 
-	RendererType rendererType = RendererType::OpenGL;
+	RendererType rendererType = rendererDefault;
 	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::HLE;
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
 	bool usePortableBuild = false;
 
-	bool audioEnabled = false;
+	bool audioEnabled = audioEnabledDefault;
 	bool vsyncEnabled = true;
 	bool aacEnabled = true;  // Enable AAC audio?
 
@@ -76,6 +94,8 @@ struct EmulatorConfig {
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;
+
+	LanguageCodes systemLanguage = LanguageCodes::English;
 
 	// Default ROM path to open in Qt and misc frontends
 	std::filesystem::path defaultRomPath = "";
@@ -104,4 +124,7 @@ struct EmulatorConfig {
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
 	void save();
+
+	static LanguageCodes languageCodeFromString(std::string inString);
+	static const char* languageCodeToString(LanguageCodes code);
 };

@@ -17,7 +17,8 @@ static retro_input_state_t inputStateCallback;
 static retro_hw_render_callback hwRender;
 static std::filesystem::path savePath;
 
-static bool screenTouched;
+static bool screenTouched = false;
+static bool usingGLES = false;
 
 std::unique_ptr<Emulator> emulator;
 RendererGL* renderer;
@@ -35,15 +36,19 @@ static void* getGLProcAddress(const char* name) {
 }
 
 static void videoResetContext() {
-#ifdef USING_GLES
-	if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
-		Helpers::panic("OpenGL ES init failed");
+	if (usingGLES) {
+		if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
+			Helpers::panic("OpenGL ES init failed");
+		}
+
+		emulator->getRenderer()->setupGLES();
 	}
-#else
-	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
-		Helpers::panic("OpenGL init failed");
+
+	else {
+		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(getGLProcAddress))) {
+			Helpers::panic("OpenGL init failed");
+		}
 	}
-#endif
 
 	emulator->initGraphicsContext(nullptr);
 }
@@ -73,6 +78,7 @@ static bool setHWRender(retro_hw_context_type type) {
 			hwRender.version_minor = 1;
 
 			if (envCallback(RETRO_ENVIRONMENT_SET_HW_RENDER, &hwRender)) {
+				usingGLES = true;
 				return true;
 			}
 			break;
@@ -170,8 +176,12 @@ static void configInit() {
 		{"panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
 																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
+		{"panda3ds_hash_textures", EmulatorConfig::hashTexturesDefault ? "Hash textures (Better graphics, maybe slower); enabled|disabled"
+																	   : "Hash textures (Better graphics, maybe slower); disabled|enabled"},
+
+		{"panda3ds_system_language", "System language; En|Fr|Es|De|It|Pt|Nl|Ru|Ja|Zh|Ko|Tw"},
 		{"panda3ds_dsp_emulation", "DSP emulation; HLE|LLE|Null"},
-		{"panda3ds_use_audio", "Enable audio; disabled|enabled"},
+		{"panda3ds_use_audio", EmulatorConfig::audioEnabledDefault ? "Enable audio; enabled|disabled" : "Enable audio; disabled|enabled"},
 		{"panda3ds_audio_volume", "Audio volume; 100|0|10|20|40|60|80|90|100|120|140|150|180|200"},
 		{"panda3ds_mute_audio", "Mute audio; disabled|enabled"},
 		{"panda3ds_enable_aac", "Enable AAC audio; enabled|disabled"},
@@ -196,6 +206,8 @@ static void configUpdate() {
 	config.shaderJitEnabled = fetchVariableBool("panda3ds_use_shader_jit", EmulatorConfig::shaderJitDefault);
 	config.chargerPlugged = fetchVariableBool("panda3ds_use_charger", true);
 	config.batteryPercentage = fetchVariableRange("panda3ds_battery_level", 5, 100);
+	config.systemLanguage = EmulatorConfig::languageCodeFromString(fetchVariable("panda3ds_system_language", "en"));
+
 	config.dspType = Audio::DSPCore::typeFromString(fetchVariable("panda3ds_dsp_emulation", "null"));
 	config.audioEnabled = fetchVariableBool("panda3ds_use_audio", false);
 	config.aacEnabled = fetchVariableBool("panda3ds_enable_aac", true);
@@ -207,6 +219,7 @@ static void configUpdate() {
 	config.accurateShaderMul = fetchVariableBool("panda3ds_accurate_shader_mul", false);
 	config.useUbershaders = fetchVariableBool("panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault);
 	config.accelerateShaders = fetchVariableBool("panda3ds_accelerate_shaders", EmulatorConfig::accelerateShadersDefault);
+	config.hashTextures = fetchVariableBool("panda3ds_hash_textures", EmulatorConfig::hashTexturesDefault);
 
 	config.forceShadergenForLights = fetchVariableBool("panda3ds_ubershader_lighting_override", true);
 	config.lightShadergenThreshold = fetchVariableRange("panda3ds_ubershader_lighting_override_threshold", 1, 8);
@@ -380,6 +393,8 @@ void retro_run() {
 	emulator->runFrame();
 
 	videoCallback(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
+	// Call audio batch callback
+	emulator->getAudioDevice().renderBatch(audioBatchCallback);
 }
 
 void retro_set_controller_port_device(uint port, uint device) {}

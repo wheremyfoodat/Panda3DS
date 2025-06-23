@@ -122,7 +122,10 @@ void Kernel::mapMemoryBlock() {
 	}
 
 	if (KernelHandles::isSharedMemHandle(block)) {
-		if (block == KernelHandles::FontSharedMemHandle && addr == 0) addr = 0x18000000;
+		if (block == KernelHandles::FontSharedMemHandle && addr == 0) {
+			addr = getSharedFontVaddr();
+		}
+
 		u8* ptr = mem.mapSharedMemory(block, addr, myPerms, otherPerms); // Map shared memory block
 
 		// Pass pointer to shared memory to the appropriate service
@@ -215,4 +218,9 @@ void Kernel::unmapMemoryBlock() {
 
 	Helpers::warn("Stubbed svcUnmapMemoryBlock!");
 	regs[0] = Result::Success;
+}
+
+u32 Kernel::getSharedFontVaddr() {
+	// Place shared font at the very beginning of system FCRAM
+	return mem.getLinearHeapVaddr() + Memory::FCRAM_APPLICATION_SIZE;
 }

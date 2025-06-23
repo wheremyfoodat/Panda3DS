@@ -32,18 +32,14 @@ Emulator::Emulator()
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());
-	setAudioEnabled(config.audioEnabled);
-
-	if (Renderdoc::isSupported() && config.enableRenderdoc) {
-		loadRenderdoc();
-	}
-
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
 		updateDiscord();
 	}
 #endif
+
+	reloadSettings();
 	reset(ReloadOption::NoReload);
 }
 
@@ -105,13 +101,18 @@ std::filesystem::path Emulator::getConfigPath() {
 	if constexpr (Helpers::isAndroid()) {
 		return getAndroidAppPath() / "config.toml";
 	} else {
-		return std::filesystem::current_path() / "config.toml";
+		std::filesystem::path localPath = std::filesystem::current_path() / "config.toml";
+
+		if (std::filesystem::exists(localPath)) {
+			return localPath;
+		} else {
+			return getAppDataRoot() / "config.toml";
+		}
 	}
 }
 #endif
 
 void Emulator::step() {}
-void Emulator::render() {}
 
 // Only resume if a ROM is properly loaded
 void Emulator::resume() {
@@ -455,6 +456,8 @@ void Emulator::reloadSettings() {
 	if (Renderdoc::isSupported() && config.enableRenderdoc && !Renderdoc::isLoaded()) {
 		loadRenderdoc();
 	}
+
+    gpu.getRenderer()->setHashTextures(config.hashTextures);
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	// Reload RPC setting if we're compiling with RPC support

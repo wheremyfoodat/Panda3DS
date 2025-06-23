@@ -1,4 +1,5 @@
 #include "services/ac.hpp"
+
 #include "ipc.hpp"
 
 namespace ACCommands {
@@ -36,7 +37,8 @@ void ACService::handleSyncRequest(u32 messagePointer) {
 		case ACCommands::IsConnected: isConnected(messagePointer); break;
 		case ACCommands::RegisterDisconnectEvent: registerDisconnectEvent(messagePointer); break;
 		case ACCommands::SetClientVersion: setClientVersion(messagePointer); break;
-		default:
+
+    default:
 			mem.write32(messagePointer + 4, Result::Success);
 			Helpers::warn("AC service requested. Command: %08X\n", command);
 			break;
@@ -77,7 +79,7 @@ void ACService::getLastErrorCode(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0A, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Hopefully this means no error?
+	mem.write32(messagePointer + 8, 0);  // Hopefully this means no error?
 }
 
 void ACService::getConnectingInfraPriority(u32 messagePointer) {

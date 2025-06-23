@@ -114,6 +114,7 @@ static std::map<std::string, HorizonHandle> serviceMap = {
 	{ "cfg:u", KernelHandles::CFG_U },
 	{ "cfg:i", KernelHandles::CFG_I },
 	{ "cfg:s", KernelHandles::CFG_S },
+	{ "cfg:nor", KernelHandles::CFG_NOR },
 	{ "csnd:SND", KernelHandles::CSND },
 	{ "dlp:SRVR", KernelHandles::DLP_SRVR },
 	{ "dsp::DSP", KernelHandles::DSP },
@@ -134,6 +135,7 @@ static std::map<std::string, HorizonHandle> serviceMap = {
 	{ "news:u", KernelHandles::NEWS_U },
 	{ "nfc:u", KernelHandles::NFC },
 	{ "ns:s", KernelHandles::NS_S },
+	{ "nwm::EXT", KernelHandles::NWM_EXT },
 	{ "nwm::UDS", KernelHandles::NWM_UDS },
 	{ "nim:aoc", KernelHandles::NIM_AOC },
 	{ "nim:u", KernelHandles::NIM_U },
@@ -223,6 +225,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::CFG_U: cfg.handleSyncRequest(messagePointer, CFGService::Type::U); break;
 		case KernelHandles::CFG_I: cfg.handleSyncRequest(messagePointer, CFGService::Type::I); break;
 		case KernelHandles::CFG_S: cfg.handleSyncRequest(messagePointer, CFGService::Type::S); break;
+		case KernelHandles::CFG_NOR: cfg.handleSyncRequest(messagePointer, CFGService::Type::NOR); break;
 		case KernelHandles::CSND: csnd.handleSyncRequest(messagePointer); break;
 		case KernelHandles::DLP_SRVR: dlp_srvr.handleSyncRequest(messagePointer); break;
 		case KernelHandles::HID: hid.handleSyncRequest(messagePointer); break;
@@ -246,6 +249,7 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::PTM_PLAY: ptm.handleSyncRequest(messagePointer, PTMService::Type::PLAY); break;
 		case KernelHandles::PTM_SYSM: ptm.handleSyncRequest(messagePointer, PTMService::Type::SYSM); break;
 		case KernelHandles::PTM_U: ptm.handleSyncRequest(messagePointer, PTMService::Type::U); break;
+		case KernelHandles::PTM_GETS: ptm.handleSyncRequest(messagePointer, PTMService::Type::GETS); break;
 		case KernelHandles::SOC: soc.handleSyncRequest(messagePointer); break;
 		case KernelHandles::SSL: ssl.handleSyncRequest(messagePointer); break;
 		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;

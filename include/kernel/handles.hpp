@@ -20,6 +20,7 @@ namespace KernelHandles {
 		CFG_U,  // CFG service (Console & region info)
 		CFG_I,
 		CFG_S,     // Used by most system apps in lieu of cfg:u
+		CFG_NOR,   // Used by system settings app
 		CSND,      // Plays audio directly from PCM samples
 		DLP_SRVR,  // Download Play: Server. Used for network play.
 		DSP,       // DSP service (Used for audio decoding and output)
@@ -39,9 +40,10 @@ namespace KernelHandles {
 		NIM_U,     // Updates
 		NDM,       // ?????
 		NS_S,      // Nintendo Shell service
+		NWM_EXT,   // ?????
 		NWM_UDS,   // Local multiplayer
 		NEWS_S,    // news:u on steroids
-		NEWS_U,    // This service literally has 1 command (AddNotification) and I don't even understand what it does
+		NEWS_U,    // This service literally has 1 command (AddNotification)
 		PTM_U,     // PTM service (Used for accessing various console info, such as battery, shell and pedometer state)
 		PTM_SYSM,  // PTM system service
 		PTM_PLAY,  // PTM Play service, used for retrieving play history
@@ -85,6 +87,8 @@ namespace KernelHandles {
 			case CECD: return "CECD";
 			case CFG_U: return "CFG:U";
 			case CFG_I: return "CFG:I";
+			case CFG_S: return "CFG:S";
+			case CFG_NOR: return "CFG:NOR";
 			case CSND: return "CSND";
 			case DSP: return "DSP";
 			case DLP_SRVR: return "DLP::SRVR";
@@ -102,6 +106,7 @@ namespace KernelHandles {
 			case NDM: return "NDM";
 			case NEWS_S: return "NEWS_S";
 			case NEWS_U: return "NEWS_U";
+			case NWM_EXT: return "nwm::EXT";
 			case NWM_UDS: return "nwm::UDS";
 			case NFC: return "NFC";
 			case NIM_AOC: return "NIM:AOC";
@@ -109,6 +114,7 @@ namespace KernelHandles {
 			case PTM_U: return "PTM:U";
 			case PTM_SYSM: return "PTM:SYSM";
 			case PTM_PLAY: return "PTM:PLAY";
+			case PTM_GETS: return "PTM:GETS";
 			case SOC: return "SOC";
 			case SSL: return "SSL";
 			case Y2R: return "Y2R";

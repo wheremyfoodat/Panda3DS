@@ -1,4 +1,5 @@
 #include "services/ptm.hpp"
+
 #include "ipc.hpp"
 
 namespace PTMCommands {
@@ -128,7 +129,7 @@ void PTMService::getTotalStepCount(u32 messagePointer) {
 	log("PTM::GetTotalStepCount\n");
 	mem.write32(messagePointer, IPC::responseHeader(0xC, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 3); // We walk a lot
+	mem.write32(messagePointer + 8, 3);  // We walk a lot
 }
 
 void PTMService::configureNew3DSCPU(u32 messagePointer) {

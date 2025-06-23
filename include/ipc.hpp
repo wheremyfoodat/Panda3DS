@@ -5,7 +5,7 @@ namespace IPC {
 	namespace BufferType {
 		enum : std::uint32_t {
 			Send = 1,
-			Receive,
+			Receive = 2,
 		};
 	}
 

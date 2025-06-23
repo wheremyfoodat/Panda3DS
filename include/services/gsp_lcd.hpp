@@ -6,9 +6,6 @@
 #include "result/result.hpp"
 
 class LCDService {
-	using Handle = HorizonHandle;
-
-	Handle handle = KernelHandles::LCD;
 	Memory& mem;
 	MAKE_LOG_FUNCTION(log, gspLCDLogger)
 

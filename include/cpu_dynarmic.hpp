@@ -181,5 +181,7 @@ class CPU {
     void addTicks(u64 ticks) { env.AddTicks(ticks); }
 
     void clearCache() { jit->ClearCache(); }
+    void clearCacheRange(u32 start, u32 size) { jit->InvalidateCacheRange(start, size); }
+
     void runFrame();
 };
