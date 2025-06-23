@@ -9,6 +9,7 @@
 #undef NO
 
 #include "PICA/gpu.hpp"
+#include "PICA/pica_hash.hpp"
 #include "SDL_metal.h"
 
 using namespace PICA;
@@ -729,6 +730,19 @@ void RendererMTL::bindTexturesToSlots() {
 
 		if (addr != 0) [[likely]] {
 			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+
+			if (hashTextures) {
+				const u8* startPointer = gpu.getPointerPhys<u8>(targetTex.location);
+				const usize sizeInBytes = targetTex.sizeInBytes();
+
+				if (startPointer == nullptr || (sizeInBytes > 0 && gpu.getPointerPhys<u8>(targetTex.location + sizeInBytes - 1) == nullptr))
+					[[unlikely]] {
+					Helpers::warn("Out-of-bounds texture fetch");
+				} else {
+					targetTex.hash = PICAHash::computeHash((const char*)startPointer, sizeInBytes);
+				}
+			}
+
 			auto tex = getTexture(targetTex);
 			commandEncoder.setFragmentTexture(tex.texture, i);
 			commandEncoder.setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);

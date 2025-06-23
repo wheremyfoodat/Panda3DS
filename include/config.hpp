@@ -62,9 +62,13 @@ struct EmulatorConfig {
 	static constexpr RendererType rendererDefault = RendererType::OpenGL;
 #endif
 
+	static constexpr bool hashTexturesDefault = true;
+
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
+	bool hashTextures = hashTexturesDefault;
+
 	bool accurateShaderMul = false;
 	bool discordRpcEnabled = false;
 

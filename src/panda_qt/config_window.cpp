@@ -231,6 +231,11 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	connectCheckbox(accelerateShaders, config.accelerateShaders);
 	gpuLayout->addRow(accelerateShaders);
 
+	QCheckBox* hashTextures = new QCheckBox(tr("Hash textures"));
+	hashTextures->setToolTip(tr("Enable this to reduce texture mismatches at the cost of slightly lower performance"));
+	connectCheckbox(hashTextures, config.hashTextures);
+	gpuLayout->addRow(hashTextures);
+
 	QCheckBox* forceShadergenForLights = new QCheckBox(tr("Force shadergen when rendering lights"));
 	connectCheckbox(forceShadergenForLights, config.forceShadergenForLights);
 	gpuLayout->addRow(forceShadergenForLights);
