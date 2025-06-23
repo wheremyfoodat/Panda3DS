@@ -8,6 +8,7 @@
 #include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/pica_frag_uniforms.hpp"
+#include "PICA/pica_hash.hpp"
 #include "PICA/pica_simd.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_decompiler.hpp"
@@ -359,17 +360,29 @@ void RendererGL::bindTexturesToSlots() {
 		const u32 width = getBits<16, 11>(dim);
 		const u32 addr = (regs[ioBase + 4] & 0x0FFFFFFF) << 3;
 		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
-
 		glActiveTexture(GL_TEXTURE0 + i);
 
 		if (addr != 0) [[likely]] {
 			Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+
+			if (hashTextures) {
+				const u8* startPointer = gpu.getPointerPhys<u8>(targetTex.location);
+				const usize sizeInBytes = targetTex.sizeInBytes();
+
+				if (startPointer == nullptr || (sizeInBytes > 0 && gpu.getPointerPhys<u8>(targetTex.location + sizeInBytes - 1) == nullptr))
+					[[unlikely]] {
+					Helpers::warn("Out-of-bounds texture fetch");
+				} else {
+					targetTex.hash = PICAHash::computeHash((const char*)startPointer, sizeInBytes);
+				}
+			}
+
 			OpenGL::Texture tex = getTexture(targetTex);
 			tex.bind();
 		} else {
-			// Mapping a texture from NULL. PICA seems to read the last sampled colour, but for now we will display a black texture instead since it is far easier.
-			// Games that do this don't really care what it does, they just expect the PICA to not crash, since it doesn't have a PU/MMU and can do all sorts of
-			// Weird invalid memory accesses without crashing
+			// Mapping a texture from NULL. PICA seems to read the last sampled colour, but for now we will display a black texture instead since it
+			// is far easier. Games that do this don't really care what it does, they just expect the PICA to not crash, since it doesn't have a
+			// PU/MMU and can do all sorts of Weird invalid memory accesses without crashing
 			blankTexture.bind();
 		}
 	}
