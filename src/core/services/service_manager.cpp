@@ -6,10 +6,11 @@
 #include "kernel.hpp"
 
 ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel),
-	  cfg(mem, config), csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel, config), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem),
+	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel), cfg(mem),
+	  csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel, config), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem),
 	  fs(mem, kernel, config), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem, kernel), mcu_hwc(mem, config), mic(mem, kernel),
-	  nfc(mem, kernel), nim(mem), ndm(mem), news_u(mem), ns(mem), nwm_uds(mem, kernel), ptm(mem, config), soc(mem), ssl(mem), y2r(mem, kernel) {}
+	  nfc(mem, kernel), nim(mem, kernel), ndm(mem), news_s(mem), news_u(mem), ns(mem), nwm_uds(mem, kernel), ptm(mem, config), soc(mem), ssl(mem),
+	  y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -37,6 +38,7 @@ void ServiceManager::reset() {
 	mcu_hwc.reset();
 	mic.reset();
 	ndm.reset();
+	news_s.reset();
 	news_u.reset();
 	nfc.reset();
 	nim.reset();
@@ -107,6 +109,7 @@ static std::map<std::string, HorizonHandle> serviceMap = {
 	{ "boss:U", KernelHandles::BOSS },
 	{ "boss:P", KernelHandles::BOSS },
 	{ "cam:u", KernelHandles::CAM },
+	{ "cecd:s", KernelHandles::CECD },
 	{ "cecd:u", KernelHandles::CECD },
 	{ "cfg:u", KernelHandles::CFG_U },
 	{ "cfg:i", KernelHandles::CFG_I },
@@ -128,12 +131,14 @@ static std::map<std::string, HorizonHandle> serviceMap = {
 	{ "mcu::HWC", KernelHandles::MCU_HWC },
 	{ "mic:u", KernelHandles::MIC },
 	{ "ndm:u", KernelHandles::NDM },
+	{ "news:s", KernelHandles::NEWS_S },
 	{ "news:u", KernelHandles::NEWS_U },
 	{ "nfc:u", KernelHandles::NFC },
 	{ "ns:s", KernelHandles::NS_S },
 	{ "nwm::EXT", KernelHandles::NWM_EXT },
 	{ "nwm::UDS", KernelHandles::NWM_UDS },
-	{ "nim:aoc", KernelHandles::NIM },
+	{ "nim:aoc", KernelHandles::NIM_AOC },
+	{ "nim:u", KernelHandles::NIM_U },
 	{ "ptm:u", KernelHandles::PTM_U }, // TODO: ptm:u and ptm:sysm have very different command sets
 	{ "ptm:sysm", KernelHandles::PTM_SYSM },
 	{ "ptm:play", KernelHandles::PTM_PLAY },
@@ -233,11 +238,14 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::MCU_HWC: mcu_hwc.handleSyncRequest(messagePointer); break;
 		case KernelHandles::MIC: mic.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NFC: nfc.handleSyncRequest(messagePointer); break;
-		case KernelHandles::NIM: nim.handleSyncRequest(messagePointer); break;
+		case KernelHandles::NIM_AOC: nim.handleSyncRequest(messagePointer, NIMService::Type::AOC); break;
+		case KernelHandles::NIM_U: nim.handleSyncRequest(messagePointer, NIMService::Type::U); break;
 		case KernelHandles::NDM: ndm.handleSyncRequest(messagePointer); break;
+		case KernelHandles::NEWS_S: news_s.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NEWS_U: news_u.handleSyncRequest(messagePointer); break;
 		case KernelHandles::NS_S: ns.handleSyncRequest(messagePointer, NSService::Type::S); break;
 		case KernelHandles::NWM_UDS: nwm_uds.handleSyncRequest(messagePointer); break;
+		case KernelHandles::PTM_GETS: ptm.handleSyncRequest(messagePointer, PTMService::Type::GETS); break;
 		case KernelHandles::PTM_PLAY: ptm.handleSyncRequest(messagePointer, PTMService::Type::PLAY); break;
 		case KernelHandles::PTM_SYSM: ptm.handleSyncRequest(messagePointer, PTMService::Type::SYSM); break;
 		case KernelHandles::PTM_U: ptm.handleSyncRequest(messagePointer, PTMService::Type::U); break;

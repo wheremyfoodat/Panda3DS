@@ -108,6 +108,7 @@ u8 Memory::read8(u32 vaddr) {
 				return getBatteryState(chargerPlugged, charging, batteryLevel);
 			}
 			case ConfigMem::EnvInfo: return envInfo;
+			case ConfigMem::PrevFirm: return 1;
 			case ConfigMem::HardwareType: return ConfigMem::HardwareCodes::Product;
 			case ConfigMem::KernelVersionMinor: return u8(kernelVersion & 0xff);
 			case ConfigMem::KernelVersionMajor: return u8(kernelVersion >> 8);
@@ -129,7 +130,7 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::WifiMac + 4:
 			case ConfigMem::WifiMac + 5: return MACAddress[vaddr - ConfigMem::WifiMac];
 
-			default: Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
+			default: return 0; Helpers::panic("Unimplemented 8-bit read, addr: %08X", vaddr);
 		}
 	}
 }
@@ -144,7 +145,7 @@ u16 Memory::read16(u32 vaddr) {
 	} else {
 		switch (vaddr) {
 			case ConfigMem::WifiMac + 4: return (MACAddress[5] << 8) | MACAddress[4];  // Wifi MAC: Last 2 bytes of MAC Address
-			default: Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
+			default: return 0; Helpers::panic("Unimplemented 16-bit read, addr: %08X", vaddr);
 		}
 	}
 }
@@ -195,6 +196,7 @@ u32 Memory::read32(u32 vaddr) {
 					return *(u32*)&vram[vaddr - VirtualAddrs::VramStart];
 				}
 
+				return 0;
 				Helpers::panic("Unimplemented 32-bit read, addr: %08X", vaddr);
 				break;
 		}

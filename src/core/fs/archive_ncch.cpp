@@ -97,8 +97,10 @@ std::optional<u32> NCCHArchive::readFile(FileSession* file, u64 offset, u32 size
 		} else if (highProgramID == systemDataArchive && lowProgramID == badWordList) {
 			fileData = std::vector<u8>(std::begin(BAD_WORD_LIST_DATA), std::end(BAD_WORD_LIST_DATA));
 		} else {
-			Helpers::panic("[NCCH archive] Read from unimplemented NCCH archive file. High program ID: %08X, low ID: %08X",
+			Helpers::warn("[NCCH archive] Read from unimplemented NCCH archive file. High program ID: %08X, low ID: %08X",
 				highProgramID, lowProgramID);
+
+			return std::nullopt;
 		}
 
 		if (offset >= fileData.size()) {

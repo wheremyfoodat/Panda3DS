@@ -33,48 +33,48 @@ void PTMService::handleSyncRequest(u32 messagePointer, PTMService::Type type) {
 
 	// ptm:play functions
 	switch (command) {
-		case PTMCommands::ConfigureNew3DSCPU: configureNew3DSCPU(messagePointer); break;
-		case PTMCommands::GetAdapterState: getAdapterState(messagePointer); break;
-		case PTMCommands::GetBatteryChargeState: getBatteryChargeState(messagePointer); break;
-		case PTMCommands::GetBatteryLevel: getBatteryLevel(messagePointer); break;
-		case PTMCommands::GetPedometerState: getPedometerState(messagePointer); break;
-		case PTMCommands::GetStepHistory: getStepHistory(messagePointer); break;
-		case PTMCommands::GetStepHistoryAll: getStepHistoryAll(messagePointer); break;
-		case PTMCommands::GetTotalStepCount: getTotalStepCount(messagePointer); break;
+			case PTMCommands::ConfigureNew3DSCPU: configureNew3DSCPU(messagePointer); break;
+			case PTMCommands::GetAdapterState: getAdapterState(messagePointer); break;
+			case PTMCommands::GetBatteryChargeState: getBatteryChargeState(messagePointer); break;
+			case PTMCommands::GetBatteryLevel: getBatteryLevel(messagePointer); break;
+			case PTMCommands::GetPedometerState: getPedometerState(messagePointer); break;
+			case PTMCommands::GetStepHistory: getStepHistory(messagePointer); break;
+			case PTMCommands::GetStepHistoryAll: getStepHistoryAll(messagePointer); break;
+			case PTMCommands::GetTotalStepCount: getTotalStepCount(messagePointer); break;
 
-		default:
-			// ptm:play-only functions
-			if (type == Type::PLAY) {
-				switch (command) {
-					case PTMCommands::GetPlayHistory:
-					case PTMCommands::GetPlayHistoryStart:
-					case PTMCommands::GetPlayHistoryLength:
-						mem.write32(messagePointer + 4, Result::Success);
-						mem.write64(messagePointer + 8, 0);
-						Helpers::warn("Stubbed PTM:PLAY service requested. Command: %08X\n", command);
-						break;
+			default:
+				// ptm:play-only functions
+				if (type == Type::PLAY) {
+					switch (command) {
+						case PTMCommands::GetPlayHistory:
+						case PTMCommands::GetPlayHistoryStart:
+						case PTMCommands::GetPlayHistoryLength:
+							mem.write32(messagePointer + 4, Result::Success);
+							mem.write64(messagePointer + 8, 0);
+							Helpers::warn("Stubbed PTM:PLAY service requested. Command: %08X\n", command);
+							break;
 
-					default: Helpers::panic("PTM PLAY service requested. Command: %08X\n", command); break;
+						default: Helpers::panic("PTM PLAY service requested. Command: %08X\n", command); break;
+					}
+				} else if (type == Type::GETS) {
+					switch (command) {
+						case PTMCommands::GetSystemTime: getSystemTime(messagePointer); break;
+
+						default: Helpers::panic("PTM GETS service requested. Command: %08X\n", command); break;
+					}
+				} else if (type == Type::SYSM) {
+					switch (command) {
+						case PTMCommands::GetSoftwareClosedFlag: getSoftwareClosedFlag(messagePointer); break;
+						case PTMCommands::ClearSoftwareClosedFlag: clearSoftwareClosedFlag(messagePointer); break;
+
+						default:
+							mem.write32(messagePointer + 4, Result::Success);
+							Helpers::warn("PTM SYSM service requested. Command: %08X\n", command);
+							break;
+					}
+				} else {
+					Helpers::panic("PTM service requested. Command: %08X\n", command);
 				}
-			} else if (type == Type::GETS) {
-				switch (command) {
-					case PTMCommands::GetSystemTime: getSystemTime(messagePointer); break;
-
-					default: Helpers::panic("PTM GETS service requested. Command: %08X\n", command); break;
-				}
-			} else if (type == Type::SYSM) {
-				switch (command) {
-					case PTMCommands::GetSoftwareClosedFlag: getSoftwareClosedFlag(messagePointer); break;
-					case PTMCommands::ClearSoftwareClosedFlag: clearSoftwareClosedFlag(messagePointer); break;
-
-					default:
-						mem.write32(messagePointer + 4, Result::Success);
-						Helpers::warn("PTM SYSM service requested. Command: %08X\n", command);
-						break;
-				}
-			} else {
-				Helpers::panic("PTM service requested. Command: %08X\n", command);
-			}
 	}
 }
 
@@ -140,8 +140,6 @@ void PTMService::configureNew3DSCPU(u32 messagePointer) {
 
 void PTMService::getSystemTime(u32 messagePointer) {
 	log("PTM::GetSystemTime [stubbed]\n");
-	Helpers::warn("PTM::GetSystemTime called");
-
 	mem.write32(messagePointer, IPC::responseHeader(0x401, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write64(messagePointer + 8, 0);  // Milliseconds since 2000?

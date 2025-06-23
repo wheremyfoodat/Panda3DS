@@ -17,6 +17,9 @@ namespace CFGCommands {
 		GetRegionCanadaUSA = 0x00040000,
 		GetSystemModel = 0x00050000,
 		TranslateCountryInfo = 0x00080080,
+		GetCountryCodeID = 0x000A0040,
+		SetConfigInfoBlk4 = 0x04020082,
+		UpdateConfigNANDSavegame = 0x04030000,
 
 		GetCountryCodeString = 0x00090040,
 		GetCountryCodeID = 0x000A0040,
@@ -47,7 +50,6 @@ void CFGService::reset() {}
 
 void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 	const u32 command = mem.read32(messagePointer);
-
 	if (type != Type::NOR) {
 		switch (command) {
 			case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;
@@ -118,8 +120,7 @@ void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 	u32 size = mem.read32(messagePointer + 4);
 	u32 blockID = mem.read32(messagePointer + 8);
 	u32 output = mem.read32(messagePointer + 16); // Pointer to write the output data to
-	log("CFG::GetConfigInfoBlk2 (size = %X, block ID = %X, output pointer = %08X\n", size, blockID, output);
-
+	log("CFG::GetConfigInfoBlk2 (size = %X, block ID = %X, output pointer = %08X)\n", size, blockID, output);
 
 	getConfigInfo(output, blockID, size, 0x2);
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 2));
@@ -130,7 +131,7 @@ void CFGService::getConfigInfoBlk8(u32 messagePointer, u32 commandWord) {
 	u32 size = mem.read32(messagePointer + 4);
 	u32 blockID = mem.read32(messagePointer + 8);
 	u32 output = mem.read32(messagePointer + 16);  // Pointer to write the output data to
-	log("CFG::GetConfigInfoBlk8 (size = %X, block ID = %X, output pointer = %08X\n", size, blockID, output);
+	log("CFG::GetConfigInfoBlk8 (size = %X, block ID = %X, output pointer = %08X)\n", size, blockID, output);
 
 	getConfigInfo(output, blockID, size, 0x8);
 	mem.write32(messagePointer, IPC::responseHeader(commandWord >> 16, 1, 2));

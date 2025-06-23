@@ -38,7 +38,7 @@ void ACService::handleSyncRequest(u32 messagePointer) {
 		case ACCommands::RegisterDisconnectEvent: registerDisconnectEvent(messagePointer); break;
 		case ACCommands::SetClientVersion: setClientVersion(messagePointer); break;
 
-		default:
+    default:
 			mem.write32(messagePointer + 4, Result::Success);
 			Helpers::warn("AC service requested. Command: %08X\n", command);
 			break;

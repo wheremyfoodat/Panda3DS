@@ -24,7 +24,7 @@ void NSService::handleSyncRequest(u32 messagePointer, Type type) {
 void NSService::launchTitle(u32 messagePointer) {
 	const u64 titleID = mem.read64(messagePointer + 4);
 	const u32 launchFlags = mem.read32(messagePointer + 12);
-	Helpers::warn("NS::LaunchTitle (title ID = %llX, launch flags = %X) (stubbed)", titleID, launchFlags);
+	log("NS::LaunchTitle (title ID = %llX, launch flags = %X) (stubbed)\n", titleID, launchFlags);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
