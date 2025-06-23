@@ -51,6 +51,9 @@ class Renderer {
 	u32 outputWindowWidth = 400;
 	u32 outputWindowHeight = 240 * 2;
 
+	// Should hw renderers hash textures? Stored separately from emulatorConfig because we'll be accessing it constantly, might be merged eventually
+	bool hashTextures = false;
+
 	EmulatorConfig* emulatorConfig = nullptr;
 
 	void doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize, u32 inputWidth, u32 inputGap, u32 outputWidth, u32 outputGap);
@@ -86,6 +89,10 @@ class Renderer {
 	// Called to notify the core to use OpenGL ES and not desktop GL
 	virtual void setupGLES() {}
 
+	// Only relevant for Metal renderer on iOS
+	// Passes a SwiftUI MTKView's layer (CAMetalLayer) to the renderer
+	virtual void setMTKLayer(void* layer) {};
+
 	// This function is called on every draw call before parsing vertex data.
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between
 	// ubershaders and shadergen, and so on.
@@ -119,4 +126,5 @@ class Renderer {
 	}
 
 	void setConfig(EmulatorConfig* config) { emulatorConfig = config; }
+	void setHashTextures(bool setting) { hashTextures = setting; }
 };

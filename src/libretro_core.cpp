@@ -176,6 +176,9 @@ static void configInit() {
 		{"panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault ? "Use ubershaders (No stutter, maybe slower); enabled|disabled"
 																	  : "Use ubershaders (No stutter, maybe slower); disabled|enabled"},
 		{"panda3ds_use_vsync", "Enable VSync; enabled|disabled"},
+		{"panda3ds_hash_textures", EmulatorConfig::hashTexturesDefault ? "Hash textures (Better graphics, maybe slower); enabled|disabled"
+																	   : "Hash textures (Better graphics, maybe slower); disabled|enabled"},
+
 		{"panda3ds_system_language", "System language; En|Fr|Es|De|It|Pt|Nl|Ru|Ja|Zh|Ko|Tw"},
 		{"panda3ds_dsp_emulation", "DSP emulation; HLE|LLE|Null"},
 		{"panda3ds_use_audio", EmulatorConfig::audioEnabledDefault ? "Enable audio; enabled|disabled" : "Enable audio; disabled|enabled"},
@@ -216,6 +219,7 @@ static void configUpdate() {
 	config.accurateShaderMul = fetchVariableBool("panda3ds_accurate_shader_mul", false);
 	config.useUbershaders = fetchVariableBool("panda3ds_use_ubershader", EmulatorConfig::ubershaderDefault);
 	config.accelerateShaders = fetchVariableBool("panda3ds_accelerate_shaders", EmulatorConfig::accelerateShadersDefault);
+	config.hashTextures = fetchVariableBool("panda3ds_hash_textures", EmulatorConfig::hashTexturesDefault);
 
 	config.forceShadergenForLights = fetchVariableBool("panda3ds_ubershader_lighting_override", true);
 	config.lightShadergenThreshold = fetchVariableRange("panda3ds_ubershader_lighting_override_threshold", 1, 8);

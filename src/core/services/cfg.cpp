@@ -18,6 +18,7 @@ namespace CFGCommands {
 		GetSystemModel = 0x00050000,
 		TranslateCountryInfo = 0x00080080,
 
+		GetCountryCodeString = 0x00090040,
 		GetCountryCodeID = 0x000A0040,
 		IsFangateSupported = 0x000B0000,
 		SetConfigInfoBlk4 = 0x04020082,
@@ -50,6 +51,7 @@ void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 	if (type != Type::NOR) {
 		switch (command) {
 			case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;
+			case CFGCommands::GetCountryCodeString: getCountryCodeString(messagePointer); break;
 			case CFGCommands::GetCountryCodeID: getCountryCodeID(messagePointer); break;
 			case CFGCommands::GetRegionCanadaUSA: getRegionCanadaUSA(messagePointer); break;
 			case CFGCommands::GetSystemModel: getSystemModel(messagePointer); break;
@@ -313,6 +315,24 @@ void CFGService::getCountryCodeID(u32 messagePointer) {
 		mem.write32(messagePointer + 4, Result::CFG::NotFound);
 		mem.write16(messagePointer + 8, 0xFF);
 	}
+}
+
+void CFGService::getCountryCodeString(u32 messagePointer) {
+	const u16 id = mem.read16(messagePointer + 4);
+	log("CFG::getCountryCodeString (id = %04X)\n", id);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x09, 2, 0));
+
+	for (auto [string, code] : countryCodeToTableIDMap) {
+		if (code == id) {
+			mem.write32(messagePointer + 4, Result::Success);
+			mem.write32(messagePointer + 8, u32(string));
+			return;
+		}
+	}
+
+	// Code is not a valid country code, return an appropriate error
+	mem.write32(messagePointer + 4, 0xD90103FA);
 }
 
 void CFGService::secureInfoGetByte101(u32 messagePointer) {

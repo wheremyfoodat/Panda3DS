@@ -55,9 +55,20 @@ struct EmulatorConfig {
 	static constexpr bool audioEnabledDefault = false;
 #endif
 
+	// We default to OpenGL on all platforms other than iOS
+#if defined(PANDA3DS_IOS)
+	static constexpr RendererType rendererDefault = RendererType::Metal;
+#else
+	static constexpr RendererType rendererDefault = RendererType::OpenGL;
+#endif
+
+	static constexpr bool hashTexturesDefault = true;
+
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
+	bool hashTextures = hashTexturesDefault;
+
 	bool accurateShaderMul = false;
 	bool discordRpcEnabled = false;
 
@@ -65,7 +76,7 @@ struct EmulatorConfig {
 	bool forceShadergenForLights = true;
 	int lightShadergenThreshold = 1;
 
-	RendererType rendererType = RendererType::OpenGL;
+	RendererType rendererType = rendererDefault;
 	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::HLE;
 
 	bool sdCardInserted = true;

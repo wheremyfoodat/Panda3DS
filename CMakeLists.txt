@@ -65,6 +65,13 @@ option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
+option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
+
+# Discord RPC & LuaJIT are currently not supported on iOS
+if(IOS)
+    set(ENABLE_DISCORD_RPC OFF)
+    set(ENABLE_LUAJIT OFF)
+endif()
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -320,8 +327,8 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp src/renderdoc.cpp
-                 src/frontend_settings.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/renderdoc.cpp
+                 src/frontend_settings.cpp src/miniaudio/miniaudio.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -409,6 +416,15 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
                  include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp
 )
+
+if(IOS)
+    set(SOURCE_FILES ${SOURCE_FILES} src/miniaudio/miniaudio.m)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS=1")
+
+    if (IOS_SIMULATOR_BUILD)
+        target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS_SIMULATOR=1")
+    endif()
+endif()
 
 cmrc_add_resource_library(
     resources_console_fonts
@@ -588,14 +604,16 @@ if(ENABLE_METAL AND APPLE)
         include/renderer_mtl/mtl_common.hpp
         include/renderer_mtl/pica_to_mtl.hpp
         include/renderer_mtl/objc_helper.hpp
+        include/renderer_mtl/texture_decoder.hpp
     )
 
     set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
         src/core/renderer_mtl/renderer_mtl.cpp
         src/core/renderer_mtl/mtl_texture.cpp
-        src/core/renderer_mtl/mtl_etc1.cpp
         src/core/renderer_mtl/mtl_lut_texture.cpp
+        src/core/renderer_mtl/pica_to_mtl.cpp
         src/core/renderer_mtl/objc_helper.mm
+        src/core/renderer_mtl/texture_decoder.cpp
         src/host_shaders/metal_shaders.metal
         src/host_shaders/metal_blit.metal
         #src/host_shaders/metal_copy_to_lut_texture.metal
@@ -609,15 +627,26 @@ if(ENABLE_METAL AND APPLE)
         set(SHADER_SOURCE "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metal")
         set(SHADER_IR "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.ir")
         set(SHADER_METALLIB "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metallib")
+
+        # MacOS, iOS and the iOS simulator all use different compilation options for shaders
+        set(MetalSDK "macosx")
+        if(IOS)
+            if (IOS_SIMULATOR_BUILD)
+                set(MetalSDK "iphonesimulator")
+            else()
+                set(MetalSDK "iphoneos")
+            endif()
+        endif()
+
         # TODO: only include sources in debug builds
         add_custom_command(
             OUTPUT ${SHADER_IR}
-            COMMAND xcrun -sdk macosx metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
+            COMMAND xcrun -sdk ${MetalSDK} metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
             DEPENDS ${SHADER_SOURCE}
             VERBATIM)
         add_custom_command(
             OUTPUT ${SHADER_METALLIB}
-            COMMAND xcrun -sdk macosx metallib -o ${SHADER_METALLIB} ${SHADER_IR}
+            COMMAND xcrun -sdk ${MetalSDK} metallib -o ${SHADER_METALLIB} ${SHADER_IR}
             DEPENDS ${SHADER_IR}
             VERBATIM)
         set(RENDERER_MTL_HOST_SHADERS_SOURCES ${RENDERER_MTL_HOST_SHADERS_SOURCES} ${SHADER_METALLIB})
@@ -646,7 +675,7 @@ if(ENABLE_METAL AND APPLE)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
     target_include_directories(AlberCore PRIVATE third_party/metal-cpp)
     # TODO: check if all of them are needed
-    target_link_libraries(AlberCore PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
+    target_link_libraries(AlberCore PUBLIC "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
@@ -752,11 +781,14 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/img/rpog_icon.png docs/img/rsyn_icon.png
                 docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
                 docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
-                docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png
+                docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png docs/img/runpog_icon.png
         )
 
         # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable
-        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts docs/translations/nl.ts)
+        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts docs/translations/nl.ts
+                            docs/translations/sv.ts
+	)
+
         set_source_files_properties(${TRANSLATIONS_TS} PROPERTIES OUTPUT_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/translations")
         qt_add_translation(TRANSLATIONS_QM ${TRANSLATIONS_TS})
 
@@ -781,7 +813,13 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
-    add_library(Alber SHARED src/hydra_core.cpp)
+
+    set(SHARED_SOURCE_FILES src/hydra_core.cpp)
+    if(IOS)
+        set(SHARED_SOURCE_FILES ${SHARED_SOURCE_FILES} src/ios_driver.mm)
+    endif()
+
+    add_library(Alber SHARED ${SHARED_SOURCE_FILES})
     target_link_libraries(Alber PUBLIC AlberCore)
 elseif(BUILD_LIBRETRO_CORE)
     include_directories(third_party/libretro/include)

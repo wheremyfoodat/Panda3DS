@@ -72,14 +72,14 @@ void EmulatorConfig::load() {
 			auto gpu = gpuResult.unwrap();
 
 			// Get renderer
-			auto rendererName = toml::find_or<std::string>(gpu, "Renderer", "OpenGL");
+			auto rendererName = toml::find_or<std::string>(gpu, "Renderer", Renderer::typeToString(rendererDefault));
 			auto configRendererType = Renderer::typeFromString(rendererName);
 
 			if (configRendererType.has_value()) {
 				rendererType = configRendererType.value();
 			} else {
 				Helpers::warn("Invalid renderer specified: %s\n", rendererName.c_str());
-				rendererType = RendererType::OpenGL;
+				rendererType = rendererDefault;
 			}
 
 			shaderJitEnabled = toml::find_or<toml::boolean>(gpu, "EnableShaderJIT", shaderJitDefault);
@@ -90,6 +90,7 @@ void EmulatorConfig::load() {
 
 			forceShadergenForLights = toml::find_or<toml::boolean>(gpu, "ForceShadergenForLighting", true);
 			lightShadergenThreshold = toml::find_or<toml::integer>(gpu, "ShadergenLightThreshold", 1);
+			hashTextures = toml::find_or<toml::boolean>(gpu, "HashTextures", hashTexturesDefault);
 			enableRenderdoc = toml::find_or<toml::boolean>(gpu, "EnableRenderdoc", false);
 		}
 	}
@@ -101,7 +102,7 @@ void EmulatorConfig::load() {
 
 			auto dspCoreName = toml::find_or<std::string>(audio, "DSPEmulation", "HLE");
 			dspType = Audio::DSPCore::typeFromString(dspCoreName);
-			
+
 			audioEnabled = toml::find_or<toml::boolean>(audio, "EnableAudio", audioEnabledDefault);
 			aacEnabled = toml::find_or<toml::boolean>(audio, "EnableAACAudio", true);
 			printDSPFirmware = toml::find_or<toml::boolean>(audio, "PrintDSPFirmware", false);
@@ -180,7 +181,7 @@ void EmulatorConfig::save() {
 	data["Window"]["WindowPosY"] = windowSettings.y;
 	data["Window"]["WindowWidth"] = windowSettings.width;
 	data["Window"]["WindowHeight"] = windowSettings.height;
-	
+
 	data["GPU"]["EnableShaderJIT"] = shaderJitEnabled;
 	data["GPU"]["Renderer"] = std::string(Renderer::typeToString(rendererType));
 	data["GPU"]["EnableVSync"] = vsyncEnabled;
@@ -190,6 +191,7 @@ void EmulatorConfig::save() {
 	data["GPU"]["ShadergenLightThreshold"] = lightShadergenThreshold;
 	data["GPU"]["AccelerateShaders"] = accelerateShaders;
 	data["GPU"]["EnableRenderdoc"] = enableRenderdoc;
+	data["GPU"]["HashTextures"] = hashTextures;
 
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;

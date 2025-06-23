@@ -9,6 +9,7 @@
 #undef NO
 
 #include "PICA/gpu.hpp"
+#include "PICA/pica_hash.hpp"
 #include "SDL_metal.h"
 
 using namespace PICA;
@@ -30,7 +31,6 @@ PICA::ColorFmt ToColorFormat(u32 format) {
 }
 
 MTL::Library* loadLibrary(MTL::Device* device, const cmrc::file& shaderSource) {
-	// MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
 	NS::Error* error = nullptr;
 	MTL::Library* library = device->newLibrary(Metal::createDispatchData(shaderSource.begin(), shaderSource.size()), &error);
 	// MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
@@ -56,11 +56,17 @@ void RendererMTL::reset() {
 	colorRenderTargetCache.reset();
 }
 
+void RendererMTL::setMTKLayer(void* layer) {
+	metalLayer = (CA::MetalLayer*)layer;
+}
+
 void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 	if (!drawable) {
 		return;
 	}
+
+	MTL::Texture* texture = drawable->texture();
 
 	using namespace PICA::ExternalRegs;
 
@@ -87,13 +93,13 @@ void RendererMTL::display() {
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(drawable->texture());
+	colorAttachment->setTexture(texture);
 	colorAttachment->setLoadAction(MTL::LoadActionClear);
 	colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
 	nextRenderPassName = "Display";
-	beginRenderPassIfNeeded(renderPassDescriptor, false, drawable->texture());
+	beginRenderPassIfNeeded(renderPassDescriptor, false, texture);
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
@@ -119,17 +125,22 @@ void RendererMTL::display() {
 
 	// Inform the vertex buffer cache that the frame ended
 	vertexBufferCache.endFrame();
-
-	// Release
 	drawable->release();
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
+	// On iOS, the SwiftUI side handles the MetalLayer
+#ifdef PANDA3DS_IOS
+	device = MTL::CreateSystemDefaultDevice();
+#else
 	// TODO: what should be the type of the view?
 	void* view = SDL_Metal_CreateView(window);
 	metalLayer = (CA::MetalLayer*)SDL_Metal_GetLayer(view);
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
+#endif
+	checkForMTLPixelFormatSupport(device);
+
 	commandQueue = device->newCommandQueue();
 
 	// Textures
@@ -719,6 +730,19 @@ void RendererMTL::bindTexturesToSlots() {
 
 		if (addr != 0) [[likely]] {
 			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+
+			if (hashTextures) {
+				const u8* startPointer = gpu.getPointerPhys<u8>(targetTex.location);
+				const usize sizeInBytes = targetTex.sizeInBytes();
+
+				if (startPointer == nullptr || (sizeInBytes > 0 && gpu.getPointerPhys<u8>(targetTex.location + sizeInBytes - 1) == nullptr))
+					[[unlikely]] {
+					Helpers::warn("Out-of-bounds texture fetch");
+				} else {
+					targetTex.hash = PICAHash::computeHash((const char*)startPointer, sizeInBytes);
+				}
+			}
+
 			auto tex = getTexture(targetTex);
 			commandEncoder.setFragmentTexture(tex.texture, i);
 			commandEncoder.setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);

@@ -1,0 +1,39 @@
+name: iOS Simulator Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Fetch submodules
+      run: git submodule update --init --recursive
+
+    - name: Update Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest
+
+    - name: Setup Vulkan SDK
+      uses: humbletim/setup-vulkan-sdk@main
+      with:
+        vulkan-query-version: latest
+        vulkan-use-cache: true
+        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
+
+    - name: Build core and frontend
+      run: cd src/pandios && ./build.sh
