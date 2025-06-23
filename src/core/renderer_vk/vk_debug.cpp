@@ -61,8 +61,8 @@ namespace Vulkan {
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageCallback(
-		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-		const VkDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData
+		vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
+		const vk::DebugUtilsMessengerCallbackDataEXT* callbackData, void* userData
 	) {
 		debugMessageCallback(
 			vk::DebugUtilsMessageSeverityFlagBitsEXT(messageSeverity), vk::DebugUtilsMessageTypeFlagsEXT(messageType), *callbackData
@@ -70,7 +70,7 @@ namespace Vulkan {
 		return VK_FALSE;
 	}
 
-	#ifdef GPU_DEBUG_INFO
+#ifdef GPU_DEBUG_INFO
 	void setObjectName(vk::Device device, vk::ObjectType objectType, const void* objectHandle, const char* format, ...) {
 		va_list args;
 		va_start(args, format);
