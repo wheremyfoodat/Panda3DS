@@ -27,6 +27,7 @@ static constexpr Xmm scratch2 = xmm1;
 static constexpr Xmm src1_xmm = xmm2;
 static constexpr Xmm src2_xmm = xmm3;
 static constexpr Xmm src3_xmm = xmm4;
+static constexpr Xmm scratch3 = xmm5;
 
 #if defined(PANDA3DS_MS_ABI)
 // Register that points to PICA state. Must be volatile for the aforementioned reasons
@@ -382,20 +383,12 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 			(((writeMask & 0b0010) ? 0 : 1) << 4) |
 			(((writeMask & 0b0001) ? 2 : 3) << 6);
 		
-		// Reorder instructions based on whether the source == scratch1. This is to avoid overwriting scratch1 if it's the source,
-		// While also having the memory load come first to mitigate execution hazards and give the load more time to complete before reading if possible
-		if (source != scratch1) {
-			movaps(scratch1, xword[statePointer + offset]);
-			movaps(scratch2, source);
-		} else {
-			movaps(scratch2, source);
-			movaps(scratch1, xword[statePointer + offset]);
-		}
-		
-		unpckhps(scratch2, scratch1); // Unpack X/Y components of source and destination
-		unpcklps(scratch1, source);   // Unpack Z/W components of source and destination
-		shufps(scratch1, scratch2, selector); // "merge-shuffle" dest and source using selecto
-		movaps(xword[statePointer + offset], scratch1); // Write back
+		movaps(scratch3, xword[statePointer + offset]);
+		movaps(scratch2, source);
+		unpckhps(scratch2, scratch3); // Unpack X/Y components of source and destination
+		unpcklps(scratch3, source);   // Unpack Z/W components of source and destination
+		shufps(scratch3, scratch2, selector); // "merge-shuffle" dest and source using selecto
+		movaps(xword[statePointer + offset], scratch3); // Write back
 	}
 }
 
