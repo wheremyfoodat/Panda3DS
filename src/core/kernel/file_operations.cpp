@@ -14,7 +14,6 @@ namespace FileOps {
 	};
 }
 
-
 void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 	const u32 cmd = mem.read32(messagePointer);
 	switch (cmd) {
@@ -89,6 +88,7 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	if (file->fd) {
 		std::unique_ptr<u8[]> data(new u8[size]);
 		IOFile f(file->fd);
+		f.seek(offset);
 
 		auto [success, bytesRead] = f.readBytes(data.get(), size);
 
@@ -146,6 +146,7 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 	}
 
 	IOFile f(file->fd);
+	f.seek(offset);
 	auto [success, bytesWritten] = f.writeBytes(data.get(), size);
 
 	// TODO: Should this check only the byte?
