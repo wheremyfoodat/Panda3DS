@@ -415,9 +415,8 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 		case MessageType::SetScreenSize: {
 			const u32 width = message.screenSize.width;
 			const u32 height = message.screenSize.height;
-
-			emu->setOutputSize(width, height);
 			screen->resizeSurface(width, height);
+			emu->setOutputSize(width, height);
 			break;
 		}
 
@@ -566,7 +565,10 @@ void MainWindow::handleScreenResize(u32 width, u32 height) {
 	message.screenSize.width = width;
 	message.screenSize.height = height;
 
-	sendMessage(message);
+	if (messageQueueMutex.try_lock()) {
+		messageQueue.push_back(message);
+		messageQueueMutex.unlock();
+	}
 }
 
 void MainWindow::initControllers() {
