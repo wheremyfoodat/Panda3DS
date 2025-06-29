@@ -23,7 +23,7 @@
 #include "services/gsp_lcd.hpp"
 #include "services/hid.hpp"
 #include "services/http.hpp"
-#include "services/ir_user.hpp"
+#include "services/ir/ir_user.hpp"
 #include "services/ldr_ro.hpp"
 #include "services/mcu/mcu_hwc.hpp"
 #include "services/mic.hpp"
@@ -114,4 +114,5 @@ class ServiceManager {
 	NFCService& getNFC() { return nfc; }
 	DSPService& getDSP() { return dsp; }
 	Y2RService& getY2R() { return y2r; }
+	IRUserService& getIRUser() { return ir_user; }
 };

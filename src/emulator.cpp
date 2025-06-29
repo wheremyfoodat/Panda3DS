@@ -132,13 +132,15 @@ void Emulator::togglePause() { running ? pause() : resume(); }
 
 void Emulator::runFrame() {
 	if (running) {
-		cpu.runFrame(); // Run 1 frame of instructions
-		gpu.display();  // Display graphics
+		cpu.runFrame();  // Run 1 frame of instructions
+		gpu.display();   // Display graphics
 
 		// Run cheats if any are loaded
 		if (cheats.haveCheats()) [[unlikely]] {
 			cheats.run();
 		}
+
+		getServiceManager().getIRUser().updateCirclePadPro();
 	} else if (romType != ROMType::None) {
 		// If the emulator is not running and a game is loaded, we still want to display the framebuffer otherwise we will get weird
 		// double-buffering issues
