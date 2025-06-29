@@ -33,6 +33,10 @@ IOS_EXPORT void iosRunFrame(CAMetalLayer* layer) {
 }
 
 IOS_EXPORT void iosLoadROM(NSString* pathNS) {
-    auto path = std::filesystem::path([pathNS UTF8String]);
-    emulator->loadROM(path);
+	auto path = std::filesystem::path([pathNS UTF8String]);
+	emulator->loadROM(path);
+}
+
+IOS_EXPORT void iosSetOutputSize(uint32_t width, uint32_t height) {
+	emulator->setOutputSize(width, height);
 }

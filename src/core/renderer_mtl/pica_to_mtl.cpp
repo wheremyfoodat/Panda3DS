@@ -40,7 +40,13 @@ namespace PICA {
 	};
 
 	void checkForMTLPixelFormatSupport(MTL::Device* device) {
-		if (!device->supportsFamily(MTL::GPUFamilyApple1)) {
+#ifndef PANDA3DS_IOS_SIMULATOR
+		const bool supportsApple1 = device->supportsFamily(MTL::GPUFamilyApple1);
+#else
+		// iOS simulator claims to support Apple1, yet doesn't support a bunch of texture formats from it...
+		const bool supportsApple1 = false;
+#endif
+		if (!supportsApple1) {
 			mtlPixelFormatInfos[2] = {MTL::PixelFormatRGBA8Unorm, 4, decodeTexelA1BGR5ToRGBA8};
 			mtlPixelFormatInfos[3] = {MTL::PixelFormatRGBA8Unorm, 4, decodeTexelB5G6R5ToRGBA8};
 			mtlPixelFormatInfos[4] = {MTL::PixelFormatRGBA8Unorm, 4, decodeTexelABGR4ToRGBA8};
