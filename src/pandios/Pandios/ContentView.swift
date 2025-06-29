@@ -38,7 +38,6 @@ class DocumentViewController: UIViewController, DocumentDelegate {
             
             print("Loading ROM", fileURL)
             emulatorLock.lock()
-            print(fileURL.path(percentEncoded: false))
             iosLoadROM(fileURL.path(percentEncoded: false))
             emulatorLock.unlock()
         }
