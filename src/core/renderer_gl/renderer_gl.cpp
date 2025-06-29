@@ -582,7 +582,33 @@ void RendererGL::display() {
 	if constexpr (!Helpers::isHydraCore()) {
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		screenFramebuffer.bind(OpenGL::ReadFramebuffer);
-		glBlitFramebuffer(0, 0, 400, 480, 0, 0, outputWindowWidth, outputWindowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+		if (outputSizeChanged) {
+			outputSizeChanged = false;
+
+			const float srcAspect = 400.0f / 480.0f; // 3DS aspect ratio
+			const float dstAspect = float(outputWindowWidth) / float(outputWindowHeight);
+
+			blitInfo.destWidth = outputWindowWidth;
+			blitInfo.destHeight = outputWindowHeight;
+			blitInfo.destX = 0;
+			blitInfo.destY = 0;
+
+			if (dstAspect > srcAspect) {
+				// Window is wider than source
+				blitInfo.destWidth = int(outputWindowHeight * srcAspect + 0.5f);
+				blitInfo.destX = (outputWindowWidth - blitInfo.destWidth) / 2;
+			} else {
+				// Window is taller than source
+				blitInfo.destHeight = int(outputWindowWidth / srcAspect + 0.5f);
+				blitInfo.destY = (outputWindowHeight - blitInfo.destHeight) / 2;
+			}
+		}
+
+		glBlitFramebuffer(
+			0, 0, 400, 480, blitInfo.destX, blitInfo.destY, blitInfo.destX + blitInfo.destWidth, blitInfo.destY + blitInfo.destHeight,
+			GL_COLOR_BUFFER_BIT, GL_LINEAR
+		);
 	}
 }
 
