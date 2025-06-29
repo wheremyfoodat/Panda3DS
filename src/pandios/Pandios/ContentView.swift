@@ -69,7 +69,8 @@ struct ContentView: UIViewRepresentable {
         }
         
         mtkView.framebufferOnly = false
-
+        mtkView.drawableSize = mtkView.frame.size
+        
         mtkView.onResize = { newDrawableSize in
             let newWidth = UInt32(newDrawableSize.width)
             let newHeight = UInt32(newDrawableSize.height)
