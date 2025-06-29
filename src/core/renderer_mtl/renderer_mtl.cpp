@@ -130,7 +130,7 @@ void RendererMTL::display() {
 	// Top screen
 	if (topScreen) {
 		renderCommandEncoder->setViewport(
-			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY + 240 * blitInfo.scale, 400 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
+			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, 400 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
 		);
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));

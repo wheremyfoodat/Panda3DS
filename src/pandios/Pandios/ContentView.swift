@@ -3,32 +3,47 @@ import SwiftUI
 import MetalKit
 import Darwin
 
+final class DrawableSize {
+    var width: UInt32 = 0
+    var height: UInt32 = 0
+    var sizeChanged = false
+}
+
 var emulatorLock = NSLock()
+var drawableSize = DrawableSize()
+
+class ResizeAwareMTKView: MTKView {
+    var onResize: ((CGSize) -> Void)?
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onResize?(self.drawableSize)
+    }
+}
 
 class DocumentViewController: UIViewController, DocumentDelegate {
     var documentPicker: DocumentPicker!
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        /// set up the document picker
         documentPicker = DocumentPicker(presentationController: self, delegate: self)
         /// When the view loads (ie user opens the app) show the file picker
         show()
     }
     
-    /// callback from the document picker
+    /// Callback from the document picker
     func didPickDocument(document: Document?) {
         if let pickedDoc = document {
             let fileURL = pickedDoc.fileURL
             
             print("Loading ROM", fileURL)
             emulatorLock.lock()
+            print(fileURL.path(percentEncoded: false))
             iosLoadROM(fileURL.path(percentEncoded: false))
             emulatorLock.unlock()
         }
     }
-    
+
     func show() {
         documentPicker.displayPicker()
     }
@@ -36,25 +51,15 @@ class DocumentViewController: UIViewController, DocumentDelegate {
 
 struct DocumentView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> DocumentViewController {
-        return DocumentViewController()
+        DocumentViewController()
     }
-    
-    func updateUIViewController(_ uiViewController: DocumentViewController, context: Context) {
-        // No update needed
-    }
+
+    func updateUIViewController(_ uiViewController: DocumentViewController, context: Context) {}
 }
 
 struct ContentView: UIViewRepresentable {
-    @State var showFileImporter = true
-
-    /*
-    func makeCoordinator() -> Renderer {
-        Renderer(self)
-    }
-    */
-    
-    func makeUIView(context: UIViewRepresentableContext<ContentView>) -> MTKView {
-        let mtkView = MTKView()
+    func makeUIView(context: Context) -> ResizeAwareMTKView {
+        let mtkView = ResizeAwareMTKView()
         mtkView.preferredFramesPerSecond = 60
         mtkView.enableSetNeedsDisplay = true
         mtkView.isPaused = true
@@ -64,17 +69,34 @@ struct ContentView: UIViewRepresentable {
         }
         
         mtkView.framebufferOnly = false
-        mtkView.drawableSize = mtkView.frame.size
+
+        mtkView.onResize = { newDrawableSize in
+            let newWidth = UInt32(newDrawableSize.width)
+            let newHeight = UInt32(newDrawableSize.height)
+            
+            emulatorLock.lock()
+            if drawableSize.width != newWidth || drawableSize.height != newHeight {
+                drawableSize.width = newWidth
+                drawableSize.height = newHeight
+                drawableSize.sizeChanged = true
+            }
+            emulatorLock.unlock()
+        }
 
         let dispatchQueue = DispatchQueue(label: "QueueIdentification", qos: .background)
-        let metalLayer = mtkView.layer as! CAMetalLayer;
+        let metalLayer = mtkView.layer as! CAMetalLayer
 
-        dispatchQueue.async{
+        dispatchQueue.async {
             iosCreateEmulator()
             
             while (true) {
                 emulatorLock.lock()
-                iosRunFrame(metalLayer);
+                if drawableSize.sizeChanged {
+                    drawableSize.sizeChanged = false
+                    iosSetOutputSize(drawableSize.width, drawableSize.height)
+                }
+                
+                iosRunFrame(metalLayer)
                 emulatorLock.unlock()
             }
         }
@@ -82,14 +104,13 @@ struct ContentView: UIViewRepresentable {
         return mtkView
     }
     
-    func updateUIView(_ uiView: MTKView, context: UIViewRepresentableContext<ContentView>) {
-        print("Updating MTKView");
-    }
+    func updateUIView(_ uiView: ResizeAwareMTKView, context: Context) {}
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        DocumentView();
-        ContentView();
+        DocumentView()
+        ContentView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
