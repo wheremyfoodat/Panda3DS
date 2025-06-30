@@ -62,7 +62,7 @@ struct EmulatorConfig {
 	static constexpr RendererType rendererDefault = RendererType::OpenGL;
 #endif
 
-	static constexpr bool hashTexturesDefault = true;
+	static constexpr bool hashTexturesDefault = false;
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
