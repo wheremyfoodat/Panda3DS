@@ -103,16 +103,44 @@ void RendererMTL::display() {
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
+	if (outputSizeChanged) {
+		outputSizeChanged = false;
+
+		const float srcAspect = 400.0 / 480.0;
+		const float destAspect = float(outputWindowWidth) / float(outputWindowHeight);
+		int destX = 0, destY = 0, destWidth = outputWindowWidth, destHeight = outputWindowHeight;
+
+		if (destAspect > srcAspect) {
+			// Window is wider than source
+			destWidth = int(outputWindowHeight * srcAspect + 0.5f);
+			destX = (outputWindowWidth - destWidth) / 2;
+		} else {
+			// Window is taller than source
+			destHeight = int(outputWindowWidth / srcAspect + 0.5f);
+			destY = (outputWindowHeight - destHeight) / 2;
+		}
+
+		blitInfo.scale = float(destWidth) / 400.0f;
+		blitInfo.topScreenX = float(destX);
+		blitInfo.topScreenY = float(destY + (destHeight - int(480 * blitInfo.scale)) / 2);
+		blitInfo.bottomScreenX = float(destX) + 40 * blitInfo.scale;
+		blitInfo.bottomScreenY = blitInfo.topScreenY + 240 * blitInfo.scale;
+	}
+
 	// Top screen
 	if (topScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(
+			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, 400 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
+		);
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	// Bottom screen
 	if (bottomScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(
+			MTL::Viewport{blitInfo.bottomScreenX, blitInfo.bottomScreenY, 320 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
+		);
 		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}

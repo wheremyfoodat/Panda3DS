@@ -53,10 +53,12 @@ class Renderer {
 
 	// Should hw renderers hash textures? Stored separately from emulatorConfig because we'll be accessing it constantly, might be merged eventually
 	bool hashTextures = false;
+	bool outputSizeChanged = true;
 
 	EmulatorConfig* emulatorConfig = nullptr;
 
 	void doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize, u32 inputWidth, u32 inputGap, u32 outputWidth, u32 outputGap);
+
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	virtual ~Renderer();
@@ -121,6 +123,7 @@ class Renderer {
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
 
 	void setOutputSize(u32 width, u32 height) {
+		outputSizeChanged = true;
 		outputWindowWidth = width;
 		outputWindowHeight = height;
 	}

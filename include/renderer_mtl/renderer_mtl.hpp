@@ -88,6 +88,16 @@ class RendererMTL final : public Renderer {
 	MTL::Texture* lastColorTexture = nullptr;
 	MTL::Texture* lastDepthTexture = nullptr;
 
+	// Information about the final 3DS screen -> Window blit, accounting for things like scaling and shifting the output based on
+	// the window's dimensions.
+	struct {
+		float topScreenX = 0;
+		float topScreenY = 0;
+		float bottomScreenX = 40;
+		float bottomScreenY = 240;
+		float scale = 1.0;
+	} blitInfo;
+
 	// Debug
 	std::string nextRenderPassName;
 
