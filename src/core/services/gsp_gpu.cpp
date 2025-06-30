@@ -66,7 +66,10 @@ void GPUService::handleSyncRequest(u32 messagePointer) {
 		case ServiceCommands::WriteHwRegs: writeHwRegs(messagePointer); break;
 		case ServiceCommands::WriteHwRegsWithMask: writeHwRegsWithMask(messagePointer); break;
 		case ServiceCommands::InvalidateDataCache: invalidateDataCache(messagePointer); break;
-		default: Helpers::panic("GPU service requested. Command: %08X\n", command);
+		default:
+			Helpers::warn("GPU service requested. Command: %08X\n", command);
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
 	}
 }
 
