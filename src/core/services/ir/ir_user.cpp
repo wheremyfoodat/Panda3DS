@@ -322,18 +322,12 @@ void IRUserService::updateCirclePadPro() {
 		return;
 	}
 
-	constexpr int C_STICK_CENTER = 0x800;
-	constexpr int C_STICK_RADIUS = 0x7FF;
-
-	CPPResponse response;
-	response.c_stick.header = static_cast<u8>(CPPResponseID::PollButtons);
-	response.c_stick.c_stick_x = rand() & 0xFFF;
-	response.c_stick.c_stick_y = static_cast<u32>(C_STICK_CENTER);
-	response.buttons.battery_level = 0x1F;
-	response.buttons.zl_not_held = 1;
-	response.buttons.zr_not_held = rand() & 1;
-	response.buttons.r_not_held = 1;
-	response.unknown = 0;
+	auto& response = cpp.state;
+	response.cStick.x = rand() & 0xFFF;
+	response.cStick.y = static_cast<u32>(CirclePadPro::ButtonState::C_STICK_CENTER);
+	response.buttons.zlNotPressed = 1;
+	response.buttons.zrNotPressed = rand() & 1;
+	response.buttons.rNotPressed = 1;
 
 	std::vector<u8> response_buffer(sizeof(response));
 	std::memcpy(response_buffer.data(), &response, sizeof(response));

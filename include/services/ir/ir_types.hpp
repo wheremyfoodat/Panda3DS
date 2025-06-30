@@ -116,22 +116,6 @@ namespace IR {
 		u32 maxDataSize;
 	};
 
-	struct CPPResponse {
-		union {
-			BitField<0, 8, u32> header;
-			BitField<8, 12, u32> c_stick_x;
-			BitField<20, 12, u32> c_stick_y;
-		} c_stick;
-		union {
-			BitField<0, 5, u8> battery_level;
-			BitField<5, 1, u8> zl_not_held;
-			BitField<6, 1, u8> zr_not_held;
-			BitField<7, 1, u8> r_not_held;
-		} buttons;
-		u8 unknown;
-	};
-	static_assert(sizeof(CPPResponse) == 6, "Circlepad Pro response has wrong size");
-
 	namespace CPPResponseID {
 		enum : u8 {
 			PollButtons = 0x10,          // This response contains the current Circlepad Pro button/stick state
