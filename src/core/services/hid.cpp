@@ -1,7 +1,62 @@
 #include "services/hid.hpp"
+
+#include <map>
+#include <unordered_map>
+
 #include "ipc.hpp"
 #include "kernel.hpp"
-#include <bit>
+
+namespace HID::Keys {
+	const char* keyToName(u32 key) {
+		static std::map<u32, const char*> keyMap = {
+			{A, "A"},
+			{B, "B"},
+			{Select, "Select"},
+			{Start, "Start"},
+			{Right, "Right"},
+			{Left, "Left"},
+			{Up, "Up"},
+			{Down, "Down"},
+			{R, "R"},
+			{L, "L"},
+			{X, "X"},
+			{Y, "Y"},
+			{CirclePadRight, "CirclePad Right"},
+			{CirclePadLeft, "CirclePad Left"},
+			{CirclePadUp, "CirclePad Up"},
+			{CirclePadDown, "CirclePad Down"},
+		};
+
+		auto it = keyMap.find(key);
+		return it != keyMap.end() ? it->second : "Unknown key";
+	}
+
+	u32 nameToKey(std::string name) {
+		static std::unordered_map<std::string, u32> keyMap = {
+			{"a", A},
+			{"b", B},
+			{"select", Select},
+			{"start", Start},
+			{"right", Right},
+			{"left", Left},
+			{"up", Up},
+			{"down", Down},
+			{"r", R},
+			{"l", L},
+			{"x", X},
+			{"y", Y},
+			{"circlepad right", CirclePadRight},
+			{"circlepad left", CirclePadLeft},
+			{"circlepad up", CirclePadUp},
+			{"circlepad down", CirclePadDown},
+		};
+
+		std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+
+		auto it = keyMap.find(name);
+		return it != keyMap.end() ? it->second : HID::Keys::Null;
+	}
+}  // namespace HID::Keys
 
 namespace HIDCommands {
 	enum : u32 {
