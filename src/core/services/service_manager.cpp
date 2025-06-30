@@ -82,7 +82,8 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 		case Commands::GetServiceHandle: getServiceHandle(messagePointer); break;
 		case Commands::Subscribe: subscribe(messagePointer); break;
 		case Commands::Unsubscribe: unsubscribe(messagePointer); break;
-		default: Helpers::panic("Unknown \"srv:\" command: %08X", header);
+		case Commands::PublishToSubscriber: publishToSubscriber(messagePointer); break;
+		default: Helpers::panic("Unknown \"srv:\" command: %08X", header); break;
 	}
 }
 
@@ -173,8 +174,8 @@ void ServiceManager::enableNotification(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 2));
-	mem.write32(messagePointer + 4, Result::Success); // Result code
-	mem.write32(messagePointer + 8, 0); // Translation descriptor
+	mem.write32(messagePointer + 4, Result::Success);  // Result code
+	mem.write32(messagePointer + 8, 0);                // Translation descriptor
 	// Handle to semaphore signaled on process notification
 	mem.write32(messagePointer + 12, notificationSemaphore.value());
 }
@@ -183,8 +184,8 @@ void ServiceManager::receiveNotification(u32 messagePointer) {
 	log("srv::ReceiveNotification() (STUBBED)\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
-	mem.write32(messagePointer + 4, Result::Success); // Result code
-	mem.write32(messagePointer + 8, 0); // Notification ID
+	mem.write32(messagePointer + 4, Result::Success);  // Result code
+	mem.write32(messagePointer + 8, 0);                // Notification ID
 }
 
 void ServiceManager::subscribe(u32 messagePointer) {
@@ -200,6 +201,14 @@ void ServiceManager::unsubscribe(u32 messagePointer) {
 	log("srv::Unsubscribe (id = %d) (stubbed)\n", id);
 
 	mem.write32(messagePointer, IPC::responseHeader(0xA, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void ServiceManager::publishToSubscriber(u32 messagePointer) {
+	u32 id = mem.read32(messagePointer + 4);
+	log("srv::PublishToSubscriber (Notification ID = %d) (stubbed)\n", id);
+
+	mem.write32(messagePointer, IPC::responseHeader(0xC, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

@@ -89,6 +89,7 @@ class ServiceManager {
 	// "srv:" commands
 	void enableNotification(u32 messagePointer);
 	void getServiceHandle(u32 messagePointer);
+	void publishToSubscriber(u32 messagePointer);
 	void receiveNotification(u32 messagePointer);
 	void registerClient(u32 messagePointer);
 	void subscribe(u32 messagePointer);
