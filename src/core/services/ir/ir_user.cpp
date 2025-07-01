@@ -69,7 +69,7 @@ void IRUserService::initializeIrnopShared(u32 messagePointer) {
 	const u32 descriptor = mem.read32(messagePointer + 28);
 	const u32 sharedMemHandle = mem.read32(messagePointer + 32);
 
-	log("IR:USER: InitializeIrnopShared (shared mem size = %08X, sharedMemHandle = %X) (stubbed)\n", sharedMemSize, sharedMemHandle);
+	log("IR:USER: InitializeIrnopShared (shared mem size = %08X, sharedMemHandle = %X)\n", sharedMemSize, sharedMemHandle);
 	Helpers::warn("Game is initializing IR:USER. If it explodes, this is probably why");
 
 	KernelObject* object = kernel.getObject(sharedMemHandle, KernelObjectType::MemoryBlock);
@@ -100,6 +100,7 @@ void IRUserService::finalizeIrnop(u32 messagePointer) {
 	}
 
 	sharedMemory = std::nullopt;
+	receiveBuffer = nullptr;
 
 	// This should disconnect any connected device de-initialize the shared memory
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 0));
@@ -160,7 +161,7 @@ void IRUserService::requireConnection(u32 messagePointer) {
 
 			// Note: We temporarily pretend we don't have a CirclePad Pro. This code must change when we emulate it or N3DS C-stick
 			const u8 status = (enableCirclePadPro) ? 2 : 1;  // Any value other than 2 is considered not connected.
-			const u8 role = 0;
+			const u8 role = (enableCirclePadPro) ? 2 : 0;
 			const u8 connected = (enableCirclePadPro) ? 1 : 0;
 
 			if (enableCirclePadPro) {
@@ -216,7 +217,7 @@ void IRUserService::disconnect(u32 messagePointer) {
 	log("IR:USER: Disconnect\n");
 
 	if (sharedMemory.has_value()) {
-		u32 sharedMemAddress = sharedMemory.value().addr;
+		u32 sharedMemAddress = sharedMemory->addr;
 
 		mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), 0);
 		mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, isConnected), 0);
@@ -225,6 +226,8 @@ void IRUserService::disconnect(u32 messagePointer) {
 	// If there's a connected device, disconnect it and trigger the status event
 	if (connectedDevice) {
 		connectedDevice = false;
+		cpp.disconnect();
+
 		if (connectionStatusEvent.has_value()) {
 			kernel.signalEvent(connectionStatusEvent.value());
 		}

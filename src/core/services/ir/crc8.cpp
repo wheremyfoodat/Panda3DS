@@ -20,12 +20,11 @@ u8 IRUserService::crc8(std::span<const u8> data) {
 	};
 
 	u8 crc = 0;
-	crc = ~crc;
 
 	for (usize i = 0; i < data.size(); i++) {
 		const u8 byte = data[i];
 		crc = crcTable[crc ^ byte];
 	}
 
-	return ~crc;
+	return crc;
 }
