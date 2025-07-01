@@ -329,7 +329,7 @@ void IRUserService::updateCirclePadPro() {
 	response.buttons.zrNotPressed = rand() & 1;
 	response.buttons.rNotPressed = 1;
 
-	std::vector<u8> response_buffer(sizeof(response));
-	std::memcpy(response_buffer.data(), &response, sizeof(response));
-	sendPayload(response_buffer);
+	std::vector<u8> responsePayload(sizeof(response));
+	std::memcpy(responsePayload.data(), &response, sizeof(response));
+	sendPayload(responsePayload);
 }
