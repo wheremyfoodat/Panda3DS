@@ -13,9 +13,11 @@ void CirclePadPro::receivePayload(Payload payload) {
 	const u8 type = payload[0];
 
 	switch (type) {
-		case CPPRequestID::ConfigurePolling:
+		case CPPRequestID::ConfigurePolling: {
+			[[maybe_unused]] const u8 pollingPeriodMs = payload[1];
 			// TODO
 			break;
+		}
 
 		case CPPRequestID::ReadCalibrationData: {
 			static constexpr std::array<u8, 0x40> calibrationData = {

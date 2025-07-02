@@ -82,10 +82,12 @@ void IRUserService::initializeIrnopShared(u32 messagePointer) {
 
 	receiveBuffer = std::make_unique<IR::Buffer>(mem, memoryBlock->addr, 0x10, 0x20, receiveBufferPackageCount, receiveBufferSize);
 
+	// Initialize the shared memory block to 0s
+	for (int i = 0; i < sizeof(SharedMemoryStatus); i++) {
+		mem.write8(memoryBlock->addr + i, 0);
+	}
 	// Set the initialized byte in shared mem to 1
 	mem.write8(memoryBlock->addr + offsetof(SharedMemoryStatus, isInitialized), 1);
-	mem.write64(memoryBlock->addr + 0x10, 0);  // Initialize the receive buffer info to all 0s
-	mem.write64(memoryBlock->addr + 0x18, 0);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x18, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -166,6 +168,10 @@ void IRUserService::requireConnection(u32 messagePointer) {
 
 			if (enableCirclePadPro) {
 				cpp.connect();
+				// Slight hack: For some reason, CirclePad Pro breaks in some games (eg Majora's Mask 3D) unless we do this
+				if (receiveEvent) {
+					kernel.signalEvent(*receiveEvent);
+				}
 			}
 
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), status);
@@ -181,6 +187,8 @@ void IRUserService::requireConnection(u32 messagePointer) {
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), 1);
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionAttemptStatus), 2);
 		}
+	} else {
+		Helpers::warn("RequireConnection without shmem");
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 0));
@@ -329,7 +337,6 @@ void IRUserService::updateCirclePadPro() {
 	response.cStick.x = rand() & 0xFFF;
 	response.cStick.y = static_cast<u32>(CirclePadPro::ButtonState::C_STICK_CENTER);
 	response.buttons.zlNotPressed = 1;
-	response.buttons.zrNotPressed = rand() & 1;
 	response.buttons.rNotPressed = 1;
 
 	std::vector<u8> responsePayload(sizeof(response));
