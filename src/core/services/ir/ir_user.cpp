@@ -10,6 +10,7 @@
 #include "kernel.hpp"
 #include "services/ir/ir_types.hpp"
 
+#define log printf
 using namespace IR;
 
 namespace IRUserCommands {
@@ -168,10 +169,6 @@ void IRUserService::requireConnection(u32 messagePointer) {
 
 			if (enableCirclePadPro) {
 				cpp.connect();
-				// Slight hack: For some reason, CirclePad Pro breaks in some games (eg Majora's Mask 3D) unless we do this
-				if (receiveEvent) {
-					kernel.signalEvent(*receiveEvent);
-				}
 			}
 
 			mem.write8(sharedMemAddress + offsetof(SharedMemoryStatus, connectionStatus), status);
@@ -217,7 +214,7 @@ void IRUserService::sendIrnop(u32 messagePointer) {
 		mem.write32(messagePointer + 4, Result::Success);
 	} else {
 		Helpers::warn("IR:USER: SendIrnop without connected device");
-		mem.write32(messagePointer + 4, Result::FailurePlaceholder);
+		mem.write32(messagePointer + 4, Result::IR::NoDeviceConnected);
 	}
 }
 
