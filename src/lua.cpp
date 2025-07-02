@@ -367,6 +367,8 @@ void LuaManager::initializeThunks() {
 	addIntConstant(HID::Keys::Right, "__ButtonRight");
 	addIntConstant(HID::Keys::L, "__ButtonL");
 	addIntConstant(HID::Keys::R, "__ButtonR");
+	addIntConstant(HID::Keys::ZL, "__ButtonZL");
+	addIntConstant(HID::Keys::ZR, "__ButtonZR");
 
 	// Call our Lua runtime initialization before any Lua script runs
 	luaL_loadstring(L, runtimeInit);

@@ -8,7 +8,6 @@ namespace IR {
 	  public:
 		struct ButtonState {
 			static constexpr int C_STICK_CENTER = 0x800;
-			static constexpr int C_STICK_RADIUS = 0x7FF;
 
 			union {
 				BitField<0, 8, u32> header;

@@ -333,7 +333,17 @@ void IRUserService::updateCirclePadPro() {
 		return;
 	}
 
-	std::vector<u8> response(sizeof(cpp.state));
-	std::memcpy(response.data(), &cpp.state, sizeof(cpp.state));
+	// The button state for the CirclePad Pro is stored in the HID service to make the frontend logic simpler
+	// We take the button state, format it nicely into the CirclePad Pro struct, and return it
+	auto& cppState = cpp.state;
+	u32 buttons = hid.getOldButtons();
+
+	cppState.buttons.zlNotPressed = (buttons & HID::Keys::ZL) ? 0 : 1;
+	cppState.buttons.zrNotPressed = (buttons & HID::Keys::ZR) ? 0 : 1;
+	cppState.cStick.x = hid.getCStickX();
+	cppState.cStick.y = hid.getCStickY();
+
+	std::vector<u8> response(sizeof(cppState));
+	std::memcpy(response.data(), &cppState, sizeof(cppState));
 	sendPayload(response);
 }

@@ -8,6 +8,7 @@
 #include "logger.hpp"
 #include "memory.hpp"
 #include "result/result.hpp"
+#include "services/hid.hpp"
 #include "services/ir/circlepad_pro.hpp"
 
 // Circular dependencies in this project? Never
@@ -23,6 +24,8 @@ class IRUserService {
 	Handle handle = KernelHandles::IR_USER;
 	Memory& mem;
 	Kernel& kernel;
+	// The IR service has a reference to the HID service as that's where the frontends store CirclePad Pro button state in
+	HIDService& hid;
 	const EmulatorConfig& config;
 
 	MAKE_LOG_FUNCTION(log, irUserLogger)
@@ -76,11 +79,9 @@ class IRUserService {
 	void sendPayload(std::span<const u8> payload);
 
   public:
-	IRUserService(Memory& mem, const EmulatorConfig& config, Kernel& kernel)
-		: mem(mem), config(config), kernel(kernel), cpp([&](IR::Device::Payload payload) { sendPayload(payload); }) {}
+	IRUserService(Memory& mem, HIDService& hid, const EmulatorConfig& config, Kernel& kernel)
+		: mem(mem), hid(hid), config(config), kernel(kernel), cpp([&](IR::Device::Payload payload) { sendPayload(payload); }) {}
 
-	void setZRPressed(bool pressed) { cpp.state.buttons.zrNotPressed = pressed ? 0 : 1; }
-	void setZLPressed(bool pressed) { cpp.state.buttons.zrNotPressed = pressed ? 0 : 1; }
 	void setCStickX(s16 value) { cpp.state.cStick.x = value; }
 	void setCStickY(s16 value) { cpp.state.cStick.y = value; }
 

@@ -592,47 +592,53 @@ void MainWindow::initControllers() {
 }
 
 void MainWindow::pollControllers() {
-	// Update circlepad if a controller is plugged in
+	// Update circlepad/c-stick/ZL/ZR if a controller is plugged in
 	if (gameController != nullptr) {
 		HIDService& hid = emu->getServiceManager().getHID();
 		const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
 		const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
 		constexpr s16 deadzone = 3276;
-		constexpr s16 maxValue = 0x9C;
-		constexpr s16 div = 0x8000 / maxValue;
+		constexpr s16 triggerThreshold = SDL_JOYSTICK_AXIS_MAX / 2;
 
-		// Avoid overriding the keyboard's circlepad input
-		if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
-			hid.setCirclepadX(0);
-		} else {
-			hid.setCirclepadX(stickX / div);
+		{
+			// Update circlepad
+			constexpr s16 circlepadMax = 0x9C;
+			constexpr s16 div = 0x8000 / circlepadMax;
+
+			// Avoid overriding the keyboard's circlepad input
+			if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
+				hid.setCirclepadX(0);
+			} else {
+				hid.setCirclepadX(stickX / div);
+			}
+
+			if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
+				hid.setCirclepadY(0);
+			} else {
+				hid.setCirclepadY(-(stickY / div));
+			}
 		}
 
-		if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
-			hid.setCirclepadY(0);
-		} else {
-			hid.setCirclepadY(-(stickY / div));
-		}
-
-		auto& ir = emu->getServiceManager().getIRUser();
 		const s16 l2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
 		const s16 r2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
 		const s16 cstickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTX);
 		const s16 cstickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTY);
 
-		ir.setZLPressed(l2 > 16000);
-		ir.setZRPressed(r2 > 16000);
+		hid.setKey(HID::Keys::ZL, l2 > triggerThreshold);
+		hid.setKey(HID::Keys::ZR, r2 > triggerThreshold);
 
+        // Update C-Stick
+        // To convert from SDL coordinates, ie [-32768, 32767] to [-2048, 2047] we just divide by 8
 		if (std::abs(cstickX) < deadzone) {
-			ir.setCStickX(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
+			hid.setCStickX(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
 		} else {
-			ir.setCStickX(cstickX / 8);
+			hid.setCStickX(cstickX / 8);
 		}
 
 		if (std::abs(cstickY) < deadzone) {
-			ir.setCStickY(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
+			hid.setCStickY(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
 		} else {
-			ir.setCStickY(-(cstickY / 8));
+			hid.setCStickY(-(cstickY / 8));
 		}
 	}
 
