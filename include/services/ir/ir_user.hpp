@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <optional>
 #include <span>
 
@@ -51,6 +52,7 @@ class IRUserService {
 	IR::CirclePadPro cpp;
 
 	std::optional<MemoryBlock> sharedMemory = std::nullopt;
+	std::unique_ptr<IR::Buffer> receiveBuffer;
 	bool connectedDevice = false;
 
 	// Header of the IR shared memory containing various bits of info

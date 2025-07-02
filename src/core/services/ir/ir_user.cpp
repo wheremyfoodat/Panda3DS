@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cstddef>
-#include <memory>
 #include <span>
 #include <string>
 #include <vector>
@@ -28,8 +27,6 @@ namespace IRUserCommands {
 		ReleaseReceivedData = 0x00190040,
 	};
 }
-
-std::unique_ptr<IR::Buffer> receiveBuffer;
 
 void IRUserService::reset() {
 	connectionStatusEvent = std::nullopt;
@@ -293,16 +290,16 @@ void IRUserService::sendPayload(std::span<const u8> payload) {
 		return;
 	}
 
+	// Based on: https://github.com/azahar-emu/azahar/blob/df3c0c18e4b71ecb5c4e009bfc07b9fd14fd39d9/src/core/hle/service/ir/ir_user.cpp#L231
 	std::vector<u8> packet;
 
 	// Builds packet header. For the format info:
 	// https://www.3dbrew.org/wiki/IRUSER_Shared_Memory#Packet_structure
-
 	packet.push_back(0xA5);
 	const u8 networkID = *(receiveBuffer->getPointer(offsetof(SharedMemoryStatus, networkID)));
 	packet.push_back(networkID);
 
-	// puts the size info.
+	// Append size info.
 	// The highest bit of the first byte is unknown, which is set to zero here. The second highest
 	// bit is a flag that determines whether the size info is in extended form. If the packet size
 	// can be represent within 6 bits, the short form (1 byte) of size info is chosen, the size is
