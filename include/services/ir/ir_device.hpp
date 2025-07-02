@@ -3,6 +3,7 @@
 #include <span>
 
 #include "helpers.hpp"
+#include "scheduler.hpp"
 
 namespace IR {
 	class Device {
@@ -11,6 +12,7 @@ namespace IR {
 
 	  protected:
 		using SendCallback = std::function<void(Payload)>;  // Callback for sending data from IR device->3DS
+		Scheduler& scheduler;
 		SendCallback sendCallback;
 
 	  public:
@@ -18,6 +20,6 @@ namespace IR {
 		virtual void disconnect() = 0;
 		virtual void receivePayload(Payload payload) = 0;
 
-		Device(SendCallback sendCallback) : sendCallback(sendCallback) {}
+		Device(SendCallback sendCallback, Scheduler& scheduler) : sendCallback(sendCallback), scheduler(scheduler) {}
 	};
 }  // namespace IR

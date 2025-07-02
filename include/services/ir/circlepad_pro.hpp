@@ -44,7 +44,10 @@ namespace IR {
 		virtual void disconnect() override;
 		virtual void receivePayload(Payload payload) override;
 
-		CirclePadPro(SendCallback sendCallback) : IR::Device(sendCallback) {}
+		CirclePadPro(SendCallback sendCallback, Scheduler& scheduler) : IR::Device(sendCallback, scheduler) {}
+
 		ButtonState state;
+		// The current polling period in cycles, configured via the ConfigurePolling command
+		s64 period = Scheduler::nsToCycles(16000);
 	};
 }  // namespace IR

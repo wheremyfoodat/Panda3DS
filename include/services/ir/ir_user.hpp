@@ -16,6 +16,7 @@
 class Kernel;
 
 class IRUserService {
+	using Payload = IR::Device::Payload;
 	using Handle = HorizonHandle;
 
 	enum class DeviceID : u8 {
@@ -75,14 +76,11 @@ class IRUserService {
 	// The IR service uses CRC8 with generator polynomial = 0x07 for verifying packets received from IR devices
 	static u8 crc8(std::span<const u8> data);
 
-	// IR service calls this to send a console->device payload
-	void receivePayload(std::span<const u8> data);
 	// IR devices call this to send a device->console payload
-	void sendPayload(std::span<const u8> payload);
+	void sendPayload(Payload payload);
 
   public:
-	IRUserService(Memory& mem, HIDService& hid, const EmulatorConfig& config, Kernel& kernel)
-		: mem(mem), hid(hid), config(config), kernel(kernel), cpp([&](IR::Device::Payload payload) { sendPayload(payload); }) {}
+	IRUserService(Memory& mem, HIDService& hid, const EmulatorConfig& config, Kernel& kernel);
 
 	void setCStickX(s16 value) { cpp.state.cStick.x = value; }
 	void setCStickY(s16 value) { cpp.state.cStick.y = value; }

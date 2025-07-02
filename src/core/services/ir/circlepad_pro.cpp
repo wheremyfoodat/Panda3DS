@@ -7,15 +7,20 @@
 using namespace IR;
 
 void CirclePadPro::connect() {}
-void CirclePadPro::disconnect() {}
+void CirclePadPro::disconnect() { scheduler.removeEvent(Scheduler::EventType::UpdateIR); }
 
 void CirclePadPro::receivePayload(Payload payload) {
 	const u8 type = payload[0];
 
 	switch (type) {
 		case CPPRequestID::ConfigurePolling: {
-			[[maybe_unused]] const u8 pollingPeriodMs = payload[1];
-			// TODO
+			// Convert polling period from ms to ns for easier use with the scheduler
+			const s64 periodNs = s64(payload[1]) * 1000ll;
+			// Convert to cycles
+			period = Scheduler::nsToCycles(periodNs);
+
+			scheduler.removeEvent(Scheduler::EventType::UpdateIR);
+			scheduler.addEvent(Scheduler::EventType::UpdateIR, scheduler.currentTimestamp + period);
 			break;
 		}
 

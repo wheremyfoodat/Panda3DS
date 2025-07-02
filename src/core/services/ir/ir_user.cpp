@@ -28,6 +28,9 @@ namespace IRUserCommands {
 	};
 }
 
+IRUserService::IRUserService(Memory& mem, HIDService& hid, const EmulatorConfig& config, Kernel& kernel)
+	: mem(mem), hid(hid), config(config), kernel(kernel), cpp([&](IR::Device::Payload payload) { sendPayload(payload); }, kernel.getScheduler()) {}
+
 void IRUserService::reset() {
 	connectionStatusEvent = std::nullopt;
 	receiveEvent = std::nullopt;
@@ -285,7 +288,7 @@ void IRUserService::clearSendBuffer(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-void IRUserService::sendPayload(std::span<const u8> payload) {
+void IRUserService::sendPayload(IRUserService::Payload payload) {
 	if (!receiveBuffer) {
 		return;
 	}
@@ -343,4 +346,8 @@ void IRUserService::updateCirclePadPro() {
 	std::vector<u8> response(sizeof(cppState));
 	std::memcpy(response.data(), &cppState, sizeof(cppState));
 	sendPayload(response);
+
+	// Schedule next IR event. TODO: Maybe account for cycle drift.
+	auto& scheduler = kernel.getScheduler();
+	scheduler.addEvent(Scheduler::EventType::UpdateIR, scheduler.currentTimestamp + cpp.period);
 }

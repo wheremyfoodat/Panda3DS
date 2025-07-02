@@ -139,8 +139,6 @@ void Emulator::runFrame() {
 		if (cheats.haveCheats()) [[unlikely]] {
 			cheats.run();
 		}
-
-		getServiceManager().getIRUser().updateCirclePadPro();
 	} else if (romType != ROMType::None) {
 		// If the emulator is not running and a game is loaded, we still want to display the framebuffer otherwise we will get weird
 		// double-buffering issues
@@ -182,6 +180,7 @@ void Emulator::pollScheduler() {
 			}
 
 			case Scheduler::EventType::SignalY2R: kernel.getServiceManager().getY2R().signalConversionDone(); break;
+			case Scheduler::EventType::UpdateIR: kernel.getServiceManager().getIRUser().updateCirclePadPro(); break;
 
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
