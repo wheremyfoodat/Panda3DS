@@ -28,7 +28,7 @@ bool Kernel::signalEvent(Handle handle) {
 	Event* event = object->getData<Event>();
 	event->fired = true;
 
-	// One shot events go back to being not fired once they are signaled
+	// Pulse events go back to being not fired once they are signaled
 	if (event->resetType == ResetType::Pulse) {
 		event->fired = false;
 	}
