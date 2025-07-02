@@ -28,8 +28,14 @@ namespace IR {
 			ButtonState() {
 				// Response header for button state reads
 				cStick.header = static_cast<u8>(CPPResponseID::PollButtons);
+				cStick.x = static_cast<u32>(CirclePadPro::ButtonState::C_STICK_CENTER);
+				cStick.y = static_cast<u32>(CirclePadPro::ButtonState::C_STICK_CENTER);
+
 				// Fully charged
 				buttons.batteryLevel = 0x1F;
+				buttons.zrNotPressed = 1;
+				buttons.zlNotPressed = 1;
+				buttons.rNotPressed = 1;
 				unknown = 0;
 			}
 		};

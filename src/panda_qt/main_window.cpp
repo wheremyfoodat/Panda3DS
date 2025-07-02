@@ -613,6 +613,27 @@ void MainWindow::pollControllers() {
 		} else {
 			hid.setCirclepadY(-(stickY / div));
 		}
+
+		auto& ir = emu->getServiceManager().getIRUser();
+		const s16 l2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		const s16 r2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+		const s16 cstickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTX);
+		const s16 cstickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTY);
+
+		ir.setZLPressed(l2 > 16000);
+		ir.setZRPressed(r2 > 16000);
+
+		if (std::abs(cstickX) < deadzone) {
+			ir.setCStickX(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
+		} else {
+			ir.setCStickX(cstickX / 8);
+		}
+
+		if (std::abs(cstickY) < deadzone) {
+			ir.setCStickY(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
+		} else {
+			ir.setCStickY(-(cstickY / 8));
+		}
 	}
 
 	SDL_Event event;

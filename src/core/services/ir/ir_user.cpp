@@ -333,13 +333,7 @@ void IRUserService::updateCirclePadPro() {
 		return;
 	}
 
-	auto& response = cpp.state;
-	response.cStick.x = rand() & 0xFFF;
-	response.cStick.y = static_cast<u32>(CirclePadPro::ButtonState::C_STICK_CENTER);
-	response.buttons.zlNotPressed = 1;
-	response.buttons.rNotPressed = 1;
-
-	std::vector<u8> responsePayload(sizeof(response));
-	std::memcpy(responsePayload.data(), &response, sizeof(response));
-	sendPayload(responsePayload);
+	std::vector<u8> response(sizeof(cpp.state));
+	std::memcpy(response.data(), &cpp.state, sizeof(cpp.state));
+	sendPayload(response);
 }

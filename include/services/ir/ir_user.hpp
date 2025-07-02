@@ -79,6 +79,11 @@ class IRUserService {
 	IRUserService(Memory& mem, const EmulatorConfig& config, Kernel& kernel)
 		: mem(mem), config(config), kernel(kernel), cpp([&](IR::Device::Payload payload) { sendPayload(payload); }) {}
 
+	void setZRPressed(bool pressed) { cpp.state.buttons.zrNotPressed = pressed ? 0 : 1; }
+	void setZLPressed(bool pressed) { cpp.state.buttons.zrNotPressed = pressed ? 0 : 1; }
+	void setCStickX(s16 value) { cpp.state.cStick.x = value; }
+	void setCStickY(s16 value) { cpp.state.cStick.y = value; }
+
 	void reset();
 	void handleSyncRequest(u32 messagePointer);
 	void updateCirclePadPro();
