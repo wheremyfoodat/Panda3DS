@@ -1,6 +1,9 @@
 #pragma once
+#include <array>
 #include <functional>
+#include <map>
 #include <optional>
+
 #include "surfaces.hpp"
 #include "textures.hpp"
 
@@ -17,41 +20,61 @@
 // - A "location" member which tells us which location in 3DS memory this surface occupies
 template <typename SurfaceType, size_t capacity, bool evictOnOverflow = false>
 class SurfaceCache {
-    // Vanilla std::optional can't hold actual references
-    using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
+	// Vanilla std::optional can't hold actual references
+	using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
 
-    size_t size;
-    size_t evictionIndex;
-    std::array<SurfaceType, capacity> buffer;
+	size_t size = 0;
+	size_t evictionIndex = 0;
+	std::array<SurfaceType, capacity> buffer;
 
-public:
-    void reset() {
-        size = 0;
-        evictionIndex = 0;
-        for (auto& e : buffer) { // Free the VRAM of all surfaces
-            e.free();
-        }
-    }
+	// Map from address to surface pointer
+	std::map<u32, SurfaceType*> addressTree;
 
-    OptionalRef find(SurfaceType& other) {
-        for (auto& e : buffer) {
-            if (e.matches(other) && e.valid)
-                return e;
-        }
+	void indexSurface(SurfaceType& surface) { addressTree[surface.location] = &surface; }
 
-        return std::nullopt;
-    }
+	void unindexSurface(SurfaceType& surface) {
+		auto it = addressTree.find(surface.location);
+		if (it != addressTree.end() && it->second == &surface) {
+			addressTree.erase(it);
+		}
+	}
 
-    OptionalRef findFromAddress(u32 address) {
-        for (auto& e : buffer) {
-            if (e.location <= address && e.location + e.sizeInBytes() > address && e.valid)
-                return e;
-        }
+  public:
+	void reset() {
+		size = 0;
+		evictionIndex = 0;
+		addressTree.clear();
+		for (auto& e : buffer) {
+			e.free();
+			e.valid = false;
+		}
+	}
 
-        return std::nullopt;
-    }
+	OptionalRef find(SurfaceType& other) {
+		for (auto& e : buffer) {
+			if (e.matches(other) && e.valid) return e;
+		}
+		return std::nullopt;
+	}
 
-    // Adds a surface object to the cache and returns it
+	// Fast range search using the address tree
+	OptionalRef findFromAddress(u32 address) {
+		// Find the first surface whose location is > address
+		auto it = addressTree.upper_bound(address);
+		if (it == addressTree.begin()) {
+			return std::nullopt;
+		}
+
+		--it;
+		SurfaceType* surface = it->second;
+		if (surface->valid && surface->location <= address && surface->location + surface->sizeInBytes() > address) {
+			return *surface;
+		};
+
+		return std::nullopt;
+	}
+
+	// Adds a surface object to the cache and returns it
 	SurfaceType& add(const SurfaceType& surface) {
 		if (size >= capacity) {
 			if constexpr (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
@@ -60,12 +83,14 @@ public:
 				}
 
 				auto& e = buffer[evictionIndex];
+				unindexSurface(e);
 				evictionIndex = (evictionIndex + 1) % capacity;
 
 				e.valid = false;
 				e.free();
 				e = surface;
 				e.allocate();
+				indexSurface(e);
 				return e;
 			} else {
 				Helpers::panic("Surface cache full! Add emptying!");
@@ -74,12 +99,14 @@ public:
 
 		size++;
 
-		// Find an existing surface we completely invalidate and overwrite it with the new surface
+		// See if any existing surface fully overlaps
 		for (auto& e : buffer) {
 			if (e.valid && e.range.lower() >= surface.range.lower() && e.range.upper() <= surface.range.upper()) {
+				unindexSurface(e);
 				e.free();
 				e = surface;
 				e.allocate();
+				indexSurface(e);
 				return e;
 			}
 		}
@@ -89,6 +116,7 @@ public:
 			if (!e.valid) {
 				e = surface;
 				e.allocate();
+				indexSurface(e);
 				return e;
 			}
 		}
@@ -97,11 +125,6 @@ public:
 		Helpers::panic("Couldn't add surface to cache\n");
 	}
 
-    SurfaceType& operator[](size_t i) {
-        return buffer[i];
-    }
-
-    const SurfaceType& operator[](size_t i) const {
-        return buffer[i];
-    }
+	SurfaceType& operator[](size_t i) { return buffer[i]; }
+	const SurfaceType& operator[](size_t i) const { return buffer[i]; }
 };
