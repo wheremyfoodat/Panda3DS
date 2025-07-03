@@ -441,7 +441,7 @@ void GPU::fireDMA(u32 dest, u32 source, u32 size) {
 		u8* fcram = mem.getFCRAM();
 		std::memcpy(&vram[dest - vramStart], &fcram[source - fcramStart], size);
 	} else {
-		printf("Non-trivially optimizable GPU DMA. Falling back to byte-by-byte transfer\n");
+		log("Non-trivially optimizable GPU DMA. Falling back to byte-by-byte transfer\n");
 
 		for (u32 i = 0; i < size; i++) {
 			mem.write8(dest + i, mem.read8(source + i));

@@ -168,6 +168,10 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	});
 	genLayout->addRow(tr("System language"), systemLanguage);
 
+	QCheckBox* circlePadProEnabled = new QCheckBox(tr("Enable CirclePad Pro"));
+	connectCheckbox(circlePadProEnabled, config.circlePadProEnabled);
+	genLayout->addRow(circlePadProEnabled);
+
 	QCheckBox* discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
 	connectCheckbox(discordRpcEnabled, config.discordRpcEnabled);
 	genLayout->addRow(discordRpcEnabled);

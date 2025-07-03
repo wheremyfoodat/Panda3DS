@@ -592,26 +592,53 @@ void MainWindow::initControllers() {
 }
 
 void MainWindow::pollControllers() {
-	// Update circlepad if a controller is plugged in
+	// Update circlepad/c-stick/ZL/ZR if a controller is plugged in
 	if (gameController != nullptr) {
 		HIDService& hid = emu->getServiceManager().getHID();
 		const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
 		const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
 		constexpr s16 deadzone = 3276;
-		constexpr s16 maxValue = 0x9C;
-		constexpr s16 div = 0x8000 / maxValue;
+		constexpr s16 triggerThreshold = SDL_JOYSTICK_AXIS_MAX / 2;
 
-		// Avoid overriding the keyboard's circlepad input
-		if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
-			hid.setCirclepadX(0);
-		} else {
-			hid.setCirclepadX(stickX / div);
+		{
+			// Update circlepad
+			constexpr s16 circlepadMax = 0x9C;
+			constexpr s16 div = 0x8000 / circlepadMax;
+
+			// Avoid overriding the keyboard's circlepad input
+			if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
+				hid.setCirclepadX(0);
+			} else {
+				hid.setCirclepadX(stickX / div);
+			}
+
+			if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
+				hid.setCirclepadY(0);
+			} else {
+				hid.setCirclepadY(-(stickY / div));
+			}
 		}
 
-		if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
-			hid.setCirclepadY(0);
+		const s16 l2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		const s16 r2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+		const s16 cStickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTX);
+		const s16 cStickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTY);
+
+		hid.setKey(HID::Keys::ZL, l2 > triggerThreshold);
+		hid.setKey(HID::Keys::ZR, r2 > triggerThreshold);
+
+		// Update C-Stick
+		// To convert from SDL coordinates, ie [-32768, 32767] to [-2048, 2047] we just divide by 8
+		if (std::abs(cStickX) < deadzone) {
+			hid.setCStickX(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
 		} else {
-			hid.setCirclepadY(-(stickY / div));
+			hid.setCStickX(cStickX / 8);
+		}
+
+		if (std::abs(cStickY) < deadzone) {
+			hid.setCStickY(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
+		} else {
+			hid.setCStickY(-(cStickY / 8));
 		}
 	}
 

@@ -10,6 +10,8 @@ InputMappings InputMappings::defaultKeyboardMappings() {
 	mappings.setMapping(SDLK_i, HID::Keys::Y);
 	mappings.setMapping(SDLK_q, HID::Keys::L);
 	mappings.setMapping(SDLK_p, HID::Keys::R);
+	mappings.setMapping(SDLK_1, HID::Keys::ZL);
+	mappings.setMapping(SDLK_0, HID::Keys::ZR);
 	mappings.setMapping(SDLK_UP, HID::Keys::Up);
 	mappings.setMapping(SDLK_DOWN, HID::Keys::Down);
 	mappings.setMapping(SDLK_RIGHT, HID::Keys::Right);

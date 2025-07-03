@@ -81,6 +81,7 @@ struct EmulatorConfig {
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
+	bool circlePadProEnabled = true;
 	bool usePortableBuild = false;
 
 	bool audioEnabled = audioEnabledDefault;

@@ -47,6 +47,7 @@ void EmulatorConfig::load() {
 			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
 
 			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
+			circlePadProEnabled = toml::find_or<toml::boolean>(general, "EnableCirclePadPro", true);
 			systemLanguage = languageCodeFromString(toml::find_or<std::string>(general, "SystemLanguage", "en"));
 		}
 	}
@@ -174,6 +175,7 @@ void EmulatorConfig::save() {
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
 	data["General"]["PrintAppVersion"] = printAppVersion;
 	data["General"]["SystemLanguage"] = languageCodeToString(systemLanguage);
+	data["General"]["EnableCirclePadPro"] = circlePadProEnabled;
 
 	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
 	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;

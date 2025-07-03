@@ -351,6 +351,7 @@ void retro_run() {
 	hid.setKey(HID::Keys::Down, getButtonState(RETRO_DEVICE_ID_JOYPAD_DOWN));
 	hid.setKey(HID::Keys::Left, getButtonState(RETRO_DEVICE_ID_JOYPAD_LEFT));
 	hid.setKey(HID::Keys::Right, getButtonState(RETRO_DEVICE_ID_JOYPAD_RIGHT));
+	// TODO: N3DS buttons
 
 	// Get analog values for the left analog stick (Right analog stick is N3DS-only and unimplemented)
 	float xLeft = getAxisState(RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);

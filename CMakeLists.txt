@@ -346,10 +346,10 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/frd.cpp src/core/services/nim.cpp src/core/services/mcu/mcu_hwc.cpp
                          src/core/services/y2r.cpp src/core/services/cam.cpp src/core/services/ldr_ro.cpp
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
-                         src/core/services/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
+                         src/core/services/ir/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
                          src/core/services/csnd.cpp src/core/services/nwm_uds.cpp src/core/services/fonts.cpp
-                         src/core/services/ns.cpp
+                         src/core/services/ns.cpp src/core/services/ir/circlepad_pro.cpp src/core/services/ir/crc8.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
@@ -397,7 +397,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
                  include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
-                 include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
+                 include/config.hpp include/services/ir/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp
@@ -414,7 +414,8 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
                  include/services/dsp_firmware_db.hpp include/frontend_settings.hpp include/fs/archive_twl_photo.hpp
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
-                 include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp
+                 include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
+                 include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp
 )
 
 if(IOS)

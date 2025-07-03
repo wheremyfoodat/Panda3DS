@@ -27,6 +27,12 @@ namespace HID::Keys {
 		GPIO0Inv = 1 << 12,   // Inverted value of GPIO bit 0
 		GPIO14Inv = 1 << 13,  // Inverted value of GPIO bit 14
 
+		// CirclePad Pro buttons. We store them in the HID service for ease, even though they're only used by the IR service
+		// Whenever the HID service writes to shared memory, we remember to mask them out
+		ZL = 1 << 14,
+		ZR = 1 << 15,
+		CirclePadProButtons = ZL | ZR,
+
 		CirclePadRight = 1 << 28,  // X >= 41
 		CirclePadLeft = 1 << 29,   // X <= -41
 		CirclePadUp = 1 << 30,     // Y >= 41
@@ -57,6 +63,9 @@ class HIDService {
 	s16 touchScreenX, touchScreenY;  // Touchscreen state
 	s16 roll, pitch, yaw;            // Gyroscope state
 	s16 accelX, accelY, accelZ;      // Accelerometer state
+
+	// New 3DS/CirclePad Pro C-stick state
+	s16 cStickX, cStickY;
 
 	bool accelerometerEnabled;
 	bool eventsInitialized;
@@ -113,7 +122,7 @@ class HIDService {
 
 		// Turn bits 28 and 29 off in the new button state, which indicate whether the circlepad is steering left or right
 		// Then, set them according to the new value of x
-		newButtons &= ~0x3000'0000;
+		newButtons &= ~(HID::Keys::CirclePadLeft | HID::Keys::CirclePadRight);
 		if (x >= 41)  // Pressing right
 			newButtons |= 1 << 28;
 		else if (x <= -41)  // Pressing left
@@ -125,12 +134,18 @@ class HIDService {
 
 		// Turn bits 30 and 31 off in the new button state, which indicate whether the circlepad is steering up or down
 		// Then, set them according to the new value of y
-		newButtons &= ~0xC000'0000;
+		newButtons &= ~(HID::Keys::CirclePadUp | HID::Keys::CirclePadDown);
 		if (y >= 41)  // Pressing up
 			newButtons |= 1 << 30;
 		else if (y <= -41)  // Pressing down
 			newButtons |= 1 << 31;
 	}
+
+	void setCStickX(s16 x) { cStickX = x; }
+	void setCStickY(s16 y) { cStickY = y; }
+
+	s16 getCStickX() { return cStickX; }
+	s16 getCStickY() { return cStickY; }
 
 	void setRoll(s16 value) { roll = value; }
 	void setPitch(s16 value) { pitch = value; }
@@ -157,9 +172,6 @@ class HIDService {
 		touchScreenPressed = true;
 	}
 
-	void releaseTouchScreen() {
-		touchScreenPressed = false;
-	}
-
+	void releaseTouchScreen() { touchScreenPressed = false; }
 	bool isTouchScreenPressed() { return touchScreenPressed; }
 };
