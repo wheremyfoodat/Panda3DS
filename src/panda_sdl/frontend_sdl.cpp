@@ -429,24 +429,24 @@ void FrontendSDL::run() {
 
 				const s16 l2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
 				const s16 r2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
-				const s16 cstickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTX);
-				const s16 cstickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTY);
+				const s16 cStickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTX);
+				const s16 cStickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTY);
 
 				hid.setKey(HID::Keys::ZL, l2 > triggerThreshold);
 				hid.setKey(HID::Keys::ZR, r2 > triggerThreshold);
 
 				// Update C-Stick
 				// To convert from SDL coordinates, ie [-32768, 32767] to [-2048, 2047] we just divide by 8
-				if (std::abs(cstickX) < deadzone) {
+				if (std::abs(cStickX) < deadzone) {
 					hid.setCStickX(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
 				} else {
-					hid.setCStickX(cstickX / 8);
+					hid.setCStickX(cStickX / 8);
 				}
 
-				if (std::abs(cstickY) < deadzone) {
+				if (std::abs(cStickY) < deadzone) {
 					hid.setCStickY(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
 				} else {
-					hid.setCStickY(-(cstickY / 8));
+					hid.setCStickY(-(cStickY / 8));
 				}
 			}
 

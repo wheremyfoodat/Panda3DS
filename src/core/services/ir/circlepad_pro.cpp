@@ -25,6 +25,7 @@ void CirclePadPro::receivePayload(Payload payload) {
 		}
 
 		case CPPRequestID::ReadCalibrationData: {
+			// Data from https://github.com/azahar-emu/azahar/blob/f8b8b6e53cf518a53c0ae5f0201660c1250c0393/src/core/hle/service/ir/extra_hid.cpp#L73
 			static constexpr std::array<u8, 0x40> calibrationData = {
 				0x00, 0x00, 0x08, 0x80, 0x85, 0xEB, 0x11, 0x3F, 0x85, 0xEB, 0x11, 0x3F, 0xFF, 0xFF, 0xFF, 0xF5, 0xFF, 0x00, 0x08, 0x80, 0x85, 0xEB,
 				0x11, 0x3F, 0x85, 0xEB, 0x11, 0x3F, 0xFF, 0xFF, 0xFF, 0x65, 0xFF, 0x00, 0x08, 0x80, 0x85, 0xEB, 0x11, 0x3F, 0x85, 0xEB, 0x11, 0x3F,
@@ -32,10 +33,10 @@ void CirclePadPro::receivePayload(Payload payload) {
 			};
 
 			struct ReadCalibrationDataRequest {
-				u8 requestID;
-				u8 expectedResponseTime;
-				u16_le offset;
-				u16_le size;
+				u8 requestID;  // Always CPPRequestID::ReadCalibrationData for this command
+				u8 unknown;
+				u16_le offset;  // Offset in calibration data to read from
+				u16_le size;    // Bytes in calibration data to read
 			};
 			static_assert(sizeof(ReadCalibrationDataRequest) == 6, "ReadCalibrationDataRequest has wrong size");
 
@@ -47,16 +48,17 @@ void CirclePadPro::receivePayload(Payload payload) {
 			ReadCalibrationDataRequest request;
 			std::memcpy(&request, payload.data(), sizeof(request));
 
-			const u16 offset = request.offset & ~0xF;
-			const u16 size = request.size & ~0xF;
+			// Get the offset and size for the calibration data read. Bottom 4 bits are ignored, aligning reads to 16 bytes
+			const auto offset = usize(request.offset & ~0xF);
+			const auto size = usize(request.size & ~0xF);
 
-			if (static_cast<std::size_t>(offset + size) > calibrationData.size()) {
+			if (offset + size > calibrationData.size()) {
 				Helpers::warn("IR::ReadCalibrationData: Read beyond the end of calibration data!!");
 				return;
 			}
 
-			std::vector<u8> response(5 + size);
-			response[0] = static_cast<u8>(CPPResponseID::ReadCalibrationData);
+			std::vector<u8> response(size + 5);
+			response[0] = CPPResponseID::ReadCalibrationData;
 			std::memcpy(&response[1], &request.offset, sizeof(request.offset));
 			std::memcpy(&response[3], &request.size, sizeof(request.size));
 			std::memcpy(&response[5], calibrationData.data() + offset, size);
