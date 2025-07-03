@@ -66,6 +66,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
 	auto patchWindowAction = toolsMenu->addAction(tr("Open Patch Window"));
 	auto shaderEditorAction = toolsMenu->addAction(tr("Open Shader Editor"));
+	auto threadDebuggerAction = toolsMenu->addAction(tr("Open Thread Debugger"));
 	auto dumpDspFirmware = toolsMenu->addAction(tr("Dump loaded DSP firmware"));
 
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
@@ -73,7 +74,10 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(shaderEditorAction, &QAction::triggered, this, [this]() { shaderEditor->show(); });
 	connect(cheatsEditorAction, &QAction::triggered, this, [this]() { cheatsEditor->show(); });
 	connect(patchWindowAction, &QAction::triggered, this, [this]() { patchWindow->show(); });
+	connect(threadDebuggerAction, &QAction::triggered, this, [this]() { threadDebugger->show(); });
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
+
+	connect(this, &MainWindow::emulatorPaused, this, [this]() { threadDebugger->update(); }, Qt::BlockingQueuedConnection);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	aboutAction->setMenuRole(QAction::AboutRole);
@@ -89,6 +93,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
 	shaderEditor = new ShaderEditorWindow(this, "shader.glsl", "");
+	threadDebugger = new ThreadDebugger(emu, this);
 
 	shaderEditor->setEnable(emu->getRenderer()->supportsShaderReload());
 	if (shaderEditor->supported) {
@@ -381,9 +386,19 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			delete message.cheat.c;
 		} break;
 
-		case MessageType::Pause: emu->pause(); break;
 		case MessageType::Resume: emu->resume(); break;
-		case MessageType::TogglePause: emu->togglePause(); break;
+		case MessageType::Pause:
+			emu->pause();
+			emit emulatorPaused();
+			break;
+
+		case MessageType::TogglePause:
+			emu->togglePause();
+			if (!emu->running) {
+				emit emulatorPaused();
+			};
+			break;
+
 		case MessageType::Reset: emu->reset(Emulator::ReloadOption::Reload); break;
 		case MessageType::PressKey: emu->getServiceManager().getHID().pressKey(message.key.key); break;
 		case MessageType::ReleaseKey: emu->getServiceManager().getHID().releaseKey(message.key.key); break;

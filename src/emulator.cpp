@@ -272,6 +272,11 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		romType = ROMType::None;
 	}
 
+	if (success) {
+		// Update the main thread entrypoint and SP so that the thread debugger can display them.
+		kernel.setMainThreadEntrypointAndSP(cpu.getReg(15), cpu.getReg(13));
+	}
+
 	resume();  // Start the emulator
 	return success;
 }

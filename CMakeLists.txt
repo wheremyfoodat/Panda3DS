@@ -732,10 +732,12 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
+            src/panda_qt/thread_debugger.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
+            include/panda_qt/thread_debugger.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
