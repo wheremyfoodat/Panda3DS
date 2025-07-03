@@ -2,9 +2,12 @@
 #include <array>
 #include <optional>
 #include <span>
+#include <string>
+#include <unordered_set>
 
 #include "kernel_types.hpp"
 #include "logger.hpp"
+#include "lua_manager.hpp"
 #include "memory.hpp"
 #include "services/ac.hpp"
 #include "services/act.hpp"
@@ -86,6 +89,28 @@ class ServiceManager {
 
 	MCU::HWCService mcu_hwc;
 
+	// We allow Lua scripts to intercept service calls and allow their own code to be ran on SyncRequests
+	// For example, if we want to intercept dsp::DSP ReadPipe (Header: 0x000E00C0), the "serviceName" field would be "dsp::DSP"
+	// and the "function" field would be 0x000E00C0
+	LuaManager& lua;
+	struct InterceptedService {
+		std::string serviceName;  // Name of the service whose function
+		u32 function;             // Header of the function to intercept
+
+		InterceptedService(const std::string& name, u32 header) : serviceName(name), function(header) {}
+		bool operator==(const InterceptedService& other) const { return serviceName == other.serviceName && function == other.function; }
+	};
+
+	struct InterceptedServiceHash {
+		usize operator()(const InterceptedService& s) const noexcept {
+			usize h1 = std::hash<std::string>{}(s.serviceName);
+			usize h2 = std::hash<u32>{}(s.function);
+			return h1 ^ (h2 << 1);
+		}
+	};
+
+	std::unordered_set<InterceptedService, InterceptedServiceHash> interceptedServices = {};
+
 	// "srv:" commands
 	void enableNotification(u32 messagePointer);
 	void getServiceHandle(u32 messagePointer);
@@ -96,7 +121,7 @@ class ServiceManager {
 	void unsubscribe(u32 messagePointer);
 
   public:
-	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config);
+	ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config, LuaManager& lua);
 	void reset();
 	void initializeFS() { fs.initializeFilesystem(); }
 	void handleSyncRequest(u32 messagePointer);
@@ -116,4 +141,7 @@ class ServiceManager {
 	DSPService& getDSP() { return dsp; }
 	Y2RService& getY2R() { return y2r; }
 	IRUserService& getIRUser() { return ir_user; }
+
+	void addServiceIntercept(const std::string& service, u32 function) { interceptedServices.insert(InterceptedService(service, function)); }
+	void clearServiceIntercepts() { interceptedServices.clear(); }
 };

@@ -47,6 +47,8 @@ class LuaManager {
 			signalEventInternal(e);
 		}
 	}
+
+	bool signalInterceptedService(const std::string& service, u32 function, u32 messagePointer);
 };
 
 #else  // Lua not enabled, Lua manager does nothing
@@ -60,5 +62,5 @@ class LuaManager {
 	void loadString(const std::string& code) {}
 	void reset() {}
 	void signalEvent(LuaEvent e) {}
-};
+	bool signalInterceptedService(const std::string& service, u32 function, u32 messagePointer) { return false; }
 #endif

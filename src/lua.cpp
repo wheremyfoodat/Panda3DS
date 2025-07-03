@@ -1,4 +1,5 @@
 #ifdef PANDA3DS_ENABLE_LUA
+#include <fmt/format.h>
 #include <teakra/disassembler.h>
 
 #include <array>
@@ -94,11 +95,39 @@ void LuaManager::loadString(const std::string& code) {
 }
 
 void LuaManager::signalEventInternal(LuaEvent e) {
-	lua_getglobal(L, "eventHandler");        // We want to call the event handler
-	lua_pushnumber(L, static_cast<int>(e));  // Push event type
+	lua_getglobal(L, "eventHandler");         // We want to call the event handler
+	lua_pushinteger(L, static_cast<int>(e));  // Push event type
 
 	// Call the function with 1 argument and 0 outputs, without an error handler
 	lua_pcall(L, 1, 0, 0);
+}
+
+// Calls the "interceptService" function, if it exists, when a service call is intercepted
+// It passes the service name, the function header, and a pointer to the call's TLS buffer as parameters
+// interceptService is expected to return a bool, which indicates whether the C++ code should proceed to handle the service call
+// or if the Lua code handles it entirely.
+// If the bool is true, the Lua code handles the service call entirely and the C++ code doesn't do anything extra
+// Otherwise, then the C++ code calls its service call handling code as usual.
+bool LuaManager::signalInterceptedService(const std::string& service, u32 function, u32 messagePointer) {
+	lua_getglobal(L, "interceptService");
+	lua_pushstring(L, service.c_str());  // Push service name
+	lua_pushinteger(L, function);        // Push function header
+	lua_pushinteger(L, messagePointer);  // Push pointer to TLS buffer
+
+	// Call the function with 3 arguments and 1 output, without an error handler
+	const int status = lua_pcall(L, 3, 1, 0);
+
+	if (status != LUA_OK) {
+		const char* err = lua_tostring(L, -1);
+		fprintf(stderr, "Lua error in interceptService: %s\n", err ? err : "(unknown error)");
+		lua_pop(L, 1);  // Remove error message from stack
+		return false;   // Have the C++ handle the service call
+	}
+
+	// Return the value interceptService returned
+	const bool ret = lua_toboolean(L, -1);
+	lua_pop(L, 1);
+	return ret;
 }
 
 void LuaManager::reset() {
@@ -111,17 +140,17 @@ void LuaManager::reset() {
 
 Emulator* LuaManager::g_emulator = nullptr;
 
-#define MAKE_MEMORY_FUNCTIONS(size)                                               \
-	static int read##size##Thunk(lua_State* L) {                                  \
-		const u32 vaddr = (u32)lua_tonumber(L, 1);                                \
-		lua_pushnumber(L, LuaManager::g_emulator->getMemory().read##size(vaddr)); \
-		return 1;                                                                 \
-	}                                                                             \
-	static int write##size##Thunk(lua_State* L) {                                 \
-		const u32 vaddr = (u32)lua_tonumber(L, 1);                                \
-		const u##size value = (u##size)lua_tonumber(L, 2);                        \
-		LuaManager::g_emulator->getMemory().write##size(vaddr, value);            \
-		return 0;                                                                 \
+#define MAKE_MEMORY_FUNCTIONS(size)                                                \
+	static int read##size##Thunk(lua_State* L) {                                   \
+		const u32 vaddr = (u32)lua_tointeger(L, 1);                                \
+		lua_pushinteger(L, LuaManager::g_emulator->getMemory().read##size(vaddr)); \
+		return 1;                                                                  \
+	}                                                                              \
+	static int write##size##Thunk(lua_State* L) {                                  \
+		const u32 vaddr = (u32)lua_tointeger(L, 1);                                \
+		const u##size value = (u##size)lua_tointeger(L, 2);                        \
+		LuaManager::g_emulator->getMemory().write##size(vaddr, value);             \
+		return 0;                                                                  \
 	}
 
 MAKE_MEMORY_FUNCTIONS(8)
@@ -131,26 +160,26 @@ MAKE_MEMORY_FUNCTIONS(64)
 #undef MAKE_MEMORY_FUNCTIONS
 
 static int readFloatThunk(lua_State* L) {
-	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	const u32 vaddr = (u32)lua_tointeger(L, 1);
 	lua_pushnumber(L, (lua_Number)Helpers::bit_cast<float, u32>(LuaManager::g_emulator->getMemory().read32(vaddr)));
 	return 1;
 }
 
 static int writeFloatThunk(lua_State* L) {
-	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	const u32 vaddr = (u32)lua_tointeger(L, 1);
 	const float value = (float)lua_tonumber(L, 2);
 	LuaManager::g_emulator->getMemory().write32(vaddr, Helpers::bit_cast<u32, float>(value));
 	return 0;
 }
 
 static int readDoubleThunk(lua_State* L) {
-	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	const u32 vaddr = (u32)lua_tointeger(L, 1);
 	lua_pushnumber(L, (lua_Number)Helpers::bit_cast<double, u64>(LuaManager::g_emulator->getMemory().read64(vaddr)));
 	return 1;
 }
 
 static int writeDoubleThunk(lua_State* L) {
-	const u32 vaddr = (u32)lua_tonumber(L, 1);
+	const u32 vaddr = (u32)lua_tointeger(L, 1);
 	const double value = (double)lua_tonumber(L, 2);
 	LuaManager::g_emulator->getMemory().write64(vaddr, Helpers::bit_cast<u64, double>(value));
 	return 0;
@@ -158,12 +187,12 @@ static int writeDoubleThunk(lua_State* L) {
 
 static int getAppIDThunk(lua_State* L) {
 	std::optional<u64> id = LuaManager::g_emulator->getMemory().getProgramID();
-	
+
 	// If the app has an ID, return true + its ID
 	// Otherwise return false and 0 as the ID
 	if (id.has_value()) {
-		lua_pushboolean(L, 1);    // Return true
-		lua_pushnumber(L, u32(*id));  // Return bottom 32 bits
+		lua_pushboolean(L, 1);              // Return true
+		lua_pushnumber(L, u32(*id));        // Return bottom 32 bits
 		lua_pushnumber(L, u32(*id >> 32));  // Return top 32 bits
 	} else {
 		lua_pushboolean(L, 0);  // Return false
@@ -192,18 +221,44 @@ static int resetThunk(lua_State* L) {
 
 static int loadROMThunk(lua_State* L) {
 	// Path argument is invalid, report that loading failed and exit
-	if (lua_type(L, -1) != LUA_TSTRING) {
+	if (lua_type(L, 1) != LUA_TSTRING) {
 		lua_pushboolean(L, 0);
+		lua_error(L);
 		return 1;
 	}
 
-	size_t pathLength;
-	const char* const str = lua_tolstring(L, -1, &pathLength);
+	usize pathLength;
+	const char* const str = lua_tolstring(L, 1, &pathLength);
 
 	const auto path = std::filesystem::path(std::string(str, pathLength));
 	// Load ROM and reply if it succeeded or not
 	lua_pushboolean(L, LuaManager::g_emulator->loadROM(path) ? 1 : 0);
 	return 1;
+}
+
+static int interceptServiceThunk(lua_State* L) {
+	// Service name argument is invalid, report that loading failed and exit
+	if (lua_type(L, 1) != LUA_TSTRING) {
+		lua_pushboolean(L, 0);
+		lua_error(L);
+		return 2;
+	}
+
+	if (lua_type(L, 2) != LUA_TNUMBER) {
+		lua_pushboolean(L, 0);
+		lua_error(L);
+		return 2;
+	}
+
+	// Get the name of the service we want to intercept, as well as the header of the function to intercept
+	usize nameLength;
+	const char* const str = lua_tolstring(L, 1, &nameLength);
+	const u32 function = (u32)lua_tointeger(L, 2);
+	const auto serviceName = std::string(str, nameLength);
+	LuaManager::g_emulator->getServiceManager().addServiceIntercept(serviceName, function);
+
+	fmt::print("Intercepting call to {} (Function id: {:08X})\n", serviceName, function);
+	return 2;
 }
 
 static int getButtonsThunk(lua_State* L) {
@@ -262,7 +317,7 @@ static int disassembleARMThunk(lua_State* L) {
 static int disassembleTeakThunk(lua_State* L) {
 	const u16 instruction = u16(lua_tonumber(L, 1));
 	const u16 expansion = u16(lua_tonumber(L, 2));
-	
+
 	std::string disassembly = Teakra::Disassembler::Do(instruction, expansion);
 	lua_pushstring(L, disassembly.c_str());
 	return 1;
@@ -292,6 +347,7 @@ static constexpr luaL_Reg functions[] = {
 	{ "__getButton", getButtonThunk },
 	{ "__disassembleARM", disassembleARMThunk },
 	{ "__disassembleTeak", disassembleTeakThunk },
+	{"__interceptService", interceptServiceThunk},
 	{ nullptr, nullptr },
 };
 // clang-format on
@@ -332,6 +388,7 @@ void LuaManager::initializeThunks() {
 
 		disassembleARM = function(pc, instruction) return GLOBALS.__disassembleARM(pc, instruction) end,
 		disassembleTeak = function(opcode, exp) return GLOBALS.__disassembleTeak(opcode, exp or 0) end,
+		interceptService = function(service, func) return GLOBALS.__interceptService(service, func) end,
 
 		Frame = __Frame,
 		ButtonA = __ButtonA,
