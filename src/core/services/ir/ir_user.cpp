@@ -10,7 +10,6 @@
 #include "kernel.hpp"
 #include "services/ir/ir_types.hpp"
 
-#define log printf
 using namespace IR;
 
 namespace IRUserCommands {

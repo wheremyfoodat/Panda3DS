@@ -124,9 +124,9 @@ class HIDService {
 		// Then, set them according to the new value of x
 		newButtons &= ~(HID::Keys::CirclePadLeft | HID::Keys::CirclePadRight);
 		if (x >= 41)  // Pressing right
-			newButtons |= 1 << 28;
+			newButtons |= HID::Keys::CirclePadRight;
 		else if (x <= -41)  // Pressing left
-			newButtons |= 1 << 29;
+			newButtons |= HID::Keys::CirclePadLeft;
 	}
 
 	void setCirclepadY(s16 y) {
@@ -136,9 +136,9 @@ class HIDService {
 		// Then, set them according to the new value of y
 		newButtons &= ~(HID::Keys::CirclePadUp | HID::Keys::CirclePadDown);
 		if (y >= 41)  // Pressing up
-			newButtons |= 1 << 30;
+			newButtons |= HID::Keys::CirclePadUp;
 		else if (y <= -41)  // Pressing down
-			newButtons |= 1 << 31;
+			newButtons |= HID::Keys::CirclePadDown;
 	}
 
 	void setCStickX(s16 x) { cStickX = x; }

@@ -4,6 +4,7 @@
 
 #include "ipc.hpp"
 #include "kernel.hpp"
+#include "services/ir/circlepad_pro.hpp"
 
 namespace HIDCommands {
 	enum : u32 {
@@ -39,7 +40,7 @@ void HIDService::reset() {
 	roll = pitch = yaw = 0;
 	accelX = accelY = accelZ = 0;
 
-	cStickX = cStickY = 0;
+	cStickX = cStickY = IR::CirclePadPro::ButtonState::C_STICK_CENTER;
 }
 
 void HIDService::handleSyncRequest(u32 messagePointer) {
@@ -170,7 +171,7 @@ void HIDService::updateInputs(u64 currentTick) {
 		const size_t padEntryOffset = 0x28 + (nextPadIndex * 0x10);  // Offset in the array of 8 pad entries
 		nextPadIndex = (nextPadIndex + 1) % 8;                       // Move to next entry
 
-		const u32 pressed = (currentButtons ^ previousButtons) & currentButtons;  // Pressed buttons
+		const u32 pressed = (currentButtons ^ previousButtons) & currentButtons;    // Pressed buttons
 		const u32 released = (currentButtons ^ previousButtons) & previousButtons;  // Released buttons
 
 		writeSharedMem<u32>(padEntryOffset, currentButtons);

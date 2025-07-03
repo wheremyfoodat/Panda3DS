@@ -26,9 +26,9 @@ namespace IR {
 
 			ButtonState() {
 				// Response header for button state reads
-				cStick.header = static_cast<u8>(CPPResponseID::PollButtons);
-				cStick.x = static_cast<u32>(CirclePadPro::ButtonState::C_STICK_CENTER);
-				cStick.y = static_cast<u32>(CirclePadPro::ButtonState::C_STICK_CENTER);
+				cStick.header = u8(CPPResponseID::PollButtons);
+				cStick.x = u32(CirclePadPro::ButtonState::C_STICK_CENTER);
+				cStick.y = u32(CirclePadPro::ButtonState::C_STICK_CENTER);
 
 				// Fully charged
 				buttons.batteryLevel = 0x1F;
