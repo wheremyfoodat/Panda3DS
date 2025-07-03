@@ -63,4 +63,5 @@ class LuaManager {
 	void reset() {}
 	void signalEvent(LuaEvent e) {}
 	bool signalInterceptedService(const std::string& service, u32 function, u32 messagePointer) { return false; }
+};
 #endif

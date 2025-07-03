@@ -216,25 +216,9 @@ void ServiceManager::publishToSubscriber(u32 messagePointer) {
 }
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
-	if (interceptedServices.size() != 0) [[unlikely]] {
-		// Check if there's a Lua handler for this function and call it
-		u32 function = mem.read32(messagePointer);
-
-		for (auto [serviceName, serviceHandle] : serviceMap) {
-			if (serviceHandle == handle) {
-				auto intercept = InterceptedService(std::string(serviceName), function);
-				if (interceptedServices.contains(intercept)) {
-					printf("Call to intercepted service\n");
-
-					// If the Lua handler returns true, it means the service is handled entirely
-					// From Lua, and we shouldn't do anything else here.
-					if (lua.signalInterceptedService(intercept.serviceName, function, messagePointer)) {
-						return;
-					}
-				}
-
-				break;
-			}
+	if (haveServiceIntercepts) [[unlikely]] {
+		if (checkForIntercept(messagePointer, handle)) [[unlikely]] {
+			return;
 		}
 	}
 
@@ -281,4 +265,25 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
+}
+
+bool ServiceManager::checkForIntercept(u32 messagePointer, Handle handle) {
+	// Check if there's a Lua handler for this function and call it
+	const u32 function = mem.read32(messagePointer);
+
+	for (auto [serviceName, serviceHandle] : serviceMap) {
+		if (serviceHandle == handle) {
+			auto intercept = InterceptedService(std::string(serviceName), function);
+			if (interceptedServices.contains(intercept)) {
+				// If the Lua handler returns true, it means the service is handled entirely
+				// From Lua, and we shouldn't do anything else here.
+				return lua.signalInterceptedService(intercept.serviceName, function, messagePointer);
+			}
+
+			break;
+		}
+	}
+
+	// Lua did not intercept the service, so emulate it normally
+	return false;
 }

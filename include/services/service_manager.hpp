@@ -37,6 +37,7 @@
 #include "services/ns.hpp"
 #include "services/nwm_uds.hpp"
 #include "services/ptm.hpp"
+#include "services/service_intercept.hpp"
 #include "services/soc.hpp"
 #include "services/ssl.hpp"
 #include "services/y2r.hpp"
@@ -93,23 +94,14 @@ class ServiceManager {
 	// For example, if we want to intercept dsp::DSP ReadPipe (Header: 0x000E00C0), the "serviceName" field would be "dsp::DSP"
 	// and the "function" field would be 0x000E00C0
 	LuaManager& lua;
-	struct InterceptedService {
-		std::string serviceName;  // Name of the service whose function
-		u32 function;             // Header of the function to intercept
+	std::unordered_set<InterceptedService> interceptedServices = {};
+	// Calling std::unordered_set<T>::size() compiles to a fairly non-trivial function call on Clang, so we store this
+	// separately and check it on service calls, for performance reasons
+	bool haveServiceIntercepts = false;
 
-		InterceptedService(const std::string& name, u32 header) : serviceName(name), function(header) {}
-		bool operator==(const InterceptedService& other) const { return serviceName == other.serviceName && function == other.function; }
-	};
-
-	struct InterceptedServiceHash {
-		usize operator()(const InterceptedService& s) const noexcept {
-			usize h1 = std::hash<std::string>{}(s.serviceName);
-			usize h2 = std::hash<u32>{}(s.function);
-			return h1 ^ (h2 << 1);
-		}
-	};
-
-	std::unordered_set<InterceptedService, InterceptedServiceHash> interceptedServices = {};
+	// Checks for whether a service call is intercepted by Lua and handles it. Returns true if Lua told us not to handle the function,
+	// or false if we should handle it as normal
+	bool checkForIntercept(u32 messagePointer, Handle handle);
 
 	// "srv:" commands
 	void enableNotification(u32 messagePointer);
@@ -142,6 +134,13 @@ class ServiceManager {
 	Y2RService& getY2R() { return y2r; }
 	IRUserService& getIRUser() { return ir_user; }
 
-	void addServiceIntercept(const std::string& service, u32 function) { interceptedServices.insert(InterceptedService(service, function)); }
-	void clearServiceIntercepts() { interceptedServices.clear(); }
+	void addServiceIntercept(const std::string& service, u32 function) {
+		interceptedServices.insert(InterceptedService(service, function));
+		haveServiceIntercepts = true;
+	}
+
+	void clearServiceIntercepts() {
+		interceptedServices.clear();
+		haveServiceIntercepts = false;
+	}
 };

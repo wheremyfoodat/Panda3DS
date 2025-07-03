@@ -1,5 +1,4 @@
 #ifdef PANDA3DS_ENABLE_LUA
-#include <fmt/format.h>
 #include <teakra/disassembler.h>
 
 #include <array>
@@ -119,8 +118,8 @@ bool LuaManager::signalInterceptedService(const std::string& service, u32 functi
 
 	if (status != LUA_OK) {
 		const char* err = lua_tostring(L, -1);
-		fprintf(stderr, "Lua error in interceptService: %s\n", err ? err : "(unknown error)");
-		lua_pop(L, 1);  // Remove error message from stack
+		fprintf(stderr, "Lua: Error in interceptService: %s\n", err);
+		lua_pop(L, 1);  // Pop error message from stack
 		return false;   // Have the C++ handle the service call
 	}
 
@@ -236,7 +235,7 @@ static int loadROMThunk(lua_State* L) {
 	return 1;
 }
 
-static int interceptServiceThunk(lua_State* L) {
+static int addServiceInterceptThunk(lua_State* L) {
 	// Service name argument is invalid, report that loading failed and exit
 	if (lua_type(L, 1) != LUA_TSTRING) {
 		lua_pushboolean(L, 0);
@@ -256,9 +255,12 @@ static int interceptServiceThunk(lua_State* L) {
 	const u32 function = (u32)lua_tointeger(L, 2);
 	const auto serviceName = std::string(str, nameLength);
 	LuaManager::g_emulator->getServiceManager().addServiceIntercept(serviceName, function);
-
-	fmt::print("Intercepting call to {} (Function id: {:08X})\n", serviceName, function);
 	return 2;
+}
+
+static int clearServiceInterceptsThunk(lua_State* L) {
+	LuaManager::g_emulator->getServiceManager().clearServiceIntercepts();
+	return 0;
 }
 
 static int getButtonsThunk(lua_State* L) {
@@ -347,7 +349,8 @@ static constexpr luaL_Reg functions[] = {
 	{ "__getButton", getButtonThunk },
 	{ "__disassembleARM", disassembleARMThunk },
 	{ "__disassembleTeak", disassembleTeakThunk },
-	{"__interceptService", interceptServiceThunk},
+	{"__addServiceIntercept", addServiceInterceptThunk },
+	{"__clearServiceIntercepts", clearServiceInterceptsThunk },
 	{ nullptr, nullptr },
 };
 // clang-format on
@@ -388,7 +391,8 @@ void LuaManager::initializeThunks() {
 
 		disassembleARM = function(pc, instruction) return GLOBALS.__disassembleARM(pc, instruction) end,
 		disassembleTeak = function(opcode, exp) return GLOBALS.__disassembleTeak(opcode, exp or 0) end,
-		interceptService = function(service, func) return GLOBALS.__interceptService(service, func) end,
+		addServiceIntercept = function(service, func) return GLOBALS.__addServiceIntercept(service, func) end,
+		clearServiceIntercepts = function() return GLOBALS.__clearServiceIntercepts() end,
 
 		Frame = __Frame,
 		ButtonA = __ButtonA,
@@ -397,6 +401,8 @@ void LuaManager::initializeThunks() {
 		ButtonY = __ButtonY,
 		ButtonL = __ButtonL,
 		ButtonR = __ButtonR,
+		ButtonZL = __ButtonZL,
+		ButtonZR = __ButtonZR,
 		ButtonUp = __ButtonUp,
 		ButtonDown = __ButtonDown,
 		ButtonLeft = __ButtonLeft,
