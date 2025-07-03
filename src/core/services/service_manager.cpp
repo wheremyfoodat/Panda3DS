@@ -5,8 +5,10 @@
 #include "ipc.hpp"
 #include "kernel.hpp"
 
-ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel),
+ServiceManager::ServiceManager(
+	std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config, LuaManager& lua
+)
+	: regs(regs), mem(mem), kernel(kernel), lua(lua), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel),
 	  cfg(mem, config), csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel, config), hid(mem, kernel), http(mem), ir_user(mem, hid, config, kernel),
 	  frd(mem), fs(mem, kernel, config), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem, kernel), mcu_hwc(mem, config),
 	  mic(mem, kernel), nfc(mem, kernel), nim(mem), ndm(mem), news_u(mem), ns(mem), nwm_uds(mem, kernel), ptm(mem, config), soc(mem), ssl(mem),
@@ -214,6 +216,12 @@ void ServiceManager::publishToSubscriber(u32 messagePointer) {
 }
 
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
+	if (haveServiceIntercepts) [[unlikely]] {
+		if (checkForIntercept(messagePointer, handle)) [[unlikely]] {
+			return;
+		}
+	}
+
 	switch (handle) {
 		// Breaking alphabetical order a bit to place the ones I think are most common at the top
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
@@ -257,4 +265,25 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
+}
+
+bool ServiceManager::checkForIntercept(u32 messagePointer, Handle handle) {
+	// Check if there's a Lua handler for this function and call it
+	const u32 function = mem.read32(messagePointer);
+
+	for (auto [serviceName, serviceHandle] : serviceMap) {
+		if (serviceHandle == handle) {
+			auto intercept = InterceptedService(std::string(serviceName), function);
+			if (interceptedServices.contains(intercept)) {
+				// If the Lua handler returns true, it means the service is handled entirely
+				// From Lua, and we shouldn't do anything else here.
+				return lua.signalInterceptedService(intercept.serviceName, function, messagePointer);
+			}
+
+			break;
+		}
+	}
+
+	// Lua did not intercept the service, so emulate it normally
+	return false;
 }

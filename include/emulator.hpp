@@ -127,6 +127,7 @@ class Emulator {
 	Scheduler& getScheduler() { return scheduler; }
 	Memory& getMemory() { return memory; }
 	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
+	Kernel& getKernel() { return kernel; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }

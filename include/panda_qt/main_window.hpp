@@ -21,6 +21,7 @@
 #include "panda_qt/screen.hpp"
 #include "panda_qt/shader_editor.hpp"
 #include "panda_qt/text_editor.hpp"
+#include "panda_qt/thread_debugger.hpp"
 #include "services/hid.hpp"
 
 struct CheatMessage {
@@ -109,6 +110,7 @@ class MainWindow : public QMainWindow {
 	TextEditorWindow* luaEditor;
 	PatchWindow* patchWindow;
 	ShaderEditorWindow* shaderEditor;
+	ThreadDebugger* threadDebugger;
 
 	// We use SDL's game controller API since it's the sanest API that supports as many controllers as possible
 	SDL_GameController* gameController = nullptr;
@@ -157,4 +159,7 @@ class MainWindow : public QMainWindow {
 
 	void handleScreenResize(u32 width, u32 height);
 	void handleTouchscreenPress(QMouseEvent* event);
+
+  signals:
+	void emulatorPaused();
 };

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <bit>
 #include <cassert>
 #include <cstring>
@@ -696,4 +697,19 @@ bool Kernel::shouldWaitOnObject(KernelObject* object) {
 			Helpers::panic("Not sure whether to wait on object (type: %s)", object->getTypeName());
 			return true;
 	}
+}
+
+std::vector<Thread> Kernel::getMainProcessThreads() {
+	// Sort the thread indices so that they appear nicer in the debugger
+	auto indices = threadIndices;
+	std::sort(indices.begin(), indices.end());
+
+	std::vector<Thread> ret;
+	ret.reserve(indices.size());
+
+	for (const auto& index : indices) {
+		ret.push_back(threads[index]);
+	}
+
+	return ret;
 }
