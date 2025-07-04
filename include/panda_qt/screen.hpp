@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 
+#include "PICA/screen_layout.hpp"
 #include "gl/context.h"
 #include "window_info.h"
 
@@ -28,6 +29,10 @@ class ScreenWidget : public QWidget {
 	// Cached "previous" dimensions, used when resizing our window
 	u32 previousWidth = 0;
 	u32 previousHeight = 0;
+
+	// Coordinates (x/y/width/height) for the two screens in window space, used for properly handling touchscreen regardless
+	// of layout or resizing
+	ScreenLayout::WindowCoordinates screenCoordinates;
 
   private:
 	std::unique_ptr<GL::Context> glContext = nullptr;

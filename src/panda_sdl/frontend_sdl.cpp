@@ -230,24 +230,7 @@ void FrontendSDL::run() {
 					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
-							break;
-						}
-
-						// Go from window positions to [0, 400) for x and [0, 480) for y
-						const s32 x = (s32)std::round(event.button.x * 400.f / windowWidth);
-						const s32 y = (s32)std::round(event.button.y * 480.f / windowHeight);
-
-						// Check if touch falls in the touch screen area
-						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-							// Convert to 3DS coordinates
-							u16 x_converted = static_cast<u16>(x) - 40;
-							u16 y_converted = static_cast<u16>(y) - 240;
-
-							hid.setTouchScreenPress(x_converted, y_converted);
-						} else {
-							hid.releaseTouchScreen();
-						}
+						handleLeftClick(event.button.x, event.button.y);
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
 						holdingRightClick = true;
 					}
@@ -321,18 +304,7 @@ void FrontendSDL::run() {
 							break;
 						}
 
-						// Go from window positions to [0, 400) for x and [0, 480) for y
-						const s32 x = (s32)std::round(event.motion.x * 400.f / windowWidth);
-						const s32 y = (s32)std::round(event.motion.y * 480.f / windowHeight);
-
-						// Check if touch falls in the touch screen area and register the new touch screen position
-						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-							// Convert to 3DS coordinates
-							u16 x_converted = static_cast<u16>(x) - 40;
-							u16 y_converted = static_cast<u16>(y) - 240;
-
-							hid.setTouchScreenPress(x_converted, y_converted);
-						}
+						handleLeftClick(event.motion.x, event.motion.y);
 					}
 
 					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope rotation
@@ -393,6 +365,8 @@ void FrontendSDL::run() {
 					if (type == SDL_WINDOWEVENT_RESIZED) {
 						windowWidth = event.window.data1;
 						windowHeight = event.window.data2;
+						ScreenLayout::calculateCoordinates(screenCoordinates, u32(windowWidth), u32(windowHeight), ScreenLayout::Layout::Default);
+
 						emu.setOutputSize(windowWidth, windowHeight);
 					}
 				}
@@ -469,5 +443,33 @@ void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
 
 	if (haveAccelerometer) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
+	}
+}
+
+void FrontendSDL::handleLeftClick(int mouseX, int mouseY) {
+	if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
+		return;
+	}
+
+	const auto& coords = screenCoordinates;
+	const int bottomScreenX = int(coords.bottomScreenX);
+	const int bottomScreenY = int(coords.bottomScreenY);
+	const int bottomScreenWidth = int(coords.bottomScreenWidth);
+	const int bottomScreenHeight = int(coords.bottomScreenHeight);
+	auto& hid = emu.getServiceManager().getHID();
+
+	// Check if the mouse is inside the bottom screen area
+	if (mouseX >= int(bottomScreenX) && mouseX < int(bottomScreenX + bottomScreenWidth) && mouseY >= int(bottomScreenY) &&
+		mouseY < int(bottomScreenY + bottomScreenHeight)) {
+		// Map to 3DS touchscreen coordinates
+		float relX = float(mouseX - bottomScreenX) / float(bottomScreenWidth);
+		float relY = float(mouseY - bottomScreenY) / float(bottomScreenHeight);
+
+		u16 x_converted = static_cast<u16>(std::clamp(relX * ScreenLayout::BOTTOM_SCREEN_WIDTH, 0.f, float(ScreenLayout::BOTTOM_SCREEN_WIDTH - 1)));
+		u16 y_converted = static_cast<u16>(std::clamp(relY * ScreenLayout::BOTTOM_SCREEN_HEIGHT, 0.f, float(ScreenLayout::BOTTOM_SCREEN_HEIGHT - 1)));
+
+		hid.setTouchScreenPress(x_converted, y_converted);
+	} else {
+		hid.releaseTouchScreen();
 	}
 }
