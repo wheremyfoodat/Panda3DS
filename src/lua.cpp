@@ -245,15 +245,11 @@ static int loadROMThunk(lua_State* L) {
 static int addServiceInterceptThunk(lua_State* L) {
 	// Service name argument is invalid, report that loading failed and exit
 	if (lua_type(L, 1) != LUA_TSTRING) {
-		lua_pushboolean(L, 0);
-		lua_error(L);
-		return 2;
+		return luaL_error(L, "Argument 1 (service name) is not a string");
 	}
 
 	if (lua_type(L, 2) != LUA_TNUMBER) {
-		lua_pushboolean(L, 0);
-		lua_error(L);
-		return 2;
+		return luaL_error(L, "Argument 2 (function id) is not a number");
 	}
 
 	// Callback is not a function object directly, fail and exit
@@ -262,9 +258,7 @@ static int addServiceInterceptThunk(lua_State* L) {
 	// good: addServiceIntercept(servicename, funcid, function (s, f, buffer) ... end)
 	// bad:  addServiceIntercept(servicename, funcid, obj:method)
 	if (lua_type(L, 3) != LUA_TFUNCTION) {
-		lua_pushboolean(L, 0);
-		lua_error(L);
-		return 2;
+		return luaL_error(L, "Argument 3 (callback) is not a function");
 	}
 
 	// Get the name of the service we want to intercept, as well as the header of the function to intercept
@@ -278,7 +272,7 @@ static int addServiceInterceptThunk(lua_State* L) {
 	lua_pushvalue(L, 3);
 	const int callback_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 	LuaManager::g_emulator->getServiceManager().addServiceIntercept(serviceName, function, callback_ref);
-	return 2;
+	return 0;
 }
 
 static int clearServiceInterceptsThunk(lua_State* L) {
