@@ -149,11 +149,19 @@ static constexpr serviceMap_t serviceMapArray[] = {
 };
 // clang-format on
 struct serviceMapByNameComparator {
+	typedef void is_transparent;
+	bool operator()( const serviceMap_t& lhs, std::string_view rhs ) const {
+		return std::less{}(lhs.first, rhs);
+	}
 	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
 		return std::less{}(lhs.first, rhs.first);
 	}
 };
 struct serviceMapByHandleComparator {
+	typedef void is_transparent;
+	bool operator()( const serviceMap_t& lhs, HorizonHandle rhs ) const {
+		return std::less{}(lhs.first, rhs);
+	}
 	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
 		return std::less{}(lhs.second, rhs.second);
 	}
@@ -171,7 +179,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
 	// Look up service handle in map, panic if it does not exist
-	if (auto search = serviceMapComparatorByName.find(service); search != serviceMapComparatorByName.end())
+	if (auto search = serviceMapByName.find(service); search != serviceMapByName.end())
 		handle = search->second;
 	else
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
