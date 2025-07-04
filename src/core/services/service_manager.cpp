@@ -151,19 +151,25 @@ static constexpr serviceMap_t serviceMapArray[] = {
 struct serviceMapByNameComparator {
 	typedef void is_transparent;
 	bool operator()( const serviceMap_t& lhs, std::string_view rhs ) const {
-		return std::less{}(lhs.first, rhs);
+		return lhs.first < rhs;
+	}
+	bool operator()( std::string_view lhs, const serviceMap_t& rhs ) const {
+		return lhs < rhs.first;
 	}
 	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
-		return std::less{}(lhs.first, rhs.first);
+		return lhs.first < rhs.first;
 	}
 };
 struct serviceMapByHandleComparator {
 	typedef void is_transparent;
 	bool operator()( const serviceMap_t& lhs, HorizonHandle rhs ) const {
-		return std::less{}(lhs.first, rhs);
+		return lhs.second < rhs;
+	}
+	bool operator()( HorizonHandle lhs, const serviceMap_t& rhs ) const {
+		return lhs < rhs.second;
 	}
 	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
-		return std::less{}(lhs.second, rhs.second);
+		return lhs.second < rhs.second;
 	}
 };
 static std::set<serviceMap_t, serviceMapByNameComparator> serviceMapByName{std::begin(serviceMapArray), std::end(serviceMapArray)};
