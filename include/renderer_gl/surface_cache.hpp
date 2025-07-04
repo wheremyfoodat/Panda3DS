@@ -28,14 +28,17 @@ class SurfaceCache {
 	std::array<SurfaceType, capacity> buffer;
 
 	// Map from address to surface pointer
-	std::map<u32, SurfaceType*> addressTree;
+	std::multimap<u32, SurfaceType*> addressTree;
 
-	void indexSurface(SurfaceType& surface) { addressTree[surface.location] = &surface; }
+	void indexSurface(SurfaceType& surface) { addressTree.emplace(surface.location, &surface); }
 
 	void unindexSurface(SurfaceType& surface) {
-		auto it = addressTree.find(surface.location);
-		if (it != addressTree.end() && it->second == &surface) {
-			addressTree.erase(it);
+		auto range = addressTree.equal_range(surface.location);
+		for (auto it = range.first; it != range.second; ++it) {
+			if (it->second == &surface) {
+				addressTree.erase(it);
+				break;
+			}
 		}
 	}
 
@@ -51,25 +54,24 @@ class SurfaceCache {
 	}
 
 	OptionalRef find(SurfaceType& other) {
-		for (auto& e : buffer) {
-			if (e.matches(other) && e.valid) return e;
+		auto range = addressTree.equal_range(other.location);
+		for (auto it = range.first; it != range.second; ++it) {
+			SurfaceType* candidate = it->second;
+			if (candidate->valid && candidate->matches(other)) {
+				return *candidate;
+			}
 		}
+
 		return std::nullopt;
 	}
 
-	// Fast range search using the address tree
 	OptionalRef findFromAddress(u32 address) {
-		// Find the first surface whose location is > address
-		auto it = addressTree.upper_bound(address);
-		if (it == addressTree.begin()) {
-			return std::nullopt;
+		for (auto it = addressTree.begin(); it != addressTree.end(); ++it) {
+			SurfaceType* surface = it->second;
+			if (surface->valid && surface->location <= address && surface->location + surface->sizeInBytes() > address) {
+				return *surface;
+			}
 		}
-
-		--it;
-		SurfaceType* surface = it->second;
-		if (surface->valid && surface->location <= address && surface->location + surface->sizeInBytes() > address) {
-			return *surface;
-		};
 
 		return std::nullopt;
 	}
