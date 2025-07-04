@@ -592,7 +592,7 @@ void RendererGL::display() {
 
             // Flip topScreenY and bottomScreenY because glBlitFramebuffer uses bottom-left origin
 			blitInfo.topScreenY = outputWindowHeight - (blitInfo.topScreenY + blitInfo.topScreenHeight);
-			blitInfo.topScreenY = outputWindowHeight - (blitInfo.bottomScreenY + blitInfo.bottomScreenHeight);
+			blitInfo.bottomScreenY = outputWindowHeight - (blitInfo.bottomScreenY + blitInfo.bottomScreenHeight);
 
 			// Used for optimizing the screen blit into a single blit
 			blitInfo.destX = windowCoords.singleBlitInfo.destX;
@@ -601,13 +601,9 @@ void RendererGL::display() {
 			blitInfo.destHeight = windowCoords.singleBlitInfo.destHeight;
 
 			// Check if we can blit the screens in 1 blit. If not, we'll break it into two.
+			// TODO: Maybe add some size-related checks too.
 			blitInfo.canDoSingleBlit =
-				windowCoords.topScreenY + windowCoords.topScreenHeight == windowCoords.bottomScreenY &&
-				windowCoords.bottomScreenX == windowCoords.topScreenX + int(ScreenLayout::BOTTOM_SCREEN_X_OFFSET * windowCoords.scale) &&
-				windowCoords.topScreenWidth == u32(ScreenLayout::TOP_SCREEN_WIDTH * windowCoords.scale) &&
-				windowCoords.bottomScreenWidth == u32(ScreenLayout::BOTTOM_SCREEN_WIDTH * windowCoords.scale) &&
-				windowCoords.topScreenHeight == u32(ScreenLayout::TOP_SCREEN_HEIGHT * windowCoords.scale) &&
-				windowCoords.bottomScreenHeight == u32(ScreenLayout::BOTTOM_SCREEN_HEIGHT * windowCoords.scale);
+				windowCoords.topScreenY + windowCoords.topScreenHeight == windowCoords.bottomScreenY && layout == ScreenLayout::Layout::Default;
 		}
 
 		if (blitInfo.canDoSingleBlit) {

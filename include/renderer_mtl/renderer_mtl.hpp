@@ -93,9 +93,13 @@ class RendererMTL final : public Renderer {
 	struct {
 		float topScreenX = 0;
 		float topScreenY = 0;
+		float topScreenWidth = 400;
+		float topScreenHeight = 240;
+
 		float bottomScreenX = 40;
 		float bottomScreenY = 240;
-		float scale = 1.0;
+		float bottomScreenWidth = 320;
+		float bottomScreenHeight = 240;
 	} blitInfo;
 
 	// Debug

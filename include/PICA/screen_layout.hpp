@@ -42,115 +42,114 @@ namespace ScreenLayout {
 			int destWidth = TOP_SCREEN_WIDTH;
 			int destHeight = CONSOLE_HEIGHT;
 		} singleBlitInfo;
-
-		float scale = 1.0f;
 	};
 
 	// Calculate screen coordinates on the screen for a given layout & a given size for the output window
 	// Used in both the renderers and in the frontends (To eg calculate touch screen boundaries)
 	static void calculateCoordinates(WindowCoordinates& coordinates, u32 outputWindowWidth, u32 outputWindowHeight, Layout layout) {
 		layout = Layout::SideBySideFlipped;
+		const float topScreenPercentage = 0.5f;
+
 		const float destAspect = float(outputWindowWidth) / float(outputWindowHeight);
 
 		if (layout == Layout::Default || layout == Layout::DefaultFlipped) {
-			const float srcAspect = 400.0 / 480.0;
+			// Calculate available height for each screen based on split
+			int availableTopHeight = int(outputWindowHeight * topScreenPercentage + 0.5f);
+			int availableBottomHeight = outputWindowHeight - availableTopHeight;
 
-			int destX = 0, destY = 0, destWidth = outputWindowWidth, destHeight = outputWindowHeight;
+			// Calculate scales for top and bottom screens, and then the actual sizes
+			float scaleTopX = float(outputWindowWidth) / float(TOP_SCREEN_WIDTH);
+			float scaleTopY = float(availableTopHeight) / float(TOP_SCREEN_HEIGHT);
+			float scaleTop = std::min(scaleTopX, scaleTopY);
 
-			if (destAspect > srcAspect) {
-				// Window is wider than source
-				destWidth = int(outputWindowHeight * srcAspect + 0.5f);
-				destX = (outputWindowWidth - destWidth) / 2;
-			} else {
-				// Window is taller than source
-				destHeight = int(outputWindowWidth / srcAspect + 0.5f);
-				destY = (outputWindowHeight - destHeight) / 2;
-			}
+			float scaleBottomX = float(outputWindowWidth) / float(BOTTOM_SCREEN_WIDTH);
+			float scaleBottomY = float(availableBottomHeight) / float(BOTTOM_SCREEN_HEIGHT);
+			float scaleBottom = std::min(scaleBottomX, scaleBottomY);
 
-			// How much we'll scale the output by
-			const float scale = float(destWidth) / float(TOP_SCREEN_WIDTH);
+			int topScreenWidth = int(TOP_SCREEN_WIDTH * scaleTop + 0.5f);
+			int topScreenHeight = int(TOP_SCREEN_HEIGHT * scaleTop + 0.5f);
 
-			// Calculate coordinates and return them
-			// TODO: This will break when we allow screens to be scaled separately
-			coordinates.topScreenX = u32(destX);
-			coordinates.topScreenWidth = u32(float(TOP_SCREEN_WIDTH) * scale);
-			coordinates.bottomScreenX = u32(destX) + BOTTOM_SCREEN_X_OFFSET * scale;
-			coordinates.bottomScreenWidth = u32(float(BOTTOM_SCREEN_WIDTH) * scale);
+			int bottomScreenWidth = int(BOTTOM_SCREEN_WIDTH * scaleBottom + 0.5f);
+			int bottomScreenHeight = int(BOTTOM_SCREEN_HEIGHT * scaleBottom + 0.5f);
+
+			// Center screens horizontally
+			int topScreenX = (outputWindowWidth - topScreenWidth) / 2;
+			int bottomScreenX = (outputWindowWidth - bottomScreenWidth) / 2;
+
+			coordinates.topScreenWidth = topScreenWidth;
+			coordinates.topScreenHeight = topScreenHeight;
+			coordinates.bottomScreenWidth = bottomScreenWidth;
+			coordinates.bottomScreenHeight = bottomScreenHeight;
+
+			coordinates.topScreenX = topScreenX;
+			coordinates.bottomScreenX = bottomScreenX;
 
 			if (layout == Layout::Default) {
-				coordinates.topScreenY = u32(destY + (destHeight - int(CONSOLE_HEIGHT * scale)) / 2);
-				coordinates.topScreenHeight = u32(float(TOP_SCREEN_HEIGHT) * scale);
-
-				coordinates.bottomScreenY = coordinates.topScreenY + TOP_SCREEN_HEIGHT * scale;
-				coordinates.bottomScreenHeight = coordinates.topScreenHeight;
+				coordinates.topScreenY = 0;
+				coordinates.bottomScreenY = topScreenHeight;
 			} else {
-				// Flip the screens vertically
-				coordinates.bottomScreenY = u32(destY + (destHeight - int(CONSOLE_HEIGHT * scale)) / 2);
-				coordinates.bottomScreenHeight = u32(float(BOTTOM_SCREEN_HEIGHT) * scale);
-
-				coordinates.topScreenY = coordinates.bottomScreenY + TOP_SCREEN_HEIGHT * scale;
-				coordinates.topScreenHeight = coordinates.bottomScreenHeight;
+				coordinates.bottomScreenY = 0;
+				coordinates.topScreenY = bottomScreenHeight;
 			}
 
 			coordinates.windowWidth = outputWindowWidth;
 			coordinates.windowHeight = outputWindowHeight;
-			coordinates.scale = scale;
 
-			coordinates.singleBlitInfo.destX = destX;
-			coordinates.singleBlitInfo.destY = destY;
-			coordinates.singleBlitInfo.destWidth = destWidth;
-			coordinates.singleBlitInfo.destHeight = destHeight;
-		} else if (layout == Layout::SideBySide || layout == Layout::SideBySideFlipped) {
-			// For side-by-side layouts, the 3DS aspect ratio is calculated as (top width + bottom width) / height
-			const float srcAspect = float(TOP_SCREEN_WIDTH + BOTTOM_SCREEN_WIDTH) / float(CONSOLE_HEIGHT);
-
-			int destX = 0, destY = 0, destWidth = outputWindowWidth, destHeight = outputWindowHeight;
-
-			if (destAspect > srcAspect) {
-				// Window is wider than the side-by-side layout — center horizontally
-				destWidth = int(outputWindowHeight * srcAspect + 0.5f);
-				destX = (outputWindowWidth - destWidth) / 2;
+			// Default layout can be rendered using a single blit, flipped layout can't
+			if (layout == Layout::Default) {
+				coordinates.singleBlitInfo.destX = coordinates.topScreenX;
+				coordinates.singleBlitInfo.destY = coordinates.topScreenY;
+				coordinates.singleBlitInfo.destWidth = coordinates.topScreenWidth;
+				coordinates.singleBlitInfo.destHeight = coordinates.topScreenHeight + coordinates.bottomScreenHeight;
 			} else {
-				// Window is taller — center vertically
-				destHeight = int(outputWindowWidth / srcAspect + 0.5f);
-				destY = (outputWindowHeight - destHeight) / 2;
+				// Dummy data for the single blit info, as we can't render the screen in 1 blit when the screens are side-by-sid
+				coordinates.singleBlitInfo.destX = 0;
+				coordinates.singleBlitInfo.destY = 0;
+				coordinates.singleBlitInfo.destWidth = 0;
+				coordinates.singleBlitInfo.destHeight = 0;
 			}
+		} else if (layout == Layout::SideBySide || layout == Layout::SideBySideFlipped) {
+			// Calculate available width for each screen based on split
+			int availableTopWidth = int(outputWindowWidth * topScreenPercentage + 0.5f);
+			int availableBottomWidth = outputWindowWidth - availableTopWidth;
 
-			// How much we'll scale the output by. Again, we want to take both screens into account
-			const float scale = float(destWidth) / float(TOP_SCREEN_WIDTH + BOTTOM_SCREEN_WIDTH);
+			// Calculate scales for top and bottom screens, and then the actual sizes
+			float scaleTop = std::min(float(availableTopWidth) / float(TOP_SCREEN_WIDTH), float(outputWindowHeight) / float(TOP_SCREEN_HEIGHT));
+			float scaleBottom =
+				std::min(float(availableBottomWidth) / float(BOTTOM_SCREEN_WIDTH), float(outputWindowHeight) / float(BOTTOM_SCREEN_HEIGHT));
 
-			// Annoyingly, the top screen is wider than the bottom screen, so to display them side-by-side and centered
-			// vertically, we have to account for that
+			int topScreenWidth = int(TOP_SCREEN_WIDTH * scaleTop + 0.5f);
+			int topScreenHeight = int(TOP_SCREEN_HEIGHT * scaleTop + 0.5f);
+			int bottomScreenWidth = int(BOTTOM_SCREEN_WIDTH * scaleBottom + 0.5f);
+			int bottomScreenHeight = int(BOTTOM_SCREEN_HEIGHT * scaleBottom + 0.5f);
 
-			// The top screen is currently always larger, but it's still best to check which screen is taller anyways
-			// Since eventually we'll want to let users scale each screen separately.
-			const int topHeightScaled = int(TOP_SCREEN_HEIGHT * scale + 0.5f);
-			const int bottomHeightScaled = int(BOTTOM_SCREEN_HEIGHT * scale + 0.5f);
-			const int maxHeight = std::max(topHeightScaled, bottomHeightScaled);
-			const int centerY = destY + (destHeight - maxHeight) / 2;
+			// Vertically center the tallest screen
+			int maxHeight = std::max(topScreenHeight, bottomScreenHeight);
+			int baseY = (outputWindowHeight - maxHeight) / 2;
 
-			coordinates.topScreenY = u32(centerY + (maxHeight - topHeightScaled) / 2);
-			coordinates.topScreenWidth = u32(TOP_SCREEN_WIDTH * scale);
-			coordinates.topScreenHeight = u32(TOP_SCREEN_HEIGHT * scale);
-
-			coordinates.bottomScreenY = u32(centerY + (maxHeight - bottomHeightScaled) / 2);
-			coordinates.bottomScreenWidth = u32(BOTTOM_SCREEN_WIDTH * scale);
-			coordinates.bottomScreenHeight = u32(BOTTOM_SCREEN_HEIGHT * scale);
+			int topScreenY = baseY + (maxHeight - topScreenHeight) / 2;
+			int bottomScreenY = baseY + (maxHeight - bottomScreenHeight) / 2;
 
 			if (layout == Layout::SideBySide) {
-				coordinates.topScreenX = destX;
-				coordinates.bottomScreenX = destX + coordinates.topScreenWidth;
+				coordinates.topScreenX = (outputWindowWidth - (topScreenWidth + bottomScreenWidth)) / 2;
+				coordinates.bottomScreenX = coordinates.topScreenX + topScreenWidth;
 			} else {
-				// Flip the screens horizontally
-				coordinates.bottomScreenX = destX;
-				coordinates.topScreenX = destX + coordinates.bottomScreenWidth;
+				coordinates.bottomScreenX = (outputWindowWidth - (topScreenWidth + bottomScreenWidth)) / 2;
+				coordinates.topScreenX = coordinates.bottomScreenX + bottomScreenWidth;
 			}
+
+			coordinates.topScreenY = topScreenY;
+			coordinates.topScreenWidth = topScreenWidth;
+			coordinates.topScreenHeight = topScreenHeight;
+
+			coordinates.bottomScreenY = bottomScreenY;
+			coordinates.bottomScreenWidth = bottomScreenWidth;
+			coordinates.bottomScreenHeight = bottomScreenHeight;
 
 			coordinates.windowWidth = outputWindowWidth;
 			coordinates.windowHeight = outputWindowHeight;
-			coordinates.scale = scale;
 
-			// Set singleBlitInfo values to dummy values. Side-by-side screens can't be rendere in only 1 blit.
+			// Dummy data for the single blit info, as we can't render the screen in 1 blit when the screens are side-by-side
 			coordinates.singleBlitInfo.destX = 0;
 			coordinates.singleBlitInfo.destY = 0;
 			coordinates.singleBlitInfo.destWidth = 0;

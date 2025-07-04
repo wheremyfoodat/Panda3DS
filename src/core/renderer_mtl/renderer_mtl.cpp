@@ -109,17 +109,21 @@ void RendererMTL::display() {
 		ScreenLayout::WindowCoordinates windowCoords;
 		ScreenLayout::calculateCoordinates(windowCoords, outputWindowWidth, outputWindowHeight, ScreenLayout::Layout::Default);
 
-		blitInfo.scale = windowCoords.scale;
-		blitInfo.topScreenX = windowCoords.topScreenX;
-		blitInfo.topScreenY = windowCoords.topScreenY;
-		blitInfo.bottomScreenX = windowCoords.bottomScreenX;
-		blitInfo.bottomScreenY = windowCoords.bottomScreenY;
+		blitInfo.topScreenX = float(windowCoords.topScreenX);
+		blitInfo.topScreenY = float(windowCoords.topScreenY);
+		blitInfo.bottomScreenX = float(windowCoords.bottomScreenX);
+		blitInfo.bottomScreenY = float(windowCoords.bottomScreenY);
+
+		blitInfo.topScreenWidth = float(windowCoords.topScreenWidth);
+		blitInfo.topScreenHeight = float(windowCoords.topScreenHeight);
+		blitInfo.bottomScreenWidth = float(windowCoords.bottomScreenWidth);
+		blitInfo.bottomScreenHeight = float(windowCoords.bottomScreenHeight);
 	}
 
 	// Top screen
 	if (topScreen) {
 		renderCommandEncoder->setViewport(
-			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, 400 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
+			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, blitInfo.topScreenWidth, blitInfo.topScreenHeight, 0.0f, 1.0f}
 		);
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
@@ -128,7 +132,7 @@ void RendererMTL::display() {
 	// Bottom screen
 	if (bottomScreen) {
 		renderCommandEncoder->setViewport(
-			MTL::Viewport{blitInfo.bottomScreenX, blitInfo.bottomScreenY, 320 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
+			MTL::Viewport{blitInfo.bottomScreenX, blitInfo.bottomScreenY, blitInfo.bottomScreenWidth, blitInfo.bottomScreenHeight, 0.0f, 1.0f}
 		);
 		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
