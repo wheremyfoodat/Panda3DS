@@ -101,14 +101,14 @@ void LuaManager::signalEventInternal(LuaEvent e) {
 	lua_pcall(L, 1, 0, 0);
 }
 
-// Calls the "interceptService" function, if it exists, when a service call is intercepted
+// Calls the callback passed to the addServiceIntercept function, when a service call is intercepted
 // It passes the service name, the function header, and a pointer to the call's TLS buffer as parameters
-// interceptService is expected to return a bool, which indicates whether the C++ code should proceed to handle the service call
+// the callback is expected to return a bool, which indicates whether the C++ code should proceed to handle the service call
 // or if the Lua code handles it entirely.
 // If the bool is true, the Lua code handles the service call entirely and the C++ code doesn't do anything extra
 // Otherwise, then the C++ code calls its service call handling code as usual.
-bool LuaManager::signalInterceptedService(const std::string& service, u32 function, u32 messagePointer) {
-	lua_getglobal(L, "interceptService");
+bool LuaManager::signalInterceptedService(int callback_ref, const std::string& service, u32 function, u32 messagePointer) {
+	lua_rawgeti(L, LUA_REGISTRYINDEX, callback_ref);
 	lua_pushstring(L, service.c_str());  // Push service name
 	lua_pushinteger(L, function);        // Push function header
 	lua_pushinteger(L, messagePointer);  // Push pointer to TLS buffer
@@ -127,6 +127,13 @@ bool LuaManager::signalInterceptedService(const std::string& service, u32 functi
 	const bool ret = lua_toboolean(L, -1);
 	lua_pop(L, 1);
 	return ret;
+}
+
+// Removes a reference from the callback value in the registry
+// Prevents memory leaks, otherwise the function object would stay forever
+void LuaManager::removeInterceptedService(const std::string& service, u32 function, int callback_ref)
+{
+	luaL_unref(L, LUA_REGISTRYINDEX, callback_ref);
 }
 
 void LuaManager::reset() {
@@ -238,15 +245,20 @@ static int loadROMThunk(lua_State* L) {
 static int addServiceInterceptThunk(lua_State* L) {
 	// Service name argument is invalid, report that loading failed and exit
 	if (lua_type(L, 1) != LUA_TSTRING) {
-		lua_pushboolean(L, 0);
-		lua_error(L);
-		return 2;
+		return luaL_error(L, "Argument 1 (service name) is not a string");
 	}
 
 	if (lua_type(L, 2) != LUA_TNUMBER) {
-		lua_pushboolean(L, 0);
-		lua_error(L);
-		return 2;
+		return luaL_error(L, "Argument 2 (function id) is not a number");
+	}
+
+	// Callback is not a function object directly, fail and exit
+	// objects with a __call metamethod are not allowed (tables, userdata)
+	// good: addServiceIntercept(servicename, funcid, my_lua_function)
+	// good: addServiceIntercept(servicename, funcid, function (s, f, buffer) ... end)
+	// bad:  addServiceIntercept(servicename, funcid, obj:method)
+	if (lua_type(L, 3) != LUA_TFUNCTION) {
+		return luaL_error(L, "Argument 3 (callback) is not a function");
 	}
 
 	// Get the name of the service we want to intercept, as well as the header of the function to intercept
@@ -254,8 +266,13 @@ static int addServiceInterceptThunk(lua_State* L) {
 	const char* const str = lua_tolstring(L, 1, &nameLength);
 	const u32 function = (u32)lua_tointeger(L, 2);
 	const auto serviceName = std::string(str, nameLength);
-	LuaManager::g_emulator->getServiceManager().addServiceIntercept(serviceName, function);
-	return 2;
+	// stores a reference to the callback function object in the registry
+	// ensures access as needed and lifetime
+	// needs to be luaL_unref'd later to avoid memory leaks
+	lua_pushvalue(L, 3);
+	const int callback_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+	LuaManager::g_emulator->getServiceManager().addServiceIntercept(serviceName, function, callback_ref);
+	return 0;
 }
 
 static int clearServiceInterceptsThunk(lua_State* L) {
