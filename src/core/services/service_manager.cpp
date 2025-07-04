@@ -271,13 +271,13 @@ bool ServiceManager::checkForIntercept(u32 messagePointer, Handle handle) {
 	// Check if there's a Lua handler for this function and call it
 	const u32 function = mem.read32(messagePointer);
 
-	for (auto [serviceName, serviceHandle] : serviceMap) {
+	for (const auto& [serviceName, serviceHandle] : serviceMap) {
 		if (serviceHandle == handle) {
 			auto intercept = InterceptedService(std::string(serviceName), function);
-			if (interceptedServices.contains(intercept)) {
+			if (auto intercept_it = interceptedServices.find(intercept); intercept_it != interceptedServices.end()) {
 				// If the Lua handler returns true, it means the service is handled entirely
 				// From Lua, and we shouldn't do anything else here.
-				return lua.signalInterceptedService(intercept.serviceName, function, messagePointer);
+				return lua.signalInterceptedService(intercept_it->second, intercept.serviceName, function, messagePointer);
 			}
 
 			break;
