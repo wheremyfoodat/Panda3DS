@@ -27,16 +27,19 @@ class SurfaceCache {
 	size_t evictionIndex = 0;
 	std::array<SurfaceType, capacity> buffer;
 
-	// Map from address to surface pointer
-	std::multimap<u32, SurfaceType*> addressTree;
+	// Map from address to a surface in the above buffer.
+	// Several cached surfaces may have the same starting address, so we use a multimap.
+	std::multimap<u32, SurfaceType*> surfaceMap;
 
-	void indexSurface(SurfaceType& surface) { addressTree.emplace(surface.location, &surface); }
+	// Adds a surface to our map
+	void indexSurface(SurfaceType& surface) { surfaceMap.emplace(surface.location, &surface); }
 
+	// Removes a surface from our map
 	void unindexSurface(SurfaceType& surface) {
-		auto range = addressTree.equal_range(surface.location);
+		auto range = surfaceMap.equal_range(surface.location);
 		for (auto it = range.first; it != range.second; ++it) {
 			if (it->second == &surface) {
-				addressTree.erase(it);
+				surfaceMap.erase(it);
 				break;
 			}
 		}
@@ -46,15 +49,18 @@ class SurfaceCache {
 	void reset() {
 		size = 0;
 		evictionIndex = 0;
-		addressTree.clear();
+		surfaceMap.clear();
+
+		// Free the memory of all surfaces
 		for (auto& e : buffer) {
 			e.free();
 			e.valid = false;
 		}
 	}
 
+	// Use our map to only scan the surfaces with the same starting location
 	OptionalRef find(SurfaceType& other) {
-		auto range = addressTree.equal_range(other.location);
+		auto range = surfaceMap.equal_range(other.location);
 		for (auto it = range.first; it != range.second; ++it) {
 			SurfaceType* candidate = it->second;
 			if (candidate->valid && candidate->matches(other)) {
@@ -66,7 +72,7 @@ class SurfaceCache {
 	}
 
 	OptionalRef findFromAddress(u32 address) {
-		for (auto it = addressTree.begin(); it != addressTree.end(); ++it) {
+		for (auto it = surfaceMap.begin(); it != surfaceMap.end(); ++it) {
 			SurfaceType* surface = it->second;
 			if (surface->valid && surface->location <= address && surface->location + surface->sizeInBytes() > address) {
 				return *surface;
