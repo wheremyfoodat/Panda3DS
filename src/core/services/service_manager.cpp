@@ -1,6 +1,6 @@
 #include "services/service_manager.hpp"
 
-#include <map>
+#include <set>
 
 #include "ipc.hpp"
 #include "kernel.hpp"
@@ -98,7 +98,8 @@ void ServiceManager::registerClient(u32 messagePointer) {
 }
 
 // clang-format off
-static std::map<std::string, HorizonHandle> serviceMap = {
+using serviceMap_t = std::pair<std::string, HorizonHandle>;
+static constexpr serviceMap_t serviceMapArray[] = {
 	{ "ac:u", KernelHandles::AC },
 	{ "ac:i", KernelHandles::AC },
 	{ "act:a", KernelHandles::ACT },
@@ -147,6 +148,18 @@ static std::map<std::string, HorizonHandle> serviceMap = {
 	{ "y2r:u", KernelHandles::Y2R },
 };
 // clang-format on
+struct serviceMapByNameComparator {
+	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
+		return std::less{}(lhs.first, rhs.first);
+	}
+};
+struct serviceMapByHandleComparator {
+	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
+		return std::less{}(lhs.second, rhs.second);
+	}
+};
+static std::set<serviceMap_t, serviceMapByNameComparator> serviceMapByName{std::begin(serviceMapArray), std::end(serviceMapArray)};
+static std::set<serviceMap_t, serviceMapByHandleComparator> serviceMapByHandle{std::begin(serviceMapArray), std::end(serviceMapArray)};
 
 // https://www.3dbrew.org/wiki/SRV:GetServiceHandle
 void ServiceManager::getServiceHandle(u32 messagePointer) {
@@ -158,7 +171,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
 	// Look up service handle in map, panic if it does not exist
-	if (auto search = serviceMap.find(service); search != serviceMap.end())
+	if (auto search = serviceMapComparatorByName.find(service); search != serviceMapComparatorByName.end())
 		handle = search->second;
 	else
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
@@ -271,16 +284,12 @@ bool ServiceManager::checkForIntercept(u32 messagePointer, Handle handle) {
 	// Check if there's a Lua handler for this function and call it
 	const u32 function = mem.read32(messagePointer);
 
-	for (const auto& [serviceName, serviceHandle] : serviceMap) {
-		if (serviceHandle == handle) {
-			auto intercept = InterceptedService(std::string(serviceName), function);
-			if (auto intercept_it = interceptedServices.find(intercept); intercept_it != interceptedServices.end()) {
-				// If the Lua handler returns true, it means the service is handled entirely
-				// From Lua, and we shouldn't do anything else here.
-				return lua.signalInterceptedService(intercept_it->second, intercept.serviceName, function, messagePointer);
-			}
-
-			break;
+	if (auto service_it = serviceMapByHandle.find(handle); service_it != serviceMapByHandle.end()) {
+		auto intercept = InterceptedService(service_it->first, function);
+		if (auto intercept_it = interceptedServices.find(intercept); intercept_it != interceptedServices.end()) {
+			// If the Lua handler returns true, it means the service is handled entirely
+			// From Lua, and we shouldn't do anything else here.
+			return lua.signalInterceptedService(intercept_it->second, intercept.serviceName, function, messagePointer);
 		}
 	}
 
