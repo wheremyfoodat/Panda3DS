@@ -47,7 +47,7 @@ void ScreenWidget::resizeEvent(QResizeEvent* event) {
 		this->windowInfo = *windowInfo;
 	}
 
-	ScreenLayout::calculateCoordinates(screenCoordinates, u32(width()), u32(height()), ScreenLayout::Layout::Default);
+	reloadScreenCoordinates();
 
 	// This will call take care of calling resizeSurface from the emulator thread
 	resizeCallback(surfaceWidth, surfaceHeight);
@@ -60,6 +60,17 @@ void ScreenWidget::resizeSurface(u32 width, u32 height) {
 			glContext->ResizeSurface(width, height);
 		}
 	}
+}
+
+void ScreenWidget::reloadScreenCoordinates() {
+	ScreenLayout::calculateCoordinates(screenCoordinates, u32(width()), u32(height()), topScreenSize, screenLayout);
+}
+
+void ScreenWidget::reloadScreenLayout(ScreenLayout::Layout newLayout, float newTopScreenSize) {
+	screenLayout = newLayout;
+	topScreenSize = newTopScreenSize;
+
+	reloadScreenCoordinates();
 }
 
 bool ScreenWidget::createGLContext() {

@@ -4,7 +4,7 @@
 
 #include <filesystem>
 
-#include "PICA/screen_layout.hpp"
+#include "screen_layout.hpp"
 #include "emulator.hpp"
 #include "input_mappings.hpp"
 

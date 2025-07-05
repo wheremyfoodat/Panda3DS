@@ -130,4 +130,5 @@ class Renderer {
 
 	void setConfig(EmulatorConfig* config) { emulatorConfig = config; }
 	void setHashTextures(bool setting) { hashTextures = setting; }
+	void reloadScreenLayout() { outputSizeChanged = true; }
 };

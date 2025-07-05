@@ -55,7 +55,12 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		windowWidth = 400;
 		windowHeight = 480;
 	}
+
+	// Initialize output size and screen layout
 	emu.setOutputSize(windowWidth, windowHeight);
+	ScreenLayout::calculateCoordinates(
+		screenCoordinates, u32(windowWidth), u32(windowHeight), emu.getConfig().topScreenSize, emu.getConfig().screenLayout
+	);
 
 	if (needOpenGL) {
 		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
@@ -365,7 +370,11 @@ void FrontendSDL::run() {
 					if (type == SDL_WINDOWEVENT_RESIZED) {
 						windowWidth = event.window.data1;
 						windowHeight = event.window.data2;
-						ScreenLayout::calculateCoordinates(screenCoordinates, u32(windowWidth), u32(windowHeight), ScreenLayout::Layout::Default);
+
+						const auto& config = emu.getConfig();
+						ScreenLayout::calculateCoordinates(
+							screenCoordinates, u32(windowWidth), u32(windowHeight), emu.getConfig().topScreenSize, emu.getConfig().screenLayout
+						);
 
 						emu.setOutputSize(windowWidth, windowHeight);
 					}

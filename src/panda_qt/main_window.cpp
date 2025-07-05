@@ -129,6 +129,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		if (config.printAppVersion) {
 			printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
 		}
+
+		screen->reloadScreenLayout(config.screenLayout, config.topScreenSize);
 	}
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
@@ -435,13 +437,24 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			break;
 		}
 
-		case MessageType::UpdateConfig:
-			emu->getConfig() = configWindow->getConfig();
+		case MessageType::UpdateConfig: {
+			auto& emuConfig = emu->getConfig();
+			auto& newConfig = configWindow->getConfig();
+			// If the screen layout changed, we have to notify the emulator & the screen widget
+			bool reloadScreenLayout = (emuConfig.screenLayout != newConfig.screenLayout || emuConfig.topScreenSize != newConfig.topScreenSize);
+
+			emuConfig = newConfig;
 			emu->reloadSettings();
 
+			if (reloadScreenLayout) {
+				emu->reloadScreenLayout();
+				screen->reloadScreenLayout(newConfig.screenLayout, newConfig.topScreenSize);
+			}
+
 			// Save new settings to disk
-			emu->getConfig().save();
+			emuConfig.save();
 			break;
+		}
 	}
 }
 

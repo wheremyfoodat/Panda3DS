@@ -115,6 +115,8 @@ class Emulator {
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+	void reloadScreenLayout() { gpu.reloadScreenLayout(); }
+
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
 	// Reloads some settings that require special handling, such as audio enable

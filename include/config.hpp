@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <string>
 
+#include "screen_layout.hpp"
 #include "audio/dsp_core.hpp"
 #include "frontend_settings.hpp"
 #include "renderer.hpp"
@@ -68,6 +69,9 @@ struct EmulatorConfig {
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
 	bool hashTextures = hashTexturesDefault;
+
+	ScreenLayout::Layout screenLayout = ScreenLayout::Layout::Default;
+	float topScreenSize = 0.5;
 
 	bool accurateShaderMul = false;
 	bool discordRpcEnabled = false;

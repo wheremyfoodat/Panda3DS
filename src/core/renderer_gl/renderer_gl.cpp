@@ -11,7 +11,7 @@
 #include "PICA/pica_hash.hpp"
 #include "PICA/pica_simd.hpp"
 #include "PICA/regs.hpp"
-#include "PICA/screen_layout.hpp"
+#include "screen_layout.hpp"
 #include "PICA/shader_decompiler.hpp"
 #include "config.hpp"
 #include "math_util.hpp"
@@ -570,15 +570,18 @@ void RendererGL::display() {
 
 	if constexpr (!Helpers::isHydraCore()) {
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		OpenGL::clearColor();
+
 		screenFramebuffer.bind(OpenGL::ReadFramebuffer);
 
-		constexpr auto layout = ScreenLayout::Layout::Default;
 		if (outputSizeChanged) {
 			outputSizeChanged = false;
 
+			auto layout = emulatorConfig->screenLayout;
+
 			// Get information about our new screen layout to use for blitting the output
 			ScreenLayout::WindowCoordinates windowCoords;
-			ScreenLayout::calculateCoordinates(windowCoords, outputWindowWidth, outputWindowHeight, layout);
+			ScreenLayout::calculateCoordinates(windowCoords, outputWindowWidth, outputWindowHeight, emulatorConfig->topScreenSize, layout);
 
 			blitInfo.topScreenX = windowCoords.topScreenX;
 			blitInfo.topScreenY = windowCoords.topScreenY;
@@ -590,20 +593,16 @@ void RendererGL::display() {
 			blitInfo.bottomScreenWidth = windowCoords.bottomScreenWidth;
 			blitInfo.bottomScreenHeight = windowCoords.bottomScreenHeight;
 
-            // Flip topScreenY and bottomScreenY because glBlitFramebuffer uses bottom-left origin
+			// Flip topScreenY and bottomScreenY because glBlitFramebuffer uses bottom-left origin
 			blitInfo.topScreenY = outputWindowHeight - (blitInfo.topScreenY + blitInfo.topScreenHeight);
 			blitInfo.bottomScreenY = outputWindowHeight - (blitInfo.bottomScreenY + blitInfo.bottomScreenHeight);
 
 			// Used for optimizing the screen blit into a single blit
+			blitInfo.canDoSingleBlit = windowCoords.singleBlitInfo.canDoSingleBlit;
 			blitInfo.destX = windowCoords.singleBlitInfo.destX;
 			blitInfo.destY = windowCoords.singleBlitInfo.destY;
 			blitInfo.destWidth = windowCoords.singleBlitInfo.destWidth;
 			blitInfo.destHeight = windowCoords.singleBlitInfo.destHeight;
-
-			// Check if we can blit the screens in 1 blit. If not, we'll break it into two.
-			// TODO: Maybe add some size-related checks too.
-			blitInfo.canDoSingleBlit =
-				windowCoords.topScreenY + windowCoords.topScreenHeight == windowCoords.bottomScreenY && layout == ScreenLayout::Layout::Default;
 		}
 
 		if (blitInfo.canDoSingleBlit) {

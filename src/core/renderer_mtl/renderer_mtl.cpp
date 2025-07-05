@@ -10,7 +10,7 @@
 
 #include "PICA/gpu.hpp"
 #include "PICA/pica_hash.hpp"
-#include "PICA/screen_layout.hpp"
+#include "screen_layout.hpp"
 #include "SDL_metal.h"
 
 using namespace PICA;
@@ -107,7 +107,9 @@ void RendererMTL::display() {
 	if (outputSizeChanged) {
 		outputSizeChanged = false;
 		ScreenLayout::WindowCoordinates windowCoords;
-		ScreenLayout::calculateCoordinates(windowCoords, outputWindowWidth, outputWindowHeight, ScreenLayout::Layout::Default);
+		ScreenLayout::calculateCoordinates(
+			windowCoords, outputWindowWidth, outputWindowHeight, emulatorConfig->topScreenSize, emulatorConfig->screenLayout
+		);
 
 		blitInfo.topScreenX = float(windowCoords.topScreenX);
 		blitInfo.topScreenY = float(windowCoords.topScreenY);
