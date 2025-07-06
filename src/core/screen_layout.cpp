@@ -19,13 +19,9 @@ void ScreenLayout::calculateCoordinates(
 		int availableBottomHeight = outputWindowHeight - availableTopHeight;
 
 		// Calculate scales for top and bottom screens, and then the actual sizes
-		float scaleTopX = float(outputWindowWidth) / float(TOP_SCREEN_WIDTH);
-		float scaleTopY = float(availableTopHeight) / float(TOP_SCREEN_HEIGHT);
-		float scaleTop = std::min(scaleTopX, scaleTopY);
-
-		float scaleBottomX = float(outputWindowWidth) / float(BOTTOM_SCREEN_WIDTH);
-		float scaleBottomY = float(availableBottomHeight) / float(BOTTOM_SCREEN_HEIGHT);
-		float scaleBottom = std::min(scaleBottomX, scaleBottomY);
+		float scaleTop = std::min(float(outputWindowWidth) / float(TOP_SCREEN_WIDTH), float(availableTopHeight) / float(TOP_SCREEN_HEIGHT));
+		float scaleBottom =
+			std::min(float(outputWindowWidth) / float(BOTTOM_SCREEN_WIDTH), float(availableBottomHeight) / float(BOTTOM_SCREEN_HEIGHT));
 
 		int topScreenWidth = int(TOP_SCREEN_WIDTH * scaleTop + 0.5f);
 		int topScreenHeight = int(TOP_SCREEN_HEIGHT * scaleTop + 0.5f);
@@ -90,10 +86,10 @@ void ScreenLayout::calculateCoordinates(
 
 		// Vertically center the tallest screen
 		int maxHeight = std::max(topScreenHeight, bottomScreenHeight);
-		int baseY = (outputWindowHeight - maxHeight) / 2;
+		int centerY = (outputWindowHeight - maxHeight) / 2;
 
-		int topScreenY = baseY + (maxHeight - topScreenHeight) / 2;
-		int bottomScreenY = baseY + (maxHeight - bottomScreenHeight) / 2;
+		int topScreenY = centerY + (maxHeight - topScreenHeight) / 2;
+		int bottomScreenY = centerY + (maxHeight - bottomScreenHeight) / 2;
 
 		if (layout == Layout::SideBySide) {
 			coordinates.topScreenX = (outputWindowWidth - (topScreenWidth + bottomScreenWidth)) / 2;
@@ -153,3 +149,4 @@ const char* ScreenLayout::layoutToString(Layout layout) {
 		default: return "invalid";
 	}
 }
+    
