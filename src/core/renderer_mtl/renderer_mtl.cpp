@@ -10,6 +10,7 @@
 
 #include "PICA/gpu.hpp"
 #include "PICA/pica_hash.hpp"
+#include "screen_layout.hpp"
 #include "SDL_metal.h"
 
 using namespace PICA;
@@ -105,32 +106,26 @@ void RendererMTL::display() {
 
 	if (outputSizeChanged) {
 		outputSizeChanged = false;
+		ScreenLayout::WindowCoordinates windowCoords;
+		ScreenLayout::calculateCoordinates(
+			windowCoords, outputWindowWidth, outputWindowHeight, emulatorConfig->topScreenSize, emulatorConfig->screenLayout
+		);
 
-		const float srcAspect = 400.0 / 480.0;
-		const float destAspect = float(outputWindowWidth) / float(outputWindowHeight);
-		int destX = 0, destY = 0, destWidth = outputWindowWidth, destHeight = outputWindowHeight;
+		blitInfo.topScreenX = float(windowCoords.topScreenX);
+		blitInfo.topScreenY = float(windowCoords.topScreenY);
+		blitInfo.bottomScreenX = float(windowCoords.bottomScreenX);
+		blitInfo.bottomScreenY = float(windowCoords.bottomScreenY);
 
-		if (destAspect > srcAspect) {
-			// Window is wider than source
-			destWidth = int(outputWindowHeight * srcAspect + 0.5f);
-			destX = (outputWindowWidth - destWidth) / 2;
-		} else {
-			// Window is taller than source
-			destHeight = int(outputWindowWidth / srcAspect + 0.5f);
-			destY = (outputWindowHeight - destHeight) / 2;
-		}
-
-		blitInfo.scale = float(destWidth) / 400.0f;
-		blitInfo.topScreenX = float(destX);
-		blitInfo.topScreenY = float(destY + (destHeight - int(480 * blitInfo.scale)) / 2);
-		blitInfo.bottomScreenX = float(destX) + 40 * blitInfo.scale;
-		blitInfo.bottomScreenY = blitInfo.topScreenY + 240 * blitInfo.scale;
+		blitInfo.topScreenWidth = float(windowCoords.topScreenWidth);
+		blitInfo.topScreenHeight = float(windowCoords.topScreenHeight);
+		blitInfo.bottomScreenWidth = float(windowCoords.bottomScreenWidth);
+		blitInfo.bottomScreenHeight = float(windowCoords.bottomScreenHeight);
 	}
 
 	// Top screen
 	if (topScreen) {
 		renderCommandEncoder->setViewport(
-			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, 400 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
+			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, blitInfo.topScreenWidth, blitInfo.topScreenHeight, 0.0f, 1.0f}
 		);
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
@@ -139,7 +134,7 @@ void RendererMTL::display() {
 	// Bottom screen
 	if (bottomScreen) {
 		renderCommandEncoder->setViewport(
-			MTL::Viewport{blitInfo.bottomScreenX, blitInfo.bottomScreenY, 320 * blitInfo.scale, 240 * blitInfo.scale, 0.0f, 1.0f}
+			MTL::Viewport{blitInfo.bottomScreenX, blitInfo.bottomScreenY, blitInfo.bottomScreenWidth, blitInfo.bottomScreenHeight, 0.0f, 1.0f}
 		);
 		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
@@ -800,7 +795,7 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.fogLUTDirty = false;
 
-	std::array<float, FOG_LUT_TEXTURE_WIDTH* 2> fogLut = {0.0f};
+	std::array<float, FOG_LUT_TEXTURE_WIDTH * 2> fogLut = {0.0f};
 
 	for (int i = 0; i < fogLut.size(); i += 2) {
 		const uint32_t value = gpu.fogLUT[i >> 1];
@@ -835,8 +830,11 @@ void RendererMTL::textureCopyImpl(
 	commandEncoder.setRenderPipelineState(blitPipeline);
 
 	// Viewport
-	renderCommandEncoder->setViewport(MTL::Viewport{
-		double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
+	renderCommandEncoder->setViewport(
+		MTL::Viewport{
+			double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0
+		}
+	);
 
 	float srcRectNDC[4] = {
 		srcRect.left / (float)srcFramebuffer.size.u(),

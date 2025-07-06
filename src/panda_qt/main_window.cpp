@@ -129,6 +129,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		if (config.printAppVersion) {
 			printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
 		}
+
+		screen->reloadScreenLayout(config.screenLayout, config.topScreenSize);
 	}
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
@@ -435,13 +437,24 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			break;
 		}
 
-		case MessageType::UpdateConfig:
-			emu->getConfig() = configWindow->getConfig();
+		case MessageType::UpdateConfig: {
+			auto& emuConfig = emu->getConfig();
+			auto& newConfig = configWindow->getConfig();
+			// If the screen layout changed, we have to notify the emulator & the screen widget
+			bool reloadScreenLayout = (emuConfig.screenLayout != newConfig.screenLayout || emuConfig.topScreenSize != newConfig.topScreenSize);
+
+			emuConfig = newConfig;
 			emu->reloadSettings();
 
+			if (reloadScreenLayout) {
+				emu->reloadScreenLayout();
+				screen->reloadScreenLayout(newConfig.screenLayout, newConfig.topScreenSize);
+			}
+
 			// Save new settings to disk
-			emu->getConfig().save();
+			emuConfig.save();
 			break;
+		}
 	}
 }
 
@@ -525,25 +538,28 @@ void MainWindow::handleTouchscreenPress(QMouseEvent* event) {
 	const QPointF clickPos = event->globalPosition();
 	const QPointF widgetPos = screen->mapFromGlobal(clickPos);
 
+	const auto& coords = screen->screenCoordinates;
+	const float bottomScreenX = float(coords.bottomScreenX);
+	const float bottomScreenY = float(coords.bottomScreenY);
+	const float bottomScreenWidth = float(coords.bottomScreenWidth);
+	const float bottomScreenHeight = float(coords.bottomScreenHeight);
+
 	// Press is inside the screen area
-	if (widgetPos.x() >= 0 && widgetPos.x() < screen->width() && widgetPos.y() >= 0 && widgetPos.y() < screen->height()) {
-		// Go from widget positions to [0, 400) for x and [0, 480) for y
-		uint x = (uint)std::round(widgetPos.x() / screen->width() * 400.f);
-		uint y = (uint)std::round(widgetPos.y() / screen->height() * 480.f);
+	if (widgetPos.x() >= bottomScreenX && widgetPos.x() < bottomScreenX + bottomScreenWidth && widgetPos.y() >= bottomScreenY &&
+		widgetPos.y() < bottomScreenY + bottomScreenHeight) {
+		// Map widget position to 3DS touchscreen coordinates, with (0, 0) = top left of touchscreen
+		float relX = (widgetPos.x() - bottomScreenX) / bottomScreenWidth;
+		float relY = (widgetPos.y() - bottomScreenY) / bottomScreenHeight;
 
-		// Check if touch falls in the touch screen area
-		if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-			// Convert to 3DS coordinates
-			u16 x_converted = static_cast<u16>(x) - 40;
-			u16 y_converted = static_cast<u16>(y) - 240;
+		u16 x_converted = u16(std::clamp(relX * ScreenLayout::BOTTOM_SCREEN_WIDTH, 0.f, float(ScreenLayout::BOTTOM_SCREEN_WIDTH - 1)));
+		u16 y_converted = u16(std::clamp(relY * ScreenLayout::BOTTOM_SCREEN_HEIGHT, 0.f, float(ScreenLayout::BOTTOM_SCREEN_HEIGHT - 1)));
 
-			EmulatorMessage message{.type = MessageType::PressTouchscreen};
-			message.touchscreen.x = x_converted;
-			message.touchscreen.y = y_converted;
-			sendMessage(message);
-		} else {
-			sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
-		}
+		EmulatorMessage message{.type = MessageType::PressTouchscreen};
+		message.touchscreen.x = x_converted;
+		message.touchscreen.y = y_converted;
+		sendMessage(message);
+	} else {
+		sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
 	}
 }
 

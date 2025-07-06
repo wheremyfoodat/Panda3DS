@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 
+#include "screen_layout.hpp"
 #include "gl/context.h"
 #include "window_info.h"
 
@@ -29,6 +30,15 @@ class ScreenWidget : public QWidget {
 	u32 previousWidth = 0;
 	u32 previousHeight = 0;
 
+	// Coordinates (x/y/width/height) for the two screens in window space, used for properly handling touchscreen regardless
+	// of layout or resizing
+	ScreenLayout::WindowCoordinates screenCoordinates;
+	// Screen layouts and sizes
+	ScreenLayout::Layout screenLayout = ScreenLayout::Layout::Default;
+	float topScreenSize = 0.5f;
+
+	void reloadScreenLayout(ScreenLayout::Layout newLayout, float newTopScreenSize);
+
   private:
 	std::unique_ptr<GL::Context> glContext = nullptr;
 	ResizeCallback resizeCallback;
@@ -39,4 +49,6 @@ class ScreenWidget : public QWidget {
 	int scaledWindowWidth() const;
 	int scaledWindowHeight() const;
 	std::optional<WindowInfo> getWindowInfo();
+
+	void reloadScreenCoordinates();
 };
