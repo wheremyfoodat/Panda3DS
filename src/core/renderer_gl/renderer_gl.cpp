@@ -269,7 +269,9 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 		return;
 	}
 
-	static constexpr std::array<GLenum, 8> stencilFuncs = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
+	static constexpr std::array<GLenum, 8> stencilFuncs = {
+		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL,
+	};
 	gl.enableStencil();
 
 	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
