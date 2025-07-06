@@ -17,6 +17,7 @@
 #include "panda_qt/about_window.hpp"
 #include "panda_qt/cheats_window.hpp"
 #include "panda_qt/config_window.hpp"
+#include "panda_qt/cpu_debugger.hpp"
 #include "panda_qt/patch_window.hpp"
 #include "panda_qt/screen.hpp"
 #include "panda_qt/shader_editor.hpp"
@@ -110,6 +111,7 @@ class MainWindow : public QMainWindow {
 	TextEditorWindow* luaEditor;
 	PatchWindow* patchWindow;
 	ShaderEditorWindow* shaderEditor;
+	CPUDebugger* cpuDebugger;
 	ThreadDebugger* threadDebugger;
 
 	// We use SDL's game controller API since it's the sanest API that supports as many controllers as possible
