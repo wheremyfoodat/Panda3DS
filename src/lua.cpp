@@ -131,8 +131,7 @@ bool LuaManager::signalInterceptedService(int callback_ref, const std::string& s
 
 // Removes a reference from the callback value in the registry
 // Prevents memory leaks, otherwise the function object would stay forever
-void LuaManager::removeInterceptedService(const std::string& service, u32 function, int callback_ref)
-{
+void LuaManager::removeInterceptedService(const std::string& service, u32 function, int callback_ref) {
 	luaL_unref(L, LUA_REGISTRYINDEX, callback_ref);
 }
 
@@ -408,7 +407,7 @@ void LuaManager::initializeThunks() {
 
 		disassembleARM = function(pc, instruction) return GLOBALS.__disassembleARM(pc, instruction) end,
 		disassembleTeak = function(opcode, exp) return GLOBALS.__disassembleTeak(opcode, exp or 0) end,
-		addServiceIntercept = function(service, func) return GLOBALS.__addServiceIntercept(service, func) end,
+		addServiceIntercept = function(service, func, cb) return GLOBALS.__addServiceIntercept(service, func, cb) end,
 		clearServiceIntercepts = function() return GLOBALS.__clearServiceIntercepts() end,
 
 		Frame = __Frame,
