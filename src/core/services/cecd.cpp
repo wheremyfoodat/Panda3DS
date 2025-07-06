@@ -47,5 +47,5 @@ void CECDService::openAndRead(u32 messagePointer) {
 	// TODO: We should implement this properly the time comes
 	mem.write32(messagePointer, IPC::responseHeader(0x12, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Bytes read
+	mem.write32(messagePointer + 8, 0);  // Bytes read
 }

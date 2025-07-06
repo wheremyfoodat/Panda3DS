@@ -1,9 +1,10 @@
-#include "kernel.hpp"
 #include <cstring>
+
+#include "kernel.hpp"
 
 HorizonHandle Kernel::makePort(const char* name) {
 	Handle ret = makeObject(KernelObjectType::Port);
-	portHandles.push_back(ret); // Push the port handle to our cache of port handles
+	portHandles.push_back(ret);  // Push the port handle to our cache of port handles
 	objects[ret].data = new Port(name);
 
 	return ret;
@@ -73,7 +74,7 @@ void Kernel::connectToPort() {
 // Send an IPC message to a port (typically "srv:") or a service
 void Kernel::sendSyncRequest() {
 	const auto handle = regs[0];
-	u32 messagePointer = getTLSPointer() + 0x80; // The message is stored starting at TLS+0x80
+	u32 messagePointer = getTLSPointer() + 0x80;  // The message is stored starting at TLS+0x80
 	logSVC("SendSyncRequest(session handle = %X)\n", handle);
 
 	// Service calls via SendSyncRequest and file access needs to put the caller to sleep for a given amount of time
@@ -93,7 +94,7 @@ void Kernel::sendSyncRequest() {
 	// Check if our sync request is targetting a file instead of a service
 	bool isFileOperation = getObject(handle, KernelObjectType::File) != nullptr;
 	if (isFileOperation) {
-		regs[0] = Result::Success; // r0 goes first here too
+		regs[0] = Result::Success;  // r0 goes first here too
 		handleFileOperation(messagePointer, handle);
 		return;
 	}
@@ -101,7 +102,7 @@ void Kernel::sendSyncRequest() {
 	// Check if our sync request is targetting a directory instead of a service
 	bool isDirectoryOperation = getObject(handle, KernelObjectType::Directory) != nullptr;
 	if (isDirectoryOperation) {
-		regs[0] = Result::Success; // r0 goes first here too
+		regs[0] = Result::Success;  // r0 goes first here too
 		handleDirectoryOperation(messagePointer, handle);
 		return;
 	}
@@ -117,10 +118,10 @@ void Kernel::sendSyncRequest() {
 	const auto sessionData = static_cast<Session*>(session->data);
 	const Handle portHandle = sessionData->portHandle;
 
-	if (portHandle == srvHandle) { // Special-case SendSyncRequest targetting the "srv: port"
+	if (portHandle == srvHandle) {  // Special-case SendSyncRequest targetting the "srv: port"
 		regs[0] = Result::Success;
 		serviceManager.handleSyncRequest(messagePointer);
-	} else if (portHandle == errorPortHandle) { // Special-case "err:f" for juicy logs too
+	} else if (portHandle == errorPortHandle) {  // Special-case "err:f" for juicy logs too
 		regs[0] = Result::Success;
 		handleErrorSyncRequest(messagePointer);
 	} else {

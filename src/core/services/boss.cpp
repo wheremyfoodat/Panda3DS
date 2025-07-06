@@ -194,6 +194,7 @@ void BOSSService::sendProperty(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0);  // Read size
+
 	// TODO: Should this do anything else?
 }
 

@@ -1,4 +1,5 @@
 #include "services/act.hpp"
+
 #include "ipc.hpp"
 
 namespace ACTCommands {
@@ -33,7 +34,7 @@ void ACTService::initialize(u32 messagePointer) {
 
 void ACTService::generateUUID(u32 messagePointer) {
 	log("ACT::GenerateUUID (stubbed)\n");
-	
+
 	// TODO: The header is probably wrong
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);

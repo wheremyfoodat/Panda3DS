@@ -1,9 +1,10 @@
 #include "services/dlp_srvr.hpp"
+
 #include "ipc.hpp"
 
 namespace DlpSrvrCommands {
 	enum : u32 {
-		IsChild = 0x000E0040
+		IsChild = 0x000E0040,
 	};
 }
 
@@ -22,5 +23,5 @@ void DlpSrvrService::isChild(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0E, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // We are responsible adults
+	mem.write32(messagePointer + 8, 0);  // We are responsible adults
 }
