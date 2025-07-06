@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+
 #include "helpers.hpp"
 #include "io_file.hpp"
 #include "nfc_types.hpp"

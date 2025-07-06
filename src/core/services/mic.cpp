@@ -1,4 +1,5 @@
 #include "services/mic.hpp"
+
 #include "ipc.hpp"
 #include "kernel/kernel.hpp"
 
@@ -127,9 +128,8 @@ void MICService::startSampling(u32 messagePointer) {
 	u32 dataSize = mem.read32(messagePointer + 16);
 	bool loop = mem.read8(messagePointer + 20);
 
-	log("MIC::StartSampling (encoding = %d, sample rate = %d, offset = %08X, size = %08X, loop: %s) (stubbed)\n",
-		encoding, sampleRate, offset, dataSize, loop ? "yes" : "no"
-	);
+	log("MIC::StartSampling (encoding = %d, sample rate = %d, offset = %08X, size = %08X, loop: %s) (stubbed)\n", encoding, sampleRate, offset,
+		dataSize, loop ? "yes" : "no");
 
 	currentlySampling = true;
 	mem.write32(messagePointer, IPC::responseHeader(0x3, 1, 0));
@@ -139,7 +139,7 @@ void MICService::startSampling(u32 messagePointer) {
 void MICService::stopSampling(u32 messagePointer) {
 	log("MIC::StopSampling\n");
 	currentlySampling = false;
-	
+
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

@@ -11,8 +11,6 @@ using namespace ScreenLayout;
 void ScreenLayout::calculateCoordinates(
 	WindowCoordinates& coordinates, u32 outputWindowWidth, u32 outputWindowHeight, float topScreenPercentage, Layout layout
 ) {
-	const float destAspect = float(outputWindowWidth) / float(outputWindowHeight);
-
 	if (layout == Layout::Default || layout == Layout::DefaultFlipped) {
 		// Calculate available height for each screen based on split
 		int availableTopHeight = int(outputWindowHeight * topScreenPercentage + 0.5f);

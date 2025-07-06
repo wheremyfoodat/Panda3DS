@@ -3,8 +3,8 @@
 #include <functional>
 #include <memory>
 
-#include "screen_layout.hpp"
 #include "gl/context.h"
+#include "screen_layout.hpp"
 #include "window_info.h"
 
 // OpenGL widget for drawing the 3DS screen

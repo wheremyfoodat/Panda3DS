@@ -36,8 +36,8 @@ void CSNDService::handleSyncRequest(u32 messagePointer) {
 
 void CSNDService::acquireSoundChannels(u32 messagePointer) {
 	log("CSND::AcquireSoundChannels\n");
-	// The CSND service talks to the DSP using the DSP FIFO to negotiate what CSND channels are allocated to the DSP, and this seems to be channels 0-7 (usually). The rest are dedicated to CSND services.
-	// https://www.3dbrew.org/wiki/CSND_Services
+	// The CSND service talks to the DSP using the DSP FIFO to negotiate what CSND channels are allocated to the DSP, and this seems to be channels
+	// 0-7 (usually). The rest are dedicated to CSND services. https://www.3dbrew.org/wiki/CSND_Services
 	constexpr u32 csndChannelMask = 0xFFFFFF00;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 2, 0));
@@ -52,7 +52,8 @@ void CSNDService::initialize(u32 messagePointer) {
 	const u32 offset2 = mem.read32(messagePointer + 16);
 	const u32 offset3 = mem.read32(messagePointer + 20);
 
-	log("CSND::Initialize (Block size = %08X, offset0 = %X, offset1 = %X, offset2 = %X, offset3 = %X)\n", blockSize, offset0, offset1, offset2, offset3);
+	log("CSND::Initialize (Block size = %08X, offset0 = %X, offset1 = %X, offset2 = %X, offset3 = %X)\n", blockSize, offset0, offset1, offset2,
+		offset3);
 
 	// Align block size to 4KB. CSND shared memory block is currently stubbed to be 0x3000 == 12KB, so panic if this is more than requested
 	blockSize = (blockSize + 0xFFF) & ~0xFFF;

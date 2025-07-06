@@ -4,9 +4,9 @@
 
 #include <filesystem>
 
-#include "screen_layout.hpp"
 #include "emulator.hpp"
 #include "input_mappings.hpp"
+#include "screen_layout.hpp"
 
 class FrontendSDL {
 	Emulator emu;

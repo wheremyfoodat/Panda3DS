@@ -15,7 +15,7 @@ namespace Audio {
 		bool signalledData;
 		bool signalledSemaphore;
 
-		uint audioFrameIndex = 0; // Index in our audio frame
+		uint audioFrameIndex = 0;  // Index in our audio frame
 		std::array<s16, 160 * 2> audioFrame;
 
 		// Get a pointer to a data memory address
