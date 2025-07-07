@@ -1,12 +1,11 @@
 #include "services/cecd.hpp"
 
-#include <optional>
-
 #include "ipc.hpp"
 #include "kernel.hpp"
 
 namespace CECDCommands {
 	enum : u32 {
+		Stop = 0x000C0040,
 		GetInfoEventHandle = 0x000F0000,
 		GetChangeStateEventHandle = 0x00100000,
 		OpenAndRead = 0x00120104,
@@ -25,6 +24,7 @@ void CECDService::handleSyncRequest(u32 messagePointer) {
 		case CECDCommands::GetInfoEventHandle: getInfoEventHandle(messagePointer); break;
 		case CECDCommands::GetChangeStateEventHandle: getChangeStateEventHandle(messagePointer); break;
 		case CECDCommands::OpenAndRead: openAndRead(messagePointer); break;
+		case CECDCommands::Stop: stop(messagePointer); break;
 
 		default:
 			Helpers::panicDev("CECD service requested. Command: %08X\n", command);
@@ -70,4 +70,15 @@ void CECDService::openAndRead(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x12, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0);  // Bytes read
+}
+
+void CECDService::stop(u32 messagePointer) {
+	log("CECD::Stop (stubbed)\n");
+
+	if (changeStateEvent.has_value()) {
+		kernel.signalEvent(*changeStateEvent);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x0C, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }

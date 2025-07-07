@@ -24,6 +24,7 @@ class CECDService {
 	void getChangeStateEventHandle(u32 messagePointer);
 	void getInfoEventHandle(u32 messagePointer);
 	void openAndRead(u32 messagePointer);
+	void stop(u32 messagePointer);
 
   public:
 	CECDService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
