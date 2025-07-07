@@ -2,16 +2,19 @@
 
 #include <fmt/format.h>
 
+#include <QCheckBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <limits>
 #include <span>
 #include <utility>
 
 #include "capstone.hpp"
 
+// TODO: Make this actually thread-safe by having it only work when paused
 static int getLinesInViewport(QListWidget* listWidget) {
 	auto viewportHeight = listWidget->viewport()->height();
 	QFontMetrics fm = QFontMetrics(listWidget->font());
@@ -31,62 +34,83 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), Q
 	setWindowTitle(tr("CPU debugger"));
 	resize(1000, 600);
 
-	// Main grid layout
 	QGridLayout* gridLayout = new QGridLayout(this);
-
-	// Top row: buttons in a horizontal layout
 	QHBoxLayout* horizontalLayout = new QHBoxLayout();
-	QPushButton* stepButton = new QPushButton(tr("Step"), this);
+
+	// Set up the top line widgets
 	QPushButton* goToAddressButton = new QPushButton(tr("Go to address"), this);
 	QPushButton* goToPCButton = new QPushButton(tr("Go to PC"), this);
+	QCheckBox* followPCCheckBox = new QCheckBox(tr("Follow PC"), this);
+	addressInput = new QLineEdit(this);
 
-	horizontalLayout->addWidget(stepButton);
 	horizontalLayout->addWidget(goToAddressButton);
 	horizontalLayout->addWidget(goToPCButton);
+	horizontalLayout->addWidget(followPCCheckBox);
+	horizontalLayout->addWidget(addressInput);
+
+	followPCCheckBox->setChecked(followPC);
+	connect(followPCCheckBox, &QCheckBox::toggled, this, [&](bool checked) { followPC = checked; });
+
+	addressInput->setPlaceholderText(tr("Address to jump to"));
+	addressInput->setMaximumWidth(100);
+
 	gridLayout->addLayout(horizontalLayout, 0, 0);
 
-	// Disassembly list on the left
+	// Disassembly list on the left, scrollbar in the middle, register view on the right
 	disasmListWidget = new QListWidget(this);
 	gridLayout->addWidget(disasmListWidget, 1, 0);
 
-	// Vertical scroll bar in the middle
 	verticalScrollBar = new QScrollBar(Qt::Vertical, this);
 	gridLayout->addWidget(verticalScrollBar, 1, 1);
 
-	// Register view on the right
 	registerTextEdit = new QPlainTextEdit(this);
 	registerTextEdit->setEnabled(true);
 	registerTextEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 	registerTextEdit->setMaximumWidth(800);
 	gridLayout->addWidget(registerTextEdit, 1, 2);
 
-	// Setup disabled widget overlay
+	// Setup overlay for when the widget is disabled
 	disabledOverlay = new DisabledWidgetOverlay(this, tr("Pause the emulator to use the CPU Debugger"));
 	disabledOverlay->resize(size());  // Fill the whole screen
 	disabledOverlay->raise();
 	disabledOverlay->hide();
 
-	// Monospace font
+	// Use a monospace font for the disassembly to align it
 	QFont mono_font = QFont("Courier New");
 	mono_font.setStyleHint(QFont::Monospace);
 	disasmListWidget->setFont(mono_font);
 	registerTextEdit->setFont(mono_font);
 
-	// To forward scrolling from the list widget to the external scrollbar
+	// Forward scrolling from the list widget to our scrollbar
 	disasmListWidget->installEventFilter(this);
 
-	// Setup scroll bar
-	verticalScrollBar->setRange(0, INT32_MAX);
+    // Annoyingly, due to a Qt limitation we can't set it to U32_MAX
+	verticalScrollBar->setRange(0, std::numeric_limits<s32>::max());
 	verticalScrollBar->setSingleStep(8);
 	verticalScrollBar->setPageStep(getLinesInViewport(disasmListWidget));
 	verticalScrollBar->show();
 	connect(verticalScrollBar, &QScrollBar::valueChanged, this, &CPUDebugger::updateDisasm);
 	registerTextEdit->setReadOnly(true);
 
-	connect(goToPCButton, &QPushButton::clicked, this, [&]() {
-		u32 pc = emu->getCPU().getReg(15);
-		verticalScrollBar->setValue(pc);
+	connect(goToPCButton, &QPushButton::clicked, this, [&]() { scrollToPC(); });
+
+	// We have a QTimer that triggers every 500ms to update our widget when it's active
+	updateTimer = new QTimer(this);
+	connect(updateTimer, &QTimer::timeout, this, &CPUDebugger::update);
+
+	// Go to address when the "Go to address" button is pressed, or when we press enter inside the address input box
+	connect(goToAddressButton, &QPushButton::clicked, this, [&]() {
+		QString text = addressInput->text().trimmed();
+
+		bool validAddr = false;
+		u32 addr = text.toUInt(&validAddr, 16);  // Parse address as hex
+		if (validAddr) {
+			verticalScrollBar->setValue(addr);
+		} else {
+			addressInput->setText(tr("Invalid hexadecimal address"));
+		}
 	});
+	connect(addressInput, &QLineEdit::returnPressed, goToAddressButton, &QPushButton::click);
 
 	disable();
 	hide();
@@ -94,22 +118,28 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), Q
 
 void CPUDebugger::enable() {
 	enabled = true;
-	auto pc = emu->getCPU().getReg(15);
 
 	disabledOverlay->hide();
-	verticalScrollBar->setValue(pc);
+	scrollToPC();
 
+	// Update the widget every 500ms
+	updateTimer->start(500);
 	update();
 }
 
 void CPUDebugger::disable() {
 	enabled = false;
 
+	updateTimer->stop();
 	disabledOverlay->show();
 }
 
 void CPUDebugger::update() {
 	if (enabled) {
+		if (followPC) {
+			scrollToPC();
+		}
+
 		updateDisasm();
 		updateRegisters();
 	}
@@ -154,7 +184,12 @@ void CPUDebugger::updateDisasm() {
 			disasmListWidget->addItem(QString::fromStdString(fmt::format("{:08X}     |     ???", addr)));
 	}
 
-    disasmListWidget->setCurrentRow(currentRow);
+	disasmListWidget->setCurrentRow(currentRow);
+}
+
+void CPUDebugger::scrollToPC() {
+	u32 pc = emu->getCPU().getReg(15);
+	verticalScrollBar->setValue(pc);
 }
 
 void CPUDebugger::updateRegisters() {
@@ -211,8 +246,9 @@ void CPUDebugger::showEvent(QShowEvent* event) {
 	enable();
 }
 
+// Scroll 1 instruction up or down when the arrow keys are pressed and we're at the edge of the disassembly list
 void CPUDebugger::keyPressEvent(QKeyEvent* event) {
-    constexpr usize instructionSize = sizeof(u32);
+	constexpr usize instructionSize = sizeof(u32);
 
 	if (event->key() == Qt::Key_Up) {
 		verticalScrollBar->setValue(verticalScrollBar->value() - instructionSize);

@@ -1,4 +1,5 @@
 #pragma once
+#include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QScrollBar>
@@ -14,10 +15,13 @@ class CPUDebugger : public QWidget {
 	QListWidget* disasmListWidget;
 	QScrollBar* verticalScrollBar;
 	QPlainTextEdit* registerTextEdit;
+	QTimer* updateTimer;
+	QLineEdit* addressInput;
 
 	DisabledWidgetOverlay* disabledOverlay;
 
 	bool enabled = false;
+	bool followPC = false;
 
   public:
 	CPUDebugger(Emulator* emulator, QWidget* parent = nullptr);
@@ -30,6 +34,7 @@ class CPUDebugger : public QWidget {
 	void update();
 	void updateDisasm();
 	void updateRegisters();
+	void scrollToPC();
 
 	bool eventFilter(QObject* obj, QEvent* event) override;
 	void showEvent(QShowEvent* event) override;
