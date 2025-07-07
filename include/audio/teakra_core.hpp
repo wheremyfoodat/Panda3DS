@@ -90,6 +90,7 @@ namespace Audio {
 
 		void setAudioEnabled(bool enable) override;
 		u8* getDspMemory() override { return teakra.GetDspMemory().data(); }
+		u32 getPC() override;
 
 		u16 recvData(u32 regId) override { return teakra.RecvData(regId); }
 		bool recvDataIsReady(u32 regId) override { return teakra.RecvDataIsReady(regId); }

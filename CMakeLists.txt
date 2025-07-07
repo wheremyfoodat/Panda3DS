@@ -314,7 +314,7 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/teakra)
 add_subdirectory(third_party/fdk-aac)
 
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
@@ -686,8 +686,8 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts teakra fdk-aac)
-target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
+target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts fdk-aac)
+target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt teakra)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
@@ -733,12 +733,13 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
-            src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp
+            src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp src/panda_qt/dsp_debugger.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
-            include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/disabled_widget_overlay.hpp
+            include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/dsp_debugger.hpp
+            include/panda_qt/disabled_widget_overlay.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})

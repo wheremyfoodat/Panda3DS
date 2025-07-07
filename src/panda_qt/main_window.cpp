@@ -9,6 +9,7 @@
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
+#include "panda_qt/dsp_debugger.hpp"
 #include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
 #include "version.hpp"
@@ -67,6 +68,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto patchWindowAction = toolsMenu->addAction(tr("Open Patch Window"));
 	auto shaderEditorAction = toolsMenu->addAction(tr("Open Shader Editor"));
 	auto cpuDebuggerAction = toolsMenu->addAction(tr("Open CPU Debugger"));
+	auto dspDebuggerAction = toolsMenu->addAction(tr("Open DSP Debugger"));
 	auto threadDebuggerAction = toolsMenu->addAction(tr("Open Thread Debugger"));
 	auto dumpDspFirmware = toolsMenu->addAction(tr("Dump loaded DSP firmware"));
 
@@ -76,6 +78,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(cheatsEditorAction, &QAction::triggered, this, [this]() { cheatsEditor->show(); });
 	connect(patchWindowAction, &QAction::triggered, this, [this]() { patchWindow->show(); });
 	connect(cpuDebuggerAction, &QAction::triggered, this, [this]() { cpuDebugger->show(); });
+	connect(dspDebuggerAction, &QAction::triggered, this, [this]() { dspDebugger->show(); });
 	connect(threadDebuggerAction, &QAction::triggered, this, [this]() { threadDebugger->show(); });
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
 
@@ -97,6 +100,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	shaderEditor = new ShaderEditorWindow(this, "shader.glsl", "");
 	threadDebugger = new ThreadDebugger(emu, this);
 	cpuDebugger = new CPUDebugger(emu, this);
+	dspDebugger = new DSPDebugger(emu, this);
 
 	shaderEditor->setEnable(emu->getRenderer()->supportsShaderReload());
 	if (shaderEditor->supported) {

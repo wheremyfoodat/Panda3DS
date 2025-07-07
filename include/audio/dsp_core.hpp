@@ -63,6 +63,8 @@ namespace Audio {
 
 		Samples& getSamples() { return sampleBuffer; }
 		virtual void setAudioEnabled(bool enable) { audioEnabled = enable; }
+
+		virtual u32 getPC() { return 0; }
 	};
 
 	std::unique_ptr<DSPCore> makeDSPCore(EmulatorConfig& config, Memory& mem, Scheduler& scheduler, DSPService& dspService);

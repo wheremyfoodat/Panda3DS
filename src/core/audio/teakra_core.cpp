@@ -7,6 +7,10 @@
 
 #include "services/dsp.hpp"
 
+#undef Assert
+#undef UNREACHABLE
+#include "teakra/impl/register.h"
+
 using namespace Audio;
 
 struct Dsp1 {
@@ -343,3 +347,5 @@ void TeakraDSP::unloadComponent() {
 	teakra.RecvData(2);
 	running = false;
 }
+
+u32 TeakraDSP::getPC() { return teakra.GetRegisterState().pc; }
