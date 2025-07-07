@@ -66,6 +66,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
 	auto patchWindowAction = toolsMenu->addAction(tr("Open Patch Window"));
 	auto shaderEditorAction = toolsMenu->addAction(tr("Open Shader Editor"));
+	auto cpuDebuggerAction = toolsMenu->addAction(tr("Open CPU Debugger"));
 	auto threadDebuggerAction = toolsMenu->addAction(tr("Open Thread Debugger"));
 	auto dumpDspFirmware = toolsMenu->addAction(tr("Dump loaded DSP firmware"));
 
@@ -74,6 +75,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(shaderEditorAction, &QAction::triggered, this, [this]() { shaderEditor->show(); });
 	connect(cheatsEditorAction, &QAction::triggered, this, [this]() { cheatsEditor->show(); });
 	connect(patchWindowAction, &QAction::triggered, this, [this]() { patchWindow->show(); });
+	connect(cpuDebuggerAction, &QAction::triggered, this, [this]() { cpuDebugger->show(); });
 	connect(threadDebuggerAction, &QAction::triggered, this, [this]() { threadDebugger->show(); });
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
 
@@ -94,6 +96,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
 	shaderEditor = new ShaderEditorWindow(this, "shader.glsl", "");
 	threadDebugger = new ThreadDebugger(emu, this);
+	cpuDebugger = new CPUDebugger(emu, this);
 
 	shaderEditor->setEnable(emu->getRenderer()->supportsShaderReload());
 	if (shaderEditor->supported) {
