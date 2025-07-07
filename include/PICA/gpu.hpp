@@ -89,6 +89,7 @@ class GPU {
 	PICA::Vertex getImmediateModeVertex();
 
 	void getAcceleratedDrawInfo(PICA::DrawAcceleration& accel, bool indexed);
+
   public:
 	// 256 entries per LUT with each LUT as its own row forming a 2D image 256 * LUT_COUNT
 	// Encoded in PICA native format
@@ -134,6 +135,8 @@ class GPU {
 
 	// Used for setting the size of the window we'll be outputting graphics to
 	void setOutputSize(u32 width, u32 height) { renderer->setOutputSize(width, height); }
+	// Used for notifying the renderer the screen layout has changed
+	void reloadScreenLayout() { renderer->reloadScreenLayout(); }
 
 	// TODO: Emulate the transfer engine & its registers
 	// Then this can be emulated by just writing the appropriate values there
@@ -181,6 +184,7 @@ class GPU {
 	}
 
 	Renderer* getRenderer() { return renderer.get(); }
+
   private:
 	// GPU external registers
 	// We have them in the end of the struct for cache locality reasons. Tl;dr we want the more commonly used things to be packed in the start
@@ -189,8 +193,8 @@ class GPU {
 
 	ALWAYS_INLINE void setVsOutputMask(u32 val) {
 		val &= 0xffff;
-	
-		// Avoid recomputing this if not necessary 
+
+		// Avoid recomputing this if not necessary
 		if (oldVsOutputMask != val) [[unlikely]] {
 			oldVsOutputMask = val;
 

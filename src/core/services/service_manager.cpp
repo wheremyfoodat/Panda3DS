@@ -4,6 +4,7 @@
 
 #include "ipc.hpp"
 #include "kernel.hpp"
+#include "services/service_map.hpp"
 
 ServiceManager::ServiceManager(
 	std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config, LuaManager& lua
@@ -98,8 +99,7 @@ void ServiceManager::registerClient(u32 messagePointer) {
 }
 
 // clang-format off
-using serviceMap_t = std::pair<std::string, HorizonHandle>;
-static const serviceMap_t serviceMapArray[] = {
+static const ServiceMapEntry serviceMapArray[] = {
 	{ "ac:u", KernelHandles::AC },
 	{ "ac:i", KernelHandles::AC },
 	{ "act:a", KernelHandles::ACT },
@@ -148,32 +148,9 @@ static const serviceMap_t serviceMapArray[] = {
 	{ "y2r:u", KernelHandles::Y2R },
 };
 // clang-format on
-struct serviceMapByNameComparator {
-	typedef void is_transparent;
-	bool operator()( const serviceMap_t& lhs, std::string_view rhs ) const {
-		return lhs.first < rhs;
-	}
-	bool operator()( std::string_view lhs, const serviceMap_t& rhs ) const {
-		return lhs < rhs.first;
-	}
-	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
-		return lhs.first < rhs.first;
-	}
-};
-struct serviceMapByHandleComparator {
-	typedef void is_transparent;
-	bool operator()( const serviceMap_t& lhs, HorizonHandle rhs ) const {
-		return lhs.second < rhs;
-	}
-	bool operator()( HorizonHandle lhs, const serviceMap_t& rhs ) const {
-		return lhs < rhs.second;
-	}
-	bool operator()( const serviceMap_t& lhs, const serviceMap_t& rhs ) const {
-		return lhs.second < rhs.second;
-	}
-};
-static std::set<serviceMap_t, serviceMapByNameComparator> serviceMapByName{std::begin(serviceMapArray), std::end(serviceMapArray)};
-static std::set<serviceMap_t, serviceMapByHandleComparator> serviceMapByHandle{std::begin(serviceMapArray), std::end(serviceMapArray)};
+
+static std::set<ServiceMapEntry, ServiceMapByNameComparator> serviceMapByName{std::begin(serviceMapArray), std::end(serviceMapArray)};
+static std::set<ServiceMapEntry, ServiceMapByHandleComparator> serviceMapByHandle{std::begin(serviceMapArray), std::end(serviceMapArray)};
 
 // https://www.3dbrew.org/wiki/SRV:GetServiceHandle
 void ServiceManager::getServiceHandle(u32 messagePointer) {
@@ -300,10 +277,11 @@ bool ServiceManager::checkForIntercept(u32 messagePointer, Handle handle) {
 
 	if (auto service_it = serviceMapByHandle.find(handle); service_it != serviceMapByHandle.end()) {
 		auto intercept = InterceptedService(service_it->first, function);
+
 		if (auto intercept_it = interceptedServices.find(intercept); intercept_it != interceptedServices.end()) {
 			// If the Lua handler returns true, it means the service is handled entirely
 			// From Lua, and we shouldn't do anything else here.
-			return lua.signalInterceptedService(intercept_it->second, intercept.serviceName, function, messagePointer);
+			return lua.signalInterceptedService(intercept.serviceName, function, messagePointer, intercept_it->second);
 		}
 	}
 

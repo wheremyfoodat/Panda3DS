@@ -21,7 +21,7 @@
 ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWidget(parent), resizeCallback(resizeCallback) {
 	// Create a native window for use with our graphics API of choice
 	resize(800, 240 * 4);
-	
+
 	setAutoFillBackground(false);
 	setAttribute(Qt::WA_NativeWindow, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
@@ -47,6 +47,8 @@ void ScreenWidget::resizeEvent(QResizeEvent* event) {
 		this->windowInfo = *windowInfo;
 	}
 
+	reloadScreenCoordinates();
+
 	// This will call take care of calling resizeSurface from the emulator thread
 	resizeCallback(surfaceWidth, surfaceHeight);
 }
@@ -58,6 +60,17 @@ void ScreenWidget::resizeSurface(u32 width, u32 height) {
 			glContext->ResizeSurface(width, height);
 		}
 	}
+}
+
+void ScreenWidget::reloadScreenCoordinates() {
+	ScreenLayout::calculateCoordinates(screenCoordinates, u32(width()), u32(height()), topScreenSize, screenLayout);
+}
+
+void ScreenWidget::reloadScreenLayout(ScreenLayout::Layout newLayout, float newTopScreenSize) {
+	screenLayout = newLayout;
+	topScreenSize = newTopScreenSize;
+
+	reloadScreenCoordinates();
 }
 
 bool ScreenWidget::createGLContext() {

@@ -1,9 +1,10 @@
 #include "services/nim.hpp"
+
 #include "ipc.hpp"
 
 namespace NIMCommands {
 	enum : u32 {
-		Initialize = 0x00210000
+		Initialize = 0x00210000,
 	};
 }
 

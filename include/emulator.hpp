@@ -115,19 +115,23 @@ class Emulator {
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+	void reloadScreenLayout() { gpu.reloadScreenLayout(); }
+
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
 	// Reloads some settings that require special handling, such as audio enable
 	void reloadSettings();
 
+	CPU& getCPU() { return cpu; }
+	Memory& getMemory() { return memory; }
+	Kernel& getKernel() { return kernel; }
+	Scheduler& getScheduler() { return scheduler; }
+
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
-	Scheduler& getScheduler() { return scheduler; }
-	Memory& getMemory() { return memory; }
 	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
-	Kernel& getKernel() { return kernel; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }

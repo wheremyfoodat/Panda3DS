@@ -328,7 +328,7 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
                  src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/renderdoc.cpp
-                 src/frontend_settings.cpp src/miniaudio/miniaudio.cpp
+                 src/frontend_settings.cpp src/miniaudio/miniaudio.cpp src/core/screen_layout.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -416,6 +416,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
                  include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
                  include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp include/services/service_intercept.hpp
+                 include/screen_layout.hpp include/services/service_map.hpp
 )
 
 if(IOS)
@@ -732,12 +733,12 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
-            src/panda_qt/thread_debugger.cpp
+            src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
-            include/panda_qt/thread_debugger.hpp
+            include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/disabled_widget_overlay.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})

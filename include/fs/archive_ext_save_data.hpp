@@ -2,11 +2,13 @@
 #include "archive_base.hpp"
 
 class ExtSaveDataArchive : public ArchiveBase {
-public:
-	ExtSaveDataArchive(Memory& mem, const std::string& folder, bool isShared = false) : ArchiveBase(mem),
-		isShared(isShared), backingFolder(folder) {}
+  public:
+	ExtSaveDataArchive(Memory& mem, const std::string& folder, bool isShared = false) : ArchiveBase(mem), isShared(isShared), backingFolder(folder) {}
 
-	u64 getFreeBytes() override { Helpers::panic("ExtSaveData::GetFreeBytes unimplemented"); return 0;  }
+	u64 getFreeBytes() override {
+		Helpers::panic("ExtSaveData::GetFreeBytes unimplemented");
+		return 0;
+	}
 	std::string name() override { return "ExtSaveData::" + backingFolder; }
 
 	HorizonResult createDirectory(const FSPath& path) override;
@@ -29,5 +31,5 @@ public:
 	std::string getExtSaveDataPathFromBinary(const FSPath& path);
 
 	bool isShared = false;
-	std::string backingFolder; // Backing folder for the archive. Can be NAND, Gamecard or SD depending on the archive path.
+	std::string backingFolder;  // Backing folder for the archive. Can be NAND, Gamecard or SD depending on the archive path.
 };
