@@ -41,5 +41,5 @@ class CPUDebugger : public QWidget {
 	bool eventFilter(QObject* obj, QEvent* event) override;
 	void showEvent(QShowEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;
-	void keyPressEvent(QKeyEvent* event);
+	void keyPressEvent(QKeyEvent* event) override;
 };
