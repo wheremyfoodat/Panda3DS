@@ -3,7 +3,7 @@
 #include <optional>
 #include <span>
 #include <string>
-#include <unordered_set>
+#include <unordered_map>
 
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -94,8 +94,10 @@ class ServiceManager {
 	// For example, if we want to intercept dsp::DSP ReadPipe (Header: 0x000E00C0), the "serviceName" field would be "dsp::DSP"
 	// and the "function" field would be 0x000E00C0
 	LuaManager& lua;
-	std::unordered_set<InterceptedService> interceptedServices = {};
-	// Calling std::unordered_set<T>::size() compiles to a fairly non-trivial function call on Clang, so we store this
+
+	// Map from service intercept entries to their corresponding Lua callbacks
+	std::unordered_map<InterceptedService, int> interceptedServices = {};
+	// Calling std::unordered_map<T>::size() compiles to a non-trivial function call on Clang, so we store this
 	// separately and check it on service calls, for performance reasons
 	bool haveServiceIntercepts = false;
 
@@ -134,12 +136,23 @@ class ServiceManager {
 	Y2RService& getY2R() { return y2r; }
 	IRUserService& getIRUser() { return ir_user; }
 
-	void addServiceIntercept(const std::string& service, u32 function) {
-		interceptedServices.insert(InterceptedService(service, function));
+	void addServiceIntercept(const std::string& service, u32 function, int callbackRef) {
+		auto success = interceptedServices.try_emplace(InterceptedService(service, function), callbackRef);
+		if (!success.second) {
+			// An intercept for this service function already exists
+			// Remove the old callback and set the new one
+			lua.removeInterceptedService(service, function, success.first->second);
+			success.first->second = callbackRef;
+		}
+
 		haveServiceIntercepts = true;
 	}
 
 	void clearServiceIntercepts() {
+		for (const auto& [interceptedService, callbackRef] : interceptedServices) {
+			lua.removeInterceptedService(interceptedService.serviceName, interceptedService.function, callbackRef);
+		}
+
 		interceptedServices.clear();
 		haveServiceIntercepts = false;
 	}
