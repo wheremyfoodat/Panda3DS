@@ -169,7 +169,7 @@ void CPUDebugger::updateDisasm() {
 				u8((instruction >> 24) & 0xff),
 			};
 
-			disassembler.disassemble(disassembly, pc, std::span(bytes));
+			disassembler.disassemble(disassembly, addr, std::span(bytes));
 			disassembly = fmt::format("{:08X}     |     {}", addr, disassembly);
 
 			QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(disassembly));
