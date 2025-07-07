@@ -176,7 +176,6 @@ void DSPDebugger::updateDisasm() {
 		const bool needExpansion = Teakra::Disassembler::NeedExpansion(instruction);
 
 		const u16 expansion = needExpansion ? readWord(addr + 2) : u16(0);
-		addr += needExpansion ? sizeof(u32) : sizeof(u16);
 
 		std::string disassembly = Teakra::Disassembler::Do(instruction, expansion);
 		disassembly = fmt::format("{:08X}     |     {}", addr, disassembly);
@@ -185,7 +184,9 @@ void DSPDebugger::updateDisasm() {
 		if (addr == pc) {
 			item->setBackground(Qt::darkGreen);
 		}
+
 		disasmListWidget->addItem(item);
+		addr += needExpansion ? sizeof(u32) : sizeof(u16);
 	}
 
 	disasmListWidget->setCurrentRow(currentRow);
