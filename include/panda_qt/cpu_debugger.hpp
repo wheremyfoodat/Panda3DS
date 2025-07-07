@@ -5,6 +5,7 @@
 #include <QScrollBar>
 #include <QWidget>
 
+#include "capstone.hpp"
 #include "emulator.hpp"
 #include "panda_qt/disabled_widget_overlay.hpp"
 
@@ -22,6 +23,7 @@ class CPUDebugger : public QWidget {
 
 	bool enabled = false;
 	bool followPC = false;
+	Common::CapstoneDisassembler disassembler;
 
   public:
 	CPUDebugger(Emulator* emulator, QWidget* parent = nullptr);

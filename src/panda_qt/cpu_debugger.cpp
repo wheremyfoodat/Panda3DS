@@ -12,8 +12,6 @@
 #include <span>
 #include <utility>
 
-#include "capstone.hpp"
-
 // TODO: Make this actually thread-safe by having it only work when paused
 static int getLinesInViewport(QListWidget* listWidget) {
 	auto viewportHeight = listWidget->viewport()->height();
@@ -30,7 +28,7 @@ static std::pair<int, int> getVisibleLineRange(QListWidget* listWidget, QScrollB
 	return {firstLine, lineCount};
 }
 
-CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), QWidget(parent, Qt::Window) {
+CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), disassembler(CS_ARCH_ARM, CS_MODE_ARM), QWidget(parent, Qt::Window) {
 	setWindowTitle(tr("CPU debugger"));
 	resize(1000, 600);
 
@@ -52,7 +50,7 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), Q
 	connect(followPCCheckBox, &QCheckBox::toggled, this, [&](bool checked) { followPC = checked; });
 
 	addressInput->setPlaceholderText(tr("Address to jump to"));
-	addressInput->setMaximumWidth(100);
+	addressInput->setMaximumWidth(150);
 
 	gridLayout->addLayout(horizontalLayout, 0, 0);
 
@@ -84,7 +82,7 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), Q
 	// Forward scrolling from the list widget to our scrollbar
 	disasmListWidget->installEventFilter(this);
 
-    // Annoyingly, due to a Qt limitation we can't set it to U32_MAX
+	// Annoyingly, due to a Qt limitation we can't set it to U32_MAX
 	verticalScrollBar->setRange(0, std::numeric_limits<s32>::max());
 	verticalScrollBar->setSingleStep(8);
 	verticalScrollBar->setPageStep(getLinesInViewport(disasmListWidget));
@@ -157,7 +155,6 @@ void CPUDebugger::updateDisasm() {
 	auto& mem = emu->getMemory();
 	u32 pc = cpu.getReg(15);
 
-	Common::CapstoneDisassembler disassembler(CS_ARCH_ARM, CS_MODE_ARM);
 	std::string disassembly;
 
 	for (u32 addr = startPC; addr < endPC; addr += sizeof(u32)) {
