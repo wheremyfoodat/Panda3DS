@@ -31,6 +31,9 @@ class DSPDebugger : public QWidget {
 	void disable();
 
   private:
+	// Get the full PC value of the DSP, including the current progrma page value
+	u32 getPC();
+
 	// Update the state of the disassembler. Qt events should always call update, not updateDisasm/updateRegister
 	// As update properly handles thread safety
 	void update();

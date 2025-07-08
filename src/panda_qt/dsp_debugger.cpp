@@ -12,7 +12,12 @@
 #include <span>
 #include <utility>
 
+#include "audio/dsp_core.hpp"
 #include "teakra/disassembler.h"
+
+#undef Assert
+#undef UNREACHABLE
+#include "teakra/impl/register.h"
 
 // TODO: Make this actually thread-safe by having it only work when paused
 static int getLinesInViewport(QListWidget* listWidget) {
@@ -167,7 +172,7 @@ void DSPDebugger::updateDisasm() {
 	};
 
 	auto& mem = emu->getMemory();
-	u32 pc = DSP->getPC();
+	u32 pc = getPC();
 
 	std::string disassembly;
 
@@ -192,8 +197,21 @@ void DSPDebugger::updateDisasm() {
 	disasmListWidget->setCurrentRow(currentRow);
 }
 
+// This is only supported on the Teakra core, as other cores don't actually have a register contexts
+u32 DSPDebugger::getPC() {
+	auto DSP = emu->getDSP();
+	auto dspType = DSP->getType();
+
+	if (dspType == Audio::DSPCore::Type::Teakra) {
+		auto regs = (Teakra::RegisterState*)DSP->getRegisters();
+		return regs->pc | (u32(regs->prpage) << 18);
+	} else {
+		return 0;
+	}
+}
+
 void DSPDebugger::scrollToPC() {
-	u32 pc = emu->getDSP()->getPC();
+	u32 pc = getPC();
 	verticalScrollBar->setValue(pc);
 }
 

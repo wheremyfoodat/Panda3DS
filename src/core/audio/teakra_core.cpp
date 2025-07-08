@@ -8,10 +8,6 @@
 #include "audio/dsp_binary.hpp"
 #include "services/dsp.hpp"
 
-#undef Assert
-#undef UNREACHABLE
-#include "teakra/impl/register.h"
-
 using namespace Audio;
 
 TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
@@ -322,4 +318,4 @@ void TeakraDSP::unloadComponent() {
 	running = false;
 }
 
-u32 TeakraDSP::getPC() { return teakra.GetRegisterState().pc; }
+void* TeakraDSP::getRegisters() { return &teakra.GetRegisterState(); }
