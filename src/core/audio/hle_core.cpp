@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "audio/aac_decoder.hpp"
+#include "audio/dsp_binary.hpp"
 #include "audio/dsp_simd.hpp"
 #include "config.hpp"
 #include "services/dsp.hpp"
@@ -87,6 +88,36 @@ namespace Audio {
 	void HLE_DSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) {
 		if (loaded) {
 			Helpers::warn("Loading DSP component when already loaded");
+		}
+
+		// We load the DSP binary into DSP memory even though we don't use it in HLE, so that we can
+		// still see the DSP code in the DSP debugger
+		u8* dspCode = dspRam.rawMemory.data();
+		u8* dspData = dspCode + 0x40000;
+
+		Dsp1 dsp1;
+		std::memcpy(&dsp1, data.data(), sizeof(dsp1));
+
+		// TODO: verify DSP1 signature & hashes
+		// Load DSP segments to DSP RAM
+		for (uint i = 0; i < dsp1.segmentCount; i++) {
+			auto& segment = dsp1.segments[i];
+			u32 addr = segment.dspAddr << 1;
+			u8* src = data.data() + segment.offs;
+			u8* dst = nullptr;
+
+			switch (segment.type) {
+				case 0:
+				case 1: dst = dspCode + addr; break;
+				default: dst = dspData + addr; break;
+			}
+
+			std::memcpy(dst, src, segment.size);
+		}
+
+		bool loadSpecialSegment = (dsp1.flags >> 1) & 0x1;
+		if (loadSpecialSegment) {
+			log("LoadComponent: special segment not supported");
 		}
 
 		loaded = true;

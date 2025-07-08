@@ -416,7 +416,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
                  include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
                  include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp include/services/service_intercept.hpp
-                 include/screen_layout.hpp include/services/service_map.hpp
+                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp
 )
 
 if(IOS)
