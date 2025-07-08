@@ -66,6 +66,21 @@ namespace Audio {
 
 		virtual Type getType() = 0;
 		virtual void* getRegisters() { return nullptr; }
+
+		// Read a word from program memory. By default, just perform a regular DSP RAM read for the HLE cores
+		// The LLE cores translate the address, accounting for the way Teak memory is mapped
+		virtual u16 readProgramWord(u32 address) {
+			u8* dspRam = getDspMemory();
+
+			auto readByte = [&](u32 addr) {
+				if (addr >= 256_KB) return u8(0);
+				return dspRam[addr];
+			};
+
+			u16 lsb = u16(readByte(address));
+			u16 msb = u16(readByte(address + 1));
+			return u16(lsb | (msb << 8));
+		}
 	};
 
 	std::unique_ptr<DSPCore> makeDSPCore(EmulatorConfig& config, Memory& mem, Scheduler& scheduler, DSPService& dspService);

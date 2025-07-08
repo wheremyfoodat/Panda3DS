@@ -9,7 +9,6 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <limits>
-#include <span>
 #include <utility>
 
 #include "audio/dsp_core.hpp"
@@ -35,7 +34,7 @@ static std::pair<int, int> getVisibleLineRange(QListWidget* listWidget, QScrollB
 	return {firstLine, lineCount};
 }
 
-DSPDebugger::DSPDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), disassembler(CS_ARCH_ARM, CS_MODE_ARM), QWidget(parent, Qt::Window) {
+DSPDebugger::DSPDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), QWidget(parent, Qt::Window) {
 	setWindowTitle(tr("DSP debugger"));
 	resize(1000, 600);
 
@@ -74,11 +73,17 @@ DSPDebugger::DSPDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), d
 	registerTextEdit->setMaximumWidth(800);
 	gridLayout->addWidget(registerTextEdit, 1, 2);
 
-	// Setup overlay for when the widget is disabled
+	// Setup overlay for when the debugger is disabled
 	disabledOverlay = new DisabledWidgetOverlay(this, tr("Pause the emulator to use the DSP Debugger"));
-	disabledOverlay->resize(size());  // Fill the whole screen
+	disabledOverlay->resize(size());  // Fill the whole widget
 	disabledOverlay->raise();
 	disabledOverlay->hide();
+
+	// Setup overlay for when the register widget is disabled
+	disabledRegisterEditOverlay = new DisabledWidgetOverlay(registerTextEdit, tr("Register view is only supported\nwith LLE DSP"));
+	disabledRegisterEditOverlay->resize(registerTextEdit->size());
+	disabledRegisterEditOverlay->raise();
+	disabledRegisterEditOverlay->hide();
 
 	// Use a monospace font for the disassembly to align it
 	QFont mono_font = QFont("Courier New");
@@ -155,21 +160,10 @@ void DSPDebugger::updateDisasm() {
 	disasmListWidget->clear();
 
 	auto [firstLine, lineCount] = getVisibleLineRange(disasmListWidget, verticalScrollBar);
-	const u32 startPC = (firstLine + 1) & ~1;  // Align PC to 2 bytes
+	const u32 startPC = firstLine;
 
-	auto DSP = emu->getDSP();
-	auto dspRam = DSP->getDspMemory();
-	auto readByte = [&](u32 addr) {
-		if (addr >= 256_KB) return u8(0);
-
-		return dspRam[addr];
-	};
-
-	auto readWord = [&](u32 addr) {
-		u16 lsb = u16(readByte(addr));
-		u16 msb = u16(readByte(addr + 1));
-		return u16(lsb | (msb << 8));
-	};
+	auto dsp = emu->getDSP();
+	auto dspRam = dsp->getDspMemory();
 
 	auto& mem = emu->getMemory();
 	u32 pc = getPC();
@@ -177,10 +171,10 @@ void DSPDebugger::updateDisasm() {
 	std::string disassembly;
 
 	for (u32 addr = startPC, instructionCount = 0; instructionCount < lineCount; instructionCount++) {
-		const u16 instruction = readWord(addr);
+		const u16 instruction = dsp->readProgramWord(addr);
 		const bool needExpansion = Teakra::Disassembler::NeedExpansion(instruction);
 
-		const u16 expansion = needExpansion ? readWord(addr + 2) : u16(0);
+		const u16 expansion = needExpansion ? dsp->readProgramWord(addr + 2) : u16(0);
 
 		std::string disassembly = Teakra::Disassembler::Do(instruction, expansion);
 		disassembly = fmt::format("{:08X}     |     {}", addr, disassembly);
@@ -199,11 +193,11 @@ void DSPDebugger::updateDisasm() {
 
 // This is only supported on the Teakra core, as other cores don't actually have a register contexts
 u32 DSPDebugger::getPC() {
-	auto DSP = emu->getDSP();
-	auto dspType = DSP->getType();
+	auto dsp = emu->getDSP();
+	auto dspType = dsp->getType();
 
 	if (dspType == Audio::DSPCore::Type::Teakra) {
-		auto regs = (Teakra::RegisterState*)DSP->getRegisters();
+		auto regs = (Teakra::RegisterState*)dsp->getRegisters();
 		return regs->pc | (u32(regs->prpage) << 18);
 	} else {
 		return 0;
@@ -215,7 +209,52 @@ void DSPDebugger::scrollToPC() {
 	verticalScrollBar->setValue(pc);
 }
 
-void DSPDebugger::updateRegisters() { registerTextEdit->setPlainText(QString::fromStdString("")); }
+void DSPDebugger::updateRegisters() {
+	auto dsp = emu->getDSP();
+	auto dspType = dsp->getType();
+
+	if (dspType == Audio::DSPCore::Type::Teakra) {
+		std::string text = "";
+		text.reserve(4096);
+
+		auto regs = (Teakra::RegisterState*)dsp->getRegisters();
+		text += fmt::format(
+			"PC:            0x{:05X}\nProgram Page:  0x{:01X}\nStack Pointer: 0x{:04X}\n", regs->pc & 0x3FFFF, regs->prpage & 0xF, regs->sp
+		);
+
+		text += "\nGeneral Purpose Registers\n";
+		for (int i = 0; i < 8; i++) {
+			text += fmt::format("r{:01d}:     0x{:08X}\n", i, regs->r[i]);
+		}
+
+		text += "\nAccumulators (40-bit)\n";
+		text += fmt::format("a0:     0x{:010X}\n", regs->a[0] & 0xFFFFFFFFFFull);
+		text += fmt::format("a1:     0x{:010X}\n", regs->a[1] & 0xFFFFFFFFFFull);
+		text += fmt::format("b0:     0x{:010X}\n", regs->b[0] & 0xFFFFFFFFFFull);
+		text += fmt::format("b1:     0x{:010X}\n", regs->b[1] & 0xFFFFFFFFFFull);
+		text += fmt::format("a1s:    0x{:010X}\n", regs->a1s & 0xFFFFFFFFFFull);
+		text += fmt::format("b1s:    0x{:010X}\n", regs->b1s & 0xFFFFFFFFFFull);
+
+		text += "\nMultiplication Unit\n";
+		text += fmt::format("x0:     0x{:04X}\n", regs->x[0]);
+		text += fmt::format("x1:     0x{:04X}\n", regs->x[1]);
+		text += fmt::format("y0:     0x{:04X}\n", regs->y[0]);
+		text += fmt::format("y1:     0x{:04X}\n", regs->y[1]);
+		text += fmt::format("p0:     0x{:08X}\n", regs->p[0]);
+		text += fmt::format("p1:     0x{:08X}\n", regs->p[1]);
+
+		text += "\nOther Registers\n";
+		text += fmt::format("mixp:   0x{:04X}\n", regs->mixp);
+		text += fmt::format("sv:     0x{:04X}\n", regs->sv);
+		text += fmt::format("Shift mode: {}\n", regs->s ? "Logic" : "Arithmetic");
+
+		registerTextEdit->setPlainText(QString::fromStdString(text));
+		disabledRegisterEditOverlay->hide();
+	} else {
+		registerTextEdit->setPlainText(QString::fromStdString(""));
+		disabledRegisterEditOverlay->show();
+	}
+}
 
 bool DSPDebugger::eventFilter(QObject* obj, QEvent* event) {
 	// Forward scroll events from the list widget to the scrollbar
@@ -255,7 +294,8 @@ void DSPDebugger::keyPressEvent(QKeyEvent* event) {
 void DSPDebugger::resizeEvent(QResizeEvent* event) {
 	QWidget::resizeEvent(event);
 	disabledOverlay->resize(event->size());
-	verticalScrollBar->setPageStep(getLinesInViewport(disasmListWidget));
+	disabledRegisterEditOverlay->resize(registerTextEdit->size());
 
+	verticalScrollBar->setPageStep(getLinesInViewport(disasmListWidget));
 	update();
 }

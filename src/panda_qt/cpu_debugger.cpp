@@ -69,7 +69,7 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), d
 
 	// Setup overlay for when the widget is disabled
 	disabledOverlay = new DisabledWidgetOverlay(this, tr("Pause the emulator to use the CPU Debugger"));
-	disabledOverlay->resize(size());  // Fill the whole screen
+	disabledOverlay->resize(size());  // Fill the whole widget
 	disabledOverlay->raise();
 	disabledOverlay->hide();
 
