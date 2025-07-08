@@ -28,11 +28,9 @@ void ControlFlow::analyze(const PICAShader& shader, u32 entrypoint) {
 static ExitMode exitParallel(ExitMode a, ExitMode b) {
 	if (a == ExitMode::Unknown) {
 		return b;
-	}
-	else if (b == ExitMode::Unknown) {
+	} else if (b == ExitMode::Unknown) {
 		return a;
-	}
-	else if (a == b) {
+	} else if (a == b) {
 		return a;
 	}
 	return ExitMode::Conditional;
@@ -317,10 +315,11 @@ std::string ShaderDecompiler::decompile() {
 			// current PC
 			decompiledShader += fmt::format("bool {}() {{\n", func.getIdentifier());
 			decompiledShader += fmt::format("uint pc = {}u;\n", func.start);
-			decompiledShader += "while(true){\nswitch(pc){\n";
+			decompiledShader += "while(true){\n";
 
+			int counter = 0;
 			for (u32 label : labels) {
-				decompiledShader += fmt::format("case {}u: {{", label);
+				decompiledShader += fmt::format("{} (pc == {}u) {{", counter == 0 ? "if" : "else if", label);
 				// Fetch the next label whose address > label
 				auto it = labels.lower_bound(label + 1);
 				u32 next = (it == labels.end()) ? func.end : *it;
@@ -340,8 +339,8 @@ std::string ShaderDecompiler::decompile() {
 			decompiledShader += "} }\n";
 
 			// Exit the function
-			decompiledShader += "return false;\n";
-			decompiledShader += "}\n";
+			decompiledShader += "return false;\n}\n";
+			counter++;
 		}
 	}
 
@@ -394,7 +393,7 @@ std::string ShaderDecompiler::getSwizzlePattern(u32 swizzle) const {
 
 	static constexpr std::array<char, 4> names = {'x', 'y', 'z', 'w'};
 	std::string ret(".    ");
-	
+
 	for (int i = 0; i < 4; i++) {
 		ret[3 - i + 1] = names[swizzle & 0x3];
 		swizzle >>= 2;
@@ -412,11 +411,11 @@ std::string ShaderDecompiler::getDestSwizzle(u32 destinationMask) const {
 	if (destinationMask & 0b100) {
 		ret += "y";
 	}
-	
+
 	if (destinationMask & 0b10) {
 		ret += "z";
 	}
-	
+
 	if (destinationMask & 0b1) {
 		ret += "w";
 	}
@@ -571,9 +570,9 @@ void ShaderDecompiler::compileInstruction(u32& pc, bool& finished) {
 				compilationError = true;
 				break;
 		}
-	} else if (opcode >= 0x30 && opcode <= 0x3F) { // MAD and MADI
+	} else if (opcode >= 0x30 && opcode <= 0x3F) {  // MAD and MADI
 		const u32 operandDescriptor = shader.operandDescriptors[instruction & 0x1f];
-		const bool isMADI = getBit<29>(instruction) == 0; // We detect MADI based on bit 29 of the instruction
+		const bool isMADI = getBit<29>(instruction) == 0;  // We detect MADI based on bit 29 of the instruction
 
 		// src1 and src2 indexes depend on whether this is one of the inverting instructions or not
 		const u32 src1Index = getBits<17, 5>(instruction);
