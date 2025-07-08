@@ -30,6 +30,7 @@ namespace Audio {
 		void runAudioFrame(u64 eventTimestamp) override;
 
 		u8* getDspMemory() override { return dspRam.data(); }
+		DSPCore::Type getType() override { return DSPCore::Type::Null; }
 
 		u16 recvData(u32 regId) override;
 		bool recvDataIsReady(u32 regId) override { return true; }  // Treat data as always ready

@@ -126,6 +126,7 @@ class Emulator {
 	Memory& getMemory() { return memory; }
 	Kernel& getKernel() { return kernel; }
 	Scheduler& getScheduler() { return scheduler; }
+	Audio::DSPCore* getDSP() { return dsp.get(); }
 
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }

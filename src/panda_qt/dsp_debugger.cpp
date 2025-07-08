@@ -1,4 +1,4 @@
-#include "panda_qt/cpu_debugger.hpp"
+#include "panda_qt/dsp_debugger.hpp"
 
 #include <fmt/format.h>
 
@@ -9,8 +9,14 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <limits>
-#include <span>
 #include <utility>
+
+#include "audio/dsp_core.hpp"
+#include "teakra/disassembler.h"
+
+#undef Assert
+#undef UNREACHABLE
+#include "teakra/impl/register.h"
 
 // TODO: Make this actually thread-safe by having it only work when paused
 static int getLinesInViewport(QListWidget* listWidget) {
@@ -28,8 +34,8 @@ static std::pair<int, int> getVisibleLineRange(QListWidget* listWidget, QScrollB
 	return {firstLine, lineCount};
 }
 
-CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), disassembler(CS_ARCH_ARM, CS_MODE_ARM), QWidget(parent, Qt::Window) {
-	setWindowTitle(tr("CPU debugger"));
+DSPDebugger::DSPDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), QWidget(parent, Qt::Window) {
+	setWindowTitle(tr("DSP debugger"));
 	resize(1000, 600);
 
 	QGridLayout* gridLayout = new QGridLayout(this);
@@ -67,11 +73,17 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), d
 	registerTextEdit->setMaximumWidth(800);
 	gridLayout->addWidget(registerTextEdit, 1, 2);
 
-	// Setup overlay for when the widget is disabled
-	disabledOverlay = new DisabledWidgetOverlay(this, tr("Pause the emulator to use the CPU Debugger"));
+	// Setup overlay for when the debugger is disabled
+	disabledOverlay = new DisabledWidgetOverlay(this, tr("Pause the emulator to use the DSP Debugger"));
 	disabledOverlay->resize(size());  // Fill the whole widget
 	disabledOverlay->raise();
 	disabledOverlay->hide();
+
+	// Setup overlay for when the register widget is disabled
+	disabledRegisterEditOverlay = new DisabledWidgetOverlay(registerTextEdit, tr("Register view is only supported\nwith LLE DSP"));
+	disabledRegisterEditOverlay->resize(registerTextEdit->size());
+	disabledRegisterEditOverlay->raise();
+	disabledRegisterEditOverlay->hide();
 
 	// Use a monospace font for the disassembly to align it
 	QFont mono_font = QFont("Courier New");
@@ -87,14 +99,14 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), d
 	verticalScrollBar->setSingleStep(8);
 	verticalScrollBar->setPageStep(getLinesInViewport(disasmListWidget));
 	verticalScrollBar->show();
-	connect(verticalScrollBar, &QScrollBar::valueChanged, this, &CPUDebugger::updateDisasm);
+	connect(verticalScrollBar, &QScrollBar::valueChanged, this, &DSPDebugger::updateDisasm);
 	registerTextEdit->setReadOnly(true);
 
 	connect(goToPCButton, &QPushButton::clicked, this, [&]() { scrollToPC(); });
 
 	// We have a QTimer that triggers every 500ms to update our widget when it's active
 	updateTimer = new QTimer(this);
-	connect(updateTimer, &QTimer::timeout, this, &CPUDebugger::update);
+	connect(updateTimer, &QTimer::timeout, this, &DSPDebugger::update);
 
 	// Go to address when the "Go to address" button is pressed, or when we press enter inside the address input box
 	connect(goToAddressButton, &QPushButton::clicked, this, [&]() {
@@ -114,7 +126,7 @@ CPUDebugger::CPUDebugger(Emulator* emulator, QWidget* parent) : emu(emulator), d
 	hide();
 }
 
-void CPUDebugger::enable() {
+void DSPDebugger::enable() {
 	enabled = true;
 
 	disabledOverlay->hide();
@@ -125,14 +137,14 @@ void CPUDebugger::enable() {
 	update();
 }
 
-void CPUDebugger::disable() {
+void DSPDebugger::disable() {
 	enabled = false;
 
 	updateTimer->stop();
 	disabledOverlay->show();
 }
 
-void CPUDebugger::update() {
+void DSPDebugger::update() {
 	if (enabled) {
 		if (followPC) {
 			scrollToPC();
@@ -143,85 +155,108 @@ void CPUDebugger::update() {
 	}
 }
 
-void CPUDebugger::updateDisasm() {
+void DSPDebugger::updateDisasm() {
 	int currentRow = disasmListWidget->currentRow();
 	disasmListWidget->clear();
 
 	auto [firstLine, lineCount] = getVisibleLineRange(disasmListWidget, verticalScrollBar);
-	const u32 startPC = (firstLine + 3) & ~3;  // Align PC to 4 bytes
-	const u32 endPC = startPC + lineCount * sizeof(u32);
+	const u32 startPC = firstLine;
 
-	auto& cpu = emu->getCPU();
+	auto dsp = emu->getDSP();
+	auto dspRam = dsp->getDspMemory();
+
 	auto& mem = emu->getMemory();
-	u32 pc = cpu.getReg(15);
+	u32 pc = getPC();
 
 	std::string disassembly;
 
-	for (u32 addr = startPC; addr < endPC; addr += sizeof(u32)) {
-		if (auto pointer = (u32*)mem.getReadPointer(addr)) {
-			const u32 instruction = *pointer;
+	for (u32 addr = startPC, instructionCount = 0; instructionCount < lineCount; instructionCount++) {
+		const u16 instruction = dsp->readProgramWord(addr);
+		const bool needExpansion = Teakra::Disassembler::NeedExpansion(instruction);
 
-			// Convert instruction to byte array to pass to Capstone
-			const std::array<u8, 4> bytes = {
-				u8(instruction & 0xff),
-				u8((instruction >> 8) & 0xff),
-				u8((instruction >> 16) & 0xff),
-				u8((instruction >> 24) & 0xff),
-			};
+		const u16 expansion = needExpansion ? dsp->readProgramWord(addr + 2) : u16(0);
 
-			disassembler.disassemble(disassembly, addr, std::span(bytes));
-			disassembly = fmt::format("{:08X}     |     {}", addr, disassembly);
+		std::string disassembly = Teakra::Disassembler::Do(instruction, expansion);
+		disassembly = fmt::format("{:08X}     |     {}", addr, disassembly);
 
-			QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(disassembly));
-			if (addr == pc) {
-				item->setBackground(Qt::darkGreen);
-			}
-			disasmListWidget->addItem(item);
-		} else
-			disasmListWidget->addItem(QString::fromStdString(fmt::format("{:08X}     |     ???", addr)));
+		QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(disassembly));
+		if (addr == pc) {
+			item->setBackground(Qt::darkGreen);
+		}
+
+		disasmListWidget->addItem(item);
+		addr += needExpansion ? sizeof(u32) : sizeof(u16);
 	}
 
 	disasmListWidget->setCurrentRow(currentRow);
 }
 
-void CPUDebugger::scrollToPC() {
-	u32 pc = emu->getCPU().getReg(15);
+// This is only supported on the Teakra core, as other cores don't actually have a register contexts
+u32 DSPDebugger::getPC() {
+	auto dsp = emu->getDSP();
+	auto dspType = dsp->getType();
+
+	if (dspType == Audio::DSPCore::Type::Teakra) {
+		auto regs = (Teakra::RegisterState*)dsp->getRegisters();
+		return regs->pc | (u32(regs->prpage) << 18);
+	} else {
+		return 0;
+	}
+}
+
+void DSPDebugger::scrollToPC() {
+	u32 pc = getPC();
 	verticalScrollBar->setValue(pc);
 }
 
-void CPUDebugger::updateRegisters() {
-	auto& cpu = emu->getCPU();
-	const std::span<u32, 16> gprs = cpu.regs();
-	const std::span<u32, 32> fprs = cpu.fprs();
-	const u32 pc = gprs[15];
-	const u32 cpsr = cpu.getCPSR();
-	const u32 fpscr = cpu.getFPSCR();
+void DSPDebugger::updateRegisters() {
+	auto dsp = emu->getDSP();
+	auto dspType = dsp->getType();
 
-	std::string text = "";
-	text.reserve(2048);
+	if (dspType == Audio::DSPCore::Type::Teakra) {
+		std::string text = "";
+		text.reserve(4096);
 
-	text += fmt::format("PC: {:08X}\nCPSR: {:08X}\nFPSCR: {:08X}\n", pc, cpsr, fpscr);
+		auto regs = (Teakra::RegisterState*)dsp->getRegisters();
+		text += fmt::format(
+			"PC:            0x{:05X}\nProgram Page:  0x{:01X}\nStack Pointer: 0x{:04X}\n", regs->pc & 0x3FFFF, regs->prpage & 0xF, regs->sp
+		);
 
-	text += "\nGeneral Purpose Registers\n";
-	for (int i = 0; i < 10; i++) {
-		text += fmt::format("r{:01d}:     0x{:08X}\n", i, gprs[i]);
+		text += "\nGeneral Purpose Registers\n";
+		for (int i = 0; i < 8; i++) {
+			text += fmt::format("r{:01d}:     0x{:08X}\n", i, regs->r[i]);
+		}
+
+		text += "\nAccumulators (40-bit)\n";
+		text += fmt::format("a0:     0x{:010X}\n", regs->a[0] & 0xFFFFFFFFFFull);
+		text += fmt::format("a1:     0x{:010X}\n", regs->a[1] & 0xFFFFFFFFFFull);
+		text += fmt::format("b0:     0x{:010X}\n", regs->b[0] & 0xFFFFFFFFFFull);
+		text += fmt::format("b1:     0x{:010X}\n", regs->b[1] & 0xFFFFFFFFFFull);
+		text += fmt::format("a1s:    0x{:010X}\n", regs->a1s & 0xFFFFFFFFFFull);
+		text += fmt::format("b1s:    0x{:010X}\n", regs->b1s & 0xFFFFFFFFFFull);
+
+		text += "\nMultiplication Unit\n";
+		text += fmt::format("x0:     0x{:04X}\n", regs->x[0]);
+		text += fmt::format("x1:     0x{:04X}\n", regs->x[1]);
+		text += fmt::format("y0:     0x{:04X}\n", regs->y[0]);
+		text += fmt::format("y1:     0x{:04X}\n", regs->y[1]);
+		text += fmt::format("p0:     0x{:08X}\n", regs->p[0]);
+		text += fmt::format("p1:     0x{:08X}\n", regs->p[1]);
+
+		text += "\nOther Registers\n";
+		text += fmt::format("mixp:   0x{:04X}\n", regs->mixp);
+		text += fmt::format("sv:     0x{:04X}\n", regs->sv);
+		text += fmt::format("Shift mode: {}\n", regs->s ? "Logic" : "Arithmetic");
+
+		registerTextEdit->setPlainText(QString::fromStdString(text));
+		disabledRegisterEditOverlay->hide();
+	} else {
+		registerTextEdit->setPlainText(QString::fromStdString(""));
+		disabledRegisterEditOverlay->show();
 	}
-	for (int i = 10; i < 16; i++) {
-		text += fmt::format("r{:02d}:    0x{:08X}\n", i, gprs[i]);
-	}
-
-	text += "\nFloating Point Registers\n";
-	for (int i = 0; i < 10; i++) {
-		text += fmt::format("f{:01d}:     {:f}\n", i, Helpers::bit_cast<float, u32>(fprs[i]));
-	}
-	for (int i = 10; i < 32; i++) {
-		text += fmt::format("f{:01d}:    {:f}\n", i, Helpers::bit_cast<float, u32>(fprs[i]));
-	}
-
-	registerTextEdit->setPlainText(QString::fromStdString(text));
 }
 
-bool CPUDebugger::eventFilter(QObject* obj, QEvent* event) {
+bool DSPDebugger::eventFilter(QObject* obj, QEvent* event) {
 	// Forward scroll events from the list widget to the scrollbar
 	if (obj == disasmListWidget && event->type() == QEvent::Wheel) {
 		QWheelEvent* wheelEvent = (QWheelEvent*)event;
@@ -237,15 +272,15 @@ bool CPUDebugger::eventFilter(QObject* obj, QEvent* event) {
 	return QWidget::eventFilter(obj, event);
 }
 
-void CPUDebugger::showEvent(QShowEvent* event) {
+void DSPDebugger::showEvent(QShowEvent* event) {
 	QWidget::showEvent(event);
 
 	enable();
 }
 
 // Scroll 1 instruction up or down when the arrow keys are pressed and we're at the edge of the disassembly list
-void CPUDebugger::keyPressEvent(QKeyEvent* event) {
-	constexpr usize instructionSize = sizeof(u32);
+void DSPDebugger::keyPressEvent(QKeyEvent* event) {
+	constexpr usize instructionSize = sizeof(u16);
 
 	if (event->key() == Qt::Key_Up) {
 		verticalScrollBar->setValue(verticalScrollBar->value() - instructionSize);
@@ -256,10 +291,11 @@ void CPUDebugger::keyPressEvent(QKeyEvent* event) {
 	}
 }
 
-void CPUDebugger::resizeEvent(QResizeEvent* event) {
+void DSPDebugger::resizeEvent(QResizeEvent* event) {
 	QWidget::resizeEvent(event);
 	disabledOverlay->resize(event->size());
-	verticalScrollBar->setPageStep(getLinesInViewport(disasmListWidget));
+	disabledRegisterEditOverlay->resize(registerTextEdit->size());
 
+	verticalScrollBar->setPageStep(getLinesInViewport(disasmListWidget));
 	update();
 }

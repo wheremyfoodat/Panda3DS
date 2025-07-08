@@ -90,6 +90,9 @@ namespace Audio {
 
 		void setAudioEnabled(bool enable) override;
 		u8* getDspMemory() override { return teakra.GetDspMemory().data(); }
+		void* getRegisters() override;
+		DSPCore::Type getType() override { return DSPCore::Type::Teakra; }
+		u16 readProgramWord(u32 address) override { return teakra.ProgramRead(address); }
 
 		u16 recvData(u32 regId) override { return teakra.RecvData(regId); }
 		bool recvDataIsReady(u32 regId) override { return teakra.RecvDataIsReady(regId); }

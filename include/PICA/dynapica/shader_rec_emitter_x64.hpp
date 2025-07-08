@@ -29,11 +29,11 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	std::vector<u32> returnPCs;
 
 	// Vector value of (-0.0, -0.0, -0.0, -0.0) for negating vectors via pxor
-	Label negateVector;
+	Xbyak::Label negateVector;
 	// Vector value of (1.0, 1.0, 1.0, 1.0) for SLT(i)/SGE(i)
-	Label onesVector;
+	Xbyak::Label onesVector;
 	// Vector value of (0xFF, 0xFF, 0xFF, 0) for setting the w component to 0 in DP3
-	Label dp3Vector;
+	Xbyak::Label dp3Vector;
 
 	u32 recompilerPC = 0;  // PC the recompiler is currently recompiling @
 	u32 loopLevel = 0;     // The current loop nesting level (0 = not in a loop)
@@ -47,7 +47,7 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 	bool codeHasExp2 = false;
 	// Whether to compile this shader using accurate, safe, non-IEEE multiplication (slow) or faster but less accurate mul
 	bool useSafeMUL = false;
-	
+
 	Xbyak::Label log2Func, exp2Func;
 	Xbyak::Label emitLog2Func();
 	Xbyak::Label emitExp2Func();
@@ -72,8 +72,8 @@ class ShaderEmitter : public Xbyak::CodeGenerator {
 
 	// Load register with number "srcReg" indexed by index "idx" into the xmm register "reg"
 	template <int sourceIndex>
-	void loadRegister(Xmm dest, const PICAShader& shader, u32 src, u32 idx, u32 operandDescriptor);
-	void storeRegister(Xmm source, const PICAShader& shader, u32 dest, u32 operandDescriptor);
+	void loadRegister(Xbyak::Xmm dest, const PICAShader& shader, u32 src, u32 idx, u32 operandDescriptor);
+	void storeRegister(Xbyak::Xmm source, const PICAShader& shader, u32 dest, u32 operandDescriptor);
 
 	const vec4f& getSourceRef(const PICAShader& shader, u32 src);
 	const vec4f& getDestRef(const PICAShader& shader, u32 dest);
