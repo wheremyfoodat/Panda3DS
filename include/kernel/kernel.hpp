@@ -150,6 +150,7 @@ class Kernel {
 	void unmapMemoryBlock();
 	void queryMemory();
 	void getCurrentProcessorNumber();
+	void getHandleInfo();
 	void getProcessID();
 	void getProcessInfo();
 	void getResourceLimit();

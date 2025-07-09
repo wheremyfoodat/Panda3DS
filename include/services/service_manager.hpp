@@ -35,7 +35,7 @@
 #include "services/nfc.hpp"
 #include "services/nim.hpp"
 #include "services/ns.hpp"
-#include "services/nwm_uds.hpp"
+#include "services/nwm/nwm_uds.hpp"
 #include "services/ptm.hpp"
 #include "services/service_intercept.hpp"
 #include "services/soc.hpp"

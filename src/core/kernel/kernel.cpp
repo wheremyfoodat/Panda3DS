@@ -60,6 +60,7 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x25: waitSynchronizationN(); break;
 		case 0x27: duplicateHandle(); break;
 		case 0x28: getSystemTick(); break;
+		case 0x29: getHandleInfo(); break;
 		case 0x2A: getSystemInfo(); break;
 		case 0x2B: getProcessInfo(); break;
 		case 0x2D: connectToPort(); break;
@@ -319,6 +320,26 @@ void Kernel::svcInvalidateEntireInstructionCache() {
 
 	clearInstructionCache();
 	regs[0] = Result::Success;
+}
+
+void Kernel::getHandleInfo() {
+	Handle handle = regs[1];
+	u32 param = regs[2];
+	logSVC("Stubbed svcGetHandledInfo(handle = %d, param = %d)\n", handle, param);
+
+	// Returns handle info in r2:r1
+	regs[0] = Result::Success;
+
+	if (param == 0 && handle == KernelHandles::CurrentProcess) {
+		// Elapsed ticks since process creation
+		u64 ticks = cpu.getTicks();
+		regs[1] = u32(ticks);
+		regs[2] = u32(ticks >> 32);
+	} else {
+		Helpers::warn("Unimplemented SVC GetHandleInfo (Handle: %d, Param: %0d)", handle, param);
+		regs[1] = 1;
+		regs[2] = 0;
+	}
 }
 
 namespace SystemInfoType {

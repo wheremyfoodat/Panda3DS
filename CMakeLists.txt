@@ -191,6 +191,10 @@ include_directories(third_party/duckstation)
 
 add_subdirectory(third_party/cmrc)
 
+set(SOCKPP_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(SOCKPP_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/sockpp)
+
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_NO_SYSTEM_PATHS ON)
@@ -348,7 +352,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
                          src/core/services/ir/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
-                         src/core/services/csnd.cpp src/core/services/nwm_uds.cpp src/core/services/fonts.cpp
+                         src/core/services/csnd.cpp src/core/services/nwm/nwm_uds.cpp src/core/services/fonts.cpp
                          src/core/services/ns.cpp src/core/services/ir/circlepad_pro.cpp src/core/services/ir/crc8.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
@@ -402,7 +406,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp
                  include/services/news_u.hpp include/applets/software_keyboard.hpp include/applets/applet_manager.hpp include/fs/archive_user_save_data.hpp
-                 include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm_uds.hpp
+                 include/services/amiibo_device.hpp include/services/nfc_types.hpp include/swap.hpp include/services/csnd.hpp include/services/nwm/nwm_uds.hpp
                  include/fs/archive_system_save_data.hpp include/lua_manager.hpp include/memory_mapped_file.hpp include/hydra_icon.hpp
                  include/PICA/dynapica/shader_rec_emitter_arm64.hpp include/scheduler.hpp include/applets/error_applet.hpp include/PICA/shader_gen.hpp
                  include/audio/dsp_core.hpp include/audio/null_core.hpp include/audio/teakra_core.hpp
@@ -416,7 +420,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
                  include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
                  include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp include/services/service_intercept.hpp
-                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp
+                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp include/services/nwm/nwm_types.hpp
 )
 
 if(IOS)
@@ -687,7 +691,7 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
 target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts fdk-aac)
-target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt teakra)
+target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt teakra sockpp-static)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
