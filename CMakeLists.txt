@@ -354,6 +354,7 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
                          src/core/services/csnd.cpp src/core/services/nwm/nwm_uds.cpp src/core/services/fonts.cpp
                          src/core/services/ns.cpp src/core/services/ir/circlepad_pro.cpp src/core/services/ir/crc8.cpp
+                         src/core/services/nwm/beacon.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp

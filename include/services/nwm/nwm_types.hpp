@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cstring>
 #include <vector>
 
 #include "helpers.hpp"
@@ -8,8 +9,11 @@
 namespace NWM {
 	// The maximum number of nodes that can exist in an UDS session.
 	static constexpr u32 UDSMaxNodes = 16;
+	static constexpr u8 defaultNetworkChannel = 11;
 	static constexpr std::array<u8, 3> nintendoOUI = {0x00, 0x1F, 0x32};
+
 	using AESKey = std::array<u8, 16>;
+	using SHA1 = std::array<u8, 20>;
 
 	enum class ConnectionState : u32 {
 		NotConnected = 3,
@@ -43,13 +47,13 @@ namespace NWM {
 	struct NetworkInfo {
 		static constexpr usize maxApplicationDataSize = 0xC8;
 
-		u8 hostMAC[6];
+		std::array<u8, 6> hostMAC;
 		u8 channel;
 		u8 unk1;
 		u8 initialized;
 		u8 unk2[3];
 		// Organizationally Unique Identifier of the device
-		u8 oui[3];
+		std::array<u8, 3> oui;
 		u8 ouiType;
 		u32_be wlanID;
 		u8 id;
@@ -95,10 +99,18 @@ namespace NWM {
 		VendorSpecific = 221
 	};
 
+	enum class VendorSpecificTagID : u8 {
+		Dummy = 20,
+		NetworkInfo = 21,
+		EncryptedData0 = 24,
+		EncryptedData1 = 25,
+	};
+
 	struct BeaconTagHeader {
 		u8 tagID;
 		u8 length;
 
+		BeaconTagHeader() : tagID(u8(TagID::VendorSpecific)), length(0) {}
 		BeaconTagHeader(u8 tagID, u8 length) : tagID(tagID), length(length) {}
 	};
 	static_assert(sizeof(BeaconTagHeader) == 2, "UDS Beacon tag header has wrong size");
@@ -112,32 +124,54 @@ namespace NWM {
 	};
 	static_assert(sizeof(SSIDTag) == 0xA, "SSID tag has wrong size");
 
+	struct VendorTag {
+		BeaconTagHeader header = BeaconTagHeader(u8(TagID::VendorSpecific), sizeof(VendorTag) - sizeof(BeaconTagHeader));
+		std::array<u8, 3> oui = nintendoOUI;
+		u8 ouiType = u8(VendorSpecificTagID::Dummy);
+		// https://github.com/azahar-emu/azahar/blob/df134acefea5b7bfe533e5333e13884528220776/src/core/hle/service/nwm/uds_beacon.cpp#L101
+		std::array<u8, 3> data = {0x0A, 0x00, 0x00};
+	};
+	static_assert(sizeof(VendorTag) == 9, "NWM: Vendor tag has wrong size");
+
+	struct NetworkInfoTag {
+		BeaconTagHeader header;
+		std::array<u8, 0x1F> networkInfoData;
+		SHA1 sha;
+		u8 applicationDataSize;
+
+		std::vector<u8> getBytes(const NetworkInfo& networkInfo);
+	};
+	static_assert(sizeof(NetworkInfoTag) == 54, "NWM: Network info tag has wrong size");
+
 	class Beacon {
 		BeaconHeader header;
 		SSIDTag ssidTag;
+		VendorTag vendorTag;
+		NetworkInfoTag networkInfoTagGenerator;
+
 		// TODO: Other tags here
 
 		std::vector<u8> generateCustomTags() {
-			return {221, 7,   0,   31,  50,  20,  10,  0,   0,   221, 100, 0,   31,  50,  21,  0,   23,  111, 16,  0,   0,   128, 0,   0,
-					0,   0,   0,   1,   3,   0,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   133, 32,  108, 157, 79,  230,
-					240, 147, 155, 4,   82,  238, 40,  11,  105, 174, 28,  33,  43,  15,  48,  108, 9,   187, 25,  41,  75,  149, 73,  1,
-					0,   0,   0,   0,   0,   0,   0,   112, 212, 244, 181, 236, 136, 39,  217, 0,   0,   1,   0,   24,  0,   80,  0,   69,
-					0,   78,  0,   65,  0,   82,  0,   0,   0,   0,   0,   0,   0,   0,   0,   221, 124, 0,   31,  50,  24,  83,  96,  134,
-					254, 243, 210, 89,  99,  16,  90,  107, 110, 100, 82,  52,  243, 8,   41,  13,  233, 253, 33,  244, 73,  46,  133, 238,
-					4,   112, 63,  161, 152, 210, 173, 226, 222, 113, 11,  47,  66,  109, 175, 175, 172, 156, 165, 96,  242, 26,  182, 165,
-					202, 197, 143, 117, 27,  3,   125, 158, 42,  255, 108, 92,  21,  117, 181, 155, 0,   51,  115, 150, 210, 227, 54,  5,
-					103, 70,  186, 22,  179, 171, 209, 232, 89,  222, 81,  46,  237, 105, 97,  216, 26,  31,  184, 238, 132, 201, 179, 183,
-					146, 93,  162, 74,  247, 247, 111, 177, 218, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
+			return {221, 124, 0,   31,  50,  24,  83,  96,  134, 254, 243, 210, 89,  99,  16,  90,  107, 110, 100, 82,  52,  243, 8,   41,  13,  233,
+					253, 33,  244, 73,  46,  133, 238, 4,   112, 63,  161, 152, 210, 173, 226, 222, 113, 11,  47,  66,  109, 175, 175, 172, 156, 165,
+					96,  242, 26,  182, 165, 202, 197, 143, 117, 27,  3,   125, 158, 42,  255, 108, 92,  21,  117, 181, 155, 0,   51,  115, 150, 210,
+					227, 54,  5,   103, 70,  186, 22,  179, 171, 209, 232, 89,  222, 81,  46,  237, 105, 97,  216, 26,  31,  184, 238, 132, 201, 179,
+					183, 146, 93,  162, 74,  247, 247, 111, 177, 218, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
 		}
 
 	  public:
 		// Converts the beacon to a vector that represents the raw bytestream
-		std::vector<u8> toVector() {
+		std::vector<u8> generate(const NetworkInfo& networkInfo, AESKey& beaconKey, AESKey& iv) {
 			std::vector<u8> ret;
-			std::vector<u8> customTags = generateCustomTags();
 
 			append(ret, header);
 			append(ret, ssidTag);
+			append(ret, vendorTag);
+
+			std::vector<u8> networkInfoTag = networkInfoTagGenerator.getBytes(networkInfo);
+			std::vector<u8> customTags = generateCustomTags();
+
+			ret.insert(ret.end(), networkInfoTag.begin(), networkInfoTag.end());
 			ret.insert(ret.end(), customTags.begin(), customTags.end());
 
 			return ret;

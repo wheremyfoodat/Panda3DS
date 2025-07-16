@@ -48,6 +48,9 @@ class NwmUdsService {
 	// Sets up a UDP server for the network host. Returns true on success.
 	bool setupUDPServer();
 
+	template <typename UDPSocket>
+	void broadcastBeacons(UDPSocket socket);
+
   public:
 	NwmUdsService(Memory& mem, Kernel& kernel) : mem(mem), kernel(kernel) {}
 	void reset();

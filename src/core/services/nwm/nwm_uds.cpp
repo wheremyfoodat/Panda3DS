@@ -22,6 +22,9 @@ auto beaconSendPort = sockpp::TEST_PORT;
 auto serverReceivePort = in_port_t(sockpp::TEST_PORT + 1);
 NWM::Beacon sendBeacon;
 
+// static constexpr std::array<u8, 6> MACAddress = {0x40, 0xF4, 0x07, 0xFF, 0xFF, 0xEE};
+static constexpr std::array<u8, 6> MACAddress = {0, 0, 0, 0, 0, 0};
+
 namespace NWMCommands {
 	enum : u32 {
 		Finalize = 0x00030000,
@@ -130,6 +133,16 @@ void NwmUdsService::createNetwork2(u32 messagePointer) {
 	connectionStatus.totalNodes = 1;
 	connectionStatus.nodes[0] = connectionStatus.networkNodeID;
 	connectionStatus.maxNodes = networkInfo.maxNodes;
+
+	// Set up misc network info fields (MAC address, OUI, node info...)
+	networkInfo.totalNodes = 1;
+	networkInfo.hostMAC = MACAddress;
+	networkInfo.oui = NWM::nintendoOUI;
+	networkInfo.ouiType = u8(NWM::VendorSpecificTagID::NetworkInfo);
+
+	if (networkInfo.channel == 0) {
+		networkInfo.channel = NWM::defaultNetworkChannel;
+	}
 
 	// Set that node 0 of the network (Us) is taken
 	markNodeAsConnected(0);
@@ -265,8 +278,6 @@ void NwmUdsService::startScan(u32 messagePointer) {
 
 		// AP wifi channel
 		mem.write8(beaconReplyAddr + 0x5, 1);
-		// static constexpr std::array<u8, 6> MACAddress = {0x40, 0xF4, 0x07, 0xFF, 0xFF, 0xEE};
-		static constexpr std::array<u8, 6> MACAddress = {0, 0, 0, 0, 0, 0};
 
 		// AP MAC address
 		for (int j = 0; j < 6; j++) {
@@ -438,15 +449,18 @@ AESKey NwmUdsService::getBeaconIV(const NetworkInfo& networkInfo) {
 	return iv;
 }
 
-template <typename UDPSOCK>
-void broadcastBeacons(UDPSOCK beaconSocket) {
+template <typename UDPSocket>
+void NwmUdsService::broadcastBeacons(UDPSocket beaconSocket) {
 	char buf[512];
 
 	sockpp::inet_address broadcastAddr("255.255.255.255", beaconSendPort);
 
 	// Broadcast beacons every 200 ms
 	while (true) {
-		auto data = sendBeacon.toVector();
+		auto key = getBeaconKey();
+		auto iv = getBeaconIV(networkInfo);
+		auto data = sendBeacon.generate(networkInfo, key, iv);
+		fmt::print("Beacon data: {}\n", data);
 
 		beaconSocket.send_to(data.data(), data.size(), broadcastAddr);
 		std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -468,7 +482,7 @@ bool NwmUdsService::setupUDPServer() {
 
 	udpsock.set_option(SOL_SOCKET, SO_BROADCAST, true);
 
-	std::thread thr(broadcastBeacons<sockpp::udp_socket>, std::move(udpsock));
+	std::thread thr(&NwmUdsService::broadcastBeacons<sockpp::udp_socket>, this, std::move(udpsock));
 	thr.detach();
 	return true;
 }
