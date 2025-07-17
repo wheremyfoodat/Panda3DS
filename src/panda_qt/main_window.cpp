@@ -115,6 +115,12 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		[&]() { return this; }, emu->getConfig(), this
 	);
 
+	configWindow->getInputWindow()->loadFromMappings(keyboardMappings);
+
+	connect(configWindow->getInputWindow(), &InputWindow::mappingsChanged, this, [&]() {
+		configWindow->getInputWindow()->applyToMappings(keyboardMappings);
+	});
+
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
 		auto romPath = std::filesystem::current_path() / args.at(1).toStdU16String();

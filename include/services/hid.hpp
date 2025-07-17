@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <optional>
+#include <string>
 
 #include "helpers.hpp"
 #include "kernel_types.hpp"
@@ -38,7 +39,10 @@ namespace HID::Keys {
 		CirclePadUp = 1 << 30,     // Y >= 41
 		CirclePadDown = 1u << 31   // Y <= -41
 	};
-}
+
+	const char* keyToName(u32 key);
+	u32 nameToKey(std::string name);
+}  // namespace HID::Keys
 
 // Circular dependency because we need HID to spawn events
 class Kernel;

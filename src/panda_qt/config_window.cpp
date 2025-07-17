@@ -284,8 +284,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	gpuLayout->addRow(tr("Light threshold for forcing shadergen"), lightShadergenThreshold);
 
 	// Audio settings
-	QGroupBox* spuGroupBox = new QGroupBox(tr("Audio Settings"), this);
-	QFormLayout* audioLayout = new QFormLayout(spuGroupBox);
+	QGroupBox* dspGroupBox = new QGroupBox(tr("Audio Settings"), this);
+	QFormLayout* audioLayout = new QFormLayout(dspGroupBox);
 	audioLayout->setHorizontalSpacing(20);
 	audioLayout->setVerticalSpacing(10);
 
@@ -344,6 +344,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	volumeLayout->addWidget(volumeLabel);
 	audioLayout->addRow(tr("Audio device volume"), volumeLayout);
 
+	inputWindow = new InputWindow(this);
+
 	// Battery settings
 	QGroupBox* batGroupBox = new QGroupBox(tr("Battery Settings"), this);
 	QFormLayout* batLayout = new QFormLayout(batGroupBox);
@@ -381,7 +383,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	addWidget(guiGroupBox, tr("Interface"), ":/docs/img/sparkling_icon.png", tr("User Interface settings"));
 	addWidget(genGroupBox, tr("General"), ":/docs/img/settings_icon.png", tr("General emulator settings"));
 	addWidget(gpuGroupBox, tr("Graphics"), ":/docs/img/display_icon.png", tr("Graphics emulation and output settings"));
-	addWidget(spuGroupBox, tr("Audio"), ":/docs/img/speaker_icon.png", tr("Audio emulation and output settings"));
+	addWidget(dspGroupBox, tr("Audio"), ":/docs/img/speaker_icon.png", tr("Audio emulation and output settings"));
+	addWidget(inputWindow, tr("Input"), ":/docs/img/gamepad_icon.png", tr("Keyboard & controller input settings"));
 	addWidget(batGroupBox, tr("Battery"), ":/docs/img/battery_icon.png", tr("Battery emulation settings"));
 	addWidget(sdcGroupBox, tr("SD Card"), ":/docs/img/sdcard_icon.png", tr("SD Card emulation settings"));
 

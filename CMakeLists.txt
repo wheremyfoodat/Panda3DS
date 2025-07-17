@@ -733,13 +733,13 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
-            src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp src/panda_qt/dsp_debugger.cpp
+            src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp src/panda_qt/dsp_debugger.cpp src/panda_qt/input_window.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
             include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/dsp_debugger.hpp
-            include/panda_qt/disabled_widget_overlay.hpp
+            include/panda_qt/disabled_widget_overlay.hpp include/panda_qt/input_window.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
@@ -787,6 +787,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
                 docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
                 docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png docs/img/runpog_icon.png
+                docs/img/gamepad_icon.png
         )
 
         # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable
