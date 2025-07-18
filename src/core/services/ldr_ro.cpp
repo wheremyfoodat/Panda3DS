@@ -1,9 +1,10 @@
 #include "services/ldr_ro.hpp"
-#include "ipc.hpp"
-#include "kernel.hpp"
 
 #include <cstdio>
 #include <string>
+
+#include "ipc.hpp"
+#include "kernel.hpp"
 
 namespace LDRCommands {
 	enum : u32 {
@@ -23,6 +24,7 @@ namespace CROHeader {
 		NextCRO = 0x088,
 		PrevCRO = 0x08C,
 		FileSize = 0x090,
+		FixedSize = 0x098,
 		OnUnresolved = 0x0AC,
 		CodeOffset = 0x0B0,
 		DataOffset = 0x0B8,
@@ -66,10 +68,13 @@ namespace SegmentTable {
 
 	namespace SegmentID {
 		enum : u32 {
-			TEXT, RODATA, DATA, BSS,
+			TEXT,
+			RODATA,
+			DATA,
+			BSS,
 		};
 	}
-}
+}  // namespace SegmentTable
 
 namespace NamedExportTable {
 	enum : u32 {
@@ -119,8 +124,8 @@ namespace RelocationPatch {
 	enum : u32 {
 		SegmentOffset = 0,
 		PatchType = 4,
-		IsLastEntry = 5,  // For import patches
-		SegmentIndex = 5, // For relocation patches
+		IsLastEntry = 5,   // For import patches
+		SegmentIndex = 5,  // For relocation patches
 		IsResolved = 6,
 		Addend = 8,
 	};
@@ -130,7 +135,7 @@ namespace RelocationPatch {
 			AbsoluteAddress = 2,
 		};
 	};
-};
+};  // namespace RelocationPatch
 
 struct CROHeaderEntry {
 	u32 offset, size;
@@ -147,12 +152,12 @@ using namespace KernelMemoryTypes;
 class CRO {
 	Memory &mem;
 
-	u32 croPointer; // Origin address of CRO in RAM
+	u32 croPointer;  // Origin address of CRO in RAM
 	u32 oldDataSegmentOffset;
 
-	bool isCRO; // False if CRS
+	bool isCRO;  // False if CRS
 
-public:
+  public:
 	CRO(Memory &mem, u32 croPointer, bool isCRO) : mem(mem), croPointer(croPointer), oldDataSegmentOffset(0), isCRO(isCRO) {}
 	~CRO() = default;
 
@@ -162,25 +167,17 @@ public:
 		return mem.readString(moduleName.offset, moduleName.size);
 	}
 
-	u32 getNextCRO() {
-		return mem.read32(croPointer + CROHeader::NextCRO);
-	}
-	
-	u32 getPrevCRO() {
-		return mem.read32(croPointer + CROHeader::PrevCRO);
-	}
+	u32 getNextCRO() { return mem.read32(croPointer + CROHeader::NextCRO); }
 
-	void setNextCRO(u32 nextCRO) {
-		mem.write32(croPointer + CROHeader::NextCRO, nextCRO);
-	}
+	u32 getPrevCRO() { return mem.read32(croPointer + CROHeader::PrevCRO); }
 
-	void setPrevCRO(u32 prevCRO) {
-		mem.write32(croPointer + CROHeader::PrevCRO, prevCRO);
-	}
+	u32 getFixedSize() { return mem.read32(croPointer + CROHeader::FixedSize); }
 
-	u32 getSize() {
-		return mem.read32(croPointer + CROHeader::FileSize);
-	}
+	void setNextCRO(u32 nextCRO) { mem.write32(croPointer + CROHeader::NextCRO, nextCRO); }
+
+	void setPrevCRO(u32 prevCRO) { mem.write32(croPointer + CROHeader::PrevCRO, prevCRO); }
+
+	u32 getSize() { return mem.read32(croPointer + CROHeader::FileSize); }
 
 	void write32(u32 addr, u32 value) {
 		// Note: some games export symbols to the static module, which doesn't contain any segments.
@@ -188,11 +185,11 @@ public:
 		// can't be accessed via mem.write32()
 		auto writePointer = mem.getWritePointer(addr);
 		if (writePointer) {
-			*(u32*)writePointer = value;
+			*(u32 *)writePointer = value;
 		} else {
 			auto readPointer = mem.getReadPointer(addr);
 			if (readPointer) {
-				*(u32*)readPointer = value;
+				*(u32 *)readPointer = value;
 			} else {
 				Helpers::panic("LDR_RO write to invalid address = %X\n", addr);
 			}
@@ -226,11 +223,9 @@ public:
 		return entryOffset + offset;
 	}
 
-	u32 getOnUnresolvedAddr() {
-		return getSegmentAddr(mem.read32(croPointer + CROHeader::OnUnresolved));
-	}
+	u32 getOnUnresolvedAddr() { return getSegmentAddr(mem.read32(croPointer + CROHeader::OnUnresolved)); }
 
-	u32 getNamedExportSymbolAddr(const std::string& symbolName) {
+	u32 getNamedExportSymbolAddr(const std::string &symbolName) {
 		// Note: The CRO contains a trie for fast symbol lookup. For simplicity,
 		// we won't use it and instead look up the symbol in the named export symbol table
 
@@ -240,7 +235,7 @@ public:
 
 		for (u32 namedExport = 0; namedExport < namedExportTable.size; namedExport++) {
 			const u32 nameOffset = mem.read32(namedExportTable.offset + 8 * namedExport + NamedExportTable::NameOffset);
-				
+
 			const std::string exportSymbolName = mem.readString(nameOffset, exportStringSize);
 
 			if (symbolName.compare(exportSymbolName) == 0) {
@@ -444,13 +439,16 @@ public:
 			const u32 segmentID = mem.read32(segmentTable.offset + 12 * segment + SegmentTable::ID);
 			switch (segmentID) {
 				case SegmentTable::SegmentID::DATA:
-					*oldDataVaddr = segmentOffset + croPointer; oldDataSegmentOffset = segmentOffset; segmentOffset = dataVaddr; break;
+					*oldDataVaddr = segmentOffset + croPointer;
+					oldDataSegmentOffset = segmentOffset;
+					segmentOffset = dataVaddr;
+					break;
 				case SegmentTable::SegmentID::BSS: segmentOffset = bssVaddr; break;
 				case SegmentTable::SegmentID::TEXT:
 				case SegmentTable::SegmentID::RODATA:
-					if (segmentOffset != 0) segmentOffset += croPointer; break;
-				default:
-					Helpers::panic("Unknown segment ID = %u", segmentID);
+					if (segmentOffset != 0) segmentOffset += croPointer;
+					break;
+				default: Helpers::panic("Unknown segment ID = %u", segmentID);
 			}
 
 			mem.write32(segmentTable.offset + 12 * segment + SegmentTable::Offset, segmentOffset);
@@ -471,9 +469,9 @@ public:
 				case SegmentTable::SegmentID::BSS: segmentOffset = 0; break;
 				case SegmentTable::SegmentID::TEXT:
 				case SegmentTable::SegmentID::RODATA:
-					if (segmentOffset != 0) segmentOffset -= croPointer; break;
-				default:
-					Helpers::panic("Unknown segment ID = %u", segmentID);
+					if (segmentOffset != 0) segmentOffset -= croPointer;
+					break;
+				default: Helpers::panic("Unknown segment ID = %u", segmentID);
 			}
 
 			mem.write32(segmentTable.offset + 12 * segment + SegmentTable::Offset, segmentOffset);
@@ -637,7 +635,9 @@ public:
 			u32 relocationOffset = mem.read32(anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset);
 
 			if (relocationOffset != 0) {
-				mem.write32(anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset, relocationOffset + croPointer);
+				mem.write32(
+					anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset, relocationOffset + croPointer
+				);
 			}
 		}
 
@@ -651,7 +651,9 @@ public:
 			u32 relocationOffset = mem.read32(anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset);
 
 			if (relocationOffset != 0) {
-				mem.write32(anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset, relocationOffset - croPointer);
+				mem.write32(
+					anonymousImportTable.offset + 8 * anonymousImport + AnonymousImportTable::RelocationOffset, relocationOffset - croPointer
+				);
 			}
 		}
 
@@ -659,7 +661,7 @@ public:
 	}
 
 	bool relocateInternalSymbols(u32 oldDataVaddr) {
-		const u8* header = (u8*)mem.getReadPointer(croPointer);
+		const u8 *header = (u8 *)mem.getReadPointer(croPointer);
 
 		const CROHeaderEntry relocationPatchTable = getHeaderEntry(CROHeader::RelocationPatchTableOffset);
 		const CROHeaderEntry segmentTable = getHeaderEntry(CROHeader::SegmentTableOffset);
@@ -715,7 +717,7 @@ public:
 		for (u32 namedImport = 0; namedImport < namedImportTable.size; namedImport++) {
 			const u32 nameOffset = mem.read32(namedImportTable.offset + 8 * namedImport + NamedImportTable::NameOffset);
 			const u32 relocationOffset = mem.read32(namedImportTable.offset + 8 * namedImport + NamedImportTable::RelocationOffset);
-				
+
 			const std::string symbolName = mem.readString(nameOffset, importStringSize);
 
 			if (symbolName.compare(std::string("__aeabi_atexit")) == 0) {
@@ -727,7 +729,7 @@ public:
 					const u32 exportSymbolAddr = cro.getNamedExportSymbolAddr(std::string("nnroAeabiAtexit_"));
 					if (exportSymbolAddr != 0) {
 						patchBatch(relocationOffset, exportSymbolAddr);
-						
+
 						return true;
 					}
 
@@ -757,7 +759,7 @@ public:
 
 			if (isResolved == 0) {
 				const u32 nameOffset = mem.read32(namedImportTable.offset + 8 * namedImport + NamedImportTable::NameOffset);
-				
+
 				const std::string symbolName = mem.readString(nameOffset, importStringSize);
 
 				// Check every loaded CRO for the symbol (the pain)
@@ -866,7 +868,7 @@ public:
 
 		return true;
 	}
-	
+
 	bool clearModules() {
 		const u32 onUnresolvedAddr = getOnUnresolvedAddr();
 
@@ -881,7 +883,7 @@ public:
 				if (indexedOffset == 0) {
 					Helpers::panic("Indexed symbol offset is NULL");
 				}
-	
+
 				const u32 relocationOffset = mem.read32(indexedOffset + 8 * indexedImport + IndexedImportTable::RelocationOffset);
 
 				patchBatch(relocationOffset, onUnresolvedAddr, true);
@@ -926,7 +928,7 @@ public:
 
 				if (isResolved == 0) {
 					const u32 nameOffset = mem.read32(namedImportTable.offset + 8 * namedImport + NamedImportTable::NameOffset);
-					
+
 					const std::string symbolName = mem.readString(nameOffset, importStringSize);
 
 					// Check our current CRO for the symbol
@@ -990,7 +992,7 @@ public:
 		u32 currentCROPointer = loadedCRS;
 		while (currentCROPointer != 0) {
 			CRO cro(mem, currentCROPointer, true);
-		
+
 			const u32 onUnresolvedAddr = cro.getOnUnresolvedAddr();
 
 			const u32 importStringSize = mem.read32(currentCROPointer + CROHeader::ImportStringSize);
@@ -1005,7 +1007,7 @@ public:
 
 				if (isResolved != 0) {
 					const u32 nameOffset = mem.read32(namedImportTable.offset + 8 * namedImport + NamedImportTable::NameOffset);
-					
+
 					const std::string symbolName = mem.readString(nameOffset, importStringSize);
 
 					// Check our current CRO for the symbol
@@ -1113,7 +1115,7 @@ public:
 		}
 
 		CRO crs(mem, loadedCRS, false);
-		
+
 		u32 headAddr = crs.getPrevCRO();
 		if (autoLink) {
 			headAddr = crs.getNextCRO();
@@ -1196,9 +1198,7 @@ public:
 	}
 };
 
-void LDRService::reset() {
-	loadedCRS = 0;
-}
+void LDRService::reset() { loadedCRS = 0; }
 
 void LDRService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
@@ -1244,8 +1244,9 @@ void LDRService::initialize(u32 messagePointer) {
 
 	// Map CRO to output address
 	// TODO: how to handle permissions?
-	bool succeeded = mem.mapVirtualMemory(mapVaddr, crsPointer, size >> 12, true, true, true,
-		MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode);
+	bool succeeded = mem.mapVirtualMemory(
+		mapVaddr, crsPointer, size >> 12, true, true, true, MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode
+	);
 	if (!succeeded) {
 		Helpers::panic("Failed to map CRS");
 	}
@@ -1260,8 +1261,7 @@ void LDRService::initialize(u32 messagePointer) {
 		Helpers::panic("Failed to rebase CRS");
 	}
 
-	kernel.clearInstructionCache();
-
+	kernel.clearInstructionCacheRange(mapVaddr, size);
 	loadedCRS = mapVaddr;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
@@ -1290,8 +1290,6 @@ void LDRService::linkCRO(u32 messagePointer) {
 		Helpers::panic("Failed to link CRO");
 	}
 
-	kernel.clearInstructionCache();
-
 	mem.write32(messagePointer, IPC::responseHeader(0x6, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
@@ -1318,7 +1316,9 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 	const u32 fixLevel = mem.read32(messagePointer + 40);
 	const Handle process = mem.read32(messagePointer + 52);
 
-	log("LDR_RO::LoadCRO (isNew = %d, buffer = %08X, vaddr = %08X, size = %08X, .data vaddr = %08X, .data size = %08X, .bss vaddr = %08X, .bss size = %08X, auto link = %d, fix level = %X, process = %X)\n", isNew, croPointer, mapVaddr, size, dataVaddr, dataSize, bssVaddr, bssSize, autoLink, fixLevel, process);
+	log("LDR_RO::LoadCRO (isNew = %d, buffer = %08X, vaddr = %08X, size = %08X, .data vaddr = %08X, .data size = %08X, .bss vaddr = %08X, .bss size "
+		"= %08X, auto link = %d, fix level = %X, process = %X)\n",
+		isNew, croPointer, mapVaddr, size, dataVaddr, dataSize, bssVaddr, bssSize, autoLink, fixLevel, process);
 
 	// Sanity checks
 	if (size < CRO_HEADER_SIZE) {
@@ -1339,8 +1339,9 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 
 	// Map CRO to output address
 	// TODO: how to handle permissions?
-	bool succeeded = mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, true, true, true,
-		MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode);
+	bool succeeded = mem.mapVirtualMemory(
+		mapVaddr, croPointer, size >> 12, true, true, true, MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode
+	);
 	if (!succeeded) {
 		Helpers::panic("Failed to map CRO");
 	}
@@ -1363,8 +1364,7 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 
 	// TODO: add fixing
 	cro.fix(fixLevel);
-
-	kernel.clearInstructionCache();
+	kernel.clearInstructionCacheRange(mapVaddr, size);
 
 	if (isNew) {
 		mem.write32(messagePointer, IPC::responseHeader(0x9, 2, 0));
@@ -1394,7 +1394,6 @@ void LDRService::unloadCRO(u32 messagePointer) {
 	}
 
 	CRO cro(mem, mapVaddr, true);
-
 	cro.unregisterCRO(loadedCRS);
 
 	if (!cro.unlink(loadedCRS)) {
@@ -1406,13 +1405,15 @@ void LDRService::unloadCRO(u32 messagePointer) {
 	}
 
 	u32 size = cro.getSize();
-	bool succeeded = mem.mapVirtualMemory(mapVaddr, croPointer, size >> 12, false, false, false,
-		MemoryState::Locked, MemoryState::AliasCode, MemoryState::Free, MemoryState::Private);
+	bool succeeded = mem.mapVirtualMemory(
+		mapVaddr, croPointer, size >> 12, false, false, false, MemoryState::Locked, MemoryState::AliasCode, MemoryState::Free, MemoryState::Private
+	);
+
 	if (!succeeded) {
 		Helpers::panic("Failed to unmap CRO");
 	}
 
-	kernel.clearInstructionCache();
+	kernel.clearInstructionCacheRange(mapVaddr, cro.getFixedSize());
 
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);

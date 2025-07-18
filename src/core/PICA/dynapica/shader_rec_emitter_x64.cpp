@@ -27,6 +27,7 @@ static constexpr Xmm scratch2 = xmm1;
 static constexpr Xmm src1_xmm = xmm2;
 static constexpr Xmm src2_xmm = xmm3;
 static constexpr Xmm src3_xmm = xmm4;
+static constexpr Xmm scratch3 = xmm5;
 
 #if defined(PANDA3DS_MS_ABI)
 // Register that points to PICA state. Must be volatile for the aforementioned reasons
@@ -370,12 +371,11 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 	} else if (haveSSE4_1) {
 		// Bit reverse the write mask because that is what blendps expects
 		u32 adjustedMask = ((writeMask >> 3) & 0b1) | ((writeMask >> 1) & 0b10) | ((writeMask << 1) & 0b100) | ((writeMask << 3) & 0b1000);
-		// Don't accidentally overwrite scratch1 if that is what we're writing derp
-		Xmm temp = (source == scratch1) ? scratch2 : scratch1;
 
-		movaps(temp, xword[statePointer + offset]);     // Read current value of dest
-		blendps(temp, source, adjustedMask);            // Blend with source
-		movaps(xword[statePointer + offset], temp);     // Write back
+		// Blend current value of dest with source. We have to invert the bits of the mask, as we do blendps source, dest instead of dest, source
+		// Note: This destroys source
+		blendps(source, xword[statePointer + offset], adjustedMask ^ 0xF);
+		movaps(xword[statePointer + offset], source);     // Write back
 	} else {
 		// Blend algo referenced from Citra
 		const u8 selector = (((writeMask & 0b1000) ? 1 : 0) << 0) |
@@ -383,20 +383,12 @@ void ShaderEmitter::storeRegister(Xmm source, const PICAShader& shader, u32 dest
 			(((writeMask & 0b0010) ? 0 : 1) << 4) |
 			(((writeMask & 0b0001) ? 2 : 3) << 6);
 		
-		// Reorder instructions based on whether the source == scratch1. This is to avoid overwriting scratch1 if it's the source,
-		// While also having the memory load come first to mitigate execution hazards and give the load more time to complete before reading if possible
-		if (source != scratch1) {
-			movaps(scratch1, xword[statePointer + offset]);
-			movaps(scratch2, source);
-		} else {
-			movaps(scratch2, source);
-			movaps(scratch1, xword[statePointer + offset]);
-		}
-		
-		unpckhps(scratch2, scratch1); // Unpack X/Y components of source and destination
-		unpcklps(scratch1, source);   // Unpack Z/W components of source and destination
-		shufps(scratch1, scratch2, selector); // "merge-shuffle" dest and source using selecto
-		movaps(xword[statePointer + offset], scratch1); // Write back
+		movaps(scratch3, xword[statePointer + offset]);
+		movaps(scratch2, source);
+		unpckhps(scratch2, scratch3); // Unpack X/Y components of source and destination
+		unpcklps(scratch3, source);   // Unpack Z/W components of source and destination
+		shufps(scratch3, scratch2, selector); // "merge-shuffle" dest and source using selecto
+		movaps(xword[statePointer + offset], scratch3); // Write back
 	}
 }
 

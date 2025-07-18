@@ -21,7 +21,7 @@
 ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWidget(parent), resizeCallback(resizeCallback) {
 	// Create a native window for use with our graphics API of choice
 	resize(800, 240 * 4);
-	
+
 	setAutoFillBackground(false);
 	setAttribute(Qt::WA_NativeWindow, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
@@ -29,6 +29,7 @@ ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWi
 	setAttribute(Qt::WA_KeyCompression, false);
 	setFocusPolicy(Qt::StrongFocus);
 	setMouseTracking(true);
+	show();
 
 	if (!createGLContext()) {
 		Helpers::panic("Failed to create GL context for display");
@@ -46,6 +47,8 @@ void ScreenWidget::resizeEvent(QResizeEvent* event) {
 		this->windowInfo = *windowInfo;
 	}
 
+	reloadScreenCoordinates();
+
 	// This will call take care of calling resizeSurface from the emulator thread
 	resizeCallback(surfaceWidth, surfaceHeight);
 }
@@ -59,12 +62,24 @@ void ScreenWidget::resizeSurface(u32 width, u32 height) {
 	}
 }
 
+void ScreenWidget::reloadScreenCoordinates() {
+	ScreenLayout::calculateCoordinates(screenCoordinates, u32(width()), u32(height()), topScreenSize, screenLayout);
+}
+
+void ScreenWidget::reloadScreenLayout(ScreenLayout::Layout newLayout, float newTopScreenSize) {
+	screenLayout = newLayout;
+	topScreenSize = newTopScreenSize;
+
+	reloadScreenCoordinates();
+}
+
 bool ScreenWidget::createGLContext() {
-	// List of GL context versions we will try. Anything 4.1+ is good
-	static constexpr std::array<GL::Context::Version, 6> versionsToTry = {
+	// List of GL context versions we will try. Anything 4.1+ is good for desktop OpenGL, and 3.1+ for OpenGL ES
+	static constexpr std::array<GL::Context::Version, 8> versionsToTry = {
 		GL::Context::Version{GL::Context::Profile::Core, 4, 6}, GL::Context::Version{GL::Context::Profile::Core, 4, 5},
 		GL::Context::Version{GL::Context::Profile::Core, 4, 4}, GL::Context::Version{GL::Context::Profile::Core, 4, 3},
 		GL::Context::Version{GL::Context::Profile::Core, 4, 2}, GL::Context::Version{GL::Context::Profile::Core, 4, 1},
+		GL::Context::Version{GL::Context::Profile::ES, 3, 2},   GL::Context::Version{GL::Context::Profile::ES, 3, 1},
 	};
 
 	std::optional<WindowInfo> windowInfo = getWindowInfo();
@@ -72,6 +87,10 @@ bool ScreenWidget::createGLContext() {
 		this->windowInfo = *windowInfo;
 
 		glContext = GL::Context::Create(*getWindowInfo(), versionsToTry);
+		if (glContext == nullptr) {
+			return false;
+		}
+
 		glContext->DoneCurrent();
 	}
 
@@ -79,7 +98,7 @@ bool ScreenWidget::createGLContext() {
 }
 
 qreal ScreenWidget::devicePixelRatioFromScreen() const {
-	const QScreen* screenForRatio = window()->windowHandle()->screen();
+	const QScreen* screenForRatio = windowHandle()->screen();
 	if (!screenForRatio) {
 		screenForRatio = QGuiApplication::primaryScreen();
 	}

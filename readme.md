@@ -19,14 +19,14 @@ SDL builds (No GUI):
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Windows Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Windows_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Windows_Build/master/Windows%20executable.zip)|
-|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|MacOS build|[![MacOS Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/MacOS_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/MacOS_Build/master/MacOS%20Alber%20App%20Bundle%20(universal).zip)|
 |Linux build|[![Linux Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml/badge.svg?branch=master)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Linux_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Linux_AppImage_Build/master/Linux%20executable.zip)|
 
 Qt and Android builds:
 |Platform|Status|Download|
 |--------|------------|--------|
 |Windows build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Windows Executable](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Windows%20executable.zip)|
-|MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle.zip)|
+|MacOS build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[MacOS App Bundle](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/MacOS%20Alber%20App%20Bundle%20(universal).zip)|
 |Linux build|[![Qt Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Qt_Build.yml)|[Linux AppImage](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Qt_Build/master/Linux%20executable.zip)|
 |Android build (arm64)|[![Android Build](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml/badge.svg)](https://github.com/wheremyfoodat/Panda3DS/actions/workflows/Android_Build.yml)|[Android APK](https://nightly.link/wheremyfoodat/Panda3DS/workflows/Android_Build/master/Android%20APKs%20(arm64).zip)|
 
@@ -35,7 +35,7 @@ Panda3DS is still in the early stages of development. Many games boot, many don'
 
 For documenting game compatibility, make sure to visit the [games list repository](https://github.com/Panda3DS-emu/Panda3DS-Games-List). For miscellaneous issues or more technical issues, feel free to use this repo's issues tab.
 # Why?
-The 3DS emulation scene is already pretty mature, with offerings such as [Citra](https://github.com/citra-emu/citra) which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
+The 3DS emulation scene is already pretty mature, with offerings such as Citra which can offer a great playing experience for most games in the library, [Corgi3DS](https://github.com/PSI-Rockin/Corgi3DS), an innovative LLE emulator, or [Mikage](https://mikage.app/). However, there's always room for more emulators! While Panda3DS was initially a mere curiosity, there's many different concepts I would like to explore with it in the future, such as:
 
 - Virtualization. What motivated the creation of this emulator was actually a discussion on whether it is possible to get fast 3DS emulation on low-end hardware such as the Raspberry Pi 4, using the KVM API. At the moment, Panda3DS is powered by Dynarmic rather than using virtualization, but this is definitely a concept I want to explore in the future.
 
@@ -68,7 +68,7 @@ Simply drag and drop a ROM to the executable if supported, or invoke the executa
 <br>
 Panda3DS can load ROMs in the following formats:
 - .3ds/.cci
-- .cxi/.app
+- .cxi/.app/.ncch
 - .elf/.axf
 - .3dsx
 
@@ -113,12 +113,13 @@ Panda3DS also supports controller input using the SDL2 GameController API.
 - [SkyEmu](https://github.com/skylersaleh/SkyEmu): A seagull-themed low-level GameBoy, GameBoy Color, GameBoy Advance and Nintendo DS emulator that is designed to be easy to use, cross platform and accurate.
 - [NanoBoyAdvance](https://github.com/nba-emu/NanoBoyAdvance): A Game Boy Advance emulator focusing on hardware research and cycle-accurate emulation
 - [Dust](https://github.com/kelpsyberry/dust): Nintendo DS emulator for desktop devices and the web
+- [felix86](https://github.com/OFFTKP/felix86): A new x86-64 → RISC-V Linux userspace emulator
+- [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
+- [ChonkyStation 3](https://github.com/liuk7071/ChonkyStation3): Experimental HLE PS3 emulator for Windows, MacOS and Linux
 - [MelonDS](https://github.com/melonDS-emu/melonDS): "DS emulator, sorta" - Arisotura
 - [Kaizen](https://github.com/SimoneN64/Kaizen): Experimental work-in-progress low-level N64 emulator
-- [ChonkyStation](https://github.com/liuk7071/ChonkyStation): Work-in-progress PlayStation emulator
 - [shadPS4](https://github.com/shadps4-emu/shadPS4): Work-in-progress PS4 emulator by the founder of PCSX, PCSX2 and more
-- [Hydra](https://github.com/hydra-emu/hydra): Cross-platform GameBoy, NES, N64 and Chip-8 emulator
-
+- [Tanuki3DS](https://github.com/burhanr13/Tanuki3DS/): A new 3DS emulator for MacOS and Linux
 # Support
 If you find this project exciting and want to support the founder, check out [his Patreon](https://www.patreon.com/wheremyfoodat) or [Ko-fi](https://ko-fi.com/wheremyfoodat)
 <br>

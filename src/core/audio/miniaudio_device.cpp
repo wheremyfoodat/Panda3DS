@@ -1,8 +1,15 @@
 #include "audio/miniaudio_device.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <limits>
+
 #include "helpers.hpp"
 
-MiniAudioDevice::MiniAudioDevice() : initialized(false), running(false), samples(nullptr) {}
+MiniAudioDevice::MiniAudioDevice(const AudioDeviceConfig& audioSettings) : AudioDeviceInterface(nullptr, audioSettings), initialized(false) {
+	running = false;
+}
 
 void MiniAudioDevice::init(Samples& samples, bool safe) {
 	this->samples = &samples;
@@ -27,8 +34,8 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 
 			// TODO: Make backend selectable here
 			found = true;
-			//count = 1;
-			//backends[0] = backend;
+			// count = 1;
+			// backends[0] = backend;
 		}
 
 		if (!found) {
@@ -81,26 +88,80 @@ void MiniAudioDevice::init(Samples& samples, bool safe) {
 	deviceConfig.playback.format = ma_format_s16;
 	deviceConfig.playback.channels = channelCount;
 	deviceConfig.sampleRate = sampleRate;
-	//deviceConfig.periodSizeInFrames = 64;
-	//deviceConfig.periods = 16;
+	// deviceConfig.periodSizeInFrames = 64;
+	// deviceConfig.periods = 16;
 	deviceConfig.pUserData = this;
 	deviceConfig.aaudio.usage = ma_aaudio_usage_game;
 	deviceConfig.wasapi.noAutoConvertSRC = true;
 
+	lastStereoSample = {0, 0};
+
 	deviceConfig.dataCallback = [](ma_device* device, void* out, const void* input, ma_uint32 frameCount) {
 		auto self = reinterpret_cast<MiniAudioDevice*>(device->pUserData);
-		s16* output = reinterpret_cast<ma_int16*>(out);
-		const usize maxSamples = std::min(self->samples->Capacity(), usize(frameCount * channelCount));
+		if (!self->running) {
+			return;
+		}
 
-		// Wait until there's enough samples to pop
-		while (self->samples->size() < maxSamples) {
-			// If audio output is disabled from the emulator thread, make sure that this callback will return and not hang
-			if (!self->running) {
-				return;
+		s16* output = reinterpret_cast<ma_int16*>(out);
+		usize samplesWritten = 0;
+		samplesWritten += self->samples->pop(output, frameCount * channelCount);
+
+		// Get the last sample for underrun handling
+		if (samplesWritten != 0) {
+			std::memcpy(&self->lastStereoSample[0], &output[(samplesWritten - 1) * 2], sizeof(lastStereoSample));
+		}
+
+		// Adjust the volume of our samples based on the emulator's volume slider
+		float audioVolume = self->audioSettings.getVolume();
+		// If volume is 1.0 we don't need to do anything
+		if (audioVolume != 1.0f) {
+			s16* sample = output;
+
+			// If our volume is > 1.0 then we boost samples using a logarithmic scale,
+			// In this case we also have to clamp samples to make sure they don't wrap around
+			if (audioVolume > 1.0f) {
+				audioVolume = 0.6 + 20 * std::log10(audioVolume);
+
+				constexpr s32 min = s32(std::numeric_limits<s16>::min());
+				constexpr s32 max = s32(std::numeric_limits<s16>::max());
+
+				for (usize i = 0; i < samplesWritten; i += 2) {
+					s16 l = s16(std::clamp<s32>(s32(float(sample[0]) * audioVolume), min, max));
+					s16 r = s16(std::clamp<s32>(s32(float(sample[1]) * audioVolume), min, max));
+
+					*sample++ = l;
+					*sample++ = r;
+				}
+			} else {
+				// If our volume is in [0.0, 1.0) then just multiply by the volume. No need to clamp, since there is no danger of our samples wrapping
+				// around due to overflow
+
+				// If we're applying cubic volume curve, raise volume to the power of 3
+				if (self->audioSettings.volumeCurve == AudioDeviceConfig::VolumeCurve::Cubic) {
+					audioVolume = audioVolume * audioVolume * audioVolume;
+				}
+
+				for (usize i = 0; i < samplesWritten; i += 2) {
+					s16 l = s16(float(sample[0]) * audioVolume);
+					s16 r = s16(float(sample[1]) * audioVolume);
+
+					*sample++ = l;
+					*sample++ = r;
+				}
 			}
 		}
 
-		self->samples->pop(output, maxSamples);
+		// If underruning, copy the last output sample
+		{
+			s16* pointer = &output[samplesWritten * 2];
+			s16 l = self->lastStereoSample[0];
+			s16 r = self->lastStereoSample[1];
+
+			for (usize i = samplesWritten; i < frameCount; i++) {
+				*pointer++ = l;
+				*pointer++ = r;
+			}
+		}
 	};
 
 	if (ma_device_init(&context, &deviceConfig, &device) != MA_SUCCESS) {
@@ -130,7 +191,7 @@ void MiniAudioDevice::start() {
 
 void MiniAudioDevice::stop() {
 	if (!initialized) {
-		Helpers::warn("MiniAudio device not initialized, can't start");
+		Helpers::warn("MiniAudio device not initialized, can't stop");
 		return;
 	}
 
@@ -139,6 +200,17 @@ void MiniAudioDevice::stop() {
 
 		if (ma_device_stop(&device) != MA_SUCCESS) {
 			Helpers::warn("Failed to stop audio device");
-		} 
+		}
+	}
+}
+
+void MiniAudioDevice::close() {
+	stop();
+
+	if (initialized) {
+		initialized = false;
+
+		ma_device_uninit(&device);
+		ma_context_uninit(&context);
 	}
 }

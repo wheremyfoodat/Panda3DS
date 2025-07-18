@@ -19,8 +19,9 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(kernel.getFcramManager(), cpu.getTicksRef(), config),
-	  cheats(memory, kernel.getServiceManager().getHID()), lua(*this), running(false)
+	: config(getConfigPath()), kernel(cpu, memory, gpu, config, lua), cpu(memory, kernel, *this), gpu(memory, config),
+	  memory(kernel.getFcramManager(), cpu.getTicksRef(), config), cheats(memory, kernel.getServiceManager().getHID()),
+	  audioDevice(config.audioDeviceConfig), lua(*this), running(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
@@ -28,28 +29,25 @@ Emulator::Emulator()
 {
 	DSPService& dspService = kernel.getServiceManager().getDSP();
 
-	dsp = Audio::makeDSPCore(config.dspType, memory, scheduler, dspService);
+	dsp = Audio::makeDSPCore(config, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());
-	setAudioEnabled(config.audioEnabled);
-
-	if (Renderdoc::isSupported() && config.enableRenderdoc) {
-		loadRenderdoc();
-	}
-
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
 		updateDiscord();
 	}
 #endif
+
+	reloadSettings();
 	reset(ReloadOption::NoReload);
 }
 
 Emulator::~Emulator() {
 	config.save();
 	lua.close();
+	audioDevice.close();
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	discordRpc.stop();
@@ -104,13 +102,18 @@ std::filesystem::path Emulator::getConfigPath() {
 	if constexpr (Helpers::isAndroid()) {
 		return getAndroidAppPath() / "config.toml";
 	} else {
-		return std::filesystem::current_path() / "config.toml";
+		std::filesystem::path localPath = std::filesystem::current_path() / "config.toml";
+
+		if (std::filesystem::exists(localPath)) {
+			return localPath;
+		} else {
+			return getAppDataRoot() / "config.toml";
+		}
 	}
 }
 #endif
 
 void Emulator::step() {}
-void Emulator::render() {}
 
 // Only resume if a ROM is properly loaded
 void Emulator::resume() {
@@ -130,8 +133,8 @@ void Emulator::togglePause() { running ? pause() : resume(); }
 
 void Emulator::runFrame() {
 	if (running) {
-		cpu.runFrame(); // Run 1 frame of instructions
-		gpu.display();  // Display graphics
+		cpu.runFrame();  // Run 1 frame of instructions
+		gpu.display();   // Display graphics
 
 		// Run cheats if any are loaded
 		if (cheats.haveCheats()) [[unlikely]] {
@@ -156,20 +159,21 @@ void Emulator::pollScheduler() {
 		scheduler.updateNextTimestamp();
 
 		switch (eventType) {
-			case Scheduler::EventType::VBlank: [[likely]] {
-				// Signal that we've reached the end of a frame
-				frameDone = true;
-				lua.signalEvent(LuaEvent::Frame);
+			case Scheduler::EventType::VBlank:
+				[[likely]] {
+					// Signal that we've reached the end of a frame
+					frameDone = true;
+					lua.signalEvent(LuaEvent::Frame);
 
-				// Send VBlank interrupts
-				ServiceManager& srv = kernel.getServiceManager();
-				srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
-				srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+					// Send VBlank interrupts
+					ServiceManager& srv = kernel.getServiceManager();
+					srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+					srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
-				// Queue next VBlank event
-				scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
-				break;
-			}
+					// Queue next VBlank event
+					scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
+					break;
+				}
 
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
 			case Scheduler::EventType::RunDSP: {
@@ -178,6 +182,7 @@ void Emulator::pollScheduler() {
 			}
 
 			case Scheduler::EventType::SignalY2R: kernel.getServiceManager().getY2R().signalConversionDone(); break;
+			case Scheduler::EventType::UpdateIR: kernel.getServiceManager().getIRUser().updateCirclePadPro(); break;
 
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
@@ -249,7 +254,7 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 		success = loadELF(path);
 	else if (extension == ".3ds" || extension == ".cci")
 		success = loadNCSD(path, ROMType::NCSD);
-	else if (extension == ".cxi" || extension == ".app")
+	else if (extension == ".cxi" || extension == ".app" || extension == ".ncch")
 		success = loadNCSD(path, ROMType::CXI);
 	else if (extension == ".3dsx")
 		success = load3DSX(path);
@@ -266,6 +271,11 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	} else {
 		romPath = std::nullopt;
 		romType = ROMType::None;
+	}
+
+	if (success) {
+		// Update the main thread entrypoint and SP so that the thread debugger can display them.
+		kernel.setMainThreadEntrypointAndSP(cpu.getReg(15), cpu.getReg(13));
 	}
 
 	resume();  // Start the emulator
@@ -343,8 +353,7 @@ bool Emulator::loadELF(std::ifstream& file) {
 std::span<u8> Emulator::getSMDH() {
 	switch (romType) {
 		case ROMType::NCSD:
-		case ROMType::CXI:
-			return memory.getCXI()->smdh;
+		case ROMType::CXI: return memory.getCXI()->smdh;
 		default: {
 			return std::span<u8>();
 		}
@@ -376,7 +385,7 @@ static void dumpRomFSNode(const RomFS::RomFSNode& node, const char* romFSBase, c
 
 	for (auto& directory : node.directories) {
 		const auto newPath = path / directory->name;
-		
+
 		// Create the directory for the new folder
 		std::error_code ec;
 		std::filesystem::create_directories(newPath, ec);
@@ -427,6 +436,10 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 }
 
 void Emulator::setAudioEnabled(bool enable) {
+	// Don't enable audio if we didn't manage to find an audio device and initialize it properly, otherwise audio sync will break,
+	// because the emulator will expect the audio device to drain the sample buffer, but there's no audio device running...
+	enable = enable && audioDevice.isInitialized();
+
 	if (!enable) {
 		audioDevice.stop();
 	} else if (enable && romType != ROMType::None && running) {
@@ -442,4 +455,27 @@ void Emulator::loadRenderdoc() {
 	std::string capturePath = (std::filesystem::current_path() / "RenderdocCaptures").generic_string();
 	Renderdoc::loadRenderdoc();
 	Renderdoc::setOutputDir(capturePath, "");
+}
+
+void Emulator::reloadSettings() {
+	setAudioEnabled(config.audioEnabled);
+
+	if (Renderdoc::isSupported() && config.enableRenderdoc && !Renderdoc::isLoaded()) {
+		loadRenderdoc();
+	}
+
+	gpu.getRenderer()->setHashTextures(config.hashTextures);
+
+#ifdef PANDA3DS_ENABLE_DISCORD_RPC
+	// Reload RPC setting if we're compiling with RPC support
+
+	if (discordRpc.running() != config.discordRpcEnabled) {
+		if (config.discordRpcEnabled) {
+			discordRpc.init();
+			updateDiscord();
+		} else {
+			discordRpc.stop();
+		}
+	}
+#endif
 }

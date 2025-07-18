@@ -1,4 +1,5 @@
 #include <cstring>
+
 #include "arm_defs.hpp"
 #include "kernel.hpp"
 
@@ -32,14 +33,17 @@ void Kernel::setupIdleThread() {
 	// Reserve some memory for the idle thread's code. We map this memory to vaddr 3FC00000 which shouldn't be accessed by applications
 	// We only allocate 4KB (1 page) because our idle code is pretty small
 	constexpr u32 codeAddress = 0x3FC00000;
-	if (!mem.allocMemory(codeAddress, 1, FcramRegion::Base, true, true, false, MemoryState::Locked)) Helpers::panic("Failed to setup idle thread");
-	
+	if (!mem.allocMemory(codeAddress, 1, FcramRegion::Base, true, true, false, MemoryState::Locked)) {
+		Helpers::panic("Failed to setup idle thread");
+	}
+
 	// Copy idle thread code to the allocated FCRAM
 	mem.copyToVaddr(codeAddress, idleThreadCode, sizeof(idleThreadCode));
 
 	t.entrypoint = codeAddress;
+	t.initialSP = 0;
 	t.tlsBase = 0;
-	t.gprs[13] = 0; // Set SP & LR to 0 just in case. The idle thread should never access memory, but let's be safe
+	t.gprs[13] = 0;  // Set SP & LR to 0 just in case. The idle thread should never access memory, but let's be safe
 	t.gprs[14] = 0;
 	t.gprs[15] = codeAddress;
 	t.cpsr = CPSR::UserMode;

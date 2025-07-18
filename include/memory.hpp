@@ -3,8 +3,8 @@
 #include <bitset>
 #include <filesystem>
 #include <fstream>
-#include <optional>
 #include <list>
+#include <optional>
 #include <vector>
 
 #include "config.hpp"
@@ -12,8 +12,8 @@
 #include "handles.hpp"
 #include "helpers.hpp"
 #include "kernel/kernel_types.hpp"
-#include "loader/ncsd.hpp"
 #include "loader/3dsx.hpp"
+#include "loader/ncsd.hpp"
 #include "result/result.hpp"
 #include "services/region_codes.hpp"
 
@@ -41,7 +41,7 @@ namespace VirtualAddrs {
 		DefaultStackSize = 0x4000,
 
 		NormalHeapStart = 0x08000000,
-		LinearHeapStartOld = 0x14000000, // If kernel version < 0x22C
+		LinearHeapStartOld = 0x14000000,  // If kernel version < 0x22C
 		LinearHeapEndOld = 0x1C000000,
 
 		LinearHeapStartNew = 0x30000000,
@@ -79,7 +79,7 @@ namespace KernelMemoryTypes {
 		PERMISSION_W = 1 << 1,
 		PERMISSION_X = 1 << 2
 	};
-	
+
 	struct MemoryInfo {
 		u32 baseAddr;
 		u32 pages;
@@ -93,14 +93,14 @@ namespace KernelMemoryTypes {
 
 	// Shared memory block for HID, GSP:GPU etc
 	struct SharedMemoryBlock {
-		u32 paddr; // Physical address of this block's memory
-		u32 size; // Size of block
-		u32 handle; // The handle of the shared memory block
-		bool mapped; // Has this block been mapped at least once?
+		u32 paddr;    // Physical address of this block's memory
+		u32 size;     // Size of block
+		u32 handle;   // The handle of the shared memory block
+		bool mapped;  // Has this block been mapped at least once?
 
 		SharedMemoryBlock(u32 paddr, u32 size, u32 handle) : paddr(paddr), size(size), handle(handle), mapped(false) {}
 	};
-}
+}  // namespace KernelMemoryTypes
 
 struct FcramBlock;
 class KFcram;
@@ -120,7 +120,7 @@ class Memory {
 	u8* dspRam;  // Provided to us by Audio
 	u8* vram;    // Provided to the memory class by the GPU class
 
-	u64& cpuTicks; // Reference to the CPU tick counter
+	u64& cpuTicks;  // Reference to the CPU tick counter
 	using SharedMemoryBlock = KernelMemoryTypes::SharedMemoryBlock;
 
 	// TODO: remove this reference when Peach's excellent page table code is moved to a better home
@@ -136,22 +136,24 @@ class Memory {
 	std::list<KernelMemoryTypes::MemoryInfo> memoryInfo;
 
 	std::array<SharedMemoryBlock, 5> sharedMemBlocks = {
-		SharedMemoryBlock(0, 0, KernelHandles::FontSharedMemHandle), // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
-		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle), // GSP shared memory
-		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle),  // HID shared memory
-		SharedMemoryBlock(0, 0x3000, KernelHandles::CSNDSharedMemHandle), // CSND shared memory
+		SharedMemoryBlock(
+			0, 0, KernelHandles::FontSharedMemHandle
+		),  // Shared memory for the system font (size is 0 because we read the size from the cmrc filesystem
+		SharedMemoryBlock(0, 0x1000, KernelHandles::GSPSharedMemHandle),          // GSP shared memory
+		SharedMemoryBlock(0, 0x1000, KernelHandles::HIDSharedMemHandle),          // HID shared memory
+		SharedMemoryBlock(0, 0x3000, KernelHandles::CSNDSharedMemHandle),         // CSND shared memory
 		SharedMemoryBlock(0, 0xE7000, KernelHandles::APTCaptureSharedMemHandle),  // APT Capture Buffer memory
- 	};
+	};
 
-public:
+  public:
 	static constexpr u32 pageShift = 12;
 	static constexpr u32 pageSize = 1 << pageShift;
 	static constexpr u32 pageMask = pageSize - 1;
 	static constexpr u32 totalPageCount = 1 << (32 - pageShift);
-	
+
 	static constexpr u32 FCRAM_SIZE = u32(128_MB);
-	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(64_MB);
-	static constexpr u32 FCRAM_SYSTEM_SIZE = u32(44_MB);
+	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(64_MB + 16_MB);
+	static constexpr u32 FCRAM_SYSTEM_SIZE = u32(44_MB - 16_MB);
 	static constexpr u32 FCRAM_BASE_SIZE = u32(20_MB);
 
 	static constexpr u32 FCRAM_PAGE_COUNT = FCRAM_SIZE / pageSize;
@@ -161,18 +163,18 @@ public:
 	static constexpr u32 DSP_CODE_MEMORY_OFFSET = u32(0_KB);
 	static constexpr u32 DSP_DATA_MEMORY_OFFSET = u32(256_KB);
 
-private:
-	//std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
-	//std::optional<u32> findPaddr(u32 size);
+  private:
+	// std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
+	// std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
 
 	// https://www.3dbrew.org/wiki/Configuration_Memory#ENVINFO
 	// Report a retail unit without JTAG
 	static constexpr u32 envInfo = 1;
 
-	// Stored in Configuration Memory starting @ 0x1FF80060 
+	// Stored in Configuration Memory starting @ 0x1FF80060
 	struct FirmwareInfo {
-		u8 unk; // Usually 0 according to 3DBrew
+		u8 unk;  // Usually 0 according to 3DBrew
 		u8 revision;
 		u8 minor;
 		u8 major;
@@ -232,9 +234,9 @@ private:
 	};
 
 	u8 getBatteryState(bool adapterConnected, bool charging, BatteryLevel batteryLevel) {
-		u8 value = static_cast<u8>(batteryLevel) << 2; // Bits 2:4 are the battery level from 0 to 5
-		if (adapterConnected) value |= 1 << 0; // Bit 0 shows if the charger is connected
-		if (charging) value |= 1 << 1; // Bit 1 shows if we're charging
+		u8 value = static_cast<u8>(batteryLevel) << 2;  // Bits 2:4 are the battery level from 0 to 5
+		if (adapterConnected) value |= 1 << 0;          // Bit 0 shows if the charger is connected
+		if (charging) value |= 1 << 1;                  // Bit 1 shows if we're charging
 
 		return value;
 	}
@@ -256,15 +258,14 @@ private:
 	}
 
 	// Returns whether "addr" is aligned to a page (4096 byte) boundary
-	static constexpr bool isAligned(u32 addr) {
-		return (addr & pageMask) == 0;
-	}
+	static constexpr bool isAligned(u32 addr) { return (addr & pageMask) == 0; }
 
 	bool allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x, KernelMemoryTypes::MemoryState state);
 	bool allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x);
-	bool mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x,
-		KernelMemoryTypes::MemoryState oldDstState, KernelMemoryTypes::MemoryState oldSrcState, 
-		KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState);
+	bool mapVirtualMemory(
+		u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x, KernelMemoryTypes::MemoryState oldDstState,
+		KernelMemoryTypes::MemoryState oldSrcState, KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState
+	);
 	void changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x);
 	Result::HorizonResult queryMemory(KernelMemoryTypes::MemoryInfo& out, u32 vaddr);
 	Result::HorizonResult testMemoryState(u32 vaddr, s32 pages, KernelMemoryTypes::MemoryState desiredState);

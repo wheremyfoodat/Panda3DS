@@ -19,7 +19,7 @@ struct ResourceLimitValues {
 // APPLICATION resource limit
 static constexpr ResourceLimitValues appResourceLimits = {
 	.maxPriority = 0x18,
-	.maxCommit = 0x4000000,
+	.maxCommit = 64_MB + 16_MB,  // We're currently giving 80MB to all apps. TODO: Implement extended memory properly
 	.maxThreads = 0x20,
 	.maxEvents = 0x20,
 	.maxMutexes = 0x20,
@@ -33,7 +33,7 @@ static constexpr ResourceLimitValues appResourceLimits = {
 // SYS_APPLET resource limit
 static constexpr ResourceLimitValues sysAppletResourceLimits = {
 	.maxPriority = 0x4,
-	.maxCommit = 0x5E00000,
+	.maxCommit = 0x5E00000 - 16_MB,
 	.maxThreads = 0x1D,
 	.maxEvents = 0xB,
 	.maxMutexes = 0x8,

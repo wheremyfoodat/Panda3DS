@@ -24,7 +24,7 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Setup Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      uses: humbletim/setup-vulkan-sdk@main
       with:
         vulkan-query-version: latest
         vulkan-use-cache: true

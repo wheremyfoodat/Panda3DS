@@ -1,8 +1,36 @@
 #pragma once
 #include <filesystem>
+#include <string>
 
+#include "screen_layout.hpp"
 #include "audio/dsp_core.hpp"
+#include "frontend_settings.hpp"
 #include "renderer.hpp"
+#include "services/region_codes.hpp"
+
+struct AudioDeviceConfig {
+	// Audio curve to use for volumes between 0-100
+	enum class VolumeCurve : int {
+		Cubic = 0,   // Samples are scaled by volume ^ 3
+		Linear = 1,  // Samples are scaled by volume
+	};
+
+	float volumeRaw = 1.0f;
+	VolumeCurve volumeCurve = VolumeCurve::Cubic;
+
+	bool muteAudio = false;
+
+	float getVolume() const {
+		if (muteAudio) {
+			return 0.0f;
+		}
+
+		return volumeRaw;
+	}
+
+	static VolumeCurve volumeCurveFromString(std::string inString);
+	static const char* volumeCurveToString(VolumeCurve curve);
+};
 
 // Remember to initialize every field here to its default value otherwise bad things will happen
 struct EmulatorConfig {
@@ -22,9 +50,29 @@ struct EmulatorConfig {
 #endif
 	static constexpr bool accelerateShadersDefault = true;
 
+#if defined(__LIBRETRO__)
+	static constexpr bool audioEnabledDefault = true;
+#else
+	static constexpr bool audioEnabledDefault = false;
+#endif
+
+	// We default to OpenGL on all platforms other than iOS
+#if defined(PANDA3DS_IOS)
+	static constexpr RendererType rendererDefault = RendererType::Metal;
+#else
+	static constexpr RendererType rendererDefault = RendererType::OpenGL;
+#endif
+
+	static constexpr bool hashTexturesDefault = false;
+
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
+	bool hashTextures = hashTexturesDefault;
+
+	ScreenLayout::Layout screenLayout = ScreenLayout::Layout::Default;
+	float topScreenSize = 0.5;
+
 	bool accurateShaderMul = false;
 	bool discordRpcEnabled = false;
 
@@ -32,22 +80,27 @@ struct EmulatorConfig {
 	bool forceShadergenForLights = true;
 	int lightShadergenThreshold = 1;
 
-	RendererType rendererType = RendererType::OpenGL;
+	RendererType rendererType = rendererDefault;
 	Audio::DSPCore::Type dspType = Audio::DSPCore::Type::HLE;
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
+	bool circlePadProEnabled = true;
 	bool usePortableBuild = false;
 
-	bool audioEnabled = false;
+	bool audioEnabled = audioEnabledDefault;
 	bool vsyncEnabled = true;
+	bool aacEnabled = true;  // Enable AAC audio?
 
 	bool enableRenderdoc = false;
 	bool printAppVersion = true;
+	bool printDSPFirmware = false;
 
 	bool chargerPlugged = true;
 	// Default to 3% battery to make users suffer
 	int batteryPercentage = 3;
+
+	LanguageCodes systemLanguage = LanguageCodes::English;
 
 	// Default ROM path to open in Qt and misc frontends
 	std::filesystem::path defaultRomPath = "";
@@ -70,8 +123,13 @@ struct EmulatorConfig {
 	};
 
 	WindowSettings windowSettings;
+	AudioDeviceConfig audioDeviceConfig;
+	FrontendSettings frontendSettings;
 
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
 	void save();
+
+	static LanguageCodes languageCodeFromString(std::string inString);
+	static const char* languageCodeToString(LanguageCodes code);
 };

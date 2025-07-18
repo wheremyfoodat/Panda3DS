@@ -7,6 +7,9 @@
 #include <utility>
 
 #include "audio/aac_decoder.hpp"
+#include "audio/dsp_binary.hpp"
+#include "audio/dsp_simd.hpp"
+#include "config.hpp"
 #include "services/dsp.hpp"
 
 namespace Audio {
@@ -19,7 +22,8 @@ namespace Audio {
 		};
 	}
 
-	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService) : DSPCore(mem, scheduler, dspService) {
+	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
+		: DSPCore(mem, scheduler, dspService, config) {
 		// Set up source indices
 		for (int i = 0; i < sources.size(); i++) {
 			sources[i].index = i;
@@ -84,6 +88,36 @@ namespace Audio {
 	void HLE_DSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) {
 		if (loaded) {
 			Helpers::warn("Loading DSP component when already loaded");
+		}
+
+		// We load the DSP binary into DSP memory even though we don't use it in HLE, so that we can
+		// still see the DSP code in the DSP debugger
+		u8* dspCode = dspRam.rawMemory.data();
+		u8* dspData = dspCode + 0x40000;
+
+		Dsp1 dsp1;
+		std::memcpy(&dsp1, data.data(), sizeof(dsp1));
+
+		// TODO: verify DSP1 signature & hashes
+		// Load DSP segments to DSP RAM
+		for (uint i = 0; i < dsp1.segmentCount; i++) {
+			auto& segment = dsp1.segments[i];
+			u32 addr = segment.dspAddr << 1;
+			u8* src = data.data() + segment.offs;
+			u8* dst = nullptr;
+
+			switch (segment.type) {
+				case 0:
+				case 1: dst = dspCode + addr; break;
+				default: dst = dspData + addr; break;
+			}
+
+			std::memcpy(dst, src, segment.size);
+		}
+
+		bool loadSpecialSegment = (dsp1.flags >> 1) & 0x1;
+		if (loadSpecialSegment) {
+			log("LoadComponent: special segment not supported");
 		}
 
 		loaded = true;
@@ -211,11 +245,11 @@ namespace Audio {
 
 		if (audioEnabled) {
 			// Wait until we've actually got room to push our frame
-			while (sampleBuffer.size() + 2 > sampleBuffer.Capacity()) {
+			while (sampleBuffer.size() + frame.size() * 2 > sampleBuffer.Capacity()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds{1});
 			}
 
-			sampleBuffer.push(frame.data(), frame.size());
+			sampleBuffer.push(frame.data(), frame.size() * 2);
 		}
 	}
 
@@ -228,6 +262,9 @@ namespace Audio {
 		// The DSP checks the DSP configuration dirty bits on every frame, applies them, and clears them
 		read.dspConfiguration.dirtyRaw = 0;
 		read.dspConfiguration.dirtyRaw2 = 0;
+
+		// The intermediate mix buffer is aligned to 16 for SIMD purposes
+		alignas(16) std::array<IntermediateMix, 3> mixes{};
 
 		for (int i = 0; i < sourceCount; i++) {
 			// Update source configuration from the read region of shared memory
@@ -250,6 +287,27 @@ namespace Audio {
 			status.samplePosition = source.samplePosition;
 
 			source.isBufferIDDirty = false;
+
+			// If the source is still enabled, mix its output into the intermediate mix buffers
+			if (source.enabled) {
+				for (int mix = 0; mix < mixes.size(); mix++) {
+					// Check if this stage is passthrough, and if it is, then skip it
+					if ((source.enabledMixStages & (1u << mix)) == 0) {
+						continue;
+					}
+
+					IntermediateMix& intermediateMix = mixes[mix];
+					const std::array<float, 4>& gains = source.gains[mix];
+
+					DSP::MixIntoQuad::mix(intermediateMix, source.currentFrame, gains.data());
+				}
+			}
+		}
+
+		for (int i = 0; i < Audio::samplesInFrame; i++) {
+			auto& mix0 = mixes[0];
+			auto& sample = mix0[i];
+			frame[i] = {s16(sample[0]), s16(sample[1])};
 		}
 
 		performMix(read, write);
@@ -298,6 +356,10 @@ namespace Audio {
 
 		if (config.monoOrStereoDirty || config.embeddedBufferDirty) {
 			source.sourceType = config.monoOrStereo;
+		}
+
+		if (config.interpolationDirty) {
+			source.interpolationMode = config.interpolationMode;
 		}
 
 		if (config.rateMultiplierDirty) {
@@ -374,6 +436,28 @@ namespace Audio {
 			}
 		}
 
+#define CONFIG_GAIN(index)                                                          \
+	if (config.gain##index##Dirty) {                                                \
+		auto& dest = source.gains[index];                                           \
+		auto& sourceGain = config.gain[index];                                      \
+                                                                                    \
+		dest[0] = float(sourceGain[0]);                                             \
+		dest[1] = float(sourceGain[1]);                                             \
+		dest[2] = float(sourceGain[2]);                                             \
+		dest[3] = float(sourceGain[3]);                                             \
+                                                                                    \
+		if (dest[0] == 0.f && dest[1] == 0.f && dest[2] == 0.f && dest[3] == 0.f) { \
+			source.enabledMixStages &= ~(1u << index);                              \
+		} else {                                                                    \
+			source.enabledMixStages |= (1u << index);                               \
+		}                                                                           \
+	}
+
+		CONFIG_GAIN(0);
+		CONFIG_GAIN(1);
+		CONFIG_GAIN(2);
+#undef CONFIG_GAIN
+
 		config.dirtyRaw = 0;
 	}
 
@@ -433,6 +517,10 @@ namespace Audio {
 	}
 
 	void HLE_DSP::generateFrame(DSPSource& source) {
+		// Zero out all output samples at first. TODO: Don't zero out the entire frame initially, rather only zero-out the "unwritten" samples when
+		// the frame is done being processed.
+		source.currentFrame = {};
+
 		if (source.currentSamples.empty()) {
 			// There's no audio left to play, turn the voice off
 			if (source.buffers.empty()) {
@@ -446,10 +534,10 @@ namespace Audio {
 
 			decodeBuffer(source);
 		} else {
-			uint maxSampleCount = uint(float(Audio::samplesInFrame) * source.rateMultiplier);
-			uint outputCount = 0;
+			usize outputCount = 0;
+			static constexpr usize maxSamples = Audio::samplesInFrame;
 
-			while (outputCount < maxSampleCount) {
+			while (outputCount < maxSamples) {
 				if (source.currentSamples.empty()) {
 					if (source.buffers.empty()) {
 						break;
@@ -458,13 +546,28 @@ namespace Audio {
 					}
 				}
 
-				const uint sampleCount = std::min<s32>(maxSampleCount - outputCount, source.currentSamples.size());
+				switch (source.interpolationMode) {
+					case Source::InterpolationMode::Linear:
+						Audio::Interpolation::linear(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
+					case Source::InterpolationMode::None:
+						Audio::Interpolation::none(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
 
-				// samples.insert(samples.end(), source.currentSamples.begin(), source.currentSamples.begin() + sampleCount);
-				source.currentSamples.erase(source.currentSamples.begin(), std::next(source.currentSamples.begin(), sampleCount));
-				source.samplePosition += sampleCount;
-				outputCount += sampleCount;
+					case Source::InterpolationMode::Polyphase:
+						// Currently stubbed to be the same as linear
+						Audio::Interpolation::polyphase(
+							source.interpolationState, source.currentSamples, source.rateMultiplier, source.currentFrame, outputCount
+						);
+						break;
+				}
 			}
+
+			source.samplePosition += u32(outputCount * source.rateMultiplier);
 		}
 	}
 
@@ -488,7 +591,7 @@ namespace Audio {
 		if (config.outputFormatDirty) {
 			mixer.channelFormat = config.outputFormat;
 		}
-		
+
 		if (config.masterVolumeDirty) {
 			mixer.volumes[0] = config.masterVolume;
 		}
@@ -496,7 +599,7 @@ namespace Audio {
 		if (config.auxVolume0Dirty) {
 			mixer.volumes[1] = config.auxVolumes[0];
 		}
-		
+
 		if (config.auxVolume1Dirty) {
 			mixer.volumes[2] = config.auxVolumes[1];
 		}
@@ -632,24 +735,9 @@ namespace Audio {
 		AAC::Message response;
 
 		switch (request.command) {
-			case AAC::Command::EncodeDecode: {
-				// Dummy response to stop games from hanging
-				response.resultCode = AAC::ResultCode::Success;
-				response.decodeResponse.channelCount = 2;
-				response.decodeResponse.sampleCount = 1024;
-				response.decodeResponse.size = 0;
-				response.decodeResponse.sampleRate = AAC::SampleRate::Rate48000;
-
-				response.command = request.command;
-				response.mode = request.mode;
-
-				// TODO: Make this a toggle in config.toml. Currently we have it on by default.
-				constexpr bool enableAAC = true;
-				if (enableAAC) {
-					aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); });
-				}
+			case AAC::Command::EncodeDecode:
+				aacDecoder->decode(response, request, [this](u32 paddr) { return getPointerPhys<u8>(paddr); }, settings.aacEnabled);
 				break;
-			}
 
 			case AAC::Command::Init:
 			case AAC::Command::Shutdown:
@@ -658,7 +746,7 @@ namespace Audio {
 				response = request;
 				response.resultCode = AAC::ResultCode::Success;
 				break;
-				
+
 			default: Helpers::warn("Unknown AAC command type"); break;
 		}
 
@@ -675,6 +763,7 @@ namespace Audio {
 		// Initialize these to some sane defaults
 		sampleFormat = SampleFormat::ADPCM;
 		sourceType = SourceType::Stereo;
+		interpolationMode = InterpolationMode::Linear;
 
 		samplePosition = 0;
 		previousBufferID = 0;
@@ -683,6 +772,10 @@ namespace Audio {
 		rateMultiplier = 1.f;
 
 		buffers = {};
+		interpolationState = {};
 		currentSamples.clear();
+
+		gains.fill({});
+		enabledMixStages = 0;
 	}
 }  // namespace Audio

@@ -42,7 +42,7 @@ namespace Result {
 		OS = 6,
 		DBG = 7,
 		DMNT = 8,
-		PDN = 9 ,
+		PDN = 9,
 		GSP = 10,
 		I2C = 11,
 		GPIO = 12,
@@ -132,7 +132,7 @@ namespace Result {
 	};
 
 	class HorizonResult {
-	private:
+	  private:
 		static const uint32_t DescriptionBits = 10;
 		static const uint32_t ModuleBits = 8;
 		static const uint32_t ReservedBits = 3;
@@ -156,7 +156,7 @@ namespace Result {
 			return (description << DescriptionOffset) | (module << ModuleOffset) | (summary << SummaryOffset) | (level << LevelOffset);
 		}
 
-	public:
+	  public:
 		constexpr HorizonResult() : m_value(0) {}
 		constexpr HorizonResult(uint32_t value) : m_value(value) {}
 		constexpr HorizonResult(uint32_t description, HorizonResultModule module, HorizonResultSummary summary, HorizonResultLevel level) : m_value(makeValue(description, static_cast<uint32_t>(module), static_cast<uint32_t>(summary), static_cast<uint32_t>(level))) {}
@@ -193,14 +193,14 @@ namespace Result {
 
 	static_assert(std::is_trivially_destructible<HorizonResult>::value, "std::is_trivially_destructible<HorizonResult>::value");
 
-	#define DEFINE_HORIZON_RESULT_MODULE(ns, value) \
-		namespace ns::Detail  {\
-			static constexpr HorizonResultModule ModuleId = HorizonResultModule::value; \
-		}
+#define DEFINE_HORIZON_RESULT_MODULE(ns, value)                                     \
+	namespace ns::Detail {                                                          \
+		static constexpr HorizonResultModule ModuleId = HorizonResultModule::value; \
+	}
 
-	#define DEFINE_HORIZON_RESULT(name, description, summary, level) \
-		static constexpr HorizonResult name(description, Detail::ModuleId, HorizonResultSummary::summary, HorizonResultLevel::level);
+#define DEFINE_HORIZON_RESULT(name, description, summary, level) \
+	static constexpr HorizonResult name(description, Detail::ModuleId, HorizonResultSummary::summary, HorizonResultLevel::level);
 
 	static constexpr HorizonResult Success(0);
 	static constexpr HorizonResult FailurePlaceholder(UINT32_MAX);
-};
+};  // namespace Result

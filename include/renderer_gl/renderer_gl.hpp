@@ -40,7 +40,7 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexArray hwShaderVAO;
 	OpenGL::VertexBuffer vbo;
 
-	// Data 
+	// Data that will be uploaded to the ubershader
 	struct {
 		// TEV configuration uniform locations
 		GLint textureEnvSourceLoc = -1;
@@ -146,6 +146,27 @@ class RendererGL final : public Renderer {
 	PICA::ShaderGen::FragmentGenerator fragShaderGen;
 	OpenGL::Driver driverInfo;
 
+	// Information about the final 3DS screen -> Window blit, accounting for things like scaling and shifting the output based on
+	// the window's dimensions. Updated whenever the screen size or layout changes.
+	struct {
+		int topScreenX = 0;
+		int topScreenY = 0;
+		int topScreenWidth = 400;
+		int topScreenHeight = 240;
+
+		int bottomScreenX = 40;
+		int bottomScreenY = 240;
+		int bottomScreenWidth = 320;
+		int bottomScreenHeight = 240;
+
+		// For optimizing the final screen blit into a single blit instead of 2 when possible:
+		int destX = 0;
+		int destY = 0;
+		int destWidth = 400;
+		int destHeight = 480;
+		bool canDoSingleBlit = true;
+	} blitInfo;
+
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();
 	void setupStencilTest(bool stencilEnable);
@@ -157,6 +178,7 @@ class RendererGL final : public Renderer {
 	void initGraphicsContextInternal();
 
 	void accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel);
+	void compileDisplayShader();
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
@@ -169,14 +191,15 @@ class RendererGL final : public Renderer {
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
-	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;             // Draw the given vertices
+	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;  // Draw the given vertices
 	void deinitGraphicsContext() override;
 
 	virtual bool supportsShaderReload() override { return true; }
 	virtual std::string getUbershader() override;
 	virtual void setUbershader(const std::string& shader) override;
 	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) override;
-	
+	virtual void setupGLES() override;
+
 	std::optional<ColourBuffer> getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound = true);
 
 	// Note: The caller is responsible for deleting the currently bound FBO before calling this

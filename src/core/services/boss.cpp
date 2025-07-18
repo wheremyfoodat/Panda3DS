@@ -1,4 +1,5 @@
 #include "services/boss.hpp"
+
 #include "ipc.hpp"
 
 namespace BOSSCommands {
@@ -25,27 +26,36 @@ namespace BOSSCommands {
 		GetTaskState = 0x00200082,
 		GetTaskStatus = 0x002300C2,
 		GetTaskInfo = 0x00250082,
+		DeleteNsData = 0x00260040,
+		GetNsDataHeaderInfo = 0x002700C2,
+		ReadNsData = 0x00280102,
+		GetNsDataLastUpdated = 0x002D0040,
 		GetErrorCode = 0x002E0040,
 		RegisterStorageEntry = 0x002F0140,
 		GetStorageEntryInfo = 0x00300000,
+		StartBgImmediate = 0x00330042,
+		InitializeSessionPrivileged = 0x04010082,
+		GetAppNewFlag = 0x04040080,
+		SetAppNewFlag = 0x040500C0,  // Probably
 	};
 }
 
-void BOSSService::reset() {
-	optoutFlag = 0;
-}
+void BOSSService::reset() { optoutFlag = 0; }
 
 void BOSSService::handleSyncRequest(u32 messagePointer) {
 	const u32 command = mem.read32(messagePointer);
 	switch (command) {
 		case BOSSCommands::CancelTask: cancelTask(messagePointer); break;
+		case BOSSCommands::DeleteNsData: deleteNsData(messagePointer); break;
+		case BOSSCommands::GetAppNewFlag: getAppNewFlag(messagePointer); break;
 		case BOSSCommands::GetErrorCode: getErrorCode(messagePointer); break;
+		case BOSSCommands::GetNsDataHeaderInfo: getNsDataHeaderInfo(messagePointer); break;
 		case BOSSCommands::GetNewArrivalFlag: getNewArrivalFlag(messagePointer); break;
 		case BOSSCommands::GetNsDataIdList:
 		case BOSSCommands::GetNsDataIdList1:
 		case BOSSCommands::GetNsDataIdList2:
-		case BOSSCommands::GetNsDataIdList3:
-			getNsDataIdList(messagePointer, command); break;
+		case BOSSCommands::GetNsDataIdList3: getNsDataIdList(messagePointer, command); break;
+		case BOSSCommands::GetNsDataLastUpdated: getNsDataLastUpdated(messagePointer); break;
 		case BOSSCommands::GetOptoutFlag: getOptoutFlag(messagePointer); break;
 		case BOSSCommands::GetStorageEntryInfo: getStorageEntryInfo(messagePointer); break;
 		case BOSSCommands::GetTaskIdList: getTaskIdList(messagePointer); break;
@@ -54,17 +64,31 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetTaskState: getTaskState(messagePointer); break;
 		case BOSSCommands::GetTaskStatus: getTaskStatus(messagePointer); break;
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
-		case BOSSCommands::InitializeSession: initializeSession(messagePointer); break;
+		case BOSSCommands::InitializeSession:
+		case BOSSCommands::InitializeSessionPrivileged: initializeSession(messagePointer); break;
+		case BOSSCommands::ReadNsData: readNsData(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
 		case BOSSCommands::RegisterNewArrivalEvent: registerNewArrivalEvent(messagePointer); break;
 		case BOSSCommands::RegisterStorageEntry: registerStorageEntry(messagePointer); break;
 		case BOSSCommands::RegisterTask: registerTask(messagePointer); break;
 		case BOSSCommands::SendProperty: sendProperty(messagePointer); break;
+		case BOSSCommands::SetAppNewFlag: setAppNewFlag(messagePointer); break;
 		case BOSSCommands::SetOptoutFlag: setOptoutFlag(messagePointer); break;
+		case BOSSCommands::StartBgImmediate: startBgImmediate(messagePointer); break;
 		case BOSSCommands::StartTask: startTask(messagePointer); break;
 		case BOSSCommands::UnregisterStorage: unregisterStorage(messagePointer); break;
 		case BOSSCommands::UnregisterTask: unregisterTask(messagePointer); break;
-		default: Helpers::panic("BOSS service requested. Command: %08X\n", command);
+
+		case 0x04500102:  // Home Menu uses this command, what is this?
+			Helpers::warn("BOSS command 0x04500102");
+			mem.write32(messagePointer, IPC::responseHeader(0x450, 1, 0));
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
+
+		default:
+			mem.write32(messagePointer + 4, Result::Success);
+			Helpers::warn("BOSS service requested. Command: %08X\n", command);
+			break;
 	}
 }
 
@@ -99,7 +123,7 @@ void BOSSService::getTaskState(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, 0);    // TaskStatus: Report the task finished successfully
 	mem.write32(messagePointer + 12, 0);  // Current state value for task PropertyID 0x4
-	mem.write8(messagePointer + 16, 0);  // TODO: Figure out what this should be
+	mem.write8(messagePointer + 16, 0);   // TODO: Figure out what this should be
 }
 
 void BOSSService::getTaskStatus(u32 messagePointer) {
@@ -150,15 +174,15 @@ void BOSSService::getErrorCode(u32 messagePointer) {
 	log("BOSS::GetErrorCode (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x2E, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, Result::Success); // No error code
+	mem.write32(messagePointer + 8, Result::Success);  // No error code
 }
 
 void BOSSService::getStorageEntryInfo(u32 messagePointer) {
 	log("BOSS::GetStorageEntryInfo (undocumented)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x30, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // u32, unknown meaning
-	mem.write16(messagePointer + 12, 0); // s16, unknown meaning
+	mem.write32(messagePointer + 8, 0);   // u32, unknown meaning
+	mem.write16(messagePointer + 12, 0);  // s16, unknown meaning
 }
 
 void BOSSService::sendProperty(u32 messagePointer) {
@@ -170,9 +194,9 @@ void BOSSService::sendProperty(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0);  // Read size
+
 	// TODO: Should this do anything else?
 }
-
 
 void BOSSService::receiveProperty(u32 messagePointer) {
 	const u32 id = mem.read32(messagePointer + 4);
@@ -182,13 +206,13 @@ void BOSSService::receiveProperty(u32 messagePointer) {
 	log("BOSS::ReceiveProperty (id = %d, size = %08X, ptr = %08X) (stubbed)\n", id, size, ptr);
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0); // Read size
+	mem.write32(messagePointer + 8, 0);  // Read size
 }
 
 // This seems to accept a KEvent as a parameter and register it for something Spotpass related
 // I need to update the 3DBrew page when it's known what it does properly
 void BOSSService::registerNewArrivalEvent(u32 messagePointer) {
-	const Handle eventHandle = mem.read32(messagePointer + 4); // Kernel event handle to register
+	const Handle eventHandle = mem.read32(messagePointer + 4);  // Kernel event handle to register
 	log("BOSS::RegisterNewArrivalEvent (handle = %X)\n", eventHandle);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
@@ -252,5 +276,92 @@ void BOSSService::getNewArrivalFlag(u32 messagePointer) {
 	log("BOSS::GetNewArrivalFlag (stubbed)\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x7, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, 0); // Flag
+	mem.write8(messagePointer + 8, 0);  // Flag
+}
+
+void BOSSService::startBgImmediate(u32 messagePointer) {
+	const u32 size = mem.read32(messagePointer + 8);
+	const u32 taskIDs = mem.read32(messagePointer + 12);
+	log("BOSS::StartBgImmediate (size = %X, task ID pointer = %X) (stubbed)\n", size, taskIDs);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x33, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, size, IPC::BufferType::Send));
+	mem.write32(messagePointer + 12, taskIDs);
+}
+
+void BOSSService::getAppNewFlag(u32 messagePointer) {
+	const u64 appID = mem.read64(messagePointer + 4);
+	log("BOSS::GetAppNewFlag (app ID = %llX)\n", appID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x404, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write8(messagePointer + 8, 0);  // No new content
+}
+
+void BOSSService::getNsDataHeaderInfo(u32 messagePointer) {
+	const u32 nsDataID = mem.read32(messagePointer + 4);
+	const u8 type = mem.read8(messagePointer + 8);
+	const u32 size = mem.read32(messagePointer + 12);
+	const u32 nsDataHeaderInfo = mem.read32(messagePointer + 20);
+	log("BOSS::GetNsDataHeaderInfo (NS data ID = %X, type = %X, size = %X, NS data header info pointer = %X) (stubbed)\n", nsDataID, type, size,
+		nsDataHeaderInfo);
+
+	switch (type) {
+		case 3:
+		case 5: mem.write32(nsDataHeaderInfo, 0); break;  // ??
+
+		default: Helpers::panic("Unimplemented NS data header info type %X", type);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x27, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, size, IPC::BufferType::Receive));
+	mem.write32(messagePointer + 12, nsDataHeaderInfo);
+}
+
+void BOSSService::getNsDataLastUpdated(u32 messagePointer) {
+	const u32 nsDataID = mem.read32(messagePointer + 4);
+	log("BOSS::GetNsDataLastUpdated (NS data ID = %X) (stubbed)\n", nsDataID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2D, 3, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write64(messagePointer + 8, 0);  // Milliseconds since last update?
+}
+
+void BOSSService::readNsData(u32 messagePointer) {
+	const u32 nsDataID = mem.read32(messagePointer + 4);
+	const s64 offset = mem.read64(messagePointer + 8);
+	const u32 size = mem.read32(messagePointer + 20);
+	const u32 data = mem.read32(messagePointer + 24);
+	log("BOSS::ReadNsData (NS data ID = %X, offset = %llX, size = %X, data pointer = %X) (stubbed)\n", nsDataID, offset, size, data);
+
+	for (u32 i = 0; i < size; i++) {
+		mem.write8(data + i, 0);
+	}
+
+	mem.write32(messagePointer, IPC::responseHeader(0x28, 3, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, size);  // Technically how many bytes have been read
+	mem.write32(messagePointer + 12, 0);    // ??
+	mem.write32(messagePointer + 16, IPC::pointerHeader(0, size, IPC::BufferType::Receive));
+	mem.write32(messagePointer + 20, data);
+}
+
+void BOSSService::deleteNsData(u32 messagePointer) {
+	const u32 nsDataID = mem.read32(messagePointer + 4);
+	log("BOSS::DeleteNsData (NS data ID = %X) (stubbed)\n", nsDataID);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x26, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+// Judging by the inputs and command number, this could very well be a "SetAppNewFlag"
+void BOSSService::setAppNewFlag(u32 messagePointer) {
+	const u64 appID = mem.read64(messagePointer + 4);
+	const u8 flag = mem.read32(messagePointer + 12);
+	log("BOSS::SetAppNewFlag (app ID = %llX, flag = %X)\n", appID, flag);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x405, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }

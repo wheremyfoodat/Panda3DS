@@ -69,6 +69,8 @@ void CheatEntryWidget::editClicked() {
 }
 
 CheatEditDialog::CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry) : QDialog(), emu(emu), cheatEntry(cheatEntry) {
+	setWindowTitle(tr("Edit Cheat"));
+
 	setAttribute(Qt::WA_DeleteOnClose);
 	setModal(true);
 
@@ -159,6 +161,7 @@ void CheatEditDialog::rejected() {
 
 CheatsWindow::CheatsWindow(Emulator* emu, const std::filesystem::path& cheatPath, QWidget* parent)
 	: QWidget(parent, Qt::Window), emu(emu), cheatPath(cheatPath) {
+	setWindowTitle(tr("Cheats"));
 	mainWindow = static_cast<MainWindow*>(parent);
 
 	QVBoxLayout* layout = new QVBoxLayout;

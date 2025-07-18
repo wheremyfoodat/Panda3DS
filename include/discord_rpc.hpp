@@ -17,6 +17,8 @@ namespace Discord {
 		void init();
 		void update(RPCStatus status, const std::string& title);
 		void stop();
+
+		bool running() const { return enabled; }
 	};
 }  // namespace Discord
 

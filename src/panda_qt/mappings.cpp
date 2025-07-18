@@ -1,4 +1,5 @@
 #include <QKeyEvent>
+#include <QKeySequence>
 
 #include "input_mappings.hpp"
 
@@ -10,6 +11,8 @@ InputMappings InputMappings::defaultKeyboardMappings() {
 	mappings.setMapping(Qt::Key_I, HID::Keys::Y);
 	mappings.setMapping(Qt::Key_Q, HID::Keys::L);
 	mappings.setMapping(Qt::Key_P, HID::Keys::R);
+	mappings.setMapping(Qt::Key_1, HID::Keys::ZL);
+	mappings.setMapping(Qt::Key_0, HID::Keys::ZR);
 	mappings.setMapping(Qt::Key_Up, HID::Keys::Up);
 	mappings.setMapping(Qt::Key_Down, HID::Keys::Down);
 	mappings.setMapping(Qt::Key_Right, HID::Keys::Right);

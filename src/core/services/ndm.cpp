@@ -1,4 +1,5 @@
 #include "services/ndm.hpp"
+
 #include "ipc.hpp"
 
 namespace NDMCommands {

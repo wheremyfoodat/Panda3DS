@@ -1,19 +1,17 @@
 #pragma once
-#include <array>
-#include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
 #include "helpers.hpp"
 #include "logger.hpp"
-#include "scheduler.hpp"
 #include "ring_buffer.hpp"
+#include "scheduler.hpp"
 
 // The DSP core must have access to the DSP service to be able to trigger interrupts properly
 class DSPService;
 class Memory;
+struct EmulatorConfig;
 
 namespace Audio {
 	// There are 160 stereo samples in 1 audio frame, so 320 samples total
@@ -24,12 +22,14 @@ namespace Audio {
 	static constexpr u64 lleSlice = 16384;
 
 	class DSPCore {
-		using Samples = Common::RingBuffer<s16, 1024>;
+		// 0x2000 stereo (= 2 channel) samples
+		using Samples = Common::RingBuffer<s16, 0x2000 * 2>;
 
 	  protected:
 		Memory& mem;
 		Scheduler& scheduler;
 		DSPService& dspService;
+		EmulatorConfig& settings;
 
 		Samples sampleBuffer;
 		bool audioEnabled = false;
@@ -38,8 +38,8 @@ namespace Audio {
 
 	  public:
 		enum class Type { Null, Teakra, HLE };
-		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService)
-			: mem(mem), scheduler(scheduler), dspService(dspService) {}
+		DSPCore(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& settings)
+			: mem(mem), scheduler(scheduler), dspService(dspService), settings(settings) {}
 		virtual ~DSPCore() {}
 
 		virtual void reset() = 0;
@@ -60,7 +60,25 @@ namespace Audio {
 
 		Samples& getSamples() { return sampleBuffer; }
 		virtual void setAudioEnabled(bool enable) { audioEnabled = enable; }
+
+		virtual Type getType() = 0;
+		virtual void* getRegisters() { return nullptr; }
+
+		// Read a word from program memory. By default, just perform a regular DSP RAM read for the HLE cores
+		// The LLE cores translate the address, accounting for the way Teak memory is mapped
+		virtual u16 readProgramWord(u32 address) {
+			u8* dspRam = getDspMemory();
+
+			auto readByte = [&](u32 addr) {
+				if (addr >= 256_KB) return u8(0);
+				return dspRam[addr];
+			};
+
+			u16 lsb = u16(readByte(address));
+			u16 msb = u16(readByte(address + 1));
+			return u16(lsb | (msb << 8));
+		}
 	};
 
-	std::unique_ptr<DSPCore> makeDSPCore(DSPCore::Type type, Memory& mem, Scheduler& scheduler, DSPService& dspService);
+	std::unique_ptr<DSPCore> makeDSPCore(EmulatorConfig& config, Memory& mem, Scheduler& scheduler, DSPService& dspService);
 }  // namespace Audio

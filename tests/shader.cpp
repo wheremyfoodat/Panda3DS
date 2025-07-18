@@ -32,7 +32,6 @@ static std::unique_ptr<PICAShader> assembleVertexShader(std::initializer_list<ni
 	for (const nihstro::SwizzlePattern& swizzle : shaderBinary.swizzle_table) {
 		newShader->uploadDescriptor(swizzle.hex);
 	}
-	newShader->finalize();
 	return newShader;
 }
 
@@ -85,7 +84,11 @@ class ShaderJITTest final : public ShaderInterpreterTest {
   private:
 	ShaderJIT shaderJit = {};
 
-	void runShader() override { shaderJit.run(*shader); }
+	void runShader() override {
+		// We prefer to run tests with accurate NaN emulation
+		shaderJit.setAccurateMul(true);
+		shaderJit.run(*shader);
+	}
 
   public:
 	explicit ShaderJITTest(std::initializer_list<nihstro::InlineAsm> code) : ShaderInterpreterTest(code) { shaderJit.prepare(*shader); }

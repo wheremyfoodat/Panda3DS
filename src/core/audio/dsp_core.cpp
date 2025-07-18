@@ -8,17 +8,17 @@
 #include "audio/null_core.hpp"
 #include "audio/teakra_core.hpp"
 
-std::unique_ptr<Audio::DSPCore> Audio::makeDSPCore(DSPCore::Type type, Memory& mem, Scheduler& scheduler, DSPService& dspService) {
+std::unique_ptr<Audio::DSPCore> Audio::makeDSPCore(EmulatorConfig& config, Memory& mem, Scheduler& scheduler, DSPService& dspService) {
 	std::unique_ptr<DSPCore> core;
 
-	switch (type) {
-		case DSPCore::Type::Null: core = std::make_unique<NullDSP>(mem, scheduler, dspService); break;
-		case DSPCore::Type::Teakra: core = std::make_unique<TeakraDSP>(mem, scheduler, dspService); break;
-		case DSPCore::Type::HLE: core = std::make_unique<HLE_DSP>(mem, scheduler, dspService); break;
+	switch (config.dspType) {
+		case DSPCore::Type::Null: core = std::make_unique<NullDSP>(mem, scheduler, dspService, config); break;
+		case DSPCore::Type::Teakra: core = std::make_unique<TeakraDSP>(mem, scheduler, dspService, config); break;
+		case DSPCore::Type::HLE: core = std::make_unique<HLE_DSP>(mem, scheduler, dspService, config); break;
 
 		default:
 			Helpers::warn("Invalid DSP core selected!");
-			core = std::make_unique<NullDSP>(mem, scheduler, dspService);
+			core = std::make_unique<NullDSP>(mem, scheduler, dspService, config);
 			break;
 	}
 

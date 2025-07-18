@@ -1,12 +1,13 @@
-#include <cassert>
 #include "kernel.hpp"
-#include "kernel_types.hpp"
-#include "cpu.hpp"
 
-Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config)
-	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config),
-	  fcramManager(mem) {
-	objects.reserve(512); // Make room for a few objects to avoid further memory allocs later
+#include <cassert>
+
+#include "cpu.hpp"
+#include "kernel_types.hpp"
+
+Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config, LuaManager& lua)
+	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config, lua), fcramManager(mem) {
+	objects.reserve(512);  // Make room for a few objects to avoid further memory allocs later
 	mutexHandles.reserve(8);
 	portHandles.reserve(32);
 	threadIndices.reserve(appResourceLimits.maxThreads);
@@ -18,7 +19,7 @@ Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config)
 		t.tlsBase = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
 		t.status = ThreadStatus::Dead;
 		t.waitList.clear();
-		t.waitList.reserve(10); // Reserve some space for the wait list to avoid further memory allocs later
+		t.waitList.reserve(10);  // Reserve some space for the wait list to avoid further memory allocs later
 		// The state below isn't necessary to initialize but we do it anyways out of caution
 		t.outPointer = 0;
 		t.waitAll = false;
@@ -70,6 +71,10 @@ void Kernel::serviceSVC(u32 svc) {
 		case 0x3A: getResourceLimitCurrentValues(); break;
 		case 0x3B: getThreadContext(); break;
 		case 0x3D: outputDebugString(); break;
+
+		// Luma SVCs
+		case 0x93: svcInvalidateInstructionCacheRange(); break;
+		case 0x94: svcInvalidateEntireInstructionCache(); break;
 		default: Helpers::panic("Unimplemented svc: %X @ %08X", svc, regs[15]); break;
 	}
 
@@ -80,7 +85,7 @@ void Kernel::setVersion(u8 major, u8 minor) {
 	u16 descriptor = (u16(major) << 8) | u16(minor);
 
 	kernelVersion = descriptor;
-	mem.kernelVersion = descriptor; // The memory objects needs a copy because you can read the kernel ver from config mem
+	mem.kernelVersion = descriptor;  // The memory objects needs a copy because you can read the kernel ver from config mem
 }
 
 HorizonHandle Kernel::makeProcess(u32 id) {
@@ -143,7 +148,7 @@ void Kernel::reset() {
 	for (auto& t : threads) {
 		t.status = ThreadStatus::Dead;
 		t.waitList.clear();
-		t.threadsWaitingForTermination = 0; // No threads are waiting for this thread to terminate cause it's dead
+		t.threadsWaitingForTermination = 0;  // No threads are waiting for this thread to terminate cause it's dead
 	}
 
 	for (auto& object : objects) {
@@ -160,7 +165,7 @@ void Kernel::reset() {
 
 	// Allocate handle #0 to a dummy object and make a main process object
 	makeObject(KernelObjectType::Dummy);
-	currentProcess = makeProcess(1); // Use ID = 1 for main process
+	currentProcess = makeProcess(1);  // Use ID = 1 for main process
 
 	// Make main thread object. We do not have to set the entrypoint and SP for it as the ROM loader does.
 	// Main thread seems to have a priority of 0x30. TODO: This creates a dummy context for thread 0,
@@ -170,14 +175,12 @@ void Kernel::reset() {
 	setupIdleThread();
 
 	// Create some of the OS ports
-	srvHandle = makePort("srv:"); // Service manager port
-	errorPortHandle = makePort("err:f"); // Error display port
+	srvHandle = makePort("srv:");         // Service manager port
+	errorPortHandle = makePort("err:f");  // Error display port
 }
 
 // Get pointer to thread-local storage
-u32 Kernel::getTLSPointer() {
-	return VirtualAddrs::TLSBase + currentThreadIndex * VirtualAddrs::TLSSize;
-}
+u32 Kernel::getTLSPointer() { return VirtualAddrs::TLSBase + currentThreadIndex * VirtualAddrs::TLSSize; }
 
 // Result CloseHandle(Handle handle)
 void Kernel::svcCloseHandle() {
@@ -271,13 +274,12 @@ void Kernel::getProcessInfo() {
 			regs[2] = 0;
 			break;
 
-		case 20: // Returns 0x20000000 - <linear memory base vaddr for process>
+		case 20:  // Returns 0x20000000 - <linear memory base vaddr for process>
 			regs[1] = PhysicalAddrs::FCRAM - mem.getLinearHeapVaddr();
 			regs[2] = 0;
 			break;
 
-		default:
-			Helpers::panic("GetProcessInfo: unimplemented type %d", type);
+		default: Helpers::panic("GetProcessInfo: unimplemented type %d", type);
 	}
 
 	regs[0] = Result::Success;
@@ -300,6 +302,23 @@ void Kernel::duplicateHandle() {
 }
 
 void Kernel::clearInstructionCache() { cpu.clearCache(); }
+void Kernel::clearInstructionCacheRange(u32 start, u32 size) { cpu.clearCacheRange(start, size); }
+
+void Kernel::svcInvalidateInstructionCacheRange() {
+	const u32 start = regs[0];
+	const u32 size = regs[1];
+	logSVC("svcInvalidateInstructionCacheRange(start = %08X, size = %08X)\n", start, size);
+
+	clearInstructionCacheRange(start, size);
+	regs[0] = Result::Success;
+}
+
+void Kernel::svcInvalidateEntireInstructionCache() {
+	logSVC("svcInvalidateEntireInstructionCache()\n");
+
+	clearInstructionCache();
+	regs[0] = Result::Success;
+}
 
 namespace SystemInfoType {
 	enum : u32 {
@@ -381,7 +400,7 @@ void Kernel::getSystemInfo() {
 					regs[2] = 0;
 					break;
 
-				default: 
+				default:
 					Helpers::warn("GetSystemInfo: Unknown PandaInformation subtype %x\n", subtype);
 					regs[0] = Result::FailurePlaceholder;
 					break;

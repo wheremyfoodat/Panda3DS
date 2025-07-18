@@ -9,6 +9,8 @@
 #undef NO
 
 #include "PICA/gpu.hpp"
+#include "PICA/pica_hash.hpp"
+#include "screen_layout.hpp"
 #include "SDL_metal.h"
 
 using namespace PICA;
@@ -30,7 +32,6 @@ PICA::ColorFmt ToColorFormat(u32 format) {
 }
 
 MTL::Library* loadLibrary(MTL::Device* device, const cmrc::file& shaderSource) {
-	// MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
 	NS::Error* error = nullptr;
 	MTL::Library* library = device->newLibrary(Metal::createDispatchData(shaderSource.begin(), shaderSource.size()), &error);
 	// MTL::Library* library = device->newLibrary(NS::String::string(source.c_str(), NS::ASCIIStringEncoding), compileOptions, &error);
@@ -56,11 +57,17 @@ void RendererMTL::reset() {
 	colorRenderTargetCache.reset();
 }
 
+void RendererMTL::setMTKLayer(void* layer) {
+	metalLayer = (CA::MetalLayer*)layer;
+}
+
 void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
 	if (!drawable) {
 		return;
 	}
+
+	MTL::Texture* texture = drawable->texture();
 
 	using namespace PICA::ExternalRegs;
 
@@ -87,26 +94,48 @@ void RendererMTL::display() {
 
 	MTL::RenderPassDescriptor* renderPassDescriptor = MTL::RenderPassDescriptor::alloc()->init();
 	MTL::RenderPassColorAttachmentDescriptor* colorAttachment = renderPassDescriptor->colorAttachments()->object(0);
-	colorAttachment->setTexture(drawable->texture());
+	colorAttachment->setTexture(texture);
 	colorAttachment->setLoadAction(MTL::LoadActionClear);
 	colorAttachment->setClearColor(MTL::ClearColor{0.0f, 0.0f, 0.0f, 1.0f});
 	colorAttachment->setStoreAction(MTL::StoreActionStore);
 
 	nextRenderPassName = "Display";
-	beginRenderPassIfNeeded(renderPassDescriptor, false, drawable->texture());
+	beginRenderPassIfNeeded(renderPassDescriptor, false, texture);
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
+	if (outputSizeChanged) {
+		outputSizeChanged = false;
+		ScreenLayout::WindowCoordinates windowCoords;
+		ScreenLayout::calculateCoordinates(
+			windowCoords, outputWindowWidth, outputWindowHeight, emulatorConfig->topScreenSize, emulatorConfig->screenLayout
+		);
+
+		blitInfo.topScreenX = float(windowCoords.topScreenX);
+		blitInfo.topScreenY = float(windowCoords.topScreenY);
+		blitInfo.bottomScreenX = float(windowCoords.bottomScreenX);
+		blitInfo.bottomScreenY = float(windowCoords.bottomScreenY);
+
+		blitInfo.topScreenWidth = float(windowCoords.topScreenWidth);
+		blitInfo.topScreenHeight = float(windowCoords.topScreenHeight);
+		blitInfo.bottomScreenWidth = float(windowCoords.bottomScreenWidth);
+		blitInfo.bottomScreenHeight = float(windowCoords.bottomScreenHeight);
+	}
+
 	// Top screen
 	if (topScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(
+			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, blitInfo.topScreenWidth, blitInfo.topScreenHeight, 0.0f, 1.0f}
+		);
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	// Bottom screen
 	if (bottomScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(
+			MTL::Viewport{blitInfo.bottomScreenX, blitInfo.bottomScreenY, blitInfo.bottomScreenWidth, blitInfo.bottomScreenHeight, 0.0f, 1.0f}
+		);
 		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
@@ -119,17 +148,22 @@ void RendererMTL::display() {
 
 	// Inform the vertex buffer cache that the frame ended
 	vertexBufferCache.endFrame();
-
-	// Release
 	drawable->release();
 }
 
 void RendererMTL::initGraphicsContext(SDL_Window* window) {
+	// On iOS, the SwiftUI side handles the MetalLayer
+#ifdef PANDA3DS_IOS
+	device = MTL::CreateSystemDefaultDevice();
+#else
 	// TODO: what should be the type of the view?
 	void* view = SDL_Metal_CreateView(window);
 	metalLayer = (CA::MetalLayer*)SDL_Metal_GetLayer(view);
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
+#endif
+	checkForMTLPixelFormatSupport(device);
+
 	commandQueue = device->newCommandQueue();
 
 	// Textures
@@ -426,7 +460,7 @@ void RendererMTL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
 	// Find the source surface.
 	auto srcFramebuffer = getColorRenderTarget(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
 	if (!srcFramebuffer) {
-		Helpers::warn("RendererMTL::TextureCopy failed to locate src framebuffer!\n");
+		doSoftwareTextureCopy(inputAddr, outputAddr, copySize, inputWidth, inputGap, outputWidth, outputGap);
 		return;
 	}
 	nextRenderPassName = "Clear before texture copy";
@@ -455,9 +489,11 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	const u8 depthFunc = Helpers::getBits<4, 3>(depthControl);
 	const u8 colorMask = Helpers::getBits<8, 4>(depthControl);
 
-	Metal::DepthStencilHash depthStencilHash{false, 1};
+	Metal::DepthStencilHash depthStencilHash;
 	depthStencilHash.stencilConfig = regs[PICA::InternalRegs::StencilTest];
 	depthStencilHash.stencilOpConfig = regs[PICA::InternalRegs::StencilOp];
+	depthStencilHash.depthStencilWrite = false;
+	depthStencilHash.depthFunc = 1;
 	const bool stencilEnable = Helpers::getBit<0>(depthStencilHash.stencilConfig);
 
 	std::optional<Metal::DepthStencilRenderTarget> depthStencilRenderTarget = std::nullopt;
@@ -485,9 +521,12 @@ void RendererMTL::drawVertices(PICA::PrimType primType, std::span<const PICA::Ve
 	depthUniforms.depthMapEnable = regs[PICA::InternalRegs::DepthmapEnable] & 1;
 
 	// -------- Pipeline --------
-	Metal::DrawPipelineHash pipelineHash{colorRenderTarget->format, DepthFmt::Unknown1};
+	Metal::DrawPipelineHash pipelineHash;
+	pipelineHash.colorFmt = colorRenderTarget->format;
 	if (depthStencilRenderTarget) {
 		pipelineHash.depthFmt = depthStencilRenderTarget->format;
+	} else {
+		pipelineHash.depthFmt = DepthFmt::Unknown1;
 	}
 	pipelineHash.fragHash.lightingEnabled = regs[0x008F] & 1;
 	pipelineHash.fragHash.lightingNumLights = regs[0x01C2] & 0x7;
@@ -714,6 +753,19 @@ void RendererMTL::bindTexturesToSlots() {
 
 		if (addr != 0) [[likely]] {
 			Metal::Texture targetTex(device, addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+
+			if (hashTextures) {
+				const u8* startPointer = gpu.getPointerPhys<u8>(targetTex.location);
+				const usize sizeInBytes = targetTex.sizeInBytes();
+
+				if (startPointer == nullptr || (sizeInBytes > 0 && gpu.getPointerPhys<u8>(targetTex.location + sizeInBytes - 1) == nullptr))
+					[[unlikely]] {
+					Helpers::warn("Out-of-bounds texture fetch");
+				} else {
+					targetTex.hash = PICAHash::computeHash((const char*)startPointer, sizeInBytes);
+				}
+			}
+
 			auto tex = getTexture(targetTex);
 			commandEncoder.setFragmentTexture(tex.texture, i);
 			commandEncoder.setFragmentSamplerState(tex.sampler ? tex.sampler : nearestSampler, i);
@@ -743,7 +795,7 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.fogLUTDirty = false;
 
-	std::array<float, FOG_LUT_TEXTURE_WIDTH* 2> fogLut = {0.0f};
+	std::array<float, FOG_LUT_TEXTURE_WIDTH * 2> fogLut = {0.0f};
 
 	for (int i = 0; i < fogLut.size(); i += 2) {
 		const uint32_t value = gpu.fogLUT[i >> 1];
@@ -778,8 +830,11 @@ void RendererMTL::textureCopyImpl(
 	commandEncoder.setRenderPipelineState(blitPipeline);
 
 	// Viewport
-	renderCommandEncoder->setViewport(MTL::Viewport{
-		double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
+	renderCommandEncoder->setViewport(
+		MTL::Viewport{
+			double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0
+		}
+	);
 
 	float srcRectNDC[4] = {
 		srcRect.left / (float)srcFramebuffer.size.u(),

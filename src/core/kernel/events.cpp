@@ -1,7 +1,8 @@
-#include "kernel.hpp"
-#include "cpu.hpp"
 #include <bit>
 #include <utility>
+
+#include "cpu.hpp"
+#include "kernel.hpp"
 
 const char* Kernel::resetTypeToString(u32 type) {
 	switch (type) {
@@ -28,7 +29,7 @@ bool Kernel::signalEvent(Handle handle) {
 	Event* event = object->getData<Event>();
 	event->fired = true;
 
-	// One shot events go back to being not fired once they are signaled
+	// Pulse events go back to being not fired once they are signaled
 	if (event->resetType == ResetType::Pulse) {
 		event->fired = false;
 	}
@@ -57,11 +58,11 @@ void Kernel::svcCreateEvent() {
 	const u32 outPointer = regs[0];
 	const u32 resetType = regs[1];
 
-	if (resetType > 2)
+	if (resetType > 2) {
 		Helpers::panic("Invalid reset type for event %d", resetType);
+	}
 
 	logSVC("CreateEvent(handle pointer = %08X, resetType = %s)\n", outPointer, resetTypeToString(resetType));
-
 	regs[0] = Result::Success;
 	regs[1] = makeEvent(static_cast<ResetType>(resetType));
 }
@@ -117,7 +118,7 @@ void Kernel::waitSynchronization1() {
 	}
 
 	if (!shouldWaitOnObject(object)) {
-		acquireSyncObject(object, threads[currentThreadIndex]); // Acquire the object since it's ready
+		acquireSyncObject(object, threads[currentThreadIndex]);  // Acquire the object since it's ready
 		regs[0] = Result::Success;
 	} else {
 		// Timeout is 0, don't bother waiting, instantly timeout
@@ -126,7 +127,7 @@ void Kernel::waitSynchronization1() {
 			return;
 		}
 
-		regs[0] = Result::OS::Timeout; // This will be overwritten with success if we don't timeout
+		regs[0] = Result::OS::Timeout;  // This will be overwritten with success if we don't timeout
 
 		auto& t = threads[currentThreadIndex];
 		t.waitList.resize(1);
@@ -149,13 +150,14 @@ void Kernel::waitSynchronizationN() {
 	s32 handleCount = regs[2];
 	bool waitAll = regs[3] != 0;
 	u32 ns2 = regs[4];
-	s32 outPointer = regs[5]; // "out" pointer - shows which object got bonked if we're waiting on multiple objects
+	s32 outPointer = regs[5];  // "out" pointer - shows which object got bonked if we're waiting on multiple objects
 	s64 ns = s64(ns1) | (s64(ns2) << 32);
 
 	logSVC("WaitSynchronizationN (handle pointer: %08X, count: %d, timeout = %lld)\n", handles, handleCount, ns);
 
-	if (handleCount <= 0)
+	if (handleCount <= 0) {
 		Helpers::panic("WaitSyncN: Invalid handle count");
+	}
 
 	// Temporary hack: Until we implement service sessions properly, don't bother sleeping when WaitSyncN targets a service handle
 	// This is necessary because a lot of games use WaitSyncN with eg the CECD service
@@ -169,7 +171,7 @@ void Kernel::waitSynchronizationN() {
 	std::vector<WaitObject> waitObjects(handleCount);
 
 	// We don't actually need to wait if waitAll == true unless one of the objects is not ready
-	bool allReady = true; // Default initialize to true, set to fault if one of the objects is not ready
+	bool allReady = true;  // Default initialize to true, set to fault if one of the objects is not ready
 
 	// Tracks whether at least one object is ready, + the index of the first ready object
 	// This is used when waitAll == false, because if one object is already available then we can skip the sleeping
@@ -190,13 +192,12 @@ void Kernel::waitSynchronizationN() {
 
 		// Panic if one of the objects is not a valid sync object
 		if (!isWaitable(object)) [[unlikely]] {
-			Helpers::panic("Tried to wait on a non waitable object in WaitSyncN. Type: %s, handle: %X\n",
-				object->getTypeName(), handle);
+			Helpers::panic("Tried to wait on a non waitable object in WaitSyncN. Type: %s, handle: %X\n", object->getTypeName(), handle);
 		}
 
 		if (shouldWaitOnObject(object)) {
-			allReady = false; // Derp, not all objects are ready :(
-		} else { /// At least one object is ready to be acquired ahead of time. If it's the first one, write it down
+			allReady = false;  // Derp, not all objects are ready :(
+		} else {               /// At least one object is ready to be acquired ahead of time. If it's the first one, write it down
 			if (!oneObjectReady) {
 				oneObjectReady = true;
 				firstReadyObjectIndex = i;
@@ -213,12 +214,12 @@ void Kernel::waitSynchronizationN() {
 		// If there's ready objects, acquire the first one and return
 		if (oneObjectReady) {
 			regs[0] = Result::Success;
-			regs[1] = firstReadyObjectIndex; // Return index of the acquired object
-			acquireSyncObject(waitObjects[firstReadyObjectIndex].second, t); // Acquire object
+			regs[1] = firstReadyObjectIndex;                                  // Return index of the acquired object
+			acquireSyncObject(waitObjects[firstReadyObjectIndex].second, t);  // Acquire object
 			return;
 		}
 
-		regs[0] = Result::OS::Timeout; // This will be overwritten with success if we don't timeout
+		regs[0] = Result::OS::Timeout;  // This will be overwritten with success if we don't timeout
 		// If the thread wakes up without timeout, this will be adjusted to the index of the handle that woke us up
 		regs[1] = 0xFFFFFFFF;
 		t.waitList.resize(handleCount);
@@ -227,8 +228,8 @@ void Kernel::waitSynchronizationN() {
 		t.wakeupTick = getWakeupTick(ns);
 
 		for (s32 i = 0; i < handleCount; i++) {
-			t.waitList[i] = waitObjects[i].first; // Add object to this thread's waitlist
-			waitObjects[i].second->getWaitlist() |= (1ull << currentThreadIndex); // And add the thread to the object's waitlist
+			t.waitList[i] = waitObjects[i].first;                                  // Add object to this thread's waitlist
+			waitObjects[i].second->getWaitlist() |= (1ull << currentThreadIndex);  // And add the thread to the object's waitlist
 		}
 
 		requireReschedule();

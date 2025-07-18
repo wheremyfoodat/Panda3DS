@@ -1,9 +1,10 @@
 #include "services/apt.hpp"
-#include "ipc.hpp"
-#include "kernel.hpp"
 
 #include <algorithm>
 #include <vector>
+
+#include "ipc.hpp"
+#include "kernel.hpp"
 
 namespace APTCommands {
 	enum : u32 {
@@ -84,8 +85,7 @@ void APTService::appletUtility(u32 messagePointer) {
 	u32 outputSize = mem.read32(messagePointer + 12);
 	u32 inputPointer = mem.read32(messagePointer + 20);
 
-	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X)\n", utility, inputSize, outputSize,
-		inputPointer);
+	log("APT::AppletUtility(utility = %d, input size = %x, output size = %x, inputPointer = %08X)\n", utility, inputSize, outputSize, inputPointer);
 
 	std::vector<u8> out(outputSize);
 	const u32 outputBuffer = mem.read32(messagePointer + 0x104);
@@ -111,8 +111,9 @@ void APTService::getAppletInfo(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x06, 7, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 
-	mem.write8(messagePointer + 20, 1); // 1 = registered
-	mem.write8(messagePointer + 24, 1); // 1 = loaded
+	mem.write8(messagePointer + 20, 1);  // 1 = registered
+	mem.write8(messagePointer + 24, 1);  // 1 = loaded
+
 	// TODO: The rest of this
 }
 
@@ -122,7 +123,7 @@ void APTService::isRegistered(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x09, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, 1); // Return that the app is always registered. This might break with home menu?
+	mem.write8(messagePointer + 8, 1);  // Return that the app is always registered. This might break with home menu?
 }
 
 void APTService::preloadLibraryApplet(u32 messagePointer) {
@@ -178,7 +179,7 @@ void APTService::checkNew3DS(u32 messagePointer) {
 	log("APT::CheckNew3DS\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x102, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, (model == ConsoleModel::New3DS) ? 1 : 0); // u8, Status (0 = Old 3DS, 1 = New 3DS)
+	mem.write8(messagePointer + 8, (model == ConsoleModel::New3DS) ? 1 : 0);  // u8, Status (0 = Old 3DS, 1 = New 3DS)
 }
 
 // TODO: Figure out the slight way this differs from APT::CheckNew3DS
@@ -186,7 +187,7 @@ void APTService::checkNew3DSApp(u32 messagePointer) {
 	log("APT::CheckNew3DSApp\n");
 	mem.write32(messagePointer, IPC::responseHeader(0x101, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, (model == ConsoleModel::New3DS) ? 1 : 0); // u8, Status (0 = Old 3DS, 1 = New 3DS)
+	mem.write8(messagePointer + 8, (model == ConsoleModel::New3DS) ? 1 : 0);  // u8, Status (0 = Old 3DS, 1 = New 3DS)
 }
 
 void APTService::enable(u32 messagePointer) {
@@ -207,14 +208,14 @@ void APTService::initialize(u32 messagePointer) {
 		notificationEvent = kernel.makeEvent(ResetType::OneShot);
 		resumeEvent = kernel.makeEvent(ResetType::OneShot);
 
-		kernel.signalEvent(resumeEvent.value()); // Seems to be signalled on startup
+		kernel.signalEvent(resumeEvent.value());  // Seems to be signalled on startup
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 3));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0x04000000); // Translation descriptor
-	mem.write32(messagePointer + 12, notificationEvent.value()); // Notification Event Handle
-	mem.write32(messagePointer + 16, resumeEvent.value()); // Resume Event Handle
+	mem.write32(messagePointer + 8, 0x04000000);                  // Translation descriptor
+	mem.write32(messagePointer + 12, notificationEvent.value());  // Notification Event Handle
+	mem.write32(messagePointer + 16, resumeEvent.value());        // Resume Event Handle
 }
 
 void APTService::inquireNotification(u32 messagePointer) {
@@ -234,11 +235,11 @@ void APTService::getLockHandle(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 3, 2));
-	mem.write32(messagePointer + 4, Result::Success); // Result code
-	mem.write32(messagePointer + 8, 0); // AppletAttr
-	mem.write32(messagePointer + 12, 0); // APT State (bit0 = Power Button State, bit1 = Order To Close State)
-	mem.write32(messagePointer + 16, 0); // Translation descriptor
-	mem.write32(messagePointer + 20, lockHandle.value()); // Lock handle
+	mem.write32(messagePointer + 4, Result::Success);      // Result code
+	mem.write32(messagePointer + 8, 0);                    // AppletAttr
+	mem.write32(messagePointer + 12, 0);                   // APT State (bit0 = Power Button State, bit1 = Order To Close State)
+	mem.write32(messagePointer + 16, 0);                   // Translation descriptor
+	mem.write32(messagePointer + 20, lockHandle.value());  // Lock handle
 }
 
 // This apparently does nothing on the original kernel either?
@@ -254,7 +255,7 @@ void APTService::sendParameter(u32 messagePointer) {
 	const u32 cmd = mem.read32(messagePointer + 12);
 	const u32 paramSize = mem.read32(messagePointer + 16);
 
-	const u32 parameterHandle = mem.read32(messagePointer + 24); // What dis?
+	const u32 parameterHandle = mem.read32(messagePointer + 24);  // What dis?
 	const u32 parameterPointer = mem.read32(messagePointer + 32);
 	log("APT::SendParameter (source app = %X, dest app = %X, cmd = %X, size = %X)", sourceAppID, destAppID, cmd, paramSize);
 
@@ -298,7 +299,9 @@ void APTService::receiveParameter(u32 messagePointer) {
 	const u32 buffer = mem.read32(messagePointer + 0x100 + 4);
 	log("APT::ReceiveParameter(app ID = %X, size = %04X)\n", app, size);
 
-	if (size > 0x1000) Helpers::panic("APT::ReceiveParameter with size > 0x1000");
+	if (size > 0x1000) {
+		Helpers::panic("APT::ReceiveParameter with size > 0x1000");
+	}
 	auto parameter = appletManager.receiveParameter();
 
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 4, 4));
@@ -326,7 +329,9 @@ void APTService::glanceParameter(u32 messagePointer) {
 	const u32 buffer = mem.read32(messagePointer + 0x100 + 4);
 	log("APT::GlanceParameter(app ID = %X, size = %04X)\n", app, size);
 
-	if (size > 0x1000) Helpers::panic("APT::GlanceParameter with size > 0x1000");
+	if (size > 0x1000) {
+		Helpers::panic("APT::GlanceParameter with size > 0x1000");
+	}
 	auto parameter = appletManager.glanceParameter();
 
 	// TODO: Properly implement this. We currently stub it similar
@@ -355,8 +360,8 @@ void APTService::replySleepQuery(u32 messagePointer) {
 }
 
 void APTService::setApplicationCpuTimeLimit(u32 messagePointer) {
-	u32 fixed = mem.read32(messagePointer + 4); // MUST be 1.
-	u32 percentage = mem.read32(messagePointer + 8); // CPU time percentage between 5% and 89%
+	u32 fixed = mem.read32(messagePointer + 4);       // MUST be 1.
+	u32 percentage = mem.read32(messagePointer + 8);  // CPU time percentage between 5% and 89%
 	log("APT::SetApplicationCpuTimeLimit (percentage = %d%%)\n", percentage);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x4F, 1, 0));
@@ -391,7 +396,7 @@ void APTService::setScreencapPostPermission(u32 messagePointer) {
 void APTService::getSharedFont(u32 messagePointer) {
 	log("APT::GetSharedFont\n");
 
-	constexpr u32 fontVaddr = 0x18000000;
+	const u32 fontVaddr = kernel.getSharedFontVaddr();
 	mem.write32(messagePointer, IPC::responseHeader(0x44, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, fontVaddr);
@@ -409,15 +414,16 @@ void APTService::theSmashBrosFunction(u32 messagePointer) {
 }
 
 void APTService::getWirelessRebootInfo(u32 messagePointer) {
-	const u32 size = mem.read32(messagePointer + 4); // Size of data to read
+	const u32 size = mem.read32(messagePointer + 4);  // Size of data to read
 	log("APT::GetWirelessRebootInfo (size = %X)\n", size);
 
-	if (size > 0x10)
+	if (size > 0x10) {
 		Helpers::panic("APT::GetWirelessInfo with size > 0x10 bytes");
+	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x45, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	for (u32 i = 0; i < size; i++) {
-		mem.write8(messagePointer + 0x104 + i, 0); // Temporarily stub this until we add SetWirelessRebootInfo
+		mem.write8(messagePointer + 0x104 + i, 0);  // Temporarily stub this until we add SetWirelessRebootInfo
 	}
 }

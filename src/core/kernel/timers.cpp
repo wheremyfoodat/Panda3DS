@@ -112,7 +112,7 @@ void Kernel::svcSetTimer() {
 	timer->interval = interval;
 	timer->running = true;
 	timer->fireTick = cpu.getTicks() + Scheduler::nsToCycles(initial);
-	
+
 	Scheduler& scheduler = cpu.getScheduler();
 	// Signal an event to poll timers as soon as possible
 	scheduler.removeEvent(Scheduler::EventType::UpdateTimers);

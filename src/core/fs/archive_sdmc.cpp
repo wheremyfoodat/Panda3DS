@@ -4,13 +4,13 @@
 namespace fs = std::filesystem;
 
 HorizonResult SDMCArchive::createFile(const FSPath& path, u64 size) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path)) {
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path)) {
 			Helpers::panic("Unsafe path in SDMC::CreateFile");
 		}
 
 		fs::path p = IOFile::getAppData() / "SDMC";
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
 		if (fs::exists(p)) {
 			return Result::FS::AlreadyExists;
@@ -39,13 +39,13 @@ HorizonResult SDMCArchive::createFile(const FSPath& path, u64 size) {
 }
 
 HorizonResult SDMCArchive::deleteFile(const FSPath& path) {
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path)) {
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path)) {
 			Helpers::panic("Unsafe path in SDMC::DeleteFile");
 		}
 
 		fs::path p = IOFile::getAppData() / "SDMC";
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
 		if (fs::is_directory(p)) {
 			Helpers::panic("SDMC::DeleteFile: Tried to delete directory");
@@ -171,13 +171,13 @@ Rust::Result<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const F
 		return Err(Result::FS::UnexpectedFileOrDir);
 	}
 
-	if (path.type == PathType::UTF16) {
-		if (!isPathSafe<PathType::UTF16>(path)) {
+	if (path.isTextPath()) {
+		if (!isSafeTextPath(path)) {
 			Helpers::panic("Unsafe path in SDMC::OpenDirectory");
 		}
 
 		fs::path p = IOFile::getAppData() / "SDMC";
-		p += fs::path(path.utf16_string).make_preferred();
+		appendPath(p, path);
 
 		if (fs::is_regular_file(p)) {
 			printf("SDMC: OpenDirectory used with a file path");
@@ -197,7 +197,7 @@ Rust::Result<DirectorySession, HorizonResult> SDMCArchive::openDirectory(const F
 
 Rust::Result<ArchiveBase*, HorizonResult> SDMCArchive::openArchive(const FSPath& path) {
 	// TODO: Fail here if the SD is disabled in the connfig.
-	if (path.type != PathType::Empty) {
+	if (!path.isEmptyType()) {
 		Helpers::panic("Unimplemented path type for SDMC::OpenArchive");
 	}
 

@@ -14,7 +14,7 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	printf("Data address = %08X, size = %08X\n", cxi.data.address, cxi.data.size);
 	printf("Stack size: %08X\n", cxi.stackSize);
 
-	static constexpr std::array<const char*, 7> regionNames = {"Japan", "North America", "Europe", "Australia", "China", "Korea", "Taiwan" };
+	static constexpr std::array<const char*, 7> regionNames = {"Japan", "North America", "Europe", "Australia", "China", "Korea", "Taiwan"};
 
 	// Set autodetected 3DS region to one of the values allowed by the CXI's SMDH
 	region = cxi.region.value();

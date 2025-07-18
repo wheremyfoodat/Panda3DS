@@ -17,10 +17,13 @@
 #include "panda_qt/about_window.hpp"
 #include "panda_qt/cheats_window.hpp"
 #include "panda_qt/config_window.hpp"
+#include "panda_qt/cpu_debugger.hpp"
+#include "panda_qt/dsp_debugger.hpp"
 #include "panda_qt/patch_window.hpp"
 #include "panda_qt/screen.hpp"
 #include "panda_qt/shader_editor.hpp"
 #include "panda_qt/text_editor.hpp"
+#include "panda_qt/thread_debugger.hpp"
 #include "services/hid.hpp"
 
 struct CheatMessage {
@@ -40,7 +43,6 @@ class MainWindow : public QMainWindow {
 		Pause,
 		Resume,
 		TogglePause,
-		DumpRomFS,
 		PressKey,
 		ReleaseKey,
 		SetCirclePadX,
@@ -51,6 +53,7 @@ class MainWindow : public QMainWindow {
 		ReleaseTouchscreen,
 		ReloadUbershader,
 		SetScreenSize,
+		UpdateConfig,
 	};
 
 	// Tagged union representing our message queue messages
@@ -108,6 +111,9 @@ class MainWindow : public QMainWindow {
 	TextEditorWindow* luaEditor;
 	PatchWindow* patchWindow;
 	ShaderEditorWindow* shaderEditor;
+	CPUDebugger* cpuDebugger;
+	DSPDebugger* dspDebugger;
+	ThreadDebugger* threadDebugger;
 
 	// We use SDL's game controller API since it's the sanest API that supports as many controllers as possible
 	SDL_GameController* gameController = nullptr;
@@ -125,6 +131,10 @@ class MainWindow : public QMainWindow {
 	void setupControllerSensors(SDL_GameController* controller);
 	void sendMessage(const EmulatorMessage& message);
 	void dispatchMessage(const EmulatorMessage& message);
+	void loadTranslation();
+
+	void loadKeybindings();
+	void saveKeybindings();
 
 	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
 	bool usingGL = false;
@@ -137,6 +147,9 @@ class MainWindow : public QMainWindow {
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
 
+	// Tracks if keybindings changed, in which case we should update the keybindings file when closing the emulator
+	bool keybindingsChanged = false;
+
   public:
 	MainWindow(QApplication* app, QWidget* parent = nullptr);
 	~MainWindow();
@@ -144,12 +157,18 @@ class MainWindow : public QMainWindow {
 	void closeEvent(QCloseEvent* event) override;
 	void keyPressEvent(QKeyEvent* event) override;
 	void keyReleaseEvent(QKeyEvent* event) override;
+
 	void mousePressEvent(QMouseEvent* event) override;
 	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
 
 	void loadLuaScript(const std::string& code);
 	void reloadShader(const std::string& shader);
 	void editCheat(u32 handle, const std::vector<uint8_t>& cheat, const std::function<void(u32)>& callback);
 
 	void handleScreenResize(u32 width, u32 height);
+	void handleTouchscreenPress(QMouseEvent* event);
+
+  signals:
+	void emulatorPaused();
 };

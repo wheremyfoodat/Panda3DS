@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <iostream>
 #include <iterator>
-#include <sstream>
 #include <string>
 #include <vector>
 #include <memory>
@@ -162,19 +161,6 @@ namespace Helpers {
 		return std::bit_cast<To, From>(from);
 	}
 #endif
-
-	static std::vector<std::string> split(const std::string& s, const char c) {
-		std::istringstream tmp(s);
-		std::vector<std::string> result(1);
-
-		while (std::getline(tmp, *result.rbegin(), c)) {
-			result.emplace_back();
-		}
-
-		// Remove temporary slot
-		result.pop_back();
-		return result;
-	}
 };  // namespace Helpers
 
 // UDLs for memory size values

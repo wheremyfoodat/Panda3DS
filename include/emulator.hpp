@@ -7,8 +7,8 @@
 #include <span>
 
 #include "PICA/gpu.hpp"
+#include "audio/audio_device.hpp"
 #include "audio/dsp_core.hpp"
-#include "audio/miniaudio_device.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
@@ -48,14 +48,14 @@ class Emulator {
 	Scheduler scheduler;
 
 	Crypto::AESEngine aesEngine;
-	MiniAudioDevice audioDevice;
+	AudioDevice audioDevice;
 	Cheats cheats;
 
   public:
 	static constexpr u32 width = 400;
 	static constexpr u32 height = 240 * 2;  // * 2 because 2 screens
 	ROMType romType = ROMType::None;
-	bool running = false;         // Is the emulator running a game?
+	bool running = false;  // Is the emulator running a game?
 
   private:
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
@@ -66,7 +66,6 @@ class Emulator {
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	Discord::RPC discordRpc;
 #endif
-	void setAudioEnabled(bool enable);
 	void updateDiscord();
 
 	// Keep the handle for the ROM here to reload when necessary and to prevent deleting it
@@ -90,7 +89,6 @@ class Emulator {
 	~Emulator();
 
 	void step();
-	void render();
 	void reset(ReloadOption reload);
 	void runFrame();
 	// Poll the scheduler for events
@@ -99,6 +97,7 @@ class Emulator {
 	void resume();  // Resume the emulator
 	void pause();   // Pause the emulator
 	void togglePause();
+	void setAudioEnabled(bool enable);
 
 	bool loadAmiibo(const std::filesystem::path& path);
 	bool loadROM(const std::filesystem::path& path);
@@ -116,14 +115,24 @@ class Emulator {
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+	void reloadScreenLayout() { gpu.reloadScreenLayout(); }
+
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
+
+	// Reloads some settings that require special handling, such as audio enable
+	void reloadSettings();
+
+	CPU& getCPU() { return cpu; }
+	Memory& getMemory() { return memory; }
+	Kernel& getKernel() { return kernel; }
+	Scheduler& getScheduler() { return scheduler; }
+	Audio::DSPCore* getDSP() { return dsp.get(); }
 
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
-	Scheduler& getScheduler() { return scheduler; }
-	Memory& getMemory() { return memory; }
+	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
