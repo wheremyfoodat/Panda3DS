@@ -6,7 +6,7 @@
 #include "kernel_types.hpp"
 
 Kernel::Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config, LuaManager& lua)
-	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config, lua) {
+	: cpu(cpu), regs(cpu.regs()), mem(mem), handleCounter(0), serviceManager(regs, mem, gpu, currentProcess, *this, config, lua), fcramManager(mem) {
 	objects.reserve(512);  // Make room for a few objects to avoid further memory allocs later
 	mutexHandles.reserve(8);
 	portHandles.reserve(32);
@@ -180,9 +180,7 @@ void Kernel::reset() {
 }
 
 // Get pointer to thread-local storage
-u32 Kernel::getTLSPointer() {
-	return VirtualAddrs::TLSBase + currentThreadIndex * VirtualAddrs::TLSSize;
-}
+u32 Kernel::getTLSPointer() { return VirtualAddrs::TLSBase + currentThreadIndex * VirtualAddrs::TLSSize; }
 
 // Result CloseHandle(Handle handle)
 void Kernel::svcCloseHandle() {
@@ -271,7 +269,8 @@ void Kernel::getProcessInfo() {
 		// According to 3DBrew: Amount of private (code, data, heap) memory used by the process + total supervisor-mode
 		// stack size + page-rounded size of the external handle table
 		case 2:
-			regs[1] = mem.getUsedUserMem();
+			// FIXME
+			regs[1] = fcramManager.getUsedCount(FcramRegion::App);
 			regs[2] = 0;
 			break;
 
@@ -364,7 +363,7 @@ void Kernel::getSystemInfo() {
 			switch (subtype) {
 				// Total used memory size in the APPLICATION memory region
 				case 1:
-					regs[1] = mem.getUsedUserMem();
+					regs[1] = fcramManager.getUsedCount(FcramRegion::App);
 					regs[2] = 0;
 					break;
 
