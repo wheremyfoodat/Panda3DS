@@ -1,6 +1,5 @@
 #include <QKeyEvent>
 #include <QKeySequence>
-#include <string>
 
 #include "input_mappings.hpp"
 
@@ -27,7 +26,3 @@ InputMappings InputMappings::defaultKeyboardMappings() {
 
 	return mappings;
 }
-
-std::string InputMappings::scancodeToName(Scancode scancode) { return QKeySequence(scancode).toString().toStdString(); }
-
-InputMappings::Scancode InputMappings::nameToScancode(const std::string& name) { return QKeySequence(QString::fromStdString(name))[0].key(); }

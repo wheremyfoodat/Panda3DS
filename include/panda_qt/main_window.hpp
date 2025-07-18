@@ -43,7 +43,6 @@ class MainWindow : public QMainWindow {
 		Pause,
 		Resume,
 		TogglePause,
-		DumpRomFS,
 		PressKey,
 		ReleaseKey,
 		SetCirclePadX,
@@ -134,6 +133,9 @@ class MainWindow : public QMainWindow {
 	void dispatchMessage(const EmulatorMessage& message);
 	void loadTranslation();
 
+	void loadKeybindings();
+	void saveKeybindings();
+
 	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
 	bool usingGL = false;
 	bool usingVk = false;
@@ -144,6 +146,9 @@ class MainWindow : public QMainWindow {
 	// And so the user can still use the keyboard to control the analog
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
+
+	// Tracks if keybindings changed, in which case we should update the keybindings file when closing the emulator
+	bool keybindingsChanged = false;
 
   public:
 	MainWindow(QApplication* app, QWidget* parent = nullptr);

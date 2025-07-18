@@ -21,7 +21,8 @@ struct InputMappings {
 
 	void setMapping(Scancode scancode, u32 key) { container[scancode] = key; }
 
-	void serialize(const std::filesystem::path& path, const std::string& frontend) const {
+	template <typename ScancodeToString>
+	void serialize(const std::filesystem::path& path, const std::string& frontend, ScancodeToString scancodeToString) const {
 		toml::basic_value<toml::preserve_comments, std::map> data;
 
 		std::error_code error;
@@ -46,18 +47,21 @@ struct InputMappings {
 		data["Mappings"] = toml::table{};
 
 		for (const auto& [scancode, key] : container) {
-			if (!data["Mappings"].contains(HID::Keys::keyToName(key))) {
-				data["Mappings"][HID::Keys::keyToName(key)] = toml::array{};
+			const std::string& keyName = HID::Keys::keyToName(key);
+			if (!data["Mappings"].contains(keyName)) {
+				data["Mappings"][keyName] = toml::array{};
 			}
-
-			data["Mappings"][HID::Keys::keyToName(key)].push_back(scancodeToName(scancode));
+			data["Mappings"][keyName].push_back(scancodeToString(scancode));
 		}
 
 		std::ofstream file(path, std::ios::out);
 		file << data;
 	}
 
-	static std::optional<InputMappings> deserialize(const std::filesystem::path& path, const std::string& wantFrontend) {
+	template <typename ScancodeFromString>
+	static std::optional<InputMappings> deserialize(
+		const std::filesystem::path& path, const std::string& wantFrontend, ScancodeFromString stringToScancode
+	) {
 		toml::basic_value<toml::preserve_comments, std::map> data;
 		std::error_code error;
 
@@ -84,23 +88,24 @@ struct InputMappings {
 				return std::tolower(a) == std::tolower(b);
 			});
 
-			if (equal) {
+			if (!equal) {
 				Helpers::warn(
 					"Mappings file %s was created for frontend %s, but we are using frontend %s\n", path.string().c_str(), haveFrontend.c_str(),
 					wantFrontend.c_str()
 				);
+
 				return std::nullopt;
 			}
 		} catch (const std::exception& ex) {
 			Helpers::warn("Exception trying to parse config file. Exception: %s\n", ex.what());
-
 			return std::nullopt;
 		}
 
 		const auto& mappingsTable = toml::find_or<toml::table>(data, "Mappings", toml::table{});
-		for (const auto& [key, scancodes] : mappingsTable) {
-			for (const auto& scancode : scancodes.as_array()) {
-				mappings.setMapping(nameToScancode(scancode.as_string()), HID::Keys::nameToKey(key));
+		for (const auto& [keyName, scancodes] : mappingsTable) {
+			for (const auto& scancodeVal : scancodes.as_array()) {
+				std::string scancodeStr = scancodeVal.as_string();
+				mappings.setMapping(stringToScancode(scancodeStr), HID::Keys::nameToKey(keyName));
 			}
 		}
 
@@ -108,8 +113,6 @@ struct InputMappings {
 	}
 
 	static InputMappings defaultKeyboardMappings();
-	static std::string scancodeToName(Scancode scancode);
-	static Scancode nameToScancode(const std::string& name);
 
 	auto begin() { return container.begin(); }
 	auto end() { return container.end(); }

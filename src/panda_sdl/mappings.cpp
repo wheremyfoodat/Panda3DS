@@ -1,7 +1,5 @@
 #include <SDL.h>
 
-#include <string>
-
 #include "input_mappings.hpp"
 
 InputMappings InputMappings::defaultKeyboardMappings() {
@@ -27,6 +25,3 @@ InputMappings InputMappings::defaultKeyboardMappings() {
 
 	return mappings;
 }
-
-std::string InputMappings::scancodeToName(Scancode scancode) { return SDL_GetKeyName(scancode); }
-InputMappings::Scancode InputMappings::nameToScancode(const std::string& name) { return SDL_GetKeyFromName(name.c_str()); }
