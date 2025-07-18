@@ -26,7 +26,7 @@ namespace {
 }  // namespace
 
 bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
-	const LoadInfo hbInfo = {
+/*	const LoadInfo hbInfo = {
 		.codeSegSizeAligned = (header.codeSegSize + 0xFFF) & ~0xFFF,
 		.rodataSegSizeAligned = (header.rodataSegSize + 0xFFF) & ~0xFFF,
 		.dataSegSizeAligned = (header.dataSegSize + 0xFFF) & ~0xFFF,
@@ -186,10 +186,10 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 				return false;
 			}
 		}
-	}
+	}*/
 
 	// Detect and fill _prm structure
-	HB3DSX::PrmStruct pst;
+	/*HB3DSX::PrmStruct pst;
 	std::memcpy(&pst, &code[4], sizeof(pst));
 	if (pst.magic[0] == '_' && pst.magic[1] == 'p' && pst.magic[2] == 'r' && pst.magic[3] == 'm') {
 		// if there was any argv to put, it would go there
@@ -205,7 +205,7 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 
 		// RUNFLAG_APTREINIT: Reinitialize APT.
 		// From libctru. Because there's no previously running software here
-		pst.runFlags |= 1 << 1;
+		pst.runFlags |= 1 << 1;*/
 
 		/* s64 dummy;
 		bool isN3DS = svcGetSystemInfo(&dummy, 0x10001, 0) == 0;
@@ -213,7 +213,7 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 		{
 			pst->heapSize = u32(48_MB);
 			pst->linearHeapSize = u32(64_MB);
-		} else */ {
+		} else *//* {
 			pst.heapSize = u32(24_MB);
 			pst.linearHeapSize = u32(32_MB);
 		}
@@ -228,7 +228,8 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 	allocateMemory(rodataSegAddr, paddr + rodataOffset, hbInfo.rodataSegSizeAligned, true, true, false, false);    // Rodata is R--
 	allocateMemory(dataSegAddr, paddr + dataOffset, hbInfo.dataSegSizeAligned + 0x1000, true, true, true, false);  // Data+BSS+Extra is RW-
 
-	return true;
+	return true;*/
+return false;
 }
 
 std::optional<u32> Memory::load3DSX(const std::filesystem::path& path) {
