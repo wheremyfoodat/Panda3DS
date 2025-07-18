@@ -779,12 +779,12 @@ void MainWindow::setupControllerSensors(SDL_GameController* controller) {
 }
 
 void MainWindow::loadKeybindings() {
-	auto keyMappings = InputMappings::deserialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](const std::string& name) {
+	auto mappings = InputMappings::deserialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](const std::string& name) {
 		return InputMappings::Scancode(QKeySequence(QString::fromStdString(name))[0].key());
 	});
 
-	if (keyMappings) {
-		keyboardMappings = *keyMappings;
+	if (mappings.has_value()) {
+		keyboardMappings = *mappings;
 	} else {
 		keyboardMappings = InputMappings::defaultKeyboardMappings();
 	}
