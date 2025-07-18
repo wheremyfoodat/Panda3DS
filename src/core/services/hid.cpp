@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <map>
 #include <unordered_map>
 
 #include "ipc.hpp"
@@ -250,7 +249,7 @@ void HIDService::updateInputs(u64 currentTick) {
 // Key serialization helpers
 namespace HID::Keys {
 	const char* keyToName(u32 key) {
-		static std::map<u32, const char*> keyMap = {
+		static std::unordered_map<u32, const char*> keyMap = {
 			{A, "A"},
 			{B, "B"},
 			{Select, "Select"},
