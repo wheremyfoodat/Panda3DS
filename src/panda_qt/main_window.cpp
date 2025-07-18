@@ -14,7 +14,7 @@
 #include "services/dsp.hpp"
 #include "version.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings()) {
 	emu = new Emulator();
 
 	loadTranslation();
@@ -114,6 +114,13 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		},
 		[&]() { return this; }, emu->getConfig(), this
 	);
+
+	loadKeybindings();
+
+	connect(configWindow->getInputWindow(), &InputWindow::mappingsChanged, this, [&]() {
+		keybindingsChanged = true;
+		configWindow->getInputWindow()->applyToMappings(keyboardMappings);
+	});
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -274,6 +281,10 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
+	if (keybindingsChanged) {
+		saveKeybindings();
+	}
+
 	delete emu;
 	delete menuBar;
 	delete aboutWindow;
@@ -765,4 +776,24 @@ void MainWindow::setupControllerSensors(SDL_GameController* controller) {
 	if (haveAccelerometer) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
 	}
+}
+
+void MainWindow::loadKeybindings() {
+	auto mappings = InputMappings::deserialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](const std::string& name) {
+		return InputMappings::Scancode(QKeySequence(QString::fromStdString(name))[0].key());
+	});
+
+	if (mappings.has_value()) {
+		keyboardMappings = *mappings;
+	} else {
+		keyboardMappings = InputMappings::defaultKeyboardMappings();
+	}
+
+	configWindow->getInputWindow()->loadFromMappings(keyboardMappings);
+}
+
+void MainWindow::saveKeybindings() {
+	keyboardMappings.serialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](InputMappings::Scancode scancode) {
+		return QKeySequence(scancode).toString().toStdString();
+	});
 }

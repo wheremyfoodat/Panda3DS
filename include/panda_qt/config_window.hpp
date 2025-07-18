@@ -16,6 +16,8 @@
 
 #include "emulator.hpp"
 #include "frontend_settings.hpp"
+#include "input_mappings.hpp"
+#include "panda_qt/input_window.hpp"
 
 class ConfigWindow : public QDialog {
 	Q_OBJECT
@@ -30,8 +32,9 @@ class ConfigWindow : public QDialog {
 	QTextEdit* helpText = nullptr;
 	QListWidget* widgetList = nullptr;
 	QStackedWidget* widgetContainer = nullptr;
+	InputWindow* inputWindow = nullptr;
 
-	static constexpr size_t settingWidgetCount = 6;
+	static constexpr size_t settingWidgetCount = 7;
 	std::array<QString, settingWidgetCount> helpTexts;
 
 	// The config class holds a copy of the emulator config which it edits and sends
@@ -52,6 +55,7 @@ class ConfigWindow : public QDialog {
 	~ConfigWindow();
 
 	EmulatorConfig& getConfig() { return config; }
+	InputWindow* getInputWindow() { return inputWindow; }
 
   private:
 	Emulator* emu;
