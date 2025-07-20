@@ -16,7 +16,6 @@
 
 #include "emulator.hpp"
 #include "frontend_settings.hpp"
-#include "input_mappings.hpp"
 #include "panda_qt/input_window.hpp"
 
 class ConfigWindow : public QDialog {
