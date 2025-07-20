@@ -5,9 +5,6 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QtWidgets>
-#include <atomic>
-#include <chrono>
-#include <thread>
 
 #include "emulator.hpp"
 

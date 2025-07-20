@@ -1,4 +1,5 @@
 #pragma once
+
 #include <QFontMetrics>
 #include <QLabel>
 #include <QString>
