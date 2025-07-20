@@ -89,13 +89,17 @@ class RendererMTL final : public Renderer {
 	MTL::Texture* lastDepthTexture = nullptr;
 
 	// Information about the final 3DS screen -> Window blit, accounting for things like scaling and shifting the output based on
-	// the window's dimensions.
+	// the window's dimensions. Updated whenever the screen size or layout changes.
 	struct {
 		float topScreenX = 0;
 		float topScreenY = 0;
+		float topScreenWidth = 400;
+		float topScreenHeight = 240;
+
 		float bottomScreenX = 40;
 		float bottomScreenY = 240;
-		float scale = 1.0;
+		float bottomScreenWidth = 320;
+		float bottomScreenHeight = 240;
 	} blitInfo;
 
 	// Debug

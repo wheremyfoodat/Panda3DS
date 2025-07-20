@@ -2,10 +2,13 @@
 #include "archive_base.hpp"
 
 class NCCHArchive : public ArchiveBase {
-public:
+  public:
 	NCCHArchive(Memory& mem) : ArchiveBase(mem) {}
 
-	u64 getFreeBytes() override { Helpers::panic("NCCH::GetFreeBytes unimplemented"); return 0;  }
+	u64 getFreeBytes() override {
+		Helpers::panic("NCCH::GetFreeBytes unimplemented");
+		return 0;
+	}
 	std::string name() override { return "NCCH"; }
 
 	HorizonResult createFile(const FSPath& path, u64 size) override;

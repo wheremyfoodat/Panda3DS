@@ -47,6 +47,7 @@ void EmulatorConfig::load() {
 			defaultRomPath = toml::find_or<std::string>(general, "DefaultRomPath", "");
 
 			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
+			circlePadProEnabled = toml::find_or<toml::boolean>(general, "EnableCirclePadPro", true);
 			systemLanguage = languageCodeFromString(toml::find_or<std::string>(general, "SystemLanguage", "en"));
 		}
 	}
@@ -92,6 +93,10 @@ void EmulatorConfig::load() {
 			lightShadergenThreshold = toml::find_or<toml::integer>(gpu, "ShadergenLightThreshold", 1);
 			hashTextures = toml::find_or<toml::boolean>(gpu, "HashTextures", hashTexturesDefault);
 			enableRenderdoc = toml::find_or<toml::boolean>(gpu, "EnableRenderdoc", false);
+
+			auto screenLayoutName = toml::find_or<std::string>(gpu, "ScreenLayout", "Default");
+			screenLayout = ScreenLayout::layoutFromString(screenLayoutName);
+			topScreenSize = float(std::clamp(toml::find_or<toml::floating>(gpu, "TopScreenSize", 0.5), 0.0, 1.0));
 		}
 	}
 
@@ -174,6 +179,7 @@ void EmulatorConfig::save() {
 	data["General"]["DefaultRomPath"] = defaultRomPath.string();
 	data["General"]["PrintAppVersion"] = printAppVersion;
 	data["General"]["SystemLanguage"] = languageCodeToString(systemLanguage);
+	data["General"]["EnableCirclePadPro"] = circlePadProEnabled;
 
 	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
 	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;
@@ -192,6 +198,8 @@ void EmulatorConfig::save() {
 	data["GPU"]["AccelerateShaders"] = accelerateShaders;
 	data["GPU"]["EnableRenderdoc"] = enableRenderdoc;
 	data["GPU"]["HashTextures"] = hashTextures;
+	data["GPU"]["ScreenLayout"] = std::string(ScreenLayout::layoutToString(screenLayout));
+	data["GPU"]["TopScreenSize"] = double(topScreenSize);
 
 	data["Audio"]["DSPEmulation"] = std::string(Audio::DSPCore::typeToString(dspType));
 	data["Audio"]["EnableAudio"] = audioEnabled;

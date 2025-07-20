@@ -19,7 +19,7 @@ class Emulator;
 namespace httplib {
 	class Server;
 	struct Response;
-}
+}  // namespace httplib
 
 // Wrapper for httplib::Response that allows the HTTP server to wait for the response to be ready
 struct DeferredResponseWrapper {
@@ -63,7 +63,7 @@ struct HttpServer {
 	std::thread httpServerThread;
 	std::queue<std::unique_ptr<HttpAction>> actionQueue;
 	std::mutex actionQueueMutex;
-	std::unique_ptr<HttpAction> currentStepAction {};
+	std::unique_ptr<HttpAction> currentStepAction{};
 
 	std::map<std::string, u32> keyMap;
 	bool paused = false;

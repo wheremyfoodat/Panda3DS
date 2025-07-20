@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <string>
 
+#include "screen_layout.hpp"
 #include "audio/dsp_core.hpp"
 #include "frontend_settings.hpp"
 #include "renderer.hpp"
@@ -62,12 +63,15 @@ struct EmulatorConfig {
 	static constexpr RendererType rendererDefault = RendererType::OpenGL;
 #endif
 
-	static constexpr bool hashTexturesDefault = true;
+	static constexpr bool hashTexturesDefault = false;
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
 	bool hashTextures = hashTexturesDefault;
+
+	ScreenLayout::Layout screenLayout = ScreenLayout::Layout::Default;
+	float topScreenSize = 0.5;
 
 	bool accurateShaderMul = false;
 	bool discordRpcEnabled = false;
@@ -81,6 +85,7 @@ struct EmulatorConfig {
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
+	bool circlePadProEnabled = true;
 	bool usePortableBuild = false;
 
 	bool audioEnabled = audioEnabledDefault;

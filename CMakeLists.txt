@@ -314,7 +314,7 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/teakra)
 add_subdirectory(third_party/fdk-aac)
 
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
@@ -328,7 +328,7 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
                  src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/renderdoc.cpp
-                 src/frontend_settings.cpp src/miniaudio/miniaudio.cpp
+                 src/frontend_settings.cpp src/miniaudio/miniaudio.cpp src/core/screen_layout.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -346,10 +346,10 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/frd.cpp src/core/services/nim.cpp src/core/services/mcu/mcu_hwc.cpp
                          src/core/services/y2r.cpp src/core/services/cam.cpp src/core/services/ldr_ro.cpp
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
-                         src/core/services/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
+                         src/core/services/ir/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
                          src/core/services/csnd.cpp src/core/services/nwm_uds.cpp src/core/services/fonts.cpp
-                         src/core/services/ns.cpp
+                         src/core/services/ns.cpp src/core/services/ir/circlepad_pro.cpp src/core/services/ir/crc8.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
@@ -397,7 +397,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
                  include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
-                 include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
+                 include/config.hpp include/services/ir/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp
@@ -414,7 +414,9 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
                  include/services/dsp_firmware_db.hpp include/frontend_settings.hpp include/fs/archive_twl_photo.hpp
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
-                 include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp
+                 include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
+                 include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp include/services/service_intercept.hpp
+                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp
 )
 
 if(IOS)
@@ -684,8 +686,8 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts teakra fdk-aac)
-target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
+target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts fdk-aac)
+target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt teakra)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
@@ -731,10 +733,13 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
+            src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp src/panda_qt/dsp_debugger.cpp src/panda_qt/input_window.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
+            include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/dsp_debugger.hpp
+            include/panda_qt/disabled_widget_overlay.hpp include/panda_qt/input_window.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
@@ -782,6 +787,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
                 docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
                 docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png docs/img/runpog_icon.png
+                docs/img/gamepad_icon.png
         )
 
         # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable

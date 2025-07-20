@@ -15,6 +15,7 @@
 #include "services/service_manager.hpp"
 
 class CPU;
+class LuaManager;
 struct Scheduler;
 
 class Kernel {
@@ -47,12 +48,12 @@ class Kernel {
 	Handle currentProcess;
 	Handle mainThread;
 	int currentThreadIndex;
-	Handle srvHandle; // Handle for the special service manager port "srv:"
-	Handle errorPortHandle; // Handle for the err:f port used for displaying errors
+	Handle srvHandle;        // Handle for the special service manager port "srv:"
+	Handle errorPortHandle;  // Handle for the err:f port used for displaying errors
 
 	u32 arbiterCount;
-	u32 threadCount; // How many threads in our thread pool have been used as of now (Up to 32)
-	u32 aliveThreadCount; // How many of these threads are actually alive?
+	u32 threadCount;       // How many threads in our thread pool have been used as of now (Up to 32)
+	u32 aliveThreadCount;  // How many of these threads are actually alive?
 	ServiceManager serviceManager;
 
 	// Top 8 bits are the major version, bottom 8 are the minor version
@@ -66,10 +67,10 @@ class Kernel {
 	Handle makeProcess(u32 id);
 	Handle makePort(const char* name);
 	Handle makeSession(Handle port);
-	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg,ThreadStatus status = ThreadStatus::Dormant);
+	Handle makeThread(u32 entrypoint, u32 initialSP, u32 priority, ProcessorID id, u32 arg, ThreadStatus status = ThreadStatus::Dormant);
 	Handle makeMemoryBlock(u32 addr, u32 size, u32 myPermission, u32 otherPermission);
 
-public:
+  public:
 	// Needs to be public to be accessible to the APT/HID services
 	Handle makeEvent(ResetType resetType, Event::CallbackType callback = Event::CallbackType::None);
 	// Needs to be public to be accessible to the APT/DSP services
@@ -201,8 +202,8 @@ public:
 	void closeDirectory(u32 messagePointer, Handle directory);
 	void readDirectory(u32 messagePointer, Handle directory);
 
-public:
-	Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config);
+  public:
+	Kernel(CPU& cpu, Memory& mem, GPU& gpu, const EmulatorConfig& config, LuaManager& lua);
 	void initializeFS() { return serviceManager.initializeFS(); }
 	void setVersion(u8 major, u8 minor);
 	void serviceSVC(u32 svc);
@@ -229,9 +230,7 @@ public:
 		return handleCounter++;
 	}
 
-	std::vector<KernelObject>& getObjects() {
-		return objects;
-	}
+	std::vector<KernelObject>& getObjects() { return objects; }
 
 	// Get pointer to the object with the specified handle
 	KernelObject* getObject(Handle handle) {
@@ -261,4 +260,14 @@ public:
 	void pollThreadWakeups();
 
 	u32 getSharedFontVaddr();
+
+	// For debuggers: Returns information about the main process' (alive) threads in a vector for the frontend to display
+	std::vector<Thread> getMainProcessThreads();
+
+	// For debuggers: Sets the entrypoint and initial SP for the main thread (thread 0) so that the debugger can display them
+	void setMainThreadEntrypointAndSP(u32 entrypoint, u32 initialSP) {
+		auto& t = threads[0];
+		t.entrypoint = entrypoint;
+		t.initialSP = initialSP;
+	}
 };

@@ -107,7 +107,7 @@ class PICAShader {
 	alignas(16) std::array<vec4f, 16> inputs;           // Attributes passed to the shader
 	alignas(16) std::array<vec4f, 16> outputs;
 	alignas(16) vec4f dummy = vec4f({f24::zero(), f24::zero(), f24::zero(), f24::zero()});  // Dummy register used by the JIT
-	
+
 	// We use a hashmap for matching 3DS shaders to their equivalent compiled code in our shader cache in the shader JIT
 	// We choose our hash type to be a 64-bit integer by default, as the collision chance is very tiny and generating it is decently optimal
 	// Ideally we want to be able to support multiple different types of hash depending on compilation settings, but let's get this working first
@@ -234,7 +234,7 @@ class PICAShader {
 
   public:
 	static constexpr size_t maxInstructionCount = 4096;
-	std::array<u32, maxInstructionCount> loadedShader;    // Currently loaded & active shader
+	std::array<u32, maxInstructionCount> loadedShader;  // Currently loaded & active shader
 
 	PICAShader(ShaderType type) : type(type) {}
 

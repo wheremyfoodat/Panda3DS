@@ -38,8 +38,9 @@ void Kernel::arbitrateAddress() {
 	const s32 value = s32(regs[3]);
 	const s64 ns = s64(u64(regs[4]) | (u64(regs[5]) << 32));
 
-	logSVC("ArbitrateAddress(Handle = %X, address = %08X, type = %s, value = %d, ns = %lld)\n", handle, address,
-		arbitrationTypeToString(type), value, ns);
+	logSVC(
+		"ArbitrateAddress(Handle = %X, address = %08X, type = %s, value = %d, ns = %lld)\n", handle, address, arbitrationTypeToString(type), value, ns
+	);
 
 	const auto arbiter = getObject(handle, KernelObjectType::AddressArbiter);
 	if (arbiter == nullptr) [[unlikely]] {
@@ -61,7 +62,7 @@ void Kernel::arbitrateAddress() {
 	switch (static_cast<ArbitrationType>(type)) {
 		// Puts this thread to sleep if word < value until another thread arbitrates the address using SIGNAL
 		case ArbitrationType::WaitIfLess: {
-			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed
+			s32 word = static_cast<s32>(mem.read32(address));  // Yes this is meant to be signed
 			if (word < value) {
 				sleepThreadOnArbiter(address);
 			}
@@ -71,7 +72,7 @@ void Kernel::arbitrateAddress() {
 		// Puts this thread to sleep if word < value until another thread arbitrates the address using SIGNAL
 		// If the thread is put to sleep, the arbiter address is decremented
 		case ArbitrationType::DecrementAndWaitIfLess: {
-			s32 word = static_cast<s32>(mem.read32(address)); // Yes this is meant to be signed
+			s32 word = static_cast<s32>(mem.read32(address));  // Yes this is meant to be signed
 			if (word < value) {
 				mem.write32(address, word - 1);
 				sleepThreadOnArbiter(address);
@@ -87,12 +88,8 @@ void Kernel::arbitrateAddress() {
 			break;
 		}
 
-		case ArbitrationType::Signal:
-			signalArbiter(address, value);
-			break;
-
-		default:
-			Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
+		case ArbitrationType::Signal: signalArbiter(address, value); break;
+		default: Helpers::panic("ArbitrateAddress: Unimplemented type %s", arbitrationTypeToString(type));
 	}
 
 	requireReschedule();
@@ -100,8 +97,9 @@ void Kernel::arbitrateAddress() {
 
 // Signal up to "threadCount" threads waiting on the arbiter indicated by "waitingAddress"
 void Kernel::signalArbiter(u32 waitingAddress, s32 threadCount) {
-	if (threadCount == 0) [[unlikely]] return;
-	s32 count = 0; // Number of threads we've woken up
+	if (threadCount == 0) [[unlikely]]
+		return;
+	s32 count = 0;  // Number of threads we've woken up
 
 	// Wake threads with the highest priority threads being woken up first
 	for (auto index : threadIndices) {

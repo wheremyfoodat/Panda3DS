@@ -36,7 +36,7 @@ namespace DSPCommands {
 namespace Result {
 	enum : u32 {
 		HeadphonesNotInserted = 0,
-		HeadphonesInserted = 1
+		HeadphonesInserted = 1,
 	};
 }
 
@@ -85,7 +85,7 @@ void DSPService::convertProcessAddressFromDspDram(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0xC, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, converted); // Converted address
+	mem.write32(messagePointer + 8, converted);  // Converted address
 }
 
 void DSPService::loadComponent(u32 messagePointer) {
@@ -109,9 +109,9 @@ void DSPService::loadComponent(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 1); // Component loaded
+	mem.write32(messagePointer + 8, 1);  // Component loaded
 	mem.write32(messagePointer + 12, (size << 4) | 0xA);
-	mem.write32(messagePointer + 16, mem.read32(messagePointer + 20)); // Component buffer
+	mem.write32(messagePointer + 16, mem.read32(messagePointer + 20));  // Component buffer
 }
 
 void DSPService::unloadComponent(u32 messagePointer) {
@@ -136,7 +136,7 @@ void DSPService::readPipeIfPossible(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write16(messagePointer + 8, u16(data.size())); // Number of bytes read
+	mem.write16(messagePointer + 8, u16(data.size()));  // Number of bytes read
 }
 
 void DSPService::recvData(u32 messagePointer) {
@@ -168,12 +168,10 @@ DSPService::DSPEvent& DSPService::getEventRef(u32 type, u32 pipe) {
 		case 1: return interrupt1;
 
 		case 2:
-			if (pipe >= pipeCount)
-				Helpers::panic("Tried to access the event of an invalid pipe");
+			if (pipe >= pipeCount) Helpers::panic("Tried to access the event of an invalid pipe");
 			return pipeEvents[pipe];
 
-		default:
-			Helpers::panic("Unknown type for DSP::getEventRef");
+		default: Helpers::panic("Unknown type for DSP::getEventRef");
 	}
 }
 
@@ -185,8 +183,8 @@ void DSPService::registerInterruptEvents(u32 messagePointer) {
 
 	// The event handle being 0 means we're removing an event
 	if (eventHandle == 0) {
-		DSPEvent& e = getEventRef(interrupt, channel); // Get event
-		if (e.has_value()) { // Remove if it exists
+		DSPEvent& e = getEventRef(interrupt, channel);  // Get event
+		if (e.has_value()) {                            // Remove if it exists
 			totalEventCount--;
 			e = std::nullopt;
 		}
@@ -227,7 +225,7 @@ void DSPService::getSemaphoreEventHandle(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x16, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	// TODO: Translation descriptor here?
-	mem.write32(messagePointer + 12, semaphoreEvent.value()); // Semaphore event handle
+	mem.write32(messagePointer + 12, semaphoreEvent.value());  // Semaphore event handle
 	kernel.signalEvent(semaphoreEvent.value());
 }
 

@@ -133,7 +133,7 @@ struct DepthBuffer {
 			GL_DEPTH_COMPONENT,
 			GL_DEPTH_STENCIL,
 		};
-		
+
 		static constexpr std::array<GLenum, 4> types = {
 			GL_UNSIGNED_SHORT,
 			GL_UNSIGNED_INT,
