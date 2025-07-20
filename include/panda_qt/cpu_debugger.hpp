@@ -1,5 +1,4 @@
 #pragma once
-
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
