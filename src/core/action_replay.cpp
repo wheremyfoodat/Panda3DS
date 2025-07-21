@@ -96,7 +96,7 @@ void ActionReplay::runInstruction(const Cheat& cheat, u32 instruction) {
 			break;
 		}
 
-// clang-format off
+		// clang-format off
 		#define MAKE_IF_INSTRUCTION(opcode, comparator)                \
 		case opcode: {                                                 \
 			const u32 baseAddr = Helpers::getBits<0, 28>(instruction); \
@@ -119,7 +119,7 @@ void ActionReplay::runInstruction(const Cheat& cheat, u32 instruction) {
 		// Not Equal (YYYYYYYY != [XXXXXXX + offset])
 		MAKE_IF_INSTRUCTION(6, !=)
 		#undef MAKE_IF_INSTRUCTION
-// clang-format on
+		// clang-format on
 
 		// BXXXXXXX 00000000 - offset = *(XXXXXXX + offset)
 		case 0xB: {
@@ -184,7 +184,6 @@ void ActionReplay::executeDType(const Cheat& cheat, u32 instruction) {
 			write8(*activeOffset + cheat[pc++], u8(data2));
 			*activeOffset += 1;
 			break;
-
 
 		case 0xD9000000: *activeData = read32(cheat[pc++] + *activeOffset); break;
 		case 0xD9000001: data1 = read32(cheat[pc++] + *activeOffset); break;

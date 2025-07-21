@@ -18,6 +18,6 @@ namespace SystemModel {
 		KTR = NewNintendo3DS,
 		FTR = Nintendo2DS,
 		RED = NewNintendo3DS_XL,
-		JAN = NewNintendo2DS_XL
+		JAN = NewNintendo2DS_XL,
 	};
 }

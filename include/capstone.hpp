@@ -23,7 +23,7 @@ namespace Common {
 		// pc: program counter of the instruction to disassemble
 		// bytes: Byte representation of instruction
 		// buffer: text buffer to output the disassembly too
-		usize disassemble(std::string& buffer, u32 pc, std::span<u8> bytes, u64 offset = 0) {
+		usize disassemble(std::string& buffer, u32 pc, std::span<const u8> bytes, u64 offset = 0) {
 			if (!initialized) {
 				buffer = "Capstone was not properly initialized";
 				return 0;

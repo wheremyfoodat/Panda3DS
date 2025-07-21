@@ -93,8 +93,10 @@ HttpServer::HttpServer(Emulator* emulator)
 																		   {"Left", {HID::Keys::Left}},
 																		   {"Up", {HID::Keys::Up}},
 																		   {"Down", {HID::Keys::Down}},
-																		   {"R", {HID::Keys::R}},
 																		   {"L", {HID::Keys::L}},
+																		   {"R", {HID::Keys::R}},
+																		   {"ZL", {HID::Keys::ZL}},
+																		   {"ZR", {HID::Keys::ZR}},
 																		   {"X", {HID::Keys::X}},
 																		   {"Y", {HID::Keys::Y}},
 																	   }) {

@@ -8,8 +8,10 @@
 #include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/pica_frag_uniforms.hpp"
+#include "PICA/pica_hash.hpp"
 #include "PICA/pica_simd.hpp"
 #include "PICA/regs.hpp"
+#include "screen_layout.hpp"
 #include "PICA/shader_decompiler.hpp"
 #include "config.hpp"
 #include "math_util.hpp"
@@ -133,8 +135,8 @@ void RendererGL::initGraphicsContextInternal() {
 
 	auto prevTexture = OpenGL::getTex2D();
 
-	// Create a plain black texture for when a game reads an invalid texture. It is common for games to configure the PICA to read texture info from NULL.
-	// Some games that do this are Pokemon X, Cars 2, Tomodachi Life, and more. We bind the texture to an FBO, clear it, and free the FBO
+	// Create a plain black texture for when a game reads an invalid texture. It is common for games to configure the PICA to read texture info from
+	// NULL. Some games that do this are Pokemon X, Cars 2, Tomodachi Life, and more. We bind the texture to an FBO, clear it, and free the FBO
 	blankTexture.create(8, 8, GL_RGBA8);
 	blankTexture.bind();
 	blankTexture.setMinFilter(OpenGL::Linear);
@@ -227,7 +229,7 @@ void RendererGL::setupBlending() {
 	// Shows if blending is enabled. If it is not enabled, then logic ops are enabled instead
 	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
 
-	if (!blendingEnabled) { // Logic ops are enabled
+	if (!blendingEnabled) {  // Logic ops are enabled
 		const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
 		gl.setLogicOp(logicOps[logicOp]);
 
@@ -268,20 +270,13 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	}
 
 	static constexpr std::array<GLenum, 8> stencilFuncs = {
-		GL_NEVER,
-		GL_ALWAYS,
-		GL_EQUAL,
-		GL_NOTEQUAL,
-		GL_LESS,
-		GL_LEQUAL,
-		GL_GREATER,
-		GL_GEQUAL
+		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL,
 	};
 	gl.enableStencil();
 
 	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
 	const u32 stencilFunc = getBits<4, 3>(stencilConfig);
-	const s32 reference = s8(getBits<16, 8>(stencilConfig)); // Signed reference value
+	const s32 reference = s8(getBits<16, 8>(stencilConfig));  // Signed reference value
 	const u32 stencilRefMask = getBits<24, 8>(stencilConfig);
 
 	const bool stencilWrite = regs[PICA::InternalRegs::DepthBufferWrite];
@@ -292,15 +287,9 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	gl.setStencilMask(stencilBufferMask);
 
 	static constexpr std::array<GLenum, 8> stencilOps = {
-		GL_KEEP,
-		GL_ZERO,
-		GL_REPLACE,
-		GL_INCR,
-		GL_DECR,
-		GL_INVERT,
-		GL_INCR_WRAP,
-		GL_DECR_WRAP
+		GL_KEEP, GL_ZERO, GL_REPLACE, GL_INCR, GL_DECR, GL_INVERT, GL_INCR_WRAP, GL_DECR_WRAP,
 	};
+
 	const u32 stencilOpConfig = regs[PICA::InternalRegs::StencilOp];
 	const u32 stencilFailOp = getBits<0, 3>(stencilOpConfig);
 	const u32 depthFailOp = getBits<4, 3>(stencilOpConfig);
@@ -359,17 +348,29 @@ void RendererGL::bindTexturesToSlots() {
 		const u32 width = getBits<16, 11>(dim);
 		const u32 addr = (regs[ioBase + 4] & 0x0FFFFFFF) << 3;
 		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
-
 		glActiveTexture(GL_TEXTURE0 + i);
 
 		if (addr != 0) [[likely]] {
 			Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+
+			if (hashTextures) {
+				const u8* startPointer = gpu.getPointerPhys<u8>(targetTex.location);
+				const usize sizeInBytes = targetTex.sizeInBytes();
+
+				if (startPointer == nullptr || (sizeInBytes > 0 && gpu.getPointerPhys<u8>(targetTex.location + sizeInBytes - 1) == nullptr))
+					[[unlikely]] {
+					Helpers::warn("Out-of-bounds texture fetch");
+				} else {
+					targetTex.hash = PICAHash::computeHash((const char*)startPointer, sizeInBytes);
+				}
+			}
+
 			OpenGL::Texture tex = getTexture(targetTex);
 			tex.bind();
 		} else {
-			// Mapping a texture from NULL. PICA seems to read the last sampled colour, but for now we will display a black texture instead since it is far easier.
-			// Games that do this don't really care what it does, they just expect the PICA to not crash, since it doesn't have a PU/MMU and can do all sorts of
-			// Weird invalid memory accesses without crashing
+			// Mapping a texture from NULL. PICA seems to read the last sampled colour, but for now we will display a black texture instead since it
+			// is far easier. Games that do this don't really care what it does, they just expect the PICA to not crash, since it doesn't have a
+			// PU/MMU and can do all sorts of Weird invalid memory accesses without crashing
 			blankTexture.bind();
 		}
 	}
@@ -455,7 +456,10 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const int depthFunc = getBits<4, 3>(depthControl);
 	const int colourMask = getBits<8, 4>(depthControl);
 	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
-	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
+
+	static constexpr std::array<GLenum, 8> depthModes = {
+		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL,
+	};
 
 	bindTexturesToSlots();
 	if (gpu.fogLUTDirty) {
@@ -552,14 +556,14 @@ void RendererGL::display() {
 
 	if (topScreen) {
 		topScreen->get().texture.bind();
-		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
-		OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+		OpenGL::setViewport(0, 240, 400, 240);   // Top screen viewport
+		OpenGL::draw(OpenGL::TriangleStrip, 4);  // Actually draw our 3DS screen
 	}
 
 	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
 	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
-	
+
 	if (bottomScreen) {
 		bottomScreen->get().texture.bind();
 		OpenGL::setViewport(40, 0, 320, 240);
@@ -568,8 +572,59 @@ void RendererGL::display() {
 
 	if constexpr (!Helpers::isHydraCore()) {
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		OpenGL::clearColor();
+
 		screenFramebuffer.bind(OpenGL::ReadFramebuffer);
-		glBlitFramebuffer(0, 0, 400, 480, 0, 0, outputWindowWidth, outputWindowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+		if (outputSizeChanged) {
+			outputSizeChanged = false;
+
+			auto layout = emulatorConfig->screenLayout;
+
+			// Get information about our new screen layout to use for blitting the output
+			ScreenLayout::WindowCoordinates windowCoords;
+			ScreenLayout::calculateCoordinates(windowCoords, outputWindowWidth, outputWindowHeight, emulatorConfig->topScreenSize, layout);
+
+			blitInfo.topScreenX = windowCoords.topScreenX;
+			blitInfo.topScreenY = windowCoords.topScreenY;
+			blitInfo.topScreenWidth = windowCoords.topScreenWidth;
+			blitInfo.topScreenHeight = windowCoords.topScreenHeight;
+
+			blitInfo.bottomScreenX = windowCoords.bottomScreenX;
+			blitInfo.bottomScreenY = windowCoords.bottomScreenY;
+			blitInfo.bottomScreenWidth = windowCoords.bottomScreenWidth;
+			blitInfo.bottomScreenHeight = windowCoords.bottomScreenHeight;
+
+			// Flip topScreenY and bottomScreenY because glBlitFramebuffer uses bottom-left origin
+			blitInfo.topScreenY = outputWindowHeight - (blitInfo.topScreenY + blitInfo.topScreenHeight);
+			blitInfo.bottomScreenY = outputWindowHeight - (blitInfo.bottomScreenY + blitInfo.bottomScreenHeight);
+
+			// Used for optimizing the screen blit into a single blit
+			blitInfo.canDoSingleBlit = windowCoords.singleBlitInfo.canDoSingleBlit;
+			blitInfo.destX = windowCoords.singleBlitInfo.destX;
+			blitInfo.destY = windowCoords.singleBlitInfo.destY;
+			blitInfo.destWidth = windowCoords.singleBlitInfo.destWidth;
+			blitInfo.destHeight = windowCoords.singleBlitInfo.destHeight;
+		}
+
+		if (blitInfo.canDoSingleBlit) {
+			glBlitFramebuffer(
+				0, 0, 400, 480, blitInfo.destX, blitInfo.destY, blitInfo.destX + blitInfo.destWidth, blitInfo.destY + blitInfo.destHeight,
+				GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+		} else {
+			// Blit top screen
+			glBlitFramebuffer(
+				0, 240, 400, 480, blitInfo.topScreenX, blitInfo.topScreenY, blitInfo.topScreenX + blitInfo.topScreenWidth,
+				blitInfo.topScreenY + blitInfo.topScreenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+
+			// Blit bottom screen
+			glBlitFramebuffer(
+				40, 0, 360, 240, blitInfo.bottomScreenX, blitInfo.bottomScreenY, blitInfo.bottomScreenX + blitInfo.bottomScreenWidth,
+				blitInfo.bottomScreenY + blitInfo.bottomScreenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+		}
 	}
 }
 
@@ -696,8 +751,10 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	u32 outputWidth = outputSize & 0xffff;
 	u32 outputHeight = outputSize >> 16;
 
-	OpenGL::DebugScope scope("DisplayTransfer inputAddr 0x%08X outputAddr 0x%08X inputWidth %d outputWidth %d inputHeight %d outputHeight %d",
-							 inputAddr, outputAddr, inputWidth, outputWidth, inputHeight, outputHeight);
+	OpenGL::DebugScope scope(
+		"DisplayTransfer inputAddr 0x%08X outputAddr 0x%08X inputWidth %d outputWidth %d inputHeight %d outputHeight %d", inputAddr, outputAddr,
+		inputWidth, outputWidth, inputHeight, outputHeight
+	);
 
 	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, outputHeight);
 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
@@ -747,8 +804,10 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	const u32 outputWidth = (outputSize & 0xffff) << 4;
 	const u32 outputGap = (outputSize >> 16) << 4;
 
-	OpenGL::DebugScope scope("TextureCopy inputAddr 0x%08X outputAddr 0x%08X totalBytes %d inputWidth %d inputGap %d outputWidth %d outputGap %d",
-							 inputAddr, outputAddr, totalBytes, inputWidth, inputGap, outputWidth, outputGap);
+	OpenGL::DebugScope scope(
+		"TextureCopy inputAddr 0x%08X outputAddr 0x%08X totalBytes %d inputWidth %d inputGap %d outputWidth %d outputGap %d", inputAddr, outputAddr,
+		totalBytes, inputWidth, inputGap, outputWidth, outputGap
+	);
 
 	if (inputGap != 0 || outputGap != 0) {
 		// Helpers::warn("Strided texture copy\n");
@@ -786,12 +845,14 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	// Find the source surface.
 	auto srcFramebuffer = getColourBuffer(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
 	if (!srcFramebuffer) {
-		static int shutUpCounter = 0; // Don't want to spam the console too much, so shut up after 5 times
+		static int shutUpCounter = 0;  // Don't want to spam the console too much, so shut up after 5 times
 
 		if (shutUpCounter < 5) {
 			shutUpCounter++;
 			printf("RendererGL::TextureCopy failed to locate src framebuffer!\n");
 		}
+
+		doSoftwareTextureCopy(inputAddr, outputAddr, copySize, inputWidth, inputGap, outputWidth, outputGap);
 		return;
 	}
 
@@ -1000,8 +1061,8 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 				driverInfo.usingGLES ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
 			);
 
-			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and upload
-			// it to the GPU
+			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and
+			// upload it to the GPU
 			if (!picaShaderSource.empty()) {
 				std::string vertexShaderSource = fragShaderGen.getVertexShaderAccelerated(picaShaderSource, vertexConfig, usingUbershader);
 				shader->create({vertexShaderSource}, OpenGL::Vertex);
@@ -1032,7 +1093,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 	if (!usingUbershader) {
 		OpenGL::Program& program = getSpecializedShader();
 		gl.useProgram(program);
-	} else { // Bind ubershader & load ubershader uniforms
+	} else {  // Bind ubershader & load ubershader uniforms
 		gl.useProgram(triangleProgram);
 
 		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
@@ -1202,7 +1263,7 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 	const u32 currentAttributeMask = accel->enabledAttributeMask;
 	// Use bitwise xor to calculate which attributes changed
 	u32 attributeMaskDiff = currentAttributeMask ^ previousAttributeMask;
-	
+
 	while (attributeMaskDiff != 0) {
 		// Get index of next different attribute and turn it off
 		const u32 index = 31 - std::countl_zero<u32>(attributeMaskDiff);

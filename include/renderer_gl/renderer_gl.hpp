@@ -40,7 +40,7 @@ class RendererGL final : public Renderer {
 	OpenGL::VertexArray hwShaderVAO;
 	OpenGL::VertexBuffer vbo;
 
-	// Data
+	// Data that will be uploaded to the ubershader
 	struct {
 		// TEV configuration uniform locations
 		GLint textureEnvSourceLoc = -1;
@@ -145,6 +145,27 @@ class RendererGL final : public Renderer {
 
 	PICA::ShaderGen::FragmentGenerator fragShaderGen;
 	OpenGL::Driver driverInfo;
+
+	// Information about the final 3DS screen -> Window blit, accounting for things like scaling and shifting the output based on
+	// the window's dimensions. Updated whenever the screen size or layout changes.
+	struct {
+		int topScreenX = 0;
+		int topScreenY = 0;
+		int topScreenWidth = 400;
+		int topScreenHeight = 240;
+
+		int bottomScreenX = 40;
+		int bottomScreenY = 240;
+		int bottomScreenWidth = 320;
+		int bottomScreenHeight = 240;
+
+		// For optimizing the final screen blit into a single blit instead of 2 when possible:
+		int destX = 0;
+		int destY = 0;
+		int destWidth = 400;
+		int destHeight = 480;
+		bool canDoSingleBlit = true;
+	} blitInfo;
 
 	MAKE_LOG_FUNCTION(log, rendererLogger)
 	void setupBlending();

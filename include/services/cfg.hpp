@@ -23,6 +23,7 @@ class CFGService {
 	void getConfigInfoBlk2(u32 messagePointer);
 	void getConfigInfoBlk8(u32 messagePointer, u32 commandWord);
 	void getCountryCodeID(u32 messagePointer);
+	void getCountryCodeString(u32 messagePointer);
 	void getLocalFriendCodeSeed(u32 messagePointer);
 	void getRegionCanadaUSA(u32 messagePointer);
 	void getSystemModel(u32 messagePointer);

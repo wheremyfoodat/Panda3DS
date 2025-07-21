@@ -1,4 +1,5 @@
 #include "services/nfc.hpp"
+
 #include "io_file.hpp"
 #include "ipc.hpp"
 #include "kernel.hpp"
@@ -165,7 +166,6 @@ void NFCService::communicationGetStatus(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write8(messagePointer + 8, static_cast<u32>(adapterStatus));
 }
-
 
 void NFCService::communicationGetResult(u32 messagePointer) {
 	log("NFC::CommunicationGetResult\n");

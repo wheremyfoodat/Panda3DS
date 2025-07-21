@@ -64,6 +64,14 @@ option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
+option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
+option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
+
+# Discord RPC & LuaJIT are currently not supported on iOS
+if(IOS)
+    set(ENABLE_DISCORD_RPC OFF)
+    set(ENABLE_LUAJIT OFF)
+endif()
 
 set(OPENGL_PROFILE ${DEFAULT_OPENGL_PROFILE} CACHE STRING "OpenGL profile to use if OpenGL is enabled. Valid values are 'OpenGL' and 'OpenGLES'.")
 set_property(CACHE OPENGL_PROFILE PROPERTY STRINGS OpenGL OpenGLES)
@@ -80,6 +88,10 @@ endif()
 if(BUILD_LIBRETRO_CORE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     add_compile_definitions(__LIBRETRO__)
+
+    if(USE_LIBRETRO_AUDIO)
+        add_compile_definitions(USE_LIBRETRO_AUDIO_DEVICE)
+    endif()
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND ENABLE_USER_BUILD)
@@ -156,7 +168,6 @@ if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     add_subdirectory(third_party/discord-rpc)
     include_directories(third_party/discord-rpc/include)
 endif()
-
 
 if (NOT ANDROID)
     if (USE_SYSTEM_SDL2)
@@ -303,7 +314,7 @@ else()
     message(FATAL_ERROR "Currently unsupported CPU architecture")
 endif()
 
-add_subdirectory(third_party/teakra EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/teakra)
 add_subdirectory(third_party/fdk-aac)
 
 set(CAPSTONE_ARCHITECTURE_DEFAULT OFF)
@@ -316,8 +327,8 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/core/CPU/cpu_dynarmic.cpp src/core/CPU/dynarmic_cycles.cpp
                  src/core/memory.cpp src/renderer.cpp src/core/renderer_null/renderer_null.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
-                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/miniaudio.cpp src/renderdoc.cpp
-                 src/frontend_settings.cpp
+                 src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/renderdoc.cpp
+                 src/frontend_settings.cpp src/miniaudio/miniaudio.cpp src/core/screen_layout.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -335,10 +346,10 @@ set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services
                          src/core/services/frd.cpp src/core/services/nim.cpp src/core/services/mcu/mcu_hwc.cpp
                          src/core/services/y2r.cpp src/core/services/cam.cpp src/core/services/ldr_ro.cpp
                          src/core/services/act.cpp src/core/services/nfc.cpp src/core/services/dlp_srvr.cpp
-                         src/core/services/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
+                         src/core/services/ir/ir_user.cpp src/core/services/http.cpp src/core/services/soc.cpp
                          src/core/services/ssl.cpp src/core/services/news_u.cpp src/core/services/amiibo_device.cpp
                          src/core/services/csnd.cpp src/core/services/nwm_uds.cpp src/core/services/fonts.cpp
-                         src/core/services/ns.cpp
+                         src/core/services/ns.cpp src/core/services/ir/circlepad_pro.cpp src/core/services/ir/crc8.cpp
 )
 set(PICA_SOURCE_FILES src/core/PICA/gpu.cpp src/core/PICA/regs.cpp src/core/PICA/shader_unit.cpp
                       src/core/PICA/shader_interpreter.cpp src/core/PICA/dynapica/shader_rec.cpp
@@ -386,7 +397,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/result/result_common.hpp include/result/result_fs.hpp include/result/result_fnd.hpp
                  include/result/result_gsp.hpp include/result/result_kernel.hpp include/result/result_os.hpp
                  include/crypto/aes_engine.hpp include/metaprogramming.hpp include/PICA/pica_vertex.hpp
-                 include/config.hpp include/services/ir_user.hpp include/http_server.hpp include/cheats.hpp
+                 include/config.hpp include/services/ir/ir_user.hpp include/http_server.hpp include/cheats.hpp
                  include/action_replay.hpp include/renderer_sw/renderer_sw.hpp include/compiler_builtins.hpp
                  include/fs/romfs.hpp include/fs/ivfc.hpp include/discord_rpc.hpp include/services/http.hpp include/result/result_cfg.hpp
                  include/applets/applet.hpp include/applets/mii_selector.hpp include/math_util.hpp include/services/soc.hpp
@@ -402,9 +413,20 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/align.hpp include/audio/aac_decoder.hpp include/PICA/pica_simd.hpp include/services/fonts.hpp
                  include/audio/audio_interpolation.hpp include/audio/hle_mixer.hpp include/audio/dsp_simd.hpp
                  include/services/dsp_firmware_db.hpp include/frontend_settings.hpp include/fs/archive_twl_photo.hpp
-                 include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp
-                 include/external_haptics_manager.hpp
+                 include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
+                 include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
+                 include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp include/services/service_intercept.hpp
+                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp include/external_haptics_manager.hpp
 )
+
+if(IOS)
+    set(SOURCE_FILES ${SOURCE_FILES} src/miniaudio/miniaudio.m)
+    target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS=1")
+
+    if (IOS_SIMULATOR_BUILD)
+        target_compile_definitions(AlberCore PUBLIC "PANDA3DS_IOS_SIMULATOR=1")
+    endif()
+endif()
 
 cmrc_add_resource_library(
     resources_console_fonts
@@ -589,14 +611,16 @@ if(ENABLE_METAL AND APPLE)
         include/renderer_mtl/mtl_common.hpp
         include/renderer_mtl/pica_to_mtl.hpp
         include/renderer_mtl/objc_helper.hpp
+        include/renderer_mtl/texture_decoder.hpp
     )
 
     set(RENDERER_MTL_SOURCE_FILES src/core/renderer_mtl/metal_cpp_impl.cpp
         src/core/renderer_mtl/renderer_mtl.cpp
         src/core/renderer_mtl/mtl_texture.cpp
-        src/core/renderer_mtl/mtl_etc1.cpp
         src/core/renderer_mtl/mtl_lut_texture.cpp
+        src/core/renderer_mtl/pica_to_mtl.cpp
         src/core/renderer_mtl/objc_helper.mm
+        src/core/renderer_mtl/texture_decoder.cpp
         src/host_shaders/metal_shaders.metal
         src/host_shaders/metal_blit.metal
         #src/host_shaders/metal_copy_to_lut_texture.metal
@@ -610,15 +634,26 @@ if(ENABLE_METAL AND APPLE)
         set(SHADER_SOURCE "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metal")
         set(SHADER_IR "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.ir")
         set(SHADER_METALLIB "${CMAKE_SOURCE_DIR}/src/host_shaders/${SHADER}.metallib")
+
+        # MacOS, iOS and the iOS simulator all use different compilation options for shaders
+        set(MetalSDK "macosx")
+        if(IOS)
+            if (IOS_SIMULATOR_BUILD)
+                set(MetalSDK "iphonesimulator")
+            else()
+                set(MetalSDK "iphoneos")
+            endif()
+        endif()
+
         # TODO: only include sources in debug builds
         add_custom_command(
             OUTPUT ${SHADER_IR}
-            COMMAND xcrun -sdk macosx metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
+            COMMAND xcrun -sdk ${MetalSDK} metal -gline-tables-only -frecord-sources -o ${SHADER_IR} -c ${SHADER_SOURCE}
             DEPENDS ${SHADER_SOURCE}
             VERBATIM)
         add_custom_command(
             OUTPUT ${SHADER_METALLIB}
-            COMMAND xcrun -sdk macosx metallib -o ${SHADER_METALLIB} ${SHADER_IR}
+            COMMAND xcrun -sdk ${MetalSDK} metallib -o ${SHADER_METALLIB} ${SHADER_IR}
             DEPENDS ${SHADER_IR}
             VERBATIM)
         set(RENDERER_MTL_HOST_SHADERS_SOURCES ${RENDERER_MTL_HOST_SHADERS_SOURCES} ${SHADER_METALLIB})
@@ -647,7 +682,7 @@ if(ENABLE_METAL AND APPLE)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
     target_include_directories(AlberCore PRIVATE third_party/metal-cpp)
     # TODO: check if all of them are needed
-    target_link_libraries(AlberCore PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
+    target_link_libraries(AlberCore PUBLIC "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
 endif()
 
 source_group("Header Files\\Core" FILES ${HEADER_FILES})
@@ -656,8 +691,8 @@ set(ALL_SOURCES ${SOURCE_FILES} ${FS_SOURCE_FILES} ${CRYPTO_SOURCE_FILES} ${KERN
     ${AUDIO_SOURCE_FILES} ${HEADER_FILES} ${FRONTEND_HEADER_FILES})
 target_sources(AlberCore PRIVATE ${ALL_SOURCES})
 
-target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts teakra fdk-aac)
-target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt)
+target_link_libraries(AlberCore PRIVATE dynarmic glad resources_console_fonts fdk-aac)
+target_link_libraries(AlberCore PUBLIC glad capstone fmt::fmt teakra)
 
 if(ENABLE_DISCORD_RPC AND NOT ANDROID)
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_DISCORD_RPC=1")
@@ -703,10 +738,13 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
+            src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp src/panda_qt/dsp_debugger.cpp src/panda_qt/input_window.cpp
         )
         set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
+            include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/dsp_debugger.hpp
+            include/panda_qt/disabled_widget_overlay.hpp include/panda_qt/input_window.hpp
         )
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
@@ -753,11 +791,15 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
                 docs/img/rsob_icon.png docs/img/rstarstruck_icon.png docs/img/rpog_icon.png docs/img/rsyn_icon.png
                 docs/img/settings_icon.png docs/img/display_icon.png docs/img/speaker_icon.png
                 docs/img/sparkling_icon.png docs/img/battery_icon.png docs/img/sdcard_icon.png
-                docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png
+                docs/img/rnap_icon.png docs/img/rcow_icon.png docs/img/skyemu_icon.png docs/img/runpog_icon.png
+                docs/img/gamepad_icon.png
         )
 
         # Translation files in Qt's .ts format. Will be converted into binary files and embedded into the executable
-        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts docs/translations/nl.ts)
+        set(TRANSLATIONS_TS docs/translations/en.ts docs/translations/el.ts docs/translations/es.ts docs/translations/pt_br.ts docs/translations/nl.ts
+                            docs/translations/sv.ts
+	)
+
         set_source_files_properties(${TRANSLATIONS_TS} PROPERTIES OUTPUT_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/translations")
         qt_add_translation(TRANSLATIONS_QM ${TRANSLATIONS_TS})
 
@@ -782,7 +824,13 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)
     include_directories(third_party/hydra_core/include)
-    add_library(Alber SHARED src/hydra_core.cpp)
+
+    set(SHARED_SOURCE_FILES src/hydra_core.cpp)
+    if(IOS)
+        set(SHARED_SOURCE_FILES ${SHARED_SOURCE_FILES} src/ios_driver.mm)
+    endif()
+
+    add_library(Alber SHARED ${SHARED_SOURCE_FILES})
     target_link_libraries(Alber PUBLIC AlberCore)
 elseif(BUILD_LIBRETRO_CORE)
     include_directories(third_party/libretro/include)

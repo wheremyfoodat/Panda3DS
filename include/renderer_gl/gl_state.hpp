@@ -35,7 +35,7 @@ struct GLStateManager {
 	bool depthMask;
 
 	float clearRed, clearBlue, clearGreen, clearAlpha;
-	
+
 	GLuint stencilMask;
 	GLuint boundVAO;
 	GLuint currentProgram;
@@ -241,13 +241,12 @@ struct GLStateManager {
 	void setBlendFunc(GLenum sourceRGB, GLenum destRGB, GLenum sourceAlpha, GLenum destAlpha) {
 		if (blendFuncSourceRGB != sourceRGB || blendFuncDestRGB != destRGB || blendFuncSourceAlpha != sourceAlpha ||
 			blendFuncDestAlpha != destAlpha) {
-
 			blendFuncSourceRGB = sourceRGB;
 			blendFuncDestRGB = destRGB;
 			blendFuncSourceAlpha = sourceAlpha;
 			blendFuncDestAlpha = destAlpha;
 
-			glBlendFuncSeparate(sourceRGB, destRGB,sourceAlpha, destAlpha);
+			glBlendFuncSeparate(sourceRGB, destRGB, sourceAlpha, destAlpha);
 		}
 	}
 

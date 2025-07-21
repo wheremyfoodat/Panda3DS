@@ -42,11 +42,13 @@ class RendererMTL final : public Renderer {
 	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override {}
 #endif
 
-  private:
-	CA::MetalLayer* metalLayer;
+	virtual void setMTKLayer(void* layer) override;
 
-	MTL::Device* device;
-	MTL::CommandQueue* commandQueue;
+  private:
+	CA::MetalLayer* metalLayer = nullptr;
+
+	MTL::Device* device = nullptr;
+	MTL::CommandQueue* commandQueue = nullptr;
 
 	Metal::CommandEncoder commandEncoder;
 
@@ -86,6 +88,20 @@ class RendererMTL final : public Renderer {
 	MTL::Texture* lastColorTexture = nullptr;
 	MTL::Texture* lastDepthTexture = nullptr;
 
+	// Information about the final 3DS screen -> Window blit, accounting for things like scaling and shifting the output based on
+	// the window's dimensions. Updated whenever the screen size or layout changes.
+	struct {
+		float topScreenX = 0;
+		float topScreenY = 0;
+		float topScreenWidth = 400;
+		float topScreenHeight = 240;
+
+		float bottomScreenX = 40;
+		float bottomScreenY = 240;
+		float bottomScreenWidth = 320;
+		float bottomScreenHeight = 240;
+	} blitInfo;
+
 	// Debug
 	std::string nextRenderPassName;
 
@@ -98,6 +114,7 @@ class RendererMTL final : public Renderer {
 	void endRenderPass() {
 		if (renderCommandEncoder) {
 			renderCommandEncoder->endEncoding();
+			renderCommandEncoder->release();
 			renderCommandEncoder = nullptr;
 		}
 	}

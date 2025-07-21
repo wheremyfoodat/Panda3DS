@@ -284,7 +284,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 
 		case VertexShaderOpDescriptorIndex: {
-			shaderUnit.vs.setOpDescriptorIndex(value);
+			shaderUnit.vs.setOpDescriptorIndex(newValue);
 			break;
 		}
 
@@ -301,7 +301,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		}
 
 		case VertexBoolUniform: {
-			shaderUnit.vs.uploadBoolUniform(value & 0xffff);
+			shaderUnit.vs.uploadBoolUniform(newValue & 0xffff);
 			break;
 		}
 
@@ -309,7 +309,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		case VertexIntUniform1:
 		case VertexIntUniform2:
 		case VertexIntUniform3: {
-			shaderUnit.vs.uploadIntUniform(index - VertexIntUniform0, value);
+			shaderUnit.vs.uploadIntUniform(index - VertexIntUniform0, newValue);
 			break;
 		}
 
@@ -326,7 +326,7 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 		}
 
 		case VertexShaderEntrypoint: {
-			shaderUnit.vs.entrypoint = value & 0xffff;
+			shaderUnit.vs.entrypoint = newValue & 0xffff;
 			break;
 		}
 
@@ -336,13 +336,13 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
 			break;
 		*/
 
-		case VertexShaderTransferIndex: shaderUnit.vs.setBufferIndex(value); break;
+		case VertexShaderTransferIndex: shaderUnit.vs.setBufferIndex(newValue); break;
 
 		// Command lists can write to the command processor registers and change the command list stream
 		// Several games are known to do this, including New Super Mario Bros 2 and Super Mario 3D Land
 		case CmdBufTrigger0:
 		case CmdBufTrigger1: {
-			if (value != 0) {                              // A non-zero value triggers command list processing
+			if (newValue != 0) {                           // A non-zero value triggers command list processing
 				int bufferIndex = index - CmdBufTrigger0;  // Index of the command buffer to execute (0 or 1)
 				u32 addr = (regs[CmdBufAddr0 + bufferIndex] & 0xfffffff) << 3;
 				u32 size = (regs[CmdBufSize0 + bufferIndex] & 0xfffff) << 3;
