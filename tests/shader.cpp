@@ -1,3 +1,4 @@
+#include <fmt/format.h>
 #include <nihstro/inline_assembly.h>
 
 #include <PICA/dynapica/shader_rec.hpp>
@@ -106,7 +107,7 @@ namespace Catch {
 	template <>
 	struct StringMaker<std::array<Floats::f24, 4>> {
 		static std::string convert(std::array<Floats::f24, 4> value) {
-			return std::format("({}, {}, {}, {})", value[0].toFloat32(), value[1].toFloat32(), value[2].toFloat32(), value[3].toFloat32());
+			return fmt::format("({}, {}, {}, {})", value[0].toFloat32(), value[1].toFloat32(), value[2].toFloat32(), value[3].toFloat32());
 		}
 	};
 }  // namespace Catch
@@ -292,8 +293,8 @@ SHADER_TEST_CASE("FLR", "[shader][vertex]") {
 SHADER_TEST_CASE("Uniform Read", "[shader][vertex][uniform]") {
 	const auto constant0 = nihstro::SourceRegister::MakeFloat(0);
 	auto shader = TestType::assembleTest({
-		{nihstro::OpCode::Id::MOVA, nihstro::DestRegister{}, "x", input0, "x", nihstro::SourceRegister{}, "", nihstro::InlineAsm::RelativeAddress::A1
-		},
+		{nihstro::OpCode::Id::MOVA, nihstro::DestRegister{}, "x", input0, "x", nihstro::SourceRegister{}, "",
+		 nihstro::InlineAsm::RelativeAddress::A1},
 		{nihstro::OpCode::Id::MOV, output0, "xyzw", constant0, "xyzw", nihstro::SourceRegister{}, "", nihstro::InlineAsm::RelativeAddress::A1},
 		{nihstro::OpCode::Id::END},
 	});
@@ -322,8 +323,8 @@ SHADER_TEST_CASE("Address Register Offset", "[video_core][shader][shader_jit]") 
 	const auto constant40 = nihstro::SourceRegister::MakeFloat(40);
 	auto shader = TestType::assembleTest({
 		// mova a0.x, sh_input.x
-		{nihstro::OpCode::Id::MOVA, nihstro::DestRegister{}, "x", input0, "x", nihstro::SourceRegister{}, "", nihstro::InlineAsm::RelativeAddress::A1
-		},
+		{nihstro::OpCode::Id::MOVA, nihstro::DestRegister{}, "x", input0, "x", nihstro::SourceRegister{}, "",
+		 nihstro::InlineAsm::RelativeAddress::A1},
 		// mov sh_output.xyzw, c40[a0.x].xyzw
 		{nihstro::OpCode::Id::MOV, output0, "xyzw", constant40, "xyzw", nihstro::SourceRegister{}, "", nihstro::InlineAsm::RelativeAddress::A1},
 		{nihstro::OpCode::Id::END},
