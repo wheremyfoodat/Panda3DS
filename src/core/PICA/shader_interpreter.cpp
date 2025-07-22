@@ -124,16 +124,24 @@ u8 PICAShader::getIndexedSource(u32 source, u32 index) {
 	switch (index) {
 		// No offset applied
 		case 0: [[likely]] return u8(source);
-		// Address register
+
+		// An address register (if index == 1 or 2) or the loop counter (if index == 3) is used as the offset
+		// There's several edge cases to handle, which have been verified with our shader tests and on a real 3DS
 		case 1:
-		case 2: {
-			const s32 offset = addrRegister[index - 1];
+		case 2:
+		case 3: {
+			s32 offset = (index == 3) ? s32(loopCounter) : addrRegister[index - 1];
 			if (offset < -128 || offset > 127) [[unlikely]] {
-				return u8(source);
+				offset = 0;
 			}
-			return u8(source + offset);
+
+			// Subtract 0x20 to get the index of the float uniform. Add the offset to it, then mask the sum with 0x7F like the PICA does
+			// After that, add 0x20 again to undo the initial subtraction
+			u8 floatUniformIndex = u8(((source - 0x20) + offset) & 0x7F);
+			floatUniformIndex += 0x20;
+
+			return floatUniformIndex;
 		}
-		case 3: return u8(source + loopCounter);
 	}
 
 	Helpers::panic("Reached unreachable path in PICAShader::getIndexedSource");
