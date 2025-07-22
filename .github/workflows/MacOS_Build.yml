@@ -41,7 +41,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
       
     - name: Run shader tests
-      run: ./${{github.workspace}}/build/AlberTests
+      run: ${{github.workspace}}/build/AlberTests
       
     - name: Install bundle dependencies
       run: brew install dylibbundler imagemagick
