@@ -2,25 +2,31 @@
 # For Plist buddy
 PATH="$PATH:/usr/libexec"
 
-
 # Construct the app iconset.
 mkdir alber.iconset
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 72 -resize 16x16 alber.iconset/icon_16x16.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 144 -resize 32x32 alber.iconset/icon_16x16@2x.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 72 -resize 32x32 alber.iconset/icon_32x32.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 144 -resize 64x64 alber.iconset/icon_32x32@2x.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 72 -resize 128x128 alber.iconset/icon_128x128.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 144 -resize 256x256 alber.iconset/icon_128x128@2x.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 72 -resize 256x256 alber.iconset/icon_256x256.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 144 -resize 512x512 alber.iconset/icon_256x256@2x.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 72 -resize 512x512 alber.iconset/icon_512x512.png
-convert docs/img/mac_icon.ico -alpha on -background none -units PixelsPerInch -density 144 -resize 1024x1024 alber.iconset/icon_512x512@2x.png
+
+# Create a mask for rounding our icon. We don't want it to be square, as most MacOS icons are rounded
+convert -size 1024x1024 xc:none -draw "roundrectangle 0,0,1024,1024,220,220" rounded_mask.png
+convert docs/img/mac_icon.ico -alpha on -background none -resize 1024x1024 PNG32:temp.png
+# Apply the mask to our icon
+convert temp.png rounded_mask.png -compose DstIn -composite temp.png
+
+convert temp.png -resize 16x16    alber.iconset/icon_16x16.png
+convert temp.png -resize 32x32    alber.iconset/icon_16x16@2x.png
+convert temp.png -resize 32x32    alber.iconset/icon_32x32.png
+convert temp.png -resize 64x64    alber.iconset/icon_32x32@2x.png
+convert temp.png -resize 128x128  alber.iconset/icon_128x128.png
+convert temp.png -resize 256x256  alber.iconset/icon_128x128@2x.png
+convert temp.png -resize 256x256  alber.iconset/icon_256x256.png
+convert temp.png -resize 512x512  alber.iconset/icon_256x256@2x.png
+convert temp.png -resize 512x512  alber.iconset/icon_512x512.png
+convert temp.png -resize 1024x1024 alber.iconset/icon_512x512@2x.png
 iconutil --convert icns alber.iconset
+rm rounded_mask.png temp.png
 
 # Set up the .app directory
 mkdir -p Alber.app/Contents/MacOS/Libraries
 mkdir Alber.app/Contents/Resources
-
 
 # Copy binary into App
 cp ./build/Alber Alber.app/Contents/MacOS/Alber
