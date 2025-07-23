@@ -32,7 +32,7 @@ jobs:
       - name: Clone and compile 3ds-examples
         run: |
           git clone --recursive https://github.com/devkitPro/3ds-examples tests/3ds-examples
-          find tests/3ds-examples/3ds-examples -type f -name Makefile -execdir make \;
+          find tests/3ds-examples -type f -name Makefile -execdir make \;
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
