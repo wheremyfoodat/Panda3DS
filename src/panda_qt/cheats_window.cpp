@@ -147,7 +147,7 @@ void CheatEditDialog::accepted() {
 			}
 
 			// Delete the CheatEditDialog when the main thread is done using it
-			this->deleteLater();
+			QObject::deleteLater();
 		});
 	});
 }
@@ -160,7 +160,7 @@ void CheatEditDialog::rejected() {
 	}
 
 	// We have to manually memory-manage the CheatEditDialog object since it's accessed via multiple threads
-	this->deleteLater();
+	QObject::deleteLater();
 }
 
 CheatsWindow::CheatsWindow(Emulator* emu, const std::filesystem::path& cheatPath, QWidget* parent)
