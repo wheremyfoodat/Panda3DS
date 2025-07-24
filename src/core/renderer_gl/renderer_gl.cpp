@@ -2,6 +2,7 @@
 
 #include <stb_image_write.h>
 
+#include <algorithm>
 #include <bit>
 #include <cmrc/cmrc.hpp>
 
@@ -178,6 +179,10 @@ void RendererGL::initGraphicsContextInternal() {
 	// Populate our driver info structure
 	driverInfo.supportsExtFbFetch = (GLAD_GL_EXT_shader_framebuffer_fetch != 0);
 	driverInfo.supportsArmFbFetch = (GLAD_GL_ARM_shader_framebuffer_fetch != 0);
+
+	// UBOs have an alignment requirement we have to respect
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, reinterpret_cast<GLint*>(&driverInfo.uboAlignment));
+	driverInfo.uboAlignment = std::max<GLuint>(driverInfo.uboAlignment, 16);
 
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
@@ -1020,7 +1025,7 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	// Upload fragment uniforms to UBO
 	shadergenFragmentUBO->Bind();
-	auto mapRes = shadergenFragmentUBO->Map(4, sizeof(PICA::FragmentUniforms));
+	auto mapRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
 	std::memcpy(mapRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
 	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
 
@@ -1074,9 +1079,10 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 			generatedVertexShader = &(*shader);
 			hwShaderUniformUBO->Bind();
 
+			// Upload shader uniforms to our UBO
 			if (shaderUnit.vs.uniformsDirty) {
 				shaderUnit.vs.uniformsDirty = false;
-				auto mapRes = hwShaderUniformUBO->Map(4, PICAShader::totalUniformSize());
+				auto mapRes = hwShaderUniformUBO->Map(driverInfo.uboAlignment, PICAShader::totalUniformSize());
 				std::memcpy(mapRes.pointer, shaderUnit.vs.getUniformPointer(), PICAShader::totalUniformSize());
 				hwShaderUniformUBO->Unmap(PICAShader::totalUniformSize());
 			}
