@@ -935,10 +935,15 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 			glUniformBlockBinding(program.handle(), vertexUBOIndex, vsUBOBlockBinding);
 		}
 	}
-	glBindBufferBase(GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId());
+
+	glBindBufferRange(
+		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), shadergenFragmentUBOOffset, sizeof(PICA::FragmentUniforms)
+	);
 
 	if (usingAcceleratedShader) {
-		glBindBufferBase(GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId());
+		glBindBufferRange(
+			GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId(), hwShaderUniformUBOOffset, PICAShader::totalUniformSize()
+		);
 	}
 
 	// Upload uniform data to our shader's UBO
@@ -1025,9 +1030,11 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	// Upload fragment uniforms to UBO
 	shadergenFragmentUBO->Bind();
-	auto mapRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
-	std::memcpy(mapRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
+	auto uboRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
+
+	std::memcpy(uboRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
 	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
+	shadergenFragmentUBOOffset = uboRes.buffer_offset;
 
 	return program;
 }
@@ -1082,9 +1089,11 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 			// Upload shader uniforms to our UBO
 			if (shaderUnit.vs.uniformsDirty) {
 				shaderUnit.vs.uniformsDirty = false;
-				auto mapRes = hwShaderUniformUBO->Map(driverInfo.uboAlignment, PICAShader::totalUniformSize());
-				std::memcpy(mapRes.pointer, shaderUnit.vs.getUniformPointer(), PICAShader::totalUniformSize());
+				auto uboRes = hwShaderUniformUBO->Map(driverInfo.uboAlignment, PICAShader::totalUniformSize());
+				std::memcpy(uboRes.pointer, shaderUnit.vs.getUniformPointer(), PICAShader::totalUniformSize());
 				hwShaderUniformUBO->Unmap(PICAShader::totalUniformSize());
+
+				hwShaderUniformUBOOffset = uboRes.buffer_offset;
 			}
 
 			performIndexedRender = accel->indexed;
