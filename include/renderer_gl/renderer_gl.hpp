@@ -101,8 +101,7 @@ class RendererGL final : public Renderer {
 	std::unique_ptr<StreamBuffer> hwVertexBuffer;
 	std::unique_ptr<StreamBuffer> hwIndexBuffer;
 
-	// Current offsets for our UBOs
-	u32 shadergenFragmentUBOOffset = 0;
+	// Current offset for our hw shader uniform UBO
 	u32 hwShaderUniformUBOOffset = 0;
 
 	// Cache of fixed attribute values so that we don't do any duplicate updates

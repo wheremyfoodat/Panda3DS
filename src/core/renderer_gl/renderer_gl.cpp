@@ -1021,14 +1021,12 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	// Upload fragment uniforms to UBO
 	shadergenFragmentUBO->Bind();
 	auto uboRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
-
 	std::memcpy(uboRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
 	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
-	shadergenFragmentUBOOffset = uboRes.buffer_offset;
 
 	// Bind our UBOs
 	glBindBufferRange(
-		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), shadergenFragmentUBOOffset, sizeof(PICA::FragmentUniforms)
+		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), uboRes.buffer_offset, sizeof(PICA::FragmentUniforms)
 	);
 
 	if (usingAcceleratedShader) {
