@@ -11,10 +11,10 @@
 #include "PICA/pica_hash.hpp"
 #include "PICA/pica_simd.hpp"
 #include "PICA/regs.hpp"
-#include "screen_layout.hpp"
 #include "PICA/shader_decompiler.hpp"
 #include "config.hpp"
 #include "math_util.hpp"
+#include "screen_layout.hpp"
 
 CMRC_DECLARE(RendererGL);
 
@@ -74,16 +74,8 @@ void RendererGL::initGraphicsContextInternal() {
 
 	hwIndexBuffer = StreamBuffer::Create(GL_ELEMENT_ARRAY_BUFFER, hwIndexBufferSize);
 	hwVertexBuffer = StreamBuffer::Create(GL_ARRAY_BUFFER, hwVertexBufferSize);
-
-	// Allocate memory for the shadergen fragment uniform UBO
-	glGenBuffers(1, &shadergenFragmentUBO);
-	gl.bindUBO(shadergenFragmentUBO);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
-
-	// Allocate memory for the accelerated vertex shader uniform UBO
-	glGenBuffers(1, &hwShaderUniformUBO);
-	gl.bindUBO(hwShaderUniformUBO);
-	glBufferData(GL_UNIFORM_BUFFER, PICAShader::totalUniformSize(), nullptr, GL_DYNAMIC_DRAW);
+	hwShaderUniformUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, 1_MB);
+	shadergenFragmentUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, 1_MB);
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize * 2, GL_STREAM_DRAW);
 	vbo.bind();
@@ -936,9 +928,10 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 			glUniformBlockBinding(program.handle(), vertexUBOIndex, vsUBOBlockBinding);
 		}
 	}
-	glBindBufferBase(GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId());
+
 	if (usingAcceleratedShader) {
-		glBindBufferBase(GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO);
+		glBindBufferBase(GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId());
 	}
 
 	// Upload uniform data to our shader's UBO
@@ -1023,8 +1016,11 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		}
 	}
 
-	gl.bindUBO(shadergenFragmentUBO);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
+	// Upload fragment uniforms to UBO
+	shadergenFragmentUBO->Bind();
+	auto mapRes = shadergenFragmentUBO->Map(4, sizeof(PICA::FragmentUniforms));
+	std::memcpy(mapRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
+	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
 
 	return program;
 }
@@ -1074,11 +1070,13 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 			usingAcceleratedShader = false;
 		} else {
 			generatedVertexShader = &(*shader);
-			gl.bindUBO(hwShaderUniformUBO);
+			hwShaderUniformUBO->Bind();
 
 			if (shaderUnit.vs.uniformsDirty) {
 				shaderUnit.vs.uniformsDirty = false;
-				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
+				auto mapRes = hwShaderUniformUBO->Map(4, PICAShader::totalUniformSize());
+				std::memcpy(mapRes.pointer, shaderUnit.vs.getUniformPointer(), PICAShader::totalUniformSize());
+				hwShaderUniformUBO->Unmap(PICAShader::totalUniformSize());
 			}
 
 			performIndexedRender = accel->indexed;

@@ -92,11 +92,12 @@ class RendererGL final : public Renderer {
 	// The "default" vertex shader to use when using specialized shaders but not PICA vertex shader -> GLSL recompilation
 	// We can compile this once and then link it with all other generated fragment shaders
 	OpenGL::Shader defaultShadergenVs;
-	GLuint shadergenFragmentUBO;
-	// UBO for uploading the PICA uniforms when using hw shaders
-	GLuint hwShaderUniformUBO;
 
 	using StreamBuffer = OpenGLStreamBuffer;
+
+	std::unique_ptr<StreamBuffer> shadergenFragmentUBO;
+	// UBO for uploading the PICA uniforms when using hw shaders
+	std::unique_ptr<StreamBuffer> hwShaderUniformUBO;
 	std::unique_ptr<StreamBuffer> hwVertexBuffer;
 	std::unique_ptr<StreamBuffer> hwIndexBuffer;
 
