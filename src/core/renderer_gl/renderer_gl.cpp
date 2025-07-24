@@ -71,11 +71,13 @@ void RendererGL::initGraphicsContextInternal() {
 	// Create stream buffers for vertex, index and uniform buffers
 	static constexpr usize hwIndexBufferSize = 2_MB;
 	static constexpr usize hwVertexBufferSize = 16_MB;
+	static constexpr usize hwShaderUniformUBOSize = 4_MB;
+	static constexpr usize shadergenFragmentUBOSize = 4_MB;
 
 	hwIndexBuffer = StreamBuffer::Create(GL_ELEMENT_ARRAY_BUFFER, hwIndexBufferSize);
 	hwVertexBuffer = StreamBuffer::Create(GL_ARRAY_BUFFER, hwVertexBufferSize);
-	hwShaderUniformUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, 1_MB);
-	shadergenFragmentUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, 1_MB);
+	hwShaderUniformUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, hwShaderUniformUBOSize);
+	shadergenFragmentUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, shadergenFragmentUBOSize);
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize * 2, GL_STREAM_DRAW);
 	vbo.bind();
