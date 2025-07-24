@@ -936,16 +936,6 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		}
 	}
 
-	glBindBufferRange(
-		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), shadergenFragmentUBOOffset, sizeof(PICA::FragmentUniforms)
-	);
-
-	if (usingAcceleratedShader) {
-		glBindBufferRange(
-			GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId(), hwShaderUniformUBOOffset, PICAShader::totalUniformSize()
-		);
-	}
-
 	// Upload uniform data to our shader's UBO
 	PICA::FragmentUniforms uniforms;
 	uniforms.alphaReference = Helpers::getBits<8, 8>(regs[InternalRegs::AlphaTestConfig]);
@@ -1035,6 +1025,17 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 	std::memcpy(uboRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
 	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
 	shadergenFragmentUBOOffset = uboRes.buffer_offset;
+
+	// Bind our UBOs
+	glBindBufferRange(
+		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), shadergenFragmentUBOOffset, sizeof(PICA::FragmentUniforms)
+	);
+
+	if (usingAcceleratedShader) {
+		glBindBufferRange(
+			GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId(), hwShaderUniformUBOOffset, PICAShader::totalUniformSize()
+		);
+	}
 
 	return program;
 }
