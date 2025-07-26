@@ -191,7 +191,7 @@ class RendererGL final : public Renderer {
 
 	void reset() override;
 	void display() override;                                                              // Display the 3DS screen contents to the window
-	void initGraphicsContext(SDL_Window* window) override;                                // Initialize graphics context
+	void initGraphicsContext(void* context) override;                                     // Initialize graphics context
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
@@ -210,10 +210,6 @@ class RendererGL final : public Renderer {
 	void setFBO(uint handle) { screenFramebuffer.m_handle = handle; }
 	void resetStateManager() { gl.reset(); }
 	void initUbershader(OpenGL::Program& program);
-
-#ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override { initGraphicsContextInternal(); }
-#endif
 
 	// Take a screenshot of the screen and store it in a file
 	void screenshot(const std::string& name) override;

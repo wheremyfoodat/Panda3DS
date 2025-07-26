@@ -173,7 +173,8 @@ std::tuple<vk::UniquePipeline, vk::UniquePipelineLayout> createGraphicsPipeline(
 	vk::PipelineDynamicStateCreateInfo dynamicState = {};
 	static vk::DynamicState dynamicStates[] = {// The viewport and scissor of the framebuffer will be dynamic at
 											   // run-time
-											   vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+											   vk::DynamicState::eViewport, vk::DynamicState::eScissor
+	};
 	dynamicState.dynamicStateCount = std::size(dynamicStates);
 	dynamicState.pDynamicStates = dynamicStates;
 
@@ -469,7 +470,8 @@ vk::RenderPass RendererVK::getRenderPass(vk::Format colorFormat, std::optional<v
 		vk::SubpassDependency(
 			0, VK_SUBPASS_EXTERNAL, vk::PipelineStageFlagBits::eAllGraphics, vk::PipelineStageFlagBits::eAllGraphics,
 			vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eColorAttachmentWrite, vk::DependencyFlagBits::eByRegion
-		)};
+		)
+	};
 
 	renderPassInfo.setDependencies(subpassDependencies);
 
@@ -892,8 +894,8 @@ using VulkanDynamicLoader = vk::detail::DynamicLoader;
 using VulkanDynamicLoader = vk::DynamicLoader;
 #endif
 
-void RendererVK::initGraphicsContext(SDL_Window* window) {
-	targetWindow = window;
+void RendererVK::initGraphicsContext(void* windowPointer) {
+	targetWindow = (SDL_Window*)windowPointer;
 	// Resolve all instance function pointers
 	static VulkanDynamicLoader dl;
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
@@ -978,8 +980,8 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 	}
 
 	// Create surface
-	if (window) {
-		if (VkSurfaceKHR newSurface; SDL_Vulkan_CreateSurface(window, instance.get(), &newSurface)) {
+	if (targetWindow) {
+		if (VkSurfaceKHR newSurface; SDL_Vulkan_CreateSurface(targetWindow, instance.get(), &newSurface)) {
 			swapchainSurface = newSurface;
 		} else {
 			Helpers::warn("Error creating Vulkan surface");
@@ -1127,7 +1129,7 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 		vk::Extent2D swapchainExtent;
 		{
 			int windowWidth, windowHeight;
-			SDL_Vulkan_GetDrawableSize(window, &windowWidth, &windowHeight);
+			SDL_Vulkan_GetDrawableSize(targetWindow, &windowWidth, &windowHeight);
 			swapchainExtent.width = windowWidth;
 			swapchainExtent.height = windowHeight;
 		}
@@ -1275,7 +1277,8 @@ void RendererVK::initGraphicsContext(SDL_Window* window) {
 
 	static vk::DescriptorSetLayoutBinding displayShaderLayout[] = {
 		{// Just a singular texture slot
-		 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment},
+		 0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment
+		},
 	};
 
 	if (auto createResult = Vulkan::DescriptorUpdateBatch::create(device.get()); createResult.has_value()) {
@@ -1407,7 +1410,8 @@ void RendererVK::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 
 		static vk::ImageSubresourceRange depthStencilRanges[2] = {
 			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1),
-			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1)};
+			vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eStencil, 0, 1, 0, 1)
+		};
 
 		// Clear RenderTarget
 		getCurrentCommandBuffer().clearDepthStencilImage(

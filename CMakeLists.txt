@@ -675,7 +675,7 @@ if(ENABLE_METAL AND APPLE)
 
     target_sources(AlberCore PRIVATE ${RENDERER_MTL_SOURCE_FILES})
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_METAL=1")
-    target_include_directories(AlberCore PRIVATE third_party/metal-cpp)
+    target_include_directories(AlberCore PUBLIC third_party/metal-cpp)
     # TODO: check if all of them are needed
     target_link_libraries(AlberCore PUBLIC "-framework Metal" "-framework Foundation" "-framework QuartzCore" resources_renderer_mtl)
 endif()
@@ -730,17 +730,24 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         option(GENERATE_QT_TRANSLATION "Generate Qt translation file" OFF)
         set(QT_LANGUAGES docs/translations)
 
-        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/screen.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
+        set(FRONTEND_SOURCE_FILES src/panda_qt/main.cpp src/panda_qt/main_window.cpp src/panda_qt/about_window.cpp
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
             src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp src/panda_qt/dsp_debugger.cpp src/panda_qt/input_window.cpp
+            src/panda_qt/screen/screen.cpp src/panda_qt/screen/screen_gl.cpp src/panda_qt/screen/screen_mtl.cpp
         )
-        set(FRONTEND_HEADER_FILES include/panda_qt/screen.hpp include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
+
+        set(FRONTEND_HEADER_FILES include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
             include/panda_qt/config_window.hpp include/panda_qt/text_editor.hpp include/panda_qt/cheats_window.hpp
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
             include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/dsp_debugger.hpp
-            include/panda_qt/disabled_widget_overlay.hpp include/panda_qt/input_window.hpp
+            include/panda_qt/disabled_widget_overlay.hpp include/panda_qt/input_window.hpp include/panda_qt/screen/screen.hpp
+            include/panda_qt/screen/screen_gl.hpp include/panda_qt/screen/screen_mtl.hpp
         )
+
+        if (APPLE AND ENABLE_METAL)
+            set(FRONTEND_SOURCE_FILES ${FRONTEND_SOURCE_FILES} src/panda_qt/screen/metal_context.mm)
+        endif()
 
         source_group("Source Files\\Qt" FILES ${FRONTEND_SOURCE_FILES})
         source_group("Header Files\\Qt" FILES ${FRONTEND_HEADER_FILES})

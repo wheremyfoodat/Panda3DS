@@ -106,12 +106,8 @@ class Emulator {
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 
-#ifdef PANDA3DS_FRONTEND_QT
-	// For passing the GL context from Qt to the renderer
-	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
-#else
-	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
-#endif
+	// For passing the SDL Window, GL context, etc from the frontend to the renderer
+	void initGraphicsContext(void* context) { gpu.initGraphicsContext(context); }
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }

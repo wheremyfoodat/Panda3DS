@@ -10,8 +10,8 @@
 
 #include "PICA/gpu.hpp"
 #include "PICA/pica_hash.hpp"
-#include "screen_layout.hpp"
 #include "SDL_metal.h"
+#include "screen_layout.hpp"
 
 using namespace PICA;
 
@@ -57,9 +57,7 @@ void RendererMTL::reset() {
 	colorRenderTargetCache.reset();
 }
 
-void RendererMTL::setMTKLayer(void* layer) {
-	metalLayer = (CA::MetalLayer*)layer;
-}
+void RendererMTL::setMTKLayer(void* layer) { metalLayer = (CA::MetalLayer*)layer; }
 
 void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
@@ -151,13 +149,13 @@ void RendererMTL::display() {
 	drawable->release();
 }
 
-void RendererMTL::initGraphicsContext(SDL_Window* window) {
-	// On iOS, the SwiftUI side handles the MetalLayer
-#ifdef PANDA3DS_IOS
+void RendererMTL::initGraphicsContext(void* window) {
+	// On Qt and IOS, the frontend handles the MetalLayer
+#if defined(PANDA3DS_FRONTEND_QT) || defined(PANDA3DS_IOS)
 	device = MTL::CreateSystemDefaultDevice();
 #else
 	// TODO: what should be the type of the view?
-	void* view = SDL_Metal_CreateView(window);
+	void* view = SDL_Metal_CreateView((SDL_Window*)window);
 	metalLayer = (CA::MetalLayer*)SDL_Metal_GetLayer(view);
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
