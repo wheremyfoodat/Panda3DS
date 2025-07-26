@@ -9,6 +9,8 @@
 
 // OpenGL widget for drawing the 3DS screen
 class ScreenWidget : public QWidget {
+	enum class API { OpenGL, Metal, Vulkan };
+
 	Q_OBJECT
 
   public:
@@ -20,6 +22,7 @@ class ScreenWidget : public QWidget {
 	void resizeSurface(u32 width, u32 height);
 
 	GL::Context* getGLContext() { return glContext.get(); }
+	void* getMTKLayer() { return mtkLayer; }
 
 	// Dimensions of our output surface
 	u32 surfaceWidth = 0;
@@ -29,6 +32,8 @@ class ScreenWidget : public QWidget {
 	// Cached "previous" dimensions, used when resizing our window
 	u32 previousWidth = 0;
 	u32 previousHeight = 0;
+
+	API api = API::OpenGL;
 
 	// Coordinates (x/y/width/height) for the two screens in window space, used for properly handling touchscreen regardless
 	// of layout or resizing
@@ -40,10 +45,18 @@ class ScreenWidget : public QWidget {
 	void reloadScreenLayout(ScreenLayout::Layout newLayout, float newTopScreenSize);
 
   private:
+	// GL context for GL-based renderers
 	std::unique_ptr<GL::Context> glContext = nullptr;
+
+	// CA::MetalLayer for the Metal renderer
+	void* mtkLayer = nullptr;
+
 	ResizeCallback resizeCallback;
 
 	bool createGLContext();
+	bool createMetalContext();
+
+	void resizeMetalView();
 
 	qreal devicePixelRatioFromScreen() const;
 	int scaledWindowWidth() const;

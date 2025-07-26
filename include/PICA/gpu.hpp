@@ -109,11 +109,8 @@ class GPU {
 	void screenshot(const std::string& name) { renderer->screenshot(name); }
 	void deinitGraphicsContext() { renderer->deinitGraphicsContext(); }
 
-#if defined(PANDA3DS_FRONTEND_SDL)
-	void initGraphicsContext(SDL_Window* window) { renderer->initGraphicsContext(window); }
-#elif defined(PANDA3DS_FRONTEND_QT)
+	void initGraphicsContext(void* window) { renderer->initGraphicsContext(window); }
 	void initGraphicsContext(GL::Context* context) { renderer->initGraphicsContext(context); }
-#endif
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();

@@ -31,8 +31,16 @@ ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWi
 	setMouseTracking(true);
 	show();
 
-	if (!createGLContext()) {
-		Helpers::panic("Failed to create GL context for display");
+	if (api == API::OpenGL) {
+		if (!createGLContext()) {
+			Helpers::panic("Failed to create GL context for display");
+		}
+	} else if (api == API::Metal) {
+		if (!createMetalContext()) {
+			Helpers::panic("Failed to create Metal context for display");
+		}
+	} else {
+		Helpers::panic("Unspported api for Qt screen widget");
 	}
 }
 
@@ -47,15 +55,18 @@ void ScreenWidget::resizeEvent(QResizeEvent* event) {
 		this->windowInfo = *windowInfo;
 	}
 
-	reloadScreenCoordinates();
+	if (api == API::Metal) {
+		resizeMetalView();
+	}
 
-	// This will call take care of calling resizeSurface from the emulator thread
+	reloadScreenCoordinates();
+	// This will call take care of calling resizeSurface from the emulator thread, as the GL renderer must resize from the emu thread
 	resizeCallback(surfaceWidth, surfaceHeight);
 }
 
 // Note: This will run on the emulator thread, we don't want any Qt calls happening there.
 void ScreenWidget::resizeSurface(u32 width, u32 height) {
-	if (previousWidth != width || previousHeight != height) {
+	if (api == API::OpenGL && (previousWidth != width || previousHeight != height)) {
 		if (glContext) {
 			glContext->ResizeSurface(width, height);
 		}

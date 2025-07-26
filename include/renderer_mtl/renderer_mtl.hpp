@@ -13,7 +13,6 @@
 #include "mtl_vertex_buffer_cache.hpp"
 #include "renderer.hpp"
 
-
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
 
@@ -30,7 +29,7 @@ class RendererMTL final : public Renderer {
 
 	void reset() override;
 	void display() override;
-	void initGraphicsContext(SDL_Window* window) override;
+	void initGraphicsContext(void* window) override;
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;

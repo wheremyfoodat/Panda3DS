@@ -168,7 +168,8 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		} else if (usingVk) {
 			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
 		} else if (usingMtl) {
-			Helpers::panic("Metal on Qt currently doesn't work, try the SDL frontend instead!");
+			emu->initGraphicsContext((void*)nullptr);
+			emu->getRenderer()->setMTKLayer(screen->getMTKLayer());
 		} else {
 			Helpers::panic("Unsupported graphics backend for Qt frontend!");
 		}
@@ -213,6 +214,8 @@ void MainWindow::emuThreadMainLoop() {
 void MainWindow::swapEmuBuffer() {
 	if (usingGL) {
 		screen->getGLContext()->SwapBuffers();
+	} else if (usingMtl) {
+		// The renderer itself calls presentDrawable to swap buffers on Metal
 	} else {
 		Helpers::panic("[Qt] Don't know how to swap buffers for the current rendering backend :(");
 	}

@@ -191,7 +191,7 @@ class RendererGL final : public Renderer {
 
 	void reset() override;
 	void display() override;                                                              // Display the 3DS screen contents to the window
-	void initGraphicsContext(SDL_Window* window) override;                                // Initialize graphics context
+	void initGraphicsContext(void* window) override;                                      // Initialize graphics context
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;  // Clear a GPU buffer in VRAM
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;  // Perform display transfer
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;

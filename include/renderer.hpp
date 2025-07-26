@@ -69,7 +69,7 @@ class Renderer {
 
 	virtual void reset() = 0;
 	virtual void display() = 0;                                                              // Display the 3DS screen contents to the window
-	virtual void initGraphicsContext(SDL_Window* window) = 0;                                // Initialize graphics context
+	virtual void initGraphicsContext(void* window) = 0;                                      // Initialize graphics context
 	virtual void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) = 0;  // Clear a GPU buffer in VRAM
 	virtual void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) = 0;  // Perform display transfer
 	virtual void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) = 0;
@@ -91,9 +91,9 @@ class Renderer {
 	// Called to notify the core to use OpenGL ES and not desktop GL
 	virtual void setupGLES() {}
 
-	// Only relevant for Metal renderer on iOS
-	// Passes a SwiftUI MTKView's layer (CAMetalLayer) to the renderer
-	virtual void setMTKLayer(void* layer) {};
+	// Used for Metal renderer on Qt and iOS
+	// Passes an NSView's backing layer (CAMetalLayer) to the renderer
+	virtual void setMTKLayer(void* layer) { Helpers::panic("Renderer doesn't support MTK Layer"); };
 
 	// This function is called on every draw call before parsing vertex data.
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between

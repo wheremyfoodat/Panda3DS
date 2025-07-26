@@ -108,9 +108,8 @@ class Emulator {
 
 #ifdef PANDA3DS_FRONTEND_QT
 	// For passing the GL context from Qt to the renderer
-	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
-#else
-	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
+	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(glContext); }
+	void initGraphicsContext(void* window) { gpu.initGraphicsContext(window); }
 #endif
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
