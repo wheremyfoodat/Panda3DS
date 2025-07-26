@@ -110,7 +110,6 @@ class GPU {
 	void deinitGraphicsContext() { renderer->deinitGraphicsContext(); }
 
 	void initGraphicsContext(void* window) { renderer->initGraphicsContext(window); }
-	void initGraphicsContext(GL::Context* context) { renderer->initGraphicsContext(context); }
 
 	void fireDMA(u32 dest, u32 source, u32 size);
 	void reset();

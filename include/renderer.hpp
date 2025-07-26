@@ -101,11 +101,6 @@ class Renderer {
 	// Returns whether this draw is eligible for using hardware-accelerated shaders or if shaders should run on the CPU
 	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) { return false; }
 
-	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
-#ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext(GL::Context* context) { Helpers::panic("Tried to initialize incompatible renderer with GL context"); }
-#endif
-
 	void setFBSize(u32 width, u32 height) {
 		fbSize[0] = width;
 		fbSize[1] = height;

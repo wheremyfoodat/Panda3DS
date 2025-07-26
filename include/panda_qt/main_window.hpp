@@ -136,7 +136,7 @@ class MainWindow : public QMainWindow {
 	void loadKeybindings();
 	void saveKeybindings();
 
-	// Tracks whether we are using an OpenGL-backed renderer or a Vulkan-backed renderer
+	// Tracks what graphics API is backing our renderer
 	bool usingGL = false;
 	bool usingVk = false;
 	bool usingMtl = false;

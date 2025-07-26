@@ -9,14 +9,14 @@
 
 // OpenGL widget for drawing the 3DS screen
 class ScreenWidget : public QWidget {
-	enum class API { OpenGL, Metal, Vulkan };
-
 	Q_OBJECT
 
   public:
 	using ResizeCallback = std::function<void(u32, u32)>;
 
-	ScreenWidget(ResizeCallback resizeCallback, QWidget* parent = nullptr);
+	enum class API { OpenGL, Metal, Vulkan };
+
+	ScreenWidget(API api, ResizeCallback resizeCallback, QWidget* parent = nullptr);
 	void resizeEvent(QResizeEvent* event) override;
 	// Called by the emulator thread for resizing the actual GL surface, since the emulator thread owns the GL context
 	void resizeSurface(u32 width, u32 height);

@@ -37,10 +37,6 @@ class RendererMTL final : public Renderer {
 	void screenshot(const std::string& name) override;
 	void deinitGraphicsContext() override;
 
-#ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override {}
-#endif
-
 	virtual void setMTKLayer(void* layer) override;
 
   private:

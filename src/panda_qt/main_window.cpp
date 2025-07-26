@@ -25,8 +25,19 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	resize(800, 240 * 4);
 	show();
 
+	const RendererType rendererType = emu->getConfig().rendererType;
+	usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
+	usingVk = (rendererType == RendererType::Vulkan);
+	usingMtl = (rendererType == RendererType::Metal);
+
+	ScreenWidget::API api = ScreenWidget::API::OpenGL;
+	if (usingVk)
+		api = ScreenWidget::API::Vulkan;
+	else if (usingMtl)
+		api = ScreenWidget::API::Metal;
+
 	// We pass a callback to the screen widget that will be triggered every time we resize the screen
-	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	screen = new ScreenWidget(api, [this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
 	setCentralWidget(screen);
 
 	appRunning = true;
@@ -149,29 +160,29 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
 	emuThread = std::thread([this]() {
-		const RendererType rendererType = emu->getConfig().rendererType;
-		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
-		usingVk = (rendererType == RendererType::Vulkan);
-		usingMtl = (rendererType == RendererType::Metal);
+		switch (screen->api) {
+			case ScreenWidget::API::OpenGL: {
+				// Make GL context current for this thread, enable VSync
+				GL::Context* glContext = screen->getGLContext();
+				glContext->MakeCurrent();
+				glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
 
-		if (usingGL) {
-			// Make GL context current for this thread, enable VSync
-			GL::Context* glContext = screen->getGLContext();
-			glContext->MakeCurrent();
-			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
+				if (glContext->IsGLES()) {
+					emu->getRenderer()->setupGLES();
+				}
 
-			if (glContext->IsGLES()) {
-				emu->getRenderer()->setupGLES();
+				emu->initGraphicsContext(glContext);
+				break;
 			}
 
-			emu->initGraphicsContext(glContext);
-		} else if (usingVk) {
-			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
-		} else if (usingMtl) {
-			emu->initGraphicsContext((void*)nullptr);
-			emu->getRenderer()->setMTKLayer(screen->getMTKLayer());
-		} else {
-			Helpers::panic("Unsupported graphics backend for Qt frontend!");
+			case ScreenWidget::API::Metal: {
+				emu->initGraphicsContext(nullptr);
+				emu->getRenderer()->setMTKLayer(screen->getMTKLayer());
+				break;
+			}
+
+			case ScreenWidget::API::Vulkan: Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!"); break;
+			default: Helpers::panic("Unsupported graphics backend for Qt frontend!"); break;
 		}
 
 		// We have to initialize controllers on the same thread they'll be polled in

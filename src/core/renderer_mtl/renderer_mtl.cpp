@@ -57,8 +57,6 @@ void RendererMTL::reset() {
 	colorRenderTargetCache.reset();
 }
 
-void RendererMTL::setMTKLayer(void* layer) {
-	metalLayer = (CA::MetalLayer*)layer;
 void RendererMTL::setMTKLayer(void* layer) { metalLayer = (CA::MetalLayer*)layer; }
 
 void RendererMTL::display() {

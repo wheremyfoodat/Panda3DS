@@ -16,8 +16,4 @@ class RendererSw final : public Renderer {
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;
 	void screenshot(const std::string& name) override;
 	void deinitGraphicsContext() override;
-
-#ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override {}
-#endif
 };

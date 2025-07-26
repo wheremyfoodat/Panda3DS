@@ -18,10 +18,8 @@
 // and https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
 
 #ifdef PANDA3DS_ENABLE_OPENGL
-ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWidget(parent), resizeCallback(resizeCallback) {
+ScreenWidget::ScreenWidget(API api, ResizeCallback resizeCallback, QWidget* parent) : api(api), QWidget(parent), resizeCallback(resizeCallback) {
 	// Create a native window for use with our graphics API of choice
-	resize(800, 240 * 4);
-
 	setAutoFillBackground(false);
 	setAttribute(Qt::WA_NativeWindow, true);
 	setAttribute(Qt::WA_NoSystemBackground, true);
@@ -29,7 +27,6 @@ ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWi
 	setAttribute(Qt::WA_KeyCompression, false);
 	setFocusPolicy(Qt::StrongFocus);
 	setMouseTracking(true);
-	show();
 
 	if (api == API::OpenGL) {
 		if (!createGLContext()) {
@@ -42,6 +39,9 @@ ScreenWidget::ScreenWidget(ResizeCallback resizeCallback, QWidget* parent) : QWi
 	} else {
 		Helpers::panic("Unspported api for Qt screen widget");
 	}
+
+	resize(800, 240 * 4);
+	show();
 }
 
 void ScreenWidget::resizeEvent(QResizeEvent* event) {
