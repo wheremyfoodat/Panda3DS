@@ -9,7 +9,7 @@ class RendererNull final : public Renderer {
 
 	void reset() override;
 	void display() override;
-	void initGraphicsContext(void* window) override;
+	void initGraphicsContext(void* context) override;
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
