@@ -10,6 +10,7 @@ class ScreenWidgetMTL : public ScreenWidget {
 
   public:
 	ScreenWidgetMTL(API api, ResizeCallback resizeCallback, QWidget* parent = nullptr);
+	~ScreenWidgetMTL() override;
 
 	virtual void* getMTKLayer() override;
 	virtual bool createContext() override;

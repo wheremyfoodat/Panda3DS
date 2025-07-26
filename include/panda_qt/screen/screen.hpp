@@ -1,7 +1,6 @@
 #pragma once
 #include <QWidget>
 #include <functional>
-#include <memory>
 
 #include "gl/context.h"
 #include "screen_layout.hpp"
@@ -17,6 +16,8 @@ class ScreenWidget : public QWidget {
 	enum class API { OpenGL, Metal, Vulkan };
 
 	ScreenWidget(API api, ResizeCallback resizeCallback, QWidget* parent = nullptr);
+	virtual ~ScreenWidget() {}
+
 	void resizeEvent(QResizeEvent* event) override;
 
 	virtual GL::Context* getGLContext() { return nullptr; }
@@ -40,6 +41,9 @@ class ScreenWidget : public QWidget {
 	float topScreenSize = 0.5f;
 
 	void reloadScreenLayout(ScreenLayout::Layout newLayout, float newTopScreenSize);
+
+	// Creates a screen widget depending on the graphics API we're using
+	static ScreenWidget* getWidget(API api, ResizeCallback resizeCallback, QWidget* parent = nullptr);
 
 	// Called by the emulator thread on OpenGL for resizing the actual GL surface, since the emulator thread owns the GL context
 	virtual void resizeSurface(u32 width, u32 height) {};

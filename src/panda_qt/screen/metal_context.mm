@@ -9,7 +9,8 @@
 
 bool ScreenWidgetMTL::createMetalContext() {
 	NSView* nativeView = (NSView*)this->winId();
-	CAMetalLayer* metalLayer = [CAMetalLayer layer];
+	// Retain the layer so that we can manually memory manage it.
+	CAMetalLayer* metalLayer = [[CAMetalLayer layer] retain];
 
 	if (!metalLayer) {
 		return false;
@@ -47,5 +48,21 @@ void ScreenWidgetMTL::resizeMetalView() {
 
 	if (metalLayer) {
 		metalLayer.drawableSize = CGSizeMake(surfaceWidth, surfaceHeight);
+	}
+}
+
+ScreenWidgetMTL::~ScreenWidgetMTL() {
+	if (mtkLayer) {
+		CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)static_cast<CA::MetalLayer*>(mtkLayer);
+
+		NSView* view = (NSView*)this->winId();
+		[view setLayer:nil];
+		[view setWantsLayer:NO];
+
+		// Release Metal device and layer
+		metalLayer.device = nil;
+		[metalLayer release];
+
+		mtkLayer = nullptr;
 	}
 }

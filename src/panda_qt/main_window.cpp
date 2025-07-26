@@ -10,7 +10,7 @@
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 #include "panda_qt/dsp_debugger.hpp"
-#include "panda_qt/screen/screen_mtl.hpp"
+#include "panda_qt/screen/screen.hpp"
 #include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
 #include "version.hpp"
@@ -38,7 +38,7 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		api = ScreenWidget::API::Metal;
 
 	// We pass a callback to the screen widget that will be triggered every time we resize the screen
-	screen = new ScreenWidgetMTL(api, [this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	screen = ScreenWidget::getWidget(api, [this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
 	setCentralWidget(screen);
 
 	appRunning = true;
@@ -305,6 +305,7 @@ MainWindow::~MainWindow() {
 	delete aboutWindow;
 	delete configWindow;
 	delete cheatsEditor;
+	delete screen;
 	delete luaEditor;
 }
 

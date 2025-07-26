@@ -120,3 +120,15 @@ std::optional<WindowInfo> ScreenWidget::getWindowInfo() {
 	return wi;
 }
 #endif
+
+ScreenWidget* ScreenWidget::getWidget(API api, ResizeCallback resizeCallback, QWidget* parent) {
+	if (api == API::OpenGL) {
+		return new ScreenWidgetGL(api, resizeCallback, parent);
+	} else if (api == API::Metal) {
+		return new ScreenWidgetMTL(api, resizeCallback, parent);
+	} else if (api == API::Vulkan) {
+		Helpers::panic("Vulkan is not yet supported on Panda3DS-Qt. Try SDL instead");
+	} else {
+		Helpers::panic("ScreenWidget::getWidget: Unimplemented graphics API");
+	}
+}
