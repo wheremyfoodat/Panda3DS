@@ -5,9 +5,9 @@
 #import <QWindow>
 #import <QuartzCore/QuartzCore.hpp>
 
-#import "panda_qt/screen/screen.hpp"
+#import "panda_qt/screen/screen_mtl.hpp"
 
-bool ScreenWidget::createMetalContext() {
+bool ScreenWidgetMTL::createMetalContext() {
 	NSView* nativeView = (NSView*)this->winId();
 	CAMetalLayer* metalLayer = [CAMetalLayer layer];
 
@@ -41,7 +41,7 @@ bool ScreenWidget::createMetalContext() {
 	return true;
 }
 
-void ScreenWidget::resizeMetalView() {
+void ScreenWidgetMTL::resizeMetalView() {
 	NSView* view = (NSView*)this->windowHandle()->winId();
 	CAMetalLayer* metalLayer = (CAMetalLayer*)[view layer];
 

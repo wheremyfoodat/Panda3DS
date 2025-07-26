@@ -1,10 +1,12 @@
+#ifdef PANDA3DS_ENABLE_OPENGL
 #include "opengl.hpp"
+#endif
 // opengl.hpp must be included at the very top. This comment exists to make clang-format not reorder it :p
+
 #include <QGuiApplication>
 #include <QScreen>
 #include <QWindow>
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <optional>
 
@@ -12,9 +14,11 @@
 #include <qpa/qplatformnativeinterface.h>
 #endif
 
+#include "panda_qt/screen//screen_mtl.hpp"
 #include "panda_qt/screen/screen.hpp"
+#include "panda_qt/screen/screen_gl.hpp"
 
-// OpenGL screen widget, based on https://github.com/stenzek/duckstation/blob/master/src/duckstation-qt/displaywidget.cpp
+// Screen widget, based on https://github.com/stenzek/duckstation/blob/master/src/duckstation-qt/displaywidget.cpp
 // and https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp
 
 #ifdef PANDA3DS_ENABLE_OPENGL
@@ -28,20 +32,7 @@ ScreenWidget::ScreenWidget(API api, ResizeCallback resizeCallback, QWidget* pare
 	setFocusPolicy(Qt::StrongFocus);
 	setMouseTracking(true);
 
-	if (api == API::OpenGL) {
-		if (!createGLContext()) {
-			Helpers::panic("Failed to create GL context for display");
-		}
-	} else if (api == API::Metal) {
-		if (!createMetalContext()) {
-			Helpers::panic("Failed to create Metal context for display");
-		}
-	} else {
-		Helpers::panic("Unspported api for Qt screen widget");
-	}
-
-	resize(800, 240 * 4);
-	show();
+	// The graphics context, as well as resizing and showing the widget, is handled by the screen backend
 }
 
 void ScreenWidget::resizeEvent(QResizeEvent* event) {
@@ -55,22 +46,8 @@ void ScreenWidget::resizeEvent(QResizeEvent* event) {
 		this->windowInfo = *windowInfo;
 	}
 
-	if (api == API::Metal) {
-		resizeMetalView();
-	}
-
 	reloadScreenCoordinates();
-	// This will call take care of calling resizeSurface from the emulator thread, as the GL renderer must resize from the emu thread
-	resizeCallback(surfaceWidth, surfaceHeight);
-}
-
-// Note: This will run on the emulator thread, we don't want any Qt calls happening there.
-void ScreenWidget::resizeSurface(u32 width, u32 height) {
-	if (api == API::OpenGL && (previousWidth != width || previousHeight != height)) {
-		if (glContext) {
-			glContext->ResizeSurface(width, height);
-		}
-	}
+	resizeDisplay();
 }
 
 void ScreenWidget::reloadScreenCoordinates() {
@@ -82,30 +59,6 @@ void ScreenWidget::reloadScreenLayout(ScreenLayout::Layout newLayout, float newT
 	topScreenSize = newTopScreenSize;
 
 	reloadScreenCoordinates();
-}
-
-bool ScreenWidget::createGLContext() {
-	// List of GL context versions we will try. Anything 4.1+ is good for desktop OpenGL, and 3.1+ for OpenGL ES
-	static constexpr std::array<GL::Context::Version, 8> versionsToTry = {
-		GL::Context::Version{GL::Context::Profile::Core, 4, 6}, GL::Context::Version{GL::Context::Profile::Core, 4, 5},
-		GL::Context::Version{GL::Context::Profile::Core, 4, 4}, GL::Context::Version{GL::Context::Profile::Core, 4, 3},
-		GL::Context::Version{GL::Context::Profile::Core, 4, 2}, GL::Context::Version{GL::Context::Profile::Core, 4, 1},
-		GL::Context::Version{GL::Context::Profile::ES, 3, 2},   GL::Context::Version{GL::Context::Profile::ES, 3, 1},
-	};
-
-	std::optional<WindowInfo> windowInfo = getWindowInfo();
-	if (windowInfo.has_value()) {
-		this->windowInfo = *windowInfo;
-
-		glContext = GL::Context::Create(*getWindowInfo(), versionsToTry);
-		if (glContext == nullptr) {
-			return false;
-		}
-
-		glContext->DoneCurrent();
-	}
-
-	return glContext != nullptr;
 }
 
 qreal ScreenWidget::devicePixelRatioFromScreen() const {

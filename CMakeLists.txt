@@ -734,7 +734,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
             src/panda_qt/config_window.cpp src/panda_qt/zep.cpp src/panda_qt/text_editor.cpp src/panda_qt/cheats_window.cpp src/panda_qt/mappings.cpp
             src/panda_qt/patch_window.cpp src/panda_qt/elided_label.cpp src/panda_qt/shader_editor.cpp src/panda_qt/translations.cpp
             src/panda_qt/thread_debugger.cpp src/panda_qt/cpu_debugger.cpp src/panda_qt/dsp_debugger.cpp src/panda_qt/input_window.cpp
-            src/panda_qt/screen/screen.cpp
+            src/panda_qt/screen/screen.cpp src/panda_qt/screen/screen_gl.cpp src/panda_qt/screen/screen_mtl.cpp
         )
 
         set(FRONTEND_HEADER_FILES include/panda_qt/main_window.hpp include/panda_qt/about_window.hpp
@@ -742,6 +742,7 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
             include/panda_qt/patch_window.hpp include/panda_qt/elided_label.hpp include/panda_qt/shader_editor.hpp
             include/panda_qt/thread_debugger.hpp include/panda_qt/cpu_debugger.hpp include/panda_qt/dsp_debugger.hpp
             include/panda_qt/disabled_widget_overlay.hpp include/panda_qt/input_window.hpp include/panda_qt/screen/screen.hpp
+            include/panda_qt/screen/screen_gl.hpp include/panda_qt/screen/screen_mtl.hpp
         )
 
         if (APPLE AND ENABLE_METAL)

@@ -7,7 +7,7 @@
 #include "screen_layout.hpp"
 #include "window_info.h"
 
-// OpenGL widget for drawing the 3DS screen
+// Abstract screen widget for drawing the 3DS screen. We've got a child class for each graphics API (ScreenWidgetGL, ScreenWidgetMTL, ...)
 class ScreenWidget : public QWidget {
 	Q_OBJECT
 
@@ -18,11 +18,9 @@ class ScreenWidget : public QWidget {
 
 	ScreenWidget(API api, ResizeCallback resizeCallback, QWidget* parent = nullptr);
 	void resizeEvent(QResizeEvent* event) override;
-	// Called by the emulator thread for resizing the actual GL surface, since the emulator thread owns the GL context
-	void resizeSurface(u32 width, u32 height);
 
-	GL::Context* getGLContext() { return glContext.get(); }
-	void* getMTKLayer() { return mtkLayer; }
+	virtual GL::Context* getGLContext() { return nullptr; }
+	virtual void* getMTKLayer() { return nullptr; }
 
 	// Dimensions of our output surface
 	u32 surfaceWidth = 0;
@@ -35,8 +33,7 @@ class ScreenWidget : public QWidget {
 
 	API api = API::OpenGL;
 
-	// Coordinates (x/y/width/height) for the two screens in window space, used for properly handling touchscreen regardless
-	// of layout or resizing
+	// Coordinates (x/y/width/height) for the two screens in window space, used for properly handling touchscreen
 	ScreenLayout::WindowCoordinates screenCoordinates;
 	// Screen layouts and sizes
 	ScreenLayout::Layout screenLayout = ScreenLayout::Layout::Default;
@@ -44,24 +41,20 @@ class ScreenWidget : public QWidget {
 
 	void reloadScreenLayout(ScreenLayout::Layout newLayout, float newTopScreenSize);
 
-  private:
-	// GL context for GL-based renderers
-	std::unique_ptr<GL::Context> glContext = nullptr;
+	// Called by the emulator thread on OpenGL for resizing the actual GL surface, since the emulator thread owns the GL context
+	virtual void resizeSurface(u32 width, u32 height) {};
 
-	// CA::MetalLayer for the Metal renderer
-	void* mtkLayer = nullptr;
-
+  protected:
 	ResizeCallback resizeCallback;
 
-	bool createGLContext();
-	bool createMetalContext();
+	virtual bool createContext() = 0;
+	virtual void resizeDisplay() = 0;
+	std::optional<WindowInfo> getWindowInfo();
 
-	void resizeMetalView();
-
+  private:
 	qreal devicePixelRatioFromScreen() const;
 	int scaledWindowWidth() const;
 	int scaledWindowHeight() const;
-	std::optional<WindowInfo> getWindowInfo();
 
 	void reloadScreenCoordinates();
 };
