@@ -9,6 +9,10 @@ ScreenWidgetMTL::ScreenWidgetMTL(API api, ResizeCallback resizeCallback, QWidget
 	show();
 }
 
-void ScreenWidgetMTL::resizeDisplay() { resizeMetalView(); }
+void ScreenWidgetMTL::resizeDisplay() {
+	resizeMetalView();
+	resizeCallback(surfaceWidth, surfaceHeight);
+}
+
 bool ScreenWidgetMTL::createContext() { return createMetalContext(); }
 void* ScreenWidgetMTL::getMTKLayer() { return mtkLayer; }
