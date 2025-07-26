@@ -26,7 +26,7 @@ ScreenWidgetMTL::ScreenWidgetMTL(API api, ResizeCallback resizeCallback, QWidget
 ScreenWidgetMTL::~ScreenWidgetMTL() {}
 bool ScreenWidgetMTL::createContext() { return false; }
 bool ScreenWidgetMTL::createMetalContext() { return false; }
-void* ScreenWidgetMTK::getMTKLayer() { return nullptr; }
+void* ScreenWidgetMTL::getMTKLayer() { return nullptr; }
 
 void ScreenWidgetMTL::resizeDisplay() {}
 void ScreenWidgetMTL::resizeMetalView() {}
