@@ -2,6 +2,7 @@
 
 #include <array>
 
+#ifdef PANDA3DS_ENABLE_OPENGL
 ScreenWidgetGL::ScreenWidgetGL(API api, ResizeCallback resizeCallback, QWidget* parent) : ScreenWidget(api, resizeCallback, parent) {
 	// On Wayland + OpenGL, we have to show the window before we can create a graphics context.
 	resize(800, 240 * 4);
@@ -51,3 +52,13 @@ void ScreenWidgetGL::resizeSurface(u32 width, u32 height) {
 }
 
 GL::Context* ScreenWidgetGL::getGLContext() { return glContext.get(); }
+#else
+ScreenWidgetGL::ScreenWidgetGL(API api, ResizeCallback resizeCallback, QWidget* parent) : ScreenWidget(api, resizeCallback, parent) {
+	Helpers::panic("OpenGL renderer not supported. Make sure you've compiled with OpenGL support and that you're on a compatible platform");
+}
+
+GL::Context* ScreenWidgetGL::getGLContext() { nullptr; }
+bool ScreenWidgetGL::createContext() { return false; }
+void ScreenWidgetGL::resizeDisplay() {}
+void ScreenWidgetGL::resizeSurface(u32 width, u32 height) {}
+#endif

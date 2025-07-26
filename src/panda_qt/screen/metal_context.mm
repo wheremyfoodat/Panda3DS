@@ -7,6 +7,8 @@
 
 #import "panda_qt/screen/screen_mtl.hpp"
 
+id<MTLDevice> metalDevice = nil;
+
 bool ScreenWidgetMTL::createMetalContext() {
 	NSView* nativeView = (NSView*)this->winId();
 	// Retain the layer so that we can manually memory manage it.
@@ -16,7 +18,7 @@ bool ScreenWidgetMTL::createMetalContext() {
 		return false;
 	}
 
-	id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice();
+	metalDevice = MTLCreateSystemDefaultDevice();
 
 	if (!metalDevice) {
 		NSLog(@"Failed to create metal device");
@@ -62,6 +64,7 @@ ScreenWidgetMTL::~ScreenWidgetMTL() {
 		// Release Metal device and layer
 		metalLayer.device = nil;
 		[metalLayer release];
+		[metalDevice release];
 
 		mtkLayer = nullptr;
 	}
