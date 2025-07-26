@@ -5,7 +5,7 @@
 #import <QWindow>
 #import <QuartzCore/QuartzCore.hpp>
 
-#import "panda_qt/screen.hpp"
+#import "panda_qt/screen/screen.hpp"
 
 bool ScreenWidget::createMetalContext() {
 	NSView* nativeView = (NSView*)this->winId();

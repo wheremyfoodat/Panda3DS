@@ -12,7 +12,7 @@
 #include <qpa/qplatformnativeinterface.h>
 #endif
 
-#include "panda_qt/screen.hpp"
+#include "panda_qt/screen/screen.hpp"
 
 // OpenGL screen widget, based on https://github.com/stenzek/duckstation/blob/master/src/duckstation-qt/displaywidget.cpp
 // and https://github.com/melonDS-emu/melonDS/blob/master/src/frontend/qt_sdl/main.cpp

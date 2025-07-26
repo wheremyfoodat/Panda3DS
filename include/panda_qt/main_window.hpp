@@ -20,7 +20,7 @@
 #include "panda_qt/cpu_debugger.hpp"
 #include "panda_qt/dsp_debugger.hpp"
 #include "panda_qt/patch_window.hpp"
-#include "panda_qt/screen.hpp"
+#include "panda_qt/screen/screen.hpp"
 #include "panda_qt/shader_editor.hpp"
 #include "panda_qt/text_editor.hpp"
 #include "panda_qt/thread_debugger.hpp"
