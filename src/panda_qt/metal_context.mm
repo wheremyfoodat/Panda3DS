@@ -1,9 +1,9 @@
 #import <AppKit/AppKit.h>
-#import <QuartzCore/CAMetalLayer.h>
 #import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
 #import <Metal/Metal.hpp>
-#import <QuartzCore/QuartzCore.hpp>
 #import <QWindow>
+#import <QuartzCore/QuartzCore.hpp>
 
 #import "panda_qt/screen.hpp"
 
@@ -18,9 +18,9 @@ bool ScreenWidget::createMetalContext() {
 	id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice();
 
 	if (!metalDevice) {
-        NSLog(@"Failed to create metal device");
-        return false;
-    }
+		NSLog(@"Failed to create metal device");
+		return false;
+	}
 
 	metalLayer.device = metalDevice;
 	metalLayer.framebufferOnly = NO;
