@@ -44,6 +44,12 @@ enum class ProcessorID : s32 {
     New3DSExtra2 = 3
 };
 
+enum class FcramRegion {
+    App = 0x100,
+    Sys = 0x200,
+    Base = 0x300
+};
+
 struct AddressArbiter {};
 
 struct ResourceLimits {
@@ -250,4 +256,11 @@ struct KernelObject {
                 Helpers::panic("Called GetWaitList on kernel object without a waitlist (Type: %s)", getTypeName());
 		}
 	}
+};
+
+struct FcramBlock {
+    u32 paddr;
+    s32 pages;
+
+    FcramBlock(u32 paddr, s32 pages) : paddr(paddr), pages(pages) {}
 };

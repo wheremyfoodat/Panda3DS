@@ -337,6 +337,7 @@ set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limi
                         src/core/kernel/address_arbiter.cpp src/core/kernel/error.cpp
                         src/core/kernel/file_operations.cpp src/core/kernel/directory_operations.cpp
                         src/core/kernel/idle_thread.cpp src/core/kernel/timers.cpp
+                        src/core/kernel/fcram.cpp
 )
 set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp
@@ -416,7 +417,7 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
                  include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
                  include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp include/services/service_intercept.hpp
-                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp
+                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp include/kernel/fcram.hpp
 )
 
 if(IOS)
