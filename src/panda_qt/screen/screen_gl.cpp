@@ -57,7 +57,7 @@ ScreenWidgetGL::ScreenWidgetGL(API api, ResizeCallback resizeCallback, QWidget* 
 	Helpers::panic("OpenGL renderer not supported. Make sure you've compiled with OpenGL support and that you're on a compatible platform");
 }
 
-GL::Context* ScreenWidgetGL::getGLContext() { nullptr; }
+GL::Context* ScreenWidgetGL::getGLContext() { return nullptr; }
 bool ScreenWidgetGL::createContext() { return false; }
 void ScreenWidgetGL::resizeDisplay() {}
 void ScreenWidgetGL::resizeSurface(u32 width, u32 height) {}
