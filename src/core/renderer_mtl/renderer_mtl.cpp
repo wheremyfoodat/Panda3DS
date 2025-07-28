@@ -150,7 +150,7 @@ void RendererMTL::display() {
 }
 
 void RendererMTL::initGraphicsContext(void* window) {
-	// On Qt and IOS, the frontend handles the MetalLayer
+	// On Qt and iOS, the frontend handles the Metal layer
 #if defined(PANDA3DS_FRONTEND_QT) || defined(PANDA3DS_IOS)
 	device = MTL::CreateSystemDefaultDevice();
 #else
