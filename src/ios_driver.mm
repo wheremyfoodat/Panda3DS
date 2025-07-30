@@ -15,13 +15,11 @@ extern "C" {
 #define IOS_EXPORT extern "C" __attribute__((visibility("default")))
 
 std::unique_ptr<Emulator> emulator = nullptr;
-HIDService* hidService = nullptr;
 
 IOS_EXPORT void iosCreateEmulator() {
 	printf("Creating emulator\n");
 
 	emulator = std::make_unique<Emulator>();
-	hidService = &emulator->getServiceManager().getHID();
 	emulator->initGraphicsContext(nullptr);
 }
 
