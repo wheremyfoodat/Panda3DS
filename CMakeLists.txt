@@ -201,9 +201,7 @@ target_include_directories(boost SYSTEM INTERFACE ${Boost_INCLUDE_DIR})
 
 if(ANDROID)
     set(CRYPTOPP_OPT_DISABLE_ASM ON CACHE BOOL "" FORCE)
-    if(NOT BUILD_LIBRETRO_CORE)
-        target_sources(AlberCore PRIVATE src/jni_driver.cpp)
-    endif()
+    target_sources(AlberCore PRIVATE src/jni_driver.cpp)
     
     target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
