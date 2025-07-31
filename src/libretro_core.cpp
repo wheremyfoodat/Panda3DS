@@ -19,8 +19,8 @@ static std::filesystem::path savePath;
 static bool screenTouched = false;
 static bool usingGLES = false;
 
-std::unique_ptr<Emulator> emulator;
-RendererGL* renderer;
+static std::unique_ptr<Emulator> emulator;
+static RendererGL* renderer;
 
 std::filesystem::path Emulator::getConfigPath() { return std::filesystem::path(savePath / "config.toml"); }
 std::filesystem::path Emulator::getAppDataRoot() { return std::filesystem::path(savePath / "Emulator Files"); }
