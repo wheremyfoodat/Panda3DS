@@ -1,4 +1,5 @@
 #include <cstring>
+
 #include "arm_defs.hpp"
 #include "kernel.hpp"
 
@@ -35,13 +36,14 @@ void Kernel::setupIdleThread() {
 	if (!vaddr.has_value() || vaddr.value() != codeAddress) {
 		Helpers::panic("Failed to setup idle thread");
 	}
-	
+
 	// Copy idle thread code to the allocated FCRAM
 	std::memcpy(&mem.getFCRAM()[fcramIndex], idleThreadCode, sizeof(idleThreadCode));
 
 	t.entrypoint = codeAddress;
+	t.initialSP = 0;
 	t.tlsBase = 0;
-	t.gprs[13] = 0; // Set SP & LR to 0 just in case. The idle thread should never access memory, but let's be safe
+	t.gprs[13] = 0;  // Set SP & LR to 0 just in case. The idle thread should never access memory, but let's be safe
 	t.gprs[14] = 0;
 	t.gprs[15] = codeAddress;
 	t.cpsr = CPSR::UserMode;

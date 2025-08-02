@@ -1,12 +1,13 @@
 #include "services/cfg.hpp"
-#include "services/dsp.hpp"
-#include "system_models.hpp"
-#include "ipc.hpp"
 
 #include <array>
 #include <bit>
 #include <string>
 #include <unordered_map>
+
+#include "ipc.hpp"
+#include "services/dsp.hpp"
+#include "system_models.hpp"
 
 namespace CFGCommands {
 	enum : u32 {
@@ -17,10 +18,29 @@ namespace CFGCommands {
 		GetRegionCanadaUSA = 0x00040000,
 		GetSystemModel = 0x00050000,
 		TranslateCountryInfo = 0x00080080,
-		GetCountryCodeID = 0x000A0040,
 
+		GetCountryCodeString = 0x00090040,
+		GetCountryCodeID = 0x000A0040,
+		IsFangateSupported = 0x000B0000,
+		SetConfigInfoBlk4 = 0x04020082,
+		UpdateConfigNANDSavegame = 0x04030000,
 		GetLocalFriendCodeSeed = 0x04050000,
 		SecureInfoGetByte101 = 0x04070000,
+	};
+}
+
+// cfg:i commands
+namespace CFGICommands {
+	enum : u32 {
+		GetConfigInfoBlk8 = 0x08010082,
+	};
+}
+
+// cfg:nor commands
+namespace NORCommands {
+	enum : u32 {
+		Initialize = 0x00010040,
+		ReadData = 0x00050082,
 	};
 }
 
@@ -28,29 +48,52 @@ void CFGService::reset() {}
 
 void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 	const u32 command = mem.read32(messagePointer);
-	switch (command) {
-		case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;
-		case CFGCommands::GetCountryCodeID: getCountryCodeID(messagePointer); break;
-		case CFGCommands::GetRegionCanadaUSA: getRegionCanadaUSA(messagePointer); break;
-		case CFGCommands::GetSystemModel: getSystemModel(messagePointer); break;
-		case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
-		case CFGCommands::SecureInfoGetRegion: secureInfoGetRegion(messagePointer); break;
-		case CFGCommands::TranslateCountryInfo: translateCountryInfo(messagePointer); break;
 
-		default: 
-			if (type == Type::S) {
-				// cfg:s-only functions
-				switch (command) {
-					case CFGCommands::GetConfigInfoBlk8: getConfigInfoBlk8(messagePointer); break;
-					case CFGCommands::GetLocalFriendCodeSeed: getLocalFriendCodeSeed(messagePointer); break;
-					case CFGCommands::SecureInfoGetByte101: secureInfoGetByte101(messagePointer); break;
-					default: Helpers::panic("CFG:S service requested. Command: %08X\n", command);
+	if (type != Type::NOR) {
+		switch (command) {
+			case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;
+			case CFGCommands::GetCountryCodeString: getCountryCodeString(messagePointer); break;
+			case CFGCommands::GetCountryCodeID: getCountryCodeID(messagePointer); break;
+			case CFGCommands::GetRegionCanadaUSA: getRegionCanadaUSA(messagePointer); break;
+			case CFGCommands::GetSystemModel: getSystemModel(messagePointer); break;
+			case CFGCommands::GenHashConsoleUnique: genUniqueConsoleHash(messagePointer); break;
+			case CFGCommands::IsFangateSupported: isFangateSupported(messagePointer); break;
+			case CFGCommands::SecureInfoGetRegion: secureInfoGetRegion(messagePointer); break;
+			case CFGCommands::TranslateCountryInfo: translateCountryInfo(messagePointer); break;
+
+			default:
+				if (type == Type::S) {
+					// cfg:s (and cfg:i) functions only functions
+					switch (command) {
+						case CFGCommands::GetConfigInfoBlk8: getConfigInfoBlk8(messagePointer, command); break;
+						case CFGCommands::GetLocalFriendCodeSeed: getLocalFriendCodeSeed(messagePointer); break;
+						case CFGCommands::SecureInfoGetByte101: secureInfoGetByte101(messagePointer); break;
+						case CFGCommands::SetConfigInfoBlk4: setConfigInfoBlk4(messagePointer); break;
+						case CFGCommands::UpdateConfigNANDSavegame: updateConfigNANDSavegame(messagePointer); break;
+
+						default: Helpers::panic("CFG:S service requested. Command: %08X\n", command);
+					}
+				} else if (type == Type::I) {
+					switch (command) {
+						case CFGCommands::GetConfigInfoBlk8:
+						case CFGICommands::GetConfigInfoBlk8: getConfigInfoBlk8(messagePointer, command); break;
+
+						default: Helpers::panic("CFG:I service requested. Command: %08X\n", command);
+					}
+				} else {
+					Helpers::panic("CFG service requested. Command: %08X\n", command);
 				}
-			} else {
-				Helpers::panic("CFG service requested. Command: %08X\n", command);
-			}
 
-			break;
+				break;
+		}
+	} else {
+		// cfg:nor functions
+		switch (command) {
+			case NORCommands::Initialize: norInitialize(messagePointer); break;
+			case NORCommands::ReadData: norReadData(messagePointer); break;
+
+			default: Helpers::panic("CFG:NOR service requested. Command: %08X\n", command);
+		}
 	}
 }
 
@@ -59,7 +102,7 @@ void CFGService::getSystemModel(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x05, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, SystemModel::Nintendo3DS); // TODO: Make this adjustable via GUI
+	mem.write8(messagePointer + 8, SystemModel::Nintendo3DS);  // TODO: Make this adjustable via GUI
 }
 
 // Write a UTF16 string to 3DS memory starting at "pointer". Appends a null terminator.
@@ -69,29 +112,28 @@ void CFGService::writeStringU16(u32 pointer, const std::u16string& string) {
 		pointer += 2;
 	}
 
-	mem.write16(pointer, static_cast<u16>(u'\0')); // Null terminator
+	mem.write16(pointer, static_cast<u16>(u'\0'));  // Null terminator
 }
 
 void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 	u32 size = mem.read32(messagePointer + 4);
 	u32 blockID = mem.read32(messagePointer + 8);
-	u32 output = mem.read32(messagePointer + 16); // Pointer to write the output data to
+	u32 output = mem.read32(messagePointer + 16);  // Pointer to write the output data to
 	log("CFG::GetConfigInfoBlk2 (size = %X, block ID = %X, output pointer = %08X\n", size, blockID, output);
-
 
 	getConfigInfo(output, blockID, size, 0x2);
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-void CFGService::getConfigInfoBlk8(u32 messagePointer) {
+void CFGService::getConfigInfoBlk8(u32 messagePointer, u32 commandWord) {
 	u32 size = mem.read32(messagePointer + 4);
 	u32 blockID = mem.read32(messagePointer + 8);
 	u32 output = mem.read32(messagePointer + 16);  // Pointer to write the output data to
 	log("CFG::GetConfigInfoBlk8 (size = %X, block ID = %X, output pointer = %08X\n", size, blockID, output);
 
 	getConfigInfo(output, blockID, size, 0x8);
-	mem.write32(messagePointer, IPC::responseHeader(0x401, 1, 2));
+	mem.write32(messagePointer, IPC::responseHeader(commandWord >> 16, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -100,7 +142,7 @@ void CFGService::getConfigInfo(u32 output, u32 blockID, u32 size, u32 permission
 	if (size == 1 && blockID == 0x70001) {  // Sound output mode
 		mem.write8(output, static_cast<u8>(DSPService::SoundOutputMode::Stereo));
 	} else if (size == 1 && blockID == 0xA0002) {  // System language
-		mem.write8(output, static_cast<u8>(LanguageCodes::English));
+		mem.write8(output, static_cast<u8>(settings.systemLanguage));
 	} else if (size == 4 && blockID == 0xB0000) {          // Country info
 		mem.write8(output, 0);                             // Unknown
 		mem.write8(output + 1, 0);                         // Unknown
@@ -160,6 +202,37 @@ void CFGService::getConfigInfo(u32 output, u32 blockID, u32 size, u32 permission
 		mem.write32(output, 0);
 	} else if (size == 8 && blockID == 0x00090000) {
 		mem.write64(output, 0);  // Some sort of key used with nwm::UDS::InitializeWithVersion
+	} else if (size == 4 && blockID == 0x110000) {
+		mem.write32(output, 1);  // According to 3Dbrew, 0 means system setup is required
+	} else if (size == 2 && blockID == 0x50001) {
+		// Backlight controls. Values taken from Citra
+		mem.write8(output, 0);
+		mem.write8(output + 1, 2);
+	} else if (size == 8 && blockID == 0x50009) {
+		// N3DS Backlight controls?
+		mem.write64(output, 0);
+	} else if (size == 4 && blockID == 0x180000) {
+		// Infrared LED related?
+		mem.write32(output, 0);
+	} else if (size == 1 && blockID == 0xE0000) {
+		mem.write8(output, 0);
+	} else if ((size == 512 && blockID == 0xC0002) || (size == 148 && blockID == 0x100001)) {
+		// CTR parental controls block (0xC0002) and TWL parental controls block (0x100001)
+		for (u32 i = 0; i < size; i++) {
+			mem.write8(output + i, 0);
+		}
+	} else if (size == 2 && blockID == 0x100000) {
+		// EULA agreed
+		mem.write8(output, 1);      // We have agreed to the EULA
+		mem.write8(output + 1, 1);  // EULA version = 1
+	} else if (size == 1 && blockID == 0x100002) {
+		Helpers::warn("Unimplemented TWL country code access");
+		mem.write8(output, 0);
+	} else if (size == 24 && blockID == 0x180001) {
+		// QTM calibration data
+		for (u32 i = 0; i < size; i++) {
+			mem.write8(output + i, 0);
+		}
 	} else {
 		Helpers::panic("Unhandled GetConfigInfoBlk2 configuration. Size = %d, block = %X", size, blockID);
 	}
@@ -181,7 +254,7 @@ void CFGService::genUniqueConsoleHash(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	// We need to implement hash generation & the SHA-256 digest properly later on. We have cryptopp so the hashing isn't too hard to do
 	// Let's stub it for now
-	mem.write32(messagePointer + 8, 0x33646D6F ^ salt); // Lower word of hash
+	mem.write32(messagePointer + 8, 0x33646D6F ^ salt);   // Lower word of hash
 	mem.write32(messagePointer + 12, 0xA3534841 ^ salt);  // Upper word of hash
 }
 
@@ -230,13 +303,13 @@ void CFGService::getCountryCodeID(u32 messagePointer) {
 	log("CFG::GetCountryCodeID (code = %04X)\n", characterCode);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0A, 2, 0));
-	
+
 	// If the character code is valid, return its table ID and a success code
 	if (auto search = countryCodeToTableIDMap.find(characterCode); search != countryCodeToTableIDMap.end()) {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write16(messagePointer + 8, search->second);
 	}
-	
+
 	else {
 		Helpers::warn("CFG::GetCountryCodeID: Invalid country code %X", characterCode);
 		mem.write32(messagePointer + 4, Result::CFG::NotFound);
@@ -244,12 +317,30 @@ void CFGService::getCountryCodeID(u32 messagePointer) {
 	}
 }
 
+void CFGService::getCountryCodeString(u32 messagePointer) {
+	const u16 id = mem.read16(messagePointer + 4);
+	log("CFG::getCountryCodeString (id = %04X)\n", id);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x09, 2, 0));
+
+	for (auto [string, code] : countryCodeToTableIDMap) {
+		if (code == id) {
+			mem.write32(messagePointer + 4, Result::Success);
+			mem.write32(messagePointer + 8, u32(string));
+			return;
+		}
+	}
+
+	// Code is not a valid country code, return an appropriate error
+	mem.write32(messagePointer + 4, 0xD90103FA);
+}
+
 void CFGService::secureInfoGetByte101(u32 messagePointer) {
 	log("CFG::SecureInfoGetByte101\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0x407, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, 0); // Secure info byte 0x101 is usually 0 according to 3DBrew
+	mem.write8(messagePointer + 8, 0);  // Secure info byte 0x101 is usually 0 according to 3DBrew
 }
 
 void CFGService::getLocalFriendCodeSeed(u32 messagePointer) {
@@ -258,6 +349,25 @@ void CFGService::getLocalFriendCodeSeed(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x405, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write64(messagePointer + 8, 0);
+}
+
+void CFGService::setConfigInfoBlk4(u32 messagePointer) {
+	u32 blockID = mem.read32(messagePointer + 4);
+	u32 size = mem.read32(messagePointer + 8);
+	u32 input = mem.read32(messagePointer + 16);
+	log("CFG::SetConfigInfoBlk4 (block ID = %X, size = %X, input pointer = %08X)\n", blockID, size, input);
+
+	mem.write32(messagePointer, IPC::responseHeader(0x401, 1, 2));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, IPC::pointerHeader(0, size, IPC::BufferType::Receive));
+	mem.write32(messagePointer + 12, input);
+}
+
+void CFGService::updateConfigNANDSavegame(u32 messagePointer) {
+	log("CFG::UpdateConfigNANDSavegame\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x403, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }
 
 // https://www.3dbrew.org/wiki/Cfg:TranslateCountryInfo
@@ -269,7 +379,7 @@ void CFGService::translateCountryInfo(u32 messagePointer) {
 	// By default the translated code is  the input
 	u32 result = country;
 
-	if (direction == 0) { // Translate from version B to version A
+	if (direction == 0) {  // Translate from version B to version A
 		switch (country) {
 			case 0x6E040000: result = 0x6E030000; break;
 			case 0x6E050000: result = 0x6E040000; break;
@@ -278,7 +388,7 @@ void CFGService::translateCountryInfo(u32 messagePointer) {
 			case 0x6E030000: result = 0x6E070000; break;
 			default: break;
 		}
-	} else if (direction == 1) { // Translate from version A to version B
+	} else if (direction == 1) {  // Translate from version A to version B
 		switch (country) {
 			case 0x6E030000: result = 0x6E040000; break;
 			case 0x6E040000: result = 0x6E050000; break;
@@ -292,4 +402,28 @@ void CFGService::translateCountryInfo(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x8, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, result);
+}
+
+void CFGService::isFangateSupported(u32 messagePointer) {
+	log("CFG::IsFangateSupported\n");
+
+	// TODO: What even is fangate?
+	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, 1);
+}
+
+void CFGService::norInitialize(u32 messagePointer) {
+	log("CFG::NOR::Initialize\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void CFGService::norReadData(u32 messagePointer) {
+	log("CFG::NOR::ReadData\n");
+	Helpers::warn("Unimplemented CFG::NOR::ReadData");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
 }

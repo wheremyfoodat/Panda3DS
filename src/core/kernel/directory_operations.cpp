@@ -10,7 +10,7 @@
 namespace DirectoryOps {
 	enum : u32 {
 		Read = 0x08010042,
-		Close = 0x08020000
+		Close = 0x08020000,
 	};
 }
 
@@ -28,7 +28,7 @@ Filename83 convertTo83(const std::string& path) {
 	// Convert a character to add it to the 8.3 name
 	// "Characters such as + are changed to the underscore _, and letters are put in uppercase"
 	// For now we put letters in uppercase until we find out what is supposed to be converted to _ and so on
-	auto convertCharacter = [](char c) { return (char) std::toupper(c); };
+	auto convertCharacter = [](char c) { return (char)std::toupper(c); };
 
 	// List of forbidden character for 8.3 filenames, from Citra
 	// TODO: Use constexpr when C++20 support is solid
@@ -66,7 +66,7 @@ Filename83 convertTo83(const std::string& path) {
 			filenameTooBig = true;
 			break;
 		}
-		filename[validCharacterCount++] = convertCharacter(c); // Append character to filename
+		filename[validCharacterCount++] = convertCharacter(c);  // Append character to filename
 	}
 
 	// Truncate name to 6 characters and denote that it is too big
@@ -113,7 +113,7 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 	const u32 entryCount = mem.read32(messagePointer + 4);
 	const u32 outPointer = mem.read32(messagePointer + 12);
 	logFileIO("Directory::Read (handle = %X, entry count = %d, out pointer = %08X)\n", directory, entryCount, outPointer);
-	
+
 	const auto p = getObject(directory, KernelObjectType::Directory);
 	if (p == nullptr) [[unlikely]] {
 		Helpers::panic("Called ReadDirectory on non-existent directory");
@@ -136,9 +136,9 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 		bool isDirectory = std::filesystem::is_directory(relative);
 
 		std::u16string nameU16 = relative.u16string();
-		bool isHidden = nameU16[0] == u'.'; // If the first character is a dot then this is a hidden file/folder
+		bool isHidden = nameU16[0] == u'.';  // If the first character is a dot then this is a hidden file/folder
 
-		const u32 entryPointer = outPointer + (count * 0x228); // 0x228 is the size of a single entry
+		const u32 entryPointer = outPointer + (count * 0x228);  // 0x228 is the size of a single entry
 		u32 utfPointer = entryPointer;
 		u32 namePointer = entryPointer + 0x20C;
 		u32 extensionPointer = entryPointer + 0x216;
@@ -152,7 +152,7 @@ void Kernel::readDirectory(u32 messagePointer, Handle directory) {
 			mem.write16(utfPointer, u16(c));
 			utfPointer += sizeof(u16);
 		}
-		mem.write16(utfPointer, 0); // Null terminate the UTF16 name
+		mem.write16(utfPointer, 0);  // Null terminate the UTF16 name
 
 		// Write 8.3 filename-extension
 		for (auto c : shortFilename) {

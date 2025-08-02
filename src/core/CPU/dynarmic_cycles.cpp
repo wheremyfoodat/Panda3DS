@@ -6,118 +6,114 @@
 
 #include <bit>
 #include <functional>
+
 #include "cpu_dynarmic.hpp"
 #include "helpers.hpp"
 
 namespace {
-    template <size_t N>
-    struct StringLiteral {
-        constexpr StringLiteral(const char(&str)[N]) {
-            std::copy_n(str, N, value);
-        }
+	template <size_t N>
+	struct StringLiteral {
+		constexpr StringLiteral(const char (&str)[N]) { std::copy_n(str, N, value); }
 
-        static constexpr std::size_t strlen = N - 1;
-        static constexpr std::size_t size = N;
+		static constexpr std::size_t strlen = N - 1;
+		static constexpr std::size_t size = N;
 
-        char value[N];
-    };
+		char value[N];
+	};
 
-    template <StringLiteral haystack, StringLiteral needle>
-    constexpr u32 GetMatchingBitsFromStringLiteral() {
-        u32 result = 0;
-        for (size_t i = 0; i < haystack.strlen; i++) {
-            for (size_t a = 0; a < needle.strlen; a++) {
-                if (haystack.value[i] == needle.value[a]) {
-                    result |= 1 << (haystack.strlen - 1 - i);
-                }
-            }
-        }
-        return result;
-    }
+	template <StringLiteral haystack, StringLiteral needle>
+	constexpr u32 GetMatchingBitsFromStringLiteral() {
+		u32 result = 0;
+		for (size_t i = 0; i < haystack.strlen; i++) {
+			for (size_t a = 0; a < needle.strlen; a++) {
+				if (haystack.value[i] == needle.value[a]) {
+					result |= 1 << (haystack.strlen - 1 - i);
+				}
+			}
+		}
+		return result;
+	}
 
-    template <u32 mask_>
-    constexpr u32 DepositBits(u32 val) {
-        u32 mask = mask_;
-        u32 res = 0;
-        for (u32 bb = 1; mask; bb += bb) {
-            u32 neg_mask = 0 - mask;
-            if (val & bb)
-                res |= mask & neg_mask;
-            mask &= mask - 1;
-        }
-        return res;
-    }
+	template <u32 mask_>
+	constexpr u32 DepositBits(u32 val) {
+		u32 mask = mask_;
+		u32 res = 0;
+		for (u32 bb = 1; mask; bb += bb) {
+			u32 neg_mask = 0 - mask;
+			if (val & bb) res |= mask & neg_mask;
+			mask &= mask - 1;
+		}
+		return res;
+	}
 
-    template <StringLiteral haystack>
-    struct MatcherArg {
-        template <StringLiteral needle>
-        u32 Get() {
-            return DepositBits<GetMatchingBitsFromStringLiteral<haystack, needle>()>(instruction);
-        }
+	template <StringLiteral haystack>
+	struct MatcherArg {
+		template <StringLiteral needle>
+		u32 Get() {
+			return DepositBits<GetMatchingBitsFromStringLiteral<haystack, needle>()>(instruction);
+		}
 
-        u32 instruction;
-    };
+		u32 instruction;
+	};
 
-    struct Matcher {
-        u32 mask;
-        u32 expect;
-        std::function<u64(u32)> fn;
-    };
+	struct Matcher {
+		u32 mask;
+		u32 expect;
+		std::function<u64(u32)> fn;
+	};
 
-    u64 DataProcessing_imm(auto i) {
-        if (i.template Get<"d">() == 15) {
-            return 7;
-        }
-        return 1;
-    }
-    u64 DataProcessing_reg(auto i) {
-        if (i.template Get<"d">() == 15) {
-            return 7;
-        }
-        return 1;
-    }
-    u64 DataProcessing_rsr(auto i) {
-        if (i.template Get<"d">() == 15) {
-            return 8;
-        }
-        return 2;
-    }
-    u64 LoadStoreSingle_imm(auto) {
-        return 2;
-    }
-    u64 LoadStoreSingle_reg(auto i) {
-        // TODO: Load PC
-        if (i.template Get<"u">() == 1 && i.template Get<"r">() == 0 &&
-            (i.template Get<"v">() == 0 || i.template Get<"v">() == 2)) {
-            return 2;
-        }
-        return 4;
-    }
-    u64 LoadStoreMultiple(auto i) {
-        // TODO: Load PC
-        return 1 + std::popcount(i.template Get<"x">()) / 2;
-    }
+	u64 DataProcessing_imm(auto i) {
+		if (i.template Get<"d">() == 15) {
+			return 7;
+		}
+		return 1;
+	}
+	u64 DataProcessing_reg(auto i) {
+		if (i.template Get<"d">() == 15) {
+			return 7;
+		}
+		return 1;
+	}
+	u64 DataProcessing_rsr(auto i) {
+		if (i.template Get<"d">() == 15) {
+			return 8;
+		}
+		return 2;
+	}
+	u64 LoadStoreSingle_imm(auto) { return 2; }
+	u64 LoadStoreSingle_reg(auto i) {
+		// TODO: Load PC
+		if (i.template Get<"u">() == 1 && i.template Get<"r">() == 0 && (i.template Get<"v">() == 0 || i.template Get<"v">() == 2)) {
+			return 2;
+		}
+		return 4;
+	}
+	u64 LoadStoreMultiple(auto i) {
+		// TODO: Load PC
+		return 1 + std::popcount(i.template Get<"x">()) / 2;
+	}
 
-    u64 SupervisorCall(auto i) {
-        // Consume extra cycles for the GetSystemTick SVC since some games wait with it in a loop rather than
-        // Properly sleeping until a VBlank interrupt
-        if (i.template Get<"v">() == 0x28) {
-            return 152;
-        }
+	u64 SupervisorCall(auto i) {
+		// Consume extra cycles for the GetSystemTick SVC since some games wait with it in a loop rather than
+		// Properly sleeping until a VBlank interrupt
+		if (i.template Get<"v">() == 0x28) {
+			return 152;
+		}
 
-        return 8;
-    }
+		return 8;
+	}
 
 #define INST(NAME, BS, CYCLES)                                                                     \
-    Matcher{GetMatchingBitsFromStringLiteral<BS, "01">(),                                          \
-            GetMatchingBitsFromStringLiteral<BS, "1">(),                                           \
-            std::function<u64(u32)>{[](u32 instruction) -> u64 {                                   \
-                [[maybe_unused]] MatcherArg<BS> i{instruction};                                    \
-                return (CYCLES);                                                                   \
-            }}},
+	Matcher{                                                                                       \
+		GetMatchingBitsFromStringLiteral<BS, "01">(), GetMatchingBitsFromStringLiteral<BS, "1">(), \
+		std::function<u64(u32)>{[](u32 instruction) -> u64 {                                       \
+			[[maybe_unused]] MatcherArg<BS> i{instruction};                                        \
+			return (CYCLES);                                                                       \
+		}}                                                                                         \
+	},
 
-    const std::array arm_matchers{
-        // clang-format off
+	const std::array arm_matchers{
+		// clang-format off
 
         // Branch instructions
         INST("BLX (imm)",           "1111101hvvvvvvvvvvvvvvvvvvvvvvvv",  5) // v5
@@ -389,11 +385,11 @@ namespace {
         INST("RFE",                 "1111100--0-1----0000101000000000",  9) // v6
         INST("SRS",                 "1111100--1-0110100000101000-----",  1) // v6
 
-        // clang-format on
-    };
+		// clang-format on
+	};
 
-    const std::array thumb_matchers{
-        // clang-format off
+	const std::array thumb_matchers{
+		// clang-format off
 
         // Shift (immediate) add, subtract, move and compare instructions
         INST("LSL (imm)",                "00000vvvvvmmmddd",    1)
@@ -487,23 +483,21 @@ namespace {
         INST("BL (imm)",                 "11110Svvvvvvvvvv11j1jvvvvvvvvvvv",    4) // v4T
         INST("BLX (imm)",                "11110Svvvvvvvvvv11j0jvvvvvvvvvvv",    5) // v5T
 
-        // clang-format on
-    };
+		// clang-format on
+	};
 
-} // namespace
+}  // namespace
 
 u64 MyEnvironment::getCyclesForInstruction(bool is_thumb, u32 instruction) {
-    if (is_thumb) {
-        return 1;
-    }
+	if (is_thumb) {
+		return 1;
+	}
 
-    const auto matches_instruction = [instruction](const auto& matcher) {
-        return (instruction & matcher.mask) == matcher.expect;
-    };
+	const auto matches_instruction = [instruction](const auto& matcher) { return (instruction & matcher.mask) == matcher.expect; };
 
-    auto iter = std::find_if(arm_matchers.begin(), arm_matchers.end(), matches_instruction);
-    if (iter != arm_matchers.end()) {
-        return iter->fn(instruction);
-    }
-    return 1;
+	auto iter = std::find_if(arm_matchers.begin(), arm_matchers.end(), matches_instruction);
+	if (iter != arm_matchers.end()) {
+		return iter->fn(instruction);
+	}
+	return 1;
 }

@@ -337,7 +337,7 @@ void Y2RService::setStandardCoeff(u32 messagePointer) {
 	log("Y2R::SetStandardCoeff (coefficient = %d)\n", coeff);
 	mem.write32(messagePointer, IPC::responseHeader(0x20, 1, 0));
 
-	if (coeff > 3) { // Invalid coefficient, should have an error code
+	if (coeff > 3) {  // Invalid coefficient, should have an error code
 		Helpers::panic("Y2R: Invalid standard coefficient (coefficient = %d)\n", coeff);
 	}
 
@@ -360,7 +360,7 @@ void Y2RService::getStandardCoefficientParams(u32 messagePointer) {
 
 		// Write standard coefficient parameters to output buffer
 		for (int i = 0; i < 8; i++) {
-			const u32 pointer = messagePointer + 8 + i * sizeof(u16); // Pointer to write parameter to
+			const u32 pointer = messagePointer + 8 + i * sizeof(u16);  // Pointer to write parameter to
 			mem.write16(pointer, coeff[i]);
 		}
 	}
@@ -453,7 +453,7 @@ void Y2RService::startConversion(u32 messagePointer) {
 
 void Y2RService::isFinishedSendingYUV(u32 messagePointer) {
 	log("Y2R::IsFinishedSendingYUV");
-	constexpr bool finished = true; // For now, Y2R transfers are instant
+	constexpr bool finished = true;  // For now, Y2R transfers are instant
 
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -489,7 +489,7 @@ void Y2RService::isFinishedSendingV(u32 messagePointer) {
 
 void Y2RService::isFinishedReceiving(u32 messagePointer) {
 	log("Y2R::IsFinishedSendingReceiving");
-	constexpr bool finished = true; // For now, receiving components is also instant
+	constexpr bool finished = true;  // For now, receiving components is also instant
 
 	mem.write32(messagePointer, IPC::responseHeader(0x17, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);

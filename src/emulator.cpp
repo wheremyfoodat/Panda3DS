@@ -19,8 +19,9 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config), cpu(memory, kernel, *this), gpu(memory, config), memory(config),
-	  cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this), running(false)
+	: config(getConfigPath()), kernel(cpu, memory, gpu, config, lua), cpu(memory, kernel, *this), gpu(memory, config),
+	  memory(config), cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this),
+	  running(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
@@ -32,18 +33,14 @@ Emulator::Emulator()
 	dspService.setDSPCore(dsp.get());
 
 	audioDevice.init(dsp->getSamples());
-	setAudioEnabled(config.audioEnabled);
-
-	if (Renderdoc::isSupported() && config.enableRenderdoc) {
-		loadRenderdoc();
-	}
-
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
 		updateDiscord();
 	}
 #endif
+
+	reloadSettings();
 	reset(ReloadOption::NoReload);
 }
 
@@ -105,13 +102,18 @@ std::filesystem::path Emulator::getConfigPath() {
 	if constexpr (Helpers::isAndroid()) {
 		return getAndroidAppPath() / "config.toml";
 	} else {
-		return std::filesystem::current_path() / "config.toml";
+		std::filesystem::path localPath = std::filesystem::current_path() / "config.toml";
+
+		if (std::filesystem::exists(localPath)) {
+			return localPath;
+		} else {
+			return getAppDataRoot() / "config.toml";
+		}
 	}
 }
 #endif
 
 void Emulator::step() {}
-void Emulator::render() {}
 
 // Only resume if a ROM is properly loaded
 void Emulator::resume() {
@@ -131,8 +133,8 @@ void Emulator::togglePause() { running ? pause() : resume(); }
 
 void Emulator::runFrame() {
 	if (running) {
-		cpu.runFrame(); // Run 1 frame of instructions
-		gpu.display();  // Display graphics
+		cpu.runFrame();  // Run 1 frame of instructions
+		gpu.display();   // Display graphics
 
 		// Run cheats if any are loaded
 		if (cheats.haveCheats()) [[unlikely]] {
@@ -179,6 +181,7 @@ void Emulator::pollScheduler() {
 			}
 
 			case Scheduler::EventType::SignalY2R: kernel.getServiceManager().getY2R().signalConversionDone(); break;
+			case Scheduler::EventType::UpdateIR: kernel.getServiceManager().getIRUser().updateCirclePadPro(); break;
 
 			default: {
 				Helpers::panic("Scheduler: Unimplemented event type received: %d\n", static_cast<int>(eventType));
@@ -267,6 +270,11 @@ bool Emulator::loadROM(const std::filesystem::path& path) {
 	} else {
 		romPath = std::nullopt;
 		romType = ROMType::None;
+	}
+
+	if (success) {
+		// Update the main thread entrypoint and SP so that the thread debugger can display them.
+		kernel.setMainThreadEntrypointAndSP(cpu.getReg(15), cpu.getReg(13));
 	}
 
 	resume();  // Start the emulator
@@ -455,6 +463,8 @@ void Emulator::reloadSettings() {
 	if (Renderdoc::isSupported() && config.enableRenderdoc && !Renderdoc::isLoaded()) {
 		loadRenderdoc();
 	}
+
+    gpu.getRenderer()->setHashTextures(config.hashTextures);
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	// Reload RPC setting if we're compiling with RPC support

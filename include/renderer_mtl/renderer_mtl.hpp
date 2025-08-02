@@ -13,7 +13,6 @@
 #include "mtl_vertex_buffer_cache.hpp"
 #include "renderer.hpp"
 
-
 // HACK: use the OpenGL cache
 #include "../renderer_gl/surface_cache.hpp"
 
@@ -30,7 +29,7 @@ class RendererMTL final : public Renderer {
 
 	void reset() override;
 	void display() override;
-	void initGraphicsContext(SDL_Window* window) override;
+	void initGraphicsContext(void* context) override;
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
@@ -38,15 +37,13 @@ class RendererMTL final : public Renderer {
 	void screenshot(const std::string& name) override;
 	void deinitGraphicsContext() override;
 
-#ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext([[maybe_unused]] GL::Context* context) override {}
-#endif
+	virtual void setMTKLayer(void* layer) override;
 
   private:
-	CA::MetalLayer* metalLayer;
+	CA::MetalLayer* metalLayer = nullptr;
 
-	MTL::Device* device;
-	MTL::CommandQueue* commandQueue;
+	MTL::Device* device = nullptr;
+	MTL::CommandQueue* commandQueue = nullptr;
 
 	Metal::CommandEncoder commandEncoder;
 
@@ -86,6 +83,20 @@ class RendererMTL final : public Renderer {
 	MTL::Texture* lastColorTexture = nullptr;
 	MTL::Texture* lastDepthTexture = nullptr;
 
+	// Information about the final 3DS screen -> Window blit, accounting for things like scaling and shifting the output based on
+	// the window's dimensions. Updated whenever the screen size or layout changes.
+	struct {
+		float topScreenX = 0;
+		float topScreenY = 0;
+		float topScreenWidth = 400;
+		float topScreenHeight = 240;
+
+		float bottomScreenX = 40;
+		float bottomScreenY = 240;
+		float bottomScreenWidth = 320;
+		float bottomScreenHeight = 240;
+	} blitInfo;
+
 	// Debug
 	std::string nextRenderPassName;
 
@@ -98,6 +109,7 @@ class RendererMTL final : public Renderer {
 	void endRenderPass() {
 		if (renderCommandEncoder) {
 			renderCommandEncoder->endEncoding();
+			renderCommandEncoder->release();
 			renderCommandEncoder = nullptr;
 		}
 	}

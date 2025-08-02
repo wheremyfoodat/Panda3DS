@@ -14,7 +14,6 @@ namespace FileOps {
 	};
 }
 
-
 void Kernel::handleFileOperation(u32 messagePointer, Handle file) {
 	const u32 cmd = mem.read32(messagePointer);
 	switch (cmd) {
@@ -70,8 +69,7 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	u32 size = mem.read32(messagePointer + 12);
 	u32 dataPointer = mem.read32(messagePointer + 20);
 
-	logFileIO("Trying to read %X bytes from file %X, starting from offset %llX into memory address %08X\n",
-		size, fileHandle, offset, dataPointer);
+	logFileIO("Trying to read %X bytes from file %X, starting from offset %llX into memory address %08X\n", size, fileHandle, offset, dataPointer);
 
 	const auto p = getObject(fileHandle, KernelObjectType::File);
 	if (p == nullptr) [[unlikely]] {
@@ -89,14 +87,14 @@ void Kernel::readFile(u32 messagePointer, Handle fileHandle) {
 	if (file->fd) {
 		std::unique_ptr<u8[]> data(new u8[size]);
 		IOFile f(file->fd);
+		f.seek(offset);
 
 		auto [success, bytesRead] = f.readBytes(data.get(), size);
 
 		if (!success) {
 			Helpers::panic("Kernel::ReadFile with file descriptor failed");
-		}
-		else {
-			for (size_t i = 0; i < bytesRead; i++) {
+		} else {
+			for (usize i = 0; i < bytesRead; i++) {
 				mem.write8(u32(dataPointer + i), data[i]);
 			}
 
@@ -124,8 +122,7 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 	u32 writeOption = mem.read32(messagePointer + 16);
 	u32 dataPointer = mem.read32(messagePointer + 24);
 
-	logFileIO("Trying to write %X bytes to file %X, starting from file offset %llX and memory address %08X\n",
-		size, fileHandle, offset, dataPointer);
+	logFileIO("Trying to write %X bytes to file %X, starting from file offset %llX and memory address %08X\n", size, fileHandle, offset, dataPointer);
 
 	const auto p = getObject(fileHandle, KernelObjectType::File);
 	if (p == nullptr) [[unlikely]] {
@@ -137,8 +134,9 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 		Helpers::panic("Tried to write closed file");
 	}
 
-	if (!file->fd)
+	if (!file->fd) {
 		Helpers::panic("[Kernel::File::WriteFile] Tried to write to file without a valid file descriptor");
+	}
 
 	std::unique_ptr<u8[]> data(new u8[size]);
 	for (size_t i = 0; i < size; i++) {
@@ -146,6 +144,7 @@ void Kernel::writeFile(u32 messagePointer, Handle fileHandle) {
 	}
 
 	IOFile f(file->fd);
+	f.seek(offset);
 	auto [success, bytesWritten] = f.writeBytes(data.get(), size);
 
 	// TODO: Should this check only the byte?

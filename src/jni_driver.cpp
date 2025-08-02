@@ -10,11 +10,11 @@
 #include "android_utils.hpp"
 #include "sdl_sensors.hpp"
 
-std::unique_ptr<Emulator> emulator = nullptr;
-HIDService* hidService = nullptr;
-RendererGL* renderer = nullptr;
-bool romLoaded = false;
-JavaVM* jvm = nullptr;
+static std::unique_ptr<Emulator> emulator = nullptr;
+static HIDService* hidService = nullptr;
+static RendererGL* renderer = nullptr;
+static bool romLoaded = false;
+static JavaVM* jvm = nullptr;
 
 jclass alberClass;
 jmethodID alberClassOpenDocument;
@@ -78,6 +78,7 @@ AlberFunction(void, Initialize)(JNIEnv* env, jobject obj) {
 	}
 
 	__android_log_print(ANDROID_LOG_INFO, "AlberDriver", "OpenGL ES %d.%d", GLVersion.major, GLVersion.minor);
+	emulator->getRenderer()->setupGLES();
 	emulator->initGraphicsContext(nullptr);
 }
 
@@ -153,7 +154,6 @@ int AndroidUtils::openDocument(const char* path, const char* perms) {
 
     jstring uri = env->NewStringUTF(path);
     jstring jmode = env->NewStringUTF(perms);
-
     jint result = env->CallStaticIntMethod(alberClass, alberClassOpenDocument, uri, jmode);
 
     env->DeleteLocalRef(uri);

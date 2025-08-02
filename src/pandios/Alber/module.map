@@ -1,0 +1,5 @@
+module AlberDriver {
+  umbrella "Headers"  // for multiple files
+  link "libAlber"
+  export *
+}

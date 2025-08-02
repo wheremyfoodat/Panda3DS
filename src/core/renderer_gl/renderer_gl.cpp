@@ -2,17 +2,20 @@
 
 #include <stb_image_write.h>
 
+#include <algorithm>
 #include <bit>
 #include <cmrc/cmrc.hpp>
 
 #include "PICA/float_types.hpp"
 #include "PICA/gpu.hpp"
 #include "PICA/pica_frag_uniforms.hpp"
+#include "PICA/pica_hash.hpp"
 #include "PICA/pica_simd.hpp"
 #include "PICA/regs.hpp"
 #include "PICA/shader_decompiler.hpp"
 #include "config.hpp"
 #include "math_util.hpp"
+#include "screen_layout.hpp"
 
 CMRC_DECLARE(RendererGL);
 
@@ -51,17 +54,12 @@ void RendererGL::reset() {
 
 		gl.useProgram(oldProgram);  // Switch to old GL program
 	}
-
-#ifdef USING_GLES
-	fragShaderGen.setTarget(PICA::ShaderGen::API::GLES, PICA::ShaderGen::Language::GLSL);
-#endif
 }
 
 void RendererGL::initGraphicsContextInternal() {
 	gl.reset();
 
 	auto gl_resources = cmrc::RendererGL::get_filesystem();
-
 	auto vertexShaderSource = gl_resources.open("opengl_vertex_shader.vert");
 	auto fragmentShaderSource = gl_resources.open("opengl_fragment_shader.frag");
 
@@ -70,32 +68,17 @@ void RendererGL::initGraphicsContextInternal() {
 	triangleProgram.create({vert, frag});
 	initUbershader(triangleProgram);
 
-	auto displayVertexShaderSource = gl_resources.open("opengl_display.vert");
-	auto displayFragmentShaderSource = gl_resources.open("opengl_display.frag");
-
-	OpenGL::Shader vertDisplay({displayVertexShaderSource.begin(), displayVertexShaderSource.size()}, OpenGL::Vertex);
-	OpenGL::Shader fragDisplay({displayFragmentShaderSource.begin(), displayFragmentShaderSource.size()}, OpenGL::Fragment);
-	displayProgram.create({vertDisplay, fragDisplay});
-
-	gl.useProgram(displayProgram);
-	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
-
+	compileDisplayShader();
 	// Create stream buffers for vertex, index and uniform buffers
 	static constexpr usize hwIndexBufferSize = 2_MB;
 	static constexpr usize hwVertexBufferSize = 16_MB;
+	static constexpr usize hwShaderUniformUBOSize = 4_MB;
+	static constexpr usize shadergenFragmentUBOSize = 4_MB;
 
 	hwIndexBuffer = StreamBuffer::Create(GL_ELEMENT_ARRAY_BUFFER, hwIndexBufferSize);
 	hwVertexBuffer = StreamBuffer::Create(GL_ARRAY_BUFFER, hwVertexBufferSize);
-
-	// Allocate memory for the shadergen fragment uniform UBO
-	glGenBuffers(1, &shadergenFragmentUBO);
-	gl.bindUBO(shadergenFragmentUBO);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
-
-	// Allocate memory for the accelerated vertex shader uniform UBO
-	glGenBuffers(1, &hwShaderUniformUBO);
-	gl.bindUBO(hwShaderUniformUBO);
-	glBufferData(GL_UNIFORM_BUFFER, PICAShader::totalUniformSize(), nullptr, GL_DYNAMIC_DRAW);
+	hwShaderUniformUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, hwShaderUniformUBOSize);
+	shadergenFragmentUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, shadergenFragmentUBOSize);
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize * 2, GL_STREAM_DRAW);
 	vbo.bind();
@@ -147,8 +130,8 @@ void RendererGL::initGraphicsContextInternal() {
 
 	auto prevTexture = OpenGL::getTex2D();
 
-	// Create a plain black texture for when a game reads an invalid texture. It is common for games to configure the PICA to read texture info from NULL.
-	// Some games that do this are Pokemon X, Cars 2, Tomodachi Life, and more. We bind the texture to an FBO, clear it, and free the FBO
+	// Create a plain black texture for when a game reads an invalid texture. It is common for games to configure the PICA to read texture info from
+	// NULL. Some games that do this are Pokemon X, Cars 2, Tomodachi Life, and more. We bind the texture to an FBO, clear it, and free the FBO
 	blankTexture.create(8, 8, GL_RGBA8);
 	blankTexture.bind();
 	blankTexture.setMinFilter(OpenGL::Linear);
@@ -191,10 +174,15 @@ void RendererGL::initGraphicsContextInternal() {
 	}
 
 	reset();
+	fragShaderGen.setTarget(driverInfo.usingGLES ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL);
 
 	// Populate our driver info structure
 	driverInfo.supportsExtFbFetch = (GLAD_GL_EXT_shader_framebuffer_fetch != 0);
 	driverInfo.supportsArmFbFetch = (GLAD_GL_ARM_shader_framebuffer_fetch != 0);
+
+	// UBOs have an alignment requirement we have to respect
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, reinterpret_cast<GLint*>(&driverInfo.uboAlignment));
+	driverInfo.uboAlignment = std::max<GLuint>(driverInfo.uboAlignment, 16);
 
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
@@ -203,7 +191,7 @@ void RendererGL::initGraphicsContextInternal() {
 
 // The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
 // So we just call initGraphicsContextInternal for both
-void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { initGraphicsContextInternal(); }
+void RendererGL::initGraphicsContext([[maybe_unused]] void* context) { initGraphicsContextInternal(); }
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
@@ -240,7 +228,7 @@ void RendererGL::setupBlending() {
 	// Shows if blending is enabled. If it is not enabled, then logic ops are enabled instead
 	const bool blendingEnabled = (regs[PICA::InternalRegs::ColourOperation] & (1 << 8)) != 0;
 
-	if (!blendingEnabled) { // Logic ops are enabled
+	if (!blendingEnabled) {  // Logic ops are enabled
 		const u32 logicOp = getBits<0, 4>(regs[PICA::InternalRegs::LogicOp]);
 		gl.setLogicOp(logicOps[logicOp]);
 
@@ -281,20 +269,13 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	}
 
 	static constexpr std::array<GLenum, 8> stencilFuncs = {
-		GL_NEVER,
-		GL_ALWAYS,
-		GL_EQUAL,
-		GL_NOTEQUAL,
-		GL_LESS,
-		GL_LEQUAL,
-		GL_GREATER,
-		GL_GEQUAL
+		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL,
 	};
 	gl.enableStencil();
 
 	const u32 stencilConfig = regs[PICA::InternalRegs::StencilTest];
 	const u32 stencilFunc = getBits<4, 3>(stencilConfig);
-	const s32 reference = s8(getBits<16, 8>(stencilConfig)); // Signed reference value
+	const s32 reference = s8(getBits<16, 8>(stencilConfig));  // Signed reference value
 	const u32 stencilRefMask = getBits<24, 8>(stencilConfig);
 
 	const bool stencilWrite = regs[PICA::InternalRegs::DepthBufferWrite];
@@ -305,15 +286,9 @@ void RendererGL::setupStencilTest(bool stencilEnable) {
 	gl.setStencilMask(stencilBufferMask);
 
 	static constexpr std::array<GLenum, 8> stencilOps = {
-		GL_KEEP,
-		GL_ZERO,
-		GL_REPLACE,
-		GL_INCR,
-		GL_DECR,
-		GL_INVERT,
-		GL_INCR_WRAP,
-		GL_DECR_WRAP
+		GL_KEEP, GL_ZERO, GL_REPLACE, GL_INCR, GL_DECR, GL_INVERT, GL_INCR_WRAP, GL_DECR_WRAP,
 	};
+
 	const u32 stencilOpConfig = regs[PICA::InternalRegs::StencilOp];
 	const u32 stencilFailOp = getBits<0, 3>(stencilOpConfig);
 	const u32 depthFailOp = getBits<4, 3>(stencilOpConfig);
@@ -372,17 +347,29 @@ void RendererGL::bindTexturesToSlots() {
 		const u32 width = getBits<16, 11>(dim);
 		const u32 addr = (regs[ioBase + 4] & 0x0FFFFFFF) << 3;
 		u32 format = regs[ioBase + (i == 0 ? 13 : 5)] & 0xF;
-
 		glActiveTexture(GL_TEXTURE0 + i);
 
 		if (addr != 0) [[likely]] {
 			Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+
+			if (hashTextures) {
+				const u8* startPointer = gpu.getPointerPhys<u8>(targetTex.location);
+				const usize sizeInBytes = targetTex.sizeInBytes();
+
+				if (startPointer == nullptr || (sizeInBytes > 0 && gpu.getPointerPhys<u8>(targetTex.location + sizeInBytes - 1) == nullptr))
+					[[unlikely]] {
+					Helpers::warn("Out-of-bounds texture fetch");
+				} else {
+					targetTex.hash = PICAHash::computeHash((const char*)startPointer, sizeInBytes);
+				}
+			}
+
 			OpenGL::Texture tex = getTexture(targetTex);
 			tex.bind();
 		} else {
-			// Mapping a texture from NULL. PICA seems to read the last sampled colour, but for now we will display a black texture instead since it is far easier.
-			// Games that do this don't really care what it does, they just expect the PICA to not crash, since it doesn't have a PU/MMU and can do all sorts of
-			// Weird invalid memory accesses without crashing
+			// Mapping a texture from NULL. PICA seems to read the last sampled colour, but for now we will display a black texture instead since it
+			// is far easier. Games that do this don't really care what it does, they just expect the PICA to not crash, since it doesn't have a
+			// PU/MMU and can do all sorts of Weird invalid memory accesses without crashing
 			blankTexture.bind();
 		}
 	}
@@ -468,7 +455,10 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	const int depthFunc = getBits<4, 3>(depthControl);
 	const int colourMask = getBits<8, 4>(depthControl);
 	gl.setColourMask(colourMask & 1, colourMask & 2, colourMask & 4, colourMask & 8);
-	static constexpr std::array<GLenum, 8> depthModes = {GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL};
+
+	static constexpr std::array<GLenum, 8> depthModes = {
+		GL_NEVER, GL_ALWAYS, GL_EQUAL, GL_NOTEQUAL, GL_LESS, GL_LEQUAL, GL_GREATER, GL_GEQUAL,
+	};
 
 	bindTexturesToSlots();
 	if (gpu.fogLUTDirty) {
@@ -565,14 +555,14 @@ void RendererGL::display() {
 
 	if (topScreen) {
 		topScreen->get().texture.bind();
-		OpenGL::setViewport(0, 240, 400, 240); // Top screen viewport
-		OpenGL::draw(OpenGL::TriangleStrip, 4); // Actually draw our 3DS screen
+		OpenGL::setViewport(0, 240, 400, 240);   // Top screen viewport
+		OpenGL::draw(OpenGL::TriangleStrip, 4);  // Actually draw our 3DS screen
 	}
 
 	const u32 bottomActiveFb = externalRegs[Framebuffer1Select] & 1;
 	const u32 bottomScreenAddr = externalRegs[bottomActiveFb == 0 ? Framebuffer1AFirstAddr : Framebuffer1ASecondAddr];
 	auto bottomScreen = colourBufferCache.findFromAddress(bottomScreenAddr);
-	
+
 	if (bottomScreen) {
 		bottomScreen->get().texture.bind();
 		OpenGL::setViewport(40, 0, 320, 240);
@@ -581,8 +571,59 @@ void RendererGL::display() {
 
 	if constexpr (!Helpers::isHydraCore()) {
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		OpenGL::clearColor();
+
 		screenFramebuffer.bind(OpenGL::ReadFramebuffer);
-		glBlitFramebuffer(0, 0, 400, 480, 0, 0, outputWindowWidth, outputWindowHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+		if (outputSizeChanged) {
+			outputSizeChanged = false;
+
+			auto layout = emulatorConfig->screenLayout;
+
+			// Get information about our new screen layout to use for blitting the output
+			ScreenLayout::WindowCoordinates windowCoords;
+			ScreenLayout::calculateCoordinates(windowCoords, outputWindowWidth, outputWindowHeight, emulatorConfig->topScreenSize, layout);
+
+			blitInfo.topScreenX = windowCoords.topScreenX;
+			blitInfo.topScreenY = windowCoords.topScreenY;
+			blitInfo.topScreenWidth = windowCoords.topScreenWidth;
+			blitInfo.topScreenHeight = windowCoords.topScreenHeight;
+
+			blitInfo.bottomScreenX = windowCoords.bottomScreenX;
+			blitInfo.bottomScreenY = windowCoords.bottomScreenY;
+			blitInfo.bottomScreenWidth = windowCoords.bottomScreenWidth;
+			blitInfo.bottomScreenHeight = windowCoords.bottomScreenHeight;
+
+			// Flip topScreenY and bottomScreenY because glBlitFramebuffer uses bottom-left origin
+			blitInfo.topScreenY = outputWindowHeight - (blitInfo.topScreenY + blitInfo.topScreenHeight);
+			blitInfo.bottomScreenY = outputWindowHeight - (blitInfo.bottomScreenY + blitInfo.bottomScreenHeight);
+
+			// Used for optimizing the screen blit into a single blit
+			blitInfo.canDoSingleBlit = windowCoords.singleBlitInfo.canDoSingleBlit;
+			blitInfo.destX = windowCoords.singleBlitInfo.destX;
+			blitInfo.destY = windowCoords.singleBlitInfo.destY;
+			blitInfo.destWidth = windowCoords.singleBlitInfo.destWidth;
+			blitInfo.destHeight = windowCoords.singleBlitInfo.destHeight;
+		}
+
+		if (blitInfo.canDoSingleBlit) {
+			glBlitFramebuffer(
+				0, 0, 400, 480, blitInfo.destX, blitInfo.destY, blitInfo.destX + blitInfo.destWidth, blitInfo.destY + blitInfo.destHeight,
+				GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+		} else {
+			// Blit top screen
+			glBlitFramebuffer(
+				0, 240, 400, 480, blitInfo.topScreenX, blitInfo.topScreenY, blitInfo.topScreenX + blitInfo.topScreenWidth,
+				blitInfo.topScreenY + blitInfo.topScreenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+
+			// Blit bottom screen
+			glBlitFramebuffer(
+				40, 0, 360, 240, blitInfo.bottomScreenX, blitInfo.bottomScreenY, blitInfo.bottomScreenX + blitInfo.bottomScreenWidth,
+				blitInfo.bottomScreenY + blitInfo.bottomScreenHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR
+			);
+		}
 	}
 }
 
@@ -709,8 +750,10 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 	u32 outputWidth = outputSize & 0xffff;
 	u32 outputHeight = outputSize >> 16;
 
-	OpenGL::DebugScope scope("DisplayTransfer inputAddr 0x%08X outputAddr 0x%08X inputWidth %d outputWidth %d inputHeight %d outputHeight %d",
-							 inputAddr, outputAddr, inputWidth, outputWidth, inputHeight, outputHeight);
+	OpenGL::DebugScope scope(
+		"DisplayTransfer inputAddr 0x%08X outputAddr 0x%08X inputWidth %d outputWidth %d inputHeight %d outputHeight %d", inputAddr, outputAddr,
+		inputWidth, outputWidth, inputHeight, outputHeight
+	);
 
 	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, outputHeight);
 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
@@ -760,8 +803,10 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	const u32 outputWidth = (outputSize & 0xffff) << 4;
 	const u32 outputGap = (outputSize >> 16) << 4;
 
-	OpenGL::DebugScope scope("TextureCopy inputAddr 0x%08X outputAddr 0x%08X totalBytes %d inputWidth %d inputGap %d outputWidth %d outputGap %d",
-							 inputAddr, outputAddr, totalBytes, inputWidth, inputGap, outputWidth, outputGap);
+	OpenGL::DebugScope scope(
+		"TextureCopy inputAddr 0x%08X outputAddr 0x%08X totalBytes %d inputWidth %d inputGap %d outputWidth %d outputGap %d", inputAddr, outputAddr,
+		totalBytes, inputWidth, inputGap, outputWidth, outputGap
+	);
 
 	if (inputGap != 0 || outputGap != 0) {
 		// Helpers::warn("Strided texture copy\n");
@@ -799,12 +844,14 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 	// Find the source surface.
 	auto srcFramebuffer = getColourBuffer(inputAddr, PICA::ColorFmt::RGBA8, copyStride, copyHeight, false);
 	if (!srcFramebuffer) {
-		static int shutUpCounter = 0; // Don't want to spam the console too much, so shut up after 5 times
+		static int shutUpCounter = 0;  // Don't want to spam the console too much, so shut up after 5 times
 
 		if (shutUpCounter < 5) {
 			shutUpCounter++;
 			printf("RendererGL::TextureCopy failed to locate src framebuffer!\n");
 		}
+
+		doSoftwareTextureCopy(inputAddr, outputAddr, copySize, inputWidth, inputGap, outputWidth, outputGap);
 		return;
 	}
 
@@ -850,9 +897,9 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 
 	PICA::FragmentConfig fsConfig(regs);
 	// If we're not on GLES, ignore the logic op configuration and don't generate redundant shaders for it, since we use hw logic ops
-#ifndef USING_GLES
-	fsConfig.outConfig.logicOpMode = PICA::LogicOpMode(0);
-#endif
+	if (!driverInfo.usingGLES) {
+		fsConfig.outConfig.logicOpMode = PICA::LogicOpMode(0);
+	}
 
 	OpenGL::Shader& fragShader = shaderCache.fragmentShaderCache[fsConfig];
 	if (!fragShader.exists()) {
@@ -887,10 +934,6 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 			uint vertexUBOIndex = glGetUniformBlockIndex(program.handle(), "PICAShaderUniforms");
 			glUniformBlockBinding(program.handle(), vertexUBOIndex, vsUBOBlockBinding);
 		}
-	}
-	glBindBufferBase(GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO);
-	if (usingAcceleratedShader) {
-		glBindBufferBase(GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO);
 	}
 
 	// Upload uniform data to our shader's UBO
@@ -975,8 +1018,22 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		}
 	}
 
-	gl.bindUBO(shadergenFragmentUBO);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
+	// Upload fragment uniforms to UBO
+	shadergenFragmentUBO->Bind();
+	auto uboRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
+	std::memcpy(uboRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
+	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
+
+	// Bind our UBOs
+	glBindBufferRange(
+		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), uboRes.buffer_offset, sizeof(PICA::FragmentUniforms)
+	);
+
+	if (usingAcceleratedShader) {
+		glBindBufferRange(
+			GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId(), hwShaderUniformUBOOffset, PICAShader::totalUniformSize()
+		);
+	}
 
 	return program;
 }
@@ -1010,11 +1067,11 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 
 			std::string picaShaderSource = PICA::ShaderGen::decompileShader(
 				shaderUnit.vs, *emulatorConfig, shaderUnit.vs.entrypoint,
-				Helpers::isAndroid() ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
+				driverInfo.usingGLES ? PICA::ShaderGen::API::GLES : PICA::ShaderGen::API::GL, PICA::ShaderGen::Language::GLSL
 			);
 
-			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and upload
-			// it to the GPU
+			// Empty source means compilation error, if the source is not empty then we convert the recompiled PICA code into a valid shader and
+			// upload it to the GPU
 			if (!picaShaderSource.empty()) {
 				std::string vertexShaderSource = fragShaderGen.getVertexShaderAccelerated(picaShaderSource, vertexConfig, usingUbershader);
 				shader->create({vertexShaderSource}, OpenGL::Vertex);
@@ -1026,11 +1083,16 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 			usingAcceleratedShader = false;
 		} else {
 			generatedVertexShader = &(*shader);
-			gl.bindUBO(hwShaderUniformUBO);
+			hwShaderUniformUBO->Bind();
 
+			// Upload shader uniforms to our UBO
 			if (shaderUnit.vs.uniformsDirty) {
 				shaderUnit.vs.uniformsDirty = false;
-				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
+				auto uboRes = hwShaderUniformUBO->Map(driverInfo.uboAlignment, PICAShader::totalUniformSize());
+				std::memcpy(uboRes.pointer, shaderUnit.vs.getUniformPointer(), PICAShader::totalUniformSize());
+				hwShaderUniformUBO->Unmap(PICAShader::totalUniformSize());
+
+				hwShaderUniformUBOOffset = uboRes.buffer_offset;
 			}
 
 			performIndexedRender = accel->indexed;
@@ -1045,7 +1107,7 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 	if (!usingUbershader) {
 		OpenGL::Program& program = getSpecializedShader();
 		gl.useProgram(program);
-	} else { // Bind ubershader & load ubershader uniforms
+	} else {  // Bind ubershader & load ubershader uniforms
 		gl.useProgram(triangleProgram);
 
 		const float depthScale = f24::fromRaw(regs[PICA::InternalRegs::DepthScale] & 0xffffff).toFloat32();
@@ -1156,6 +1218,19 @@ void RendererGL::initUbershader(OpenGL::Program& program) {
 	glUniform1i(OpenGL::uniformLocation(program, "u_tex_luts"), 3);
 }
 
+void RendererGL::compileDisplayShader() {
+	auto gl_resources = cmrc::RendererGL::get_filesystem();
+	auto displayVertexShaderSource = driverInfo.usingGLES ? gl_resources.open("opengl_es_display.vert") : gl_resources.open("opengl_display.vert");
+	auto displayFragmentShaderSource = driverInfo.usingGLES ? gl_resources.open("opengl_es_display.frag") : gl_resources.open("opengl_display.frag");
+
+	OpenGL::Shader vertDisplay({displayVertexShaderSource.begin(), displayVertexShaderSource.size()}, OpenGL::Vertex);
+	OpenGL::Shader fragDisplay({displayFragmentShaderSource.begin(), displayFragmentShaderSource.size()}, OpenGL::Fragment);
+	displayProgram.create({vertDisplay, fragDisplay});
+
+	gl.useProgram(displayProgram);
+	glUniform1i(OpenGL::uniformLocation(displayProgram, "u_texture"), 0);  // Init sampler object
+}
+
 void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) {
 	u32 buffer = 0;  // Vertex buffer index for non-fixed attributes
 	u32 attrCount = 0;
@@ -1202,7 +1277,7 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 	const u32 currentAttributeMask = accel->enabledAttributeMask;
 	// Use bitwise xor to calculate which attributes changed
 	u32 attributeMaskDiff = currentAttributeMask ^ previousAttributeMask;
-	
+
 	while (attributeMaskDiff != 0) {
 		// Get index of next different attribute and turn it off
 		const u32 index = 31 - std::countl_zero<u32>(attributeMaskDiff);
@@ -1249,5 +1324,21 @@ void RendererGL::accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAccele
 				reinterpret_cast<GLvoid*>(vertexBufferOffset + attrib.offset)
 			);
 		}
+	}
+}
+
+void RendererGL::setupGLES() {
+	driverInfo.usingGLES = true;
+
+	// OpenGL ES hardware is typically way too slow to use the ubershader (eg RPi, mobile phones, handhelds) or has other issues with it.
+	// So, display a warning and turn them off on OpenGL ES.
+	if (emulatorConfig->useUbershaders) {
+		emulatorConfig->useUbershaders = false;
+		Helpers::warn("Ubershaders enabled on OpenGL ES. This usually results in a worse experience, turning it off...");
+	}
+
+	// Stub out logic operations so that calling them doesn't crash the emulator
+	if (!glLogicOp) {
+		glLogicOp = [](GLenum) {};
 	}
 }

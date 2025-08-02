@@ -6,6 +6,7 @@
 
 #include "emulator.hpp"
 #include "input_mappings.hpp"
+#include "screen_layout.hpp"
 
 class FrontendSDL {
 	Emulator emu;
@@ -27,7 +28,11 @@ class FrontendSDL {
 	u32 windowHeight = 480;
 	int gameControllerID;
 	bool programRunning = true;
-	
+
+	// Coordinates (x/y/width/height) for the two screens in window space, used for properly handling touchscreen regardless
+	// of layout or resizing
+	ScreenLayout::WindowCoordinates screenCoordinates;
+
 	// For tracking whether to update gyroscope
 	// We bind gyro to right click + mouse movement
 	bool holdingRightClick = false;
@@ -38,5 +43,7 @@ class FrontendSDL {
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
 
+  private:
 	void setupControllerSensors(SDL_GameController* controller);
+	void handleLeftClick(int mouseX, int mouseY);
 };

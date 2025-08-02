@@ -71,6 +71,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	themeSelect->addItem(tr("Dark"));
 	themeSelect->addItem(tr("Greetings Cat"));
 	themeSelect->addItem(tr("Cream"));
+	themeSelect->addItem(tr("OLED"));
 	themeSelect->setCurrentIndex(static_cast<int>(config.frontendSettings.theme));
 	connect(themeSelect, &QComboBox::currentIndexChanged, this, [&](int index) {
 		config.frontendSettings.theme = static_cast<Theme>(index);
@@ -86,6 +87,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	iconSelect->addItem(tr("Sleepy panda"));
 	iconSelect->addItem(tr("Cow panda"));
 	iconSelect->addItem(tr("The penguin from SkyEmu"));
+	iconSelect->addItem(tr("Unpog"));
 	iconSelect->setCurrentIndex(static_cast<int>(config.frontendSettings.icon));
 
 	connect(iconSelect, &QComboBox::currentIndexChanged, this, [&](int index) {
@@ -145,6 +147,31 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	romLayout->addWidget(browseRomPath);
 	genLayout->addRow(tr("Default ROMs path"), romLayout);
 
+	QComboBox* systemLanguage = new QComboBox();
+	systemLanguage->addItem(tr("Japanese"));
+	systemLanguage->addItem(tr("English"));
+	systemLanguage->addItem(tr("French"));
+	systemLanguage->addItem(tr("German"));
+	systemLanguage->addItem(tr("Italian"));
+	systemLanguage->addItem(tr("Spanish"));
+	systemLanguage->addItem(tr("Chinese"));
+	systemLanguage->addItem(tr("Korean"));
+	systemLanguage->addItem(tr("Dutch"));
+	systemLanguage->addItem(tr("Portuguese"));
+	systemLanguage->addItem(tr("Russian"));
+	systemLanguage->addItem(tr("Taiwanese"));
+
+	systemLanguage->setCurrentIndex(static_cast<int>(config.systemLanguage));
+	connect(systemLanguage, &QComboBox::currentIndexChanged, this, [&](int index) {
+		config.systemLanguage = static_cast<LanguageCodes>(index);
+		updateConfig();
+	});
+	genLayout->addRow(tr("System language"), systemLanguage);
+
+	QCheckBox* circlePadProEnabled = new QCheckBox(tr("Enable CirclePad Pro"));
+	connectCheckbox(circlePadProEnabled, config.circlePadProEnabled);
+	genLayout->addRow(circlePadProEnabled);
+
 	QCheckBox* discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
 	connectCheckbox(discordRpcEnabled, config.discordRpcEnabled);
 	genLayout->addRow(discordRpcEnabled);
@@ -163,14 +190,24 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	gpuLayout->setHorizontalSpacing(20);
 	gpuLayout->setVerticalSpacing(10);
 
-	QComboBox* rendererType = new QComboBox;
+	QComboBox* rendererType = new QComboBox();
 	rendererType->addItem(tr("Null"));
 	rendererType->addItem(tr("OpenGL"));
 	rendererType->addItem(tr("Vulkan"));
 	rendererType->setCurrentIndex(static_cast<int>(config.rendererType));
 	connect(rendererType, &QComboBox::currentIndexChanged, this, [&](int index) {
-		config.rendererType = static_cast<RendererType>(index);
-		updateConfig();
+		auto type = static_cast<RendererType>(index);
+
+		if (type == RendererType::Vulkan) {
+			QMessageBox messageBox(
+				QMessageBox::Icon::Critical, tr("Vulkan renderer unavailable"),
+				tr("Qt UI doesn't currently support Vulkan, try again at a later time")
+			);
+			messageBox.exec();
+		} else {
+			config.rendererType = type;
+			updateConfig();
+		}
 	});
 	gpuLayout->addRow(tr("GPU renderer"), rendererType);
 
@@ -198,6 +235,41 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	connectCheckbox(accelerateShaders, config.accelerateShaders);
 	gpuLayout->addRow(accelerateShaders);
 
+	QCheckBox* hashTextures = new QCheckBox(tr("Hash textures"));
+	hashTextures->setToolTip(tr("Enable this to reduce texture mismatches at the cost of slightly lower performance"));
+	connectCheckbox(hashTextures, config.hashTextures);
+	gpuLayout->addRow(hashTextures);
+
+	QComboBox* screenLayout = new QComboBox();
+	screenLayout->addItem(tr("Default"));
+	screenLayout->addItem(tr("Default (Flipped)"));
+	screenLayout->addItem(tr("Side-by-Side"));
+	screenLayout->addItem(tr("Side-by-Side (Flipped)"));
+	screenLayout->setCurrentIndex(static_cast<int>(config.screenLayout));
+	connect(screenLayout, &QComboBox::currentIndexChanged, this, [&](int index) {
+		config.screenLayout = static_cast<ScreenLayout::Layout>(index);
+		updateConfig();
+	});
+	gpuLayout->addRow(tr("Screen Layout"), screenLayout);
+
+	// Screen size slider widgets
+	QLabel* topScreenSizeLabel = new QLabel(QString::number(int(config.topScreenSize * 100)));
+	QSlider* topScreenSizeSlider = new QSlider(Qt::Horizontal);
+
+	topScreenSizeSlider->setRange(0, 100);
+	topScreenSizeSlider->setValue(int(config.topScreenSize * 100));
+	connect(topScreenSizeSlider, &QSlider::valueChanged, this, [this, topScreenSizeLabel](int value) {
+		config.topScreenSize = float(value) / 100.0f;
+		topScreenSizeLabel->setText(QString::number(value));
+		updateConfig();
+	});
+
+	QHBoxLayout* screenSizeLayout = new QHBoxLayout();
+	screenSizeLayout->setSpacing(4);
+	screenSizeLayout->addWidget(topScreenSizeSlider);
+	screenSizeLayout->addWidget(topScreenSizeLabel);
+	gpuLayout->addRow(tr("Top screen size (%)"), screenSizeLayout);
+
 	QCheckBox* forceShadergenForLights = new QCheckBox(tr("Force shadergen when rendering lights"));
 	connectCheckbox(forceShadergenForLights, config.forceShadergenForLights);
 	gpuLayout->addRow(forceShadergenForLights);
@@ -212,12 +284,12 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	gpuLayout->addRow(tr("Light threshold for forcing shadergen"), lightShadergenThreshold);
 
 	// Audio settings
-	QGroupBox* spuGroupBox = new QGroupBox(tr("Audio Settings"), this);
-	QFormLayout* audioLayout = new QFormLayout(spuGroupBox);
+	QGroupBox* dspGroupBox = new QGroupBox(tr("Audio Settings"), this);
+	QFormLayout* audioLayout = new QFormLayout(dspGroupBox);
 	audioLayout->setHorizontalSpacing(20);
 	audioLayout->setVerticalSpacing(10);
 
-	QComboBox* dspType = new QComboBox;
+	QComboBox* dspType = new QComboBox();
 	dspType->addItem(tr("Null"));
 	dspType->addItem(tr("LLE"));
 	dspType->addItem(tr("HLE"));
@@ -244,7 +316,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	connectCheckbox(muteAudio, config.audioDeviceConfig.muteAudio);
 	audioLayout->addRow(muteAudio);
 
-	QComboBox* volumeCurveType = new QComboBox;
+	QComboBox* volumeCurveType = new QComboBox();
 	volumeCurveType->addItem(tr("Cubic"));
 	volumeCurveType->addItem(tr("Linear"));
 	volumeCurveType->setCurrentIndex(static_cast<int>(config.audioDeviceConfig.volumeCurve));
@@ -260,7 +332,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	volumeSlider->setRange(0, 200);
 	volumeSlider->setValue(int(config.audioDeviceConfig.volumeRaw * 100));
 	connect(volumeSlider, &QSlider::valueChanged, this, [this, volumeLabel](int value) {
-		config.audioDeviceConfig.volumeRaw = static_cast<float>(value) / 100.0f;
+		config.audioDeviceConfig.volumeRaw = float(value) / 100.0f;
 		volumeLabel->setText(QString::number(value));
 
 		updateConfig();
@@ -271,6 +343,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	volumeLayout->addWidget(volumeSlider);
 	volumeLayout->addWidget(volumeLabel);
 	audioLayout->addRow(tr("Audio device volume"), volumeLayout);
+
+	inputWindow = new InputWindow(this);
 
 	// Battery settings
 	QGroupBox* batGroupBox = new QGroupBox(tr("Battery Settings"), this);
@@ -309,7 +383,8 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	addWidget(guiGroupBox, tr("Interface"), ":/docs/img/sparkling_icon.png", tr("User Interface settings"));
 	addWidget(genGroupBox, tr("General"), ":/docs/img/settings_icon.png", tr("General emulator settings"));
 	addWidget(gpuGroupBox, tr("Graphics"), ":/docs/img/display_icon.png", tr("Graphics emulation and output settings"));
-	addWidget(spuGroupBox, tr("Audio"), ":/docs/img/speaker_icon.png", tr("Audio emulation and output settings"));
+	addWidget(dspGroupBox, tr("Audio"), ":/docs/img/speaker_icon.png", tr("Audio emulation and output settings"));
+	addWidget(inputWindow, tr("Input"), ":/docs/img/gamepad_icon.png", tr("Keyboard & controller input settings"));
 	addWidget(batGroupBox, tr("Battery"), ":/docs/img/battery_icon.png", tr("Battery emulation settings"));
 	addWidget(sdcGroupBox, tr("SD Card"), ":/docs/img/sdcard_icon.png", tr("SD Card emulation settings"));
 
@@ -406,6 +481,36 @@ void ConfigWindow::setTheme(Theme theme) {
 			break;
 		}
 
+		case Theme::Oled: {
+			QApplication::setStyle(QStyleFactory::create("Fusion"));
+
+			QPalette p;
+			p.setColor(QPalette::Window, Qt::black);
+			p.setColor(QPalette::WindowText, Qt::white);
+			p.setColor(QPalette::Base, Qt::black);
+			p.setColor(QPalette::AlternateBase, Qt::black);
+			p.setColor(QPalette::ToolTipBase, Qt::black);
+			p.setColor(QPalette::ToolTipText, Qt::white);
+			p.setColor(QPalette::Text, Qt::white);
+			p.setColor(QPalette::Button, QColor(5, 5, 5));
+			p.setColor(QPalette::ButtonText, Qt::white);
+			p.setColor(QPalette::BrightText, Qt::red);
+			p.setColor(QPalette::Link, QColor(42, 130, 218));
+
+			p.setColor(QPalette::Highlight, QColor(42, 130, 218));
+			p.setColor(QPalette::HighlightedText, Qt::black);
+			qApp->setPalette(p);
+			qApp->setStyleSheet(
+				"QLineEdit {"
+				"background-color: #000000; color: #ffffff; border: 1px solid #a0a0a0; "
+				"border-radius: 4px; padding: 5px; }"
+
+				"QCheckBox::indicator:unchecked {"
+				"border: 1px solid #808080; border-radius: 4px; }"
+			);
+			break;
+		}
+
 		case Theme::System: {
 			qApp->setPalette(this->style()->standardPalette());
 			qApp->setStyle(QStyleFactory::create("WindowsVista"));
@@ -423,6 +528,7 @@ void ConfigWindow::setIcon(WindowIcon icon) {
 		case WindowIcon::Rnap: updateIcon(":/docs/img/rnap_icon.png"); break;
 		case WindowIcon::Rcow: updateIcon(":/docs/img/rcow_icon.png"); break;
 		case WindowIcon::SkyEmu: updateIcon(":/docs/img/skyemu_icon.png"); break;
+		case WindowIcon::Runpog: updateIcon(":/docs/img/runpog_icon.png"); break;
 
 		case WindowIcon::Rpog:
 		default: updateIcon(":/docs/img/rpog_icon.png"); break;

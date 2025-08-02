@@ -11,6 +11,7 @@ struct FrontendSettings {
 		Dark = 2,
 		GreetingsCat = 3,
 		Cream = 4,
+		Oled = 5,
 	};
 
 	// Different panda-themed window icons
@@ -20,6 +21,7 @@ struct FrontendSettings {
 		Rnap = 2,
 		Rcow = 3,
 		SkyEmu = 4,
+		Runpog = 5,
 	};
 
 	Theme theme = Theme::Dark;

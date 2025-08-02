@@ -55,7 +55,12 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		windowWidth = 400;
 		windowHeight = 480;
 	}
+
+	// Initialize output size and screen layout
 	emu.setOutputSize(windowWidth, windowHeight);
+	ScreenLayout::calculateCoordinates(
+		screenCoordinates, u32(windowWidth), u32(windowHeight), emu.getConfig().topScreenSize, emu.getConfig().screenLayout
+	);
 
 	if (needOpenGL) {
 		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
@@ -71,11 +76,27 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 
 		glContext = SDL_GL_CreateContext(window);
 		if (glContext == nullptr) {
-			Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
-		}
+			Helpers::warn("OpenGL context creation failed: %s\nTrying again with OpenGL ES.", SDL_GetError());
 
-		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
-			Helpers::panic("OpenGL init failed");
+			// Some low end devices (eg RPi, emulation handhelds) don't support desktop GL, but only OpenGL ES, so fall back to that if GL context
+			// creation failed
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+			glContext = SDL_GL_CreateContext(window);
+			if (glContext == nullptr) {
+				Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+			}
+
+			if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+				Helpers::panic("OpenGL init failed");
+			}
+
+			emu.getRenderer()->setupGLES();
+		} else {
+			if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+				Helpers::panic("OpenGL init failed");
+			}
 		}
 
 		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
@@ -214,24 +235,7 @@ void FrontendSDL::run() {
 					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
-						if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
-							break;
-						}
-
-						// Go from window positions to [0, 400) for x and [0, 480) for y
-						const s32 x = (s32)std::round(event.button.x * 400.f / windowWidth);
-						const s32 y = (s32)std::round(event.button.y * 480.f / windowHeight);
-
-						// Check if touch falls in the touch screen area
-						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-							// Convert to 3DS coordinates
-							u16 x_converted = static_cast<u16>(x) - 40;
-							u16 y_converted = static_cast<u16>(y) - 240;
-
-							hid.setTouchScreenPress(x_converted, y_converted);
-						} else {
-							hid.releaseTouchScreen();
-						}
+						handleLeftClick(event.button.x, event.button.y);
 					} else if (event.button.button == SDL_BUTTON_RIGHT) {
 						holdingRightClick = true;
 					}
@@ -305,18 +309,7 @@ void FrontendSDL::run() {
 							break;
 						}
 
-						// Go from window positions to [0, 400) for x and [0, 480) for y
-						const s32 x = (s32)std::round(event.motion.x * 400.f / windowWidth);
-						const s32 y = (s32)std::round(event.motion.y * 480.f / windowHeight);
-
-						// Check if touch falls in the touch screen area and register the new touch screen position
-						if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-							// Convert to 3DS coordinates
-							u16 x_converted = static_cast<u16>(x) - 40;
-							u16 y_converted = static_cast<u16>(y) - 240;
-
-							hid.setTouchScreenPress(x_converted, y_converted);
-						}
+						handleLeftClick(event.motion.x, event.motion.y);
 					}
 
 					// We use right click to indicate we want to rotate the console. If right click is not held, then this is not a gyroscope rotation
@@ -377,6 +370,12 @@ void FrontendSDL::run() {
 					if (type == SDL_WINDOWEVENT_RESIZED) {
 						windowWidth = event.window.data1;
 						windowHeight = event.window.data2;
+
+						const auto& config = emu.getConfig();
+						ScreenLayout::calculateCoordinates(
+							screenCoordinates, u32(windowWidth), u32(windowHeight), emu.getConfig().topScreenSize, emu.getConfig().screenLayout
+						);
+
 						emu.setOutputSize(windowWidth, windowHeight);
 					}
 				}
@@ -385,24 +384,52 @@ void FrontendSDL::run() {
 
 		// Update controller analog sticks and HID service
 		if (emu.romType != ROMType::None) {
+			// Update circlepad/c-stick/ZL/ZR if a controller is plugged in
 			if (gameController != nullptr) {
 				const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
 				const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
 				constexpr s16 deadzone = 3276;
-				constexpr s16 maxValue = 0x9C;
-				constexpr s16 div = 0x8000 / maxValue;
+				constexpr s16 triggerThreshold = SDL_JOYSTICK_AXIS_MAX / 2;
 
-				// Avoid overriding the keyboard's circlepad input
-				if (abs(stickX) < deadzone && !keyboardAnalogX) {
-					hid.setCirclepadX(0);
-				} else {
-					hid.setCirclepadX(stickX / div);
+				{
+					// Update circlepad
+					constexpr s16 circlepadMax = 0x9C;
+					constexpr s16 div = 0x8000 / circlepadMax;
+
+					// Avoid overriding the keyboard's circlepad input
+					if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
+						hid.setCirclepadX(0);
+					} else {
+						hid.setCirclepadX(stickX / div);
+					}
+
+					if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
+						hid.setCirclepadY(0);
+					} else {
+						hid.setCirclepadY(-(stickY / div));
+					}
 				}
 
-				if (abs(stickY) < deadzone && !keyboardAnalogY) {
-					hid.setCirclepadY(0);
+				const s16 l2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+				const s16 r2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+				const s16 cStickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTX);
+				const s16 cStickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTY);
+
+				hid.setKey(HID::Keys::ZL, l2 > triggerThreshold);
+				hid.setKey(HID::Keys::ZR, r2 > triggerThreshold);
+
+				// Update C-Stick
+				// To convert from SDL coordinates, ie [-32768, 32767] to [-2048, 2047] we just divide by 8
+				if (std::abs(cStickX) < deadzone) {
+					hid.setCStickX(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
 				} else {
-					hid.setCirclepadY(-(stickY / div));
+					hid.setCStickX(cStickX / 8);
+				}
+
+				if (std::abs(cStickY) < deadzone) {
+					hid.setCStickY(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
+				} else {
+					hid.setCStickY(-(cStickY / 8));
 				}
 			}
 
@@ -425,5 +452,33 @@ void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
 
 	if (haveAccelerometer) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
+	}
+}
+
+void FrontendSDL::handleLeftClick(int mouseX, int mouseY) {
+	if (windowWidth == 0 || windowHeight == 0) [[unlikely]] {
+		return;
+	}
+
+	const auto& coords = screenCoordinates;
+	const int bottomScreenX = int(coords.bottomScreenX);
+	const int bottomScreenY = int(coords.bottomScreenY);
+	const int bottomScreenWidth = int(coords.bottomScreenWidth);
+	const int bottomScreenHeight = int(coords.bottomScreenHeight);
+	auto& hid = emu.getServiceManager().getHID();
+
+	// Check if the mouse is inside the bottom screen area
+	if (mouseX >= int(bottomScreenX) && mouseX < int(bottomScreenX + bottomScreenWidth) && mouseY >= int(bottomScreenY) &&
+		mouseY < int(bottomScreenY + bottomScreenHeight)) {
+		// Map to 3DS touchscreen coordinates
+		float relX = float(mouseX - bottomScreenX) / float(bottomScreenWidth);
+		float relY = float(mouseY - bottomScreenY) / float(bottomScreenHeight);
+
+		u16 x_converted = static_cast<u16>(std::clamp(relX * ScreenLayout::BOTTOM_SCREEN_WIDTH, 0.f, float(ScreenLayout::BOTTOM_SCREEN_WIDTH - 1)));
+		u16 y_converted = static_cast<u16>(std::clamp(relY * ScreenLayout::BOTTOM_SCREEN_HEIGHT, 0.f, float(ScreenLayout::BOTTOM_SCREEN_HEIGHT - 1)));
+
+		hid.setTouchScreenPress(x_converted, y_converted);
+	} else {
+		hid.releaseTouchScreen();
 	}
 }

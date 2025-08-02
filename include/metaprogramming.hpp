@@ -13,4 +13,4 @@ namespace Helpers {
 	static constexpr void static_for(Func&& f) {
 		static_for_impl<T, Begin>(std::forward<Func>(f), std::make_integer_sequence<T, End - Begin>{});
 	}
-}
+}  // namespace Helpers

@@ -26,7 +26,7 @@ jobs:
         version: 6.2.0
 
     - name: Setup Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      uses: humbletim/setup-vulkan-sdk@main
       with:
         vulkan-query-version: latest
         vulkan-use-cache: true
@@ -56,7 +56,7 @@ jobs:
         arch: [x86_64, arm64]
 
     name: MacOS-${{ matrix.arch }}
-    runs-on: macos-13
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -64,7 +64,7 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Setup Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      uses: humbletim/setup-vulkan-sdk@main
       with:
         vulkan-query-version: latest
         vulkan-use-cache: true
@@ -109,7 +109,7 @@ jobs:
   MacOS-Universal:
     name: MacOS-Universal
     needs: [MacOS]
-    runs-on: macos-13
+    runs-on: macos-latest
 
     steps:
       - name: Download x86_64
@@ -162,7 +162,7 @@ jobs:
        sudo ./llvm.sh 17
        
     - name: Setup Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      uses: humbletim/setup-vulkan-sdk@main
       with:
         vulkan-query-version: latest
         vulkan-use-cache: true

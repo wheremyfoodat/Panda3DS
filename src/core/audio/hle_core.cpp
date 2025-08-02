@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "audio/aac_decoder.hpp"
+#include "audio/dsp_binary.hpp"
 #include "audio/dsp_simd.hpp"
 #include "config.hpp"
 #include "services/dsp.hpp"
@@ -87,6 +88,36 @@ namespace Audio {
 	void HLE_DSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMask) {
 		if (loaded) {
 			Helpers::warn("Loading DSP component when already loaded");
+		}
+
+		// We load the DSP binary into DSP memory even though we don't use it in HLE, so that we can
+		// still see the DSP code in the DSP debugger
+		u8* dspCode = dspRam.rawMemory.data();
+		u8* dspData = dspCode + 0x40000;
+
+		Dsp1 dsp1;
+		std::memcpy(&dsp1, data.data(), sizeof(dsp1));
+
+		// TODO: verify DSP1 signature & hashes
+		// Load DSP segments to DSP RAM
+		for (uint i = 0; i < dsp1.segmentCount; i++) {
+			auto& segment = dsp1.segments[i];
+			u32 addr = segment.dspAddr << 1;
+			u8* src = data.data() + segment.offs;
+			u8* dst = nullptr;
+
+			switch (segment.type) {
+				case 0:
+				case 1: dst = dspCode + addr; break;
+				default: dst = dspData + addr; break;
+			}
+
+			std::memcpy(dst, src, segment.size);
+		}
+
+		bool loadSpecialSegment = (dsp1.flags >> 1) & 0x1;
+		if (loadSpecialSegment) {
+			log("LoadComponent: special segment not supported");
 		}
 
 		loaded = true;
@@ -365,7 +396,28 @@ namespace Audio {
 
 		if (config.partialEmbeddedBufferDirty) {
 			config.partialEmbeddedBufferDirty = 0;
-			printf("Partial embedded buffer dirty for voice %d\n", source.index);
+
+			const u8* data = getPointerPhys<u8>(source.currentBufferPaddr & ~0x3);
+
+			if (data != nullptr) {
+				switch (source.sampleFormat) {
+					case SampleFormat::PCM8: source.currentSamples = decodePCM8(data, config.length, source); break;
+					case SampleFormat::PCM16: source.currentSamples = decodePCM16(data, config.length, source); break;
+					case SampleFormat::ADPCM: source.currentSamples = decodeADPCM(data, config.length, source); break;
+
+					default:
+						Helpers::warn("Invalid DSP sample format");
+						source.currentSamples = {};
+						break;
+				}
+
+				// We're skipping the first samplePosition samples, so remove them from the buffer so as not to consume them later
+				if (source.samplePosition > 0) {
+					auto start = source.currentSamples.begin();
+					auto end = std::next(start, source.samplePosition);
+					source.currentSamples.erase(start, end);
+				}
+			}
 		}
 
 		if (config.bufferQueueDirty) {
@@ -447,6 +499,7 @@ namespace Audio {
 			return;
 		}
 
+		source.currentBufferPaddr = buffer.paddr;
 		source.currentBufferID = buffer.bufferID;
 		source.previousBufferID = 0;
 		// For looping buffers, this is only set for the first time we play it. Loops do not set the dirty bit.
@@ -735,6 +788,7 @@ namespace Audio {
 		interpolationMode = InterpolationMode::Linear;
 
 		samplePosition = 0;
+		currentBufferPaddr = 0;
 		previousBufferID = 0;
 		currentBufferID = 0;
 		syncCount = 0;

@@ -7,8 +7,8 @@
 #include <span>
 
 #include "PICA/gpu.hpp"
+#include "audio/audio_device.hpp"
 #include "audio/dsp_core.hpp"
-#include "audio/miniaudio_device.hpp"
 #include "cheats.hpp"
 #include "config.hpp"
 #include "cpu.hpp"
@@ -48,7 +48,7 @@ class Emulator {
 	Scheduler scheduler;
 
 	Crypto::AESEngine aesEngine;
-	MiniAudioDevice audioDevice;
+	AudioDevice audioDevice;
 	Cheats cheats;
 
   public:
@@ -89,7 +89,6 @@ class Emulator {
 	~Emulator();
 
 	void step();
-	void render();
 	void reset(ReloadOption reload);
 	void runFrame();
 	// Poll the scheduler for events
@@ -107,26 +106,29 @@ class Emulator {
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 
-#ifdef PANDA3DS_FRONTEND_QT
-	// For passing the GL context from Qt to the renderer
-	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
-#else
-	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
-#endif
+	// For passing the SDL Window, GL context, etc from the frontend to the renderer
+	void initGraphicsContext(void* context) { gpu.initGraphicsContext(context); }
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+	void reloadScreenLayout() { gpu.reloadScreenLayout(); }
+
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
 	// Reloads some settings that require special handling, such as audio enable
 	void reloadSettings();
 
+	CPU& getCPU() { return cpu; }
+	Memory& getMemory() { return memory; }
+	Kernel& getKernel() { return kernel; }
+	Scheduler& getScheduler() { return scheduler; }
+	Audio::DSPCore* getDSP() { return dsp.get(); }
+
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
-	Scheduler& getScheduler() { return scheduler; }
-	Memory& getMemory() { return memory; }
+	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }

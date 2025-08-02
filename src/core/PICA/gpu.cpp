@@ -138,7 +138,7 @@ void GPU::drawArrays(bool indexed) {
 
 	if (config.accelerateShaders) {
 		// If we are potentially going to use hw shaders, gather necessary to do vertex fetch, index buffering, etc on the GPU
-		// This includes parsing which vertices to upload, getting pointers to the index buffer data & vertex data, and so on 
+		// This includes parsing which vertices to upload, getting pointers to the index buffer data & vertex data, and so on
 		getAcceleratedDrawInfo(accel, indexed);
 	}
 
@@ -182,6 +182,7 @@ void GPU::drawArrays() {
 
 	// We can have up to 16 attributes, each one consisting of 4 floats
 	constexpr u32 maxAttrSizeInFloats = 16 * 4;
+	setVsOutputMask(regs[PICA::InternalRegs::VertexShaderOutputMask]);
 
 	// Base address for vertex attributes
 	// The vertex base is always on a quadword boundary because the PICA does weird alignment shit any time possible
@@ -441,7 +442,7 @@ void GPU::fireDMA(u32 dest, u32 source, u32 size) {
 		u8* fcram = mem.getFCRAM();
 		std::memcpy(&vram[dest - vramStart], &fcram[source - fcramStart], size);
 	} else {
-		printf("Non-trivially optimizable GPU DMA. Falling back to byte-by-byte transfer\n");
+		log("Non-trivially optimizable GPU DMA. Falling back to byte-by-byte transfer\n");
 
 		for (u32 i = 0; i < size; i++) {
 			mem.write8(dest + i, mem.read8(source + i));

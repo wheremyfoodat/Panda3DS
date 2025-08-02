@@ -6,6 +6,4 @@ void AmiiboDevice::reset() {
 }
 
 // Load amiibo information from our raw 540 byte array
-void AmiiboDevice::loadFromRaw() {
-
-}
+void AmiiboDevice::loadFromRaw() {}

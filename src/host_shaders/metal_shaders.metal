@@ -1,4 +1,6 @@
 #include <metal_stdlib>
+#include <TargetConditionals.h>
+
 using namespace metal;
 
 struct BasicVertexOut {
@@ -218,12 +220,6 @@ struct Globals {
 	uint GPUREG_LIGHTING_LUTINPUT_ABS;
 	uint GPUREG_LIGHTING_LUTINPUT_SELECT;
 	uint GPUREG_LIGHTi_CONFIG;
-
-	// HACK
-	//bool lightingEnabled;
-    //uint8_t lightingNumLights;
-    //uint32_t lightingConfig1;
-    //uint16_t alphaControl;
 
     float3 normal;
 };
@@ -655,14 +651,15 @@ float4 performLogicOp(LogicOp logicOp, float4 s, float4 d) {
     return as_type<float4>(performLogicOpU(logicOp, as_type<uint4>(s), as_type<uint4>(d)));
 }
 
-fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[color(0)]], constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]], constant uint2& lutSlices [[buffer(3)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture2d_array<float> texLightingLut [[texture(3)]], texture1d_array<float> texFogLut [[texture(4)]], sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
-    Globals globals;
+// iOS simulator doesn't support fb fetch, so don't enable it
+#ifndef TARGET_OS_SIMULATOR
+#define PREVIOUS_COLOR_DECL float4 prevColor [[color(0)]],
+#else
+#define PREVIOUS_COLOR_DECL
+#endif
 
-    // HACK
-    //globals.lightingEnabled = picaRegs.read(0x008Fu) != 0u;
-    //globals.lightingNumLights = picaRegs.read(0x01C2u);
-    //globals.lightingConfig1 = picaRegs.read(0x01C4u);
-    //globals.alphaControl = picaRegs.read(0x104);
+fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], PREVIOUS_COLOR_DECL constant PicaRegs& picaRegs [[buffer(0)]], constant FragTEV& tev [[buffer(1)]], constant LogicOp& logicOp [[buffer(2)]], constant uint2& lutSlices [[buffer(3)]], texture2d<float> tex0 [[texture(0)]], texture2d<float> tex1 [[texture(1)]], texture2d<float> tex2 [[texture(2)]], texture2d_array<float> texLightingLut [[texture(3)]], texture1d_array<float> texFogLut [[texture(4)]], sampler samplr0 [[sampler(0)]], sampler samplr1 [[sampler(1)]], sampler samplr2 [[sampler(2)]], sampler linearSampler [[sampler(3)]]) {
+    Globals globals;
 
     globals.tevSources[0] = in.color;
     if (lightingEnabled) {
@@ -755,5 +752,9 @@ fragment float4 fragmentDraw(DrawVertexOut in [[stage_in]], float4 prevColor [[c
 		}
 	}
 
+#ifndef TARGET_OS_SIMULATOR
 	return performLogicOp(logicOp, color, prevColor);
+#else
+	return performLogicOp(logicOp, color, float4(0.0));
+#endif
 }

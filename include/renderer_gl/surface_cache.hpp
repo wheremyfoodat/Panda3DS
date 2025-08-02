@@ -1,6 +1,9 @@
 #pragma once
+#include <array>
 #include <functional>
+#include <map>
 #include <optional>
+
 #include "surfaces.hpp"
 #include "textures.hpp"
 
@@ -17,41 +20,69 @@
 // - A "location" member which tells us which location in 3DS memory this surface occupies
 template <typename SurfaceType, size_t capacity, bool evictOnOverflow = false>
 class SurfaceCache {
-    // Vanilla std::optional can't hold actual references
-    using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
+	// Vanilla std::optional can't hold actual references
+	using OptionalRef = std::optional<std::reference_wrapper<SurfaceType>>;
 
-    size_t size;
-    size_t evictionIndex;
-    std::array<SurfaceType, capacity> buffer;
+	size_t size = 0;
+	size_t evictionIndex = 0;
+	std::array<SurfaceType, capacity> buffer;
 
-public:
-    void reset() {
-        size = 0;
-        evictionIndex = 0;
-        for (auto& e : buffer) { // Free the VRAM of all surfaces
-            e.free();
-        }
-    }
+	// Map from address to a surface in the above buffer.
+	// Several cached surfaces may have the same starting address, so we use a multimap.
+	std::multimap<u32, SurfaceType*> surfaceMap;
 
-    OptionalRef find(SurfaceType& other) {
-        for (auto& e : buffer) {
-            if (e.matches(other) && e.valid)
-                return e;
-        }
+	// Adds a surface to our map
+	void indexSurface(SurfaceType& surface) { surfaceMap.emplace(surface.location, &surface); }
 
-        return std::nullopt;
-    }
+	// Removes a surface from our map
+	void unindexSurface(SurfaceType& surface) {
+		auto range = surfaceMap.equal_range(surface.location);
+		for (auto it = range.first; it != range.second; ++it) {
+			if (it->second == &surface) {
+				surfaceMap.erase(it);
+				break;
+			}
+		}
+	}
 
-    OptionalRef findFromAddress(u32 address) {
-        for (auto& e : buffer) {
-            if (e.location <= address && e.location + e.sizeInBytes() > address && e.valid)
-                return e;
-        }
+  public:
+	void reset() {
+		size = 0;
+		evictionIndex = 0;
+		surfaceMap.clear();
 
-        return std::nullopt;
-    }
+		// Free the memory of all surfaces
+		for (auto& e : buffer) {
+			e.free();
+			e.valid = false;
+		}
+	}
 
-    // Adds a surface object to the cache and returns it
+	// Use our map to only scan the surfaces with the same starting location
+	OptionalRef find(SurfaceType& other) {
+		auto range = surfaceMap.equal_range(other.location);
+		for (auto it = range.first; it != range.second; ++it) {
+			SurfaceType* candidate = it->second;
+			if (candidate->valid && candidate->matches(other)) {
+				return *candidate;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	OptionalRef findFromAddress(u32 address) {
+		for (auto it = surfaceMap.begin(); it != surfaceMap.end(); ++it) {
+			SurfaceType* surface = it->second;
+			if (surface->valid && surface->location <= address && surface->location + surface->sizeInBytes() > address) {
+				return *surface;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	// Adds a surface object to the cache and returns it
 	SurfaceType& add(const SurfaceType& surface) {
 		if (size >= capacity) {
 			if constexpr (evictOnOverflow) {  // Do a ring buffer if evictOnOverflow is true
@@ -60,12 +91,14 @@ public:
 				}
 
 				auto& e = buffer[evictionIndex];
+				unindexSurface(e);
 				evictionIndex = (evictionIndex + 1) % capacity;
 
 				e.valid = false;
 				e.free();
 				e = surface;
 				e.allocate();
+				indexSurface(e);
 				return e;
 			} else {
 				Helpers::panic("Surface cache full! Add emptying!");
@@ -74,12 +107,14 @@ public:
 
 		size++;
 
-		// Find an existing surface we completely invalidate and overwrite it with the new surface
+		// See if any existing surface fully overlaps
 		for (auto& e : buffer) {
 			if (e.valid && e.range.lower() >= surface.range.lower() && e.range.upper() <= surface.range.upper()) {
+				unindexSurface(e);
 				e.free();
 				e = surface;
 				e.allocate();
+				indexSurface(e);
 				return e;
 			}
 		}
@@ -89,6 +124,7 @@ public:
 			if (!e.valid) {
 				e = surface;
 				e.allocate();
+				indexSurface(e);
 				return e;
 			}
 		}
@@ -97,11 +133,6 @@ public:
 		Helpers::panic("Couldn't add surface to cache\n");
 	}
 
-    SurfaceType& operator[](size_t i) {
-        return buffer[i];
-    }
-
-    const SurfaceType& operator[](size_t i) const {
-        return buffer[i];
-    }
+	SurfaceType& operator[](size_t i) { return buffer[i]; }
+	const SurfaceType& operator[](size_t i) const { return buffer[i]; }
 };

@@ -1,25 +1,3 @@
-diff --git a/src/host_shaders/opengl_display.frag b/src/host_shaders/opengl_display.frag
-index 612671c8..1937f711 100644
---- a/src/host_shaders/opengl_display.frag
-+++ b/src/host_shaders/opengl_display.frag
-@@ -1,4 +1,5 @@
--#version 410 core
-+#version 300 es
-+precision mediump float;
- in vec2 UV;
- out vec4 FragColor;
- 
-diff --git a/src/host_shaders/opengl_display.vert b/src/host_shaders/opengl_display.vert
-index 990e2f80..2e7842ac 100644
---- a/src/host_shaders/opengl_display.vert
-+++ b/src/host_shaders/opengl_display.vert
-@@ -1,4 +1,5 @@
--#version 410 core
-+#version 300 es
-+precision mediump float;
- out vec2 UV;
- 
- void main() {
 diff --git a/src/host_shaders/opengl_fragment_shader.frag b/src/host_shaders/opengl_fragment_shader.frag
 index 9f07df0b..96a35afa 100644
 --- a/src/host_shaders/opengl_fragment_shader.frag

@@ -244,18 +244,18 @@ namespace Service::NFC {
 
 #pragma pack(1)
 	struct EncryptedAmiiboFile {
-		u8 constant_value;                  // Must be A5
-		u16_be write_counter;               // Number of times the amiibo has been written?
-		u8 amiibo_version;                  // Amiibo file version
-		AmiiboSettings settings;            // Encrypted amiibo settings
-		HashData hmac_tag;                  // Hash
-		AmiiboModelInfo model_info;         // Encrypted amiibo model info
-		HashData keygen_salt;               // Salt
-		HashData hmac_data;                 // Hash
-		ChecksummedMiiData owner_mii;  // Encrypted Mii data
-		u64_be application_id;              // Encrypted Game id
-		u16_be application_write_counter;   // Encrypted Counter
-		u32_be application_area_id;         // Encrypted Game id
+		u8 constant_value;                 // Must be A5
+		u16_be write_counter;              // Number of times the amiibo has been written?
+		u8 amiibo_version;                 // Amiibo file version
+		AmiiboSettings settings;           // Encrypted amiibo settings
+		HashData hmac_tag;                 // Hash
+		AmiiboModelInfo model_info;        // Encrypted amiibo model info
+		HashData keygen_salt;              // Salt
+		HashData hmac_data;                // Hash
+		ChecksummedMiiData owner_mii;      // Encrypted Mii data
+		u64_be application_id;             // Encrypted Game id
+		u16_be application_write_counter;  // Encrypted Counter
+		u32_be application_area_id;        // Encrypted Game id
 		u8 application_id_byte;
 		u8 unknown;
 		u64 mii_extension;
@@ -274,9 +274,9 @@ namespace Service::NFC {
 		u16_be write_counter;       // Number of times the amiibo has been written?
 		u8 amiibo_version;          // Amiibo file version
 		AmiiboSettings settings;
-		ChecksummedMiiData owner_mii;  // Mii data
-		u64_be application_id;              // Game id
-		u16_be application_write_counter;   // Counter
+		ChecksummedMiiData owner_mii;      // Mii data
+		u64_be application_id;             // Game id
+		u16_be application_write_counter;  // Counter
 		u32_be application_area_id;
 		u8 application_id_byte;
 		u8 unknown;

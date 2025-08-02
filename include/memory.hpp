@@ -134,7 +134,7 @@ public:
 	static constexpr u32 totalPageCount = 1 << (32 - pageShift);
 	
 	static constexpr u32 FCRAM_SIZE = u32(128_MB);
-	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(64_MB);
+	static constexpr u32 FCRAM_APPLICATION_SIZE = u32(80_MB);
 	static constexpr u32 FCRAM_PAGE_COUNT = FCRAM_SIZE / pageSize;
 	static constexpr u32 FCRAM_APPLICATION_PAGE_COUNT = FCRAM_APPLICATION_SIZE / pageSize;
 

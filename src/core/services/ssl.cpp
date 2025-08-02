@@ -1,6 +1,7 @@
+#include "services/ssl.hpp"
+
 #include "ipc.hpp"
 #include "result/result.hpp"
-#include "services/ssl.hpp"
 
 namespace SSLCommands {
 	enum : u32 {
@@ -31,10 +32,10 @@ void SSLService::initialize(u32 messagePointer) {
 
 	if (initialized) {
 		Helpers::warn("SSL service initialized twice");
-	} 
+	}
 
 	initialized = true;
-	rng.seed(std::random_device()()); // Seed rng via std::random_device
+	rng.seed(std::random_device()());  // Seed rng via std::random_device
 
 	mem.write32(messagePointer + 4, Result::Success);
 }
@@ -48,7 +49,8 @@ void SSLService::generateRandomData(u32 messagePointer) {
 	u32 data;
 
 	for (u32 i = 0; i < size; i++) {
-		// We don't have an available random value since we're on a multiple of 4 bytes and our Twister is 32-bit, generate a new one from the Mersenne Twister
+		// We don't have an available random value since we're on a multiple of 4 bytes and our Twister is 32-bit, generate a new one from the
+		// Mersenne Twister
 		if ((i & 3) == 0) {
 			data = rng();
 		}

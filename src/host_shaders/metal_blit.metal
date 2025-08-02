@@ -10,8 +10,8 @@ struct BasicVertexOut {
 };
 
 struct NDCViewport {
-    float2 offset;
-    float2 scale;
+	float2 offset;
+	float2 scale;
 };
 
 vertex BasicVertexOut vertexBlit(uint vid [[vertex_id]], constant NDCViewport& viewport [[buffer(0)]]) {

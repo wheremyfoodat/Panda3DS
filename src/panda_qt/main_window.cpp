@@ -9,11 +9,13 @@
 
 #include "cheats.hpp"
 #include "input_mappings.hpp"
+#include "panda_qt/dsp_debugger.hpp"
+#include "panda_qt/screen/screen.hpp"
 #include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
 #include "version.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings()) {
 	emu = new Emulator();
 
 	loadTranslation();
@@ -22,14 +24,24 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	// Enable drop events for loading ROMs
 	setAcceptDrops(true);
 	resize(800, 240 * 4);
+	show();
+
+	const RendererType rendererType = emu->getConfig().rendererType;
+	usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
+	usingVk = (rendererType == RendererType::Vulkan);
+	usingMtl = (rendererType == RendererType::Metal);
+
+	ScreenWidget::API api = ScreenWidget::API::OpenGL;
+	if (usingVk)
+		api = ScreenWidget::API::Vulkan;
+	else if (usingMtl)
+		api = ScreenWidget::API::Metal;
 
 	// We pass a callback to the screen widget that will be triggered every time we resize the screen
-	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	screen = ScreenWidget::getWidget(api, [this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
 	setCentralWidget(screen);
 
-	screen->show();
 	appRunning = true;
-
 	// Set our menu bar up
 	menuBar = new QMenuBar(nullptr);
 
@@ -67,6 +79,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	auto cheatsEditorAction = toolsMenu->addAction(tr("Open Cheats Editor"));
 	auto patchWindowAction = toolsMenu->addAction(tr("Open Patch Window"));
 	auto shaderEditorAction = toolsMenu->addAction(tr("Open Shader Editor"));
+	auto cpuDebuggerAction = toolsMenu->addAction(tr("Open CPU Debugger"));
+	auto dspDebuggerAction = toolsMenu->addAction(tr("Open DSP Debugger"));
+	auto threadDebuggerAction = toolsMenu->addAction(tr("Open Thread Debugger"));
 	auto dumpDspFirmware = toolsMenu->addAction(tr("Dump loaded DSP firmware"));
 
 	connect(dumpRomFSAction, &QAction::triggered, this, &MainWindow::dumpRomFS);
@@ -74,7 +89,12 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	connect(shaderEditorAction, &QAction::triggered, this, [this]() { shaderEditor->show(); });
 	connect(cheatsEditorAction, &QAction::triggered, this, [this]() { cheatsEditor->show(); });
 	connect(patchWindowAction, &QAction::triggered, this, [this]() { patchWindow->show(); });
+	connect(cpuDebuggerAction, &QAction::triggered, this, [this]() { cpuDebugger->show(); });
+	connect(dspDebuggerAction, &QAction::triggered, this, [this]() { dspDebugger->show(); });
+	connect(threadDebuggerAction, &QAction::triggered, this, [this]() { threadDebugger->show(); });
 	connect(dumpDspFirmware, &QAction::triggered, this, &MainWindow::dumpDspFirmware);
+
+	connect(this, &MainWindow::emulatorPaused, this, [this]() { threadDebugger->update(); }, Qt::BlockingQueuedConnection);
 
 	auto aboutAction = aboutMenu->addAction(tr("About Panda3DS"));
 	aboutAction->setMenuRole(QAction::AboutRole);
@@ -90,6 +110,9 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	patchWindow = new PatchWindow(this);
 	luaEditor = new TextEditorWindow(this, "script.lua", "");
 	shaderEditor = new ShaderEditorWindow(this, "shader.glsl", "");
+	threadDebugger = new ThreadDebugger(emu, this);
+	cpuDebugger = new CPUDebugger(emu, this);
+	dspDebugger = new DSPDebugger(emu, this);
 
 	shaderEditor->setEnable(emu->getRenderer()->supportsShaderReload());
 	if (shaderEditor->supported) {
@@ -103,6 +126,13 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		},
 		[&]() { return this; }, emu->getConfig(), this
 	);
+
+	loadKeybindings();
+
+	connect(configWindow->getInputWindow(), &InputWindow::mappingsChanged, this, [&]() {
+		keybindingsChanged = true;
+		configWindow->getInputWindow()->applyToMappings(keyboardMappings);
+	});
 
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
@@ -125,28 +155,35 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		if (config.printAppVersion) {
 			printf("Welcome to Panda3DS v%s!\n", PANDA3DS_VERSION);
 		}
+
+		screen->reloadScreenLayout(config.screenLayout, config.topScreenSize);
 	}
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
 	emuThread = std::thread([this]() {
-		const RendererType rendererType = emu->getConfig().rendererType;
-		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
-		usingVk = (rendererType == RendererType::Vulkan);
-		usingMtl = (rendererType == RendererType::Metal);
+		switch (screen->api) {
+			case ScreenWidget::API::OpenGL: {
+				// Make GL context current for this thread, enable VSync
+				GL::Context* glContext = screen->getGLContext();
+				glContext->MakeCurrent();
+				glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
 
-		if (usingGL) {
-			// Make GL context current for this thread, enable VSync
-			GL::Context* glContext = screen->getGLContext();
-			glContext->MakeCurrent();
-			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
+				if (glContext->IsGLES()) {
+					emu->getRenderer()->setupGLES();
+				}
 
-			emu->initGraphicsContext(glContext);
-		} else if (usingVk) {
-			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
-		} else if (usingMtl) {
-			Helpers::panic("Metal on Qt currently doesn't work, try the SDL frontend instead!");
-		} else {
-			Helpers::panic("Unsupported graphics backend for Qt frontend!");
+				emu->initGraphicsContext(glContext);
+				break;
+			}
+
+			case ScreenWidget::API::Metal: {
+				emu->initGraphicsContext(nullptr);
+				emu->getRenderer()->setMTKLayer(screen->getMTKLayer());
+				break;
+			}
+
+			case ScreenWidget::API::Vulkan: Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!"); break;
+			default: Helpers::panic("Unsupported graphics backend for Qt frontend!"); break;
 		}
 
 		// We have to initialize controllers on the same thread they'll be polled in
@@ -189,6 +226,8 @@ void MainWindow::emuThreadMainLoop() {
 void MainWindow::swapEmuBuffer() {
 	if (usingGL) {
 		screen->getGLContext()->SwapBuffers();
+	} else if (usingMtl) {
+		// The renderer itself calls presentDrawable to swap buffers on Metal
 	} else {
 		Helpers::panic("[Qt] Don't know how to swap buffers for the current rendering backend :(");
 	}
@@ -257,11 +296,16 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
+	if (keybindingsChanged) {
+		saveKeybindings();
+	}
+
 	delete emu;
 	delete menuBar;
 	delete aboutWindow;
 	delete configWindow;
 	delete cheatsEditor;
+	delete screen;
 	delete luaEditor;
 }
 
@@ -378,9 +422,19 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 			delete message.cheat.c;
 		} break;
 
-		case MessageType::Pause: emu->pause(); break;
 		case MessageType::Resume: emu->resume(); break;
-		case MessageType::TogglePause: emu->togglePause(); break;
+		case MessageType::Pause:
+			emu->pause();
+			emit emulatorPaused();
+			break;
+
+		case MessageType::TogglePause:
+			emu->togglePause();
+			if (!emu->running) {
+				emit emulatorPaused();
+			};
+			break;
+
 		case MessageType::Reset: emu->reset(Emulator::ReloadOption::Reload); break;
 		case MessageType::PressKey: emu->getServiceManager().getHID().pressKey(message.key.key); break;
 		case MessageType::ReleaseKey: emu->getServiceManager().getHID().releaseKey(message.key.key); break;
@@ -412,19 +466,29 @@ void MainWindow::dispatchMessage(const EmulatorMessage& message) {
 		case MessageType::SetScreenSize: {
 			const u32 width = message.screenSize.width;
 			const u32 height = message.screenSize.height;
-
-			emu->setOutputSize(width, height);
 			screen->resizeSurface(width, height);
+			emu->setOutputSize(width, height);
 			break;
 		}
 
-		case MessageType::UpdateConfig:
-			emu->getConfig() = configWindow->getConfig();
+		case MessageType::UpdateConfig: {
+			auto& emuConfig = emu->getConfig();
+			auto& newConfig = configWindow->getConfig();
+			// If the screen layout changed, we have to notify the emulator & the screen widget
+			bool reloadScreenLayout = (emuConfig.screenLayout != newConfig.screenLayout || emuConfig.topScreenSize != newConfig.topScreenSize);
+
+			emuConfig = newConfig;
 			emu->reloadSettings();
 
+			if (reloadScreenLayout) {
+				emu->reloadScreenLayout();
+				screen->reloadScreenLayout(newConfig.screenLayout, newConfig.topScreenSize);
+			}
+
 			// Save new settings to disk
-			emu->getConfig().save();
+			emuConfig.save();
 			break;
+		}
 	}
 }
 
@@ -508,25 +572,28 @@ void MainWindow::handleTouchscreenPress(QMouseEvent* event) {
 	const QPointF clickPos = event->globalPosition();
 	const QPointF widgetPos = screen->mapFromGlobal(clickPos);
 
+	const auto& coords = screen->screenCoordinates;
+	const float bottomScreenX = float(coords.bottomScreenX);
+	const float bottomScreenY = float(coords.bottomScreenY);
+	const float bottomScreenWidth = float(coords.bottomScreenWidth);
+	const float bottomScreenHeight = float(coords.bottomScreenHeight);
+
 	// Press is inside the screen area
-	if (widgetPos.x() >= 0 && widgetPos.x() < screen->width() && widgetPos.y() >= 0 && widgetPos.y() < screen->height()) {
-		// Go from widget positions to [0, 400) for x and [0, 480) for y
-		uint x = (uint)std::round(widgetPos.x() / screen->width() * 400.f);
-		uint y = (uint)std::round(widgetPos.y() / screen->height() * 480.f);
+	if (widgetPos.x() >= bottomScreenX && widgetPos.x() < bottomScreenX + bottomScreenWidth && widgetPos.y() >= bottomScreenY &&
+		widgetPos.y() < bottomScreenY + bottomScreenHeight) {
+		// Map widget position to 3DS touchscreen coordinates, with (0, 0) = top left of touchscreen
+		float relX = (widgetPos.x() - bottomScreenX) / bottomScreenWidth;
+		float relY = (widgetPos.y() - bottomScreenY) / bottomScreenHeight;
 
-		// Check if touch falls in the touch screen area
-		if (y >= 240 && y <= 480 && x >= 40 && x < 40 + 320) {
-			// Convert to 3DS coordinates
-			u16 x_converted = static_cast<u16>(x) - 40;
-			u16 y_converted = static_cast<u16>(y) - 240;
+		u16 x_converted = u16(std::clamp(relX * ScreenLayout::BOTTOM_SCREEN_WIDTH, 0.f, float(ScreenLayout::BOTTOM_SCREEN_WIDTH - 1)));
+		u16 y_converted = u16(std::clamp(relY * ScreenLayout::BOTTOM_SCREEN_HEIGHT, 0.f, float(ScreenLayout::BOTTOM_SCREEN_HEIGHT - 1)));
 
-			EmulatorMessage message{.type = MessageType::PressTouchscreen};
-			message.touchscreen.x = x_converted;
-			message.touchscreen.y = y_converted;
-			sendMessage(message);
-		} else {
-			sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
-		}
+		EmulatorMessage message{.type = MessageType::PressTouchscreen};
+		message.touchscreen.x = x_converted;
+		message.touchscreen.y = y_converted;
+		sendMessage(message);
+	} else {
+		sendMessage(EmulatorMessage{.type = MessageType::ReleaseTouchscreen});
 	}
 }
 
@@ -563,7 +630,10 @@ void MainWindow::handleScreenResize(u32 width, u32 height) {
 	message.screenSize.width = width;
 	message.screenSize.height = height;
 
-	sendMessage(message);
+	if (messageQueueMutex.try_lock()) {
+		messageQueue.push_back(message);
+		messageQueueMutex.unlock();
+	}
 }
 
 void MainWindow::initControllers() {
@@ -587,26 +657,53 @@ void MainWindow::initControllers() {
 }
 
 void MainWindow::pollControllers() {
-	// Update circlepad if a controller is plugged in
+	// Update circlepad/c-stick/ZL/ZR if a controller is plugged in
 	if (gameController != nullptr) {
 		HIDService& hid = emu->getServiceManager().getHID();
 		const s16 stickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTX);
 		const s16 stickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_LEFTY);
 		constexpr s16 deadzone = 3276;
-		constexpr s16 maxValue = 0x9C;
-		constexpr s16 div = 0x8000 / maxValue;
+		constexpr s16 triggerThreshold = SDL_JOYSTICK_AXIS_MAX / 2;
 
-		// Avoid overriding the keyboard's circlepad input
-		if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
-			hid.setCirclepadX(0);
-		} else {
-			hid.setCirclepadX(stickX / div);
+		{
+			// Update circlepad
+			constexpr s16 circlepadMax = 0x9C;
+			constexpr s16 div = 0x8000 / circlepadMax;
+
+			// Avoid overriding the keyboard's circlepad input
+			if (std::abs(stickX) < deadzone && !keyboardAnalogX) {
+				hid.setCirclepadX(0);
+			} else {
+				hid.setCirclepadX(stickX / div);
+			}
+
+			if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
+				hid.setCirclepadY(0);
+			} else {
+				hid.setCirclepadY(-(stickY / div));
+			}
 		}
 
-		if (std::abs(stickY) < deadzone && !keyboardAnalogY) {
-			hid.setCirclepadY(0);
+		const s16 l2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		const s16 r2 = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+		const s16 cStickX = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTX);
+		const s16 cStickY = SDL_GameControllerGetAxis(gameController, SDL_CONTROLLER_AXIS_RIGHTY);
+
+		hid.setKey(HID::Keys::ZL, l2 > triggerThreshold);
+		hid.setKey(HID::Keys::ZR, r2 > triggerThreshold);
+
+		// Update C-Stick
+		// To convert from SDL coordinates, ie [-32768, 32767] to [-2048, 2047] we just divide by 8
+		if (std::abs(cStickX) < deadzone) {
+			hid.setCStickX(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
 		} else {
-			hid.setCirclepadY(-(stickY / div));
+			hid.setCStickX(cStickX / 8);
+		}
+
+		if (std::abs(cStickY) < deadzone) {
+			hid.setCStickY(IR::CirclePadPro::ButtonState::C_STICK_CENTER);
+		} else {
+			hid.setCStickY(-(cStickY / 8));
 		}
 	}
 
@@ -695,4 +792,24 @@ void MainWindow::setupControllerSensors(SDL_GameController* controller) {
 	if (haveAccelerometer) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
 	}
+}
+
+void MainWindow::loadKeybindings() {
+	auto mappings = InputMappings::deserialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](const std::string& name) {
+		return InputMappings::Scancode(QKeySequence(QString::fromStdString(name))[0].key());
+	});
+
+	if (mappings.has_value()) {
+		keyboardMappings = *mappings;
+	} else {
+		keyboardMappings = InputMappings::defaultKeyboardMappings();
+	}
+
+	configWindow->getInputWindow()->loadFromMappings(keyboardMappings);
+}
+
+void MainWindow::saveKeybindings() {
+	keyboardMappings.serialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](InputMappings::Scancode scancode) {
+		return QKeySequence(scancode).toString().toStdString();
+	});
 }
