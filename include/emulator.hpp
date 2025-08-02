@@ -40,9 +40,9 @@ enum class ROMType {
 
 class Emulator {
 	EmulatorConfig config;
+	Memory memory;
 	CPU cpu;
 	GPU gpu;
-	Memory memory;
 	Kernel kernel;
 	std::unique_ptr<Audio::DSPCore> dsp;
 	Scheduler scheduler;
