@@ -521,7 +521,7 @@ Result::HorizonResult Memory::queryMemory(MemoryInfo& out, u32 vaddr) {
 	}
 
 	// Official kernel just returns an error here
-	Helpers::panic("Failed to find block in QueryMemory!");
+	Helpers::warn("Failed to find block in QueryMemory!");
 	return Result::FailurePlaceholder;
 }
 
@@ -529,7 +529,6 @@ Result::HorizonResult Memory::testMemoryState(u32 vaddr, s32 pages, MemoryState 
 	for (auto& alloc : memoryInfo) {
 		// Don't bother checking if we're to the left of the requested region
 		if (vaddr >= alloc.end()) continue;
-
 		if (alloc.state != desiredState) return Result::FailurePlaceholder;  // TODO: error for state mismatch
 
 		// If the end of this block comes after the end of the requested range with no errors, it's a success

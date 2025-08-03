@@ -172,7 +172,7 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	connectCheckbox(circlePadProEnabled, config.circlePadProEnabled);
 	genLayout->addRow(circlePadProEnabled);
 
-	QCheckBox* fastmemEnabled = new QCheckBox(tr("Enable fastmem"));
+	QCheckBox* fastmemEnabled = new QCheckBox(tr("Enable Fastmem"));
 	connectCheckbox(fastmemEnabled, config.fastmemEnabled);
 	genLayout->addRow(fastmemEnabled);
 
