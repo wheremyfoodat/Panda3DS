@@ -11,7 +11,7 @@
 #include "handles.hpp"
 #include "helpers.hpp"
 #include "host_memory/host_memory.h"
-#include "kernel/kernel_types.hpp"
+#include "kernel/fcram.hpp"
 #include "loader/3dsx.hpp"
 #include "loader/ncsd.hpp"
 #include "result/result.hpp"

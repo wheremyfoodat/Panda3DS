@@ -14,10 +14,10 @@ namespace PICA {
 
 		bool needsSwizzle = false;
 		MTL::TextureSwizzleChannels swizzle{
-			.red = MTL::TextureSwizzleRed,
-			.green = MTL::TextureSwizzleGreen,
-			.blue = MTL::TextureSwizzleBlue,
-			.alpha = MTL::TextureSwizzleAlpha,
+			MTL::TextureSwizzleRed,
+			MTL::TextureSwizzleGreen,
+			MTL::TextureSwizzleBlue,
+			MTL::TextureSwizzleAlpha,
 		};
 	};
 
@@ -33,7 +33,7 @@ namespace PICA {
 			case ColorFmt::RGBA5551: return MTL::PixelFormatRGBA8Unorm;  // TODO: use MTL::PixelFormatBGR5A1Unorm?
 			case ColorFmt::RGB565: return MTL::PixelFormatRGBA8Unorm;    // TODO: use MTL::PixelFormatB5G6R5Unorm?
 #ifdef PANDA3DS_IOS
-			case ColorFmt::RGBA4: return MTL::PixelFormatRGBA8Unorm; // IOS + Metal doesn't support AGBR4 properly, at least on simulator
+			case ColorFmt::RGBA4: return MTL::PixelFormatRGBA8Unorm;  // IOS + Metal doesn't support AGBR4 properly, at least on simulator
 #else
 			case ColorFmt::RGBA4: return MTL::PixelFormatABGR4Unorm;
 #endif
@@ -130,8 +130,7 @@ namespace PICA {
 			case PrimType::TriangleFan:
 				Helpers::warn("Triangle fans are not supported on Metal, using triangles instead");
 				return MTL::PrimitiveTypeTriangle;
-			case PrimType::GeometryPrimitive:
-				return MTL::PrimitiveTypeTriangle;
+			case PrimType::GeometryPrimitive: return MTL::PrimitiveTypeTriangle;
 		}
 	}
 

@@ -16,27 +16,27 @@ namespace PICA {
 		 decodeTexelAI8ToRG8,
 		 true,
 		 {
-			 .red = MTL::TextureSwizzleRed,
-			 .green = MTL::TextureSwizzleRed,
-			 .blue = MTL::TextureSwizzleRed,
-			 .alpha = MTL::TextureSwizzleGreen,
+			 MTL::TextureSwizzleRed,
+			 MTL::TextureSwizzleRed,
+			 MTL::TextureSwizzleRed,
+			 MTL::TextureSwizzleGreen,
 		 }},                                                 // IA8
 		{MTL::PixelFormatRG8Unorm, 2, decodeTexelGR8ToRG8},  // RG8
 		{MTL::PixelFormatR8Unorm,
 		 1,
 		 decodeTexelI8ToR8,
 		 true,
-		 {.red = MTL::TextureSwizzleRed, .green = MTL::TextureSwizzleRed, .blue = MTL::TextureSwizzleRed, .alpha = MTL::TextureSwizzleOne}},  // I8
-		{MTL::PixelFormatA8Unorm, 1, decodeTexelA8ToA8},                                                                                      // A8
-		{MTL::PixelFormatABGR4Unorm, 2, decodeTexelAI4ToABGR4},                                                                               // IA4
+		 {MTL::TextureSwizzleRed, MTL::TextureSwizzleRed, MTL::TextureSwizzleRed, MTL::TextureSwizzleOne}},  // I8
+		{MTL::PixelFormatA8Unorm, 1, decodeTexelA8ToA8},                                                     // A8
+		{MTL::PixelFormatABGR4Unorm, 2, decodeTexelAI4ToABGR4},                                              // IA4
 		{MTL::PixelFormatR8Unorm,
 		 1,
 		 decodeTexelI4ToR8,
 		 true,
-		 {.red = MTL::TextureSwizzleRed, .green = MTL::TextureSwizzleRed, .blue = MTL::TextureSwizzleRed, .alpha = MTL::TextureSwizzleOne}},  // I4
-		{MTL::PixelFormatA8Unorm, 1, decodeTexelA4ToA8},                                                                                      // A4
-		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelETC1ToRGBA8},                                                                              // ETC1
-		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelETC1A4ToRGBA8},  // ETC1A4
+		 {MTL::TextureSwizzleRed, MTL::TextureSwizzleRed, MTL::TextureSwizzleRed, MTL::TextureSwizzleOne}},  // I4
+		{MTL::PixelFormatA8Unorm, 1, decodeTexelA4ToA8},                                                     // A4
+		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelETC1ToRGBA8},                                             // ETC1
+		{MTL::PixelFormatRGBA8Unorm, 4, decodeTexelETC1A4ToRGBA8},                                           // ETC1A4
 	};
 
 	void checkForMTLPixelFormatSupport(MTL::Device* device) {
@@ -57,10 +57,10 @@ namespace PICA {
 				decodeTexelAI4ToRG8,
 				true,
 				{
-					.red = MTL::TextureSwizzleRed,
-					.green = MTL::TextureSwizzleRed,
-					.blue = MTL::TextureSwizzleRed,
-					.alpha = MTL::TextureSwizzleGreen,
+					MTL::TextureSwizzleRed,
+					MTL::TextureSwizzleRed,
+					MTL::TextureSwizzleRed,
+					MTL::TextureSwizzleGreen,
 				}
 			};
 		}

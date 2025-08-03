@@ -2,7 +2,6 @@
 
 #include "memory.hpp"
 
-
 void KFcram::Region::reset(u32 start, size_t size) {
 	this->start = start;
 	pages = size >> 12;
@@ -22,7 +21,7 @@ void KFcram::Region::alloc(std::list<FcramBlock>& out, s32 allocPages, bool line
 
 		// If the current block is bigger than the allocation, split it
 		if (it->pages > allocPages) {
-			Block newBlock(it->pages - allocPages, it->pageOffs + allocPages);
+			Block newBlock(it->pages - allocPages, it->pageOffset + allocPages);
 			it->pages = allocPages;
 			blocks.insert(it, newBlock);
 		}
@@ -32,7 +31,7 @@ void KFcram::Region::alloc(std::list<FcramBlock>& out, s32 allocPages, bool line
 		allocPages -= it->pages;
 		freePages -= it->pages;
 
-		u32 paddr = start + (it->pageOffs << 12);
+		u32 paddr = start + (it->pageOffset << 12);
 		FcramBlock outBlock(paddr, it->pages);
 		out.push_back(outBlock);
 
