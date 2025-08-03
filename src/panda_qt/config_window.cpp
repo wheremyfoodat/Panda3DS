@@ -172,6 +172,10 @@ ConfigWindow::ConfigWindow(ConfigCallback configCallback, MainWindowCallback win
 	connectCheckbox(circlePadProEnabled, config.circlePadProEnabled);
 	genLayout->addRow(circlePadProEnabled);
 
+	QCheckBox* fastmemEnabled = new QCheckBox(tr("Enable fastmem"));
+	connectCheckbox(fastmemEnabled, config.fastmemEnabled);
+	genLayout->addRow(fastmemEnabled);
+
 	QCheckBox* discordRpcEnabled = new QCheckBox(tr("Enable Discord RPC"));
 	connectCheckbox(discordRpcEnabled, config.discordRpcEnabled);
 	genLayout->addRow(discordRpcEnabled);

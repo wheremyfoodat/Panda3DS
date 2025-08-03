@@ -16,7 +16,8 @@ CMRC_DECLARE(ConsoleFonts);
 using namespace KernelMemoryTypes;
 
 Memory::Memory(KFcram& fcramManager, const EmulatorConfig& config) : fcramManager(fcramManager), config(config) {
-	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE, false);
+	const bool fastmemEnabled = config.fastmemEnabled;
+	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE, fastmemEnabled);
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
@@ -24,7 +25,7 @@ Memory::Memory(KFcram& fcramManager, const EmulatorConfig& config) : fcramManage
 
 	fcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
 	// arenaDSPRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
-	useFastmem = arena->VirtualBasePointer() != nullptr;
+	useFastmem = fastmemEnabled && arena->VirtualBasePointer() != nullptr;
 }
 
 void Memory::reset() {

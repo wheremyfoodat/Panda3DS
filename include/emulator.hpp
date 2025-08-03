@@ -39,6 +39,7 @@ enum class ROMType {
 };
 
 class Emulator {
+	// Config should be initialized before anything else
 	EmulatorConfig config;
 
 	Memory memory;
