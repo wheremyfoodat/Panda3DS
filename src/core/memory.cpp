@@ -399,7 +399,7 @@ void Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, 
 				// perms |= Common::MemoryPermission::Execute;
 			}
 
-			arena->Map(vaddr, FASTMEM_FCRAM_OFFSET + usize(pages) * pageSize, usize(pages) * pageSize, perms, false);
+			arena->Map(vaddr, FASTMEM_FCRAM_OFFSET + paddr, usize(pages) * pageSize, perms, false);
 		}
 	} else if (paddr >= VirtualAddrs::DSPMemStart && paddr < VirtualAddrs::DSPMemStart + DSP_RAM_SIZE) {
 		hostPtr = dspRam + (paddr - VirtualAddrs::DSPMemStart);
