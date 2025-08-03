@@ -114,8 +114,10 @@ void Kernel::controlMemory() {
 			// Official kernel has an internal state bit to indicate that the region's permissions may be changed
 			// But this should account for all cases
 			if (!mem.testMemoryState(addr0, pages, MemoryState::Private) && !mem.testMemoryState(addr0, pages, MemoryState::Alias) &&
-				!mem.testMemoryState(addr0, pages, MemoryState::Aliased) && !mem.testMemoryState(addr0, pages, MemoryState::AliasCode))
-				Helpers::panic("Tried to mprotect invalid region!");
+				!mem.testMemoryState(addr0, pages, MemoryState::Aliased) && !mem.testMemoryState(addr0, pages, MemoryState::AliasCode)) {
+				Helpers::warn("Tried to mprotect invalid region!");
+				return;
+			}
 
 			mem.changePermissions(addr0, pages, r, w, false);
 			regs[1] = addr0;
