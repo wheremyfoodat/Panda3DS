@@ -3,8 +3,8 @@
 #include <cstring>
 #include <optional>
 
-#include "memory.hpp"
 #include "kernel/fcram.hpp"
+#include "memory.hpp"
 
 using namespace KernelMemoryTypes;
 
@@ -61,16 +61,19 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 
 	// TODO: base this off the exheader
 	auto region = FcramRegion::App;
+	u32 bssAddr = dataAddr + (cxi.data.pageCount << 12);
 
 	allocMemory(textAddr, cxi.text.pageCount, region, true, false, true, MemoryState::Code);
 	allocMemory(rodataAddr, cxi.rodata.pageCount, region, true, false, false, MemoryState::Code);
 	allocMemory(dataAddr, cxi.data.pageCount, region, true, true, false, MemoryState::Private);
-	allocMemory(dataAddr + (cxi.data.pageCount << 12), bssSize >> 12, region, true, true, false, MemoryState::Private);
+	allocMemory(bssAddr, bssSize >> 12, region, true, true, false, MemoryState::Private);
 
 	// Copy .code file to FCRAM
 	copyToVaddr(textAddr, code.data(), textSize);
 	copyToVaddr(rodataAddr, code.data() + textSize, rodataSize);
 	copyToVaddr(dataAddr, code.data() + textSize + rodataSize, cxi.data.pageCount << 12);
+	// Set BSS to zeroes
+	copyToVaddr(bssAddr, code.data() + textSize + rodataSize + (cxi.data.size << 12), bssSize);
 
 	ncsd.entrypoint = cxi.text.address;
 
