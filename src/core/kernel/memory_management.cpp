@@ -105,8 +105,9 @@ void Kernel::controlMemory() {
 			// The same as a Map operation, except in reverse
 			if (!mem.mapVirtualMemory(
 					addr0, addr1, pages, false, false, false, MemoryState::Alias, MemoryState::Aliased, MemoryState::Free, MemoryState::Private
-				))
+				)) {
 				Helpers::panic("ControlMemory: Failed to unmap memory");
+			}
 			break;
 
 		case Operation::Protect:
@@ -138,7 +139,7 @@ void Kernel::queryMemory() {
 	const auto result = mem.queryMemory(info, addr);
 	regs[0] = result;
 	regs[1] = info.baseAddr;
-	regs[2] = info.pages << 12;
+	regs[2] = info.pages * Memory::pageSize;
 	regs[3] = info.perms;
 	regs[4] = info.state;
 	regs[5] = 0;  // page flags

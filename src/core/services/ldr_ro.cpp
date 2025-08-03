@@ -150,7 +150,7 @@ static const std::string CRR_MAGIC("CRR0");
 using namespace KernelMemoryTypes;
 
 class CRO {
-	Memory &mem;
+	Memory& mem;
 
 	u32 croPointer;  // Origin address of CRO in RAM
 	u32 oldDataSegmentOffset;
@@ -158,7 +158,7 @@ class CRO {
 	bool isCRO;  // False if CRS
 
   public:
-	CRO(Memory &mem, u32 croPointer, bool isCRO) : mem(mem), croPointer(croPointer), oldDataSegmentOffset(0), isCRO(isCRO) {}
+	CRO(Memory& mem, u32 croPointer, bool isCRO) : mem(mem), croPointer(croPointer), oldDataSegmentOffset(0), isCRO(isCRO) {}
 	~CRO() = default;
 
 	std::string getModuleName() {
@@ -174,9 +174,7 @@ class CRO {
 	u32 getFixedSize() { return mem.read32(croPointer + CROHeader::FixedSize); }
 
 	void setNextCRO(u32 nextCRO) { mem.write32(croPointer + CROHeader::NextCRO, nextCRO); }
-
 	void setPrevCRO(u32 prevCRO) { mem.write32(croPointer + CROHeader::PrevCRO, prevCRO); }
-
 	u32 getSize() { return mem.read32(croPointer + CROHeader::FileSize); }
 
 	void write32(u32 addr, u32 value) {
@@ -185,11 +183,11 @@ class CRO {
 		// can't be accessed via mem.write32()
 		auto writePointer = mem.getWritePointer(addr);
 		if (writePointer) {
-			*(u32 *)writePointer = value;
+			*(u32*)writePointer = value;
 		} else {
 			auto readPointer = mem.getReadPointer(addr);
 			if (readPointer) {
-				*(u32 *)readPointer = value;
+				*(u32*)readPointer = value;
 			} else {
 				Helpers::panic("LDR_RO write to invalid address = %X\n", addr);
 			}
@@ -225,17 +223,15 @@ class CRO {
 
 	u32 getOnUnresolvedAddr() { return getSegmentAddr(mem.read32(croPointer + CROHeader::OnUnresolved)); }
 
-	u32 getNamedExportSymbolAddr(const std::string &symbolName) {
+	u32 getNamedExportSymbolAddr(const std::string& symbolName) {
 		// Note: The CRO contains a trie for fast symbol lookup. For simplicity,
 		// we won't use it and instead look up the symbol in the named export symbol table
 
 		const u32 exportStringSize = mem.read32(croPointer + CROHeader::ExportStringSize);
-
 		const CROHeaderEntry namedExportTable = getHeaderEntry(CROHeader::NamedExportTableOffset);
 
 		for (u32 namedExport = 0; namedExport < namedExportTable.size; namedExport++) {
 			const u32 nameOffset = mem.read32(namedExportTable.offset + 8 * namedExport + NamedExportTable::NameOffset);
-
 			const std::string exportSymbolName = mem.readString(nameOffset, exportStringSize);
 
 			if (symbolName.compare(exportSymbolName) == 0) {
@@ -430,7 +426,7 @@ class CRO {
 		return true;
 	}
 
-	bool rebaseSegmentTable(u32 dataVaddr, u32 bssVaddr, u32 *oldDataVaddr) {
+	bool rebaseSegmentTable(u32 dataVaddr, u32 bssVaddr, u32* oldDataVaddr) {
 		const CROHeaderEntry segmentTable = getHeaderEntry(CROHeader::SegmentTableOffset);
 
 		for (u32 segment = 0; segment < segmentTable.size; segment++) {
@@ -661,7 +657,7 @@ class CRO {
 	}
 
 	bool relocateInternalSymbols(u32 oldDataVaddr) {
-		const u8 *header = (u8 *)mem.getReadPointer(croPointer);
+		const u8* header = (u8*)mem.getReadPointer(croPointer);
 
 		const CROHeaderEntry relocationPatchTable = getHeaderEntry(CROHeader::RelocationPatchTableOffset);
 		const CROHeaderEntry segmentTable = getHeaderEntry(CROHeader::SegmentTableOffset);
@@ -673,7 +669,6 @@ class CRO {
 			const u32 addend = mem.read32(relocationPatchTable.offset + 12 * relocationPatch + RelocationPatch::Addend);
 
 			const u32 segmentAddr = getSegmentAddr(segmentOffset);
-
 			const u32 entryID = mem.read32(segmentTable.offset + 12 * (segmentOffset & 0xF) + SegmentTable::ID);
 
 			u32 relocationTarget = segmentAddr;
@@ -1247,6 +1242,7 @@ void LDRService::initialize(u32 messagePointer) {
 	bool succeeded = mem.mapVirtualMemory(
 		mapVaddr, crsPointer, size >> 12, true, true, true, MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode
 	);
+
 	if (!succeeded) {
 		Helpers::panic("Failed to map CRS");
 	}
@@ -1342,6 +1338,7 @@ void LDRService::loadCRO(u32 messagePointer, bool isNew) {
 	bool succeeded = mem.mapVirtualMemory(
 		mapVaddr, croPointer, size >> 12, true, true, true, MemoryState::Free, MemoryState::Private, MemoryState::Locked, MemoryState::AliasCode
 	);
+
 	if (!succeeded) {
 		Helpers::panic("Failed to map CRO");
 	}
