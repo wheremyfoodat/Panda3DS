@@ -270,7 +270,7 @@ void Kernel::getProcessInfo() {
 		// stack size + page-rounded size of the external handle table
 		case 2:
 			// FIXME
-			regs[1] = fcramManager.getUsedCount(FcramRegion::App);
+			regs[1] = fcramManager.getUsedCount(FcramRegion::App) * Memory::pageSize;
 			regs[2] = 0;
 			break;
 
@@ -363,7 +363,7 @@ void Kernel::getSystemInfo() {
 			switch (subtype) {
 				// Total used memory size in the APPLICATION memory region
 				case 1:
-					regs[1] = fcramManager.getUsedCount(FcramRegion::App);
+					regs[1] = fcramManager.getUsedCount(FcramRegion::App) * Memory::pageSize;
 					regs[2] = 0;
 					break;
 
