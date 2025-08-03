@@ -26,7 +26,12 @@ enum class KernelObjectType : u8 {
 	Thread
 };
 
-enum class ResourceLimitCategory : int { Application = 0, SystemApplet = 1, LibraryApplet = 2, Misc = 3 };
+enum class ResourceLimitCategory : int {
+	Application = 0,
+	SystemApplet = 1,
+	LibraryApplet = 2,
+	Misc = 3,
+};
 
 // Reset types (for use with events and timers)
 enum class ResetType {
@@ -35,7 +40,13 @@ enum class ResetType {
 	Pulse = 2,    // Only meaningful for timers: same as ONESHOT but it will periodically signal the timer instead of just once.
 };
 
-enum class ArbitrationType { Signal = 0, WaitIfLess = 1, DecrementAndWaitIfLess = 2, WaitIfLessTimeout = 3, DecrementAndWaitIfLessTimeout = 4 };
+enum class ArbitrationType {
+	Signal = 0,
+	WaitIfLess = 1,
+	DecrementAndWaitIfLess = 2,
+	WaitIfLessTimeout = 3,
+	DecrementAndWaitIfLessTimeout = 4,
+};
 
 enum class ProcessorID : s32 {
 	AllCPUs = -1,
