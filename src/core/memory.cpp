@@ -15,12 +15,16 @@ CMRC_DECLARE(ConsoleFonts);
 
 using namespace KernelMemoryTypes;
 
-Memory::Memory(KFcram& fcramManager, u64& cpuTicks, const EmulatorConfig& config) : fcramManager(fcramManager), cpuTicks(cpuTicks), config(config) {
-	fcram = new uint8_t[FCRAM_SIZE]();
+Memory::Memory(KFcram& fcramManager, const EmulatorConfig& config) : fcramManager(fcramManager), config(config) {
+	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE, false);
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
 	paddrTable.resize(totalPageCount, 0);
+
+	fcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
+	// arenaDSPRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
+	useFastmem = arena->VirtualBasePointer() != nullptr;
 }
 
 void Memory::reset() {
@@ -31,6 +35,11 @@ void Memory::reset() {
 
 	// TODO: remove this, only needed to make the subsequent allocations work for now
 	fcramManager.reset(FCRAM_SIZE, FCRAM_APPLICATION_SIZE, FCRAM_SYSTEM_SIZE, FCRAM_BASE_SIZE);
+
+	if (useFastmem) {
+		// Unmap any mappings when resetting
+		arena->Unmap(0, 4_GB, false);
+	}
 
 	for (u32 i = 0; i < totalPageCount; i++) {
 		readTable[i] = 0;
@@ -58,14 +67,17 @@ void Memory::reset() {
 	}
 
 	// Map DSP RAM as R/W at [0x1FF00000, 0x1FF7FFFF]
-	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize;               // Number of DSP RAM pages
+	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize;  // Number of DSP RAM pages
 
 	u32 vaddr = VirtualAddrs::DSPMemStart;
 	u32 paddr = PhysicalAddrs::DSP_RAM;
 
-	Operation op{ .newState = MemoryState::Static, .r = true, .w = true, .changeState = true, .changePerms = true };
+	Operation op{.newState = MemoryState::Static, .r = true, .w = true, .changeState = true, .changePerms = true};
 	changeMemoryState(vaddr, dspRamPages, op);
 	mapPhysicalMemory(vaddr, paddr, dspRamPages, true, true, false);
+
+	// Allocate RW mapping for DSP RAM
+	// addFastmemView(VirtualAddrs::DSPMemStart, FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false);
 
 	// Later adjusted based on ROM header when possible
 	region = Regions::USA;
@@ -112,7 +124,7 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::FirmRevision: return firm.revision;
 			case ConfigMem::FirmVersionMinor: return firm.minor;
 			case ConfigMem::FirmVersionMajor: return firm.major;
-			case ConfigMem::WifiLevel: return 0; // No wifi :(
+			case ConfigMem::WifiLevel: return 0;  // No wifi :(
 
 			case ConfigMem::WifiMac:
 			case ConfigMem::WifiMac + 1:
@@ -155,8 +167,8 @@ u32 Memory::read32(u32 vaddr) {
 			case ConfigMem::Datetime0 + 4:
 				return u32(timeSince3DSEpoch() >> 32);  // top 32 bits
 			// Ticks since time was last updated. For now we return the current tick count
-			case ConfigMem::Datetime0 + 8: return u32(cpuTicks);
-			case ConfigMem::Datetime0 + 12: return u32(cpuTicks >> 32);
+			case ConfigMem::Datetime0 + 8: return u32(*cpuTicks);
+			case ConfigMem::Datetime0 + 12: return u32(*cpuTicks >> 32);
 			case ConfigMem::Datetime0 + 16: return 0xFFB0FF0;  // Unknown, set by PTM
 			case ConfigMem::Datetime0 + 20:
 			case ConfigMem::Datetime0 + 24:
@@ -164,11 +176,10 @@ u32 Memory::read32(u32 vaddr) {
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case ConfigMem::SyscoreVer: return 2;
-			case 0x1FF81000: return 0;                   // TODO: Figure out what this config mem address does
+			case 0x1FF81000:
+				return 0;  // TODO: Figure out what this config mem address does
 			// Wifi MAC: First 4 bytes of MAC Address
-			case ConfigMem::WifiMac:
-				return (u32(MACAddress[3]) << 24) | (u32(MACAddress[2]) << 16) | (u32(MACAddress[1]) << 8) |
-					   MACAddress[0];
+			case ConfigMem::WifiMac: return (u32(MACAddress[3]) << 24) | (u32(MACAddress[2]) << 16) | (u32(MACAddress[1]) << 8) | MACAddress[0];
 
 			// 3D slider. Float in range 0.0 = off, 1.0 = max.
 			case ConfigMem::SliderState3D: return Helpers::bit_cast<u32, float>(0.0f);
@@ -178,7 +189,7 @@ u32 Memory::read32(u32 vaddr) {
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 					static int shutUpCounter = 0;
-					if (shutUpCounter < 5) { // Stop spamming about VRAM reads after the first 5
+					if (shutUpCounter < 5) {  // Stop spamming about VRAM reads after the first 5
 						shutUpCounter++;
 						Helpers::warn("VRAM read!\n");
 					}
@@ -376,20 +387,36 @@ void Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, 
 	// TODO: make this a separate function
 	u8* hostPtr = nullptr;
 	if (paddr < FCRAM_SIZE) {
-		hostPtr = fcram + paddr; // FIXME
-	}
-	else if (paddr >= VirtualAddrs::DSPMemStart && paddr < VirtualAddrs::DSPMemStart + DSP_RAM_SIZE) {
+		hostPtr = fcram + paddr;  // FIXME: FCRAM doesn't actually start from physical address 0, but from 0x20000000
+
+		if (useFastmem) {
+			Common::MemoryPermission perms = Common::MemoryPermission::Read;
+			if (w) {
+				perms |= Common::MemoryPermission::Write;
+			}
+
+			if (x) {
+				// perms |= Common::MemoryPermission::Execute;
+			}
+
+			arena->Map(vaddr, FASTMEM_FCRAM_OFFSET + usize(pages) * pageSize, usize(pages) * pageSize, perms, false);
+		}
+	} else if (paddr >= VirtualAddrs::DSPMemStart && paddr < VirtualAddrs::DSPMemStart + DSP_RAM_SIZE) {
 		hostPtr = dspRam + (paddr - VirtualAddrs::DSPMemStart);
 	}
 
 	for (int i = 0; i < pages; i++) {
 		u32 index = (vaddr >> 12) + i;
 		paddrTable[index] = paddr + (i << 12);
-		if (r) readTable[index] = (uintptr_t)(hostPtr + (i << 12));
-		else readTable[index] = 0;
+		if (r)
+			readTable[index] = (uintptr_t)(hostPtr + (i << 12));
+		else
+			readTable[index] = 0;
 
-		if (w) writeTable[index] = (uintptr_t)(hostPtr + (i << 12));
-		else writeTable[index] = 0;
+		if (w)
+			writeTable[index] = (uintptr_t)(hostPtr + (i << 12));
+		else
+			writeTable[index] = 0;
 	}
 }
 
@@ -399,6 +426,10 @@ void Memory::unmapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages) {
 		paddrTable[index] = 0;
 		readTable[index] = 0;
 		writeTable[index] = 0;
+	}
+
+	if (useFastmem) {
+		arena->Unmap(vaddr, pages * pageSize, false);
 	}
 }
 
@@ -410,7 +441,7 @@ bool Memory::allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool 
 	fcramManager.alloc(memList, pages, region, false);
 
 	for (auto it = memList.begin(); it != memList.end(); it++) {
-		Operation op{ .newState = state, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true };
+		Operation op{.newState = state, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true};
 		changeMemoryState(vaddr, it->pages, op);
 		mapPhysicalMemory(vaddr, it->paddr, it->pages, r, w, x);
 		vaddr += it->pages << 12;
@@ -430,7 +461,7 @@ bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegio
 	auto res = testMemoryState(vaddr, pages, MemoryState::Free);
 	if (res.isFailure()) Helpers::panic("Unable to map linear allocation (vaddr:%08X pages:%08X)", vaddr, pages);
 
-	Operation op{ .newState = MemoryState::Continuous, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true };
+	Operation op{.newState = MemoryState::Continuous, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true};
 	changeMemoryState(vaddr, pages, op);
 	mapPhysicalMemory(vaddr, paddr, pages, r, w, x);
 
@@ -438,8 +469,10 @@ bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegio
 	return true;
 }
 
-bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x, MemoryState oldDstState, MemoryState oldSrcState,
-	MemoryState newDstState, MemoryState newSrcState) {
+bool Memory::mapVirtualMemory(
+	u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x, MemoryState oldDstState, MemoryState oldSrcState, MemoryState newDstState,
+	MemoryState newSrcState
+) {
 	// Check that the regions have the specified state
 	// TODO: check src perms
 	auto res = testMemoryState(srcVaddr, pages, oldSrcState);
@@ -448,11 +481,11 @@ bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, boo
 	res = testMemoryState(dstVaddr, pages, oldDstState);
 	if (res.isFailure()) return false;
 
-	// Change the virtual memory state for both regions 
-	Operation srcOp{ .newState = newSrcState, .changeState = true };
+	// Change the virtual memory state for both regions
+	Operation srcOp{.newState = newSrcState, .changeState = true};
 	changeMemoryState(srcVaddr, pages, srcOp);
 
-	Operation dstOp{ .newState = newDstState, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true };
+	Operation dstOp{.newState = newDstState, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true};
 	changeMemoryState(dstVaddr, pages, dstOp);
 
 	// Get a list of physical blocks in the source region
@@ -461,8 +494,10 @@ bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, boo
 
 	// Map or unmap each physical block
 	for (auto& block : physicalList) {
-		if (newDstState == MemoryState::Free) unmapPhysicalMemory(dstVaddr, block.paddr, block.pages);
-		else mapPhysicalMemory(dstVaddr, block.paddr, block.pages, r, w, x);
+		if (newDstState == MemoryState::Free)
+			unmapPhysicalMemory(dstVaddr, block.paddr, block.pages);
+		else
+			mapPhysicalMemory(dstVaddr, block.paddr, block.pages, r, w, x);
 		dstVaddr += block.pages << 12;
 	}
 
@@ -470,7 +505,7 @@ bool Memory::mapVirtualMemory(u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, boo
 }
 
 void Memory::changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x) {
-	Operation op{ .r = r, .w = w, .x = x, .changePerms = true };
+	Operation op{.r = r, .w = w, .x = x, .changePerms = true};
 	changeMemoryState(vaddr, pages, op);
 
 	// Now that permissions have been changed, update the corresponding host tables
@@ -503,7 +538,7 @@ Result::HorizonResult Memory::testMemoryState(u32 vaddr, s32 pages, MemoryState 
 		// Don't bother checking if we're to the left of the requested region
 		if (vaddr >= alloc.end()) continue;
 
-		if (alloc.state != desiredState) return Result::FailurePlaceholder; // TODO: error for state mismatch
+		if (alloc.state != desiredState) return Result::FailurePlaceholder;  // TODO: error for state mismatch
 
 		// If the end of this block comes after the end of the requested range with no errors, it's a success
 		if (alloc.end() >= vaddr + (pages << 12)) return Result::Success;
@@ -537,7 +572,7 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 			bool w = myPerms & 0b010;
 			bool x = myPerms & 0b100;
 
-			Operation op{ .newState = MemoryState::Shared, .r = r, .w = x, .x = x, .changeState = true, .changePerms = true };
+			Operation op{.newState = MemoryState::Shared, .r = r, .w = x, .x = x, .changeState = true, .changePerms = true};
 			changeMemoryState(vaddr, size >> 12, op);
 			mapPhysicalMemory(vaddr, paddr, size >> 12, r, w, x);
 
