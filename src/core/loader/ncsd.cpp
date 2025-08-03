@@ -47,15 +47,12 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	}
 
 	// Map the ROM on the kernel side
-	u32 textOffset = 0;
 	u32 textAddr = cxi.text.address;
 	u32 textSize = cxi.text.pageCount * pageSize;
 
-	u32 rodataOffset = textOffset + textSize;
 	u32 rodataAddr = cxi.rodata.address;
 	u32 rodataSize = cxi.rodata.pageCount * pageSize;
 
-	u32 dataOffset = rodataOffset + rodataSize;
 	u32 dataAddr = cxi.data.address;
 	u32 dataSize = cxi.data.pageCount * pageSize + bssSize;  // We're merging the data and BSS segments, as BSS is just pre-initted .data
 
@@ -85,7 +82,9 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 
 std::optional<NCSD> Memory::loadNCSD(Crypto::AESEngine& aesEngine, const std::filesystem::path& path) {
 	NCSD ncsd;
-	if (!ncsd.file.open(path, "rb")) return std::nullopt;
+	if (!ncsd.file.open(path, "rb")) {
+		return std::nullopt;
+	}
 
 	u8 magic[4];  // Must be "NCSD"
 	ncsd.file.seek(0x100);
