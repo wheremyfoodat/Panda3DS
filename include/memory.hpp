@@ -102,10 +102,6 @@ namespace KernelMemoryTypes {
 	};
 }  // namespace KernelMemoryTypes
 
-struct FcramBlock;
-class KFcram;
-enum class FcramRegion;
-
 class Memory {
 	// Used internally by changeMemoryState
 	struct Operation {
