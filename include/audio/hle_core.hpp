@@ -69,7 +69,9 @@ namespace Audio {
 		// In order to save up on CPU time.
 		uint enabledMixStages = 0;
 
-		u32 samplePosition;  // Sample number into the current audio buffer
+		u32 samplePosition;      // Sample number into the current audio buffer
+		u32 currentBufferPaddr;  // Physical address of current audio buffer
+
 		float rateMultiplier;
 		u16 syncCount;
 		u16 currentBufferID;

@@ -70,8 +70,6 @@ void CheatEntryWidget::editClicked() {
 
 CheatEditDialog::CheatEditDialog(Emulator* emu, CheatEntryWidget& cheatEntry) : QDialog(), emu(emu), cheatEntry(cheatEntry) {
 	setWindowTitle(tr("Edit Cheat"));
-
-	setAttribute(Qt::WA_DeleteOnClose);
 	setModal(true);
 
 	QVBoxLayout* layout = new QVBoxLayout;
@@ -147,6 +145,9 @@ void CheatEditDialog::accepted() {
 				cheatEntry.setMetadata(metadata);
 				cheatEntry.Update();
 			}
+
+			// Delete the CheatEditDialog when the main thread is done using it
+			QObject::deleteLater();
 		});
 	});
 }
@@ -157,6 +158,9 @@ void CheatEditDialog::rejected() {
 		// Was adding a cheat but user pressed cancel
 		cheatEntry.Remove();
 	}
+
+	// We have to manually memory-manage the CheatEditDialog object since it's accessed via multiple threads
+	QObject::deleteLater();
 }
 
 CheatsWindow::CheatsWindow(Emulator* emu, const std::filesystem::path& cheatPath, QWidget* parent)

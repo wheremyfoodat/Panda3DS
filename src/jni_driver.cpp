@@ -10,11 +10,11 @@
 #include "android_utils.hpp"
 #include "sdl_sensors.hpp"
 
-std::unique_ptr<Emulator> emulator = nullptr;
-HIDService* hidService = nullptr;
-RendererGL* renderer = nullptr;
-bool romLoaded = false;
-JavaVM* jvm = nullptr;
+static std::unique_ptr<Emulator> emulator = nullptr;
+static HIDService* hidService = nullptr;
+static RendererGL* renderer = nullptr;
+static bool romLoaded = false;
+static JavaVM* jvm = nullptr;
 
 jclass alberClass;
 jmethodID alberClassOpenDocument;

@@ -118,7 +118,6 @@ void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 
 // The volume here is in the range [0, 0x3F]
 // It is read directly from I2C Device 3 register 0x09
-// Since we currently do not have audio, set the volume a bit below max (0x30)
 void HIDService::getSoundVolume(u32 messagePointer) {
 	log("HID::GetSoundVolume\n");
 	constexpr u8 volume = 0x30;
@@ -237,7 +236,7 @@ void HIDService::updateInputs(u64 currentTick) {
 
 	// For some reason, the original developers decided to signal the HID events each time the OS rescanned inputs
 	// Rather than once every time the state of a key, or the accelerometer state, etc is updated
-	// This means that the OS will signal the events even if literally nothing happened
+	// This means that the OS will signal the events even if nothing happened
 	// Some games such as Majora's Mask rely on this behaviour.
 	if (eventsInitialized) {
 		for (auto& e : events) {
