@@ -70,7 +70,7 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	copyToVaddr(rodataAddr, code.data() + textSize, rodataSize);
 	copyToVaddr(dataAddr, code.data() + textSize + rodataSize, cxi.data.pageCount << 12);
 	// Set BSS to zeroes
-	copyToVaddr(bssAddr, code.data() + textSize + rodataSize + (cxi.data.size << 12), bssSize);
+	copyToVaddr(bssAddr, code.data() + textSize + rodataSize + (cxi.data.pageCount << 12), bssSize);
 
 	ncsd.entrypoint = cxi.text.address;
 
