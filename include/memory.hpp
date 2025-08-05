@@ -186,6 +186,8 @@ class Memory {
 				// perms |= Common::MemoryPermission::Execute;
 			}
 
+			// If anything is mapped at the place we're trying to map, unmap it. Then, create our mapping.
+			arena->Unmap(guestVaddr, size, false);
 			arena->Map(guestVaddr, arenaOffset, size, perms, false);
 		}
 	}

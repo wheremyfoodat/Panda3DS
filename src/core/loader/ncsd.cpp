@@ -40,7 +40,7 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	// Total memory to allocate for loading
 	u32 totalSize = (cxi.text.pageCount + cxi.rodata.pageCount + cxi.data.pageCount) * pageSize + bssSize;
 
-	if (code.size() < totalSize) {
+	if (code.size() + bssSize < totalSize) {
 		Helpers::panic("Total code size as reported by the exheader is larger than the .code file");
 		return false;
 	}
