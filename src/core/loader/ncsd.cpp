@@ -39,7 +39,6 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	u32 bssSize = (cxi.bssSize + 0xfff) & ~0xfff;  // Round BSS size up to a page boundary
 	// Total memory to allocate for loading
 	u32 totalSize = (cxi.text.pageCount + cxi.rodata.pageCount + cxi.data.pageCount) * pageSize + bssSize;
-	code.resize(code.size() + bssSize, 0);  // Pad the .code file with zeroes for the BSS segment
 
 	if (code.size() < totalSize) {
 		Helpers::panic("Total code size as reported by the exheader is larger than the .code file");
@@ -69,8 +68,10 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	copyToVaddr(textAddr, code.data(), textSize);
 	copyToVaddr(rodataAddr, code.data() + textSize, rodataSize);
 	copyToVaddr(dataAddr, code.data() + textSize + rodataSize, cxi.data.pageCount << 12);
+
 	// Set BSS to zeroes
-	copyToVaddr(bssAddr, code.data() + textSize + rodataSize + (cxi.data.pageCount << 12), bssSize);
+	std::vector<u8> bss(bssSize, 0);
+	copyToVaddr(bssAddr, bss.data(), bssSize);
 
 	ncsd.entrypoint = cxi.text.address;
 
