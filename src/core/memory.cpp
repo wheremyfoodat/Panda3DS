@@ -463,7 +463,7 @@ bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegio
 
 bool Memory::mapVirtualMemory(
 	u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x, MemoryState oldDstState, MemoryState oldSrcState, MemoryState newDstState,
-	MemoryState newSrcState
+	MemoryState newSrcState, bool unmapPages
 ) {
 	// Check that the regions have the specified state
 	// TODO: check src perms
@@ -487,7 +487,10 @@ bool Memory::mapVirtualMemory(
 	// Map or unmap each physical block
 	for (auto& block : physicalList) {
 		if (newDstState == MemoryState::Free) {
-			unmapPhysicalMemory(dstVaddr, block.paddr, block.pages);
+			// TODO: Games with CROs will unmap the CRO yet still continue accessing the address it was mapped to?
+			if (unmapPages) {
+				unmapPhysicalMemory(dstVaddr, block.paddr, block.pages);
+			}
 		} else {
 			mapPhysicalMemory(dstVaddr, block.paddr, block.pages, r, w, x);
 		}

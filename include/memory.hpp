@@ -290,7 +290,8 @@ class Memory {
 	bool allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x);
 	bool mapVirtualMemory(
 		u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x, KernelMemoryTypes::MemoryState oldDstState,
-		KernelMemoryTypes::MemoryState oldSrcState, KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState
+		KernelMemoryTypes::MemoryState oldSrcState, KernelMemoryTypes::MemoryState newDstState, KernelMemoryTypes::MemoryState newSrcState,
+		bool unmapPages = true
 	);
 	void changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x);
 	Result::HorizonResult queryMemory(KernelMemoryTypes::MemoryInfo& out, u32 vaddr);

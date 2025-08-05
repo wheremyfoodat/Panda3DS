@@ -1403,7 +1403,8 @@ void LDRService::unloadCRO(u32 messagePointer) {
 
 	u32 size = cro.getSize();
 	bool succeeded = mem.mapVirtualMemory(
-		mapVaddr, croPointer, size >> 12, false, false, false, MemoryState::Locked, MemoryState::AliasCode, MemoryState::Free, MemoryState::Private
+		mapVaddr, croPointer, size >> 12, false, false, false, MemoryState::Locked, MemoryState::AliasCode, MemoryState::Free, MemoryState::Private,
+		false
 	);
 
 	if (!succeeded) {
