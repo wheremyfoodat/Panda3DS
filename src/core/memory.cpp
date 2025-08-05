@@ -486,10 +486,12 @@ bool Memory::mapVirtualMemory(
 
 	// Map or unmap each physical block
 	for (auto& block : physicalList) {
-		if (newDstState == MemoryState::Free)
+		if (newDstState == MemoryState::Free) {
 			unmapPhysicalMemory(dstVaddr, block.paddr, block.pages);
-		else
+		} else {
 			mapPhysicalMemory(dstVaddr, block.paddr, block.pages, r, w, x);
+		}
+
 		dstVaddr += block.pages << 12;
 	}
 
