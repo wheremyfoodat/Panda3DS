@@ -1,6 +1,7 @@
 #include "kernel.hpp"
 
 #include <cassert>
+#include <limits>
 
 #include "cpu.hpp"
 #include "kernel_types.hpp"
@@ -161,6 +162,7 @@ void Kernel::reset() {
 	threadIndices.clear();
 	serviceManager.reset();
 
+	nextScheduledWakeupTick = std::numeric_limits<u64>::max();
 	needReschedule = false;
 
 	// Allocate handle #0 to a dummy object and make a main process object
