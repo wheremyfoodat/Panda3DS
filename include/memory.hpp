@@ -192,8 +192,6 @@ class Memory {
 		}
 	}
 
-	// std::bitset<FCRAM_PAGE_COUNT> usedFCRAMPages;
-	// std::optional<u32> findPaddr(u32 size);
 	u64 timeSince3DSEpoch();
 
 	// https://www.3dbrew.org/wiki/Configuration_Memory#ENVINFO
