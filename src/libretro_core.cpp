@@ -153,6 +153,7 @@ static int fetchVariableRange(std::string key, int min, int max) { return std::c
 
 static void configInit() {
 	static const retro_variable values[] = {
+		{"panda3ds_use_fastmem", EmulatorConfig::enableFastmemDefault ? "Enable fastmem; enabled|disabled" : "Enable fastmem; disabled|enabled"},
 		{"panda3ds_use_shader_jit", EmulatorConfig::shaderJitDefault ? "Enable shader JIT; enabled|disabled" : "Enable shader JIT; disabled|enabled"},
 		{"panda3ds_accelerate_shaders",
 		 EmulatorConfig::accelerateShadersDefault ? "Run 3DS shaders on the GPU; enabled|disabled" : "Run 3DS shaders on the GPU; disabled|enabled"},
@@ -188,9 +189,10 @@ static void configUpdate() {
 	config.rendererType = RendererType::OpenGL;
 	config.vsyncEnabled = fetchVariableBool("panda3ds_use_vsync", true);
 	config.shaderJitEnabled = fetchVariableBool("panda3ds_use_shader_jit", EmulatorConfig::shaderJitDefault);
+	config.fastmemEnabled = fetchVariableBool("panda3ds_use_fastmem", EmulatorConfig::enableFastmemDefault);
+	config.systemLanguage = EmulatorConfig::languageCodeFromString(fetchVariable("panda3ds_system_language", "en"));
 	config.chargerPlugged = fetchVariableBool("panda3ds_use_charger", true);
 	config.batteryPercentage = fetchVariableRange("panda3ds_battery_level", 5, 100);
-	config.systemLanguage = EmulatorConfig::languageCodeFromString(fetchVariable("panda3ds_system_language", "en"));
 
 	config.dspType = Audio::DSPCore::typeFromString(fetchVariable("panda3ds_dsp_emulation", "null"));
 	config.audioEnabled = fetchVariableBool("panda3ds_use_audio", false);

@@ -55,7 +55,7 @@ Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock* sharedMem
 	}
 	mem.write16(textAddress, 0);  // Write UTF-16 null terminator
 
-	// Temporarily hardcode the pressed button to be the firs tone
+	// Temporarily hardcode the pressed button to be the first one
 	switch (config.numButtonsM1) {
 		case SoftwareKeyboardButtonConfig::SingleButton: config.returnCode = SoftwareKeyboardResult::D0Click; break;
 		case SoftwareKeyboardButtonConfig::DualButton: config.returnCode = SoftwareKeyboardResult::D1Click1; break;

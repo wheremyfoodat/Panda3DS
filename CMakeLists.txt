@@ -64,6 +64,7 @@ option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
 option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
 option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
+option(ENABLE_FASTMEM "Build with support for hardware fastmem" ON)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
 option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
 
@@ -188,6 +189,7 @@ include_directories(third_party/toml11)
 include_directories(third_party/glm)
 include_directories(third_party/renderdoc)
 include_directories(third_party/duckstation)
+include_directories(third_party/host_memory/include)
 
 add_subdirectory(third_party/cmrc)
 
@@ -329,6 +331,7 @@ set(SOURCE_FILES src/emulator.cpp src/io_file.cpp src/config.cpp
                  src/http_server.cpp src/stb_image_write.c src/core/cheats.cpp src/core/action_replay.cpp
                  src/discord_rpc.cpp src/lua.cpp src/memory_mapped_file.cpp src/renderdoc.cpp
                  src/frontend_settings.cpp src/miniaudio/miniaudio.cpp src/core/screen_layout.cpp
+                 src/dynamic_library.cpp
 )
 set(CRYPTO_SOURCE_FILES src/core/crypto/aes_engine.cpp)
 set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limits.cpp
@@ -337,6 +340,7 @@ set(KERNEL_SOURCE_FILES src/core/kernel/kernel.cpp src/core/kernel/resource_limi
                         src/core/kernel/address_arbiter.cpp src/core/kernel/error.cpp
                         src/core/kernel/file_operations.cpp src/core/kernel/directory_operations.cpp
                         src/core/kernel/idle_thread.cpp src/core/kernel/timers.cpp
+                        src/core/kernel/fcram.cpp
 )
 set(SERVICE_SOURCE_FILES src/core/services/service_manager.cpp src/core/services/apt.cpp src/core/services/hid.cpp
                          src/core/services/fs.cpp src/core/services/gsp_gpu.cpp src/core/services/gsp_lcd.cpp
@@ -416,7 +420,8 @@ set(HEADER_FILES include/emulator.hpp include/helpers.hpp include/termcolor.hpp 
                  include/fs/archive_twl_sound.hpp include/fs/archive_card_spi.hpp include/services/ns.hpp include/audio/audio_device.hpp
                  include/audio/audio_device_interface.hpp include/audio/libretro_audio_device.hpp include/services/ir/ir_types.hpp
                  include/services/ir/ir_device.hpp include/services/ir/circlepad_pro.hpp include/services/service_intercept.hpp
-                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp
+                 include/screen_layout.hpp include/services/service_map.hpp include/audio/dsp_binary.hpp include/dynamic_library.hpp
+                 include/enum_flag_ops.hpp include/kernel/fcram.hpp
 )
 
 if(IOS)
@@ -443,6 +448,9 @@ set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
 
                              third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
+
+                             third_party/host_memory/host_memory.cpp
+                             third_party/host_memory/virtual_buffer.cpp
 )
 
 if(ENABLE_LUAJIT AND NOT ANDROID)
@@ -708,6 +716,10 @@ endif()
 
 if(ENABLE_HTTP_SERVER)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_ENABLE_HTTP_SERVER=1)
+endif()
+
+if(ENABLE_FASTMEM)
+    target_compile_definitions(AlberCore PRIVATE PANDA3DS_HARDWARE_FASTMEM=1)
 endif()
 
 # Configure frontend

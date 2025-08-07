@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "config.hpp"
+#include "fcram.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
@@ -24,6 +25,8 @@ class Kernel {
 	std::span<u32, 16> regs;
 	CPU& cpu;
 	Memory& mem;
+
+	KFcram fcramManager;
 
 	// The handle number for the next kernel object to be created
 	u32 handleCounter;
@@ -247,6 +250,7 @@ class Kernel {
 	}
 
 	ServiceManager& getServiceManager() { return serviceManager; }
+	KFcram& getFcramManager() { return fcramManager; }
 	Scheduler& getScheduler();
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }

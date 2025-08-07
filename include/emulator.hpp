@@ -39,10 +39,13 @@ enum class ROMType {
 };
 
 class Emulator {
+	// Config should be initialized before anything else
 	EmulatorConfig config;
+
+	Memory memory;
+	// We want memory to be constructed before the rest of the emulator, so it's at the top of the struct
 	CPU cpu;
 	GPU gpu;
-	Memory memory;
 	Kernel kernel;
 	std::unique_ptr<Audio::DSPCore> dsp;
 	Scheduler scheduler;

@@ -4,6 +4,7 @@
 #include "memory.hpp"
 
 using namespace ELFIO;
+using namespace KernelMemoryTypes;
 
 std::optional<u32> Memory::loadELF(std::ifstream& file) {
 	loadedCXI = std::nullopt;  // ELF files don't have a CXI, so set this to null
@@ -24,6 +25,7 @@ std::optional<u32> Memory::loadELF(std::ifstream& file) {
 	auto segNum = reader.segments.size();
 	printf("Number of segments: %d\n", segNum);
 	printf(" #  Perms       Vaddr           File Size       Mem Size\n");
+
 	for (int i = 0; i < segNum; ++i) {
 		const auto seg = reader.segments[i];
 		const auto flags = seg->get_flags();
@@ -55,12 +57,8 @@ std::optional<u32> Memory::loadELF(std::ifstream& file) {
 			Helpers::warn("Rounding ELF segment size to %08X\n", memorySize);
 		}
 
-		// This should also assert that findPaddr doesn't fail
-		u32 fcramAddr = findPaddr(memorySize).value();
-		std::memcpy(&fcram[fcramAddr], data, fileSize);
-
-		// Allocate the segment on the OS side
-		allocateMemory(vaddr, fcramAddr, memorySize, true, r, w, x);
+		allocMemory(vaddr, memorySize / Memory::pageSize, FcramRegion::App, r, w, x, MemoryState::Code);
+		copyToVaddr(vaddr, data, fileSize);
 	}
 
 	// ELF can't specify a region, make it default to USA
