@@ -27,6 +27,7 @@ namespace FRDCommands {
 		GetFriendAttributeFlags = 0x00170042,
 		UpdateGameModeDescription = 0x001D0002,
 
+		SaveLocalAccountData = 0x04050000,
 		UpdateMii = 0x040C0800,
 	};
 }
@@ -61,6 +62,7 @@ void FRDService::handleSyncRequest(u32 messagePointer, FRDService::Type type) {
 			if (type == Type::A) {
 				switch (command) {
 					case FRDCommands::UpdateMii: updateMii(messagePointer); break;
+					case FRDCommands::SaveLocalAccountData: saveLocalAccountData(messagePointer); break;
 					default: Helpers::panic("FRD:A service requested. Command: %08X\n", command); break;
 				}
 			} else {
@@ -262,6 +264,13 @@ void FRDService::logout(u32 messagePointer) {
 	loggedIn = false;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::saveLocalAccountData(u32 messagePointer) {
+	log("FRD::SaveLocalAccountData (stubbed)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x405, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
