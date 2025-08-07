@@ -82,7 +82,9 @@ void Kernel::getResourceLimitCurrentValues() {
 s32 Kernel::getCurrentResourceValue(const KernelObject* limit, u32 resourceName) {
 	const auto data = static_cast<ResourceLimits*>(limit->data);
 	switch (resourceName) {
-		case ResourceType::Commit: return mem.usedUserMemory;
+		// TODO: needs to use the current amount of memory allocated by the process
+		case ResourceType::Commit: return fcramManager.getUsedCount(FcramRegion::App) * Memory::pageSize;
+
 		case ResourceType::Thread: return threadIndices.size();
 		default: Helpers::panic("Attempted to get current value of unknown kernel resource: %d\n", resourceName);
 	}

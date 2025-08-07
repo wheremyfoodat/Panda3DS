@@ -20,7 +20,7 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 
 Emulator::Emulator()
 	: config(getConfigPath()), kernel(cpu, memory, gpu, config, lua), cpu(memory, kernel, *this), gpu(memory, config),
-	  memory(cpu.getTicksRef(), config), cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this),
+	  memory(kernel.fcramManager, config), cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this),
 	  running(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
@@ -159,20 +159,21 @@ void Emulator::pollScheduler() {
 		scheduler.updateNextTimestamp();
 
 		switch (eventType) {
-			case Scheduler::EventType::VBlank: [[likely]] {
-				// Signal that we've reached the end of a frame
-				frameDone = true;
-				lua.signalEvent(LuaEvent::Frame);
+			case Scheduler::EventType::VBlank:
+				[[likely]] {
+					// Signal that we've reached the end of a frame
+					frameDone = true;
+					lua.signalEvent(LuaEvent::Frame);
 
-				// Send VBlank interrupts
-				ServiceManager& srv = kernel.getServiceManager();
-				srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
-				srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+					// Send VBlank interrupts
+					ServiceManager& srv = kernel.getServiceManager();
+					srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+					srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
 
-				// Queue next VBlank event
-				scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
-				break;
-			}
+					// Queue next VBlank event
+					scheduler.addEvent(Scheduler::EventType::VBlank, time + CPU::ticksPerSec / 60);
+					break;
+				}
 
 			case Scheduler::EventType::ThreadWakeup: kernel.pollThreadWakeups(); break;
 			case Scheduler::EventType::UpdateTimers: kernel.pollTimers(); break;
@@ -353,8 +354,7 @@ bool Emulator::loadELF(std::ifstream& file) {
 std::span<u8> Emulator::getSMDH() {
 	switch (romType) {
 		case ROMType::NCSD:
-		case ROMType::CXI:
-			return memory.getCXI()->smdh;
+		case ROMType::CXI: return memory.getCXI()->smdh;
 		default: {
 			return std::span<u8>();
 		}
@@ -386,7 +386,7 @@ static void dumpRomFSNode(const RomFS::RomFSNode& node, const char* romFSBase, c
 
 	for (auto& directory : node.directories) {
 		const auto newPath = path / directory->name;
-		
+
 		// Create the directory for the new folder
 		std::error_code ec;
 		std::filesystem::create_directories(newPath, ec);
@@ -465,7 +465,7 @@ void Emulator::reloadSettings() {
 		loadRenderdoc();
 	}
 
-    gpu.getRenderer()->setHashTextures(config.hashTextures);
+	gpu.getRenderer()->setHashTextures(config.hashTextures);
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	// Reload RPC setting if we're compiling with RPC support

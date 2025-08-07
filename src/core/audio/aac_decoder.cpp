@@ -45,8 +45,6 @@ void AAC::Decoder::decode(AAC::Message& response, const AAC::Message& request, A
 	std::array<s16, frameSize> frame;
 	std::array<std::vector<s16>, 2> audioStreams;
 
-	bool queriedStreamInfo = false;
-
 	while (bytesValid != 0) {
 		if (aacDecoder_Fill(decoderHandle, &input, &bufferSize, &bytesValid) != AAC_DEC_OK) {
 			Helpers::warn("Failed to fill AAC decoder with samples");

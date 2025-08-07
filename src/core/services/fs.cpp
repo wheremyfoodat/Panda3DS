@@ -194,7 +194,11 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 		case FSCommands::SetThisSaveDataSecureValue: setThisSaveDataSecureValue(messagePointer); break;
 		case FSCommands::AbnegateAccessRight: abnegateAccessRight(messagePointer); break;
 		case FSCommands::TheGameboyVCFunction: theGameboyVCFunction(messagePointer); break;
-		default: Helpers::panic("FS service requested. Command: %08X\n", command);
+
+		default:
+			Helpers::warn("Unimplemented FS service requested. Command: %08X\n", command);
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
 	}
 }
 

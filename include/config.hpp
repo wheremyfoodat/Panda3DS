@@ -2,10 +2,10 @@
 #include <filesystem>
 #include <string>
 
-#include "screen_layout.hpp"
 #include "audio/dsp_core.hpp"
 #include "frontend_settings.hpp"
 #include "renderer.hpp"
+#include "screen_layout.hpp"
 #include "services/region_codes.hpp"
 
 struct AudioDeviceConfig {
@@ -49,12 +49,7 @@ struct EmulatorConfig {
 	static constexpr bool ubershaderDefault = true;
 #endif
 	static constexpr bool accelerateShadersDefault = true;
-
-#if defined(__LIBRETRO__)
 	static constexpr bool audioEnabledDefault = true;
-#else
-	static constexpr bool audioEnabledDefault = false;
-#endif
 
 	// We default to OpenGL on all platforms other than iOS
 #if defined(PANDA3DS_IOS)
@@ -63,11 +58,13 @@ struct EmulatorConfig {
 	static constexpr RendererType rendererDefault = RendererType::OpenGL;
 #endif
 
+	static constexpr bool enableFastmemDefault = true;
 	static constexpr bool hashTexturesDefault = false;
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
+	bool fastmemEnabled = enableFastmemDefault;
 	bool hashTextures = hashTexturesDefault;
 
 	ScreenLayout::Layout screenLayout = ScreenLayout::Layout::Default;

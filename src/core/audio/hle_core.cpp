@@ -396,7 +396,28 @@ namespace Audio {
 
 		if (config.partialEmbeddedBufferDirty) {
 			config.partialEmbeddedBufferDirty = 0;
-			printf("Partial embedded buffer dirty for voice %d\n", source.index);
+
+			const u8* data = getPointerPhys<u8>(source.currentBufferPaddr & ~0x3);
+
+			if (data != nullptr) {
+				switch (source.sampleFormat) {
+					case SampleFormat::PCM8: source.currentSamples = decodePCM8(data, config.length, source); break;
+					case SampleFormat::PCM16: source.currentSamples = decodePCM16(data, config.length, source); break;
+					case SampleFormat::ADPCM: source.currentSamples = decodeADPCM(data, config.length, source); break;
+
+					default:
+						Helpers::warn("Invalid DSP sample format");
+						source.currentSamples = {};
+						break;
+				}
+
+				// We're skipping the first samplePosition samples, so remove them from the buffer so as not to consume them later
+				if (source.samplePosition > 0) {
+					auto start = source.currentSamples.begin();
+					auto end = std::next(start, source.samplePosition);
+					source.currentSamples.erase(start, end);
+				}
+			}
 		}
 
 		if (config.bufferQueueDirty) {
@@ -478,6 +499,7 @@ namespace Audio {
 			return;
 		}
 
+		source.currentBufferPaddr = buffer.paddr;
 		source.currentBufferID = buffer.bufferID;
 		source.previousBufferID = 0;
 		// For looping buffers, this is only set for the first time we play it. Loops do not set the dirty bit.
@@ -766,6 +788,7 @@ namespace Audio {
 		interpolationMode = InterpolationMode::Linear;
 
 		samplePosition = 0;
+		currentBufferPaddr = 0;
 		previousBufferID = 0;
 		currentBufferID = 0;
 		syncCount = 0;

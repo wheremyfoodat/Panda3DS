@@ -102,10 +102,17 @@ libretro-build-osx-arm64:
 #    - .core-defs
 
 # Android ARMv8a
-# android-arm64-v8a:
-#   extends:
-#     - .libretro-android-cmake-arm64-v8a
-#     - .core-defs
+android-arm64-v8a:
+  extends:
+    - .libretro-android-cmake-arm64-v8a
+    - .core-defs
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    - export ANDROID_NDK_VERSION=26.2.11394342
+    - export NDK_ROOT=/android-sdk-linux/ndk/$ANDROID_NDK_VERSION
+    - /android-sdk-linux/cmdline-tools/latest/bin/sdkmanager "ndk;$ANDROID_NDK_VERSION"
+    - /android-sdk-linux/cmdline-tools/latest/bin/sdkmanager "cmake;3.30.3"
+    - export PATH=/android-sdk-linux/cmake/3.30.3/bin:$PATH
 
 # Android 64-bit x86
 # android-x86_64:

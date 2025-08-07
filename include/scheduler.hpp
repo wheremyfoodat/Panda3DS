@@ -4,7 +4,6 @@
 #include <limits>
 
 #include "helpers.hpp"
-#include "logger.hpp"
 
 struct Scheduler {
 	enum class EventType {

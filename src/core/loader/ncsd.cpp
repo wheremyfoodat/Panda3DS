@@ -3,7 +3,10 @@
 #include <cstring>
 #include <optional>
 
+#include "kernel/fcram.hpp"
 #include "memory.hpp"
+
+using namespace KernelMemoryTypes;
 
 bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	printf("Text address = %08X, size = %08X\n", cxi.text.address, cxi.text.size);
@@ -24,12 +27,6 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	// Round up the size of the CXI stack size to a page (4KB) boundary, as the OS can only allocate memory this way
 	u32 stackSize = (cxi.stackSize + pageSize - 1) & -pageSize;
 
-	if (stackSize > 512_KB) {
-		// TODO: Figure out the actual max stack size
-		Helpers::warn("CXI stack size is %08X which seems way too big. Clamping to 512KB", stackSize);
-		stackSize = 512_KB;
-	}
-
 	// Allocate stack
 	if (!allocateMainThreadStack(stackSize)) {
 		// Should be unreachable
@@ -42,40 +39,41 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 	u32 bssSize = (cxi.bssSize + 0xfff) & ~0xfff;  // Round BSS size up to a page boundary
 	// Total memory to allocate for loading
 	u32 totalSize = (cxi.text.pageCount + cxi.rodata.pageCount + cxi.data.pageCount) * pageSize + bssSize;
-	code.resize(code.size() + bssSize, 0);  // Pad the .code file with zeroes for the BSS segment
 
-	if (code.size() < totalSize) {
+	if (code.size() + bssSize < totalSize) {
 		Helpers::panic("Total code size as reported by the exheader is larger than the .code file");
 		return false;
 	}
 
-	const auto opt = findPaddr(totalSize);
-	if (!opt.has_value()) {
-		Helpers::panic("Failed to find paddr to map CXI file's code to");
-		return false;
-	}
-
-	const auto paddr = opt.value();
-	std::memcpy(&fcram[paddr], &code[0], totalSize);  // Copy the 3 segments + BSS to FCRAM
-
 	// Map the ROM on the kernel side
-	u32 textOffset = 0;
 	u32 textAddr = cxi.text.address;
 	u32 textSize = cxi.text.pageCount * pageSize;
 
-	u32 rodataOffset = textOffset + textSize;
 	u32 rodataAddr = cxi.rodata.address;
 	u32 rodataSize = cxi.rodata.pageCount * pageSize;
 
-	u32 dataOffset = rodataOffset + rodataSize;
 	u32 dataAddr = cxi.data.address;
 	u32 dataSize = cxi.data.pageCount * pageSize + bssSize;  // We're merging the data and BSS segments, as BSS is just pre-initted .data
 
-	allocateMemory(textAddr, paddr + textOffset, textSize, true, true, false, true);         // Text is R-X
-	allocateMemory(rodataAddr, paddr + rodataOffset, rodataSize, true, true, false, false);  // Rodata is R--
-	allocateMemory(dataAddr, paddr + dataOffset, dataSize, true, true, true, false);         // Data+BSS is RW-
+	// TODO: base this off the exheader
+	auto region = FcramRegion::App;
+	u32 bssAddr = dataAddr + (cxi.data.pageCount << 12);
 
-	ncsd.entrypoint = textAddr;
+	allocMemory(textAddr, cxi.text.pageCount, region, true, false, true, MemoryState::Code);
+	allocMemory(rodataAddr, cxi.rodata.pageCount, region, true, false, false, MemoryState::Code);
+	allocMemory(dataAddr, cxi.data.pageCount, region, true, true, false, MemoryState::Private);
+	allocMemory(bssAddr, bssSize >> 12, region, true, true, false, MemoryState::Private);
+
+	// Copy .code file to FCRAM
+	copyToVaddr(textAddr, code.data(), textSize);
+	copyToVaddr(rodataAddr, code.data() + textSize, rodataSize);
+	copyToVaddr(dataAddr, code.data() + textSize + rodataSize, cxi.data.pageCount << 12);
+
+	// Set BSS to zeroes
+	std::vector<u8> bss(bssSize, 0);
+	copyToVaddr(bssAddr, bss.data(), bssSize);
+
+	ncsd.entrypoint = cxi.text.address;
 
 	// Back the IOFile for accessing the ROM, as well as the ROM's CXI partition, in the memory class.
 	CXIFile = ncsd.file;
@@ -85,7 +83,9 @@ bool Memory::mapCXI(NCSD& ncsd, NCCH& cxi) {
 
 std::optional<NCSD> Memory::loadNCSD(Crypto::AESEngine& aesEngine, const std::filesystem::path& path) {
 	NCSD ncsd;
-	if (!ncsd.file.open(path, "rb")) return std::nullopt;
+	if (!ncsd.file.open(path, "rb")) {
+		return std::nullopt;
+	}
 
 	u8 magic[4];  // Must be "NCSD"
 	ncsd.file.seek(0x100);

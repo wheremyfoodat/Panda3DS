@@ -48,6 +48,7 @@ void EmulatorConfig::load() {
 
 			printAppVersion = toml::find_or<toml::boolean>(general, "PrintAppVersion", true);
 			circlePadProEnabled = toml::find_or<toml::boolean>(general, "EnableCirclePadPro", true);
+			fastmemEnabled = toml::find_or<toml::boolean>(general, "EnableFastmem", enableFastmemDefault);
 			systemLanguage = languageCodeFromString(toml::find_or<std::string>(general, "SystemLanguage", "en"));
 		}
 	}
@@ -180,6 +181,7 @@ void EmulatorConfig::save() {
 	data["General"]["PrintAppVersion"] = printAppVersion;
 	data["General"]["SystemLanguage"] = languageCodeToString(systemLanguage);
 	data["General"]["EnableCirclePadPro"] = circlePadProEnabled;
+	data["General"]["EnableFastmem"] = fastmemEnabled;
 
 	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
 	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;
