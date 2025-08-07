@@ -1,7 +1,5 @@
 #pragma once
 #include <array>
-#include <cassert>
-#include <limits>
 #include <span>
 #include <string>
 #include <vector>
@@ -26,8 +24,10 @@ class Kernel {
 	CPU& cpu;
 	Memory& mem;
 
+  public:
 	KFcram fcramManager;
 
+  private:
 	// The handle number for the next kernel object to be created
 	u32 handleCounter;
 	// A list of our OS threads, the max number of which depends on the resource limit (hardcoded 32 per process on retail it seems).
@@ -250,7 +250,6 @@ class Kernel {
 	}
 
 	ServiceManager& getServiceManager() { return serviceManager; }
-	KFcram& getFcramManager() { return fcramManager; }
 	Scheduler& getScheduler();
 
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
