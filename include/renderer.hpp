@@ -9,10 +9,6 @@
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
 
-#ifdef PANDA3DS_FRONTEND_QT
-#include "gl/context.h"
-#endif
-
 enum class RendererType : s8 {
 	// Todo: Auto = -1,
 	Null = 0,
@@ -23,7 +19,6 @@ enum class RendererType : s8 {
 };
 
 struct EmulatorConfig;
-struct SDL_Window;
 
 class GPU;
 class ShaderUnit;

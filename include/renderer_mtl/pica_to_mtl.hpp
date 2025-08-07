@@ -3,6 +3,7 @@
 #include <Metal/Metal.hpp>
 
 #include "PICA/regs.hpp"
+#include "helpers.hpp"
 // TODO: remove dependency on OpenGL
 #include "opengl.hpp"
 

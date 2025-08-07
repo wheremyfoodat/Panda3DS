@@ -24,12 +24,6 @@
 #include "http_server.hpp"
 #endif
 
-#ifdef PANDA3DS_FRONTEND_QT
-#include "gl/context.h"
-#endif
-
-struct SDL_Window;
-
 enum class ROMType {
 	None,
 	ELF,
