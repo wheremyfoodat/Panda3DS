@@ -9,6 +9,7 @@
 #include "vk_sampler_cache.hpp"
 
 class GPU;
+struct SDL_Window;
 
 class RendererVK final : public Renderer {
 	SDL_Window* targetWindow;
