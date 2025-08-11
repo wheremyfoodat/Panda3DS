@@ -2,6 +2,7 @@
 
 #include <stb_image_write.h>
 
+#include <algorithm>
 #include <bit>
 #include <cmrc/cmrc.hpp>
 
@@ -11,10 +12,10 @@
 #include "PICA/pica_hash.hpp"
 #include "PICA/pica_simd.hpp"
 #include "PICA/regs.hpp"
-#include "screen_layout.hpp"
 #include "PICA/shader_decompiler.hpp"
 #include "config.hpp"
 #include "math_util.hpp"
+#include "screen_layout.hpp"
 
 CMRC_DECLARE(RendererGL);
 
@@ -71,19 +72,13 @@ void RendererGL::initGraphicsContextInternal() {
 	// Create stream buffers for vertex, index and uniform buffers
 	static constexpr usize hwIndexBufferSize = 2_MB;
 	static constexpr usize hwVertexBufferSize = 16_MB;
+	static constexpr usize hwShaderUniformUBOSize = 4_MB;
+	static constexpr usize shadergenFragmentUBOSize = 4_MB;
 
 	hwIndexBuffer = StreamBuffer::Create(GL_ELEMENT_ARRAY_BUFFER, hwIndexBufferSize);
 	hwVertexBuffer = StreamBuffer::Create(GL_ARRAY_BUFFER, hwVertexBufferSize);
-
-	// Allocate memory for the shadergen fragment uniform UBO
-	glGenBuffers(1, &shadergenFragmentUBO);
-	gl.bindUBO(shadergenFragmentUBO);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(PICA::FragmentUniforms), nullptr, GL_DYNAMIC_DRAW);
-
-	// Allocate memory for the accelerated vertex shader uniform UBO
-	glGenBuffers(1, &hwShaderUniformUBO);
-	gl.bindUBO(hwShaderUniformUBO);
-	glBufferData(GL_UNIFORM_BUFFER, PICAShader::totalUniformSize(), nullptr, GL_DYNAMIC_DRAW);
+	hwShaderUniformUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, hwShaderUniformUBOSize);
+	shadergenFragmentUBO = StreamBuffer::Create(GL_UNIFORM_BUFFER, shadergenFragmentUBOSize);
 
 	vbo.createFixedSize(sizeof(Vertex) * vertexBufferSize * 2, GL_STREAM_DRAW);
 	vbo.bind();
@@ -185,6 +180,10 @@ void RendererGL::initGraphicsContextInternal() {
 	driverInfo.supportsExtFbFetch = (GLAD_GL_EXT_shader_framebuffer_fetch != 0);
 	driverInfo.supportsArmFbFetch = (GLAD_GL_ARM_shader_framebuffer_fetch != 0);
 
+	// UBOs have an alignment requirement we have to respect
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, reinterpret_cast<GLint*>(&driverInfo.uboAlignment));
+	driverInfo.uboAlignment = std::max<GLuint>(driverInfo.uboAlignment, 16);
+
 	// Initialize the default vertex shader used with shadergen
 	std::string defaultShadergenVSSource = fragShaderGen.getDefaultVertexShader();
 	defaultShadergenVs.create({defaultShadergenVSSource.c_str(), defaultShadergenVSSource.size()}, OpenGL::Vertex);
@@ -192,7 +191,7 @@ void RendererGL::initGraphicsContextInternal() {
 
 // The OpenGL renderer doesn't need to do anything with the GL context (For Qt frontend) or the SDL window (For SDL frontend)
 // So we just call initGraphicsContextInternal for both
-void RendererGL::initGraphicsContext([[maybe_unused]] SDL_Window* window) { initGraphicsContextInternal(); }
+void RendererGL::initGraphicsContext([[maybe_unused]] void* context) { initGraphicsContextInternal(); }
 
 // Set up the OpenGL blending context to match the emulated PICA
 void RendererGL::setupBlending() {
@@ -936,10 +935,6 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 			glUniformBlockBinding(program.handle(), vertexUBOIndex, vsUBOBlockBinding);
 		}
 	}
-	glBindBufferBase(GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO);
-	if (usingAcceleratedShader) {
-		glBindBufferBase(GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO);
-	}
 
 	// Upload uniform data to our shader's UBO
 	PICA::FragmentUniforms uniforms;
@@ -1023,8 +1018,22 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
 		}
 	}
 
-	gl.bindUBO(shadergenFragmentUBO);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PICA::FragmentUniforms), &uniforms);
+	// Upload fragment uniforms to UBO
+	shadergenFragmentUBO->Bind();
+	auto uboRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
+	std::memcpy(uboRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
+	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
+
+	// Bind our UBOs
+	glBindBufferRange(
+		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), uboRes.buffer_offset, sizeof(PICA::FragmentUniforms)
+	);
+
+	if (usingAcceleratedShader) {
+		glBindBufferRange(
+			GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId(), hwShaderUniformUBOOffset, PICAShader::totalUniformSize()
+		);
+	}
 
 	return program;
 }
@@ -1074,11 +1083,16 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* 
 			usingAcceleratedShader = false;
 		} else {
 			generatedVertexShader = &(*shader);
-			gl.bindUBO(hwShaderUniformUBO);
+			hwShaderUniformUBO->Bind();
 
+			// Upload shader uniforms to our UBO
 			if (shaderUnit.vs.uniformsDirty) {
 				shaderUnit.vs.uniformsDirty = false;
-				glBufferSubData(GL_UNIFORM_BUFFER, 0, PICAShader::totalUniformSize(), shaderUnit.vs.getUniformPointer());
+				auto uboRes = hwShaderUniformUBO->Map(driverInfo.uboAlignment, PICAShader::totalUniformSize());
+				std::memcpy(uboRes.pointer, shaderUnit.vs.getUniformPointer(), PICAShader::totalUniformSize());
+				hwShaderUniformUBO->Unmap(PICAShader::totalUniformSize());
+
+				hwShaderUniformUBOOffset = uboRes.buffer_offset;
 			}
 
 			performIndexedRender = accel->indexed;

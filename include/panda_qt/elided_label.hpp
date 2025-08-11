@@ -6,6 +6,7 @@
 
 class ElidedLabel : public QLabel {
 	Q_OBJECT
+
   public:
 	explicit ElidedLabel(Qt::TextElideMode elideMode = Qt::ElideLeft, QWidget* parent = nullptr);
 	explicit ElidedLabel(QString text, Qt::TextElideMode elideMode = Qt::ElideLeft, QWidget* parent = nullptr);

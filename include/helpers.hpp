@@ -3,10 +3,8 @@
 #include <cstdarg>
 #include <cstdint>
 #include <iostream>
-#include <iterator>
-#include <string>
-#include <vector>
 #include <memory>
+#include <string>
 
 #include "termcolor.hpp"
 
@@ -37,7 +35,7 @@ namespace Helpers {
 			return {};
 		}
 		const auto buf = std::make_unique<char[]>(size);
-		std::snprintf(buf.get(), size, fmt.c_str(), args ...);
+		std::snprintf(buf.get(), size, fmt.c_str(), args...);
 		return std::string(buf.get(), buf.get() + size - 1);
 	}
 
@@ -50,7 +48,7 @@ namespace Helpers {
 
 		exit(1);
 	}
-	
+
 #ifdef PANDA3DS_LIMITED_PANICS
 	template <class... Args>
 	static void panicDev(const char* fmt, Args&&... args) {}

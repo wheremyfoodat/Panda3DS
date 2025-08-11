@@ -30,10 +30,10 @@ namespace MemoryPermissions {
 	};
 }
 
+using namespace KernelMemoryTypes;
+
 // Returns whether "value" is aligned to a page boundary (Ie a boundary of 4096 bytes)
-static constexpr bool isAligned(u32 value) {
-	return (value & 0xFFF) == 0;
-}
+static constexpr bool isAligned(u32 value) { return (value & 0xFFF) == 0; }
 
 // Result ControlMemory(u32* outaddr, u32 addr0, u32 addr1, u32 size,
 //						MemoryOperation operation, MemoryPermission permissions)
@@ -44,6 +44,7 @@ void Kernel::controlMemory() {
 	u32 addr0 = regs[1];
 	u32 addr1 = regs[2];
 	u32 size = regs[3];
+	u32 pages = size >> 12;  // Official kernel truncates nonaligned sizes
 	u32 perms = regs[4];
 
 	if (perms == MemoryPermissions::DontCare) {
@@ -61,7 +62,7 @@ void Kernel::controlMemory() {
 		Helpers::panic("ControlMemory: attempted to allocate executable memory");
 	}
 
-	if (!isAligned(addr0) || !isAligned(addr1) || !isAligned(size)) {
+	if (!isAligned(addr0) || !isAligned(addr1)) {
 		Helpers::panic("ControlMemory: Unaligned parameters\nAddr0: %08X\nAddr1: %08X\nSize: %08X", addr0, addr1, size);
 	}
 
@@ -72,22 +73,54 @@ void Kernel::controlMemory() {
 
 	switch (operation & 0xFF) {
 		case Operation::Commit: {
-			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear, r, w, x, true);
-			if (!address.has_value()) {
-				Helpers::panic("ControlMemory: Failed to allocate memory");
+			// TODO: base this from the exheader
+			auto region = FcramRegion::App;
+
+			u32 outAddr = 0;
+			if (linear) {
+				if (!mem.allocMemoryLinear(outAddr, addr0, pages, region, r, w, false)) {
+					Helpers::panic("ControlMemory: Failed to allocate linear memory");
+				}
+			} else {
+				if (!mem.allocMemory(addr0, pages, region, r, w, false, MemoryState::Private)) {
+					Helpers::panic("ControlMemory: Failed to allocate memory");
+				}
+
+				outAddr = addr0;
 			}
 
-			regs[1] = address.value();
+			regs[1] = outAddr;
 			break;
 		}
 
-		case Operation::Map: mem.mirrorMapping(addr0, addr1, size); break;
+		case Operation::Map:
+			// Official kernel only allows Private regions to be mapped to Free regions. An Alias or Aliased region cannot be mapped again
+			if (!mem.mapVirtualMemory(
+					addr0, addr1, pages, r, w, false, MemoryState::Free, MemoryState::Private, MemoryState::Alias, MemoryState::Aliased
+				))
+				Helpers::panic("ControlMemory: Failed to map memory");
+			break;
+
+		case Operation::Unmap:
+			// The same as a Map operation, except in reverse
+			if (!mem.mapVirtualMemory(
+					addr0, addr1, pages, false, false, false, MemoryState::Alias, MemoryState::Aliased, MemoryState::Free, MemoryState::Private
+				)) {
+				Helpers::panic("ControlMemory: Failed to unmap memory");
+			}
+			break;
 
 		case Operation::Protect:
-			Helpers::warn(
-				"Ignoring mprotect! Hope nothing goes wrong but if the game accesses invalid memory or crashes then we prolly need to implement "
-				"this\n"
-			);
+			// Official kernel has an internal state bit to indicate that the region's permissions may be changed
+			// But this should account for all cases
+			if (!mem.testMemoryState(addr0, pages, MemoryState::Private) && !mem.testMemoryState(addr0, pages, MemoryState::Alias) &&
+				!mem.testMemoryState(addr0, pages, MemoryState::Aliased) && !mem.testMemoryState(addr0, pages, MemoryState::AliasCode)) {
+				Helpers::warn("Tried to mprotect invalid region!");
+				return;
+			}
+
+			mem.changePermissions(addr0, pages, r, w, false);
+			regs[1] = addr0;
 			break;
 
 		default: Helpers::warn("ControlMemory: unknown operation %X\n", operation); break;
@@ -104,10 +137,11 @@ void Kernel::queryMemory() {
 
 	logSVC("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
 
-	const auto info = mem.queryMemory(addr);
-	regs[0] = Result::Success;
+	KernelMemoryTypes::MemoryInfo info;
+	const auto result = mem.queryMemory(info, addr);
+	regs[0] = result;
 	regs[1] = info.baseAddr;
-	regs[2] = info.size;
+	regs[2] = info.pages * Memory::pageSize;
 	regs[3] = info.perms;
 	regs[4] = info.state;
 	regs[5] = 0;  // page flags

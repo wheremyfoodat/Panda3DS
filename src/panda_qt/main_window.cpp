@@ -10,11 +10,12 @@
 #include "cheats.hpp"
 #include "input_mappings.hpp"
 #include "panda_qt/dsp_debugger.hpp"
+#include "panda_qt/screen/screen.hpp"
 #include "sdl_sensors.hpp"
 #include "services/dsp.hpp"
 #include "version.hpp"
 
-MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent), keyboardMappings(InputMappings()) {
 	emu = new Emulator();
 
 	loadTranslation();
@@ -25,8 +26,19 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 	resize(800, 240 * 4);
 	show();
 
+	const RendererType rendererType = emu->getConfig().rendererType;
+	usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
+	usingVk = (rendererType == RendererType::Vulkan);
+	usingMtl = (rendererType == RendererType::Metal);
+
+	ScreenWidget::API api = ScreenWidget::API::OpenGL;
+	if (usingVk)
+		api = ScreenWidget::API::Vulkan;
+	else if (usingMtl)
+		api = ScreenWidget::API::Metal;
+
 	// We pass a callback to the screen widget that will be triggered every time we resize the screen
-	screen = new ScreenWidget([this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
+	screen = ScreenWidget::getWidget(api, [this](u32 width, u32 height) { handleScreenResize(width, height); }, this);
 	setCentralWidget(screen);
 
 	appRunning = true;
@@ -115,6 +127,13 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		[&]() { return this; }, emu->getConfig(), this
 	);
 
+	loadKeybindings();
+
+	connect(configWindow->getInputWindow(), &InputWindow::mappingsChanged, this, [&]() {
+		keybindingsChanged = true;
+		configWindow->getInputWindow()->applyToMappings(keyboardMappings);
+	});
+
 	auto args = QCoreApplication::arguments();
 	if (args.size() > 1) {
 		auto romPath = std::filesystem::current_path() / args.at(1).toStdU16String();
@@ -142,28 +161,29 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// The emulator graphics context for the thread should be initialized in the emulator thread due to how GL contexts work
 	emuThread = std::thread([this]() {
-		const RendererType rendererType = emu->getConfig().rendererType;
-		usingGL = (rendererType == RendererType::OpenGL || rendererType == RendererType::Software || rendererType == RendererType::Null);
-		usingVk = (rendererType == RendererType::Vulkan);
-		usingMtl = (rendererType == RendererType::Metal);
+		switch (screen->api) {
+			case ScreenWidget::API::OpenGL: {
+				// Make GL context current for this thread, enable VSync
+				GL::Context* glContext = screen->getGLContext();
+				glContext->MakeCurrent();
+				glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
 
-		if (usingGL) {
-			// Make GL context current for this thread, enable VSync
-			GL::Context* glContext = screen->getGLContext();
-			glContext->MakeCurrent();
-			glContext->SetSwapInterval(emu->getConfig().vsyncEnabled ? 1 : 0);
+				if (glContext->IsGLES()) {
+					emu->getRenderer()->setupGLES();
+				}
 
-			if (glContext->IsGLES()) {
-				emu->getRenderer()->setupGLES();
+				emu->initGraphicsContext(glContext);
+				break;
 			}
 
-			emu->initGraphicsContext(glContext);
-		} else if (usingVk) {
-			Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!");
-		} else if (usingMtl) {
-			Helpers::panic("Metal on Qt currently doesn't work, try the SDL frontend instead!");
-		} else {
-			Helpers::panic("Unsupported graphics backend for Qt frontend!");
+			case ScreenWidget::API::Metal: {
+				emu->initGraphicsContext(nullptr);
+				emu->getRenderer()->setMTKLayer(screen->getMTKLayer());
+				break;
+			}
+
+			case ScreenWidget::API::Vulkan: Helpers::panic("Vulkan on Qt is currently WIP, try the SDL frontend instead!"); break;
+			default: Helpers::panic("Unsupported graphics backend for Qt frontend!"); break;
 		}
 
 		// We have to initialize controllers on the same thread they'll be polled in
@@ -206,6 +226,8 @@ void MainWindow::emuThreadMainLoop() {
 void MainWindow::swapEmuBuffer() {
 	if (usingGL) {
 		screen->getGLContext()->SwapBuffers();
+	} else if (usingMtl) {
+		// The renderer itself calls presentDrawable to swap buffers on Metal
 	} else {
 		Helpers::panic("[Qt] Don't know how to swap buffers for the current rendering backend :(");
 	}
@@ -274,11 +296,16 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 
 // Cleanup when the main window closes
 MainWindow::~MainWindow() {
+	if (keybindingsChanged) {
+		saveKeybindings();
+	}
+
 	delete emu;
 	delete menuBar;
 	delete aboutWindow;
 	delete configWindow;
 	delete cheatsEditor;
+	delete screen;
 	delete luaEditor;
 }
 
@@ -765,4 +792,24 @@ void MainWindow::setupControllerSensors(SDL_GameController* controller) {
 	if (haveAccelerometer) {
 		SDL_GameControllerSetSensorEnabled(controller, SDL_SENSOR_ACCEL, SDL_TRUE);
 	}
+}
+
+void MainWindow::loadKeybindings() {
+	auto mappings = InputMappings::deserialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](const std::string& name) {
+		return InputMappings::Scancode(QKeySequence(QString::fromStdString(name))[0].key());
+	});
+
+	if (mappings.has_value()) {
+		keyboardMappings = *mappings;
+	} else {
+		keyboardMappings = InputMappings::defaultKeyboardMappings();
+	}
+
+	configWindow->getInputWindow()->loadFromMappings(keyboardMappings);
+}
+
+void MainWindow::saveKeybindings() {
+	keyboardMappings.serialize(emu->getAppDataRoot() / "controls_qt.toml", "Qt", [](InputMappings::Scancode scancode) {
+		return QKeySequence(scancode).toString().toStdString();
+	});
 }

@@ -1,6 +1,8 @@
 #include "services/hid.hpp"
 
-#include <bit>
+#include <algorithm>
+#include <cctype>
+#include <unordered_map>
 
 #include "ipc.hpp"
 #include "kernel.hpp"
@@ -116,7 +118,6 @@ void HIDService::getGyroscopeCoefficient(u32 messagePointer) {
 
 // The volume here is in the range [0, 0x3F]
 // It is read directly from I2C Device 3 register 0x09
-// Since we currently do not have audio, set the volume a bit below max (0x30)
 void HIDService::getSoundVolume(u32 messagePointer) {
 	log("HID::GetSoundVolume\n");
 	constexpr u8 volume = 0x30;
@@ -235,7 +236,7 @@ void HIDService::updateInputs(u64 currentTick) {
 
 	// For some reason, the original developers decided to signal the HID events each time the OS rescanned inputs
 	// Rather than once every time the state of a key, or the accelerometer state, etc is updated
-	// This means that the OS will signal the events even if literally nothing happened
+	// This means that the OS will signal the events even if nothing happened
 	// Some games such as Majora's Mask rely on this behaviour.
 	if (eventsInitialized) {
 		for (auto& e : events) {
@@ -243,3 +244,60 @@ void HIDService::updateInputs(u64 currentTick) {
 		}
 	}
 }
+
+// Key serialization helpers
+namespace HID::Keys {
+	const char* keyToName(u32 key) {
+		static std::unordered_map<u32, const char*> keyMap = {
+			{A, "A"},
+			{B, "B"},
+			{Select, "Select"},
+			{Start, "Start"},
+			{Right, "D-Pad Right"},
+			{Left, "D-Pad Left"},
+			{Up, "D-Pad Up"},
+			{Down, "D-Pad Down"},
+			{R, "R"},
+			{L, "L"},
+			{X, "X"},
+			{Y, "Y"},
+			{ZL, "ZL"},
+			{ZR, "ZR"},
+			{CirclePadRight, "CirclePad Right"},
+			{CirclePadLeft, "CirclePad Left"},
+			{CirclePadUp, "CirclePad Up"},
+			{CirclePadDown, "CirclePad Down"},
+		};
+
+		auto it = keyMap.find(key);
+		return it != keyMap.end() ? it->second : "Unknown key";
+	}
+
+	u32 nameToKey(std::string name) {
+		static std::unordered_map<std::string, u32> keyMap = {
+			{"a", A},
+			{"b", B},
+			{"select", Select},
+			{"start", Start},
+			{"d-pad right", Right},
+			{"d-pad left", Left},
+			{"d-pad up", Up},
+			{"d-pad down", Down},
+			{"r", R},
+			{"l", L},
+			{"x", X},
+			{"y", Y},
+			{"zl", ZL},
+			{"zr", ZR},
+			{"circlepad right", CirclePadRight},
+			{"circlepad left", CirclePadLeft},
+			{"circlepad up", CirclePadUp},
+			{"circlepad down", CirclePadDown},
+		};
+
+		std::transform(name.begin(), name.end(), name.begin(), [](char c) { return std::tolower(c); });
+		auto it = keyMap.find(name);
+
+		return it != keyMap.end() ? it->second : HID::Keys::Null;
+	}
+}  // namespace HID::Keys

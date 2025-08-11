@@ -2,6 +2,7 @@
 
 #include <map>
 
+#include "helpers.hpp"
 #include "objc_helper.hpp"
 #include "pica_to_mtl.hpp"
 

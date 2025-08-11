@@ -147,4 +147,3 @@ const char* ScreenLayout::layoutToString(Layout layout) {
 		default: return "invalid";
 	}
 }
-    

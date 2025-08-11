@@ -1,4 +1,5 @@
 #include <QKeyEvent>
+#include <QKeySequence>
 
 #include "input_mappings.hpp"
 

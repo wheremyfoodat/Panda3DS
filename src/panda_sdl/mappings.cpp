@@ -1,6 +1,6 @@
-#include "input_mappings.hpp"
-
 #include <SDL.h>
+
+#include "input_mappings.hpp"
 
 InputMappings InputMappings::defaultKeyboardMappings() {
 	InputMappings mappings;

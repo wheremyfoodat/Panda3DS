@@ -1,5 +1,4 @@
 #include <3ds.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,5 +15,5 @@ int main(int argc, char** argv) {
         __asm__ volatile ("" ::: "memory");
     }
 
-	return 0;
+    return 0;
 }
