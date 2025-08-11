@@ -248,17 +248,17 @@ u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8>
 }
 
 void Texture::decodeTexture(std::span<const u8> data) {
-    std::vector<u32> decoded;
-    decoded.reserve(u64(size.u()) * u64(size.v()));
+	std::vector<u32> decoded;
+	decoded.reserve(u64(size.u()) * u64(size.v()));
 
-    // Decode texels line by line
-    for (u32 v = 0; v < size.v(); v++) {
-        for (u32 u = 0; u < size.u(); u++) {
-            u32 colour = decodeTexel(u, v, format, data);
-            decoded.push_back(colour);
-        }
-    }
+	// Decode texels line by line
+	for (u32 v = size.v() - 1; s32(v) >= 0; v--) {
+		for (u32 u = 0; u < size.u(); u++) {
+			u32 colour = decodeTexel(u, v, format, data);
+			decoded.push_back(colour);
+		}
+	}
 
-    texture.bind();
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.u(), size.v(), GL_RGBA, GL_UNSIGNED_BYTE, decoded.data());
+	texture.bind();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.u(), size.v(), GL_RGBA, GL_UNSIGNED_BYTE, decoded.data());
 }

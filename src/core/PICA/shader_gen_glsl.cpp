@@ -798,9 +798,9 @@ void main() {
 	vec4 colourAbs = abs(a_vertexColour);
 	v_colour = min(colourAbs, vec4(1.f));
 
-	v_texcoord0 = vec3(a_texcoord0.x, 1.0 - a_texcoord0.y, a_texcoord0_w);
-	v_texcoord1 = vec2(a_texcoord1.x, 1.0 - a_texcoord1.y);
-	v_texcoord2 = vec2(a_texcoord2.x, 1.0 - a_texcoord2.y);
+	v_texcoord0 = vec3(a_texcoord0.x, a_texcoord0.y, a_texcoord0_w);
+	v_texcoord1 = vec2(a_texcoord1.x, a_texcoord1.y);
+	v_texcoord2 = vec2(a_texcoord2.x, a_texcoord2.y);
 	v_view = a_view;
 	v_quaternion = a_quaternion;
 
