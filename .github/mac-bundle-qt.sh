@@ -57,6 +57,7 @@ PlistBuddy Alber.app/Contents/Info.plist -c "add CFBundleInfoDictionaryVersion s
 PlistBuddy Alber.app/Contents/Info.plist -c "add CFBundleName string Panda3DS"
 PlistBuddy Alber.app/Contents/Info.plist -c "add CFBundlePackageType string APPL"
 PlistBuddy Alber.app/Contents/Info.plist -c "add NSHumanReadableCopyright string Copyright 2023 Panda3DS Team"
+PlistBuddy Alber.app/Contents/Info.plist -c "add LSApplicationCategoryType string public.app-category.games"
 
 PlistBuddy Alber.app/Contents/Info.plist -c "add LSMinimumSystemVersion string 10.15"
 
