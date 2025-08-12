@@ -41,6 +41,9 @@ chmod a+x Alber.app/Contents/Macos/Alber
 # Copy icons into App
 cp alber.icns Alber.app/Contents/Resources/AppIcon.icns
 
+# Delete temporary icon files
+rm -rf alber.icns alber.iconset
+
 # Fix up Plist stuff
 PlistBuddy Alber.app/Contents/Info.plist -c "add CFBundleDisplayName string Alber"
 PlistBuddy Alber.app/Contents/Info.plist -c "add CFBundleIconName string AppIcon"
