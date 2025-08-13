@@ -8,11 +8,12 @@
 struct Scheduler {
 	enum class EventType {
 		VBlank = 0,          // End of frame event
-		UpdateTimers = 1,    // Update kernel timer objects
+		ThreadWakeup = 1,    // A thread might wake up from eg sleeping or timing outs
 		RunDSP = 2,          // Make the emulated DSP run for one audio frame
-		SignalY2R = 3,       // Signal that a Y2R conversion has finished
-		UpdateIR = 4,        // Update an IR device (For now, just the CirclePad Pro/N3DS controls)
-		Panic = 5,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
+		UpdateTimers = 3,    // Update kernel timer objects
+		SignalY2R = 4,       // Signal that a Y2R conversion has finished
+		UpdateIR = 5,        // Update an IR device (For now, just the CirclePad Pro/N3DS controls)
+		Panic = 6,           // Dummy event that is always pending and should never be triggered (Timestamp = UINT64_MAX)
 		TotalNumberOfEvents  // How many event types do we have in total?
 	};
 	static constexpr usize totalNumberOfEvents = static_cast<usize>(EventType::TotalNumberOfEvents);
