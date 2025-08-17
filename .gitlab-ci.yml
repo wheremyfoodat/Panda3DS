@@ -54,15 +54,7 @@ stages:
 ################################### DESKTOPS #################################
 # Linux 64-bit
 libretro-build-linux-x64:
-  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:latest
-  before_script:
-    - export NUMPROC=$(($(nproc)/5))
-    - sudo apt-get update -qy
-    - sudo apt-get install -qy software-properties-common
-    - sudo add-apt-repository -y ppa:savoury1/build-tools
-    - sudo add-apt-repository -y ppa:savoury1/gcc-defaults-12
-    - sudo apt-get update -qy
-    - sudo apt-get install -qy cmake gcc-12 g++-12
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:backports
   variables:
     CC: /usr/bin/gcc-12
     CXX: /usr/bin/g++-12
@@ -106,13 +98,9 @@ android-arm64-v8a:
   extends:
     - .libretro-android-cmake-arm64-v8a
     - .core-defs
-  before_script:
-    - export NUMPROC=$(($(nproc)/5))
-    - export ANDROID_NDK_VERSION=26.2.11394342
-    - export NDK_ROOT=/android-sdk-linux/ndk/$ANDROID_NDK_VERSION
-    - /android-sdk-linux/cmdline-tools/latest/bin/sdkmanager "ndk;$ANDROID_NDK_VERSION"
-    - /android-sdk-linux/cmdline-tools/latest/bin/sdkmanager "cmake;3.30.3"
-    - export PATH=/android-sdk-linux/cmake/3.30.3/bin:$PATH
+  variables:
+    ANDROID_NDK_VERSION: 26.2.11394342
+    NDK_ROOT: /android-sdk-linux/ndk/$ANDROID_NDK_VERSION
 
 # Android 64-bit x86
 # android-x86_64:
