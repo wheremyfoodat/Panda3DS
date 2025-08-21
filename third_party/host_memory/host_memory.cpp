@@ -53,9 +53,11 @@
 
 #endif  // ^^^ Linux ^^^
 
+#include <fmt/format.h>
 #include <host_memory/free_region_manager.h>
 #include <host_memory/host_memory.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -489,6 +491,14 @@ namespace Common {
             fd = shm_open(SHM_ANON, O_RDWR, 0600);
 #elif defined(__ANDROID__)
             fd = AshmemCreateFileMapping("HostMemory", 0);
+#elif defined(__APPLE__)
+            // Shove file in a temp directory since MacOS app bundles and iOS apps run sandboxed
+            const char* tempPath = getenv("TMPDIR");
+            // Fallback to /var/tmp if TMPDIR is not defined
+            if (!tempPath || !*tempPath) tempPath = "/var/tmp";
+
+            auto path = fmt::format("{}/HostMemory", tempPath);
+            fd = memfd_create(path.c_str(), 0);
 #else
             fd = memfd_create("HostMemory", 0);
 #endif
