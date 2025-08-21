@@ -23,7 +23,7 @@ namespace Audio {
 	}
 
 	HLE_DSP::HLE_DSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
-		: DSPCore(mem, scheduler, dspService, config) {
+		: DSPCore(mem, scheduler, dspService, config), dspRam(*(Audio::HLE::DspMemory*)mem.getDSPMem()) {
 		// Set up source indices
 		for (int i = 0; i < sources.size(); i++) {
 			sources[i].index = i;
