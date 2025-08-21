@@ -11,7 +11,7 @@
 using namespace Audio;
 
 TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
-	: DSPCore(mem, scheduler, dspService, config), pipeBaseAddr(0), running(false) {
+	: DSPCore(mem, scheduler, dspService, config), pipeBaseAddr(0), teakra(getTeakraConfig()), running(false) {
 	// Set up callbacks for Teakra
 	Teakra::AHBMCallback ahbm;
 
@@ -80,6 +80,13 @@ TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, 
 
 	teakra.SetRecvDataHandler(2, [processPipeEvent]() { processPipeEvent(true); });
 	teakra.SetSemaphoreHandler([processPipeEvent]() { processPipeEvent(false); });
+}
+
+Teakra::UserConfig TeakraDSP::getTeakraConfig() {
+	Teakra::UserConfig config;
+	config.dsp_memory = mem.getDSPMem();
+
+	return config;
 }
 
 void TeakraDSP::reset() {
@@ -237,7 +244,7 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 	teakra.Reset();
 	running = true;
 
-	u8* dspCode = teakra.GetDspMemory().data();
+	u8* dspCode = teakra.GetDspMemory();
 	u8* dspData = dspCode + 0x40000;
 
 	Dsp1 dsp1;

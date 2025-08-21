@@ -24,7 +24,7 @@ Memory::Memory(KFcram& fcramManager, const EmulatorConfig& config) : fcramManage
 	paddrTable.resize(totalPageCount, 0);
 
 	fcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
-	// arenaDSPRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
+	dspRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
 	useFastmem = fastmemEnabled && arena->VirtualBasePointer() != nullptr;
 }
 
@@ -395,6 +395,10 @@ void Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, 
 		}
 	} else if (paddr >= VirtualAddrs::DSPMemStart && paddr < VirtualAddrs::DSPMemStart + DSP_RAM_SIZE) {
 		hostPtr = dspRam + (paddr - VirtualAddrs::DSPMemStart);
+
+		if (useFastmem) {
+			addFastmemView(vaddr, FASTMEM_DSP_RAM_OFFSET + paddr - VirtualAddrs::DSPMemStart, usize(pages) * pageSize, w);
+		}
 	}
 
 	for (int i = 0; i < pages; i++) {
