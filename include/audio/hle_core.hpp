@@ -146,7 +146,7 @@ namespace Audio {
 
 		std::array<std::vector<u8>, pipeCount> pipeData;      // The data of each pipe
 		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
-		Audio::HLE::DspMemory dspRam;
+		Audio::HLE::DspMemory& dspRam;
 
 		Audio::DSPMixer mixer;
 		std::unique_ptr<Audio::AAC::Decoder> aacDecoder;

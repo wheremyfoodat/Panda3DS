@@ -18,7 +18,16 @@
 
 #include "dynamic_library.hpp"
 
-#elif defined(__linux__) || defined(__FreeBSD__)  // ^^^ Windows ^^^ vvv Linux vvv
+#elif defined(__linux__) || defined(__FreeBSD__) || defined(TARGET_OS_OSX)  // ^^^ Windows ^^^ vvv Linux vvv
+
+#ifndef __linux__
+#define memfd_create(name, x)                  \
+	({                                         \
+		int fd = open(name, O_RDWR | O_CREAT); \
+		unlink(name);                          \
+		fd;                                    \
+	})
+#endif
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -44,9 +53,11 @@
 
 #endif  // ^^^ Linux ^^^
 
+#include <fmt/format.h>
 #include <host_memory/free_region_manager.h>
 #include <host_memory/host_memory.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -368,7 +379,7 @@ namespace Common {
 		std::unordered_map<size_t, size_t> placeholder_host_pointers;  ///< Placeholder backing offset
 	};
 
-#elif (defined(__linux__) || defined(__FreeBSD__)) && defined(PANDA3DS_HARDWARE_FASTMEM)  // ^^^ Windows ^^^ vvv Linux vvv
+#elif (defined(__linux__) || defined(__FreeBSD__)) || defined(TARGET_OS_OSX) && defined(PANDA3DS_HARDWARE_FASTMEM)  // ^^^ Windows ^^^ vvv Linux vvv
 
 #ifdef __ANDROID__
 #define ASHMEM_DEVICE "/dev/ashmem"
@@ -475,11 +486,19 @@ namespace Common {
 			}
 
 			// Backing memory initialization
-#if defined(__FreeBSD__) && __FreeBSD__ < 13
+#if (defined(__FreeBSD__) && __FreeBSD__ < 13)
 			// XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
 			fd = shm_open(SHM_ANON, O_RDWR, 0600);
 #elif defined(__ANDROID__)
 			fd = AshmemCreateFileMapping("HostMemory", 0);
+#elif defined(TARGET_OS_OSX)
+			// Shove file in a temp directory since MacOS app bundles and iOS apps run sandboxed
+			const char* tempPath = getenv("TMPDIR");
+			// Fallback to /var/tmp if TMPDIR is not defined
+			if (!tempPath || !*tempPath) tempPath = "/var/tmp";
+
+			auto path = fmt::format("{}/HostMemory", tempPath);
+			fd = memfd_create(path.c_str(), 0);
 #else
 			fd = memfd_create("HostMemory", 0);
 #endif
@@ -666,7 +685,8 @@ namespace Common {
 
 #endif  // ^^^ Generic ^^^
 
-	HostMemory::HostMemory(size_t backing_size_, size_t virtual_size_, bool enableFastmem) : backing_size(backing_size_), virtual_size(virtual_size_) {
+	HostMemory::HostMemory(size_t backing_size_, size_t virtual_size_, bool enableFastmem)
+		: backing_size(backing_size_), virtual_size(virtual_size_) {
 		try {
 			// Fastmem is disabled, just throw bad alloc and use the VirtualBuffer fallback.
 			if (!enableFastmem) {
