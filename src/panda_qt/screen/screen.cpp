@@ -31,7 +31,6 @@ ScreenWidget::ScreenWidget(API api, ResizeCallback resizeCallback, QWidget* pare
 	setAttribute(Qt::WA_KeyCompression, false);
 	setFocusPolicy(Qt::StrongFocus);
 	setMouseTracking(true);
-	show();
 
 	// The graphics context, as well as resizing and showing the widget, is handled by the screen backend
 }
