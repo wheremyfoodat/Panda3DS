@@ -2,6 +2,8 @@
 
 #include <Metal/Metal.hpp>
 
+#include "helpers.hpp"
+
 namespace Metal {
 	struct RenderState {
 		MTL::RenderPipelineState* renderPipelineState = nullptr;

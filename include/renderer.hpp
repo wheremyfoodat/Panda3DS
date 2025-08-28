@@ -9,10 +9,6 @@
 #include "PICA/regs.hpp"
 #include "helpers.hpp"
 
-#ifdef PANDA3DS_FRONTEND_QT
-#include "gl/context.h"
-#endif
-
 enum class RendererType : s8 {
 	// Todo: Auto = -1,
 	Null = 0,
@@ -23,7 +19,6 @@ enum class RendererType : s8 {
 };
 
 struct EmulatorConfig;
-struct SDL_Window;
 
 class GPU;
 class ShaderUnit;
@@ -53,10 +48,12 @@ class Renderer {
 
 	// Should hw renderers hash textures? Stored separately from emulatorConfig because we'll be accessing it constantly, might be merged eventually
 	bool hashTextures = false;
+	bool outputSizeChanged = true;
 
 	EmulatorConfig* emulatorConfig = nullptr;
 
 	void doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize, u32 inputWidth, u32 inputGap, u32 outputWidth, u32 outputGap);
+
   public:
 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
 	virtual ~Renderer();
@@ -67,7 +64,7 @@ class Renderer {
 
 	virtual void reset() = 0;
 	virtual void display() = 0;                                                              // Display the 3DS screen contents to the window
-	virtual void initGraphicsContext(SDL_Window* window) = 0;                                // Initialize graphics context
+	virtual void initGraphicsContext(void* context) = 0;                                     // Initialize graphics context
 	virtual void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) = 0;  // Clear a GPU buffer in VRAM
 	virtual void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) = 0;  // Perform display transfer
 	virtual void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) = 0;
@@ -89,20 +86,15 @@ class Renderer {
 	// Called to notify the core to use OpenGL ES and not desktop GL
 	virtual void setupGLES() {}
 
-	// Only relevant for Metal renderer on iOS
-	// Passes a SwiftUI MTKView's layer (CAMetalLayer) to the renderer
-	virtual void setMTKLayer(void* layer) {};
+	// Used for Metal renderer on Qt and iOS
+	// Passes an NSView's backing layer (CAMetalLayer) to the renderer
+	virtual void setMTKLayer(void* layer) { Helpers::panic("Renderer doesn't support MTK Layer"); };
 
 	// This function is called on every draw call before parsing vertex data.
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between
 	// ubershaders and shadergen, and so on.
 	// Returns whether this draw is eligible for using hardware-accelerated shaders or if shaders should run on the CPU
 	virtual bool prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel) { return false; }
-
-	// Functions for initializing the graphics context for the Qt frontend, where we don't have the convenience of SDL_Window
-#ifdef PANDA3DS_FRONTEND_QT
-	virtual void initGraphicsContext(GL::Context* context) { Helpers::panic("Tried to initialize incompatible renderer with GL context"); }
-#endif
 
 	void setFBSize(u32 width, u32 height) {
 		fbSize[0] = width;
@@ -121,10 +113,12 @@ class Renderer {
 	void setDepthBufferLoc(u32 loc) { depthBufferLoc = loc; }
 
 	void setOutputSize(u32 width, u32 height) {
+		outputSizeChanged = true;
 		outputWindowWidth = width;
 		outputWindowHeight = height;
 	}
 
 	void setConfig(EmulatorConfig* config) { emulatorConfig = config; }
 	void setHashTextures(bool setting) { hashTextures = setting; }
+	void reloadScreenLayout() { outputSizeChanged = true; }
 };

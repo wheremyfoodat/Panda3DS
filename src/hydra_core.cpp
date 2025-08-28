@@ -82,6 +82,7 @@ void HydraCore::runFrame() {
 	hid.setKey(HID::Keys::Down, checkButtonCallback(0, hydra::ButtonType::Keypad1Down));
 	hid.setKey(HID::Keys::Left, checkButtonCallback(0, hydra::ButtonType::Keypad1Left));
 	hid.setKey(HID::Keys::Right, checkButtonCallback(0, hydra::ButtonType::Keypad1Right));
+	// TODO: N3DS buttons
 
 	int x = !!checkButtonCallback(0, hydra::ButtonType::Analog1Right) - !!checkButtonCallback(0, hydra::ButtonType::Analog1Left);
 	int y = !!checkButtonCallback(0, hydra::ButtonType::Analog1Up) - !!checkButtonCallback(0, hydra::ButtonType::Analog1Down);

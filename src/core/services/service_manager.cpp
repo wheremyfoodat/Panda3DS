@@ -1,16 +1,19 @@
 #include "services/service_manager.hpp"
 
-#include <map>
+#include <set>
 
 #include "ipc.hpp"
 #include "kernel.hpp"
+#include "services/service_map.hpp"
 
-ServiceManager::ServiceManager(std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config)
-	: regs(regs), mem(mem), kernel(kernel), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel), cfg(mem, config),
-	  csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel, config), hid(mem, kernel), http(mem), ir_user(mem, kernel), frd(mem),
-	  fs(mem, kernel, config), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem, kernel), mcu_hwc(mem, config), mic(mem, kernel),
-	  nfc(mem, kernel), nim(mem, kernel), ndm(mem), news_s(mem), news_u(mem), ns(mem), nwm_uds(mem, kernel), ptm(mem, config), soc(mem), ssl(mem),
-	  y2r(mem, kernel) {}
+ServiceManager::ServiceManager(
+	std::span<u32, 16> regs, Memory& mem, GPU& gpu, u32& currentPID, Kernel& kernel, const EmulatorConfig& config, LuaManager& lua
+)
+	: regs(regs), mem(mem), kernel(kernel), lua(lua), ac(mem), am(mem), boss(mem), act(mem), apt(mem, kernel), cam(mem, kernel), cecd(mem, kernel),
+	  cfg(mem, config), csnd(mem, kernel), dlp_srvr(mem), dsp(mem, kernel, config), hid(mem, kernel), http(mem), ir_user(mem, hid, config, kernel),
+	  frd(mem), fs(mem, kernel, config), gsp_gpu(mem, gpu, kernel, currentPID), gsp_lcd(mem), ldr(mem, kernel), mcu_hwc(mem, config),
+	  mic(mem, kernel), nfc(mem, kernel), nim(mem, kernel), ndm(mem), news_s(mem), news_u(mem), ns(mem), nwm_uds(mem, kernel), ptm(mem, config),
+	  soc(mem), ssl(mem), y2r(mem, kernel) {}
 
 static constexpr int MAX_NOTIFICATION_COUNT = 16;
 
@@ -84,7 +87,8 @@ void ServiceManager::handleSyncRequest(u32 messagePointer) {
 		case Commands::GetServiceHandle: getServiceHandle(messagePointer); break;
 		case Commands::Subscribe: subscribe(messagePointer); break;
 		case Commands::Unsubscribe: unsubscribe(messagePointer); break;
-		default: Helpers::panic("Unknown \"srv:\" command: %08X", header);
+		case Commands::PublishToSubscriber: publishToSubscriber(messagePointer); break;
+		default: Helpers::panic("Unknown \"srv:\" command: %08X", header); break;
 	}
 }
 
@@ -96,7 +100,7 @@ void ServiceManager::registerClient(u32 messagePointer) {
 }
 
 // clang-format off
-static std::map<std::string, HorizonHandle> serviceMap = {
+static const ServiceMapEntry serviceMapArray[] = {
 	{ "ac:u", KernelHandles::AC },
 	{ "ac:i", KernelHandles::AC },
 	{ "act:a", KernelHandles::ACT },
@@ -149,6 +153,9 @@ static std::map<std::string, HorizonHandle> serviceMap = {
 };
 // clang-format on
 
+static std::set<ServiceMapEntry, ServiceMapByNameComparator> serviceMapByName{std::begin(serviceMapArray), std::end(serviceMapArray)};
+static std::set<ServiceMapEntry, ServiceMapByHandleComparator> serviceMapByHandle{std::begin(serviceMapArray), std::end(serviceMapArray)};
+
 // https://www.3dbrew.org/wiki/SRV:GetServiceHandle
 void ServiceManager::getServiceHandle(u32 messagePointer) {
 	u32 nameLength = mem.read32(messagePointer + 12);
@@ -159,7 +166,7 @@ void ServiceManager::getServiceHandle(u32 messagePointer) {
 	log("srv::getServiceHandle (Service: %s, nameLength: %d, flags: %d)\n", service.c_str(), nameLength, flags);
 
 	// Look up service handle in map, panic if it does not exist
-	if (auto search = serviceMap.find(service); search != serviceMap.end())
+	if (auto search = serviceMapByName.find(service); search != serviceMapByName.end())
 		handle = search->second;
 	else
 		Helpers::panic("srv: GetServiceHandle with unknown service %s", service.c_str());
@@ -178,8 +185,8 @@ void ServiceManager::enableNotification(u32 messagePointer) {
 	}
 
 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 2));
-	mem.write32(messagePointer + 4, Result::Success); // Result code
-	mem.write32(messagePointer + 8, 0); // Translation descriptor
+	mem.write32(messagePointer + 4, Result::Success);  // Result code
+	mem.write32(messagePointer + 8, 0);                // Translation descriptor
 	// Handle to semaphore signaled on process notification
 	mem.write32(messagePointer + 12, notificationSemaphore.value());
 }
@@ -188,8 +195,8 @@ void ServiceManager::receiveNotification(u32 messagePointer) {
 	log("srv::ReceiveNotification() (STUBBED)\n");
 
 	mem.write32(messagePointer, IPC::responseHeader(0xB, 2, 0));
-	mem.write32(messagePointer + 4, Result::Success); // Result code
-	mem.write32(messagePointer + 8, 0); // Notification ID
+	mem.write32(messagePointer + 4, Result::Success);  // Result code
+	mem.write32(messagePointer + 8, 0);                // Notification ID
 }
 
 void ServiceManager::subscribe(u32 messagePointer) {
@@ -208,7 +215,21 @@ void ServiceManager::unsubscribe(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
+void ServiceManager::publishToSubscriber(u32 messagePointer) {
+	u32 id = mem.read32(messagePointer + 4);
+	log("srv::PublishToSubscriber (Notification ID = %d) (stubbed)\n", id);
+
+	mem.write32(messagePointer, IPC::responseHeader(0xC, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
 void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
+	if (haveServiceIntercepts) [[unlikely]] {
+		if (checkForIntercept(messagePointer, handle)) [[unlikely]] {
+			return;
+		}
+	}
+
 	switch (handle) {
 		// Breaking alphabetical order a bit to place the ones I think are most common at the top
 		case KernelHandles::GPU: [[likely]] gsp_gpu.handleSyncRequest(messagePointer); break;
@@ -254,4 +275,22 @@ void ServiceManager::sendCommandToService(u32 messagePointer, Handle handle) {
 		case KernelHandles::Y2R: y2r.handleSyncRequest(messagePointer); break;
 		default: Helpers::panic("Sent IPC message to unknown service %08X\n Command: %08X", handle, mem.read32(messagePointer));
 	}
+}
+
+bool ServiceManager::checkForIntercept(u32 messagePointer, Handle handle) {
+	// Check if there's a Lua handler for this function and call it
+	const u32 function = mem.read32(messagePointer);
+
+	if (auto service_it = serviceMapByHandle.find(handle); service_it != serviceMapByHandle.end()) {
+		auto intercept = InterceptedService(service_it->first, function);
+
+		if (auto intercept_it = interceptedServices.find(intercept); intercept_it != interceptedServices.end()) {
+			// If the Lua handler returns true, it means the service is handled entirely
+			// From Lua, and we shouldn't do anything else here.
+			return lua.signalInterceptedService(intercept.serviceName, function, messagePointer, intercept_it->second);
+		}
+	}
+
+	// Lua did not intercept the service, so emulate it normally
+	return false;
 }

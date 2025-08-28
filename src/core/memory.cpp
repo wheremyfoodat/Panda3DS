@@ -6,6 +6,7 @@
 #include <ctime>
 
 #include "config_mem.hpp"
+#include "kernel/fcram.hpp"
 #include "resource_limits.hpp"
 #include "services/fonts.hpp"
 #include "services/ptm.hpp"
@@ -14,38 +15,43 @@ CMRC_DECLARE(ConsoleFonts);
 
 using namespace KernelMemoryTypes;
 
-Memory::Memory(u64& cpuTicks, const EmulatorConfig& config) : cpuTicks(cpuTicks), config(config) {
-	fcram = new uint8_t[FCRAM_SIZE]();
+Memory::Memory(KFcram& fcramManager, const EmulatorConfig& config) : fcramManager(fcramManager), config(config) {
+	const bool fastmemEnabled = config.fastmemEnabled;
+	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE, fastmemEnabled);
 
 	readTable.resize(totalPageCount, 0);
 	writeTable.resize(totalPageCount, 0);
-	memoryInfo.reserve(32);  // Pre-allocate some room for memory allocation info to avoid dynamic allocs
+	paddrTable.resize(totalPageCount, 0);
+
+	fcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
+	dspRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
+	useFastmem = fastmemEnabled && arena->VirtualBasePointer() != nullptr;
 }
 
 void Memory::reset() {
-	// Unallocate all memory
+	// Mark the entire process address space as free
+	constexpr static int MAX_USER_PAGES = 0x40000000 >> 12;
 	memoryInfo.clear();
-	usedFCRAMPages.reset();
-	usedUserMemory = u32(0_MB);
-	usedSystemMemory = u32(0_MB);
+	memoryInfo.push_back(MemoryInfo(0, MAX_USER_PAGES, 0, KernelMemoryTypes::Free));
+
+	// TODO: remove this, only needed to make the subsequent allocations work for now
+	fcramManager.reset(FCRAM_SIZE, FCRAM_APPLICATION_SIZE, FCRAM_SYSTEM_SIZE, FCRAM_BASE_SIZE);
+
+	if (useFastmem) {
+		// Unmap any mappings when resetting
+		arena->Unmap(0, 4_GB, false);
+	}
 
 	for (u32 i = 0; i < totalPageCount; i++) {
 		readTable[i] = 0;
 		writeTable[i] = 0;
+		paddrTable[i] = 0;
 	}
 
-	// Map (32 * 4) KB of FCRAM before the stack for the TLS of each thread
-	std::optional<u32> tlsBaseOpt = findPaddr(32 * 4_KB);
-	if (!tlsBaseOpt.has_value()) {  // Should be unreachable but still good to have
-		Helpers::panic("Failed to allocate memory for thread-local storage");
-	}
-
-	u32 basePaddrForTLS = tlsBaseOpt.value();
-	for (u32 i = 0; i < appResourceLimits.maxThreads; i++) {
-		u32 vaddr = VirtualAddrs::TLSBase + i * VirtualAddrs::TLSSize;
-		allocateMemory(vaddr, basePaddrForTLS, VirtualAddrs::TLSSize, true);
-		basePaddrForTLS += VirtualAddrs::TLSSize;
-	}
+	// Allocate 512 bytes of TLS for each thread. Since the smallest allocatable unit is 4 KB, that means allocating one page for every 8 threads
+	// Note that TLS is always allocated in the Base region
+	s32 tlsPages = (appResourceLimits.maxThreads + 7) >> 3;
+	allocMemory(VirtualAddrs::TLSBase, tlsPages, FcramRegion::Base, true, true, false, MemoryState::Locked);
 
 	// Initialize shared memory blocks and reserve memory for them
 	for (auto& e : sharedMemBlocks) {
@@ -56,19 +62,23 @@ void Memory::reset() {
 		}
 
 		e.mapped = false;
-		e.paddr = allocateSysMemory(e.size);
+		FcramBlockList memBlock;
+		fcramManager.alloc(memBlock, e.size >> 12, FcramRegion::Sys, false);
+		e.paddr = memBlock.begin()->paddr;
 	}
 
 	// Map DSP RAM as R/W at [0x1FF00000, 0x1FF7FFFF]
-	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize;               // Number of DSP RAM pages
-	constexpr u32 initialPage = VirtualAddrs::DSPMemStart / pageSize;  // First page of DSP RAM in the virtual address space
+	constexpr u32 dspRamPages = DSP_RAM_SIZE / pageSize;  // Number of DSP RAM pages
 
-	for (u32 i = 0; i < dspRamPages; i++) {
-		auto pointer = uintptr_t(&dspRam[i * pageSize]);
+	u32 vaddr = VirtualAddrs::DSPMemStart;
+	u32 paddr = PhysicalAddrs::DSP_RAM;
 
-		readTable[i + initialPage] = pointer;
-		writeTable[i + initialPage] = pointer;
-	}
+	Operation op{.newState = MemoryState::Static, .r = true, .w = true, .changeState = true, .changePerms = true};
+	changeMemoryState(vaddr, dspRamPages, op);
+	mapPhysicalMemory(vaddr, paddr, dspRamPages, true, true, false);
+
+	// Allocate RW mapping for DSP RAM
+	// addFastmemView(VirtualAddrs::DSPMemStart, FASTMEM_DSP_RAM_OFFSET, DSP_RAM_SIZE, true, false);
 
 	// Later adjusted based on ROM header when possible
 	region = Regions::USA;
@@ -76,14 +86,9 @@ void Memory::reset() {
 
 bool Memory::allocateMainThreadStack(u32 size) {
 	// Map stack pages as R/W
-	std::optional<u32> basePaddr = findPaddr(size);
-	if (!basePaddr.has_value()) {  // Should also be unreachable but still good to have
-		return false;
-	}
-
+	// TODO: get the region from the exheader
 	const u32 stackBottom = VirtualAddrs::StackTop - size;
-	std::optional<u32> result = allocateMemory(stackBottom, basePaddr.value(), size, true);  // Should never be nullopt
-	return result.has_value();
+	return allocMemory(stackBottom, size >> 12, FcramRegion::App, true, true, false, MemoryState::Locked);
 }
 
 u8 Memory::read8(u32 vaddr) {
@@ -121,7 +126,7 @@ u8 Memory::read8(u32 vaddr) {
 			case ConfigMem::FirmRevision: return firm.revision;
 			case ConfigMem::FirmVersionMinor: return firm.minor;
 			case ConfigMem::FirmVersionMajor: return firm.major;
-			case ConfigMem::WifiLevel: return 0; // No wifi :(
+			case ConfigMem::WifiLevel: return 0;  // No wifi :(
 
 			case ConfigMem::WifiMac:
 			case ConfigMem::WifiMac + 1:
@@ -164,8 +169,8 @@ u32 Memory::read32(u32 vaddr) {
 			case ConfigMem::Datetime0 + 4:
 				return u32(timeSince3DSEpoch() >> 32);  // top 32 bits
 			// Ticks since time was last updated. For now we return the current tick count
-			case ConfigMem::Datetime0 + 8: return u32(cpuTicks);
-			case ConfigMem::Datetime0 + 12: return u32(cpuTicks >> 32);
+			case ConfigMem::Datetime0 + 8: return u32(*cpuTicks);
+			case ConfigMem::Datetime0 + 12: return u32(*cpuTicks >> 32);
 			case ConfigMem::Datetime0 + 16: return 0xFFB0FF0;  // Unknown, set by PTM
 			case ConfigMem::Datetime0 + 20:
 			case ConfigMem::Datetime0 + 24:
@@ -173,11 +178,10 @@ u32 Memory::read32(u32 vaddr) {
 
 			case ConfigMem::AppMemAlloc: return appResourceLimits.maxCommit;
 			case ConfigMem::SyscoreVer: return 2;
-			case 0x1FF81000: return 0;                   // TODO: Figure out what this config mem address does
+			case 0x1FF81000:
+				return 0;  // TODO: Figure out what this config mem address does
 			// Wifi MAC: First 4 bytes of MAC Address
-			case ConfigMem::WifiMac:
-				return (u32(MACAddress[3]) << 24) | (u32(MACAddress[2]) << 16) | (u32(MACAddress[1]) << 8) |
-					   MACAddress[0];
+			case ConfigMem::WifiMac: return (u32(MACAddress[3]) << 24) | (u32(MACAddress[2]) << 16) | (u32(MACAddress[1]) << 8) | MACAddress[0];
 
 			// 3D slider. Float in range 0.0 = off, 1.0 = max.
 			case ConfigMem::SliderState3D: return Helpers::bit_cast<u32, float>(0.0f);
@@ -187,7 +191,7 @@ u32 Memory::read32(u32 vaddr) {
 			default:
 				if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
 					static int shutUpCounter = 0;
-					if (shutUpCounter < 5) { // Stop spamming about VRAM reads after the first 5
+					if (shutUpCounter < 5) {  // Stop spamming about VRAM reads after the first 5
 						shutUpCounter++;
 						Helpers::warn("VRAM read!\n");
 					}
@@ -298,149 +302,258 @@ std::string Memory::readString(u32 address, u32 maxSize) {
 // thanks to the New 3DS having more FCRAM
 u32 Memory::getLinearHeapVaddr() { return (kernelVersion < 0x22C) ? VirtualAddrs::LinearHeapStartOld : VirtualAddrs::LinearHeapStartNew; }
 
-std::optional<u32> Memory::allocateMemory(u32 vaddr, u32 paddr, u32 size, bool linear, bool r, bool w, bool x, bool adjustAddrs, bool isMap) {
-	// Kernel-allocated memory & size must always be aligned to a page boundary
-	// Additionally assert we don't OoM and that we don't try to allocate physical FCRAM past what's available to userland
-	// If we're mapping there's no fear of OoM, because we're not really allocating memory, just binding vaddrs to specific paddrs
-	assert(isAligned(vaddr) && isAligned(paddr) && isAligned(size));
-	assert(size <= FCRAM_APPLICATION_SIZE || isMap);
-	assert(usedUserMemory + size <= FCRAM_APPLICATION_SIZE || isMap);
-	assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
+void Memory::changeMemoryState(u32 vaddr, s32 pages, const Operation& op) {
+	assert(!(vaddr & 0xFFF));
 
-	// Amount of available user FCRAM pages and FCRAM pages to allocate respectively
-	const u32 availablePageCount = (FCRAM_APPLICATION_SIZE - usedUserMemory) / pageSize;
-	const u32 neededPageCount = size / pageSize;
+	if (!op.changePerms && !op.changeState) Helpers::panic("Invalid op passed to changeMemoryState!");
 
-	assert(availablePageCount >= neededPageCount || isMap);
+	bool blockFound = false;
 
-	// If the paddr is 0, that means we need to select our own
-	// TODO: Fix. This method always tries to allocate blocks linearly.
-	// However, if the allocation is non-linear, the panic will trigger when it shouldn't.
-	// Non-linear allocation needs special handling
-	if (paddr == 0 && adjustAddrs) {
-		std::optional<u32> newPaddr = findPaddr(size);
-		if (!newPaddr.has_value()) {
-			Helpers::panic("Failed to find paddr");
+	for (auto it = memoryInfo.begin(); it != memoryInfo.end(); it++) {
+		// Find the block that the memory region is located in
+		u32 blockStart = it->baseAddr;
+		u32 blockEnd = it->end();
+
+		u32 reqStart = vaddr;
+		u32 reqEnd = vaddr + (pages << 12);
+
+		if (!(reqStart >= blockStart && reqEnd <= blockEnd)) continue;
+
+		// Now that the block has been found, fill it with the necessary info
+		auto oldState = it->state;
+		u32 oldPerms = it->perms;
+		it->baseAddr = reqStart;
+		it->pages = pages;
+		if (op.changePerms) it->perms = (op.r ? PERMISSION_R : 0) | (op.w ? PERMISSION_W : 0) | (op.x ? PERMISSION_X : 0);
+		if (op.changeState) it->state = op.newState;
+
+		// If the requested memory region is smaller than the block found, the block must be split
+		if (blockStart < reqStart) {
+			MemoryInfo startBlock(blockStart, (reqStart - blockStart) >> 12, oldPerms, oldState);
+			memoryInfo.insert(it, startBlock);
 		}
 
-		paddr = newPaddr.value();
-		assert(paddr + size <= FCRAM_APPLICATION_SIZE || isMap);
-	}
-
-	// If the vaddr is 0 that means we need to select our own
-	// Depending on whether our mapping should be linear or not we allocate from one of the 2 typical heap spaces
-	// We don't plan on implementing freeing any time soon, so we can pick added userUserMemory to the vaddr base to
-	// Get the full vaddr.
-	// TODO: Fix this
-	if (vaddr == 0 && adjustAddrs) {
-		// Linear memory needs to be allocated in a way where you can easily get the paddr by subtracting the linear heap base
-		// In order to be able to easily send data to hardware like the GPU
-		if (linear) {
-			vaddr = getLinearHeapVaddr() + paddr;
-		} else {
-			vaddr = usedUserMemory + VirtualAddrs::NormalHeapStart;
-		}
-	}
-
-	if (!isMap) {
-		usedUserMemory += size;
-	}
-
-	// Do linear mapping
-	u32 virtualPage = vaddr >> pageShift;
-	u32 physPage = paddr >> pageShift;  // TODO: Special handle when non-linear mapping is necessary
-	for (u32 i = 0; i < neededPageCount; i++) {
-		if (r) {
-			readTable[virtualPage] = uintptr_t(&fcram[physPage * pageSize]);
-		}
-		if (w) {
-			writeTable[virtualPage] = uintptr_t(&fcram[physPage * pageSize]);
+		if (reqEnd < blockEnd) {
+			auto itAfter = std::next(it);
+			MemoryInfo endBlock(reqEnd, (blockEnd - reqEnd) >> 12, oldPerms, oldState);
+			memoryInfo.insert(itAfter, endBlock);
 		}
 
-		// Mark FCRAM page as allocated and go on
-		usedFCRAMPages[physPage] = true;
-		virtualPage++;
-		physPage++;
+		blockFound = true;
+		break;
 	}
 
-	// Back up the info for this allocation in our memoryInfo vector
-	u32 perms = (r ? PERMISSION_R : 0) | (w ? PERMISSION_W : 0) | (x ? PERMISSION_X : 0);
-	memoryInfo.push_back(std::move(MemoryInfo(vaddr, size, perms, KernelMemoryTypes::Reserved)));
+	if (!blockFound) Helpers::panic("Unable to find block in changeMemoryState!");
 
-	return vaddr;
+	// Merge all blocks with the same state and permissions
+	for (auto it = memoryInfo.begin(); it != memoryInfo.end();) {
+		auto next = std::next(it);
+		if (next == memoryInfo.end()) break;
+
+		if (it->state != next->state || it->perms != next->perms) {
+			it++;
+			continue;
+		}
+
+		next->baseAddr = it->baseAddr;
+		next->pages += it->pages;
+		it = memoryInfo.erase(it);
+	}
 }
 
-// Find a paddr which we can use for allocating "size" bytes
-std::optional<u32> Memory::findPaddr(u32 size) {
-	assert(isAligned(size));
-	const u32 neededPages = size / pageSize;
+void Memory::queryPhysicalBlocks(FcramBlockList& outList, u32 vaddr, s32 pages) {
+	s32 srcPages = pages;
+	for (auto& alloc : memoryInfo) {
+		u32 blockStart = alloc.baseAddr;
+		u32 blockEnd = alloc.end();
 
-	// The FCRAM page we're testing to see if it's appropriate to use
-	u32 candidatePage = 0;
-	// The number of linear available pages we could find starting from this candidate page.
-	// If this ends up >= than neededPages then the paddr is good (ie we can use the candidate page as a base address)
-	u32 counter = 0;
+		if (!(vaddr >= blockStart && vaddr < blockEnd)) continue;
 
-	for (u32 i = 0; i < FCRAM_APPLICATION_PAGE_COUNT; i++) {
-		if (usedFCRAMPages[i]) {  // Page is occupied already, go to new candidate
-			candidatePage = i + 1;
-			counter = 0;
-		} else {  // The paddr we're testing has 1 more free page
-			counter++;
-			// Check if there's enough free memory to use this page
-			// We use == instead of >= because some software does 0-byte allocations
-			if (counter >= neededPages) {
-				return candidatePage * pageSize;
+		s32 blockPaddr = paddrTable[vaddr >> 12];
+		s32 blockPages = alloc.pages - ((vaddr - blockStart) >> 12);
+		blockPages = std::min(srcPages, blockPages);
+		FcramBlock physicalBlock(blockPaddr, blockPages);
+		outList.push_back(physicalBlock);
+
+		vaddr += blockPages << 12;
+		srcPages -= blockPages;
+		if (srcPages == 0) break;
+	}
+
+	if (srcPages != 0) Helpers::panic("Unable to find virtual pages to map!");
+}
+
+void Memory::mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x) {
+	assert(!(vaddr & 0xFFF));
+	assert(!(paddr & 0xFFF));
+
+	// TODO: make this a separate function
+	u8* hostPtr = nullptr;
+	if (paddr < FCRAM_SIZE) {
+		hostPtr = fcram + paddr;  // FIXME: FCRAM doesn't actually start from physical address 0, but from 0x20000000
+
+		if (useFastmem) {
+			addFastmemView(vaddr, FASTMEM_FCRAM_OFFSET + paddr, usize(pages) * pageSize, w);
+		}
+	} else if (paddr >= VirtualAddrs::DSPMemStart && paddr < VirtualAddrs::DSPMemStart + DSP_RAM_SIZE) {
+		hostPtr = dspRam + (paddr - VirtualAddrs::DSPMemStart);
+
+		if (useFastmem) {
+			addFastmemView(vaddr, FASTMEM_DSP_RAM_OFFSET + paddr - VirtualAddrs::DSPMemStart, usize(pages) * pageSize, w);
+		}
+	}
+
+	for (int i = 0; i < pages; i++) {
+		u32 index = (vaddr >> 12) + i;
+		paddrTable[index] = paddr + (i << 12);
+		if (r)
+			readTable[index] = (uintptr_t)(hostPtr + (i << 12));
+		else
+			readTable[index] = 0;
+
+		if (w)
+			writeTable[index] = (uintptr_t)(hostPtr + (i << 12));
+		else
+			writeTable[index] = 0;
+	}
+}
+
+void Memory::unmapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages) {
+	for (int i = 0; i < pages; i++) {
+		u32 index = (vaddr >> 12) + i;
+		paddrTable[index] = 0;
+		readTable[index] = 0;
+		writeTable[index] = 0;
+	}
+
+	if (useFastmem) {
+		arena->Unmap(vaddr, pages * pageSize, false);
+	}
+}
+
+bool Memory::allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool w, bool x, MemoryState state) {
+	auto res = testMemoryState(vaddr, pages, MemoryState::Free);
+	if (res.isFailure()) return false;
+
+	FcramBlockList memList;
+	fcramManager.alloc(memList, pages, region, false);
+
+	for (auto it = memList.begin(); it != memList.end(); it++) {
+		Operation op{.newState = state, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true};
+		changeMemoryState(vaddr, it->pages, op);
+		mapPhysicalMemory(vaddr, it->paddr, it->pages, r, w, x);
+		vaddr += it->pages << 12;
+	}
+
+	return true;
+}
+
+bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x) {
+	if (inVaddr) Helpers::panic("inVaddr specified for linear allocation!");
+
+	FcramBlockList memList;
+	fcramManager.alloc(memList, pages, region, true);
+
+	u32 paddr = memList.begin()->paddr;
+	u32 vaddr = getLinearHeapVaddr() + paddr;
+	auto res = testMemoryState(vaddr, pages, MemoryState::Free);
+	if (res.isFailure()) Helpers::panic("Unable to map linear allocation (vaddr:%08X pages:%08X)", vaddr, pages);
+
+	Operation op{.newState = MemoryState::Continuous, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true};
+	changeMemoryState(vaddr, pages, op);
+	mapPhysicalMemory(vaddr, paddr, pages, r, w, x);
+
+	outVaddr = vaddr;
+	return true;
+}
+
+bool Memory::mapVirtualMemory(
+	u32 dstVaddr, u32 srcVaddr, s32 pages, bool r, bool w, bool x, MemoryState oldDstState, MemoryState oldSrcState, MemoryState newDstState,
+	MemoryState newSrcState, bool unmapPages
+) {
+	// Check that the regions have the specified state
+	// TODO: check src perms
+	auto res = testMemoryState(srcVaddr, pages, oldSrcState);
+	if (res.isFailure()) return false;
+
+	res = testMemoryState(dstVaddr, pages, oldDstState);
+	if (res.isFailure()) return false;
+
+	// Change the virtual memory state for both regions
+	Operation srcOp{.newState = newSrcState, .changeState = true};
+	changeMemoryState(srcVaddr, pages, srcOp);
+
+	Operation dstOp{.newState = newDstState, .r = r, .w = w, .x = x, .changeState = true, .changePerms = true};
+	changeMemoryState(dstVaddr, pages, dstOp);
+
+	// Get a list of physical blocks in the source region
+	FcramBlockList physicalList;
+	queryPhysicalBlocks(physicalList, srcVaddr, pages);
+
+	// Map or unmap each physical block
+	for (auto& block : physicalList) {
+		if (newDstState == MemoryState::Free) {
+			// TODO: Games with CROs will unmap the CRO yet still continue accessing the address it was mapped to?
+			if (unmapPages) {
+				unmapPhysicalMemory(dstVaddr, block.paddr, block.pages);
 			}
+		} else {
+			mapPhysicalMemory(dstVaddr, block.paddr, block.pages, r, w, x);
 		}
+
+		dstVaddr += block.pages << 12;
 	}
 
-	// Couldn't find any page :(
-	return std::nullopt;
+	return true;
 }
 
-u32 Memory::allocateSysMemory(u32 size) {
-	// Should never be triggered, only here as a sanity check
-	if (!isAligned(size)) {
-		Helpers::panic("Memory::allocateSysMemory: Size is not page aligned (val = %08X)", size);
+void Memory::changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x) {
+	Operation op{.r = r, .w = w, .x = x, .changePerms = true};
+	changeMemoryState(vaddr, pages, op);
+
+	// Now that permissions have been changed, update the corresponding host tables
+	FcramBlockList physicalList;
+	queryPhysicalBlocks(physicalList, vaddr, pages);
+
+	for (auto& block : physicalList) {
+		mapPhysicalMemory(vaddr, block.paddr, block.pages, r, w, x);
+		vaddr += block.pages;
 	}
-
-	// We use a pretty dumb allocator for OS memory since this is not really accessible to the app and is only used internally
-	// It works by just allocating memory linearly, starting from index 0 of OS memory and going up
-	// This should also be unreachable in practice and exists as a sanity check
-	if (size > remainingSysFCRAM()) {
-		Helpers::panic("Memory::allocateSysMemory: Overflowed OS FCRAM");
-	}
-
-	const u32 pageCount = size / pageSize;                      // Number of pages that will be used up
-	const u32 startIndex = sysFCRAMIndex() + usedSystemMemory;  // Starting FCRAM index
-	const u32 startingPage = startIndex / pageSize;
-
-	for (u32 i = 0; i < pageCount; i++) {
-		if (usedFCRAMPages[startingPage + i])  // Also a theoretically unreachable panic for safety
-			Helpers::panic("Memory::reserveMemory: Trying to reserve already reserved memory");
-		usedFCRAMPages[startingPage + i] = true;
-	}
-
-	usedSystemMemory += size;
-	return startIndex;
 }
 
-// The way I understand how the kernel's QueryMemory is supposed to work is that you give it a vaddr
-// And the kernel looks up the memory allocations it's performed, finds which one it belongs in and returns its info?
-// TODO: Verify this
-MemoryInfo Memory::queryMemory(u32 vaddr) {
+Result::HorizonResult Memory::queryMemory(MemoryInfo& out, u32 vaddr) {
 	// Check each allocation
 	for (auto& alloc : memoryInfo) {
 		// Check if the memory address belongs in this allocation and return the info if so
 		if (vaddr >= alloc.baseAddr && vaddr < alloc.end()) {
-			return alloc;
+			out = alloc;
+			return Result::Success;
 		}
 	}
 
-	// Otherwise, if this vaddr was never allocated
-	// TODO: I think this is meant to return how much memory starting here is free as the size?
-	return MemoryInfo(vaddr, pageSize, 0, KernelMemoryTypes::Free);
+	// Official kernel just returns an error here
+	Helpers::warn("Failed to find block in QueryMemory!");
+	return Result::FailurePlaceholder;
+}
+
+Result::HorizonResult Memory::testMemoryState(u32 vaddr, s32 pages, MemoryState desiredState) {
+	for (auto& alloc : memoryInfo) {
+		// Don't bother checking if we're to the left of the requested region
+		if (vaddr >= alloc.end()) continue;
+		if (alloc.state != desiredState) return Result::FailurePlaceholder;  // TODO: error for state mismatch
+
+		// If the end of this block comes after the end of the requested range with no errors, it's a success
+		if (alloc.end() >= vaddr + (pages << 12)) return Result::Success;
+	}
+
+	// TODO: error for when address is outside of userland
+	return Result::FailurePlaceholder;
+}
+
+void Memory::copyToVaddr(u32 dstVaddr, const u8* srcHost, s32 size) {
+	// TODO: check for noncontiguous allocations
+	u8* dstHost = (u8*)readTable[dstVaddr >> 12] + (dstVaddr & 0xFFF);
+	memcpy(dstHost, srcHost, size);
 }
 
 u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerms) {
@@ -461,13 +574,11 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 			bool w = myPerms & 0b010;
 			bool x = myPerms & 0b100;
 
-			const auto result = allocateMemory(vaddr, paddr, size, true, r, w, x, false, true);
-			e.mapped = true;
-			if (!result.has_value()) {
-				Helpers::panic("Memory::mapSharedMemory: Failed to map shared memory block");
-				return nullptr;
-			}
+			Operation op{.newState = MemoryState::Shared, .r = r, .w = x, .x = x, .changeState = true, .changePerms = true};
+			changeMemoryState(vaddr, size >> 12, op);
+			mapPhysicalMemory(vaddr, paddr, size >> 12, r, w, x);
 
+			e.mapped = true;
 			return &fcram[paddr];
 		}
 	}
@@ -475,24 +586,6 @@ u8* Memory::mapSharedMemory(Handle handle, u32 vaddr, u32 myPerms, u32 otherPerm
 	// This should be unreachable but better safe than sorry
 	Helpers::panic("Memory::mapSharedMemory: Unknown shared memory handle %08X", handle);
 	return nullptr;
-}
-
-void Memory::mirrorMapping(u32 destAddress, u32 sourceAddress, u32 size) {
-	// Should theoretically be unreachable, only here for safety purposes
-	assert(isAligned(destAddress) && isAligned(sourceAddress) && isAligned(size));
-
-	const u32 pageCount = size / pageSize;  // How many pages we need to mirror
-	for (u32 i = 0; i < pageCount; i++) {
-		// Redo the shift here to "properly" handle wrapping around the address space instead of reading OoB
-		const u32 sourcePage = sourceAddress / pageSize;
-		const u32 destPage = destAddress / pageSize;
-
-		readTable[destPage] = readTable[sourcePage];
-		writeTable[destPage] = writeTable[sourcePage];
-
-		sourceAddress += pageSize;
-		destAddress += pageSize;
-	}
 }
 
 // Get the number of ms since Jan 1 1900

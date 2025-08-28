@@ -17,37 +17,38 @@ namespace Operation {
 
 namespace MemoryPermissions {
 	enum : u32 {
-		None = 0,             // ---
-		Read = 1,             // R--
-		Write = 2,            // -W-
-		ReadWrite = 3,        // RW-
-		Execute = 4,          // --X
-		ReadExecute = 5,      // R-X
-		WriteExecute = 6,     // -WX
-		ReadWriteExecute = 7, // RWX
+		None = 0,              // ---
+		Read = 1,              // R--
+		Write = 2,             // -W-
+		ReadWrite = 3,         // RW-
+		Execute = 4,           // --X
+		ReadExecute = 5,       // R-X
+		WriteExecute = 6,      // -WX
+		ReadWriteExecute = 7,  // RWX
 
 		DontCare = 0x10000000
 	};
 }
 
+using namespace KernelMemoryTypes;
+
 // Returns whether "value" is aligned to a page boundary (Ie a boundary of 4096 bytes)
-static constexpr bool isAligned(u32 value) {
-	return (value & 0xFFF) == 0;
-}
+static constexpr bool isAligned(u32 value) { return (value & 0xFFF) == 0; }
 
 // Result ControlMemory(u32* outaddr, u32 addr0, u32 addr1, u32 size,
 //						MemoryOperation operation, MemoryPermission permissions)
 // This has a weird ABI documented here https://www.3dbrew.org/wiki/Kernel_ABI
 // TODO: Does this need to write to outaddr?
 void Kernel::controlMemory() {
-	u32 operation = regs[0]; // The base address is written here
+	u32 operation = regs[0];  // The base address is written here
 	u32 addr0 = regs[1];
 	u32 addr1 = regs[2];
 	u32 size = regs[3];
+	u32 pages = size >> 12;  // Official kernel truncates nonaligned sizes
 	u32 perms = regs[4];
 
 	if (perms == MemoryPermissions::DontCare) {
-		perms = MemoryPermissions::ReadWrite; // We make "don't care" equivalent to read-write
+		perms = MemoryPermissions::ReadWrite;  // We make "don't care" equivalent to read-write
 		Helpers::panic("Unimplemented allocation permission: DONTCARE");
 	}
 
@@ -57,33 +58,69 @@ void Kernel::controlMemory() {
 	bool x = perms & 0b100;
 	bool linear = operation & Operation::Linear;
 
-	if (x)
+	if (x) {
 		Helpers::panic("ControlMemory: attempted to allocate executable memory");
+	}
 
-	if (!isAligned(addr0) || !isAligned(addr1) || !isAligned(size)) {
+	if (!isAligned(addr0) || !isAligned(addr1)) {
 		Helpers::panic("ControlMemory: Unaligned parameters\nAddr0: %08X\nAddr1: %08X\nSize: %08X", addr0, addr1, size);
 	}
 
-	logSVC("ControlMemory(addr0 = %08X, addr1 = %08X, size = %08X, operation = %X (%c%c%c)%s\n",
-			addr0, addr1, size, operation, r ? 'r' : '-', w ? 'w' : '-', x ? 'x' : '-', linear ? ", linear" : ""
+	logSVC(
+		"ControlMemory(addr0 = %08X, addr1 = %08X, size = %08X, operation = %X (%c%c%c)%s\n", addr0, addr1, size, operation, r ? 'r' : '-',
+		w ? 'w' : '-', x ? 'x' : '-', linear ? ", linear" : ""
 	);
 
 	switch (operation & 0xFF) {
 		case Operation::Commit: {
-			std::optional<u32> address = mem.allocateMemory(addr0, 0, size, linear, r, w, x, true);
-			if (!address.has_value())
-				Helpers::panic("ControlMemory: Failed to allocate memory");
+			// TODO: base this from the exheader
+			auto region = FcramRegion::App;
 
-			regs[1] = address.value();
+			u32 outAddr = 0;
+			if (linear) {
+				if (!mem.allocMemoryLinear(outAddr, addr0, pages, region, r, w, false)) {
+					Helpers::panic("ControlMemory: Failed to allocate linear memory");
+				}
+			} else {
+				if (!mem.allocMemory(addr0, pages, region, r, w, false, MemoryState::Private)) {
+					Helpers::panic("ControlMemory: Failed to allocate memory");
+				}
+
+				outAddr = addr0;
+			}
+
+			regs[1] = outAddr;
 			break;
 		}
 
 		case Operation::Map:
-			mem.mirrorMapping(addr0, addr1, size);
+			// Official kernel only allows Private regions to be mapped to Free regions. An Alias or Aliased region cannot be mapped again
+			if (!mem.mapVirtualMemory(
+					addr0, addr1, pages, r, w, false, MemoryState::Free, MemoryState::Private, MemoryState::Alias, MemoryState::Aliased
+				))
+				Helpers::panic("ControlMemory: Failed to map memory");
+			break;
+
+		case Operation::Unmap:
+			// The same as a Map operation, except in reverse
+			if (!mem.mapVirtualMemory(
+					addr0, addr1, pages, false, false, false, MemoryState::Alias, MemoryState::Aliased, MemoryState::Free, MemoryState::Private
+				)) {
+				Helpers::panic("ControlMemory: Failed to unmap memory");
+			}
 			break;
 
 		case Operation::Protect:
-			Helpers::warn("Ignoring mprotect! Hope nothing goes wrong but if the game accesses invalid memory or crashes then we prolly need to implement this\n");
+			// Official kernel has an internal state bit to indicate that the region's permissions may be changed
+			// But this should account for all cases
+			if (!mem.testMemoryState(addr0, pages, MemoryState::Private) && !mem.testMemoryState(addr0, pages, MemoryState::Alias) &&
+				!mem.testMemoryState(addr0, pages, MemoryState::Aliased) && !mem.testMemoryState(addr0, pages, MemoryState::AliasCode)) {
+				Helpers::warn("Tried to mprotect invalid region!");
+				return;
+			}
+
+			mem.changePermissions(addr0, pages, r, w, false);
+			regs[1] = addr0;
 			break;
 
 		default: Helpers::warn("ControlMemory: unknown operation %X\n", operation); break;
@@ -100,13 +137,14 @@ void Kernel::queryMemory() {
 
 	logSVC("QueryMemory(mem info pointer = %08X, page info pointer = %08X, addr = %08X)\n", memInfo, pageInfo, addr);
 
-	const auto info = mem.queryMemory(addr);
-	regs[0] = Result::Success;
+	KernelMemoryTypes::MemoryInfo info;
+	const auto result = mem.queryMemory(info, addr);
+	regs[0] = result;
 	regs[1] = info.baseAddr;
-	regs[2] = info.size;
+	regs[2] = info.pages * Memory::pageSize;
 	regs[3] = info.perms;
 	regs[4] = info.state;
-	regs[5] = 0; // page flags
+	regs[5] = 0;  // page flags
 }
 
 // Result MapMemoryBlock(Handle memblock, u32 addr, MemoryPermission myPermissions, MemoryPermission otherPermission)
@@ -126,21 +164,13 @@ void Kernel::mapMemoryBlock() {
 			addr = getSharedFontVaddr();
 		}
 
-		u8* ptr = mem.mapSharedMemory(block, addr, myPerms, otherPerms); // Map shared memory block
+		u8* ptr = mem.mapSharedMemory(block, addr, myPerms, otherPerms);  // Map shared memory block
 
 		// Pass pointer to shared memory to the appropriate service
 		switch (block) {
-			case KernelHandles::HIDSharedMemHandle:
-				serviceManager.setHIDSharedMem(ptr);
-				break;
-
-			case KernelHandles::GSPSharedMemHandle:
-				serviceManager.setGSPSharedMem(ptr);
-				break;
-
-			case KernelHandles::FontSharedMemHandle:
-				mem.copySharedFont(ptr, addr);
-				break;
+			case KernelHandles::HIDSharedMemHandle: serviceManager.setHIDSharedMem(ptr); break;
+			case KernelHandles::GSPSharedMemHandle: serviceManager.setGSPSharedMem(ptr); break;
+			case KernelHandles::FontSharedMemHandle: mem.copySharedFont(ptr, addr); break;
 
 			case KernelHandles::CSNDSharedMemHandle:
 				serviceManager.setCSNDSharedMem(ptr);
@@ -168,7 +198,7 @@ void Kernel::createMemoryBlock() {
 	const u32 addr = regs[1];
 	const u32 size = regs[2];
 	u32 myPermission = regs[3];
-	u32 otherPermission = mem.read32(regs[13] + 4); // This is placed on the stack rather than r4
+	u32 otherPermission = mem.read32(regs[13] + 4);  // This is placed on the stack rather than r4
 	logSVC("CreateMemoryBlock (addr = %08X, size = %08X, myPermission = %d, otherPermission = %d)\n", addr, size, myPermission, otherPermission);
 
 	// Returns whether a permission is valid
@@ -178,10 +208,9 @@ void Kernel::createMemoryBlock() {
 			case MemoryPermissions::Read:
 			case MemoryPermissions::Write:
 			case MemoryPermissions::ReadWrite:
-			case MemoryPermissions::DontCare:
-				return true;
+			case MemoryPermissions::DontCare: return true;
 
-			default: // Permissions with the executable flag enabled or invalid permissions are not allowed
+			default:  // Permissions with the executable flag enabled or invalid permissions are not allowed
 				return false;
 		}
 	};
@@ -200,8 +229,9 @@ void Kernel::createMemoryBlock() {
 
 	// TODO: The address needs to be in a specific range otherwise it throws an invalid address error
 
-	if (addr == 0)
+	if (addr == 0) {
 		Helpers::panic("CreateMemoryBlock: Tried to use addr = 0");
+	}
 
 	// Implement "Don't care" permission as RW
 	if (myPermission == MemoryPermissions::DontCare) myPermission = MemoryPermissions::ReadWrite;

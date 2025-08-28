@@ -5,39 +5,13 @@
 #include <cstring>
 #include <thread>
 
+#include "audio/dsp_binary.hpp"
 #include "services/dsp.hpp"
 
 using namespace Audio;
 
-struct Dsp1 {
-	// All sizes are in bytes unless otherwise specified
-	u8 signature[0x100];
-	u8 magic[4];
-	u32 size;
-	u8 codeMemLayout;
-	u8 dataMemLayout;
-	u8 pad[3];
-	u8 specialType;
-	u8 segmentCount;
-	u8 flags;
-	u32 specialStart;
-	u32 specialSize;
-	u64 zeroBits;
-
-	struct Segment {
-		u32 offs;     // Offset of the segment data
-		u32 dspAddr;  // Start of the segment in 16-bit units
-		u32 size;
-		u8 pad[3];
-		u8 type;
-		u8 hash[0x20];
-	};
-
-	Segment segments[10];
-};
-
 TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, EmulatorConfig& config)
-	: DSPCore(mem, scheduler, dspService, config), pipeBaseAddr(0), running(false) {
+	: DSPCore(mem, scheduler, dspService, config), pipeBaseAddr(0), teakra(getTeakraConfig()), running(false) {
 	// Set up callbacks for Teakra
 	Teakra::AHBMCallback ahbm;
 
@@ -106,6 +80,13 @@ TeakraDSP::TeakraDSP(Memory& mem, Scheduler& scheduler, DSPService& dspService, 
 
 	teakra.SetRecvDataHandler(2, [processPipeEvent]() { processPipeEvent(true); });
 	teakra.SetSemaphoreHandler([processPipeEvent]() { processPipeEvent(false); });
+}
+
+Teakra::UserConfig TeakraDSP::getTeakraConfig() {
+	Teakra::UserConfig config;
+	config.dsp_memory = mem.getDSPMem();
+
+	return config;
 }
 
 void TeakraDSP::reset() {
@@ -263,7 +244,7 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 	teakra.Reset();
 	running = true;
 
-	u8* dspCode = teakra.GetDspMemory().data();
+	u8* dspCode = teakra.GetDspMemory();
 	u8* dspData = dspCode + 0x40000;
 
 	Dsp1 dsp1;
@@ -312,7 +293,7 @@ void TeakraDSP::loadComponent(std::vector<u8>& data, u32 programMask, u32 dataMa
 		runSlice();
 	}
 	pipeBaseAddr = teakra.RecvData(2);
-	
+
 	// Schedule next DSP event
 	scheduler.addEvent(Scheduler::EventType::RunDSP, scheduler.currentTimestamp + Audio::lleSlice * 2);
 	loaded = true;
@@ -343,3 +324,5 @@ void TeakraDSP::unloadComponent() {
 	teakra.RecvData(2);
 	running = false;
 }
+
+void* TeakraDSP::getRegisters() { return &teakra.GetRegisterState(); }

@@ -69,7 +69,9 @@ namespace Audio {
 		// In order to save up on CPU time.
 		uint enabledMixStages = 0;
 
-		u32 samplePosition;  // Sample number into the current audio buffer
+		u32 samplePosition;      // Sample number into the current audio buffer
+		u32 currentBufferPaddr;  // Physical address of current audio buffer
+
 		float rateMultiplier;
 		u16 syncCount;
 		u16 currentBufferID;
@@ -144,7 +146,7 @@ namespace Audio {
 
 		std::array<std::vector<u8>, pipeCount> pipeData;      // The data of each pipe
 		std::array<Source, Audio::HLE::sourceCount> sources;  // DSP voices
-		Audio::HLE::DspMemory dspRam;
+		Audio::HLE::DspMemory& dspRam;
 
 		Audio::DSPMixer mixer;
 		std::unique_ptr<Audio::AAC::Decoder> aacDecoder;
@@ -213,6 +215,7 @@ namespace Audio {
 		void runAudioFrame(u64 eventTimestamp) override;
 
 		u8* getDspMemory() override { return dspRam.rawMemory.data(); }
+		DSPCore::Type getType() override { return DSPCore::Type::HLE; }
 
 		u16 recvData(u32 regId) override;
 		bool recvDataIsReady(u32 regId) override { return true; }  // Treat data as always ready

@@ -2,7 +2,7 @@
 #include "archive_base.hpp"
 
 class SelfNCCHArchive : public ArchiveBase {
-public:
+  public:
 	SelfNCCHArchive(Memory& mem) : ArchiveBase(mem) {}
 
 	u64 getFreeBytes() override { return 0; }

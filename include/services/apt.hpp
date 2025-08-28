@@ -1,12 +1,12 @@
 #pragma once
 #include <optional>
+
+#include "applets/applet_manager.hpp"
 #include "helpers.hpp"
 #include "kernel_types.hpp"
 #include "logger.hpp"
 #include "memory.hpp"
 #include "result/result.hpp"
-
-#include "applets/applet_manager.hpp"
 
 // Yay, more circular dependencies
 class Kernel;

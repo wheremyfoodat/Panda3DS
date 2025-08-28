@@ -3,6 +3,7 @@
 
 class UserSaveDataArchive : public ArchiveBase {
 	u32 archiveID;
+
   public:
 	UserSaveDataArchive(Memory& mem, u32 archiveID) : ArchiveBase(mem), archiveID(archiveID) {}
 

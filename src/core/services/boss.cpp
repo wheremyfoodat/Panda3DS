@@ -65,8 +65,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 		case BOSSCommands::GetTaskStatus: getTaskStatus(messagePointer); break;
 		case BOSSCommands::GetTaskStorageInfo: getTaskStorageInfo(messagePointer); break;
 		case BOSSCommands::InitializeSession:
-		case BOSSCommands::InitializeSessionPrivileged:
-			initializeSession(messagePointer); break;
+		case BOSSCommands::InitializeSessionPrivileged: initializeSession(messagePointer); break;
 		case BOSSCommands::ReadNsData: readNsData(messagePointer); break;
 		case BOSSCommands::ReceiveProperty: receiveProperty(messagePointer); break;
 		case BOSSCommands::RegisterNewArrivalEvent: registerNewArrivalEvent(messagePointer); break;
@@ -82,8 +81,7 @@ void BOSSService::handleSyncRequest(u32 messagePointer) {
 
 		case 0x04500102:  // Home Menu uses this command, what is this?
 			Helpers::warn("BOSS command 0x04500102");
-
-      mem.write32(messagePointer, IPC::responseHeader(0x450, 1, 0));
+			mem.write32(messagePointer, IPC::responseHeader(0x450, 1, 0));
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 
@@ -196,6 +194,7 @@ void BOSSService::sendProperty(u32 messagePointer) {
 	mem.write32(messagePointer, IPC::responseHeader(0x14, 1, 2));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, 0);  // Read size
+
 	// TODO: Should this do anything else?
 }
 

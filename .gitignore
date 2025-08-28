@@ -70,3 +70,12 @@ fb.bat
 
 config.toml
 CMakeSettings.json
+
+# IDE files
+
+# KDevelop files
+*.kdev4
+# IDEA/Clion files
+.idea/
+# VSC files
+/.vscode/

@@ -47,15 +47,15 @@ Result::HorizonResult SoftwareKeyboardApplet::start(const MemoryBlock* sharedMem
 
 	const std::u16string text = u"Pand";
 	u32 textAddress = sharedMem->addr;
-	
+
 	// Copy text to shared memory the app gave us
 	for (u32 i = 0; i < text.size(); i++) {
 		mem.write16(textAddress, u16(text[i]));
 		textAddress += sizeof(u16);
 	}
-	mem.write16(textAddress, 0); // Write UTF-16 null terminator
+	mem.write16(textAddress, 0);  // Write UTF-16 null terminator
 
-	// Temporarily hardcode the pressed button to be the firs tone
+	// Temporarily hardcode the pressed button to be the first one
 	switch (config.numButtonsM1) {
 		case SoftwareKeyboardButtonConfig::SingleButton: config.returnCode = SoftwareKeyboardResult::D0Click; break;
 		case SoftwareKeyboardButtonConfig::DualButton: config.returnCode = SoftwareKeyboardResult::D1Click1; break;

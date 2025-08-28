@@ -1,10 +1,11 @@
 #include "services/fs.hpp"
-#include "kernel/kernel.hpp"
+
 #include "io_file.hpp"
 #include "ipc.hpp"
+#include "kernel/kernel.hpp"
 #include "result/result.hpp"
 
-#ifdef CreateFile // windows.h defines CreateFile & DeleteFile because of course it does.
+#ifdef CreateFile  // windows.h defines CreateFile & DeleteFile because of course it does.
 #undef CreateDirectory
 #undef CreateFile
 #undef DeleteFile
@@ -48,20 +49,17 @@ namespace FSCommands {
 	};
 }
 
-void FSService::reset() {
-	priority = 0;
-}
+void FSService::reset() { priority = 0; }
 
 // Creates directories for NAND, ExtSaveData, etc if they don't already exist. Should be executed after loading a new ROM.
 void FSService::initializeFilesystem() {
-	const auto sdmcPath = IOFile::getAppData() / "SDMC"; // Create SDMC directory
+	const auto sdmcPath = IOFile::getAppData() / "SDMC";  // Create SDMC directory
 	const auto nandSharedpath = IOFile::getAppData() / ".." / "SharedFiles" / "NAND";
 
-	const auto savePath = IOFile::getAppData() / "SaveData"; // Create SaveData
-	const auto formatPath = IOFile::getAppData() / "FormatInfo"; // Create folder for storing archive formatting info
+	const auto savePath = IOFile::getAppData() / "SaveData";      // Create SaveData
+	const auto formatPath = IOFile::getAppData() / "FormatInfo";  // Create folder for storing archive formatting info
 	const auto systemSaveDataPath = IOFile::getAppData() / ".." / "SharedFiles" / "SystemSaveData";
 	namespace fs = std::filesystem;
-
 
 	if (!fs::is_directory(nandSharedpath)) {
 		fs::create_directories(nandSharedpath);
@@ -90,30 +88,26 @@ ArchiveBase* FSService::getArchiveFromID(u32 id, const FSPath& archivePath) {
 		case ArchiveID::SaveData: return &saveData;
 		case ArchiveID::UserSaveData2: return &userSaveData2;
 
-		case ArchiveID::ExtSaveData:
-			return &extSaveData_sdmc;
+		case ArchiveID::ExtSaveData: return &extSaveData_sdmc;
 
-		case ArchiveID::SharedExtSaveData:
-			return &sharedExtSaveData_nand;
+		case ArchiveID::SharedExtSaveData: return &sharedExtSaveData_nand;
 
 		case ArchiveID::SystemSaveData: return &systemSaveData;
 		case ArchiveID::SDMC: return &sdmc;
 		case ArchiveID::SDMCWriteOnly: return &sdmcWriteOnly;
-		case ArchiveID::SavedataAndNcch: return &ncch; // This can only access NCCH outside of FSPXI
+		case ArchiveID::SavedataAndNcch: return &ncch;  // This can only access NCCH outside of FSPXI
 
 		case ArchiveID::TwlPhoto: return &twlPhoto;
 		case ArchiveID::TwlSound: return &twlSound;
 		case ArchiveID::CardSPI: return &cardSpi;
 
-		default:
-			Helpers::panic("Unknown archive. ID: %d\n", id);
-			return nullptr;
+		default: Helpers::panic("Unknown archive. ID: %d\n", id); return nullptr;
 	}
 }
 
 std::optional<HorizonHandle> FSService::openFileHandle(ArchiveBase* archive, const FSPath& path, const FSPath& archivePath, const FilePerms& perms) {
 	FileDescriptor opened = archive->openFile(path, perms);
-	if (opened.has_value()) { // If opened doesn't have a value, we failed to open the file
+	if (opened.has_value()) {  // If opened doesn't have a value, we failed to open the file
 		auto handle = kernel.makeObject(KernelObjectType::File);
 
 		auto& file = kernel.getObjects()[handle];
@@ -127,7 +121,7 @@ std::optional<HorizonHandle> FSService::openFileHandle(ArchiveBase* archive, con
 
 Rust::Result<HorizonHandle, Result::HorizonResult> FSService::openDirectoryHandle(ArchiveBase* archive, const FSPath& path) {
 	Rust::Result<DirectorySession, Result::HorizonResult> opened = archive->openDirectory(path);
-	if (opened.isOk()) { // If opened doesn't have a value, we failed to open the directory
+	if (opened.isOk()) {  // If opened doesn't have a value, we failed to open the directory
 		auto handle = kernel.makeObject(KernelObjectType::Directory);
 		auto& object = kernel.getObjects()[handle];
 		object.data = new DirectorySession(opened.unwrap());
@@ -153,8 +147,7 @@ Rust::Result<HorizonHandle, Result::HorizonResult> FSService::openArchiveHandle(
 		archiveObject.data = new ArchiveSession(res.unwrap(), path);
 
 		return Ok(handle);
-	}
-	else {
+	} else {
 		return Err(res.unwrapErr());
 	}
 }
@@ -163,8 +156,7 @@ FSPath FSService::readPath(u32 type, u32 pointer, u32 size) {
 	std::vector<u8> data;
 	data.resize(size);
 
-	for (u32 i = 0; i < size; i++)
-		data[i] = mem.read8(pointer + i);
+	for (u32 i = 0; i < size; i++) data[i] = mem.read8(pointer + i);
 
 	return FSPath(type, data);
 }
@@ -212,7 +204,10 @@ void FSService::handleSyncRequest(u32 messagePointer) {
 			mem.write32(messagePointer + 8, 0);
 			break;
 
-		default: Helpers::panic("FS service requested. Command: %08X\n", command);
+		default:
+			Helpers::warn("Unimplemented FS service requested. Command: %08X\n", command);
+			mem.write32(messagePointer + 4, Result::Success);
+			break;
 	}
 }
 
@@ -232,7 +227,7 @@ void FSService::initializeWithSdkVersion(u32 messagePointer) {
 }
 
 void FSService::closeArchive(u32 messagePointer) {
-	const Handle handle = static_cast<u32>(mem.read64(messagePointer + 4)); // TODO: archive handles should be 64-bit
+	const Handle handle = static_cast<u32>(mem.read64(messagePointer + 4));  // TODO: archive handles should be 64-bit
 	const auto object = kernel.getObject(handle, KernelObjectType::Archive);
 	log("FSService::CloseArchive(handle = %X)\n", handle);
 
@@ -311,7 +306,7 @@ void FSService::openFile(u32 messagePointer) {
 		mem.write32(messagePointer + 4, Result::FS::FileNotFound);
 	} else {
 		mem.write32(messagePointer + 4, Result::Success);
-		mem.write32(messagePointer + 8, 0x10); // "Move handle descriptor"
+		mem.write32(messagePointer + 8, 0x10);  // "Move handle descriptor"
 		mem.write32(messagePointer + 12, handle.value());
 	}
 }
@@ -498,8 +493,9 @@ void FSService::formatSaveData(u32 messagePointer) {
 	log("FS::FormatSaveData\n");
 
 	const u32 archiveID = mem.read32(messagePointer + 4);
-	if (archiveID != ArchiveID::SaveData)
+	if (archiveID != ArchiveID::SaveData) {
 		Helpers::panic("FS::FormatSaveData: Archive is not SaveData");
+	}
 
 	// Read path and path info
 	const u32 pathType = mem.read32(messagePointer + 8);
@@ -509,24 +505,24 @@ void FSService::formatSaveData(u32 messagePointer) {
 	// Size of a block. Seems to always be 0x200
 	const u32 blockSize = mem.read32(messagePointer + 16);
 
-	if (blockSize != 0x200 && blockSize != 0x1000)
+	if (blockSize != 0x200 && blockSize != 0x1000) {
 		Helpers::panic("FS::FormatSaveData: Invalid SaveData block size");
+	}
 
-	const u32 directoryNum = mem.read32(messagePointer + 20); // Max number of directories
-	const u32 fileNum = mem.read32(messagePointer + 24); // Max number of files
-	const u32 directoryBucketNum = mem.read32(messagePointer + 28); // Not sure what a directory bucket is...?
-	const u32 fileBucketNum = mem.read32(messagePointer + 32); // Same here
+	const u32 directoryNum = mem.read32(messagePointer + 20);        // Max number of directories
+	const u32 fileNum = mem.read32(messagePointer + 24);             // Max number of files
+	const u32 directoryBucketNum = mem.read32(messagePointer + 28);  // Not sure what a directory bucket is...?
+	const u32 fileBucketNum = mem.read32(messagePointer + 32);       // Same here
 	const bool duplicateData = mem.read8(messagePointer + 36) != 0;
 
-	ArchiveBase::FormatInfo info {
+	ArchiveBase::FormatInfo info{
 		.size = blockSize * 0x200,
 		.numOfDirectories = directoryNum,
 		.numOfFiles = fileNum,
-		.duplicateData = duplicateData
+		.duplicateData = duplicateData,
 	};
 
 	saveData.format(path, info);
-
 	mem.write32(messagePointer, IPC::responseHeader(0x84C, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
@@ -540,8 +536,8 @@ void FSService::deleteExtSaveData(u32 messagePointer) {
 	log("FS::DeleteExtSaveData (media type = %d, saveID = %llx) (stubbed)\n", mediaType, saveID);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0852, 1, 0));
-	// TODO: We can't properly implement this yet until we properly support title/save IDs. We will stub this and insert a warning for now. Required for Planet Robobot
-	// When we properly implement it, it will just be a recursive directory deletion
+	// TODO: We can't properly implement this yet until we properly support title/save IDs. We will stub this and insert a warning for now. Required
+	// for Planet Robobot When we properly implement it, it will just be a recursive directory deletion
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
@@ -549,7 +545,8 @@ void FSService::createExtSaveData(u32 messagePointer) {
 	Helpers::warn("Stubbed call to FS::CreateExtSaveData!");
 	// First 4 words of parameters are the ExtSaveData info
 	// https://www.3dbrew.org/wiki/Filesystem_services#ExtSaveDataInfo
-	// This creates the ExtSaveData with the specified saveid in the specified media type. It stores the SMDH as "icon" in the root of the created directory. 
+	// This creates the ExtSaveData with the specified saveid in the specified media type. It stores the SMDH as "icon" in the root of the created
+	// directory.
 	const u8 mediaType = mem.read8(messagePointer + 4);
 	const u64 saveID = mem.read64(messagePointer + 8);
 	const u32 numOfDirectories = mem.read32(messagePointer + 20);
@@ -569,18 +566,13 @@ void FSService::formatThisUserSaveData(u32 messagePointer) {
 	log("FS::FormatThisUserSaveData\n");
 
 	const u32 blockSize = mem.read32(messagePointer + 4);
-	const u32 directoryNum = mem.read32(messagePointer + 8); // Max number of directories
-	const u32 fileNum = mem.read32(messagePointer + 12); // Max number of files
-	const u32 directoryBucketNum = mem.read32(messagePointer + 16); // Not sure what a directory bucket is...?
-	const u32 fileBucketNum = mem.read32(messagePointer + 20); // Same here
+	const u32 directoryNum = mem.read32(messagePointer + 8);         // Max number of directories
+	const u32 fileNum = mem.read32(messagePointer + 12);             // Max number of files
+	const u32 directoryBucketNum = mem.read32(messagePointer + 16);  // Not sure what a directory bucket is...?
+	const u32 fileBucketNum = mem.read32(messagePointer + 20);       // Same here
 	const bool duplicateData = mem.read8(messagePointer + 24) != 0;
 
-	ArchiveBase::FormatInfo info {
-		.size = blockSize * 0x200,
-		.numOfDirectories = directoryNum,
-		.numOfFiles = fileNum,
-		.duplicateData = duplicateData
-	};
+	ArchiveBase::FormatInfo info{.size = blockSize * 0x200, .numOfDirectories = directoryNum, .numOfFiles = fileNum, .duplicateData = duplicateData};
 	FSPath emptyPath;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x080F, 1, 0));
@@ -606,18 +598,16 @@ void FSService::controlArchive(u32 messagePointer) {
 	}
 
 	switch (action) {
-		case 0: // Commit save data changes. Shouldn't need us to do anything
+		case 0:  // Commit save data changes. Shouldn't need us to do anything
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 
-		case 1: // Retrieves a file's last-modified timestamp. Seen in DDLC, stubbed for the moment
+		case 1:  // Retrieves a file's last-modified timestamp. Seen in DDLC, stubbed for the moment
 			Helpers::warn("FS::ControlArchive: Tried to retrieve a file's last-modified timestamp");
 			mem.write32(messagePointer + 4, Result::Success);
 			break;
 
-		default:
-			Helpers::panic("Unimplemented action for ControlArchive (action = %X)\n", action);
-			break;
+		default: Helpers::panic("Unimplemented action for ControlArchive (action = %X)\n", action); break;
 	}
 }
 
@@ -701,9 +691,9 @@ void FSService::getThisSaveDataSecureValue(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x86F, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, 0); // Secure value does not exist
-	mem.write8(messagePointer + 12, 1); // TODO: What is this?
-	mem.write64(messagePointer + 16, 0); // Secure value
+	mem.write8(messagePointer + 8, 0);    // Secure value does not exist
+	mem.write8(messagePointer + 12, 1);   // TODO: What is this?
+	mem.write64(messagePointer + 16, 0);  // Secure value
 }
 
 void FSService::setThisSaveDataSecureValue(u32 messagePointer) {

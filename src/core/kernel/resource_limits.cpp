@@ -1,4 +1,5 @@
 #include "resource_limits.hpp"
+
 #include "kernel.hpp"
 
 // Result GetResourceLimit(Handle* resourceLimit, Handle process)
@@ -22,7 +23,7 @@ void Kernel::getResourceLimit() {
 
 // Result GetResourceLimitLimitValues(s64* values, Handle resourceLimit, LimitableResource* names, s32 nameCount)
 void Kernel::getResourceLimitLimitValues() {
-	u32 values = regs[0]; // Pointer to values (The resource limits get output here)
+	u32 values = regs[0];  // Pointer to values (The resource limits get output here)
 	const Handle resourceLimit = regs[1];
 	u32 names = regs[2];  // Pointer to resources that we should return
 	u32 count = regs[3];  // Number of resources
@@ -51,7 +52,7 @@ void Kernel::getResourceLimitLimitValues() {
 
 // Result GetResourceLimitCurrentValues(s64* values, Handle resourceLimit, LimitableResource* names, s32 nameCount)
 void Kernel::getResourceLimitCurrentValues() {
-	u32 values = regs[0]; // Pointer to values (The resource limits get output here)
+	u32 values = regs[0];  // Pointer to values (The resource limits get output here)
 	const Handle resourceLimit = regs[1];
 	u32 names = regs[2];  // Pointer to resources that we should return
 	u32 count = regs[3];  // Number of resources
@@ -81,7 +82,9 @@ void Kernel::getResourceLimitCurrentValues() {
 s32 Kernel::getCurrentResourceValue(const KernelObject* limit, u32 resourceName) {
 	const auto data = static_cast<ResourceLimits*>(limit->data);
 	switch (resourceName) {
-		case ResourceType::Commit: return mem.usedUserMemory;
+		// TODO: needs to use the current amount of memory allocated by the process
+		case ResourceType::Commit: return fcramManager.getUsedCount(FcramRegion::App) * Memory::pageSize;
+
 		case ResourceType::Thread: return threadIndices.size();
 		default: Helpers::panic("Attempted to get current value of unknown kernel resource: %d\n", resourceName);
 	}

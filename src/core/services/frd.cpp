@@ -27,6 +27,7 @@ namespace FRDCommands {
 		GetFriendAttributeFlags = 0x00170042,
 		UpdateGameModeDescription = 0x001D0002,
 
+		SaveLocalAccountData = 0x04050000,
 		UpdateMii = 0x040C0800,
 	};
 }
@@ -56,11 +57,12 @@ void FRDService::handleSyncRequest(u32 messagePointer, FRDService::Type type) {
 		case FRDCommands::SetNotificationMask: setNotificationMask(messagePointer); break;
 		case FRDCommands::UpdateGameModeDescription: updateGameModeDescription(messagePointer); break;
 
-		default: 
+		default:
 			// FRD:A functions
 			if (type == Type::A) {
 				switch (command) {
 					case FRDCommands::UpdateMii: updateMii(messagePointer); break;
+					case FRDCommands::SaveLocalAccountData: saveLocalAccountData(messagePointer); break;
 					default: Helpers::panic("FRD:A service requested. Command: %08X\n", command); break;
 				}
 			} else {
@@ -89,17 +91,17 @@ void FRDService::getMyFriendKey(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 5, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write32(messagePointer + 8, 0);  // Principal ID
-	mem.write32(messagePointer + 12, 0); // Padding (?)
-	mem.write32(messagePointer + 16, 0); // Local friend code
+	mem.write32(messagePointer + 8, 0);   // Principal ID
+	mem.write32(messagePointer + 12, 0);  // Padding (?)
+	mem.write32(messagePointer + 16, 0);  // Local friend code
 	mem.write32(messagePointer + 20, 0);
 }
 
 void FRDService::getFriendKeyList(u32 messagePointer) {
 	log("FRD::GetFriendKeyList\n");
 
-	const u32 count = mem.read32(messagePointer + 8); // From what I understand this is a cap on the number of keys to receive?
-	constexpr u32 friendCount = 0; // And this should be the number of friends whose keys were actually received?
+	const u32 count = mem.read32(messagePointer + 8);  // From what I understand this is a cap on the number of keys to receive?
+	constexpr u32 friendCount = 0;                     // And this should be the number of friends whose keys were actually received?
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 2, 2));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -147,11 +149,11 @@ void FRDService::getFriendAttributeFlags(u32 messagePointer) {
 }
 
 void FRDService::getMyPresence(u32 messagePointer) {
-	static constexpr u32 presenceSize = 0x12C; // A presence seems to be 12C bytes of data, not sure what it contains
+	static constexpr u32 presenceSize = 0x12C;  // A presence seems to be 12C bytes of data, not sure what it contains
 	log("FRD::GetMyPresence\n");
-	u32 buffer = mem.read32(messagePointer + 0x104); // Buffer to write presence info to.
+	u32 buffer = mem.read32(messagePointer + 0x104);  // Buffer to write presence info to.
 
-	for (u32 i = 0; i < presenceSize; i += 4) { // Clear presence info with 0s for now
+	for (u32 i = 0; i < presenceSize; i += 4) {  // Clear presence info with 0s for now
 		mem.write32(buffer + i, 0);
 	}
 
@@ -168,15 +170,15 @@ void FRDService::getFriendPresence(u32 messagePointer) {
 }
 
 void FRDService::getMyProfile(u32 messagePointer) {
-	mem.write32(messagePointer, IPC::responseHeader(0x7, 3, 0)); // Not sure if the header here has the correct # of responses?
+	mem.write32(messagePointer, IPC::responseHeader(0x7, 3, 0));  // Not sure if the header here has the correct # of responses?
 	mem.write32(messagePointer + 4, Result::Success);
 
 	// TODO: Should maybe make these user-configurable. Not super important though
-	mem.write8(messagePointer + 8, static_cast<u8>(Regions::USA));            // Region
-	mem.write8(messagePointer + 9, static_cast<u8>(CountryCodes::US));        // Country
-	mem.write8(messagePointer + 10, 2);                                       // Area (this should be Washington)
-	mem.write8(messagePointer + 11, static_cast<u8>(LanguageCodes::English)); // Language
-	mem.write8(messagePointer + 12, 2);                                       // Platform (always 2 for CTR)
+	mem.write8(messagePointer + 8, static_cast<u8>(Regions::USA));             // Region
+	mem.write8(messagePointer + 9, static_cast<u8>(CountryCodes::US));         // Country
+	mem.write8(messagePointer + 10, 2);                                        // Area (this should be Washington)
+	mem.write8(messagePointer + 11, static_cast<u8>(LanguageCodes::English));  // Language
+	mem.write8(messagePointer + 12, 2);                                        // Platform (always 2 for CTR)
 
 	// Padding
 	mem.write8(messagePointer + 13, 0);
@@ -226,7 +228,7 @@ void FRDService::getMyMii(u32 messagePointer) {
 void FRDService::getMyFavoriteGame(u32 messagePointer) {
 	log("FRD::GetMyFavoriteGame (stubbed)\n");
 	constexpr u64 titleID = 0;
-	
+
 	mem.write32(messagePointer, IPC::responseHeader(0xD, 3, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write64(messagePointer + 8, titleID);
@@ -262,6 +264,13 @@ void FRDService::logout(u32 messagePointer) {
 	loggedIn = false;
 
 	mem.write32(messagePointer, IPC::responseHeader(0x4, 1, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void FRDService::saveLocalAccountData(u32 messagePointer) {
+	log("FRD::SaveLocalAccountData (stubbed)\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x405, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }
 

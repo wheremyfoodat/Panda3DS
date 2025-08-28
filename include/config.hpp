@@ -5,6 +5,7 @@
 #include "audio/dsp_core.hpp"
 #include "frontend_settings.hpp"
 #include "renderer.hpp"
+#include "screen_layout.hpp"
 #include "services/region_codes.hpp"
 
 struct AudioDeviceConfig {
@@ -48,12 +49,10 @@ struct EmulatorConfig {
 	static constexpr bool ubershaderDefault = true;
 #endif
 	static constexpr bool accelerateShadersDefault = true;
-
-#if defined(__LIBRETRO__)
 	static constexpr bool audioEnabledDefault = true;
-#else
-	static constexpr bool audioEnabledDefault = false;
-#endif
+
+	static constexpr bool enableFastmemDefault = true;
+	static constexpr bool hashTexturesDefault = false;
 
 	// We default to OpenGL on all platforms other than iOS
 #if defined(PANDA3DS_IOS)
@@ -62,12 +61,14 @@ struct EmulatorConfig {
 	static constexpr RendererType rendererDefault = RendererType::OpenGL;
 #endif
 
-	static constexpr bool hashTexturesDefault = true;
-
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
 	bool accelerateShaders = accelerateShadersDefault;
+	bool fastmemEnabled = enableFastmemDefault;
 	bool hashTextures = hashTexturesDefault;
+
+	ScreenLayout::Layout screenLayout = ScreenLayout::Layout::Default;
+	float topScreenSize = 0.5;
 
 	bool accurateShaderMul = false;
 	bool discordRpcEnabled = false;
@@ -81,6 +82,7 @@ struct EmulatorConfig {
 
 	bool sdCardInserted = true;
 	bool sdWriteProtected = false;
+	bool circlePadProEnabled = true;
 	bool usePortableBuild = false;
 
 	bool audioEnabled = audioEnabledDefault;

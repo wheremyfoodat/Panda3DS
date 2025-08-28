@@ -2,7 +2,7 @@
 #include "archive_base.hpp"
 
 class SaveDataArchive : public ArchiveBase {
-public:
+  public:
 	SaveDataArchive(Memory& mem) : ArchiveBase(mem) {}
 
 	u64 getFreeBytes() override { return 32_MB; }
@@ -27,6 +27,6 @@ public:
 	// Returns whether the cart has save data or not
 	bool cartHasSaveData() {
 		auto cxi = mem.getCXI();
-		return (cxi != nullptr && cxi->hasSaveData()); // We need to have a CXI file with more than 0 bytes of save data
+		return (cxi != nullptr && cxi->hasSaveData());  // We need to have a CXI file with more than 0 bytes of save data
 	}
 };

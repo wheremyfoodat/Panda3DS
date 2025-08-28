@@ -22,7 +22,6 @@ std::unique_ptr<Audio::DSPCore> Audio::makeDSPCore(EmulatorConfig& config, Memor
 			break;
 	}
 
-	mem.setDSPMem(core->getDspMemory());
 	return core;
 }
 

@@ -6,6 +6,8 @@
 
 #include "memory.hpp"
 
+using namespace KernelMemoryTypes;
+
 namespace {
 	struct LoadInfo {
 		u32 codeSegSizeAligned;
@@ -52,12 +54,6 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 	// Total memory to allocate for loading
 	// suum of aligned values is always aligned, have an extra RW page for libctru
 	const u32 totalSize = hbInfo.codeSegSizeAligned + hbInfo.rodataSegSizeAligned + hbInfo.dataSegSizeAligned + 4_KB;
-
-	const auto opt = findPaddr(totalSize);
-	if (!opt.has_value()) {
-		Helpers::panic("Failed to find paddr to map 3DSX file's code to");
-		return false;
-	}
 
 	// Map the ROM on the kernel side
 	const u32 textOffset = 0;
@@ -213,7 +209,8 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 		{
 			pst->heapSize = u32(48_MB);
 			pst->linearHeapSize = u32(64_MB);
-		} else */ {
+		} else */
+		{
 			pst.heapSize = u32(24_MB);
 			pst.linearHeapSize = u32(32_MB);
 		}
@@ -221,12 +218,17 @@ bool Memory::map3DSX(HB3DSX& hb3dsx, const HB3DSX::Header& header) {
 		std::memcpy(&code[4], &pst, sizeof(pst));
 	}
 
-	const auto paddr = opt.value();
-	std::memcpy(&fcram[paddr], &code[0], totalSize);  // Copy the 3 segments + BSS to FCRAM
+	// Text is R-X
+	allocMemory(textSegAddr, hbInfo.codeSegSizeAligned / Memory::pageSize, FcramRegion::App, true, false, true, MemoryState::Code);
+	copyToVaddr(textSegAddr, &code[textOffset], hbInfo.codeSegSizeAligned);
 
-	allocateMemory(textSegAddr, paddr + textOffset, hbInfo.codeSegSizeAligned, true, true, false, true);           // Text is R-X
-	allocateMemory(rodataSegAddr, paddr + rodataOffset, hbInfo.rodataSegSizeAligned, true, true, false, false);    // Rodata is R--
-	allocateMemory(dataSegAddr, paddr + dataOffset, hbInfo.dataSegSizeAligned + 0x1000, true, true, true, false);  // Data+BSS+Extra is RW-
+	// Rodata is R--
+	allocMemory(rodataSegAddr, hbInfo.rodataSegSizeAligned / Memory::pageSize, FcramRegion::App, true, false, false, MemoryState::Code);
+	copyToVaddr(rodataSegAddr, &code[rodataOffset], hbInfo.rodataSegSizeAligned);
+
+	// Data + BSS + Extra is RW-. We allocate 1 extra page (4KB) which is not initialized to anything.
+	allocMemory(dataSegAddr, (hbInfo.dataSegSizeAligned + 4_KB) / Memory::pageSize, FcramRegion::App, true, true, false, MemoryState::Private);
+	copyToVaddr(dataSegAddr, &code[dataOffset], hbInfo.dataSegSizeAligned);
 
 	return true;
 }

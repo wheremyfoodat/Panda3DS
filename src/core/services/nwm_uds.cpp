@@ -1,7 +1,8 @@
+#include "services/nwm_uds.hpp"
+
 #include "ipc.hpp"
 #include "kernel.hpp"
 #include "result/result.hpp"
-#include "services/nwm_uds.hpp"
 
 namespace NWMCommands {
 	enum : u32 {

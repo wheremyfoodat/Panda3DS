@@ -1,5 +1,6 @@
-#include "ipc.hpp"
 #include "services/news_u.hpp"
+
+#include "ipc.hpp"
 
 namespace NewsCommands {
 	enum : u32 {};

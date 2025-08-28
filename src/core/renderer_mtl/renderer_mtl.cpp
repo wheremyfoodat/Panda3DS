@@ -11,6 +11,7 @@
 #include "PICA/gpu.hpp"
 #include "PICA/pica_hash.hpp"
 #include "SDL_metal.h"
+#include "screen_layout.hpp"
 
 using namespace PICA;
 
@@ -56,9 +57,7 @@ void RendererMTL::reset() {
 	colorRenderTargetCache.reset();
 }
 
-void RendererMTL::setMTKLayer(void* layer) {
-	metalLayer = (CA::MetalLayer*)layer;
-}
+void RendererMTL::setMTKLayer(void* layer) { metalLayer = (CA::MetalLayer*)layer; }
 
 void RendererMTL::display() {
 	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
@@ -103,16 +102,38 @@ void RendererMTL::display() {
 	renderCommandEncoder->setRenderPipelineState(displayPipeline);
 	renderCommandEncoder->setFragmentSamplerState(nearestSampler, 0);
 
+	if (outputSizeChanged) {
+		outputSizeChanged = false;
+		ScreenLayout::WindowCoordinates windowCoords;
+		ScreenLayout::calculateCoordinates(
+			windowCoords, outputWindowWidth, outputWindowHeight, emulatorConfig->topScreenSize, emulatorConfig->screenLayout
+		);
+
+		blitInfo.topScreenX = float(windowCoords.topScreenX);
+		blitInfo.topScreenY = float(windowCoords.topScreenY);
+		blitInfo.bottomScreenX = float(windowCoords.bottomScreenX);
+		blitInfo.bottomScreenY = float(windowCoords.bottomScreenY);
+
+		blitInfo.topScreenWidth = float(windowCoords.topScreenWidth);
+		blitInfo.topScreenHeight = float(windowCoords.topScreenHeight);
+		blitInfo.bottomScreenWidth = float(windowCoords.bottomScreenWidth);
+		blitInfo.bottomScreenHeight = float(windowCoords.bottomScreenHeight);
+	}
+
 	// Top screen
 	if (topScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{0, 0, 400, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(
+			MTL::Viewport{blitInfo.topScreenX, blitInfo.topScreenY, blitInfo.topScreenWidth, blitInfo.topScreenHeight, 0.0f, 1.0f}
+		);
 		renderCommandEncoder->setFragmentTexture(topScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
 
 	// Bottom screen
 	if (bottomScreen) {
-		renderCommandEncoder->setViewport(MTL::Viewport{40, 240, 320, 240, 0.0f, 1.0f});
+		renderCommandEncoder->setViewport(
+			MTL::Viewport{blitInfo.bottomScreenX, blitInfo.bottomScreenY, blitInfo.bottomScreenWidth, blitInfo.bottomScreenHeight, 0.0f, 1.0f}
+		);
 		renderCommandEncoder->setFragmentTexture(bottomScreen->get().texture, 0);
 		renderCommandEncoder->drawPrimitives(MTL::PrimitiveTypeTriangleStrip, NS::UInteger(0), NS::UInteger(4));
 	}
@@ -128,13 +149,13 @@ void RendererMTL::display() {
 	drawable->release();
 }
 
-void RendererMTL::initGraphicsContext(SDL_Window* window) {
-	// On iOS, the SwiftUI side handles the MetalLayer
-#ifdef PANDA3DS_IOS
+void RendererMTL::initGraphicsContext(void* window) {
+	// On Qt and iOS, the frontend handles the Metal layer
+#if defined(PANDA3DS_FRONTEND_QT) || defined(PANDA3DS_IOS)
 	device = MTL::CreateSystemDefaultDevice();
 #else
 	// TODO: what should be the type of the view?
-	void* view = SDL_Metal_CreateView(window);
+	void* view = SDL_Metal_CreateView((SDL_Window*)window);
 	metalLayer = (CA::MetalLayer*)SDL_Metal_GetLayer(view);
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
@@ -772,7 +793,7 @@ void RendererMTL::updateLightingLUT(MTL::RenderCommandEncoder* encoder) {
 void RendererMTL::updateFogLUT(MTL::RenderCommandEncoder* encoder) {
 	gpu.fogLUTDirty = false;
 
-	std::array<float, FOG_LUT_TEXTURE_WIDTH* 2> fogLut = {0.0f};
+	std::array<float, FOG_LUT_TEXTURE_WIDTH * 2> fogLut = {0.0f};
 
 	for (int i = 0; i < fogLut.size(); i += 2) {
 		const uint32_t value = gpu.fogLUT[i >> 1];
@@ -807,8 +828,11 @@ void RendererMTL::textureCopyImpl(
 	commandEncoder.setRenderPipelineState(blitPipeline);
 
 	// Viewport
-	renderCommandEncoder->setViewport(MTL::Viewport{
-		double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0});
+	renderCommandEncoder->setViewport(
+		MTL::Viewport{
+			double(destRect.left), double(destRect.bottom), double(destRect.right - destRect.left), double(destRect.top - destRect.bottom), 0.0, 1.0
+		}
+	);
 
 	float srcRectNDC[4] = {
 		srcRect.left / (float)srcFramebuffer.size.u(),

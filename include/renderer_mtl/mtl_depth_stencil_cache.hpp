@@ -2,6 +2,7 @@
 
 #include <map>
 
+#include "helpers.hpp"
 #include "pica_to_mtl.hpp"
 
 using namespace PICA;
@@ -17,7 +18,6 @@ namespace Metal {
 	class DepthStencilCache {
 	  public:
 		DepthStencilCache() = default;
-
 		~DepthStencilCache() { reset(); }
 
 		void set(MTL::Device* dev) { device = dev; }

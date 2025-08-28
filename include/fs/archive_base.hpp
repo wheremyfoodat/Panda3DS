@@ -271,7 +271,7 @@ class ArchiveBase {
 	bool isSafeTextPath(const FSPath& path) {
 		if (path.type == PathType::UTF16) {
 			return isPathSafe<PathType::UTF16>(path);
-		} else if (path.type == PathType::ASCII){
+		} else if (path.type == PathType::ASCII) {
 			return isPathSafe<PathType::ASCII>(path);
 		}
 

@@ -54,15 +54,7 @@ stages:
 ################################### DESKTOPS #################################
 # Linux 64-bit
 libretro-build-linux-x64:
-  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:latest
-  before_script:
-    - export NUMPROC=$(($(nproc)/5))
-    - sudo apt-get update -qy
-    - sudo apt-get install -qy software-properties-common
-    - sudo add-apt-repository -y ppa:savoury1/build-tools
-    - sudo add-apt-repository -y ppa:savoury1/gcc-defaults-12
-    - sudo apt-get update -qy
-    - sudo apt-get install -qy cmake gcc-12 g++-12
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:backports
   variables:
     CC: /usr/bin/gcc-12
     CXX: /usr/bin/g++-12
@@ -102,10 +94,13 @@ libretro-build-osx-arm64:
 #    - .core-defs
 
 # Android ARMv8a
-# android-arm64-v8a:
-#   extends:
-#     - .libretro-android-cmake-arm64-v8a
-#     - .core-defs
+android-arm64-v8a:
+  extends:
+    - .libretro-android-cmake-arm64-v8a
+    - .core-defs
+  variables:
+    ANDROID_NDK_VERSION: 26.2.11394342
+    NDK_ROOT: /android-sdk-linux/ndk/$ANDROID_NDK_VERSION
 
 # Android 64-bit x86
 # android-x86_64:

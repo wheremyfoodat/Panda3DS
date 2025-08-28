@@ -6,6 +6,7 @@
 
 CPU::CPU(Memory& mem, Kernel& kernel, Emulator& emu) : mem(mem), emu(emu), scheduler(emu.getScheduler()), env(mem, kernel, emu.getScheduler()) {
 	cp15 = std::make_shared<CP15>();
+	mem.setCPUTicks(getTicksRef());
 
 	Dynarmic::A32::UserConfig config;
 	config.arch_version = Dynarmic::A32::ArchVersion::v6K;
@@ -14,6 +15,12 @@ CPU::CPU(Memory& mem, Kernel& kernel, Emulator& emu) : mem(mem), emu(emu), sched
 	config.define_unpredictable_behaviour = true;
 	config.global_monitor = &exclusiveMonitor;
 	config.processor_id = 0;
+
+	if (mem.isFastmemEnabled()) {
+		config.fastmem_pointer = u64(mem.getFastmemArenaBase());
+	} else {
+		config.fastmem_pointer = std::nullopt;
+	}
 
 	jit = std::make_unique<Dynarmic::A32::Jit>(config);
 }

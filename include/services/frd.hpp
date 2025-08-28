@@ -40,6 +40,7 @@ class FRDService {
 	void hasLoggedIn(u32 messagePointer);
 	void isOnline(u32 messagePointer);
 	void logout(u32 messagePointer);
+	void saveLocalAccountData(u32 messagePointer);
 	void setClientSDKVersion(u32 messagePointer);
 	void setNotificationMask(u32 messagePointer);
 	void updateGameModeDescription(u32 messagePointer);

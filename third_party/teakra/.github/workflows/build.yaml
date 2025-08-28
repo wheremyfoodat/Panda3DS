@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2025 Andrea Pappacoda <andrea@pappacoda.it>
+# SPDX-License-Identifier: MIT
+
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ 'ubuntu-latest', 'windows-latest', 'macos-latest' ]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure
+      run: cmake -B build
+
+    - name: Build
+      run: cmake --build build --parallel
+
+    - name: Test
+      working-directory: build
+      run: ctest --verbose

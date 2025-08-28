@@ -1,12 +1,13 @@
 #include "services/cfg.hpp"
-#include "services/dsp.hpp"
-#include "system_models.hpp"
-#include "ipc.hpp"
 
 #include <array>
 #include <bit>
 #include <string>
 #include <unordered_map>
+
+#include "ipc.hpp"
+#include "services/dsp.hpp"
+#include "system_models.hpp"
 
 namespace CFGCommands {
 	enum : u32 {
@@ -17,12 +18,12 @@ namespace CFGCommands {
 		GetRegionCanadaUSA = 0x00040000,
 		GetSystemModel = 0x00050000,
 		TranslateCountryInfo = 0x00080080,
-		UpdateConfigNANDSavegame = 0x04030000,
 
 		GetCountryCodeString = 0x00090040,
 		GetCountryCodeID = 0x000A0040,
 		IsFangateSupported = 0x000B0000,
 		SetConfigInfoBlk4 = 0x04020082,
+		UpdateConfigNANDSavegame = 0x04030000,
 		GetLocalFriendCodeSeed = 0x04050000,
 		SecureInfoGetByte101 = 0x04070000,
 	};
@@ -47,6 +48,7 @@ void CFGService::reset() {}
 
 void CFGService::handleSyncRequest(u32 messagePointer, CFGService::Type type) {
 	const u32 command = mem.read32(messagePointer);
+
 	if (type != Type::NOR) {
 		switch (command) {
 			case CFGCommands::GetConfigInfoBlk2: [[likely]] getConfigInfoBlk2(messagePointer); break;
@@ -100,7 +102,7 @@ void CFGService::getSystemModel(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x05, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, SystemModel::Nintendo3DS); // TODO: Make this adjustable via GUI
+	mem.write8(messagePointer + 8, SystemModel::Nintendo3DS);  // TODO: Make this adjustable via GUI
 }
 
 // Write a UTF16 string to 3DS memory starting at "pointer". Appends a null terminator.
@@ -110,14 +112,14 @@ void CFGService::writeStringU16(u32 pointer, const std::u16string& string) {
 		pointer += 2;
 	}
 
-	mem.write16(pointer, static_cast<u16>(u'\0')); // Null terminator
+	mem.write16(pointer, static_cast<u16>(u'\0'));  // Null terminator
 }
 
 void CFGService::getConfigInfoBlk2(u32 messagePointer) {
 	u32 size = mem.read32(messagePointer + 4);
 	u32 blockID = mem.read32(messagePointer + 8);
-	u32 output = mem.read32(messagePointer + 16); // Pointer to write the output data to
-	log("CFG::GetConfigInfoBlk2 (size = %X, block ID = %X, output pointer = %08X)\n", size, blockID, output);
+	u32 output = mem.read32(messagePointer + 16);  // Pointer to write the output data to
+	log("CFG::GetConfigInfoBlk2 (size = %X, block ID = %X, output pointer = %08X\n", size, blockID, output);
 
 	getConfigInfo(output, blockID, size, 0x2);
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 2));
@@ -252,7 +254,7 @@ void CFGService::genUniqueConsoleHash(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 	// We need to implement hash generation & the SHA-256 digest properly later on. We have cryptopp so the hashing isn't too hard to do
 	// Let's stub it for now
-	mem.write32(messagePointer + 8, 0x33646D6F ^ salt); // Lower word of hash
+	mem.write32(messagePointer + 8, 0x33646D6F ^ salt);   // Lower word of hash
 	mem.write32(messagePointer + 12, 0xA3534841 ^ salt);  // Upper word of hash
 }
 
@@ -301,13 +303,13 @@ void CFGService::getCountryCodeID(u32 messagePointer) {
 	log("CFG::GetCountryCodeID (code = %04X)\n", characterCode);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x0A, 2, 0));
-	
+
 	// If the character code is valid, return its table ID and a success code
 	if (auto search = countryCodeToTableIDMap.find(characterCode); search != countryCodeToTableIDMap.end()) {
 		mem.write32(messagePointer + 4, Result::Success);
 		mem.write16(messagePointer + 8, search->second);
 	}
-	
+
 	else {
 		Helpers::warn("CFG::GetCountryCodeID: Invalid country code %X", characterCode);
 		mem.write32(messagePointer + 4, Result::CFG::NotFound);
@@ -338,7 +340,7 @@ void CFGService::secureInfoGetByte101(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x407, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
-	mem.write8(messagePointer + 8, 0); // Secure info byte 0x101 is usually 0 according to 3DBrew
+	mem.write8(messagePointer + 8, 0);  // Secure info byte 0x101 is usually 0 according to 3DBrew
 }
 
 void CFGService::getLocalFriendCodeSeed(u32 messagePointer) {
@@ -377,7 +379,7 @@ void CFGService::translateCountryInfo(u32 messagePointer) {
 	// By default the translated code is  the input
 	u32 result = country;
 
-	if (direction == 0) { // Translate from version B to version A
+	if (direction == 0) {  // Translate from version B to version A
 		switch (country) {
 			case 0x6E040000: result = 0x6E030000; break;
 			case 0x6E050000: result = 0x6E040000; break;
@@ -386,7 +388,7 @@ void CFGService::translateCountryInfo(u32 messagePointer) {
 			case 0x6E030000: result = 0x6E070000; break;
 			default: break;
 		}
-	} else if (direction == 1) { // Translate from version A to version B
+	} else if (direction == 1) {  // Translate from version A to version B
 		switch (country) {
 			case 0x6E030000: result = 0x6E040000; break;
 			case 0x6E040000: result = 0x6E050000; break;
@@ -421,7 +423,6 @@ void CFGService::norInitialize(u32 messagePointer) {
 void CFGService::norReadData(u32 messagePointer) {
 	log("CFG::NOR::ReadData\n");
 	Helpers::warn("Unimplemented CFG::NOR::ReadData");
-	
 	mem.write32(messagePointer, IPC::responseHeader(0x5, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 }

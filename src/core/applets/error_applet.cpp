@@ -1,4 +1,5 @@
 #include "applets/error_applet.hpp"
+
 #include "kernel/handles.hpp"
 
 using namespace Applets;
@@ -11,7 +12,7 @@ Result::HorizonResult ErrorApplet::start(const MemoryBlock* sharedMem, const std
 		.destID = AppletIDs::Application,
 		.signal = static_cast<u32>(APTSignal::WakeupByExit),
 		.object = 0,
-		.data = parameters, // TODO: Figure out how the data format for this applet
+		.data = parameters,  // TODO: Figure out how the data format for this applet
 	};
 
 	nextParameter = param;

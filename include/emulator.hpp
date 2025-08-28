@@ -24,12 +24,6 @@
 #include "http_server.hpp"
 #endif
 
-#ifdef PANDA3DS_FRONTEND_QT
-#include "gl/context.h"
-#endif
-
-struct SDL_Window;
-
 enum class ROMType {
 	None,
 	ELF,
@@ -39,10 +33,13 @@ enum class ROMType {
 };
 
 class Emulator {
+	// Config should be initialized before anything else
 	EmulatorConfig config;
+
+	Memory memory;
+	// We want memory to be constructed before the rest of the emulator, so it's at the top of the struct
 	CPU cpu;
 	GPU gpu;
-	Memory memory;
 	Kernel kernel;
 	std::unique_ptr<Audio::DSPCore> dsp;
 	Scheduler scheduler;
@@ -106,26 +103,28 @@ class Emulator {
 	bool loadELF(const std::filesystem::path& path);
 	bool loadELF(std::ifstream& file);
 
-#ifdef PANDA3DS_FRONTEND_QT
-	// For passing the GL context from Qt to the renderer
-	void initGraphicsContext(GL::Context* glContext) { gpu.initGraphicsContext(nullptr); }
-#else
-	void initGraphicsContext(SDL_Window* window) { gpu.initGraphicsContext(window); }
-#endif
+	// For passing the SDL Window, GL context, etc from the frontend to the renderer
+	void initGraphicsContext(void* context) { gpu.initGraphicsContext(context); }
 
 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+	void reloadScreenLayout() { gpu.reloadScreenLayout(); }
+
 	void deinitGraphicsContext() { gpu.deinitGraphicsContext(); }
 
 	// Reloads some settings that require special handling, such as audio enable
 	void reloadSettings();
 
+	CPU& getCPU() { return cpu; }
+	Memory& getMemory() { return memory; }
+	Kernel& getKernel() { return kernel; }
+	Scheduler& getScheduler() { return scheduler; }
+	Audio::DSPCore* getDSP() { return dsp.get(); }
+
 	EmulatorConfig& getConfig() { return config; }
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
-	Scheduler& getScheduler() { return scheduler; }
-	Memory& getMemory() { return memory; }
 	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
 
 	RendererType getRendererType() const { return config.rendererType; }
