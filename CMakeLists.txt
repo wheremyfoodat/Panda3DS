@@ -59,6 +59,7 @@ option(ENABLE_DISCORD_RPC "Compile with Discord RPC support (disabled by default
 option(ENABLE_LUAJIT "Enable scripting with the Lua programming language" ON)
 option(ENABLE_QT_GUI "Enable the Qt GUI. If not selected then the emulator uses a minimal SDL-based UI instead" OFF)
 option(USE_SYSTEM_SDL2 "Use the system's SDL2 package" OFF)
+option(USE_SYSTEM_LUAJIT "Use the system's LuaJIT package" OFF)
 option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
 option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
 option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
@@ -228,18 +229,32 @@ else()
 endif()
 
 if(ENABLE_LUAJIT)
-    add_subdirectory(third_party/LuaJIT luajit)
-    include_directories(third_party/LuaJIT/src ${CMAKE_BINARY_DIR}/luajit)
-    set_target_properties(luajit PROPERTIES EXCLUDE_FROM_ALL 1)
+    if (USE_SYSTEM_LUAJIT)
+        find_package(LuaJIT MODULE REQUIRED)
 
-    if(MSVC)
-      target_compile_definitions(libluajit PRIVATE _CRT_SECURE_NO_WARNINGS)
-      target_compile_definitions(minilua PRIVATE _CRT_SECURE_NO_WARNINGS)
-      target_compile_definitions(buildvm PRIVATE _CRT_SECURE_NO_WARNINGS)
+        if (LUAJIT_FOUND)
+            target_include_directories(AlberCore PUBLIC ${LUA_INCLUDE_DIR})
+            message(STATUS "Lua include dir: ${LUA_INCLUDE_DIR}")
+        else()
+            message(FATAL_ERROR "Failed to find system LuaJIT. Either disable LuaJIT, or use the bundled LuaJIT by setting USE_SYSTEM_LUAJIT to false")
+        endif()
+
+        target_link_libraries(AlberCore PRIVATE ${LUA_LIBRARIES})
+    else()
+        add_subdirectory(third_party/LuaJIT luajit)
+        target_include_directories(AlberCore PUBLIC third_party/LuaJIT/src ${CMAKE_BINARY_DIR}/luajit)
+        set_target_properties(luajit PROPERTIES EXCLUDE_FROM_ALL 1)
+
+        if(MSVC)
+            target_compile_definitions(libluajit PRIVATE _CRT_SECURE_NO_WARNINGS)
+            target_compile_definitions(minilua PRIVATE _CRT_SECURE_NO_WARNINGS)
+            target_compile_definitions(buildvm PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+
+        target_link_libraries(AlberCore PRIVATE libluajit)
     endif()
-
+    
     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_ENABLE_LUA=1")
-    target_link_libraries(AlberCore PRIVATE libluajit)
 endif()
 
 # Detect target architecture
