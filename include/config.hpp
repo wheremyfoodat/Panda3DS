@@ -58,8 +58,13 @@ struct EmulatorConfig {
 	static constexpr RendererType rendererDefault = RendererType::OpenGL;
 #endif
 
-	static constexpr bool enableFastmemDefault = true;
+#if defined(__LIBRETRO__)
+	static constexpr bool hashTexturesDefault = true;
+#else
 	static constexpr bool hashTexturesDefault = false;
+#endif
+
+	static constexpr bool enableFastmemDefault = true;
 
 	bool shaderJitEnabled = shaderJitDefault;
 	bool useUbershaders = ubershaderDefault;
