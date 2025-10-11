@@ -52,9 +52,7 @@ void Kernel::pollTimers() {
 	}
 }
 
-void Kernel::cancelTimer(Timer* timer) {
-	timer->running = false;
-}
+void Kernel::cancelTimer(Timer* timer) { timer->running = false; }
 
 void Kernel::signalTimer(Handle timerHandle, Timer* timer) {
 	timer->fired = true;
@@ -115,8 +113,7 @@ void Kernel::svcSetTimer() {
 
 	Scheduler& scheduler = cpu.getScheduler();
 	// Signal an event to poll timers as soon as possible
-	scheduler.removeEvent(Scheduler::EventType::UpdateTimers);
-	scheduler.addEvent(Scheduler::EventType::UpdateTimers, cpu.getTicks() + 1);
+	scheduler.rescheduleEvent(Scheduler::EventType::UpdateTimers, cpu.getTicks() + 1);
 
 	// If the initial delay is 0 then instantly signal the timer
 	if (initial == 0) {

@@ -447,8 +447,7 @@ void Y2RService::startConversion(u32 messagePointer) {
 
 	// Remove any potential pending Y2R event and schedule a new one
 	Scheduler& scheduler = kernel.getScheduler();
-	scheduler.removeEvent(Scheduler::EventType::SignalY2R);
-	scheduler.addEvent(Scheduler::EventType::SignalY2R, scheduler.currentTimestamp + delayTicks);
+	scheduler.rescheduleEvent(Scheduler::EventType::SignalY2R, scheduler.currentTimestamp + delayTicks);
 }
 
 void Y2RService::isFinishedSendingYUV(u32 messagePointer) {
