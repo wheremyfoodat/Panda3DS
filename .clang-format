@@ -12,3 +12,5 @@ AllowShortIfStatementsOnASingleLine: true
 Cpp11BracedListStyle: true
 PackConstructorInitializers: BinPack
 AlignAfterOpenBracket: BlockIndent
+DerivePointerAlignment: false
+PointerAlignment: Left

@@ -447,7 +447,7 @@ bool Memory::allocMemory(u32 vaddr, s32 pages, FcramRegion region, bool r, bool 
 }
 
 bool Memory::allocMemoryLinear(u32& outVaddr, u32 inVaddr, s32 pages, FcramRegion region, bool r, bool w, bool x) {
-	if (inVaddr) Helpers::panic("inVaddr specified for linear allocation!");
+	if (inVaddr) Helpers::warn("inVaddr specified for linear allocation!");
 
 	FcramBlockList memList;
 	fcramManager.alloc(memList, pages, region, true);
