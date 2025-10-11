@@ -18,7 +18,7 @@
 
 #include "dynamic_library.hpp"
 
-#elif defined(__linux__) || defined(__FreeBSD__) || defined(TARGET_OS_OSX)  // ^^^ Windows ^^^ vvv Linux vvv
+#elif defined(__linux__) || defined(__FreeBSD__) || (defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1)  // ^^^ Windows ^^^ vvv Linux vvv
 
 #ifndef __linux__
 #define memfd_create(name, x)                  \
