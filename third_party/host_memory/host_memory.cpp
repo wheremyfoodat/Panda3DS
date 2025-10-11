@@ -481,7 +481,7 @@ namespace Common {
 
 			long page_size = sysconf(_SC_PAGESIZE);
 			if (page_size != 0x1000) {
-				Helpers::warn("page size {:#x} is incompatible with 4K paging", page_size);
+				Helpers::warn("Page size %X is incompatible with 4K paging", page_size);
 				throw std::bad_alloc{};
 			}
 
