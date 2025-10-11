@@ -1,9 +1,8 @@
 # We need to be able to use enable_language(OBJC) on Mac, so we need CMake 3.16 vs the 3.11 we use otherwise. Blame Apple.
 if (APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
     cmake_minimum_required(VERSION 3.16)
 else()
-    cmake_minimum_required(VERSION 3.11)
+    cmake_minimum_required(VERSION 3.12)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -68,6 +67,13 @@ option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performan
 option(ENABLE_FASTMEM "Build with support for hardware fastmem" ON)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
 option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
+
+# Building with newer Vulkan SDK versions requires MacOS 13.3, as it uses std::format which isn't available in older libcxx
+if (ENABLE_VULKAN)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.3" CACHE STRING "Minimum OS X deployment version")
+else()
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version")
+endif()
 
 # Discord RPC & LuaJIT are currently not supported on iOS
 if(IOS)
