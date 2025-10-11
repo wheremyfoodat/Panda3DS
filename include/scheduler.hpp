@@ -8,7 +8,7 @@
 struct Scheduler {
 	enum class EventType {
 		VBlank = 0,          // End of frame event
-		ThreadWakeup = 1,    // A thread might wake up from eg sleeping or timing outs
+		ThreadWakeup = 1,    // A thread might wake up from eg sleeping or timing out
 		RunDSP = 2,          // Make the emulated DSP run for one audio frame
 		UpdateTimers = 3,    // Update kernel timer objects
 		SignalY2R = 4,       // Signal that a Y2R conversion has finished
