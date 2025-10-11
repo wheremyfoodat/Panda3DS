@@ -19,8 +19,7 @@ void CirclePadPro::receivePayload(Payload payload) {
 			// Convert to cycles
 			period = Scheduler::nsToCycles(periodNs);
 
-			scheduler.removeEvent(Scheduler::EventType::UpdateIR);
-			scheduler.addEvent(Scheduler::EventType::UpdateIR, scheduler.currentTimestamp + period);
+			scheduler.rescheduleEvent(Scheduler::EventType::UpdateIR, scheduler.currentTimestamp + period);
 			break;
 		}
 

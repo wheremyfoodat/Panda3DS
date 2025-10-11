@@ -738,8 +738,7 @@ void Kernel::addWakeupEvent(u64 tick) {
 		nextScheduledWakeupTick = tick;
 		auto& scheduler = cpu.getScheduler();
 
-		scheduler.removeEvent(Scheduler::EventType::ThreadWakeup);
-		scheduler.addEvent(Scheduler::EventType::ThreadWakeup, tick);
+		scheduler.rescheduleEvent(Scheduler::EventType::ThreadWakeup, tick);
 	}
 }
 
