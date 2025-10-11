@@ -62,6 +62,7 @@ class Kernel {
 	// Top 8 bits are the major version, bottom 8 are the minor version
 	u16 kernelVersion = 0;
 
+	u64 nextScheduledWakeupTick = std::numeric_limits<u64>::max();
 	// Shows whether a reschedule will be need
 	bool needReschedule = false;
 
@@ -98,6 +99,8 @@ class Kernel {
 	void signalArbiter(u32 waitingAddress, s32 threadCount);
 	void sleepThread(s64 ns);
 	void sleepThreadOnArbiter(u32 waitingAddress);
+	void sleepThreadOnArbiterWithTimeout(u32 waitingAddress, s64 timeoutNs);
+
 	void switchThread(int newThreadIndex);
 	void sortThreads();
 	std::optional<int> getNextThread();
@@ -218,6 +221,8 @@ class Kernel {
 		}
 	}
 
+	void addWakeupEvent(u64 tick);
+
 	Handle makeObject(KernelObjectType type) {
 		if (handleCounter > KernelHandles::Max) [[unlikely]] {
 			Helpers::panic("Hlep we somehow created enough kernel objects to overflow this thing");
@@ -255,6 +260,8 @@ class Kernel {
 	void sendGPUInterrupt(GPUInterrupt type) { serviceManager.sendGPUInterrupt(type); }
 	void clearInstructionCache();
 	void clearInstructionCacheRange(u32 start, u32 size);
+	void pollThreadWakeups();
+
 	u32 getSharedFontVaddr();
 
 	// For debuggers: Returns information about the main process' (alive) threads in a vector for the frontend to display
