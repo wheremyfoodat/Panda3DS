@@ -379,7 +379,8 @@ namespace Common {
 		std::unordered_map<size_t, size_t> placeholder_host_pointers;  ///< Placeholder backing offset
 	};
 
-#elif (defined(__linux__) || defined(__FreeBSD__)) || defined(TARGET_OS_OSX) && defined(PANDA3DS_HARDWARE_FASTMEM)  // ^^^ Windows ^^^ vvv Linux vvv
+#elif (defined(__linux__) || defined(__FreeBSD__)) || \
+	(defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1) && defined(PANDA3DS_HARDWARE_FASTMEM)  // ^^^ Windows ^^^ vvv Linux vvv
 
 #ifdef __ANDROID__
 #define ASHMEM_DEVICE "/dev/ashmem"
@@ -481,7 +482,7 @@ namespace Common {
 
 			long page_size = sysconf(_SC_PAGESIZE);
 			if (page_size != 0x1000) {
-				Helpers::warn("Page size %X is incompatible with 4K paging", page_size);
+				Helpers::warn("Page size 0x%X is incompatible with 4K paging", page_size);
 				throw std::bad_alloc{};
 			}
 
@@ -491,7 +492,7 @@ namespace Common {
 			fd = shm_open(SHM_ANON, O_RDWR, 0600);
 #elif defined(__ANDROID__)
 			fd = AshmemCreateFileMapping("HostMemory", 0);
-#elif defined(TARGET_OS_OSX)
+#elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
 			// Shove file in a temp directory since MacOS app bundles and iOS apps run sandboxed
 			const char* tempPath = getenv("TMPDIR");
 			// Fallback to /var/tmp if TMPDIR is not defined
