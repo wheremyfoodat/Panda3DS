@@ -29,6 +29,8 @@ struct Scheduler {
 	// Set nextTimestamp to the timestamp of the next event
 	void updateNextTimestamp() { nextTimestamp = events.cbegin()->first; }
 
+	// Add an event to the scheduler. Assumes this event doesn't already exist in the scheduler.
+	// (If it might, then use rescheduleEvent instead, which will remove and reschedule the event)
 	void addEvent(EventType type, u64 timestamp) {
 		events.emplace(timestamp, type);
 		updateNextTimestamp();
@@ -45,6 +47,47 @@ struct Scheduler {
 			}
 		}
 	};
+
+	// Reschedule an event of "type" to "newTimestamp".
+	// If the event is already in the scheduler, replace its timestamp with the new timestamp
+	// If possible, it will perform an in-place replacement. Otherwise, it will fallback to a remove+insert operation.
+	// If the event is not in the scheduler, we'll add it
+	void rescheduleEvent(EventType type, u64 newTimestamp) {
+		// Find the event if it exists
+		for (auto it = events.begin(); it != events.end(); ++it) {
+			if (it->second == type) {
+				bool inplace = true;
+
+				// Peek at the previous and next events to see if we can safely update in-place
+				if (it != events.begin()) {
+					auto previousIterator = std::prev(it);
+					if (newTimestamp < previousIterator->first) {
+						inplace = false;
+					}
+				}
+
+				auto nextIterator = std::next(it);
+				if (nextIterator != events.end() && newTimestamp > nextIterator->first) {
+					inplace = false;
+				}
+
+				if (inplace) {
+					it->first = newTimestamp;
+					updateNextTimestamp();
+				} else {
+					EventType ev = it->second;
+					events.erase(it);
+					events.emplace(newTimestamp, ev);
+					updateNextTimestamp();
+				}
+
+				return;
+			}
+		}
+
+		// The event did not exist: Add it to the scheduler
+		addEvent(type, newTimestamp);
+	}
 
 	void reset() {
 		currentTimestamp = 0;
