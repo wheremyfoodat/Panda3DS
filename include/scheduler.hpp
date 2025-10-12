@@ -73,14 +73,13 @@ struct Scheduler {
 
 				if (inplace) {
 					it->first = newTimestamp;
-					updateNextTimestamp();
 				} else {
 					EventType ev = it->second;
 					events.erase(it);
 					events.emplace(newTimestamp, ev);
-					updateNextTimestamp();
 				}
 
+				updateNextTimestamp();
 				return;
 			}
 		}
