@@ -47,7 +47,7 @@ public class InputMapActivity extends BaseActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        return InputHandler.processKeyEvent(event);
+        return InputHandler.processKeyEvent(event, null);
     }
 
     private void onInputEvent(InputEvent event) {

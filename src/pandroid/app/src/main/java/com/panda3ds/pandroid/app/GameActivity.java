@@ -152,7 +152,7 @@ public class GameActivity extends BaseActivity implements EmulatorCallback, Sens
 
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {	
-		if ((!drawerFragment.isOpened()) && InputHandler.processKeyEvent(event)) {
+		if ((!drawerFragment.isOpened()) && InputHandler.processKeyEvent(event, true)) {
 			return true;
 		}
 

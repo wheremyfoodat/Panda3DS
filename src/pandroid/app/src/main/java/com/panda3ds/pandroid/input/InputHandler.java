@@ -90,7 +90,7 @@ public class InputHandler {
         return true;
     }
 
-    public static boolean processKeyEvent(KeyEvent event) {
+    public static boolean processKeyEvent(KeyEvent event, Boolean playing) {
         if (!isSourceValid(event.getSource())) {
             return false;
         }
@@ -110,8 +110,11 @@ public class InputHandler {
             }
         }
         String code = KeyEvent.keyCodeToString(event.getKeyCode());
-        if (InputMap.relative(code) == KeyName.NULL) {
-            return false;
+
+        if (playing != null) {
+            if (InputMap.relative(code) == KeyName.NULL) {
+                return false;
+            }
         }
 
         if (event.getAction() == KeyEvent.ACTION_UP) {
