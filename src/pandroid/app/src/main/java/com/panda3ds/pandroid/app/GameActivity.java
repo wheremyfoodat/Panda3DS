@@ -151,11 +151,7 @@ public class GameActivity extends BaseActivity implements EmulatorCallback, Sens
 	}
 
 	@Override
-	public boolean dispatchKeyEvent(KeyEvent event) {
-		if (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP || event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN) {
-                    return super.dispatchKeyEvent(event);
-		}
-		
+	public boolean dispatchKeyEvent(KeyEvent event) {	
 		if ((!drawerFragment.isOpened()) && InputHandler.processKeyEvent(event)) {
 			return true;
 		}

@@ -110,6 +110,10 @@ public class InputHandler {
             }
         }
         String code = KeyEvent.keyCodeToString(event.getKeyCode());
+        if (InputMap.relative(code) == KeyName.NULL) {
+            return false;
+        }
+
         if (event.getAction() == KeyEvent.ACTION_UP) {
             keyDownEvents.remove(code);
             handleEvent(new InputEvent(code, 0.0f));
