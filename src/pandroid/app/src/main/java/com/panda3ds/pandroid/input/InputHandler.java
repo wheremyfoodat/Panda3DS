@@ -111,7 +111,7 @@ public class InputHandler {
         }
         String code = KeyEvent.keyCodeToString(event.getKeyCode());
 
-        if (playing != null) {
+        if (playing == true) {
             if (InputMap.relative(code) == KeyName.NULL) {
                 return false;
             }
