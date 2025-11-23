@@ -4,9 +4,6 @@
 [submodule "third_party/cryptopp/cryptopp"]
 	path = third_party/cryptopp/cryptopp
 	url = https://github.com/weidai11/cryptopp
-[submodule "third_party/xbyak"]
-	path = third_party/xbyak
-	url = https://github.com/herumi/xbyak
 [submodule "third_party/toml11"]
 	path = third_party/toml11
 	url = https://github.com/ToruNiina/toml11
@@ -80,3 +77,6 @@
 [submodule "third_party/capstone"]
 	path = third_party/capstone
 	url = https://github.com/Panda3DS-emu/capstone
+[submodule "third_party/xbyak"]
+	path = third_party/xbyak
+	url = https://github.com/Panda3DS-emu/xbyak
