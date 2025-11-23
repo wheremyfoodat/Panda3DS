@@ -40,7 +40,7 @@ jobs:
       uses: humbletim/setup-vulkan-sdk@main
       with:
         vulkan-query-version: latest
-        vulkan-use-cache: true
+        vulkan-use-cache: false
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
 
     - name: Setup Java
@@ -108,7 +108,7 @@ jobs:
       uses: humbletim/setup-vulkan-sdk@main
       with:
         vulkan-query-version: latest
-        vulkan-use-cache: true
+        vulkan-use-cache: false
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
 
     - name: Setup Java
