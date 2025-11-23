@@ -23,11 +23,6 @@ jobs:
     - name: Fetch submodules
       run: git submodule update --init --recursive
 
-    - name: Update Xcode
-      uses: maxim-lobanov/setup-xcode@v1
-      with:
-        xcode-version: latest
-
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@main
       with:
