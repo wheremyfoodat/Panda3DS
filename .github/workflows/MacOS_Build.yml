@@ -17,7 +17,7 @@ jobs:
         arch: [x86_64, arm64]
 
     name: MacOS-${{ matrix.arch }}
-    runs-on: macos-26
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
