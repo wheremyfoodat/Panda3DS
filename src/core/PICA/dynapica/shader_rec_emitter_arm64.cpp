@@ -123,8 +123,6 @@ void ShaderEmitter::compileInstruction(const PICAShader& shaderUnit) {
 		MOV(W1, recompilerPC);  // W1 = Current PC
 		CMP(W0, W1);            // If they're equal, execute a RET, otherwise skip it
 		B(NE, skipReturn);
-
-		LDP(XZR, X30, SP, POST_INDEXED, 16);
 		RET();
 
 		l(skipReturn);
