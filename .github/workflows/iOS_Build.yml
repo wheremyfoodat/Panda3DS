@@ -16,7 +16,7 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: macos-latest
+    runs-on: macos-26
 
     steps:
     - uses: actions/checkout@v4
@@ -35,8 +35,5 @@ jobs:
         vulkan-use-cache: false
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
   
-    - name: Install dependencies
-      run: xcodebuild -downloadComponent MetalToolchain
-
     - name: Build core and frontend
       run: cd src/pandios && ./build.sh

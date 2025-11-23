@@ -17,7 +17,7 @@ jobs:
         arch: [x86_64, arm64]
 
     name: MacOS-${{ matrix.arch }}
-    runs-on: macos-latest
+    runs-on: macos-26
 
     steps:
     - uses: actions/checkout@v4
@@ -30,9 +30,6 @@ jobs:
         vulkan-query-version: latest
         vulkan-use-cache: false
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
-
-    - name: Install dependencies
-      run: xcodebuild -downloadComponent MetalToolchain
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
