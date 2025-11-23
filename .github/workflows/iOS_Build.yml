@@ -34,6 +34,9 @@ jobs:
         vulkan-query-version: latest
         vulkan-use-cache: false
         vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
+  
+    - name: Install dependencies
+      run: xcodebuild -downloadComponent MetalToolchain
 
     - name: Build core and frontend
       run: cd src/pandios && ./build.sh

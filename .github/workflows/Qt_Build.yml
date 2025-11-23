@@ -72,7 +72,7 @@ jobs:
 
     - name: Install bundle dependencies
       run: |
-        brew install dylibbundler imagemagick
+        brew install dylibbundler imagemagick && xcodebuild -downloadComponent MetalToolchain
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
