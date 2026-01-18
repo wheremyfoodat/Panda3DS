@@ -27,7 +27,7 @@ void GLStateManager::resetClearing() {
 	clearGreen = 0.f;
 	clearAlpha = 1.f;
 
-	OpenGL::setClearColor(clearRed, clearBlue, clearGreen, clearAlpha);
+	OpenGL::setClearColor(clearRed, clearGreen, clearBlue, clearAlpha);
 }
 
 void GLStateManager::resetClipping() {
