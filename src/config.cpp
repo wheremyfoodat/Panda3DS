@@ -153,7 +153,11 @@ void EmulatorConfig::load() {
 			frontendSettings.icon = FrontendSettings::iconFromString(toml::find_or<std::string>(ui, "WindowIcon", "rpog"));
 			frontendSettings.language = toml::find_or<std::string>(ui, "Language", "en");
 			frontendSettings.showImGuiDebugPanel = toml::find_or<toml::boolean>(ui, "ShowImGuiDebugPanel", true);
+			#ifdef IMGUI_FRONTEND
+			frontendSettings.stretchImGuiOutputToWindow = toml::find_or<toml::boolean>(ui, "StretchImGuiOutputToWindow", true);
+			#else
 			frontendSettings.stretchImGuiOutputToWindow = toml::find_or<toml::boolean>(ui, "StretchImGuiOutputToWindow", false);
+			#endif
 		}
 	}
 }

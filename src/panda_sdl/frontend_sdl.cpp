@@ -22,8 +22,8 @@ FrontendSDL::FrontendSDL(SDL_Window* existingWindow, SDL_GLContext existingConte
 FrontendSDL::ImGuiWindowContext FrontendSDL::createImGuiWindowContext(const EmulatorConfig& bootConfig, const char* windowTitle) {
 	int windowX = SDL_WINDOWPOS_CENTERED;
 	int windowY = SDL_WINDOWPOS_CENTERED;
-	int windowW = 400;
-	int windowH = 480;
+	int windowW = 640;
+	int windowH = 360;
 	if (bootConfig.windowSettings.rememberPosition) {
 		windowX = bootConfig.windowSettings.x;
 		windowY = bootConfig.windowSettings.y;
@@ -115,8 +115,13 @@ void FrontendSDL::initialize(SDL_Window* existingWindow, SDL_GLContext existingC
 	} else {
 		windowX = SDL_WINDOWPOS_CENTERED;
 		windowY = SDL_WINDOWPOS_CENTERED;
+		#ifdef IMGUI_FRONTEND
+		windowWidth = 640;
+		windowHeight = 360;
+		#else
 		windowWidth = 400;
 		windowHeight = 480;
+		#endif
 	}
 
 	// Initialize output size and screen layout
@@ -309,22 +314,29 @@ void FrontendSDL::run() {
 	keyboardAnalogX = false;
 	keyboardAnalogY = false;
 	holdingRightClick = false;
+	#ifdef IMGUI_FRONTEND
+	int lastDrawableW = -1;
+	int lastDrawableH = -1;
+	#endif
 
 	while (programRunning) {
 		#ifdef IMGUI_FRONTEND
 		const auto& cfg = emu.getConfig();
-		if (cfg.frontendSettings.stretchImGuiOutputToWindow) {
-			int drawableW = 0;
-			int drawableH = 0;
-			SDL_GL_GetDrawableSize(window, &drawableW, &drawableH);
-			if (drawableW > 0 && drawableH > 0) {
+		int drawableW = 0;
+		int drawableH = 0;
+		SDL_GL_GetDrawableSize(window, &drawableW, &drawableH);
+		if (drawableW > 0 && drawableH > 0 && (drawableW != lastDrawableW || drawableH != lastDrawableH)) {
+			lastDrawableW = drawableW;
+			lastDrawableH = drawableH;
+			if (cfg.frontendSettings.stretchImGuiOutputToWindow) {
 				windowWidth = u32(drawableW);
 				windowHeight = u32(drawableH);
 				emu.setOutputSize(windowWidth, windowHeight);
+			}
+			if (cfg.frontendSettings.stretchImGuiOutputToWindow) {
 				ScreenLayout::calculateCoordinates(
 					screenCoordinates, windowWidth, windowHeight, cfg.topScreenSize, cfg.screenLayout
 				);
-				glViewport(0, 0, drawableW, drawableH);
 			}
 		}
 		#endif

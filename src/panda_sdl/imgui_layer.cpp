@@ -280,11 +280,13 @@ std::optional<std::filesystem::path> ImGuiLayer::runGameSelector() {
 		#endif
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
+		const float maxW = std::max(200.0f, drawableW * 0.9f);
+		const float maxH = std::max(150.0f, drawableH * 0.9f);
 
 		if (showNoRom) {
 			std::string rootLabel = primaryScanRootLabel();
 			ImGui::SetNextWindowPos(ImVec2(drawableW * 0.5f, drawableH * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(620, 260), ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImVec2(std::min(620.0f, maxW), std::min(260.0f, maxH)), ImGuiCond_Always);
 			ImGui::Begin("No ROMs Found", nullptr, flags);
 			ImGui::TextWrapped(
 				"No ROM inserted!\n\n"
@@ -305,7 +307,7 @@ std::optional<std::filesystem::path> ImGuiLayer::runGameSelector() {
 			ImGui::End();
 		} else if (!inSettings) {
 			ImGui::SetNextWindowPos(ImVec2(drawableW * 0.5f, drawableH * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImVec2(std::min(800.0f, maxW), std::min(600.0f, maxH)), ImGuiCond_Always);
 			ImGui::Begin("Select Game", nullptr, flags);
 
 			for (int i = 0; i < (int)games.size(); i++) {
@@ -316,7 +318,7 @@ std::optional<std::filesystem::path> ImGuiLayer::runGameSelector() {
 			ImGui::Dummy(ImVec2(0, 8));
 			ImGui::Separator();
 			ImGui::Dummy(ImVec2(0, 8));
-			ImGui::SetCursorPosX((800 - 120) * 0.5f);
+			ImGui::SetCursorPosX((ImGui::GetWindowWidth() - 120.0f) * 0.5f);
 			if (ImGui::Button("Settings", ImVec2(120, 0))) {
 				inSettings = true;
 				showSettings = true;
@@ -360,12 +362,20 @@ void ImGuiLayer::drawDebugPanel() {
 		return;
 	}
 
+	int winW = 0;
+	int winH = 0;
+	SDL_GL_GetDrawableSize(window, &winW, &winH);
+	const float maxW = std::max(220.0f, winW * 0.45f);
+	const float maxH = std::max(120.0f, winH * 0.45f);
+	ImGui::SetNextWindowSizeConstraints(ImVec2(200.0f, 0.0f), ImVec2(maxW, maxH));
+
 	ImGui::SetNextWindowPos(ImVec2(float(kDebugPadding), float(kDebugPadding)), ImGuiCond_Always);
 	ImGui::SetNextWindowBgAlpha(0.35f);
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize |
 							 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings;
 
 	ImGui::Begin("##DebugOverlay", nullptr, flags);
+	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + maxW - 20.0f);
 	int major = 0;
 	int minor = 0;
 	glGetIntegerv(GL_MAJOR_VERSION, &major);
@@ -377,6 +387,7 @@ void ImGuiLayer::drawDebugPanel() {
 	ImGui::Text("Revision: %s", versionInfo.gitRevision.c_str());
 	ImGui::Text("FPS     : %.1f", ImGui::GetIO().Framerate);
 	ImGui::Text("Paused  : %s", isPaused ? "Yes" : "No");
+	ImGui::PopTextWrapPos();
 	ImGui::End();
 }
 
@@ -427,8 +438,10 @@ void ImGuiLayer::drawSettingsPanel() {
 	int winW = 0;
 	int winH = 0;
 	SDL_GL_GetDrawableSize(window, &winW, &winH);
-	const float width = 520.0f;
-	const float height = 640.0f * 0.65f;
+	const float maxW = std::max(240.0f, winW * 0.9f);
+	const float maxH = std::max(200.0f, winH * 0.9f);
+	const float width = std::min(520.0f, maxW);
+	const float height = std::min(640.0f * 0.65f, maxH);
 	ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
 	ImGui::SetNextWindowPos(ImVec2(winW * 0.5f, winH * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 

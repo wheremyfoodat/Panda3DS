@@ -28,7 +28,11 @@ struct FrontendSettings {
 	WindowIcon icon = WindowIcon::Rpog;
 	std::string language = "en";
 	bool showImGuiDebugPanel = true;
+	#ifdef IMGUI_FRONTEND
+	bool stretchImGuiOutputToWindow = true;
+	#else
 	bool stretchImGuiOutputToWindow = false;
+	#endif
 
 	static Theme themeFromString(std::string inString);
 	static const char* themeToString(Theme theme);
