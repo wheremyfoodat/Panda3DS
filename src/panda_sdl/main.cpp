@@ -14,6 +14,7 @@ int emu_main(int argc, char *argv[]) {
 	}
 
 	app.run();
+	return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -23,8 +24,8 @@ int main(int argc, char *argv[]) {
 #ifdef __WINRT__
 #include "SDL.h"
 
-int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR argv, int argc)
+int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int)
 {
-    return SDL_WinRTRunApp(emu_main, NULL);
+	return SDL_WinRTRunApp(emu_main, nullptr);
 }
 #endif

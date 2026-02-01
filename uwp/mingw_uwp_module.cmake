@@ -118,7 +118,7 @@ function(_mingw_uwp_setup_impl target)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|AMD64")
       target_compile_options(${target} PRIVATE -mcx16)
     endif()
-    target_link_options(${target} PRIVATE -municode -static)
+    target_link_options(${target} PRIVATE -municode)
 
     if(NOT MINGW_WINRT_UNCAGED)
       set(_prev_required_flags "${CMAKE_REQUIRED_FLAGS}")
