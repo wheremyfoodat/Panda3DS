@@ -26,6 +26,7 @@ class ImGuiLayer {
 	void setPaused(bool paused) { isPaused = paused; }
 	void setPauseCallback(std::function<void(bool)> callback) { onPauseChange = std::move(callback); }
 	void setVsyncCallback(std::function<void(bool)> callback) { onVsyncChange = std::move(callback); }
+	void setExitToSelectorCallback(std::function<void()> callback) { onExitToSelector = std::move(callback); }
 
   private:
 	void drawDebugPanel();
@@ -45,6 +46,7 @@ class ImGuiLayer {
 
 	std::function<void(bool)> onPauseChange;
 	std::function<void(bool)> onVsyncChange;
+	std::function<void()> onExitToSelector;
 };
 
 #endif

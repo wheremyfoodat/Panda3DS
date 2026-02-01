@@ -153,6 +153,7 @@ void EmulatorConfig::load() {
 			frontendSettings.icon = FrontendSettings::iconFromString(toml::find_or<std::string>(ui, "WindowIcon", "rpog"));
 			frontendSettings.language = toml::find_or<std::string>(ui, "Language", "en");
 			frontendSettings.showImGuiDebugPanel = toml::find_or<toml::boolean>(ui, "ShowImGuiDebugPanel", true);
+			frontendSettings.stretchImGuiOutputToWindow = toml::find_or<toml::boolean>(ui, "StretchImGuiOutputToWindow", false);
 		}
 	}
 }
@@ -222,6 +223,7 @@ void EmulatorConfig::save() {
 	data["UI"]["WindowIcon"] = std::string(FrontendSettings::iconToString(frontendSettings.icon));
 	data["UI"]["Language"] = frontendSettings.language;
 	data["UI"]["ShowImGuiDebugPanel"] = frontendSettings.showImGuiDebugPanel;
+	data["UI"]["StretchImGuiOutputToWindow"] = frontendSettings.stretchImGuiOutputToWindow;
 
 	std::ofstream file(path, std::ios::out);
 	file << data;

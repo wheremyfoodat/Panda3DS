@@ -35,6 +35,9 @@ class FrontendSDL {
 	bool loadROM(const std::filesystem::path& path);
 	void run();
 	std::optional<std::filesystem::path> selectGame();
+	#ifdef IMGUI_FRONTEND
+	bool consumeReturnToSelector();
+	#endif
 	u32 getMapping(InputMappings::Scancode scancode) { return keyboardMappings.getMapping(scancode); }
 
 	SDL_Window* window = nullptr;
@@ -60,6 +63,7 @@ class FrontendSDL {
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
 	bool emuPaused = false;
+	bool returnToSelector = false;
 
   private:
 	void setupControllerSensors(SDL_GameController* controller);

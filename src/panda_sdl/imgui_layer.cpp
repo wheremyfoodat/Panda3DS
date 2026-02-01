@@ -407,9 +407,13 @@ void ImGuiLayer::drawPausePanel() {
 		showSettings = true;
 	}
 	if (ImGui::Button("Quit", ImVec2(-1, 0))) {
-		SDL_Event quit{};
-		quit.type = SDL_QUIT;
-		SDL_PushEvent(&quit);
+		if (onExitToSelector) {
+			onExitToSelector();
+		} else {
+			SDL_Event quit{};
+			quit.type = SDL_QUIT;
+			SDL_PushEvent(&quit);
+		}
 	}
 
 	ImGui::End();
@@ -518,6 +522,7 @@ void ImGuiLayer::drawSettingsPanel() {
 			cfg.frontendSettings.showImGuiDebugPanel = showDebugPanel;
 			showDebug = showDebugPanel;
 		}
+		ImGui::Checkbox("Stretch Output To Window", &cfg.frontendSettings.stretchImGuiOutputToWindow);
 	}
 
 	if (ImGui::CollapsingHeader("Graphics")) {

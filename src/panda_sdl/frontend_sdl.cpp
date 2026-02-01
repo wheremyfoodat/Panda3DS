@@ -124,6 +124,24 @@ void FrontendSDL::initialize(SDL_Window* existingWindow, SDL_GLContext existingC
 	ScreenLayout::calculateCoordinates(
 		screenCoordinates, u32(windowWidth), u32(windowHeight), emu.getConfig().topScreenSize, emu.getConfig().screenLayout
 	);
+	#ifdef IMGUI_FRONTEND
+	if (emu.getConfig().frontendSettings.stretchImGuiOutputToWindow) {
+		int drawableW = 0;
+		int drawableH = 0;
+		SDL_Window* currentWindow = existingWindow ? existingWindow : SDL_GL_GetCurrentWindow();
+		if (currentWindow) {
+			SDL_GL_GetDrawableSize(currentWindow, &drawableW, &drawableH);
+			if (drawableW > 0 && drawableH > 0) {
+				windowWidth = u32(drawableW);
+				windowHeight = u32(drawableH);
+				emu.setOutputSize(windowWidth, windowHeight);
+				ScreenLayout::calculateCoordinates(
+					screenCoordinates, windowWidth, windowHeight, emu.getConfig().topScreenSize, emu.getConfig().screenLayout
+				);
+			}
+		}
+	}
+	#endif
 
 	if (needOpenGL) {
 		#ifdef IMGUI_FRONTEND
@@ -266,6 +284,12 @@ void FrontendSDL::initialize(SDL_Window* existingWindow, SDL_GLContext existingC
 	imgui->init();
 	imgui->setPauseCallback([this](bool paused) { setPaused(paused); });
 	imgui->setVsyncCallback([this](bool enabled) { SDL_GL_SetSwapInterval(enabled ? 1 : 0); });
+	imgui->setExitToSelectorCallback([this]() {
+		returnToSelector = true;
+		programRunning = false;
+		emu.reset(Emulator::ReloadOption::NoReload);
+		emu.romType = ROMType::None;
+	});
 #endif
 }
 
@@ -287,6 +311,23 @@ void FrontendSDL::run() {
 	holdingRightClick = false;
 
 	while (programRunning) {
+		#ifdef IMGUI_FRONTEND
+		const auto& cfg = emu.getConfig();
+		if (cfg.frontendSettings.stretchImGuiOutputToWindow) {
+			int drawableW = 0;
+			int drawableH = 0;
+			SDL_GL_GetDrawableSize(window, &drawableW, &drawableH);
+			if (drawableW > 0 && drawableH > 0) {
+				windowWidth = u32(drawableW);
+				windowHeight = u32(drawableH);
+				emu.setOutputSize(windowWidth, windowHeight);
+				ScreenLayout::calculateCoordinates(
+					screenCoordinates, windowWidth, windowHeight, cfg.topScreenSize, cfg.screenLayout
+				);
+				glViewport(0, 0, drawableW, drawableH);
+			}
+		}
+		#endif
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 		httpServer.processActions();
 #endif
@@ -559,12 +600,19 @@ void FrontendSDL::run() {
 				case SDL_WINDOWEVENT: {
 					auto type = event.window.event;
 					if (type == SDL_WINDOWEVENT_RESIZED) {
-						windowWidth = event.window.data1;
-						windowHeight = event.window.data2;
+						int drawableW = event.window.data1;
+						int drawableH = event.window.data2;
+						#ifdef IMGUI_FRONTEND
+						if (emu.getConfig().frontendSettings.stretchImGuiOutputToWindow) {
+							SDL_GL_GetDrawableSize(window, &drawableW, &drawableH);
+						}
+						#endif
+						windowWidth = u32(drawableW);
+						windowHeight = u32(drawableH);
 
 						const auto& config = emu.getConfig();
 						ScreenLayout::calculateCoordinates(
-							screenCoordinates, u32(windowWidth), u32(windowHeight), emu.getConfig().topScreenSize, emu.getConfig().screenLayout
+							screenCoordinates, windowWidth, windowHeight, config.topScreenSize, config.screenLayout
 						);
 
 						emu.setOutputSize(windowWidth, windowHeight);
@@ -640,12 +688,22 @@ void FrontendSDL::run() {
 	}
 
 	#ifdef IMGUI_FRONTEND
-	if (imgui) {
+	if (imgui && !returnToSelector) {
 		imgui->shutdown();
 		imgui.reset();
 	}
 	#endif
 }
+
+#ifdef IMGUI_FRONTEND
+bool FrontendSDL::consumeReturnToSelector() {
+	if (!returnToSelector) {
+		return false;
+	}
+	returnToSelector = false;
+	return true;
+}
+#endif
 
 void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
 	bool haveGyro = SDL_GameControllerHasSensor(controller, SDL_SENSOR_GYRO) == SDL_TRUE;

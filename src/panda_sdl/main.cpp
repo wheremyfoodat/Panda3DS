@@ -35,6 +35,30 @@ int emu_main(int argc, char *argv[]) {
 	FrontendSDL app;
 	#endif
 
+	#ifdef IMGUI_FRONTEND
+	std::optional<std::filesystem::path> forcedRom;
+	if (argc > 1) {
+		forcedRom = std::filesystem::current_path() / argv[1];
+	}
+
+	while (true) {
+		std::optional<std::filesystem::path> selected = forcedRom;
+		if (!selected.has_value()) {
+			selected = app.selectGame();
+			if (!selected.has_value()) {
+				return 0;
+			}
+		}
+		if (!app.loadROM(*selected)) {
+			Helpers::panic("Failed to load ROM file: %s", selected->string().c_str());
+		}
+		forcedRom.reset();
+		app.run();
+		if (!app.consumeReturnToSelector()) {
+			break;
+		}
+	}
+	#else
 	if (argc > 1) {
 		auto romPath = std::filesystem::current_path() / argv[1];
 		if (!app.loadROM(romPath)) {
@@ -42,20 +66,11 @@ int emu_main(int argc, char *argv[]) {
 			Helpers::panic("Failed to load ROM file: %s", romPath.string().c_str());
 		}
 	} else {
-		#ifdef IMGUI_FRONTEND
-		auto selected = app.selectGame();
-		if (!selected.has_value()) {
-			return 0;
-		}
-		if (!app.loadROM(*selected)) {
-			Helpers::panic("Failed to load ROM file: %s", selected->string().c_str());
-		}
-		#else
 		printf("No ROM inserted! Load a ROM by dragging and dropping it into the emulator window!\n");
-		#endif
 	}
 
 	app.run();
+	#endif
 	return 0;
 }
 
