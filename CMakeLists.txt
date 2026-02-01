@@ -67,6 +67,19 @@ option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performan
 option(ENABLE_FASTMEM "Build with support for hardware fastmem" ON)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
 option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
+option(UWP_BUILD "Build as a UWP application for use on Windows/Xbox." OFF)
+option(IMGUI_FRONTEND "Build the imgui frontend. Forces OpenGL. " OFF)
+
+if(UWP_BUILD)
+    set(MINGW_UWP_DIR "${CMAKE_CURRENT_LIST_DIR}/uwp")
+    set(ENABLE_OPENGL ON)
+    set(IMGUI_FRONTEND ON)
+    set(ENABLE_DISCORD_RPC OFF)
+    set(ENABLE_VULKAN OFF)
+    set(ENABLE_METAL OFF)
+    set(ENABLE_TESTS OFF)
+    set(ENABLE_HTTP_SERVER OFF)
+endif()
 
 # Building with newer Vulkan SDK versions requires MacOS 13.3, as it uses std::format which isn't available in older libcxx
 if (ENABLE_VULKAN)
@@ -178,7 +191,13 @@ if(ENABLE_DISCORD_RPC AND NOT ANDROID)
 endif()
 
 if (NOT ANDROID)
-    if (USE_SYSTEM_SDL2)
+    if (UWP_BUILD)
+        target_include_directories(AlberCore PUBLIC
+            "${MINGW_UWP_DIR}/deps/include"
+            "${MINGW_UWP_DIR}/deps/include/SDL2"
+        )
+        target_link_libraries(AlberCore PUBLIC "${MINGW_UWP_DIR}/deps/lib/SDL2.lib")
+    elseif (USE_SYSTEM_SDL2)
         find_package(SDL2 CONFIG REQUIRED)
         target_link_libraries(AlberCore PUBLIC SDL2::SDL2)
     else()
@@ -264,7 +283,17 @@ if(ENABLE_LUAJIT)
 endif()
 
 # Detect target architecture
-if (NOT APPLE OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+if (UWP_BUILD AND APPX_ARCH_OVERRIDE)
+    if (APPX_ARCH_OVERRIDE STREQUAL "x64")
+        set(HOST_X64 TRUE)
+        set(HOST_ARM64 FALSE)
+    elseif (APPX_ARCH_OVERRIDE STREQUAL "arm64")
+        set(HOST_X64 FALSE)
+        set(HOST_ARM64 TRUE)
+    else()
+        message(FATAL_ERROR "Unsupported UWP APPX_ARCH_OVERRIDE: ${APPX_ARCH_OVERRIDE}")
+    endif()
+elseif (NOT APPLE OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
   # Normal target detection
   if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
@@ -753,6 +782,11 @@ endif()
 
 if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
+
+    if(UWP_BUILD)
+        include("${MINGW_UWP_DIR}/mingw_uwp_module.cmake")
+        mingw_uwp_setup(Alber)
+    endif()
 
     if(ENABLE_QT_GUI)
         find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)

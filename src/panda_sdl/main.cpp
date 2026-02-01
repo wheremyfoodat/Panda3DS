@@ -1,6 +1,6 @@
 #include "panda_sdl/frontend_sdl.hpp"
 
-int main(int argc, char *argv[]) {
+int emu_main(int argc, char *argv[]) {
 	FrontendSDL app;
 
 	if (argc > 1) {
@@ -15,3 +15,16 @@ int main(int argc, char *argv[]) {
 
 	app.run();
 }
+
+int main(int argc, char *argv[]) {
+	return emu_main(argc, argv);
+}
+
+#ifdef __WINRT__
+#include "SDL.h"
+
+int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR argv, int argc)
+{
+    return SDL_WinRTRunApp(emu_main, NULL);
+}
+#endif
