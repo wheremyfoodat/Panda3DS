@@ -70,6 +70,13 @@ option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling
 option(UWP_BUILD "Build as a UWP application for use on Windows/Xbox." OFF)
 option(IMGUI_FRONTEND "Build the imgui frontend. Forces OpenGL. " OFF)
 
+if(IMGUI_FRONTEND)
+    set(ENABLE_OPENGL ON)
+    set(ENABLE_VULKAN OFF)
+    set(ENABLE_METAL OFF)
+    add_compile_definitions(IMGUI_FRONTEND IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+endif()
+
 if(UWP_BUILD)
     set(MINGW_UWP_DIR "${CMAKE_CURRENT_LIST_DIR}/uwp")
     set(ENABLE_OPENGL ON)
@@ -889,9 +896,26 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
         set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")
+
+        if(IMGUI_FRONTEND)
+            list(APPEND FRONTEND_SOURCE_FILES
+                src/panda_sdl/imgui_layer.cpp
+                third_party/imgui/backends/imgui_impl_sdl.cpp
+                third_party/imgui/backends/imgui_impl_opengl3.cpp
+            )
+            list(APPEND FRONTEND_HEADER_FILES
+                "include/panda_sdl/imgui_layer.hpp"
+            )
+            if(WIN32)
+                list(APPEND FRONTEND_LIBRARIES imm32)
+            endif()
+        endif()
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)
+    if(FRONTEND_LIBRARIES)
+        target_link_libraries(Alber PRIVATE ${FRONTEND_LIBRARIES})
+    endif()
     target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${GL_CONTEXT_SOURCE_FILES} ${APP_RESOURCES})
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)

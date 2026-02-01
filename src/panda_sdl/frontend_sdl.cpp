@@ -6,7 +6,67 @@
 #include "sdl_sensors.hpp"
 #include "version.hpp"
 
+#ifdef IMGUI_FRONTEND
+#include "panda_sdl/imgui_layer.hpp"
+#endif
+
 FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+	initialize(nullptr, nullptr, false);
+}
+
+#ifdef IMGUI_FRONTEND
+FrontendSDL::FrontendSDL(SDL_Window* existingWindow, SDL_GLContext existingContext) : keyboardMappings(InputMappings::defaultKeyboardMappings()) {
+	initialize(existingWindow, existingContext, true);
+}
+
+FrontendSDL::ImGuiWindowContext FrontendSDL::createImGuiWindowContext(const EmulatorConfig& bootConfig, const char* windowTitle) {
+	int windowX = SDL_WINDOWPOS_CENTERED;
+	int windowY = SDL_WINDOWPOS_CENTERED;
+	int windowW = 400;
+	int windowH = 480;
+	if (bootConfig.windowSettings.rememberPosition) {
+		windowX = bootConfig.windowSettings.x;
+		windowY = bootConfig.windowSettings.y;
+		windowW = bootConfig.windowSettings.width;
+		windowH = bootConfig.windowSettings.height;
+	}
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	SDL_Window* window = SDL_CreateWindow(windowTitle, windowX, windowY, windowW, windowH, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	if (!window) {
+		Helpers::panic("Window creation failed: %s", SDL_GetError());
+	}
+	#ifdef IMGUI_FRONTEND_DEBUG
+	printf("[IMGUI] SDL_CreateWindow -> %p\n", window);
+	#endif
+
+	SDL_GLContext glContext = SDL_GL_CreateContext(window);
+	if (!glContext) {
+		Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+	}
+	#ifdef IMGUI_FRONTEND_DEBUG
+	printf("[IMGUI] SDL_GL_CreateContext -> %p\n", glContext);
+	#endif
+
+	if (SDL_GL_MakeCurrent(window, glContext) != 0) {
+		Helpers::panic("SDL_GL_MakeCurrent failed: %s", SDL_GetError());
+	}
+	#ifdef IMGUI_FRONTEND_DEBUG
+	printf("[IMGUI] SDL_GL_MakeCurrent OK. Current window=%p context=%p\n", SDL_GL_GetCurrentWindow(), SDL_GL_GetCurrentContext());
+	#endif
+
+	if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+		Helpers::panic("OpenGL init failed");
+	}
+	SDL_GL_SetSwapInterval(bootConfig.vsyncEnabled ? 1 : 0);
+
+	return {window, glContext};
+}
+#endif
+
+void FrontendSDL::initialize(SDL_Window* existingWindow, SDL_GLContext existingContext, bool useExternalContext) {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
 		Helpers::panic("Failed to initialize SDL2");
 	}
@@ -28,7 +88,10 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 		setupControllerSensors(gameController);
 	}
 
-	const EmulatorConfig& config = emu.getConfig();
+	EmulatorConfig& config = emu.getConfig();
+#ifdef IMGUI_FRONTEND
+	config.rendererType = RendererType::OpenGL;
+#endif
 	// We need OpenGL for software rendering/null renderer or for the OpenGL renderer if it's enabled.
 	bool needOpenGL = config.rendererType == RendererType::Software || config.rendererType == RendererType::Null;
 #ifdef PANDA3DS_ENABLE_OPENGL
@@ -63,43 +126,117 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 	);
 
 	if (needOpenGL) {
-		// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
-		// MacOS gets mad if we don't explicitly demand a core profile
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::OpenGL ? 4 : 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::OpenGL ? 1 : 3);
-		window = SDL_CreateWindow(windowTitle, windowX, windowY, windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-
-		if (window == nullptr) {
-			Helpers::panic("Window creation failed: %s", SDL_GetError());
+		#ifdef IMGUI_FRONTEND
+		// IMGUI_FRONTEND must reuse an existing GL 4.1 context and window.
+		if (!useExternalContext || existingWindow == nullptr || existingContext == nullptr) {
+			existingWindow = SDL_GL_GetCurrentWindow();
+			existingContext = SDL_GL_GetCurrentContext();
+			useExternalContext = existingWindow != nullptr && existingContext != nullptr;
+		}
+		#ifdef IMGUI_FRONTEND_DEBUG
+		printf("[IMGUI] FrontendSDL init: existingWindow=%p existingContext=%p currentWindow=%p currentContext=%p\n",
+			existingWindow, existingContext, SDL_GL_GetCurrentWindow(), SDL_GL_GetCurrentContext());
+		#endif
+		if (!useExternalContext) {
+			Helpers::panic("IMGUI_FRONTEND requires an existing OpenGL window/context");
 		}
 
-		glContext = SDL_GL_CreateContext(window);
-		if (glContext == nullptr) {
-			Helpers::warn("OpenGL context creation failed: %s\nTrying again with OpenGL ES.", SDL_GetError());
+		window = existingWindow;
+		glContext = existingContext;
+		SDL_GetWindowSize(window, reinterpret_cast<int*>(&windowWidth), reinterpret_cast<int*>(&windowHeight));
 
-			// Some low end devices (eg RPi, emulation handhelds) don't support desktop GL, but only OpenGL ES, so fall back to that if GL context
-			// creation failed
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-			glContext = SDL_GL_CreateContext(window);
-			if (glContext == nullptr) {
-				Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
-			}
+		if (SDL_GL_MakeCurrent(window, glContext) != 0) {
+			Helpers::panic("SDL_GL_MakeCurrent failed: %s", SDL_GetError());
+		}
+		#ifdef IMGUI_FRONTEND_DEBUG
+		printf("[IMGUI] SDL_GL_MakeCurrent OK. Current window=%p context=%p\n", SDL_GL_GetCurrentWindow(), SDL_GL_GetCurrentContext());
+		#endif
 
-			if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
-				Helpers::panic("OpenGL init failed");
-			}
+		if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+			#ifdef IMGUI_FRONTEND_DEBUG
+			printf("[IMGUI] gladLoadGLLoader failed\n");
+			#endif
+			Helpers::panic("OpenGL init failed");
+		}
 
-			emu.getRenderer()->setupGLES();
-		} else {
-			if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
-				Helpers::panic("OpenGL init failed");
-			}
+		int major = 0;
+		int minor = 0;
+		glGetIntegerv(GL_MAJOR_VERSION, &major);
+		glGetIntegerv(GL_MINOR_VERSION, &minor);
+		const GLubyte* renderer = glGetString(GL_RENDERER);
+		const GLubyte* version = glGetString(GL_VERSION);
+		#ifdef IMGUI_FRONTEND_DEBUG
+		printf("[IMGUI] GL version %d.%d, renderer=%s, versionStr=%s\n", major, minor,
+			reinterpret_cast<const char*>(renderer ? renderer : reinterpret_cast<const GLubyte*>("(null)")),
+			reinterpret_cast<const char*>(version ? version : reinterpret_cast<const GLubyte*>("(null)")));
+		#endif
+		if (major < 4 || (major == 4 && minor < 1)) {
+			Helpers::panic("IMGUI_FRONTEND requires a single OpenGL 4.1+ core context (got %d.%d)", major, minor);
 		}
 
 		SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
+		#else
+		bool usingGLES = false;
+		if (useExternalContext && existingWindow && existingContext) {
+			window = existingWindow;
+			glContext = existingContext;
+			SDL_GetWindowSize(window, reinterpret_cast<int*>(&windowWidth), reinterpret_cast<int*>(&windowHeight));
+
+			if (SDL_GL_MakeCurrent(window, glContext) != 0) {
+				Helpers::panic("SDL_GL_MakeCurrent failed: %s", SDL_GetError());
+			}
+
+			if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+				Helpers::panic("OpenGL init failed");
+			}
+
+			SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
+		} else {
+			// Demand 4.1 core for OpenGL renderer (max available on MacOS), 3.3 for the software & null renderers
+			// MacOS gets mad if we don't explicitly demand a core profile
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, config.rendererType == RendererType::OpenGL ? 4 : 3);
+			SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, config.rendererType == RendererType::OpenGL ? 1 : 3);
+			window = SDL_CreateWindow(windowTitle, windowX, windowY, windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+
+			if (window == nullptr) {
+				Helpers::panic("Window creation failed: %s", SDL_GetError());
+			}
+
+			glContext = SDL_GL_CreateContext(window);
+			if (glContext == nullptr) {
+				Helpers::warn("OpenGL context creation failed: %s\nTrying again with OpenGL ES.", SDL_GetError());
+
+				// Some low end devices (eg RPi, emulation handhelds) don't support desktop GL, but only OpenGL ES, so fall back to that if GL context
+				// creation failed
+				SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+				SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+				SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+				glContext = SDL_GL_CreateContext(window);
+				if (glContext == nullptr) {
+					Helpers::panic("OpenGL context creation failed: %s", SDL_GetError());
+				}
+
+				if (!gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+					Helpers::panic("OpenGL init failed");
+				}
+				emu.getRenderer()->setupGLES();
+				usingGLES = true;
+			}
+
+			if (!usingGLES) {
+				if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+					Helpers::panic("OpenGL init failed");
+				}
+			}
+
+			if (SDL_GL_MakeCurrent(window, glContext) != 0) {
+				Helpers::panic("SDL_GL_MakeCurrent failed: %s", SDL_GetError());
+			}
+
+			SDL_GL_SetSwapInterval(config.vsyncEnabled ? 1 : 0);
+		}
+		#endif
 	}
 
 #ifdef PANDA3DS_ENABLE_VULKAN
@@ -123,9 +260,25 @@ FrontendSDL::FrontendSDL() : keyboardMappings(InputMappings::defaultKeyboardMapp
 #endif
 
 	emu.initGraphicsContext(window);
+
+#ifdef IMGUI_FRONTEND
+	imgui = std::make_unique<ImGuiLayer>(window, glContext, emu);
+	imgui->init();
+	imgui->setPauseCallback([this](bool paused) { setPaused(paused); });
+	imgui->setVsyncCallback([this](bool enabled) { SDL_GL_SetSwapInterval(enabled ? 1 : 0); });
+#endif
 }
 
 bool FrontendSDL::loadROM(const std::filesystem::path& path) { return emu.loadROM(path); }
+
+std::optional<std::filesystem::path> FrontendSDL::selectGame() {
+	#ifdef IMGUI_FRONTEND
+	if (imgui) {
+		return imgui->runGameSelector();
+	}
+	#endif
+	return std::nullopt;
+}
 
 void FrontendSDL::run() {
 	programRunning = true;
@@ -143,6 +296,13 @@ void FrontendSDL::run() {
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
+			#ifdef IMGUI_FRONTEND
+			if (imgui) {
+				imgui->processEvent(event);
+				imgui->handleHotkey(event);
+			}
+			#endif
+
 			namespace Keys = HID::Keys;
 
 			switch (event.type) {
@@ -154,10 +314,21 @@ void FrontendSDL::run() {
 					auto& windowSettings = emu.getConfig().windowSettings;
 					SDL_GetWindowPosition(window, &windowSettings.x, &windowSettings.y);
 					SDL_GetWindowSize(window, &windowSettings.width, &windowSettings.height);
+					#ifdef IMGUI_FRONTEND
+					if (imgui) {
+						imgui->shutdown();
+						imgui.reset();
+					}
+					#endif
 					return;
 				}
 
 				case SDL_KEYDOWN: {
+					#ifdef IMGUI_FRONTEND
+					if (imgui && imgui->wantsCaptureKeyboard()) {
+						break;
+					}
+					#endif
 					if (emu.romType == ROMType::None) break;
 
 					u32 key = getMapping(event.key.keysym.sym);
@@ -186,7 +357,7 @@ void FrontendSDL::run() {
 							// Use the F4 button as a hot-key to pause or resume the emulator
 							// We can't use the audio play/pause buttons because it's annoying
 							case SDLK_F4: {
-								emu.togglePause();
+								togglePaused();
 								break;
 							}
 
@@ -232,6 +403,11 @@ void FrontendSDL::run() {
 				}
 
 				case SDL_MOUSEBUTTONDOWN:
+					#ifdef IMGUI_FRONTEND
+					if (imgui && imgui->wantsCaptureMouse()) {
+						break;
+					}
+					#endif
 					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
@@ -243,6 +419,11 @@ void FrontendSDL::run() {
 					break;
 
 				case SDL_MOUSEBUTTONUP:
+					#ifdef IMGUI_FRONTEND
+					if (imgui && imgui->wantsCaptureMouse()) {
+						break;
+					}
+					#endif
 					if (emu.romType == ROMType::None) break;
 
 					if (event.button.button == SDL_BUTTON_LEFT) {
@@ -301,6 +482,11 @@ void FrontendSDL::run() {
 
 				// Detect mouse motion events for gyroscope emulation
 				case SDL_MOUSEMOTION: {
+					#ifdef IMGUI_FRONTEND
+					if (imgui && imgui->wantsCaptureMouse()) {
+						break;
+					}
+					#endif
 					if (emu.romType == ROMType::None) break;
 
 					// Handle "dragging" across the touchscreen
@@ -347,6 +533,11 @@ void FrontendSDL::run() {
 				}
 
 				case SDL_DROPFILE: {
+					#ifdef IMGUI_FRONTEND
+					if (imgui && imgui->wantsCaptureMouse()) {
+						break;
+					}
+					#endif
 					char* droppedDir = event.drop.file;
 
 					if (droppedDir) {
@@ -381,6 +572,13 @@ void FrontendSDL::run() {
 				}
 			}
 		}
+
+		#ifdef IMGUI_FRONTEND
+		if (imgui) {
+			imgui->beginFrame();
+			imgui->render();
+		}
+		#endif
 
 		// Update controller analog sticks and HID service
 		if (emu.romType != ROMType::None) {
@@ -440,6 +638,13 @@ void FrontendSDL::run() {
 
 		SDL_GL_SwapWindow(window);
 	}
+
+	#ifdef IMGUI_FRONTEND
+	if (imgui) {
+		imgui->shutdown();
+		imgui.reset();
+	}
+	#endif
 }
 
 void FrontendSDL::setupControllerSensors(SDL_GameController* controller) {
@@ -482,3 +687,26 @@ void FrontendSDL::handleLeftClick(int mouseX, int mouseY) {
 		hid.releaseTouchScreen();
 	}
 }
+
+void FrontendSDL::setPaused(bool paused) {
+	if (emuPaused == paused) {
+		return;
+	}
+	emuPaused = paused;
+	if (paused) {
+		emu.pause();
+	} else {
+		emu.resume();
+	}
+	#ifdef IMGUI_FRONTEND
+	if (imgui) {
+		imgui->setPaused(emuPaused);
+	}
+	#endif
+}
+
+void FrontendSDL::togglePaused() {
+	setPaused(!emuPaused);
+}
+
+FrontendSDL::~FrontendSDL() = default;

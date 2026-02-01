@@ -3,6 +3,8 @@
 #include <SDL.h>
 
 #include <filesystem>
+#include <memory>
+#include <optional>
 
 #include "emulator.hpp"
 #include "input_mappings.hpp"
@@ -13,11 +15,26 @@ class FrontendSDL {
 #ifdef PANDA3DS_ENABLE_OPENGL
 	SDL_GLContext glContext;
 #endif
+#ifdef IMGUI_FRONTEND
+	std::unique_ptr<class ImGuiLayer> imgui;
+#endif
 
   public:
 	FrontendSDL();
+	#ifdef IMGUI_FRONTEND
+	FrontendSDL(SDL_Window* existingWindow, SDL_GLContext existingContext);
+	#endif
+	~FrontendSDL();
+	#ifdef IMGUI_FRONTEND
+	struct ImGuiWindowContext {
+		SDL_Window* window = nullptr;
+		SDL_GLContext context = nullptr;
+	};
+	static ImGuiWindowContext createImGuiWindowContext(const EmulatorConfig& bootConfig, const char* windowTitle);
+	#endif
 	bool loadROM(const std::filesystem::path& path);
 	void run();
+	std::optional<std::filesystem::path> selectGame();
 	u32 getMapping(InputMappings::Scancode scancode) { return keyboardMappings.getMapping(scancode); }
 
 	SDL_Window* window = nullptr;
@@ -42,8 +59,12 @@ class FrontendSDL {
 	// And so the user can still use the keyboard to control the analog
 	bool keyboardAnalogX = false;
 	bool keyboardAnalogY = false;
+	bool emuPaused = false;
 
   private:
 	void setupControllerSensors(SDL_GameController* controller);
 	void handleLeftClick(int mouseX, int mouseY);
+	void setPaused(bool paused);
+	void togglePaused();
+	void initialize(SDL_Window* existingWindow, SDL_GLContext existingContext, bool useExternalContext);
 };
