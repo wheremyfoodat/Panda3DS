@@ -1,5 +1,5 @@
 
-# Made by MinGW UWP CLI v1.0.0 (https://github.com/momo-AUX1/mingw-uwp-cli)
+# Made by MinGW UWP CLI v1.0.1 (https://github.com/momo-AUX1/mingw-uwp-cli)
 # MinGW UWP port module
 # Include this file from your root CMakeLists.txt and call:
 #   mingw_uwp_setup(<target>)
@@ -106,9 +106,13 @@ function(_mingw_uwp_setup_impl target)
     set(MINGW_UWP_APP_ID "App")
   endif()
 
+  option(MINGW_WINRT_UNCAGED "Disable AppContainer flags and WinRT core libs (windowsapp, runtimeobject, winstorecompat)" OFF)
+
   if(MSVC)
     target_compile_options(${target} PRIVATE /EHsc)
-    target_link_options(${target} PRIVATE /APPCONTAINER)
+    if(NOT MINGW_WINRT_UNCAGED)
+      target_link_options(${target} PRIVATE /APPCONTAINER)
+    endif()
     target_compile_definitions(${target} PRIVATE UNICODE _UNICODE)
   else()
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|AMD64")
@@ -116,12 +120,14 @@ function(_mingw_uwp_setup_impl target)
     endif()
     target_link_options(${target} PRIVATE -municode -static)
 
-    set(_prev_required_flags "${CMAKE_REQUIRED_FLAGS}")
-    set(CMAKE_REQUIRED_FLAGS "-Wl,--appcontainer")
-    check_cxx_source_compiles("int wWinMain(void) {return 0;}" LINKER_SUPPORTS_APPCONTAINER_FLAG)
-    set(CMAKE_REQUIRED_FLAGS "${_prev_required_flags}")
-    if(LINKER_SUPPORTS_APPCONTAINER_FLAG)
-      target_link_options(${target} PRIVATE -Wl,--appcontainer)
+    if(NOT MINGW_WINRT_UNCAGED)
+      set(_prev_required_flags "${CMAKE_REQUIRED_FLAGS}")
+      set(CMAKE_REQUIRED_FLAGS "-Wl,--appcontainer")
+      check_cxx_source_compiles("int wWinMain(void) {return 0;}" LINKER_SUPPORTS_APPCONTAINER_FLAG)
+      set(CMAKE_REQUIRED_FLAGS "${_prev_required_flags}")
+      if(LINKER_SUPPORTS_APPCONTAINER_FLAG)
+        target_link_options(${target} PRIVATE -Wl,--appcontainer)
+      endif()
     endif()
   endif()
 
@@ -169,12 +175,18 @@ function(_mingw_uwp_setup_impl target)
 
   target_compile_definitions(${target} PRIVATE __WINRT__)
 
-  target_link_libraries(${target} PRIVATE windowsapp)
+  if(NOT MINGW_WINRT_UNCAGED)
+    target_link_libraries(${target} PRIVATE windowsapp)
+  endif()
 
   if(NOT MSVC)
     include(FetchContent)
     set(MINGW_USE_WINRT ON)
     set(MINGW_WINRT_FORCE_FROZEN_SDK ON)
+    if(MINGW_WINRT_UNCAGED)
+      set(MINGW_WINRT_DISABLE_CORE_LIBS ON)
+      set(MINGW_WINRT_USE_WINSTORECOMPAT OFF)
+    endif()
     FetchContent_Declare(MinGWWinRT GIT_REPOSITORY https://github.com/momo-AUX1/cmake-mingw-winrt.git GIT_TAG main)
     FetchContent_MakeAvailable(MinGWWinRT)
 

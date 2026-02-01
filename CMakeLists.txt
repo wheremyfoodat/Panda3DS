@@ -79,6 +79,9 @@ if(UWP_BUILD)
     set(ENABLE_METAL OFF)
     set(ENABLE_TESTS OFF)
     set(ENABLE_HTTP_SERVER OFF)
+    set(MINGW_WINRT_UNCAGED ON CACHE BOOL "" FORCE)
+    set(ENABLE_RENDERDOC_API OFF)
+    set(GPU_DEBUG_INFO OFF)
 endif()
 
 # Building with newer Vulkan SDK versions requires MacOS 13.3, as it uses std::format which isn't available in older libcxx
