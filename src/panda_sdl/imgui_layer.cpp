@@ -144,6 +144,7 @@ void ImGuiLayer::init() {
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 	io.IniFilename = nullptr;
 	showDebug = emu.getConfig().frontendSettings.showImGuiDebugPanel;
 
