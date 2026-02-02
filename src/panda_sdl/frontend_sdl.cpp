@@ -317,6 +317,9 @@ void FrontendSDL::run() {
 	#ifdef IMGUI_FRONTEND
 	int lastDrawableW = -1;
 	int lastDrawableH = -1;
+	controllerStartHeld = false;
+	controllerSelectHeld = false;
+	controllerPauseComboArmed = true;
 	#endif
 
 	while (programRunning) {
@@ -522,6 +525,24 @@ void FrontendSDL::run() {
 						case SDL_CONTROLLER_BUTTON_BACK: key = Keys::Select; break;
 						case SDL_CONTROLLER_BUTTON_START: key = Keys::Start; break;
 					}
+
+					#ifdef IMGUI_FRONTEND
+					if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
+						controllerStartHeld = event.cbutton.state == SDL_PRESSED;
+					}
+					if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
+						controllerSelectHeld = event.cbutton.state == SDL_PRESSED;
+					}
+					if (event.cbutton.state == SDL_PRESSED && controllerStartHeld && controllerSelectHeld && controllerPauseComboArmed) {
+						controllerPauseComboArmed = false;
+						if (imgui) {
+							imgui->showPauseMenuFromController();
+						}
+					}
+					if (event.cbutton.state == SDL_RELEASED && (!controllerStartHeld && !controllerSelectHeld)) {
+						controllerPauseComboArmed = true;
+					}
+					#endif
 
 					if (key != 0) {
 						if (event.cbutton.state == SDL_PRESSED) {

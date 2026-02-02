@@ -64,6 +64,11 @@ class FrontendSDL {
 	bool keyboardAnalogY = false;
 	bool emuPaused = false;
 	bool returnToSelector = false;
+	#ifdef IMGUI_FRONTEND
+	bool controllerStartHeld = false;
+	bool controllerSelectHeld = false;
+	bool controllerPauseComboArmed = true;
+	#endif
 
   private:
 	void setupControllerSensors(SDL_GameController* controller);

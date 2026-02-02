@@ -236,6 +236,16 @@ void ImGuiLayer::handleHotkey(const SDL_Event& event) {
 	}
 }
 
+void ImGuiLayer::showPauseMenuFromController() {
+	if (!showPauseMenu) {
+		showPauseMenu = true;
+		if (onPauseChange) {
+			isPaused = true;
+			onPauseChange(true);
+		}
+	}
+}
+
 std::optional<std::filesystem::path> ImGuiLayer::runGameSelector() {
 	std::vector<InstalledGame> games = scanAllGames();
 	bool showNoRom = games.empty();
