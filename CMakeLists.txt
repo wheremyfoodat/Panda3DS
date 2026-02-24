@@ -67,6 +67,29 @@ option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performan
 option(ENABLE_FASTMEM "Build with support for hardware fastmem" ON)
 option(USE_LIBRETRO_AUDIO "Enable to use the LR audio device with the LR core. Otherwise our own device is used" OFF)
 option(IOS_SIMULATOR_BUILD "Compiling for IOS simulator (Set to off if compiling for a real iPhone)" ON)
+option(UWP_BUILD "Build as a UWP application for use on Windows/Xbox." OFF)
+option(IMGUI_FRONTEND "Build the imgui frontend. Forces OpenGL. " OFF)
+
+if(IMGUI_FRONTEND)
+    set(ENABLE_OPENGL ON)
+    set(ENABLE_VULKAN OFF)
+    set(ENABLE_METAL OFF)
+    add_compile_definitions(IMGUI_FRONTEND IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+endif()
+
+if(UWP_BUILD)
+    set(MINGW_UWP_DIR "${CMAKE_CURRENT_LIST_DIR}/uwp")
+    set(ENABLE_OPENGL ON)
+    set(IMGUI_FRONTEND ON)
+    set(ENABLE_DISCORD_RPC OFF)
+    set(ENABLE_VULKAN OFF)
+    set(ENABLE_METAL OFF)
+    set(ENABLE_TESTS OFF)
+    set(ENABLE_HTTP_SERVER OFF)
+    set(MINGW_WINRT_UNCAGED ON CACHE BOOL "" FORCE)
+    set(ENABLE_RENDERDOC_API OFF)
+    set(GPU_DEBUG_INFO OFF)
+endif()
 
 # Building with newer Vulkan SDK versions requires MacOS 13.3, as it uses std::format which isn't available in older libcxx
 if (ENABLE_VULKAN)
@@ -178,7 +201,13 @@ if(ENABLE_DISCORD_RPC AND NOT ANDROID)
 endif()
 
 if (NOT ANDROID)
-    if (USE_SYSTEM_SDL2)
+    if (UWP_BUILD)
+        target_include_directories(AlberCore PUBLIC
+            "${MINGW_UWP_DIR}/deps/include"
+            "${MINGW_UWP_DIR}/deps/include/SDL2"
+        )
+        target_link_libraries(AlberCore PUBLIC "${MINGW_UWP_DIR}/deps/lib/SDL2.lib")
+    elseif (USE_SYSTEM_SDL2)
         find_package(SDL2 CONFIG REQUIRED)
         target_link_libraries(AlberCore PUBLIC SDL2::SDL2)
     else()
@@ -264,7 +293,17 @@ if(ENABLE_LUAJIT)
 endif()
 
 # Detect target architecture
-if (NOT APPLE OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
+if (UWP_BUILD AND APPX_ARCH_OVERRIDE)
+    if (APPX_ARCH_OVERRIDE STREQUAL "x64")
+        set(HOST_X64 TRUE)
+        set(HOST_ARM64 FALSE)
+    elseif (APPX_ARCH_OVERRIDE STREQUAL "arm64")
+        set(HOST_X64 FALSE)
+        set(HOST_ARM64 TRUE)
+    else()
+        message(FATAL_ERROR "Unsupported UWP APPX_ARCH_OVERRIDE: ${APPX_ARCH_OVERRIDE}")
+    endif()
+elseif (NOT APPLE OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
   # Normal target detection
   if (CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86-64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     set(HOST_X64 TRUE)
@@ -754,6 +793,11 @@ endif()
 if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     add_executable(Alber)
 
+    if(UWP_BUILD)
+        include("${MINGW_UWP_DIR}/mingw_uwp_module.cmake")
+        mingw_uwp_setup(Alber)
+    endif()
+
     if(ENABLE_QT_GUI)
         find_package(Qt6 REQUIRED COMPONENTS Widgets LinguistTools)
         if(NOT ENABLE_OPENGL)
@@ -852,9 +896,26 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     else()
         set(FRONTEND_SOURCE_FILES src/panda_sdl/main.cpp src/panda_sdl/frontend_sdl.cpp src/panda_sdl/mappings.cpp)
         set(FRONTEND_HEADER_FILES "include/panda_sdl/frontend_sdl.hpp")
+
+        if(IMGUI_FRONTEND)
+            list(APPEND FRONTEND_SOURCE_FILES
+                src/panda_sdl/imgui_layer.cpp
+                third_party/imgui/backends/imgui_impl_sdl.cpp
+                third_party/imgui/backends/imgui_impl_opengl3.cpp
+            )
+            list(APPEND FRONTEND_HEADER_FILES
+                "include/panda_sdl/imgui_layer.hpp"
+            )
+            if(WIN32)
+                list(APPEND FRONTEND_LIBRARIES imm32)
+            endif()
+        endif()
     endif()
 
     target_link_libraries(Alber PRIVATE AlberCore)
+    if(FRONTEND_LIBRARIES)
+        target_link_libraries(Alber PRIVATE ${FRONTEND_LIBRARIES})
+    endif()
     target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${GL_CONTEXT_SOURCE_FILES} ${APP_RESOURCES})
 elseif(BUILD_HYDRA_CORE)
     target_compile_definitions(AlberCore PRIVATE PANDA3DS_HYDRA_CORE=1)

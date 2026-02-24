@@ -1,0 +1,437 @@
+
+# Made by MinGW UWP CLI v1.0.1 (https://github.com/momo-AUX1/mingw-uwp-cli)
+# MinGW UWP port module
+# Include this file from your root CMakeLists.txt and call:
+#   mingw_uwp_setup(<target>)
+#
+# Optional overrides:
+#   set(MINGW_UWP_ENABLE ON)
+#   set(MINGW_UWP_PUBLISHER "CN=YourPublisher")
+#   set(MINGW_UWP_PACKAGE_NAME "Your.Package")
+#   set(MINGW_UWP_DISPLAY_NAME "Your App")
+#   set(MINGW_UWP_NAMESPACE "YourNamespace")
+#   set(MINGW_UWP_ENTRYPOINT "YourNamespace.App")
+#   set(MINGW_UWP_APP_ID "App")
+#   set(MINGW_UWP_USE_DEPS_LIBS ON)
+#   set(MINGW_UWP_DEPS_LIBS "foo;bar")
+
+include(CheckCXXSourceCompiles)
+
+option(MINGW_UWP_ENABLE "Enable MinGW UWP support" ON)
+
+option(MINGW_WINRT_COROUTINE_ALIAS_FIX "Patch C++/WinRT coroutine alias for GCC/MinGW on non-Windows hosts" OFF)
+
+set(APPX_ARCH_OVERRIDE "" CACHE STRING "Force Appx architecture (x64/x86/arm64/arm) for cross-compiling")
+
+set(_MINGW_UWP_ROOT "${CMAKE_CURRENT_LIST_DIR}")
+
+set(MINGW_UWP_PUBLISHER "CN=Unknown" CACHE STRING "Publisher CN for Appx manifest")
+set(MINGW_UWP_PACKAGE_NAME "Alber" CACHE STRING "Package name for Appx manifest")
+set(MINGW_UWP_DISPLAY_NAME "Alber" CACHE STRING "Display name for Appx manifest")
+set(MINGW_UWP_ENTRYPOINT "" CACHE STRING "EntryPoint (namespace.class) for Appx manifest")
+set(MINGW_UWP_APP_ID "App" CACHE STRING "Application Id for Appx manifest")
+set(MINGW_UWP_USE_DEPS_LIBS OFF CACHE BOOL "Auto-link libraries from deps/lib")
+set(MINGW_UWP_DEPS_LIBS "" CACHE STRING "Explicit deps libs to link (semicolon-separated)")
+
+function(_mingw_uwp_setup_impl target)
+  if(NOT TARGET ${target})
+    message(FATAL_ERROR "mingw_uwp_setup: target '${target}' not found.")
+  endif()
+
+  if(APPX_ARCH_OVERRIDE)
+    string(TOLOWER "${APPX_ARCH_OVERRIDE}" _appx_arch_override)
+    if(_appx_arch_override STREQUAL "amd64" OR _appx_arch_override STREQUAL "x64")
+      set(APPX_ARCHITECTURE "x64")
+      set(CMAKE_SYSTEM_PROCESSOR "AMD64" CACHE STRING "Forced for workaround" FORCE)
+    elseif(_appx_arch_override STREQUAL "x86")
+      set(APPX_ARCHITECTURE "x86")
+      set(CMAKE_SYSTEM_PROCESSOR "x86" CACHE STRING "Forced for workaround" FORCE)
+    elseif(_appx_arch_override STREQUAL "arm64")
+      set(APPX_ARCHITECTURE "arm64")
+      set(CMAKE_SYSTEM_PROCESSOR "ARM64" CACHE STRING "Forced for workaround" FORCE)
+    elseif(_appx_arch_override STREQUAL "arm")
+      set(APPX_ARCHITECTURE "arm")
+      set(CMAKE_SYSTEM_PROCESSOR "ARM" CACHE STRING "Forced for workaround" FORCE)
+    else()
+      message(FATAL_ERROR "Invalid APPX_ARCH_OVERRIDE '${APPX_ARCH_OVERRIDE}' (use x64/x86/arm64/arm)")
+    endif()
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64")
+    set(APPX_ARCHITECTURE "x64")
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86")
+    set(APPX_ARCHITECTURE "x86")
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
+    set(APPX_ARCHITECTURE "arm64")
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM")
+    set(APPX_ARCHITECTURE "arm")
+  else()
+    message(FATAL_ERROR "Invalid architecture ${CMAKE_SYSTEM_PROCESSOR}")
+  endif()
+
+  message(STATUS "Building for ${APPX_ARCHITECTURE}.")
+
+  get_target_property(_output_name ${target} OUTPUT_NAME)
+  if(NOT _output_name)
+    set(_output_name "${target}")
+  endif()
+
+  set(MINGW_UWP_EXECUTABLE "${_output_name}.exe")
+
+  if(NOT MINGW_UWP_PACKAGE_NAME)
+    set(MINGW_UWP_PACKAGE_NAME "${_output_name}")
+  endif()
+  if(NOT MINGW_UWP_DISPLAY_NAME)
+    set(MINGW_UWP_DISPLAY_NAME "${MINGW_UWP_PACKAGE_NAME}")
+  endif()
+  if(NOT MINGW_UWP_PUBLISHER)
+    set(MINGW_UWP_PUBLISHER "CN=Unknown")
+  endif()
+
+  if(NOT DEFINED MINGW_UWP_NAMESPACE OR "${MINGW_UWP_NAMESPACE}" STREQUAL "")
+    set(_namespace "${MINGW_UWP_PACKAGE_NAME}")
+    string(REGEX REPLACE "[^0-9A-Za-z_]" "" _namespace "${_namespace}")
+    if(_namespace STREQUAL "")
+      set(_namespace "App")
+    endif()
+    string(REGEX MATCH "^[0-9]" _namespace_starts_digit "${_namespace}")
+    if(_namespace_starts_digit)
+      set(_namespace "_${_namespace}")
+    endif()
+    set(MINGW_UWP_NAMESPACE "${_namespace}")
+  endif()
+
+  if(NOT MINGW_UWP_ENTRYPOINT)
+    set(MINGW_UWP_ENTRYPOINT "${MINGW_UWP_NAMESPACE}.App")
+  endif()
+  if(NOT MINGW_UWP_APP_ID)
+    set(MINGW_UWP_APP_ID "App")
+  endif()
+
+  option(MINGW_WINRT_UNCAGED "Disable AppContainer flags and WinRT core libs (windowsapp, runtimeobject, winstorecompat)" OFF)
+
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /EHsc)
+    if(NOT MINGW_WINRT_UNCAGED)
+      target_link_options(${target} PRIVATE /APPCONTAINER)
+    endif()
+    target_compile_definitions(${target} PRIVATE UNICODE _UNICODE)
+  else()
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|AMD64")
+      target_compile_options(${target} PRIVATE -mcx16)
+    endif()
+    target_link_options(${target} PRIVATE -municode)
+
+    if(NOT MINGW_WINRT_UNCAGED)
+      set(_prev_required_flags "${CMAKE_REQUIRED_FLAGS}")
+      set(CMAKE_REQUIRED_FLAGS "-Wl,--appcontainer")
+      check_cxx_source_compiles("int wWinMain(void) {return 0;}" LINKER_SUPPORTS_APPCONTAINER_FLAG)
+      set(CMAKE_REQUIRED_FLAGS "${_prev_required_flags}")
+      if(LINKER_SUPPORTS_APPCONTAINER_FLAG)
+        target_link_options(${target} PRIVATE -Wl,--appcontainer)
+      endif()
+    endif()
+  endif()
+
+  if(EXISTS "${_MINGW_UWP_ROOT}/Images")
+    file(COPY "${_MINGW_UWP_ROOT}/Images" DESTINATION ${CMAKE_BINARY_DIR})
+  else()
+    message(WARNING "Images directory not found at ${_MINGW_UWP_ROOT}/Images")
+  endif()
+  if(NOT EXISTS "${_MINGW_UWP_ROOT}/AppxManifest.in")
+    message(FATAL_ERROR "AppxManifest.in not found at ${_MINGW_UWP_ROOT}/AppxManifest.in")
+  endif()
+  configure_file("${_MINGW_UWP_ROOT}/AppxManifest.in" "${CMAKE_BINARY_DIR}/AppxManifest.xml" @ONLY)
+
+  if(EXISTS "${_MINGW_UWP_ROOT}/deps/bin")
+    file(GLOB _deps_bins "${_MINGW_UWP_ROOT}/deps/bin/*")
+    if(_deps_bins)
+      file(COPY ${_deps_bins} DESTINATION ${CMAKE_BINARY_DIR})
+    endif()
+  endif()
+
+  if(EXISTS "${_MINGW_UWP_ROOT}/deps/include")
+    target_include_directories(${target} PRIVATE "${_MINGW_UWP_ROOT}/deps/include")
+  endif()
+
+  if(MINGW_UWP_DEPS_LIBS)
+    target_link_libraries(${target} PRIVATE ${MINGW_UWP_DEPS_LIBS})
+  elseif(MINGW_UWP_USE_DEPS_LIBS AND EXISTS "${_MINGW_UWP_ROOT}/deps/lib")
+    file(GLOB _deps_libs "${_MINGW_UWP_ROOT}/deps/lib/*.lib" "${_MINGW_UWP_ROOT}/deps/lib/*.a")
+    if(_deps_libs)
+      target_link_libraries(${target} PRIVATE ${_deps_libs})
+    endif()
+  endif()
+
+  if(NOT MSVC)
+    if(APPX_ARCHITECTURE STREQUAL "x64")
+      target_compile_definitions(${target} PRIVATE _AMD64 _M_AMD64 _WIN64 _M_X64)
+    elseif(APPX_ARCHITECTURE STREQUAL "x86")
+      target_compile_definitions(${target} PRIVATE _X86 _M_IX86 _WIN32)
+    elseif(APPX_ARCHITECTURE STREQUAL "arm64")
+      target_compile_definitions(${target} PRIVATE _ARM64)
+    elseif(APPX_ARCHITECTURE STREQUAL "arm")
+      target_compile_definitions(${target} PRIVATE _ARM)
+    endif()
+  endif()
+
+  target_compile_definitions(${target} PRIVATE __WINRT__)
+
+  if(NOT MINGW_WINRT_UNCAGED)
+    target_link_libraries(${target} PRIVATE windowsapp)
+  endif()
+
+  if(NOT MSVC)
+    include(FetchContent)
+    set(MINGW_USE_WINRT ON)
+    set(MINGW_WINRT_FORCE_FROZEN_SDK ON)
+    if(MINGW_WINRT_UNCAGED)
+      set(MINGW_WINRT_DISABLE_CORE_LIBS ON)
+      set(MINGW_WINRT_USE_WINSTORECOMPAT OFF)
+    endif()
+    FetchContent_Declare(MinGWWinRT GIT_REPOSITORY https://github.com/momo-AUX1/cmake-mingw-winrt.git GIT_TAG main)
+    FetchContent_MakeAvailable(MinGWWinRT)
+
+    set(_mingw_winrt_hint "")
+    if(DEFINED ENV{MINGW_WINRT_DIR})
+      set(_mingw_winrt_hint "$ENV{MINGW_WINRT_DIR}")
+    endif()
+    if(NOT DEFINED MinGWWinRT_SOURCE_DIR OR "${MinGWWinRT_SOURCE_DIR}" STREQUAL "")
+      if(NOT "${_mingw_winrt_hint}" STREQUAL "" AND EXISTS "${_mingw_winrt_hint}/MinGWWinRT.cmake")
+        set(MinGWWinRT_SOURCE_DIR "${_mingw_winrt_hint}")
+      elseif(EXISTS "${CMAKE_BINARY_DIR}/_deps/mingwwinrt-src/MinGWWinRT.cmake")
+        set(MinGWWinRT_SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/mingwwinrt-src")
+      endif()
+    endif()
+
+    if(DEFINED MinGWWinRT_SOURCE_DIR AND NOT "${MinGWWinRT_SOURCE_DIR}" STREQUAL "")
+      include("${MinGWWinRT_SOURCE_DIR}/MinGWWinRT.cmake")
+      if(MINGW_WINRT_COROUTINE_ALIAS_FIX AND NOT CMAKE_HOST_WIN32)
+        set(_winrt_header "${CMAKE_BINARY_DIR}/_deps/mingwwinrt-src/winrt/include/winrt/Windows.Foundation.h")
+        if(EXISTS "${_winrt_header}")
+          file(READ "${_winrt_header}" _winrt_contents)
+          if(_winrt_contents MATCHES "using coroutine_handle = impl::coroutine_handle<>;"
+             AND NOT _winrt_contents MATCHES "using coroutine_handle_t = impl::coroutine_handle<>;")
+            string(REPLACE "using coroutine_handle = impl::coroutine_handle<>;"
+                           "using coroutine_handle_t = impl::coroutine_handle<>;"
+                           _winrt_contents "${_winrt_contents}")
+            string(REPLACE "coroutine_handle handle" "coroutine_handle_t handle" _winrt_contents "${_winrt_contents}")
+            string(REPLACE "coroutine_handle resume" "coroutine_handle_t resume" _winrt_contents "${_winrt_contents}")
+            string(REPLACE "coroutine_handle m_handle" "coroutine_handle_t m_handle" _winrt_contents "${_winrt_contents}")
+            file(WRITE "${_winrt_header}" "${_winrt_contents}")
+            message(STATUS "Applied WinRT coroutine alias workaround for MinGW GCC.")
+          endif()
+        endif()
+      endif()
+    else()
+      message(FATAL_ERROR "MinGWWinRT not found. Ensure network access for FetchContent.")
+    endif()
+  endif()
+
+  set(SIGNING_CERTIFICATE "" CACHE STRING "Path to a .pfx certificate to sign the Appx (optional)")
+  set(SIGNING_CERT_PASSWORD "" CACHE STRING "Password for the .pfx certificate (optional)")
+
+  find_program(MAKEAPPX_EXE NAMES makeappx.exe makeappx MakeAppx.exe MakeAppx)
+  find_program(SIGNTOOL_EXE NAMES signtool.exe signtool SignTool.exe SignTool)
+
+  if(NOT MAKEAPPX_EXE)
+    set(_pf86 "")
+    if(NOT "$ENV{ProgramFiles}" STREQUAL "")
+      set(_pf_candidate "$ENV{ProgramFiles}")
+      if(EXISTS "${_pf_candidate}/Windows Kits/10/bin")
+        set(_pf86 "${_pf_candidate}")
+      endif()
+    endif()
+    if(_pf86 STREQUAL "" AND NOT "$ENV{ProgramW6432}" STREQUAL "")
+      set(_pf_candidate "$ENV{ProgramW6432}")
+      if(EXISTS "${_pf_candidate}/Windows Kits/10/bin")
+        set(_pf86 "${_pf_candidate}")
+      endif()
+    endif()
+    if(_pf86 STREQUAL "")
+      set(_pf_candidate "C:/Program Files (x86)")
+      if(EXISTS "${_pf_candidate}/Windows Kits/10/bin")
+        set(_pf86 "${_pf_candidate}")
+      endif()
+    endif()
+    if(NOT _pf86 STREQUAL "")
+      set(_win_kits_dir "${_pf86}/Windows Kits/10/bin")
+      if(EXISTS "${_win_kits_dir}")
+        file(GLOB _versions RELATIVE "${_win_kits_dir}" "${_win_kits_dir}/*")
+        foreach(_v ${_versions})
+          set(_candidate "${_win_kits_dir}/${_v}/${APPX_ARCHITECTURE}/MakeAppx.exe")
+          if(EXISTS "${_candidate}")
+            set(MAKEAPPX_EXE "${_candidate}")
+            message(STATUS "Found MakeAppx at ${MAKEAPPX_EXE}")
+            break()
+          endif()
+          set(_candidate2 "${_win_kits_dir}/${_v}/x64/MakeAppx.exe")
+          if(EXISTS "${_candidate2}")
+            set(MAKEAPPX_EXE "${_candidate2}")
+            message(STATUS "Found MakeAppx at ${MAKEAPPX_EXE}")
+            break()
+          endif()
+        endforeach()
+      endif()
+    endif()
+  endif()
+
+  if(NOT SIGNTOOL_EXE)
+    set(_pf86 "")
+    if(NOT "$ENV{ProgramFiles}" STREQUAL "")
+      set(_pf_candidate "$ENV{ProgramFiles}")
+      if(EXISTS "${_pf_candidate}/Windows Kits/10/bin")
+        set(_pf86 "${_pf_candidate}")
+      endif()
+    endif()
+    if(_pf86 STREQUAL "" AND NOT "$ENV{ProgramW6432}" STREQUAL "")
+      set(_pf_candidate "$ENV{ProgramW6432}")
+      if(EXISTS "${_pf_candidate}/Windows Kits/10/bin")
+        set(_pf86 "${_pf_candidate}")
+      endif()
+    endif()
+    if(_pf86 STREQUAL "")
+      set(_pf_candidate "C:/Program Files (x86)")
+      if(EXISTS "${_pf_candidate}/Windows Kits/10/bin")
+        set(_pf86 "${_pf_candidate}")
+      endif()
+    endif()
+    if(NOT _pf86 STREQUAL "")
+      set(_win_kits_dir "${_pf86}/Windows Kits/10/bin")
+      if(EXISTS "${_win_kits_dir}")
+        file(GLOB _versions RELATIVE "${_win_kits_dir}" "${_win_kits_dir}/*")
+        foreach(_v ${_versions})
+          set(_candidate "${_win_kits_dir}/${_v}/${APPX_ARCHITECTURE}/signtool.exe")
+          if(EXISTS "${_candidate}")
+            set(SIGNTOOL_EXE "${_candidate}")
+            message(STATUS "Found SignTool at ${SIGNTOOL_EXE}")
+            break()
+          endif()
+          set(_candidate2 "${_win_kits_dir}/${_v}/x64/signtool.exe")
+          if(EXISTS "${_candidate2}")
+            set(SIGNTOOL_EXE "${_candidate2}")
+            message(STATUS "Found SignTool at ${SIGNTOOL_EXE}")
+            break()
+          endif()
+        endforeach()
+      endif()
+    endif()
+  endif()
+
+  if(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+    set(_appx_output_dir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+  else()
+    set(_appx_output_dir "${CMAKE_CURRENT_BINARY_DIR}")
+  endif()
+
+  set(_appx_file "${CMAKE_BINARY_DIR}/${MINGW_UWP_PACKAGE_NAME}.appx")
+  set(_msix_file "${CMAKE_BINARY_DIR}/${MINGW_UWP_PACKAGE_NAME}.msix")
+
+  if(MAKEAPPX_EXE)
+    if(NOT TARGET appx)
+      add_custom_target(appx
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/appx/Images"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different AppxManifest.xml "$<TARGET_FILE:${target}>" "${CMAKE_BINARY_DIR}/appx"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${_MINGW_UWP_ROOT}/Images" "${CMAKE_BINARY_DIR}/appx/Images"
+        COMMAND powershell.exe -NoProfile -Command "& { & '${MAKEAPPX_EXE}' pack /d '${CMAKE_BINARY_DIR}/appx' /p '${_appx_file}' }"
+        DEPENDS ${target}
+      )
+    endif()
+
+    if(SIGNTOOL_EXE)
+      if(SIGNING_CERTIFICATE)
+        if(SIGNING_CERT_PASSWORD)
+          add_custom_command(TARGET appx POST_BUILD
+            COMMAND ${SIGNTOOL_EXE} sign /fd SHA256 /a /f "${SIGNING_CERTIFICATE}" /p "${SIGNING_CERT_PASSWORD}" "${_appx_file}"
+          )
+        else()
+          add_custom_command(TARGET appx POST_BUILD
+            COMMAND ${SIGNTOOL_EXE} sign /fd SHA256 /a /f "${SIGNING_CERTIFICATE}" "${_appx_file}"
+          )
+        endif()
+      else()
+        message(WARNING "SignTool found (${SIGNTOOL_EXE}) but SIGNING_CERTIFICATE not set. Package will not be signed.")
+      endif()
+    else()
+      message(STATUS "MakeAppx found at ${MAKEAPPX_EXE} but SignTool was not found; package will remain unsigned unless you provide SignTool.")
+    endif()
+  else()
+    set(TRY_MAKEAPPX "makeappx.exe")
+    if(MAKEAPPX_EXE)
+      set(TRY_MAKEAPPX "${MAKEAPPX_EXE}")
+    endif()
+
+    if(NOT TARGET appx)
+      add_custom_target(appx
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/appx/Images"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different AppxManifest.xml "$<TARGET_FILE:${target}>" "${CMAKE_BINARY_DIR}/appx"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${_MINGW_UWP_ROOT}/Images" "${CMAKE_BINARY_DIR}/appx/Images"
+        COMMAND powershell.exe -NoProfile -Command "& { & '${TRY_MAKEAPPX}' pack /d '${CMAKE_BINARY_DIR}/appx' /p '${_appx_file}' }"
+        DEPENDS ${target}
+      )
+    endif()
+  endif()
+
+  if(TARGET appx)
+    add_custom_command(TARGET appx POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_appx_file}" "${_appx_output_dir}/${MINGW_UWP_PACKAGE_NAME}.appx"
+    )
+  endif()
+
+  if(MAKEAPPX_EXE)
+    if(NOT TARGET msix)
+      add_custom_target(msix
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/msix/Images"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different AppxManifest.xml "$<TARGET_FILE:${target}>" "${CMAKE_BINARY_DIR}/msix"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${_MINGW_UWP_ROOT}/Images" "${CMAKE_BINARY_DIR}/msix/Images"
+        COMMAND powershell.exe -NoProfile -Command "& { & '${MAKEAPPX_EXE}' pack /d '${CMAKE_BINARY_DIR}/msix' /p '${_msix_file}' }"
+        DEPENDS ${target}
+      )
+    endif()
+
+    if(SIGNTOOL_EXE)
+      if(SIGNING_CERTIFICATE)
+        if(SIGNING_CERT_PASSWORD)
+          add_custom_command(TARGET msix POST_BUILD
+            COMMAND ${SIGNTOOL_EXE} sign /fd SHA256 /a /f "${SIGNING_CERTIFICATE}" /p "${SIGNING_CERT_PASSWORD}" "${_msix_file}"
+          )
+        else()
+          add_custom_command(TARGET msix POST_BUILD
+            COMMAND ${SIGNTOOL_EXE} sign /fd SHA256 /a /f "${SIGNING_CERTIFICATE}" "${_msix_file}"
+          )
+        endif()
+      else()
+        message(WARNING "SignTool found (${SIGNTOOL_EXE}) but SIGNING_CERTIFICATE not set. MSIX will not be signed.")
+      endif()
+    else()
+      message(STATUS "MakeAppx found at ${MAKEAPPX_EXE} but SignTool was not found; MSIX will remain unsigned unless you provide SignTool.")
+    endif()
+  else()
+    set(TRY_MAKEAPPX "makeappx.exe")
+    if(MAKEAPPX_EXE)
+      set(TRY_MAKEAPPX "${MAKEAPPX_EXE}")
+    endif()
+
+    if(NOT TARGET msix)
+      add_custom_target(msix
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/msix/Images"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different AppxManifest.xml "$<TARGET_FILE:${target}>" "${CMAKE_BINARY_DIR}/msix"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${_MINGW_UWP_ROOT}/Images" "${CMAKE_BINARY_DIR}/msix/Images"
+        COMMAND powershell.exe -NoProfile -Command "& { & '${TRY_MAKEAPPX}' pack /d '${CMAKE_BINARY_DIR}/msix' /p '${_msix_file}' }"
+        DEPENDS ${target}
+      )
+    endif()
+  endif()
+
+  if(TARGET msix)
+    add_custom_command(TARGET msix POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_msix_file}" "${_appx_output_dir}/${MINGW_UWP_PACKAGE_NAME}.msix"
+    )
+  endif()
+endfunction()
+
+function(mingw_uwp_setup target)
+  if(MINGW_UWP_ENABLE)
+    _mingw_uwp_setup_impl(${target})
+  else()
+    message(STATUS "MINGW_UWP_ENABLE=OFF; skipping UWP setup for ${target}.")
+  endif()
+endfunction()
