@@ -53,6 +53,11 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 
 	// Create and bind actions for them
 	auto loadGameAction = fileMenu->addAction(tr("Load game"));
+
+	recentsMenu = fileMenu->addMenu(tr("Recents"));
+	updateRecentsMenu();
+
+	fileMenu->addSeparator();
 	auto loadLuaAction = fileMenu->addAction(tr("Load Lua script"));
 	auto openAppFolderAction = fileMenu->addAction(tr("Open Panda3DS folder"));
 
@@ -140,6 +145,10 @@ MainWindow::MainWindow(QApplication* app, QWidget* parent) : QMainWindow(parent)
 		if (!emu->loadROM(romPath)) {
 			// For some reason just .c_str() doesn't show the proper path
 			Helpers::warn("Failed to load ROM file: %s", romPath.string().c_str());
+		} else {
+			emu->getConfig().addToRecentGames(romPath);
+			emu->getConfig().save();
+			updateRecentsMenu();
 		}
 	}
 
@@ -240,11 +249,48 @@ void MainWindow::selectROM() {
 	);
 
 	if (!path.isEmpty()) {
-		std::filesystem::path* p = new std::filesystem::path(path.toStdU16String());
+		loadROMFromPath(std::filesystem::path(path.toStdU16String()));
+	}
+}
 
-		EmulatorMessage message{.type = MessageType::LoadROM};
-		message.path.p = p;
-		sendMessage(message);
+void MainWindow::loadROMFromPath(const std::filesystem::path& path) {
+	std::filesystem::path* p = new std::filesystem::path(path);
+
+	EmulatorMessage message{.type = MessageType::LoadROM};
+	message.path.p = p;
+	sendMessage(message);
+
+	emu->getConfig().addToRecentGames(path);
+	emu->getConfig().save();
+	updateRecentsMenu();
+}
+
+void MainWindow::updateRecentsMenu() {
+	recentsMenu->clear();
+	const auto& recentGames = emu->getConfig().recentlyPlayed;
+
+	if (recentGames.empty()) {
+		// Add a disabled "No recent games" item
+		QAction* noRecentsAction = recentsMenu->addAction(tr("No recent games"));
+		noRecentsAction->setEnabled(false);
+	} else {
+		for (const auto& gamePath : recentGames) {
+			QString displayName = QString::fromStdU16String(gamePath.filename().u16string());
+			QAction* action = recentsMenu->addAction(displayName);
+
+			// Store the full path in the action's data, set tooltip to show full path
+			action->setData(QString::fromStdU16String(gamePath.u16string()));
+			action->setToolTip(QString::fromStdU16String(gamePath.u16string()));
+			connect(action, &QAction::triggered, this, [this, gamePath]() { loadROMFromPath(gamePath); });
+		}
+
+		recentsMenu->addSeparator();
+		QAction* clearAction = recentsMenu->addAction(tr("Clear recent games"));
+		connect(clearAction, &QAction::triggered, this, [this]() {
+			emu->getConfig().recentlyPlayed.clear();
+			emu->getConfig().save();
+			updateRecentsMenu();
+		});
 	}
 }
 

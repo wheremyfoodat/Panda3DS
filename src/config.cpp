@@ -50,6 +50,23 @@ void EmulatorConfig::load() {
 			circlePadProEnabled = toml::find_or<toml::boolean>(general, "EnableCirclePadPro", true);
 			fastmemEnabled = toml::find_or<toml::boolean>(general, "EnableFastmem", enableFastmemDefault);
 			systemLanguage = languageCodeFromString(toml::find_or<std::string>(general, "SystemLanguage", "en"));
+
+			// Load recent games list
+			if (general.contains("RecentGames") && general.at("RecentGames").is_array()) {
+				const auto& recentsArray = general.at("RecentGames").as_array();
+				recentlyPlayed.clear();
+
+				for (const auto& item : recentsArray) {
+					if (item.is_string()) {
+						std::filesystem::path gamePath = toml::get<std::string>(item);
+
+						recentlyPlayed.push_back(gamePath);
+						if (recentlyPlayed.size() >= maxRecentGames) {
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -183,6 +200,12 @@ void EmulatorConfig::save() {
 	data["General"]["EnableCirclePadPro"] = circlePadProEnabled;
 	data["General"]["EnableFastmem"] = fastmemEnabled;
 
+	toml::array recentsArray;
+	for (const auto& gamePath : recentlyPlayed) {
+		recentsArray.push_back(gamePath.string());
+	}
+	data["General"]["RecentGames"] = recentsArray;
+
 	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
 	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;
 	data["Window"]["WindowPosX"] = windowSettings.x;
@@ -276,5 +299,19 @@ const char* EmulatorConfig::languageCodeToString(LanguageCodes code) {
 		return "en";
 	} else {
 		return codes[static_cast<u32>(code)];
+	}
+}
+void EmulatorConfig::addToRecentGames(const std::filesystem::path& path) {
+	// Remove path if it's already in the list
+	auto it = std::find(recentlyPlayed.begin(), recentlyPlayed.end(), path);
+	if (it != recentlyPlayed.end()) {
+		recentlyPlayed.erase(it);
+	}
+
+	recentlyPlayed.insert(recentlyPlayed.begin(), path);
+
+	// Limit how many games can be saved
+	if (recentlyPlayed.size() > maxRecentGames) {
+		recentlyPlayed.resize(maxRecentGames);
 	}
 }
