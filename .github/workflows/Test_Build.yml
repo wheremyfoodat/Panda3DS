@@ -35,7 +35,9 @@ jobs:
       - name: Clone and compile 3ds-examples
         run: |
           git clone --recursive https://github.com/devkitPro/3ds-examples tests/3ds-examples
-          make -C tests/3ds-examples
+          # The devkitpro docker image is outdated and cannot build 3ds-examples at the moment
+          # TODO: Reenable this when it's updated again
+          # make -C tests/3ds-examples
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4

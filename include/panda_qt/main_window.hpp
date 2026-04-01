@@ -103,6 +103,7 @@ class MainWindow : public QMainWindow {
 	std::vector<EmulatorMessage> messageQueue;
 
 	QMenuBar* menuBar = nullptr;
+	QMenu* recentsMenu = nullptr;
 	InputMappings keyboardMappings;
 	ScreenWidget* screen;
 	AboutWindow* aboutWindow;
@@ -123,6 +124,8 @@ class MainWindow : public QMainWindow {
 	void emuThreadMainLoop();
 	void selectLuaFile();
 	void selectROM();
+	void loadROMFromPath(const std::filesystem::path& path);
+	void updateRecentsMenu();
 	void dumpDspFirmware();
 	void dumpRomFS();
 	void showAboutMenu();

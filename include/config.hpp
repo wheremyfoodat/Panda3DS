@@ -108,6 +108,9 @@ struct EmulatorConfig {
 	std::filesystem::path defaultRomPath = "";
 	std::filesystem::path filePath;
 
+	static constexpr size_t maxRecentGames = 8;
+	std::vector<std::filesystem::path> recentlyPlayed;
+
 	// Frontend window settings
 	struct WindowSettings {
 		static constexpr int defaultX = 200;
@@ -131,6 +134,8 @@ struct EmulatorConfig {
 	EmulatorConfig(const std::filesystem::path& path);
 	void load();
 	void save();
+
+	void addToRecentGames(const std::filesystem::path& path);
 
 	static LanguageCodes languageCodeFromString(std::string inString);
 	static const char* languageCodeToString(LanguageCodes code);
