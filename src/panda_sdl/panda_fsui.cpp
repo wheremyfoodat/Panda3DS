@@ -25,7 +25,9 @@
 #include "fsui/imgui_fullscreen.hpp"
 #include "fsui/platform_sdl2.hpp"
 #include "io_file.hpp"
+#include "services/hid.hpp"
 #include "services/region_codes.hpp"
+#include "version.hpp"
 
 namespace
 {
@@ -288,6 +290,9 @@ void PandaFsuiAdapter::syncUiStateFromConfig()
 	uiState.game_list_paths = cfg.fsuiGameListPaths;
 	uiState.game_list_recursive_paths = cfg.fsuiGameListRecursivePaths;
 	uiState.covers_path = cfg.fsuiCoversPath.empty() ? (emu.getAppDataRoot() / "covers") : cfg.fsuiCoversPath;
+	uiState.show_inputs_overlay = cfg.fsuiShowInputsOverlay;
+	uiState.show_settings_overlay = cfg.fsuiShowSettingsOverlay;
+	uiState.show_performance_overlay = cfg.fsuiShowPerformanceOverlay;
 	fsuiContext.app_icon_path = resolveFsuiAppIconPath(cfg.frontendSettings.icon);
 }
 
@@ -303,6 +308,9 @@ void PandaFsuiAdapter::persistUiState(bool reload)
 	cfg.fsuiGameListPaths = uiState.game_list_paths;
 	cfg.fsuiGameListRecursivePaths = uiState.game_list_recursive_paths;
 	cfg.fsuiCoversPath = uiState.covers_path;
+	cfg.fsuiShowInputsOverlay = uiState.show_inputs_overlay;
+	cfg.fsuiShowSettingsOverlay = uiState.show_settings_overlay;
+	cfg.fsuiShowPerformanceOverlay = uiState.show_performance_overlay;
 	cfg.save();
 	if (reload) {
 		emu.reloadSettings();
@@ -662,6 +670,59 @@ std::string PandaFsuiAdapter::currentGameSubtitle() const
 {
 	const auto& rom_path = emu.getROMPath();
 	return rom_path.has_value() ? rom_path->filename().string() : "No title is currently running.";
+}
+
+std::vector<fsui::OverlayTextLine> PandaFsuiAdapter::buildPerformanceOverlayLines() const
+{
+	char fps[64] = {};
+	std::snprintf(fps, sizeof(fps), "FPS: %.1f", ImGui::GetIO().Framerate);
+	return {
+		fsui::OverlayTextLine{.text = fps},
+		fsui::OverlayTextLine{.text = "Renderer: OpenGL 4.1"},
+		fsui::OverlayTextLine{.text = std::string("Version: ") + PANDA3DS_VERSION},
+	};
+}
+
+std::vector<fsui::OverlayTextLine> PandaFsuiAdapter::buildSettingsOverlayLines() const
+{
+	const EmulatorConfig& cfg = emu.getConfig();
+	return {
+		fsui::OverlayTextLine{.text = std::string("VSync: ") + (cfg.vsyncEnabled ? "On" : "Off")},
+		fsui::OverlayTextLine{.text = std::string("Layout: ") + s_screen_layout_names[static_cast<size_t>(findArrayIndex(s_screen_layout_values, cfg.screenLayout))]},
+		fsui::OverlayTextLine{.text = std::string("Shader JIT: ") + (cfg.shaderJitEnabled ? "On" : "Off")},
+		fsui::OverlayTextLine{.text = std::string("Ubershaders: ") + (cfg.useUbershaders ? "On" : "Off")},
+	};
+}
+
+std::vector<fsui::InputOverlayDeviceState> PandaFsuiAdapter::buildInputOverlayDevices() const
+{
+	HIDService& hid = emu.getServiceManager().getHID();
+	const u32 buttons = hid.getOldButtons();
+	auto button_value = [buttons](u32 mask) { return (buttons & mask) ? 1.0f : 0.0f; };
+
+	fsui::InputOverlayDeviceState device;
+	device.title = "3DS";
+	device.bindings = {
+		{.label = "Up", .glyph = ICON_PF_DPAD_UP, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::Up)},
+		{.label = "Down", .glyph = ICON_PF_DPAD_DOWN, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::Down)},
+		{.label = "Left", .glyph = ICON_PF_DPAD_LEFT, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::Left)},
+		{.label = "Right", .glyph = ICON_PF_DPAD_RIGHT, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::Right)},
+		{.label = "A", .glyph = ICON_PF_BUTTON_A, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::A)},
+		{.label = "B", .glyph = ICON_PF_BUTTON_B, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::B)},
+		{.label = "X", .glyph = ICON_PF_BUTTON_X, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::X)},
+		{.label = "Y", .glyph = ICON_PF_BUTTON_Y, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::Y)},
+		{.label = "L", .glyph = ICON_PF_LEFT_SHOULDER_L1, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::L)},
+		{.label = "R", .glyph = ICON_PF_RIGHT_SHOULDER_R1, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::R)},
+		{.label = "ZL", .glyph = ICON_PF_LEFT_TRIGGER_ZL, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::ZL)},
+		{.label = "ZR", .glyph = ICON_PF_RIGHT_TRIGGER_ZR, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::ZR)},
+		{.label = "Start", .glyph = ICON_PF_START, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::Start)},
+		{.label = "Select", .glyph = ICON_PF_SELECT_SHARE, .kind = fsui::InputOverlayBindingKind::Button, .value = button_value(HID::Keys::Select)},
+		{.label = "CP X", .kind = fsui::InputOverlayBindingKind::Axis, .value = static_cast<float>(hid.getCirclepadX()) / 156.0f},
+		{.label = "CP Y", .kind = fsui::InputOverlayBindingKind::Axis, .value = static_cast<float>(hid.getCirclepadY()) / 156.0f},
+		{.label = "C X", .kind = fsui::InputOverlayBindingKind::Axis, .value = static_cast<float>(hid.getCStickX()) / 156.0f},
+		{.label = "C Y", .kind = fsui::InputOverlayBindingKind::Axis, .value = static_cast<float>(hid.getCStickY()) / 156.0f},
+	};
+	return {device};
 }
 
 void PandaFsuiAdapter::requestLaunchPath(const std::filesystem::path& path)
@@ -1270,6 +1331,15 @@ bool PandaFsuiAdapter::initialize(const fsui::FontStack& fonts)
 		}
 	};
 	fsuiContext.host.detect_prompt_icon_pack = []() { return fsui::DetectPromptIconPackFromSDL(); };
+	fsuiContext.host.detect_swap_north_west_gamepad_buttons = []() { return false; };
+	fsuiContext.host.runtime_overlay_options = fsui::RuntimeOverlayOptions{
+		.show_inputs = true,
+		.show_settings = true,
+		.show_performance = true,
+	};
+	fsuiContext.host.get_input_overlay_devices = [this]() { return buildInputOverlayDevices(); };
+	fsuiContext.host.get_settings_overlay_lines = [this]() { return buildSettingsOverlayLines(); };
+	fsuiContext.host.get_performance_overlay_lines = [this]() { return buildPerformanceOverlayLines(); };
 	fsuiContext.host.request_classic_ui = [this]() { requestClassicUi(true); };
 	fsuiContext.host.launch_path = [this](const std::filesystem::path& path) { requestLaunchPath(path); };
 	fsuiContext.host.close_selector = [this]() { closeSelectorRequested = true; };

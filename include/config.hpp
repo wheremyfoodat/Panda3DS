@@ -120,6 +120,9 @@ struct EmulatorConfig {
 	std::string fsuiTheme = "Dark";
 	std::string fsuiPromptIconPack = "Auto";
 	std::filesystem::path fsuiBackgroundImagePath = "";
+	bool fsuiShowInputsOverlay = false;
+	bool fsuiShowSettingsOverlay = false;
+	bool fsuiShowPerformanceOverlay = false;
 
 	// Frontend window settings
 	struct WindowSettings {

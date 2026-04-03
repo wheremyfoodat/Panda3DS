@@ -206,6 +206,9 @@ void EmulatorConfig::load() {
 			fsuiDefaultGameView = static_cast<int>(toml::find_or<toml::integer>(ui, "DefaultFullscreenUIGameView", 0));
 			fsuiGameSort = static_cast<int>(toml::find_or<toml::integer>(ui, "FullscreenUIGameSort", 0));
 			fsuiGameSortReverse = toml::find_or<toml::boolean>(ui, "FullscreenUIGameSortReverse", false);
+			fsuiShowInputsOverlay = toml::find_or<toml::boolean>(ui, "FullscreenUIShowInputs", false);
+			fsuiShowSettingsOverlay = toml::find_or<toml::boolean>(ui, "FullscreenUIShowSettings", false);
+			fsuiShowPerformanceOverlay = toml::find_or<toml::boolean>(ui, "FullscreenUIShowPerformance", false);
 			#ifdef IMGUI_FRONTEND
 			frontendSettings.stretchImGuiOutputToWindow = toml::find_or<toml::boolean>(ui, "StretchImGuiOutputToWindow", true);
 			#else
@@ -313,6 +316,9 @@ void EmulatorConfig::save() {
 	data["UI"]["DefaultFullscreenUIGameView"] = fsuiDefaultGameView;
 	data["UI"]["FullscreenUIGameSort"] = fsuiGameSort;
 	data["UI"]["FullscreenUIGameSortReverse"] = fsuiGameSortReverse;
+	data["UI"]["FullscreenUIShowInputs"] = fsuiShowInputsOverlay;
+	data["UI"]["FullscreenUIShowSettings"] = fsuiShowSettingsOverlay;
+	data["UI"]["FullscreenUIShowPerformance"] = fsuiShowPerformanceOverlay;
 	data["UI"]["StretchImGuiOutputToWindow"] = frontendSettings.stretchImGuiOutputToWindow;
 	data["Folders"]["Covers"] = fsuiCoversPath.string();
 

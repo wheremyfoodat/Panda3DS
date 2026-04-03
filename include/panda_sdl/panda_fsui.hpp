@@ -71,6 +71,9 @@ class PandaFsuiAdapter {
 	std::string formatPercent(float value) const;
 	std::string formatInteger(int value) const;
 	std::string formatTitleId(std::uint64_t program_id) const;
+	std::vector<fsui::OverlayTextLine> buildPerformanceOverlayLines() const;
+	std::vector<fsui::OverlayTextLine> buildSettingsOverlayLines() const;
+	std::vector<fsui::InputOverlayDeviceState> buildInputOverlayDevices() const;
 	void openFileAndLaunch();
 	void requestLaunchPath(const std::filesystem::path& path);
 	void requestClassicUi(bool open_settings);
