@@ -126,6 +126,7 @@ class Emulator {
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
 	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
+	const std::optional<std::filesystem::path>& getROMPath() const { return romPath; }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }

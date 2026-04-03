@@ -4,10 +4,17 @@
 
 #include <SDL.h>
 
+#include <filesystem>
 #include <functional>
+#include <memory>
 #include <optional>
 
 #include "emulator.hpp"
+#include "fsui/backend_sdl.hpp"
+#include "fsui/fsui.hpp"
+#include "panda_sdl/panda_fsui.hpp"
+
+struct ImFont;
 
 class ImGuiLayer {
   public:
@@ -30,13 +37,24 @@ class ImGuiLayer {
 	void showPauseMenuFromController();
 
   private:
+	bool useFullscreenUI();
 	void drawDebugPanel();
-	void drawPausePanel();
-	void drawSettingsPanel();
+	void drawClassicPausePanel();
+	void drawClassicSettingsPanel();
+	void drawSettingsGeneralSection(bool& reloadSettings);
+	void drawSettingsWindowSection(bool& reloadSettings);
+	void drawSettingsUISection(bool& reloadSettings);
+	void drawSettingsGraphicsSection(bool& reloadSettings);
+	void drawSettingsAudioSection(bool& reloadSettings);
+	void drawSettingsBatterySection(bool& reloadSettings);
+	void drawSettingsSDSection(bool& reloadSettings);
 
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext = nullptr;
 	Emulator& emu;
+	fsui::FontStack fontStack;
+	fsui::SdlImGuiBackend imguiBackend;
+	PandaFsuiAdapter fsuiAdapter;
 
 	bool showDebug = true;
 	bool showPauseMenu = false;
@@ -44,6 +62,7 @@ class ImGuiLayer {
 	bool isPaused = false;
 	bool captureKeyboard = false;
 	bool captureMouse = false;
+	bool fullscreenSelectorMode = false;
 
 	std::function<void(bool)> onPauseChange;
 	std::function<void(bool)> onVsyncChange;

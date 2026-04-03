@@ -176,7 +176,6 @@ include_directories(${FMT_INCLUDE_DIR})
 include_directories(third_party/boost/)
 include_directories(third_party/elfio/)
 include_directories(third_party/hips/include/)
-include_directories(third_party/imgui/)
 include_directories(third_party/dynarmic/src)
 include_directories(third_party/cityhash/include)
 include_directories(third_party/result/include)
@@ -186,6 +185,13 @@ include_directories(third_party/stb)
 include_directories(third_party/opengl)
 include_directories(third_party/miniaudio)
 include_directories(third_party/mio/single_include)
+if(IMGUI_FRONTEND)
+    include_directories(third_party/fsui/include)
+    include_directories(third_party/fsui/third_party/imgui)
+    include_directories(third_party/fsui/third_party/imgui/backends)
+else()
+    include_directories(third_party/imgui/)
+endif()
 
 add_compile_definitions(NOMINMAX)             # Make windows.h not define min/max macros because third-party deps don't like it
 add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Make windows.h not include literally everything
@@ -202,20 +208,35 @@ endif()
 
 if (NOT ANDROID)
     if (UWP_BUILD)
+        if (NOT TARGET SDL2::SDL2)
+            add_library(SDL2::SDL2 SHARED IMPORTED GLOBAL)
+            set_target_properties(SDL2::SDL2 PROPERTIES
+                IMPORTED_IMPLIB "${MINGW_UWP_DIR}/deps/lib/SDL2.lib"
+                INTERFACE_INCLUDE_DIRECTORIES "${MINGW_UWP_DIR}/deps/include;${MINGW_UWP_DIR}/deps/include/SDL2"
+            )
+        endif()
         target_include_directories(AlberCore PUBLIC
             "${MINGW_UWP_DIR}/deps/include"
             "${MINGW_UWP_DIR}/deps/include/SDL2"
         )
-        target_link_libraries(AlberCore PUBLIC "${MINGW_UWP_DIR}/deps/lib/SDL2.lib")
+        target_link_libraries(AlberCore PUBLIC SDL2::SDL2)
     elseif (USE_SYSTEM_SDL2)
         find_package(SDL2 CONFIG REQUIRED)
         target_link_libraries(AlberCore PUBLIC SDL2::SDL2)
     else()
         set(SDL_STATIC ON CACHE BOOL "" FORCE)
-        set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+        if(IMGUI_FRONTEND)
+            set(SDL_SHARED ON CACHE BOOL "" FORCE)
+        else()
+            set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+        endif()
         set(SDL_TEST OFF CACHE BOOL "" FORCE)
         add_subdirectory(third_party/SDL2)
-        target_link_libraries(AlberCore PUBLIC SDL2-static)
+        if(IMGUI_FRONTEND)
+            target_link_libraries(AlberCore PUBLIC SDL2::SDL2)
+        else()
+            target_link_libraries(AlberCore PUBLIC SDL2-static)
+        endif()
     endif()
 endif()
 
@@ -228,6 +249,16 @@ include_directories(third_party/duckstation)
 include_directories(third_party/host_memory/include)
 
 add_subdirectory(third_party/cmrc)
+add_subdirectory(third_party/glad)
+if(IMGUI_FRONTEND)
+    set(FSUI_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(FSUI_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+    set(FSUI_PLATFORM_BACKEND SDL2 CACHE STRING "" FORCE)
+    add_subdirectory(third_party/fsui)
+    if(TARGET fsui-renderer-opengl)
+        target_compile_definitions(fsui-renderer-opengl PRIVATE FSUI_USE_LEGACY_GLAD=1)
+    endif()
+endif()
 
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/boost")
 set(Boost_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/boost")
@@ -242,8 +273,6 @@ if(ANDROID)
     target_sources(AlberCore PRIVATE src/jni_driver.cpp)
     target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
-
-add_subdirectory(third_party/glad)
 
 # Cryptopp doesn't support compiling under clang-cl, so we have to include it as a prebuilt MSVC static library
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND MSVC)
@@ -500,18 +529,21 @@ cmrc_add_resource_library(
     "src/core/services/fonts/SharedFontReplacement.bin"
 )
 
-set(THIRD_PARTY_SOURCE_FILES third_party/imgui/imgui.cpp
-                             third_party/imgui/imgui_draw.cpp
-                             third_party/imgui/imgui_tables.cpp
-                             third_party/imgui/imgui_widgets.cpp
-                             third_party/imgui/imgui_demo.cpp
-
-                             third_party/cityhash/cityhash.cpp
+set(THIRD_PARTY_SOURCE_FILES third_party/cityhash/cityhash.cpp
                              third_party/xxhash/xxhash.c
 
                              third_party/host_memory/host_memory.cpp
                              third_party/host_memory/virtual_buffer.cpp
 )
+if(NOT IMGUI_FRONTEND)
+    list(APPEND THIRD_PARTY_SOURCE_FILES
+        third_party/imgui/imgui.cpp
+        third_party/imgui/imgui_draw.cpp
+        third_party/imgui/imgui_tables.cpp
+        third_party/imgui/imgui_widgets.cpp
+        third_party/imgui/imgui_demo.cpp
+    )
+endif()
 
 if(ENABLE_LUAJIT AND NOT ANDROID)
     # Build luv and libuv for Lua TCP server usage if we're not on Android
@@ -900,11 +932,11 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         if(IMGUI_FRONTEND)
             list(APPEND FRONTEND_SOURCE_FILES
                 src/panda_sdl/imgui_layer.cpp
-                third_party/imgui/backends/imgui_impl_sdl.cpp
-                third_party/imgui/backends/imgui_impl_opengl3.cpp
+                src/panda_sdl/panda_fsui.cpp
             )
             list(APPEND FRONTEND_HEADER_FILES
                 "include/panda_sdl/imgui_layer.hpp"
+                "include/panda_sdl/panda_fsui.hpp"
             )
             if(WIN32)
                 list(APPEND FRONTEND_LIBRARIES imm32)
@@ -915,6 +947,10 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
     target_link_libraries(Alber PRIVATE AlberCore)
     if(FRONTEND_LIBRARIES)
         target_link_libraries(Alber PRIVATE ${FRONTEND_LIBRARIES})
+    endif()
+    if(IMGUI_FRONTEND)
+        target_link_libraries(Alber PRIVATE FSUI::backend-sdl FSUI::donor)
+        target_compile_definitions(Alber PRIVATE PANDA3DS_FSUI_ICON_DIR="${PROJECT_SOURCE_DIR}/docs/img")
     endif()
     target_sources(Alber PRIVATE ${FRONTEND_SOURCE_FILES} ${FRONTEND_HEADER_FILES} ${GL_CONTEXT_SOURCE_FILES} ${APP_RESOURCES})
 elseif(BUILD_HYDRA_CORE)

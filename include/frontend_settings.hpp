@@ -28,6 +28,7 @@ struct FrontendSettings {
 	WindowIcon icon = WindowIcon::Rpog;
 	std::string language = "en";
 	bool showImGuiDebugPanel = true;
+	bool enableFullscreenUI = false;
 	#ifdef IMGUI_FRONTEND
 	bool stretchImGuiOutputToWindow = true;
 	#else
@@ -39,4 +40,5 @@ struct FrontendSettings {
 
 	static WindowIcon iconFromString(std::string inString);
 	static const char* iconToString(WindowIcon icon);
+	static bool defaultFullscreenUIEnabled();
 };

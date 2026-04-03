@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <string>
+#include <vector>
 
 #include "audio/dsp_core.hpp"
 #include "frontend_settings.hpp"
@@ -110,6 +111,15 @@ struct EmulatorConfig {
 
 	static constexpr size_t maxRecentGames = 8;
 	std::vector<std::filesystem::path> recentlyPlayed;
+	std::vector<std::filesystem::path> fsuiGameListPaths;
+	std::vector<std::filesystem::path> fsuiGameListRecursivePaths;
+	std::filesystem::path fsuiCoversPath = "";
+	int fsuiDefaultGameView = 0;
+	int fsuiGameSort = 0;
+	bool fsuiGameSortReverse = false;
+	std::string fsuiTheme = "Dark";
+	std::string fsuiPromptIconPack = "Auto";
+	std::filesystem::path fsuiBackgroundImagePath = "";
 
 	// Frontend window settings
 	struct WindowSettings {

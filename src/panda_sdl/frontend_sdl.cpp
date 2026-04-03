@@ -298,7 +298,20 @@ void FrontendSDL::initialize(SDL_Window* existingWindow, SDL_GLContext existingC
 #endif
 }
 
-bool FrontendSDL::loadROM(const std::filesystem::path& path) { return emu.loadROM(path); }
+bool FrontendSDL::loadROM(const std::filesystem::path& path) {
+	const bool loaded = emu.loadROM(path);
+	if (loaded) {
+		emuPaused = false;
+		#ifdef IMGUI_FRONTEND
+		if (imgui) {
+			imgui->setPaused(false);
+		}
+		#endif
+		emu.getConfig().addToRecentGames(path);
+		emu.getConfig().save();
+	}
+	return loaded;
+}
 
 std::optional<std::filesystem::path> FrontendSDL::selectGame() {
 	#ifdef IMGUI_FRONTEND
@@ -717,7 +730,9 @@ void FrontendSDL::run() {
 		// TODO: Should this be uncommented?
 		// kernel.evalReschedule();
 
+		#ifndef IMGUI_FRONTEND
 		SDL_GL_SwapWindow(window);
+		#endif
 	}
 
 	#ifdef IMGUI_FRONTEND

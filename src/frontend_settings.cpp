@@ -4,6 +4,10 @@
 #include <cctype>
 #include <unordered_map>
 
+#if defined(__WINRT__) && !defined(__ANDROID__)
+#include <SDL.h>
+#endif
+
 // Frontend setting serialization/deserialization functions
 
 FrontendSettings::Theme FrontendSettings::themeFromString(std::string inString) {
@@ -62,4 +66,14 @@ const char* FrontendSettings::iconToString(WindowIcon icon) {
 		case WindowIcon::Rpog:
 		default: return "rpog";
 	}
+}
+
+bool FrontendSettings::defaultFullscreenUIEnabled() {
+	#if defined(__WINRT__) && !defined(__ANDROID__)
+	return SDL_WinRTGetDeviceFamily() == SDL_WINRT_DEVICEFAMILY_XBOX;
+	#elif defined(__XBOXONE__) || defined(__XBOXSERIES__)
+	return true;
+	#else
+	return false;
+	#endif
 }

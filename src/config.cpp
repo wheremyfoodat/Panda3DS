@@ -15,7 +15,10 @@
 // We are legally allowed, as per the author's wish, to use the above code without any licensing restrictions
 // However we still want to follow the license as closely as possible and offer the proper attributions.
 
-EmulatorConfig::EmulatorConfig(const std::filesystem::path& path) : filePath(path) { load(); }
+EmulatorConfig::EmulatorConfig(const std::filesystem::path& path) : filePath(path) {
+	frontendSettings.enableFullscreenUI = FrontendSettings::defaultFullscreenUIEnabled();
+	load();
+}
 
 void EmulatorConfig::load() {
 	const std::filesystem::path& path = filePath;
@@ -64,6 +67,31 @@ void EmulatorConfig::load() {
 						if (recentlyPlayed.size() >= maxRecentGames) {
 							break;
 						}
+					}
+				}
+			}
+		}
+	}
+
+	if (data.contains("GameList")) {
+		auto gameListResult = toml::expect<toml::value>(data.at("GameList"));
+		if (gameListResult.is_ok()) {
+			auto gameList = gameListResult.unwrap();
+
+			fsuiGameListPaths.clear();
+			if (gameList.contains("Paths") && gameList.at("Paths").is_array()) {
+				for (const auto& item : gameList.at("Paths").as_array()) {
+					if (item.is_string()) {
+						fsuiGameListPaths.emplace_back(toml::get<std::string>(item));
+					}
+				}
+			}
+
+			fsuiGameListRecursivePaths.clear();
+			if (gameList.contains("RecursivePaths") && gameList.at("RecursivePaths").is_array()) {
+				for (const auto& item : gameList.at("RecursivePaths").as_array()) {
+					if (item.is_string()) {
+						fsuiGameListRecursivePaths.emplace_back(toml::get<std::string>(item));
 					}
 				}
 			}
@@ -170,11 +198,27 @@ void EmulatorConfig::load() {
 			frontendSettings.icon = FrontendSettings::iconFromString(toml::find_or<std::string>(ui, "WindowIcon", "rpog"));
 			frontendSettings.language = toml::find_or<std::string>(ui, "Language", "en");
 			frontendSettings.showImGuiDebugPanel = toml::find_or<toml::boolean>(ui, "ShowImGuiDebugPanel", true);
+			frontendSettings.enableFullscreenUI =
+				toml::find_or<toml::boolean>(ui, "EnableFullscreenUI", FrontendSettings::defaultFullscreenUIEnabled());
+			fsuiTheme = toml::find_or<std::string>(ui, "FullscreenUITheme", "Dark");
+			fsuiPromptIconPack = toml::find_or<std::string>(ui, "FullscreenUIPromptIcons", "Auto");
+			fsuiBackgroundImagePath = toml::find_or<std::string>(ui, "FullscreenUIBackgroundImage", "");
+			fsuiDefaultGameView = static_cast<int>(toml::find_or<toml::integer>(ui, "DefaultFullscreenUIGameView", 0));
+			fsuiGameSort = static_cast<int>(toml::find_or<toml::integer>(ui, "FullscreenUIGameSort", 0));
+			fsuiGameSortReverse = toml::find_or<toml::boolean>(ui, "FullscreenUIGameSortReverse", false);
 			#ifdef IMGUI_FRONTEND
 			frontendSettings.stretchImGuiOutputToWindow = toml::find_or<toml::boolean>(ui, "StretchImGuiOutputToWindow", true);
 			#else
 			frontendSettings.stretchImGuiOutputToWindow = toml::find_or<toml::boolean>(ui, "StretchImGuiOutputToWindow", false);
 			#endif
+		}
+	}
+
+	if (data.contains("Folders")) {
+		auto foldersResult = toml::expect<toml::value>(data.at("Folders"));
+		if (foldersResult.is_ok()) {
+			auto folders = foldersResult.unwrap();
+			fsuiCoversPath = toml::find_or<std::string>(folders, "Covers", "");
 		}
 	}
 }
@@ -211,6 +255,18 @@ void EmulatorConfig::save() {
 		recentsArray.push_back(gamePath.string());
 	}
 	data["General"]["RecentGames"] = recentsArray;
+
+	toml::array pathsArray;
+	for (const auto& path : fsuiGameListPaths) {
+		pathsArray.push_back(path.string());
+	}
+	data["GameList"]["Paths"] = pathsArray;
+
+	toml::array recursivePathsArray;
+	for (const auto& path : fsuiGameListRecursivePaths) {
+		recursivePathsArray.push_back(path.string());
+	}
+	data["GameList"]["RecursivePaths"] = recursivePathsArray;
 
 	data["Window"]["AppVersionOnWindow"] = windowSettings.showAppVersion;
 	data["Window"]["RememberWindowPosition"] = windowSettings.rememberPosition;
@@ -250,7 +306,15 @@ void EmulatorConfig::save() {
 	data["UI"]["WindowIcon"] = std::string(FrontendSettings::iconToString(frontendSettings.icon));
 	data["UI"]["Language"] = frontendSettings.language;
 	data["UI"]["ShowImGuiDebugPanel"] = frontendSettings.showImGuiDebugPanel;
+	data["UI"]["EnableFullscreenUI"] = frontendSettings.enableFullscreenUI;
+	data["UI"]["FullscreenUITheme"] = fsuiTheme;
+	data["UI"]["FullscreenUIPromptIcons"] = fsuiPromptIconPack;
+	data["UI"]["FullscreenUIBackgroundImage"] = fsuiBackgroundImagePath.string();
+	data["UI"]["DefaultFullscreenUIGameView"] = fsuiDefaultGameView;
+	data["UI"]["FullscreenUIGameSort"] = fsuiGameSort;
+	data["UI"]["FullscreenUIGameSortReverse"] = fsuiGameSortReverse;
 	data["UI"]["StretchImGuiOutputToWindow"] = frontendSettings.stretchImGuiOutputToWindow;
+	data["Folders"]["Covers"] = fsuiCoversPath.string();
 
 	std::ofstream file(path, std::ios::out);
 	file << data;
