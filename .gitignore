@@ -16,7 +16,8 @@ ReleaseWithClangCL/
 Enabled/
 Disabled/
 build/
-
+build_uwp/
+build_fsui/
 .vs/
 .vscode/*.log
 .cache/

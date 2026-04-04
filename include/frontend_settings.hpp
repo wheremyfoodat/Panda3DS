@@ -27,10 +27,18 @@ struct FrontendSettings {
 	Theme theme = Theme::Dark;
 	WindowIcon icon = WindowIcon::Rpog;
 	std::string language = "en";
+	bool showImGuiDebugPanel = true;
+	bool enableFullscreenUI = false;
+	#ifdef IMGUI_FRONTEND
+	bool stretchImGuiOutputToWindow = true;
+	#else
+	bool stretchImGuiOutputToWindow = false;
+	#endif
 
 	static Theme themeFromString(std::string inString);
 	static const char* themeToString(Theme theme);
 
 	static WindowIcon iconFromString(std::string inString);
 	static const char* iconToString(WindowIcon icon);
+	static bool defaultFullscreenUIEnabled();
 };
