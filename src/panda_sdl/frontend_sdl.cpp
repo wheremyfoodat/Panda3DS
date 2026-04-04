@@ -292,8 +292,6 @@ void FrontendSDL::initialize(SDL_Window* existingWindow, SDL_GLContext existingC
 	imgui->setExitToSelectorCallback([this]() {
 		returnToSelector = true;
 		programRunning = false;
-		emu.reset(Emulator::ReloadOption::NoReload);
-		emu.romType = ROMType::None;
 	});
 #endif
 }
@@ -749,6 +747,14 @@ bool FrontendSDL::consumeReturnToSelector() {
 		return false;
 	}
 	returnToSelector = false;
+	emu.reset(Emulator::ReloadOption::NoReload);
+	emu.romType = ROMType::None;
+	emuPaused = false;
+#ifdef IMGUI_FRONTEND
+	if (imgui) {
+		imgui->setPaused(false);
+	}
+#endif
 	return true;
 }
 #endif

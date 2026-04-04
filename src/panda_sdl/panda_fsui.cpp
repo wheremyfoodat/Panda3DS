@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <set>
 #include <string>
 #include <string_view>
@@ -19,6 +20,7 @@
 
 #include "IconsFontAwesome5.h"
 #include "IconsPromptFont.h"
+#include "helpers.hpp"
 #include "config.hpp"
 #include "emulator.hpp"
 #include "frontend_settings.hpp"
@@ -111,6 +113,56 @@ namespace
 	{
 		std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 		return value;
+	}
+
+	std::string percentEncodeUrl(std::string_view value)
+	{
+		std::string encoded;
+		encoded.reserve(value.size());
+		for (unsigned char c : value) {
+			const bool unreserved =
+				(c >= 'a' && c <= 'z') ||
+				(c >= 'A' && c <= 'Z') ||
+				(c >= '0' && c <= '9') ||
+				c == '-' || c == '_' || c == '.' || c == '~' || c == '/' || c == ':';
+			if (unreserved) {
+				encoded.push_back(static_cast<char>(c));
+			} else {
+				static constexpr char hex[] = "0123456789ABCDEF";
+				encoded.push_back('%');
+				encoded.push_back(hex[c >> 4]);
+				encoded.push_back(hex[c & 0x0F]);
+			}
+		}
+		return encoded;
+	}
+
+	std::string fileUrlForPath(const std::filesystem::path& path)
+	{
+		std::error_code ec;
+		const std::filesystem::path absolute = std::filesystem::absolute(path, ec);
+		const std::string generic = (ec || absolute.empty()) ? path.generic_string() : absolute.generic_string();
+		std::string url = "file://";
+		#ifdef _WIN32
+		url.push_back('/');
+		#endif
+		url += percentEncodeUrl(generic);
+		return url;
+	}
+
+	bool openUrl(std::string_view url)
+	{
+		const std::string url_string(url);
+		if (SDL_OpenURL(url_string.c_str()) != 0) {
+			Helpers::warn("Failed to open URL %s: %s", url_string.c_str(), SDL_GetError());
+			return false;
+		}
+		return true;
+	}
+
+	bool openPathInBrowser(const std::filesystem::path& path)
+	{
+		return openUrl(fileUrlForPath(path));
 	}
 
 	const char* windowIconFilename(FrontendSettings::WindowIcon icon)
@@ -1332,6 +1384,8 @@ bool PandaFsuiAdapter::initialize(const fsui::FontStack& fonts)
 	};
 	fsuiContext.host.detect_prompt_icon_pack = []() { return fsui::DetectPromptIconPackFromSDL(); };
 	fsuiContext.host.detect_swap_north_west_gamepad_buttons = []() { return false; };
+	fsuiContext.host.open_file_browser = [this](const std::filesystem::path& path) { openPathInBrowser(path); };
+	fsuiContext.host.open_url = [](std::string_view url) { openUrl(url); };
 	fsuiContext.host.runtime_overlay_options = fsui::RuntimeOverlayOptions{
 		.show_inputs = true,
 		.show_settings = true,
