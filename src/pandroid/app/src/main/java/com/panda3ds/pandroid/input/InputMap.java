@@ -1,5 +1,7 @@
 package com.panda3ds.pandroid.input;
 
+import androidx.annotation.Keep;
+
 import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.utils.Constants;
 
@@ -41,6 +43,7 @@ public class InputMap {
         parser.save(data);
     }
 
+    @Keep
     private static class DataModel {
         public float deadZone = 0.2f;
         public final String[] keys = new String[32];

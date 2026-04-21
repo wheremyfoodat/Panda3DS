@@ -1,5 +1,7 @@
 package com.panda3ds.pandroid.data.config;
 
+import androidx.annotation.Keep;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.internal.LinkedTreeMap;
@@ -93,6 +95,7 @@ public class GlobalConfig {
         }
     }
 
+    @Keep
     private static class DataModel {
         private final Map<String, Object> configs = new LinkedTreeMap<>();
         private final JsonObject extras = new JsonObject();
