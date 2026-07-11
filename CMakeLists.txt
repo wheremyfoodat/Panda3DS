@@ -329,7 +329,7 @@ endif()
 
 if(HOST_X64 OR HOST_ARM64)
     set(DYNARMIC_TESTS OFF)
-    #set(DYNARMIC_NO_BUNDLED_FMT ON)
+    set(DYNARMIC_USE_BUNDLED_EXTERNALS ON)
     set(DYNARMIC_FRONTENDS "A32" CACHE STRING "")
     add_subdirectory(third_party/dynarmic)
     add_compile_definitions(CPU_DYNARMIC)
