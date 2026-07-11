@@ -28,8 +28,8 @@
     </message>
     <message>
         <location filename="../../src/panda_qt/about_window.cpp" line="38"/>
-        <source>Panda3DS is developed by volunteers in their spare time. Below is a list of some of these volunteers who&apos;ve agreed to be listed here, in no particular order.&lt;br&gt;If you think you should be listed here too, please inform us&lt;br&gt;&lt;br&gt;- Peach (wheremyfoodat)&lt;br&gt;- noumidev&lt;br&gt;- liuk707&lt;br&gt;- Wunk&lt;br&gt;- marysaka&lt;br&gt;- Sky&lt;br&gt;- merryhime&lt;br&gt;- TGP17&lt;br&gt;- Shadow&lt;br&gt;</source>
-        <translation>Panda3DS utvecklas av volontärer på deras fritid. Nedan finns en lista över några av dessa volontärer som har gått med på att listas här, utan någon särskild ordning.&lt;br&gt;Om du tycker att du också borde listas här, informera oss&lt;br&gt;&lt;br&gt;- Peach (wheremyfoodat)&lt;br&gt;- noumidev&lt;br&gt;- liuk707&lt;br&gt;- Wunk&lt;br&gt;- marysaka&lt;br&gt;- Sky&lt;br&gt;- merryhime&lt;br&gt;- TGP17&lt;br&gt;- Shadow&lt;br&gt;</translation>
+        <source>Panda3DS is developed by volunteers in their spare time. Below is a list of some of these volunteers who&apos;ve agreed to be listed here, in no particular order.&lt;br&gt;If you think you should be listed here too, please inform us&lt;br&gt;&lt;br&gt;- Peach (wheremyfoodat)&lt;br&gt;- noumidev&lt;br&gt;- liuk707&lt;br&gt;- Wunk&lt;br&gt;- marysaka&lt;br&gt;- Sky&lt;br&gt;- merryhime&lt;br&gt;- TGP17&lt;br&gt;- Shadow&lt;br&gt;- Adamillo&lt;br&gt;</source>
+        <translation>Panda3DS utvecklas av volontärer på deras fritid. Nedan finns en lista över några av dessa volontärer som har gått med på att listas här, utan någon särskild ordning.&lt;br&gt;Om du tycker att du också borde listas här, informera oss&lt;br&gt;&lt;br&gt;- Peach (wheremyfoodat)&lt;br&gt;- noumidev&lt;br&gt;- liuk707&lt;br&gt;- Wunk&lt;br&gt;- marysaka&lt;br&gt;- Sky&lt;br&gt;- merryhime&lt;br&gt;- TGP17&lt;br&gt;- Shadow&lt;br&gt;- Adamillo&lt;br&gt;</translation>
     </message>
 </context>
 <context>
