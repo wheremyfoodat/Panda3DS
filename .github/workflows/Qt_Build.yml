@@ -23,7 +23,6 @@ jobs:
       uses: jurplel/install-qt-action@v4
       with:
         arch: win64_msvc2022_64
-        version: 6.6.*
 
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@main
