@@ -22,7 +22,7 @@ jobs:
     - name: Setup Qt
       uses: jurplel/install-qt-action@v3
       with:
-        arch: win64_msvc2019_64
+        arch: win64_msvc2022_64
         version: 6.5.5
 
     - name: Setup Vulkan SDK
