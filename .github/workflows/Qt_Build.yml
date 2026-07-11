@@ -108,7 +108,7 @@ jobs:
   MacOS-Universal:
     name: MacOS-Universal
     needs: [MacOS]
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
       - name: Download x86_64
