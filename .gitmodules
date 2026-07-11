@@ -79,4 +79,4 @@
 	url = https://github.com/Panda3DS-emu/xbyak
 [submodule "third_party/dynarmic"]
 	path = third_party/dynarmic
-	url = https://github.com/azahar-emu/dynarmic
+	url = https://github.com/panda3ds-emu/dynarmic.git
