@@ -329,7 +329,7 @@ endif()
 
 set(cryptopp_SOURCES_ASM)
 
-if (MSVC AND NOT DISABLE_ASM)
+if (MSVC AND NOT CRYPTOPP_OPT_DISABLE_ASM)
   if (${CMAKE_GENERATOR} MATCHES ".*ARM")
     message(STATUS "Disabling ASM because ARM is specified as target platform.")
   else ()
@@ -340,6 +340,7 @@ if (MSVC AND NOT DISABLE_ASM)
       )
     if (CMAKE_SIZEOF_VOID_P EQUAL 8)
       list(APPEND cryptopp_SOURCES_ASM
+        ${SRC_DIR}/cpuid64.asm
         ${SRC_DIR}/x64dll.asm
         ${SRC_DIR}/x64masm.asm
         )
