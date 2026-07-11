@@ -305,6 +305,7 @@ set(cryptopp_SOURCES
         ${SRC_DIR}/neon_simd.cpp
         ${SRC_DIR}/oaep.cpp
         ${SRC_DIR}/osrng.cpp
+        ${SRC_DIR}/primetab.cpp
         ${SRC_DIR}/power7_ppc.cpp
         ${SRC_DIR}/power8_ppc.cpp
         ${SRC_DIR}/power9_ppc.cpp
@@ -328,7 +329,7 @@ endif()
 
 set(cryptopp_SOURCES_ASM)
 
-if (MSVC AND NOT DISABLE_ASM)
+if (MSVC AND NOT CRYPTOPP_OPT_DISABLE_ASM)
   if (${CMAKE_GENERATOR} MATCHES ".*ARM")
     message(STATUS "Disabling ASM because ARM is specified as target platform.")
   else ()
@@ -339,6 +340,7 @@ if (MSVC AND NOT DISABLE_ASM)
       )
     if (CMAKE_SIZEOF_VOID_P EQUAL 8)
       list(APPEND cryptopp_SOURCES_ASM
+        ${SRC_DIR}/cpuid64.asm
         ${SRC_DIR}/x64dll.asm
         ${SRC_DIR}/x64masm.asm
         )
