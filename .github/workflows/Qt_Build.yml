@@ -12,7 +12,7 @@ env:
 
 jobs:
   Windows:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -24,15 +24,8 @@ jobs:
       with:
         arch: win64_msvc2022_64
 
-    - name: Setup Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@main
-      with:
-        vulkan-query-version: latest
-        vulkan-use-cache: false
-        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
-
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=ON -DENABLE_QT_GUI=ON
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_USER_BUILD=OFF -DENABLE_VULKAN=OFF -DENABLE_QT_GUI=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
