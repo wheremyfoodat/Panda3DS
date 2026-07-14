@@ -38,6 +38,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-interference-size")
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Od")
+
 if(ANDROID)
     set(DEFAULT_OPENGL_PROFILE OpenGLES)
 else()
