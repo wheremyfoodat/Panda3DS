@@ -62,6 +62,18 @@ libretro-build-linux-x64:
     - .libretro-linux-cmake-x86_64
     - .core-defs
 
+# Linux aarch64
+# No image override here: the :backports tag exists only for the amd64 image,
+# while the aarch64 one installs gcc-12 in its main Dockerfile, so the same
+# compiler the x64 job asks for is already on PATH.
+libretro-build-linux-aarch64:
+  variables:
+    CC: /usr/bin/gcc-12
+    CXX: /usr/bin/g++-12
+  extends:
+    - .libretro-linux-cmake-aarch64
+    - .core-defs
+
 # Windows 64-bit
 libretro-build-windows-x64:
   extends:
