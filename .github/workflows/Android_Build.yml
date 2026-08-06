@@ -92,6 +92,6 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        name: pandroid-(${{ matrix.artifact_name }})
+        name: pandroid-${{ matrix.artifact_name }}
         path: |
           ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
