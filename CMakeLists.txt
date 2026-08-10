@@ -760,6 +760,10 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
             message(FATAL_ERROR "Qt frontend requires OpenGL")
         endif()
 
+        if(Qt6_VERSION VERSION_GREATER_EQUAL "6.10.0")
+            find_package(Qt6 REQUIRED COMPONENTS Gui GuiPrivate)
+        endif()
+
         option(GENERATE_QT_TRANSLATION "Generate Qt translation file" OFF)
         set(QT_LANGUAGES docs/translations)
 
@@ -793,6 +797,9 @@ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
         target_compile_definitions(Alber PUBLIC "ZEP_QT=1")
         target_compile_definitions(Alber PUBLIC "ZEP_FEATURE_CPP_FILE_SYSTEM=1")
         target_link_libraries(Alber PRIVATE Qt6::Widgets)
+        if(Qt6_VERSION VERSION_GREATER_EQUAL "6.10.0")
+            target_link_libraries(Alber PRIVATE Qt6::Gui Qt6::GuiPrivate)
+        endif()
 
         # We can't use qt_standard_project_setup since it's Qt 6.3+ and we don't need to set the minimum that high
         set_target_properties(Alber PROPERTIES AUTOMOC ON)
