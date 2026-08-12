@@ -3,6 +3,8 @@ package com.panda3ds.pandroid.view.controller.mapping;
 import android.annotation.SuppressLint;
 import android.view.Gravity;
 
+import androidx.annotation.Keep;
+
 import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.utils.Constants;
 
@@ -96,6 +98,7 @@ public class ControllerProfileManager {
         }
     }
 
+    @Keep
     public static class DataModel {
         public final Map<String, Profile> profiles = new HashMap<>();
         public String profileId;

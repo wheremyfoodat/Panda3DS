@@ -3,6 +3,8 @@ package com.panda3ds.pandroid.view.controller.mapping;
 
 import androidx.annotation.NonNull;
 
+import com.google.gson.Gson;
+
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -10,27 +12,34 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Layout {
-    private final Map<ControllerItem, Location> mapLocations = new HashMap<>();
+    private static final Gson gson = new Gson();
+    private final Map<String, Location> mapLocations = new HashMap<>();
 
     public void setLocation(ControllerItem item, Location location) {
-        mapLocations.put(item, location);
+        mapLocations.put(item.name(), location);
     }
 
-    @NotNull
-    public Location getLocation(ControllerItem item) {
-        if (!mapLocations.containsKey(item)) {
-            setLocation(item, new Location());
+    public Location getLocation(ControllerItem key) {
+        Object raw = mapLocations.get(key.name());
+        if (raw == null) return null;
+
+        if (raw instanceof Location) {
+            return (Location) raw;
         }
-        return Objects.requireNonNull(mapLocations.get(item));
+
+        return gson.fromJson(gson.toJson(raw), Location.class);
     }
 
     @NonNull
     @Override
     public Layout clone() {
         Layout cloned = new Layout();
-        for (ControllerItem key : mapLocations.keySet()) {
-            cloned.setLocation(key, getLocation(key).clone());
+
+        for (String key : mapLocations.keySet()) {
+            ControllerItem item = ControllerItem.valueOf(key);
+            cloned.setLocation(item, getLocation(item).clone());
         }
+
         return cloned;
     }
 }
