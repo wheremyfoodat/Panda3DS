@@ -213,6 +213,12 @@ if(ANDROID)
     set(CRYPTOPP_OPT_DISABLE_ASM ON CACHE BOOL "" FORCE)
     target_sources(AlberCore PRIVATE src/jni_driver.cpp)
     target_link_libraries(AlberCore PRIVATE EGL log)
+
+    add_subdirectory(third_party/oboe)
+    include_directories(third_party/oboe/include)
+
+    target_sources(AlberCore PRIVATE src/core/audio/oboe_audio_device.cpp)
+    target_link_libraries(AlberCore PRIVATE oboe)
 endif()
 
 add_subdirectory(third_party/glad)
