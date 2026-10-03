@@ -12,11 +12,16 @@ env:
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runs-on: ubuntu-24.04
+          - arch: aarch64
+            runs-on: ubuntu-24.04-arm
+
+    runs-on: ${{ matrix.runs-on }}
 
     steps:
     - uses: actions/checkout@v4
@@ -51,5 +56,5 @@ jobs:
     - name: Upload executable
       uses: actions/upload-artifact@v4
       with:
-        name: Linux executable
+        name: Linux executable (${{ matrix.arch }})
         path: './build/Alber'

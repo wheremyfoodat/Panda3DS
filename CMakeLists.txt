@@ -215,6 +215,10 @@ if(ANDROID)
     target_link_libraries(AlberCore PRIVATE EGL log)
 endif()
 
+if(NOT APPLE AND (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64"))
+    set(CRYPTOPP_OPT_DISABLE_ASM ON CACHE BOOL "" FORCE)
+endif()
+
 add_subdirectory(third_party/glad)
 
 # Cryptopp doesn't support compiling under clang-cl, so we have to include it as a prebuilt MSVC static library
