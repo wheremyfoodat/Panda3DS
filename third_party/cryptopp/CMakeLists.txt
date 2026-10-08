@@ -426,6 +426,50 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU
       endif ()
     endif ()
   endif ()
+
+  # ARMv8 (aarch64). CRC32 and the crypto extensions are optional parts of the
+  # architecture, so the sources that use them have to be compiled with the
+  # matching -march or the assembler rejects the instructions outright:
+  #   crc_simd.cpp: Error: selected processor does not support `crc32w w0,w0,w2'
+  # Apple and Android toolchains already imply these, so only probe elsewhere.
+  if (CRYPTOPP_ARMV8 AND NOT APPLE AND NOT ANDROID AND NOT CRYPTOPP_DISABLE_ASM)
+    CheckCompileLinkOption("-march=armv8-a+crc -I${SRC_DIR} -DCRYPTOPP_ARM_NEON_HEADER=1" CRYPTOPP_ARMV8_CRC32
+                           "${TEST_PROG_DIR}/test_arm_crc.cpp")
+    CheckCompileLinkOption("-march=armv8-a+crypto -I${SRC_DIR} -DCRYPTOPP_ARM_NEON_HEADER=1" CRYPTOPP_ARMV8_AES
+                           "${TEST_PROG_DIR}/test_arm_aes.cpp")
+    CheckCompileLinkOption("-march=armv8-a+crypto -I${SRC_DIR} -DCRYPTOPP_ARM_NEON_HEADER=1" CRYPTOPP_ARMV8_PMULL
+                           "${TEST_PROG_DIR}/test_arm_pmull.cpp")
+    CheckCompileLinkOption("-march=armv8-a+crypto -I${SRC_DIR} -DCRYPTOPP_ARM_NEON_HEADER=1" CRYPTOPP_ARMV8_SHA256
+                           "${TEST_PROG_DIR}/test_arm_sha256.cpp")
+
+    if (CRYPTOPP_ARMV8_CRC32)
+      set_source_files_properties(${SRC_DIR}/crc_simd.cpp PROPERTIES
+                                  COMPILE_FLAGS "-march=armv8-a+crc")
+    else ()
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_CRC32")
+    endif ()
+
+    if (CRYPTOPP_ARMV8_AES)
+      set_source_files_properties(${SRC_DIR}/rijndael_simd.cpp PROPERTIES
+                                  COMPILE_FLAGS "-march=armv8-a+crypto")
+    else ()
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_AES")
+    endif ()
+
+    if (CRYPTOPP_ARMV8_PMULL)
+      set_source_files_properties(${SRC_DIR}/gcm_simd.cpp ${SRC_DIR}/gf2n_simd.cpp
+                                  PROPERTIES COMPILE_FLAGS "-march=armv8-a+crypto")
+    else ()
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_PMULL")
+    endif ()
+
+    if (CRYPTOPP_ARMV8_SHA256)
+      set_source_files_properties(${SRC_DIR}/sha_simd.cpp ${SRC_DIR}/shacal2_simd.cpp
+                                  PROPERTIES COMPILE_FLAGS "-march=armv8-a+crypto")
+    else ()
+      list(APPEND CRYPTOPP_COMPILE_OPTIONS "-DCRYPTOPP_DISABLE_ARM_SHA")
+    endif ()
+  endif ()
 endif ()
 
 #============================================================================
