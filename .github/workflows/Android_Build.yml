@@ -7,24 +7,36 @@ on:
   pull_request:
 
 jobs:
-  x64:
+  build:
+    name: Build ${{ matrix.arch }}
     runs-on: ubuntu-24.04
 
     strategy:
       matrix:
-        build_type:
-          - release
+        build_type: [release]
+        arch: [x64, arm64]
+        include:
+          - arch: x64
+            abi: x86_64
+            cache_key_arch: x86_64
+            artifact_name: "x86-64"
+            extra_cmake_args: ""
+          - arch: arm64
+            abi: arm64-v8a
+            cache_key_arch: arm64
+            artifact_name: "arm64"
+            extra_cmake_args: '-DCMAKE_CXX_FLAGS="-march=armv8-a+crypto"'
 
     steps:
     - name: Set BUILD_TYPE variable
       run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
 
     - uses: actions/checkout@v5
-    - name: Fetch submodules
-      run: git submodule update --init --recursive
+      with:
+        submodules: recursive
 
     - name: Setup CCache
-      uses: hendrikmuhs/ccache-action@v1.2
+      uses: hendrikmuhs/ccache-action@v1.2.23
 
     - name: Set up gradle caches
       uses: actions/cache@v5
@@ -32,7 +44,7 @@ jobs:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-pandroid-x86_64-${{ hashFiles(
+        key: ${{ runner.os }}-pandroid-${{ matrix.cache_key_arch }}-${{ hashFiles(
            '**/*.gradle',
            '**/*.gradle.kts',
            '**/gradle-wrapper.properties',
@@ -42,7 +54,7 @@ jobs:
            '**/libs.versions.toml'
            ) }}
         restore-keys: |
-          ${{ runner.os }}-pandroid-x86_64-
+          ${{ runner.os }}-pandroid-${{ matrix.cache_key_arch }}-
 
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@main
@@ -58,7 +70,7 @@ jobs:
         java-version: '17'
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=x86_64 -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${{ matrix.abi }} -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON ${{ matrix.extra_cmake_args }} -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
     - name: Build
       run: |
@@ -69,83 +81,7 @@ jobs:
 
         # Strip the generated library and move it to the appropriate location
         ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded ./build/libAlber.so
-        mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/x86_64/
-
-        # Build the Android app with Gradle
-        cd src/pandroid
-        ./gradlew assemble${{ env.BUILD_TYPE }}
-        cd ../..
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v6
-      with:
-        name: Android APKs (x86-64)
-        path: |
-          ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
-
-  arm64:
-    runs-on: ubuntu-24.04
-
-    strategy:
-      matrix:
-        build_type:
-          - release
-
-    steps:
-    - name: Set BUILD_TYPE variable
-      run: echo "BUILD_TYPE=${{ matrix.build_type }}" >> $GITHUB_ENV
-
-    - uses: actions/checkout@v5
-    - name: Fetch submodules
-      run: git submodule update --init --recursive
-
-    - name: Setup CCache
-      uses: hendrikmuhs/ccache-action@v1.2
-
-    - name: Set up gradle caches
-      uses: actions/cache@v5
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-pandroid-arm64-${{ hashFiles(
-           '**/*.gradle',
-           '**/*.gradle.kts',
-           '**/gradle-wrapper.properties',
-           '**/gradle.properties',
-           '**/settings.gradle',
-           '**/settings.gradle.kts',
-           '**/libs.versions.toml'
-           ) }}
-        restore-keys: |
-          ${{ runner.os }}-pandroid-arm64-
-
-    - name: Setup Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@main
-      with:
-        vulkan-query-version: latest
-        vulkan-use-cache: false
-        vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
-
-    - name: Setup Java
-      uses: actions/setup-java@v5
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
-    - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DBUILD_HYDRA_CORE=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DENABLE_VULKAN=0 -DENABLE_USER_BUILD=ON -DCMAKE_CXX_FLAGS="-march=armv8-a+crypto" -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-    - name: Build
-      run: |
-        # Apply patch for GLES compatibility
-        git apply ./.github/gles.patch
-        # Build the project with CMake
-        cmake --build ${{github.workspace}}/build --config ${{ env.BUILD_TYPE }}
-
-        # Strip the generated library and move it to the appropriate location
-        ${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded ./build/libAlber.so
-        mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/arm64-v8a/
+        mv ./build/libAlber.so ./src/pandroid/app/src/main/jniLibs/${{ matrix.abi }}/
         
         # Build the Android app with Gradle
         cd src/pandroid
@@ -156,6 +92,6 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        name: Android APKs (arm64)
+        name: pandroid-${{ matrix.artifact_name }}
         path: |
           ./src/pandroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/app-${{ env.BUILD_TYPE }}.apk
