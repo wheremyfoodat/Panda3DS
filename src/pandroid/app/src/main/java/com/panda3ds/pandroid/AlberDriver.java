@@ -4,6 +4,8 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 
+import androidx.annotation.Keep;
+
 import com.panda3ds.pandroid.app.PandroidApplication;
 import com.panda3ds.pandroid.utils.FileUtils;
 import com.panda3ds.pandroid.utils.GameUtils;
@@ -36,6 +38,7 @@ public class AlberDriver {
 	public static native void setAccurateShaderMulEnable(boolean enable);
 	public static native void setAudioEnabled(boolean enable);
 
+    @Keep
 	public static int openDocument(String path, String mode) {
 		try {
 			mode = FileUtils.parseNativeMode(mode);

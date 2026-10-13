@@ -1,5 +1,7 @@
 package com.panda3ds.pandroid.view.ds;
 
+import androidx.annotation.Keep;
+
 import com.panda3ds.pandroid.data.config.GlobalConfig;
 import com.panda3ds.pandroid.view.renderer.layout.ConsoleLayout;
 
@@ -46,6 +48,7 @@ public class DsLayoutManager {
         return new DsLayout(data.models.get(index)[0], data.models.get(index)[1]);
     }
 
+    @Keep
     private static class DataModel {
         private final ArrayList<Model[]> models = new ArrayList<>();
     }

@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
 
+import androidx.annotation.Keep;
+
 import com.panda3ds.pandroid.app.GameActivity;
 import com.panda3ds.pandroid.data.GsonConfigParser;
 import com.panda3ds.pandroid.data.game.GameMetadata;
@@ -167,6 +169,7 @@ public class GameUtils {
         return null;
     }
 
+    @Keep
     private static class DataModel {
         public final List<GameMetadata> games = new ArrayList<>();
         public final HashMap<String, GamesFolder> folders = new HashMap<>();
