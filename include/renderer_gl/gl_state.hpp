@@ -191,10 +191,10 @@ struct GLStateManager {
 
 	void setColourMask(bool r, bool g, bool b, bool a) {
 		if (r != redMask || g != greenMask || b != blueMask || a != alphaMask) {
-			r = redMask;
-			g = greenMask;
-			b = blueMask;
-			a = alphaMask;
+			redMask = r;
+			greenMask = g;
+			blueMask = b;
+			alphaMask = a;
 
 			OpenGL::setColourMask(r, g, b, a);
 		}
