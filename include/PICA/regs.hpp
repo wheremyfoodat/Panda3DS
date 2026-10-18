@@ -5,6 +5,7 @@ namespace PICA {
 	namespace InternalRegs {
 		enum : u32 {
 			// Rasterizer registers
+			FaceCulling = 0x40,
 			ViewportWidth = 0x41,
 			ViewportInvw = 0x42,
 			ViewportHeight = 0x43,

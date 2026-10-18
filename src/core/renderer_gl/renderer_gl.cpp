@@ -503,6 +503,16 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	setupStencilTest(stencilEnable);
 
+	// GPUREG_FACECULLING_CONFIG: 0 keep all, 1 keep clockwise, 2 keep counter-clockwise
+	const u32 cullMode = regs[PICA::InternalRegs::FaceCulling] & 3;
+	if (cullMode == 0 || cullMode == 3) {
+		glDisable(GL_CULL_FACE);
+	} else {
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(cullMode == 1 ? GL_CW : GL_CCW);
+	}
+
 	if (!usingAcceleratedShader) {
 		vbo.bufferVertsSub(vertices);
 		OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
