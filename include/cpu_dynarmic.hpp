@@ -180,6 +180,9 @@ class CPU {
 
     void addTicks(u64 ticks) { env.AddTicks(ticks); }
 
+    // End the current time slice: Run() returns after the current block so the scheduler can process due events
+    void stopSlice() { env.ticksLeft = 0; }
+
     void clearCache() { jit->ClearCache(); }
     void clearCacheRange(u32 start, u32 size) { jit->InvalidateCacheRange(start, size); }
 

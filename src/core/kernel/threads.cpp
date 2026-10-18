@@ -400,6 +400,10 @@ void Kernel::sleepThread(s64 ns) {
 					u64 idleCycles = timestamp - scheduler.currentTimestamp;
 					cpu.addTicks(idleCycles);
 				}
+
+				// We have skipped to the next event, so end the CPU's time slice and let the scheduler handle it now. Without this the
+				// slice (sized for the whole frame when it started) keeps running and the idle thread spins through the remainder of it.
+				cpu.stopSlice();
 			}
 		}
 	} else {  // If we're sleeping for >= 0 ns
