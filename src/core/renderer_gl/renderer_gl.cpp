@@ -422,6 +422,11 @@ void RendererGL::updateFogLUT() {
 }
 
 void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
+	// A game may draw before it has set up the framebuffer: the size is still 0 then, and there is nothing to draw into
+	if (fbSize[0] == 0 || fbSize[1] == 0) {
+		return;
+	}
+
 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
 		OpenGL::Triangle,

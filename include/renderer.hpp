@@ -32,7 +32,7 @@ class Renderer {
 	const std::array<u32, regNum>& regs;
 	const std::array<u32, extRegNum>& externalRegs;
 
-	std::array<u32, 2> fbSize;  // The size of the framebuffer (ie both the colour and depth buffer)'
+	std::array<u32, 2> fbSize{};  // The size of the framebuffer (ie both the colour and depth buffer)'
 
 	u32 colourBufferLoc;                // Location in 3DS VRAM for the colour buffer
 	PICA::ColorFmt colourBufferFormat;  // Format of the colours stored in the colour buffer
