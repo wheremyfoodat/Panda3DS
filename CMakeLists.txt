@@ -883,6 +883,11 @@ elseif(BUILD_LIBRETRO_CORE)
     add_library(panda3ds_libretro SHARED src/libretro_core.cpp)
     target_link_libraries(panda3ds_libretro PUBLIC AlberCore)
     set_target_properties(panda3ds_libretro PROPERTIES PREFIX "")
+
+    if(UNIX AND NOT APPLE)
+        # Hide everything but retro_* so the frontend's libraries can't interpose our symbols
+        target_link_libraries(panda3ds_libretro PRIVATE "-Wl,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/src/libretro_link.T\"")
+    endif()
 endif()
 
 if(ENABLE_LTO OR ENABLE_USER_BUILD)
