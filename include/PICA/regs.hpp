@@ -5,6 +5,9 @@ namespace PICA {
 	namespace InternalRegs {
 		enum : u32 {
 			// Rasterizer registers
+			// Bits 0-1 select which faces survive: 0 keeps all, 1 keeps the clockwise ones, 2 the
+			// counter-clockwise ones
+			FaceCulling = 0x40,
 			ViewportWidth = 0x41,
 			ViewportInvw = 0x42,
 			ViewportHeight = 0x43,
@@ -165,6 +168,9 @@ namespace PICA {
 			CmdBufTrigger0 = 0x23C,
 			CmdBufTrigger1 = 0x23D,
 
+			// Bits 0-1 select where the primitives come from: 0 feeds the vertex shader outputs straight into
+			// the primitive assembly, 2 hands them to the geometry shader, which emits the primitives itself
+			UseGeometryShader = 0x229,
 			PrimitiveConfig = 0x25E,
 			PrimitiveRestart = 0x25F,
 

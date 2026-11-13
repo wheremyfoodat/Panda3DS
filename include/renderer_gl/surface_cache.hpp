@@ -82,6 +82,28 @@ class SurfaceCache {
 		return std::nullopt;
 	}
 
+	// Marks every cached surface that overlaps [start, end) as dirty. Surfaces that are cached from
+	// guest memory (textures) use this to notice that something else has written to that memory.
+	void invalidateRange(u32 start, u32 end) {
+		for (auto& e : buffer) {
+			if constexpr (requires { e.dirty; }) {
+				if (e.valid && e.location < end && e.location + e.sizeInBytes() > start) {
+					e.dirty = true;
+				}
+			}
+		}
+	}
+
+	// Calls the given function for every cached surface whose memory overlaps [start, end).
+	template <typename Function>
+	void forEachOverlapping(u32 start, u32 end, Function function) {
+		for (auto& e : buffer) {
+			if (e.valid && e.range.lower() < end && e.range.upper() > start) {
+				function(e);
+			}
+		}
+	}
+
 	// Adds a surface object to the cache and returns it
 	SurfaceType& add(const SurfaceType& surface) {
 		if (size >= capacity) {

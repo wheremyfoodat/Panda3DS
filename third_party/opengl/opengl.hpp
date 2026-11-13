@@ -608,11 +608,15 @@ namespace OpenGL {
 	static void disableDepth() { glDisable(GL_DEPTH_TEST); }
 	static void enableStencil() { glEnable(GL_STENCIL_TEST); }
 	static void disableStencil() { glDisable(GL_STENCIL_TEST); }
+	static void enableCullFace() { glEnable(GL_CULL_FACE); }
+	static void disableCullFace() { glDisable(GL_CULL_FACE); }
 
 	static void enableClipPlane(GLuint index) { glEnable(GL_CLIP_DISTANCE0 + index); }
 	static void disableClipPlane(GLuint index) { glDisable(GL_CLIP_DISTANCE0 + index); }
 
 	static void setDepthFunc(DepthFunc func) { glDepthFunc(static_cast<GLenum>(func)); }
+	static void setCullFace(GLenum mode) { glCullFace(mode); }
+	static void setFrontFace(GLenum mode) { glFrontFace(mode); }
 	static void setColourMask(GLboolean r, GLboolean g, GLboolean b, GLboolean a) { glColorMask(r, g, b, a); }
 	static void setDepthMask(GLboolean mask) { glDepthMask(mask); }
 

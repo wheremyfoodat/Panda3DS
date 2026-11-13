@@ -14,6 +14,13 @@ struct ColourBuffer {
 	OpenGL::uvec2 size;
 	bool valid;
 
+	// Set once the GPU has drawn into this buffer, which only updates the buffer's own texture. The
+	// pixels reach guest memory the next time a texture fetch covers the same memory.
+	bool needsWriteBack = false;
+	// Guest write epoch when we last rendered into this buffer. If guest code wrote its memory after
+	// that, writing back would clobber those writes, so the pending write-back is dropped.
+	u32 lastGpuWriteEpoch = 0;
+
 	// Range of VRAM taken up by buffer
 	Interval<u32> range;
 	// OpenGL resources allocated to buffer

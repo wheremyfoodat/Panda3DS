@@ -89,6 +89,8 @@ class RendererGL final : public Renderer {
 	OpenGL::Texture LUTTexture;
 	OpenGL::Framebuffer screenFramebuffer;
 	OpenGL::Texture blankTexture;
+	// Stand-in sampled by texture units that are disabled, which the PICA makes return white
+	OpenGL::Texture whiteTexture;
 	// The "default" vertex shader to use when using specialized shaders but not PICA vertex shader -> GLSL recompilation
 	// We can compile this once and then link it with all other generated fragment shaders
 	OpenGL::Shader defaultShadergenVs;
@@ -183,6 +185,11 @@ class RendererGL final : public Renderer {
 
 	void accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel);
 	void compileDisplayShader();
+	// Copies a colour buffer's pixels from its texture back into the guest memory it occupies, so that
+	// textures sampling that memory see what the GPU rendered
+	void writeBackColourBuffer(ColourBuffer& buffer);
+	// Marks the colour buffer covering the given address as holding pixels guest memory does not have yet
+	void markColourBufferWritten(u32 addr);
 
   public:
 	RendererGL(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs)
@@ -197,6 +204,7 @@ class RendererGL final : public Renderer {
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
 	void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) override;  // Draw the given vertices
 	void deinitGraphicsContext() override;
+	void invalidateGuestRange(u32 start, u32 end) override;
 
 	virtual bool supportsShaderReload() override { return true; }
 	virtual std::string getUbershader() override;
@@ -213,4 +221,8 @@ class RendererGL final : public Renderer {
 
 	// Take a screenshot of the screen and store it in a file
 	void screenshot(const std::string& name) override;
+
+	// Copy the composed picture (both screens at the output resolution) into a top-down BGRA8 buffer.
+	// Frontends that present through a compositor of their own (eg OpenEmu) fetch frames this way.
+	void copyScreenToBGRA(void* buffer);
 };

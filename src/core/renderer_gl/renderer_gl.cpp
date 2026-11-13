@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cstring>
 #include <cmrc/cmrc.hpp>
 
 #include "PICA/float_types.hpp"
@@ -144,6 +145,21 @@ void RendererGL::initGraphicsContextInternal() {
 	// Clear the texture and then delete FBO
 	OpenGL::setViewport(8, 8);
 	gl.setClearColour(0.0, 0.0, 0.0, 0.0);
+	OpenGL::clearColor();
+	dummyFBO.free();
+
+	// A disabled texture unit samples as white on the PICA, so give the renderer a white texture to
+	// bind whenever a draw leaves a unit off but its TEV stages still read from it
+	whiteTexture.create(8, 8, GL_RGBA8);
+	whiteTexture.bind();
+	whiteTexture.setMinFilter(OpenGL::Linear);
+	whiteTexture.setMagFilter(OpenGL::Linear);
+
+	dummyFBO.createWithDrawTexture(whiteTexture);
+	dummyFBO.bind(OpenGL::DrawFramebuffer);
+
+	OpenGL::setViewport(8, 8);
+	gl.setClearColour(1.0, 1.0, 1.0, 1.0);
 	OpenGL::clearColor();
 	dummyFBO.free();
 
@@ -336,6 +352,10 @@ void RendererGL::bindTexturesToSlots() {
 
 	for (int i = 0; i < 3; i++) {
 		if ((regs[PICA::InternalRegs::TexUnitCfg] & (1 << i)) == 0) {
+			// The unit is off, which the PICA turns into white samples for any TEV stage that still
+			// reads it. Bind the white texture so a stale binding cannot leak into this draw.
+			glActiveTexture(GL_TEXTURE0 + i);
+			whiteTexture.bind();
 			continue;
 		}
 
@@ -448,6 +468,16 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 	auto poop = getColourBuffer(colourBufferLoc, colourBufferFormat, fbSize[0], fbSize[1]);
 	poop->fbo.bind(OpenGL::DrawAndReadFramebuffer);
 
+	// Guest code may have written this target's memory since we last rendered into it (video playback
+	// and software-rendered UI do that). Writing our older pixels back would undo those writes.
+	if (auto cached = colourBufferCache.findFromAddress(colourBufferLoc)) {
+		ColourBuffer& buffer = cached.value().get();
+		if (buffer.needsWriteBack && gpu.getMemory().getSurfaceWriteEpoch(buffer.location, buffer.location + u32(buffer.sizeInBytes())) > buffer.lastGpuWriteEpoch)
+			buffer.needsWriteBack = false;
+	}
+
+	markColourBufferWritten(colourBufferLoc);
+
 	const u32 depthControl = regs[PICA::InternalRegs::DepthAndColorMask];
 	const bool depthWrite = regs[PICA::InternalRegs::DepthBufferWrite];
 	const bool depthEnable = depthControl & 1;
@@ -503,6 +533,19 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 
 	setupStencilTest(stencilEnable);
 
+	// PICA's face culling register keeps all faces (0), the clockwise ones (1) or the counter-clockwise
+	// ones (2). Games rely on it for the inverted hull outlines cel-shaded models use, which need the
+	// faces of the unexpanded mesh culled while the drawn hull points inwards.
+	u32 cullMode = regs[PICA::InternalRegs::FaceCulling] & 3;
+	if (cullMode == 0) {
+		gl.disableCull();
+	} else {
+		// Front faces are clockwise in PICA clip space, so keeping clockwise faces means culling the back
+		// ones and keeping counter-clockwise faces means culling the front ones
+		gl.setCullFace(cullMode == 1 ? GL_BACK : GL_FRONT);
+		gl.enableCull();
+	}
+
 	if (!usingAcceleratedShader) {
 		vbo.bufferVertsSub(vertices);
 		OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
@@ -529,6 +572,8 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
 			OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
 		}
 	}
+
+	gl.disableCull();
 }
 
 void RendererGL::display() {
@@ -629,6 +674,7 @@ void RendererGL::display() {
 
 void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) {
 	log("GPU: Clear buffer\nStart: %08X End: %08X\nValue: %08X Control: %08X\n", startAddress, endAddress, value, control);
+	invalidateGuestRange(startAddress, endAddress);
 	gl.disableScissor();
 
 	const auto color = colourBufferCache.findFromAddress(startAddress);
@@ -642,6 +688,7 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 		gl.setColourMask(true, true, true, true);
 		gl.setClearColour(r, g, b, a);
 		OpenGL::clearColor();
+		markColourBufferWritten(startAddress);
 		return;
 	}
 
@@ -675,6 +722,89 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
 	log("[RendererGL::ClearBuffer] No buffer found!\n");
 }
 
+void RendererGL::invalidateGuestRange(u32 start, u32 end) {
+	if (end > start)
+		textureCache.invalidateRange(start, end);
+
+	// Something else wrote to the memory these buffers cover, so their textures are no longer authoritative
+	// for it. Writing them back would undo whatever just reached memory.
+	colourBufferCache.forEachOverlapping(start, end, [](ColourBuffer& buffer) { buffer.needsWriteBack = false; });
+}
+
+// Rendering into a colour buffer only touches that buffer's own OpenGL texture, so guest memory keeps
+// whatever it held before. Textures, on the other hand, are decoded from guest memory, which means a
+// game that renders a picture and then samples the same memory back as a texture would read stale
+// data. This copies the buffer into memory, in the tiled layout the PICA stores surfaces in.
+void RendererGL::writeBackColourBuffer(ColourBuffer& buffer) {
+	buffer.needsWriteBack = false;
+
+	u8* destination = gpu.getPointerPhys<u8>(buffer.location);
+	if (destination == nullptr) {
+		return;
+	}
+
+	const u32 width = buffer.size.u();
+	const u32 height = buffer.size.v();
+	const u32 bytesPerPixel = PICA::sizePerPixel(buffer.format);
+	std::vector<u8> pixels(size_t(width) * size_t(height) * 4);
+
+	glBindTexture(GL_TEXTURE_2D, buffer.texture.handle());
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+
+	for (u32 y = 0; y < height; y++) {
+		// OpenGL hands the rows out bottom-up, the PICA stores them top-down
+		const u8* row = &pixels[size_t(height - 1 - y) * width * 4];
+
+		for (u32 x = 0; x < width; x++) {
+			const u8 r = row[x * 4 + 0];
+			const u8 g = row[x * 4 + 1];
+			const u8 b = row[x * 4 + 2];
+			const u8 a = row[x * 4 + 3];
+			u8* texel = &destination[Texture::getSwizzledOffset(x, y, width, bytesPerPixel)];
+
+			switch (buffer.format) {
+				case PICA::ColorFmt::RGBA8:  // Stored as A, B, G, R
+					texel[0] = a;
+					texel[1] = b;
+					texel[2] = g;
+					texel[3] = r;
+					break;
+
+				case PICA::ColorFmt::RGB8:  // Stored as B, G, R
+					texel[0] = b;
+					texel[1] = g;
+					texel[2] = r;
+					break;
+
+				case PICA::ColorFmt::RGBA5551: {
+					// Little-endian, with the single alpha bit at the bottom
+					const u16 value = u16(((r >> 3) << 11) | ((g >> 3) << 6) | ((b >> 3) << 1) | (a >> 7));
+					texel[0] = u8(value & 0xff);
+					texel[1] = u8(value >> 8);
+					break;
+				}
+
+				case PICA::ColorFmt::RGB565: {
+					const u16 value = u16(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
+					texel[0] = u8(value & 0xff);
+					texel[1] = u8(value >> 8);
+					break;
+				}
+
+				case PICA::ColorFmt::RGBA4: {
+					const u16 value = u16(((r >> 4) << 12) | ((g >> 4) << 8) | ((b >> 4) << 4) | (a >> 4));
+					texel[0] = u8(value & 0xff);
+					texel[1] = u8(value >> 8);
+					break;
+				}
+			}
+		}
+	}
+
+	// The memory below this buffer changed, so any texture decoded from it has to be decoded again
+	textureCache.invalidateRange(buffer.location, buffer.location + u32(buffer.sizeInBytes()));
+}
+
 OpenGL::Framebuffer RendererGL::getColourFBO() {
 	// We construct a colour buffer object and see if our cache has any matching colour buffers in it
 	// If not, we allocate a texture & FBO for our framebuffer and store it in the cache
@@ -684,7 +814,10 @@ OpenGL::Framebuffer RendererGL::getColourFBO() {
 	if (buffer.has_value()) {
 		return buffer.value().get().fbo;
 	} else {
-		return colourBufferCache.add(sampleBuffer).fbo;
+		ColourBuffer& created = colourBufferCache.add(sampleBuffer);
+		// Guest writes into this range have to reach us, since the buffer's pixels only live on the GPU
+		gpu.getMemory().trackGuestSurface(created.location, created.location + u32(created.sizeInBytes()));
+		return created.fbo;
 	}
 }
 
@@ -708,11 +841,40 @@ void RendererGL::bindDepthBuffer() {
 }
 
 OpenGL::Texture RendererGL::getTexture(Texture& tex) {
+	// A texture can be sampled from memory the GPU rendered into, such as a game rendering its UI to a
+	// colour buffer and then texturing a quad with it. Those pixels only live in the colour buffer's
+	// own texture, so they have to reach guest memory before anything is decoded from it.
+	const u32 textureEnd = tex.location + u32(tex.sizeInBytes());
+	// From now on, writes by guest code into this memory bump an epoch we compare our decodes against
+	gpu.getMemory().trackGuestSurface(tex.location, textureEnd);
+	const u32 guestWriteEpoch = gpu.getMemory().getSurfaceWriteEpoch(tex.location, textureEnd);
+
+	colourBufferCache.forEachOverlapping(tex.location, textureEnd, [&](ColourBuffer& buffer) {
+		if (buffer.needsWriteBack) {
+			writeBackColourBuffer(buffer);
+		}
+	});
+
 	// Similar logic as the getColourFBO/bindDepthBuffer functions
 	auto buffer = textureCache.find(tex);
+	OpenGL::Texture result;
 
 	if (buffer.has_value()) {
-		return buffer.value().get().texture;
+		Texture& cached = buffer.value().get();
+
+		// Someone wrote the memory below the cached texture since it was decoded, either the GPU (which
+		// invalidates through the renderer) or guest code (which shows up as a newer write epoch), so
+		// decode it again
+		if (cached.dirty || cached.surfaceEpoch < guestWriteEpoch) {
+			const u8* startPointer = gpu.getPointerPhys<u8>(tex.location);
+			if (startPointer != nullptr) {
+				cached.decodeTexture(std::span{startPointer, cached.sizeInBytes()});
+				cached.dirty = false;
+				cached.surfaceEpoch = gpu.getMemory().getGuestWriteEpoch();
+			}
+		}
+
+		result = cached.texture;
 	} else {
 		const u8* startPointer = gpu.getPointerPhys<u8>(tex.location);
 		const usize sizeInBytes = tex.sizeInBytes();
@@ -725,9 +887,12 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
 		const auto textureData = std::span{startPointer, tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
 		Texture& newTex = textureCache.add(tex);
 		newTex.decodeTexture(textureData);
+		newTex.surfaceEpoch = gpu.getMemory().getGuestWriteEpoch();
 
-		return newTex.texture;
+		result = newTex.texture;
 	}
+
+	return result;
 }
 
 // NOTE: The GPU format has RGB5551 and RGB655 swapped compared to internal regs format
@@ -787,6 +952,10 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
 		srcRect.left, srcRect.bottom, srcRect.right, srcRect.top, destRect.left, destRect.bottom, destRect.right, destRect.top, GL_COLOR_BUFFER_BIT,
 		GL_LINEAR
 	);
+
+	// The destination lives in guest memory, so any texture cached from it is now out of date
+	invalidateGuestRange(outputAddr, outputAddr + outputWidth * outputHeight * sizePerPixel(outputFormat));
+	markColourBufferWritten(outputAddr);
 }
 
 void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) {
@@ -871,6 +1040,10 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 
 		srcRect.left, srcRect.bottom, srcRect.right, srcRect.top, destRect.left, destRect.bottom, destRect.right, destRect.top, GL_COLOR_BUFFER_BIT,
 		GL_LINEAR
 	);
+
+	// The destination lives in guest memory, so any texture cached from it is now out of date
+	invalidateGuestRange(outputAddr, outputAddr + copySize);
+	markColourBufferWritten(outputAddr);
 }
 
 std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt format, u32 width, u32 height, bool createIfnotFound) {
@@ -888,7 +1061,21 @@ std::optional<ColourBuffer> RendererGL::getColourBuffer(u32 addr, PICA::ColorFmt
 
 	// Otherwise create and cache a new buffer.
 	ColourBuffer sampleBuffer(addr, format, width, height);
-	return colourBufferCache.add(sampleBuffer);
+	ColourBuffer& created = colourBufferCache.add(sampleBuffer);
+	// Guest writes into this range have to reach us, since the buffer's pixels only live on the GPU
+	gpu.getMemory().trackGuestSurface(created.location, created.location + u32(created.sizeInBytes()));
+	return created;
+}
+
+// Marks the colour buffer covering the given address as holding pixels that guest memory does not have yet.
+// Called after anything writes into a buffer (draws, clears, blits), never when one is merely read.
+void RendererGL::markColourBufferWritten(u32 addr) {
+	auto buffer = colourBufferCache.findFromAddress(addr);
+	if (buffer.has_value()) {
+		ColourBuffer& target = buffer.value().get();
+		target.needsWriteBack = true;
+		target.lastGpuWriteEpoch = gpu.getMemory().getGuestWriteEpoch();
+	}
 }
 
 OpenGL::Program& RendererGL::getSpecializedShader() {
@@ -1161,6 +1348,26 @@ void RendererGL::screenshot(const std::string& name) {
 	}
 
 	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
+}
+
+void RendererGL::copyScreenToBGRA(void* buffer) {
+	constexpr u32 width = 400;
+	constexpr u32 height = 2 * 240;
+
+	// glReadPixels hands out the rows bottom-up, so read into a staging buffer and copy them flipped
+	static std::vector<u8> staging;
+	staging.resize(width * height * 4);
+
+	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
+	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, staging.data());
+
+	u8* destination = static_cast<u8*>(buffer);
+	for (u32 y = 0; y < height; y++) {
+		std::memcpy(destination + y * width * 4, staging.data() + (height - y - 1) * width * 4, width * 4);
+	}
+
+	// Leave the read framebuffer bound to nothing so the state manager does not inherit ours
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 }
 
 void RendererGL::deinitGraphicsContext() {

@@ -60,12 +60,18 @@ void RendererMTL::reset() {
 void RendererMTL::setMTKLayer(void* layer) { metalLayer = (CA::MetalLayer*)layer; }
 
 void RendererMTL::display() {
-	CA::MetalDrawable* drawable = metalLayer->nextDrawable();
-	if (!drawable) {
-		return;
-	}
+	CA::MetalDrawable* drawable = nullptr;
+	MTL::Texture* texture = presentTexture;
 
-	MTL::Texture* texture = drawable->texture();
+	// Without an external present target, fall back to the window's drawable
+	if (!texture) {
+		drawable = metalLayer->nextDrawable();
+		if (!drawable) {
+			return;
+		}
+
+		texture = drawable->texture();
+	}
 
 	using namespace PICA::ExternalRegs;
 
@@ -140,13 +146,18 @@ void RendererMTL::display() {
 
 	endRenderPass();
 
-	commandBuffer->presentDrawable(drawable);
+	if (drawable) {
+		commandBuffer->presentDrawable(drawable);
+	}
 	commandBuffer->popDebugGroup();
 	commitCommandBuffer();
 
 	// Inform the vertex buffer cache that the frame ended
 	vertexBufferCache.endFrame();
-	drawable->release();
+
+	if (drawable) {
+		drawable->release();
+	}
 }
 
 void RendererMTL::initGraphicsContext(void* window) {
@@ -160,6 +171,25 @@ void RendererMTL::initGraphicsContext(void* window) {
 	device = MTL::CreateSystemDefaultDevice();
 	metalLayer->setDevice(device);
 #endif
+	createContextObjects();
+}
+
+void RendererMTL::initGraphicsContextWithDevice(void* device) {
+	this->device = (MTL::Device*)device;
+	this->device->retain();
+	ownsDevice = false;
+	createContextObjects();
+}
+
+void RendererMTL::setPresentTexture(void* texture) {
+	if (presentTexture) {
+		presentTexture->release();
+	}
+	presentTexture = (MTL::Texture*)texture;
+	presentTexture->retain();
+}
+
+void RendererMTL::createContextObjects() {
 	checkForMTLPixelFormatSupport(device);
 
 	commandQueue = device->newCommandQueue();
@@ -638,7 +668,17 @@ void RendererMTL::deinitGraphicsContext() {
 	nearestSampler->release();
 	library->release();
 	commandQueue->release();
-	device->release();
+
+	if (presentTexture) {
+		presentTexture->release();
+		presentTexture = nullptr;
+	}
+
+	// The device belongs to the frontend when it was handed to us
+	if (ownsDevice) {
+		device->release();
+	}
+	device = nullptr;
 }
 
 std::optional<Metal::ColorRenderTarget> RendererMTL::getColorRenderTarget(
@@ -859,6 +899,9 @@ void RendererMTL::beginRenderPassIfNeeded(
 		endRenderPass();
 
 		renderCommandEncoder = commandBuffer->renderCommandEncoder(renderPassDescriptor);
+		// renderCommandEncoder() follows the Objective-C naming rules, so the encoder it returns is
+		// autoreleased. Retain it here because endRenderPass() releases it.
+		renderCommandEncoder->retain();
 		renderCommandEncoder->setLabel(toNSString(nextRenderPassName));
 		commandEncoder.newRenderCommandEncoder(renderCommandEncoder);
 

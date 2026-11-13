@@ -70,6 +70,11 @@ class Renderer {
 	virtual void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) = 0;
 	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;  // Draw the given vertices
 
+	// Tells the renderer that the guest wrote to the physical memory range [start, end), so any cached
+	// GPU-side copy of data in that range is out of date. Only relevant for renderers that cache
+	// guest memory in host objects, such as textures.
+	virtual void invalidateGuestRange(u32 start, u32 end) {}
+
 	virtual void screenshot(const std::string& name) = 0;
 	// Some frontends and platforms may require that we delete our GL or misc context and obtain a new one for things like exclusive fullscreen
 	// This function does things like write back or cache necessary state before we delete our context
@@ -89,6 +94,15 @@ class Renderer {
 	// Used for Metal renderer on Qt and iOS
 	// Passes an NSView's backing layer (CAMetalLayer) to the renderer
 	virtual void setMTKLayer(void* layer) { Helpers::panic("Renderer doesn't support MTK Layer"); };
+
+	// Used by frontends that own the graphics device and hand it to the core instead of letting the core create one
+	// (eg OpenEmu, which shares one MTLDevice between itself and the core). renderer-dependent: backends that cannot
+	// take an external device fall back to initGraphicsContext, which gets the device pointer as its context.
+	virtual void initGraphicsContextWithDevice(void* device) { initGraphicsContext(device); }
+
+	// Used by frontends that present into a texture of their own instead of a window's drawable (eg OpenEmu).
+	// The pointer is a backend-specific texture handle; the renderer must not take ownership of the caller's reference.
+	virtual void setPresentTexture(void* texture) { Helpers::panic("Renderer doesn't support external present targets"); }
 
 	// This function is called on every draw call before parsing vertex data.
 	// It is responsible for things like looking up which vertex/fragment shaders to use, recompiling them if they don't exist, choosing between

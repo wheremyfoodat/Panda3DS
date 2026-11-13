@@ -11,27 +11,13 @@
 class Kernel;
 
 class Y2RService {
-	using Handle = HorizonHandle;
-
-	Handle handle = KernelHandles::Y2R;
-	Memory& mem;
-	Kernel& kernel;
-	MAKE_LOG_FUNCTION(log, y2rLogger)
-
-	std::optional<Handle> transferEndEvent;
-	bool transferEndInterruptEnabled;
-
-	enum class BusyStatus : u32 {
-		NotBusy = 0,
-		Busy = 1,
-	};
-
+  public:
 	enum class InputFormat : u32 {
 		YUV422_Individual8 = 0,
 		YUV420_Individual8 = 1,
 		YUV422_Individual16 = 2,
 		YUV420_Individual16 = 3,
-		YUV422_Batch = 4,
+		YUV422_Interleaved = 4,  // YUYV pairs in a single buffer
 	};
 
 	enum class OutputFormat : u32 {
@@ -63,7 +49,34 @@ class Y2RService {
 		{{0x12A, 0x1CA, 0x88, 0x36, 0x21C, -0x1F04, 0x99C, -0x2421}},   // ITU_Rec709_Scaling
 	}};
 
+	// One side of a conversion, as configured by SetSending*/SetReceiving. Data moves in chunks of
+	// transferUnit bytes, with gap bytes skipped in between.
+	struct ConversionBuffer {
+		u32 address = 0;
+		u32 imageSize = 0;
+		u32 transferUnit = 0;
+		u32 gap = 0;
+	};
+
+  private:
+	using Handle = HorizonHandle;
+
+	Handle handle = KernelHandles::Y2R;
+	Memory& mem;
+	Kernel& kernel;
+	MAKE_LOG_FUNCTION(log, y2rLogger)
+
+	std::optional<Handle> transferEndEvent;
+	bool transferEndInterruptEnabled;
+
+	enum class BusyStatus : u32 {
+		NotBusy = 0,
+		Busy = 1,
+	};
+
 	CoefficientSet conversionCoefficients;  // Current conversion coefficients
+
+	ConversionBuffer srcY, srcU, srcV, srcYUYV, dst;
 
 	InputFormat inputFmt;
 	OutputFormat outputFmt;
@@ -72,15 +85,18 @@ class Y2RService {
 
 	bool spacialDithering;
 	bool temporalDithering;
-	u16 alpha;
+	u8 alpha;
 	u16 inputLineWidth;
 	u16 inputLines;
+
+	void convert();
 
 	// Service commands
 	void driverInitialize(u32 messagePointer);
 	void driverFinalize(u32 messagePointer);
 	void getTransferEndEvent(u32 messagePointer);
 	void getBlockAlignment(u32 messagePointer);
+	void getInputFormat(u32 messagePointer);
 	void getInputLines(u32 messagePointer);
 	void getInputLineWidth(u32 messagePointer);
 	void getOutputFormat(u32 messagePointer);

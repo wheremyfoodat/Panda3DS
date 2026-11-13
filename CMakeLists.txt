@@ -917,3 +917,9 @@ if(ENABLE_TESTS)
 
     add_test(AlberTests AlberTests)
 endif()
+
+# Core plugin for OpenEmu, built from this tree because it links AlberCore. Opt in by configuring
+# the tree with OPENEMU_FRAMEWORK_DIR pointing at a build of OpenEmu's frameworks.
+if(APPLE AND ENABLE_METAL)
+    add_subdirectory(openemu)
+endif()

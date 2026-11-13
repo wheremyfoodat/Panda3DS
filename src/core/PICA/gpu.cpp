@@ -134,6 +134,20 @@ static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
 // Call the correct version of drawArrays based on whether this is an indexed draw (first template parameter)
 // And whether we are going to use the shader JIT (second template parameter)
 void GPU::drawArrays(bool indexed) {
+	// With the geometry pipeline enabled the vertex stream is only the input of the geometry shader, which
+	// emits the primitives on its own. We do not emulate geometry shaders yet, and rasterizing the input as a
+	// triangle list paints geometry that does not exist on hardware (Professor Layton uses it for a shadow
+	// pass whose input triangles come out as black polygons across the cel-shaded characters), so such draws
+	// are skipped until the geometry shader itself can be run.
+	if (Helpers::getBits<0, 2>(regs[PICA::InternalRegs::UseGeometryShader]) == 2) {
+		static bool warned = false;
+		if (!warned) {
+			warned = true;
+			Helpers::warn("Draws that use the geometry shader pipeline are skipped, as geometry shaders are not emulated\n");
+		}
+		return;
+	}
+
 	PICA::DrawAcceleration accel;
 
 	if (config.accelerateShaders) {
@@ -441,11 +455,18 @@ void GPU::fireDMA(u32 dest, u32 source, u32 size) {
 		// Valid, optimized FCRAM->VRAM DMA. TODO: Is VRAM->VRAM DMA allowed?
 		u8* fcram = mem.getFCRAM();
 		std::memcpy(&vram[dest - vramStart], &fcram[source - fcramStart], size);
+
+		// VRAM changed underneath the renderer, so any cached GPU-side copies of it are stale
+		renderer->invalidateGuestRange(PhysicalAddrs::VRAM + (dest - vramStart), PhysicalAddrs::VRAM + (dest - vramStart) + size);
 	} else {
 		log("Non-trivially optimizable GPU DMA. Falling back to byte-by-byte transfer\n");
 
 		for (u32 i = 0; i < size; i++) {
 			mem.write8(dest + i, mem.read8(source + i));
 		}
+
+		// Translate the destination to a physical address so the renderer can match it against its surfaces
+		const u32 destPaddr = (dest - fcramStart < fcramSize) ? PhysicalAddrs::FCRAM + (dest - fcramStart) : dest;
+		renderer->invalidateGuestRange(destPaddr, destPaddr + size);
 	}
 }

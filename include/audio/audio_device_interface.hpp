@@ -31,6 +31,10 @@ class AudioDeviceInterface {
 	virtual void start() = 0;
 	virtual void stop() = 0;
 
+	// Whether the device found an output and set itself up. Frontend-supplied devices report true once they are ready
+	// to be drained, which is what the audio sync relies on.
+	virtual bool isInitialized() const = 0;
+
 	// Only used for audio devices that render multiple audio frames in one go, eg the libretro audio device.
 	virtual void renderBatch(RenderBatchCallback callback) {}
 };

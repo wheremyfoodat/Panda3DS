@@ -72,7 +72,10 @@ struct EnvColor {
     float4 c4;
     float4 c5;
 
-    thread float4& operator[](int i) {
+    // The trailing "thread" address space qualifier on the method is required:
+    // without it newer Metal compilers cannot bind "this" and reject the reference
+    // return below.
+    thread float4& operator[](int i) thread {
         switch (i) {
             case 0: return c0;
             case 1: return c1;

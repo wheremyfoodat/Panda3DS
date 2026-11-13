@@ -1,11 +1,17 @@
 #include "services/y2r.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cstring>
+#include <vector>
+
 #include "ipc.hpp"
 #include "kernel.hpp"
 
 namespace Y2RCommands {
 	enum : u32 {
 		SetInputFormat = 0x00010040,
+		GetInputFormat = 0x00020000,
 		SetOutputFormat = 0x00030040,
 		GetOutputFormat = 0x00040000,
 		SetRotation = 0x00050040,
@@ -44,6 +50,227 @@ namespace Y2RCommands {
 	};
 }
 
+// The Y2R hardware works through the input image in strips that are 8 lines tall. A strip is
+// converted into RGB32 tiles of 8x8 pixels, which are then rotated, remapped and packed into the
+// output format. Neither the strip height nor the tile layout is configurable.
+namespace {
+	using InputFormat = Y2RService::InputFormat;
+	using OutputFormat = Y2RService::OutputFormat;
+	using Rotation = Y2RService::Rotation;
+	using ConversionBuffer = Y2RService::ConversionBuffer;
+	using CoefficientSet = Y2RService::CoefficientSet;
+
+	constexpr u32 stripHeight = 8;
+	constexpr u32 tileSize = stripHeight * stripHeight;  // Pixels per 8x8 tile
+	using ImageTile = std::array<u32, tileSize>;
+
+	// Maps a tile's pixels to where they are stored in the output buffer. Line alignment keeps the
+	// pixels in row-major order, 8x8 block alignment uses the morton swizzling the PICA expects.
+	constexpr std::array<u8, tileSize> linearLut = {
+		// clang-format off
+		 0,  1,  2,  3,  4,  5,  6,  7,
+		 8,  9, 10, 11, 12, 13, 14, 15,
+		16, 17, 18, 19, 20, 21, 22, 23,
+		24, 25, 26, 27, 28, 29, 30, 31,
+		32, 33, 34, 35, 36, 37, 38, 39,
+		40, 41, 42, 43, 44, 45, 46, 47,
+		48, 49, 50, 51, 52, 53, 54, 55,
+		56, 57, 58, 59, 60, 61, 62, 63,
+		// clang-format on
+	};
+
+	constexpr std::array<u8, tileSize> mortonLut = {
+		// clang-format off
+		 0,  1,  4,  5, 16, 17, 20, 21,
+		 2,  3,  6,  7, 18, 19, 22, 23,
+		 8,  9, 12, 13, 24, 25, 28, 29,
+		10, 11, 14, 15, 26, 27, 30, 31,
+		32, 33, 36, 37, 48, 49, 52, 53,
+		34, 35, 38, 39, 50, 51, 54, 55,
+		40, 41, 44, 45, 56, 57, 60, 61,
+		42, 43, 46, 47, 58, 59, 62, 63,
+		// clang-format on
+	};
+
+	// The rotations below rotate each tile on its own. The hardware processes strips independently,
+	// so rotations of 90 and 270 degrees turn every tile of a strip into a separate 8 x height image.
+	void rotateTile0(const ImageTile& input, ImageTile& output, u32 height, const std::array<u8, tileSize>& map) {
+		for (u32 i = 0; i < height * 8; i++) {
+			output[map[i]] = input[i];
+		}
+	}
+
+	void rotateTile90(const ImageTile& input, ImageTile& output, u32 height, const std::array<u8, tileSize>& map) {
+		u32 outIndex = 0;
+		for (u32 x = 0; x < 8; x++) {
+			for (u32 y = height - 1; y != u32(-1); y--) {
+				output[map[outIndex++]] = input[y * 8 + x];
+			}
+		}
+	}
+
+	void rotateTile180(const ImageTile& input, ImageTile& output, u32 height, const std::array<u8, tileSize>& map) {
+		u32 outIndex = 0;
+		for (u32 i = height * 8 - 1; i != u32(-1); i--) {
+			output[map[outIndex++]] = input[i];
+		}
+	}
+
+	void rotateTile270(const ImageTile& input, ImageTile& output, u32 height, const std::array<u8, tileSize>& map) {
+		u32 outIndex = 0;
+		for (u32 x = 8 - 1; x != u32(-1); x--) {
+			for (u32 y = 0; y < height; y++) {
+				output[map[outIndex++]] = input[y * 8 + x];
+			}
+		}
+	}
+
+	// Turns one strip of decoded YUV samples into 8x8 tiles of RGB32 pixels. The arithmetic is
+	// bit-exact with the hardware, as far as it has been tested.
+	template <InputFormat format>
+	void convertStrip(
+		const u8* inputY, const u8* inputU, const u8* inputV, ImageTile* output, u32 width, u32 height, const CoefficientSet& coefficients
+	) {
+		for (u32 y = 0; y < height; y++) {
+			for (u32 x = 0; x < width; x++) {
+				s32 Y, U, V;
+
+				if constexpr (format == InputFormat::YUV422_Individual8 || format == InputFormat::YUV422_Individual16) {
+					Y = inputY[y * width + x];
+					U = inputU[(y * width + x) / 2];
+					V = inputV[(y * width + x) / 2];
+				} else if constexpr (format == InputFormat::YUV420_Individual8 || format == InputFormat::YUV420_Individual16) {
+					Y = inputY[y * width + x];
+					U = inputU[((y / 2) * width + x) / 2];
+					V = inputV[((y / 2) * width + x) / 2];
+				} else {
+					// Interleaved YUYV pairs
+					Y = inputY[(y * width + x) * 2];
+					U = inputY[(y * width + (x / 2) * 2) * 2 + 1];
+					V = inputY[(y * width + (x / 2) * 2) * 2 + 3];
+				}
+
+				const s32 cY = coefficients[0] * Y;
+				s32 r = cY + coefficients[1] * V;
+				s32 g = cY - coefficients[2] * V - coefficients[3] * U;
+				s32 b = cY + coefficients[4] * U;
+
+				constexpr s32 roundingOffset = 0x18;
+				r = (r >> 3) + coefficients[5] + roundingOffset;
+				g = (g >> 3) + coefficients[6] + roundingOffset;
+				b = (b >> 3) + coefficients[7] + roundingOffset;
+
+				const u32 red = std::clamp(r >> 5, 0, 0xFF);
+				const u32 green = std::clamp(g >> 5, 0, 0xFF);
+				const u32 blue = std::clamp(b >> 5, 0, 0xFF);
+				output[x / 8][y * 8 + (x % 8)] = (red << 24) | (green << 16) | (blue << 8);
+			}
+		}
+	}
+
+	// Simulates an incoming CDMA transfer: the data of one buffer is moved in units of transferUnit
+	// bytes, with gap bytes skipped in between. N is the number of bytes per sample, which
+	// automatically reduces 16-bit formats to the 8-bit values the conversion works on.
+	template <u32 N>
+	void receiveData(Memory& mem, ConversionBuffer& buffer, u8* output, u32 amountOfData) {
+		const u32 outputUnit = buffer.transferUnit / N;
+		if (outputUnit == 0) {
+			Helpers::warn("Y2R: Source buffer was not set up, skipping conversion\n");
+			return;
+		}
+
+		while (amountOfData > 0) {
+			const u8* input = static_cast<const u8*>(mem.getReadPointer(buffer.address));
+			if (input == nullptr) {
+				Helpers::warn("Y2R: Source buffer at %08X cannot be read\n", buffer.address);
+				return;
+			}
+
+			const u32 count = std::min(outputUnit, amountOfData);
+			for (u32 i = 0; i < count; i++) {
+				output[i] = input[i * N];
+			}
+
+			output += outputUnit;
+			buffer.address += buffer.transferUnit + buffer.gap;
+			buffer.imageSize -= buffer.transferUnit;
+			amountOfData -= count;
+		}
+	}
+
+	// Packs the intermediate RGB32 pixels into the output format while simulating an outgoing CDMA
+	// transfer, which again moves transferUnit bytes at a time and skips gap bytes in between.
+	void sendData(Memory& mem, OutputFormat format, const u32* input, ConversionBuffer& buffer, s32 amountOfData, u8 alpha) {
+		if (buffer.transferUnit == 0) {
+			Helpers::warn("Y2R: Destination buffer was not set up, skipping conversion\n");
+			return;
+		}
+
+		while (amountOfData > 0) {
+			const u32 unitStart = buffer.address;
+			u8* output = static_cast<u8*>(mem.getWritePointer(unitStart));
+			if (output == nullptr) {
+				Helpers::warn("Y2R: Destination buffer at %08X cannot be written\n", unitStart);
+				return;
+			}
+
+			const u8* unitBegin = output;
+			const u8* unitEnd = output + buffer.transferUnit;
+			while (output < unitEnd && amountOfData > 0) {
+				const u32 color = *input++;
+				const u8 r = (color >> 24) & 0xFF;
+				const u8 g = (color >> 16) & 0xFF;
+				const u8 b = (color >> 8) & 0xFF;
+
+				// The PICA formats used by the Y2R output store their channels in BGR order in memory
+				switch (format) {
+					case OutputFormat::RGB32:  // RGBA8, stored as A, B, G, R
+						output[0] = alpha;
+						output[1] = b;
+						output[2] = g;
+						output[3] = r;
+						output += 4;
+						break;
+
+					case OutputFormat::RGB24:  // Stored as B, G, R
+						output[0] = b;
+						output[1] = g;
+						output[2] = r;
+						output += 3;
+						break;
+
+					case OutputFormat::RGB15: {  // RGBA5551, stored little-endian
+						const u16 value = ((r & 0xF8) << 8) | ((g & 0xF8) << 3) | ((b & 0xF8) >> 2) | (alpha >> 7);
+						output[0] = value & 0xFF;
+						output[1] = value >> 8;
+						output += 2;
+						break;
+					}
+
+					case OutputFormat::RGB565: {  // Little-endian as well
+						const u16 value = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3);
+						output[0] = value & 0xFF;
+						output[1] = value >> 8;
+						output += 2;
+						break;
+					}
+				}
+
+				amountOfData -= 1;
+			}
+
+			// The pixels went into guest memory through a raw pointer, which skips the write functions that
+			// tell the renderer about changes, so report the range here or textures decoded from the output
+			// buffer keep showing the first frame
+			mem.notifyGuestWriteRange(unitStart, u32(output - unitBegin));
+
+			output += buffer.gap;
+			buffer.address += buffer.transferUnit + buffer.gap;
+			buffer.imageSize -= buffer.transferUnit;
+		}
+	}
+}  // namespace
+
 void Y2RService::reset() {
 	transferEndInterruptEnabled = false;
 	transferEndEvent = std::nullopt;
@@ -56,12 +283,156 @@ void Y2RService::reset() {
 	spacialDithering = false;
 	temporalDithering = false;
 
-	alpha = 0xFFFF;
+	srcY = ConversionBuffer{};
+	srcU = ConversionBuffer{};
+	srcV = ConversionBuffer{};
+	srcYUYV = ConversionBuffer{};
+	dst = ConversionBuffer{};
+
+	alpha = 0xFF;
 	inputLines = 69;
 	inputLineWidth = 420;
 
 	conversionCoefficients.fill(0);
 	isBusy = false;
+}
+
+// Performs the YUV to RGB conversion the hardware would do. Only the settings combinations the
+// games in the compatibility list use are fully handled; anything unexpected is warned about and
+// skipped rather than producing garbage.
+void Y2RService::convert() {
+	const u32 width = inputLineWidth;
+	const u32 height = inputLines;
+
+	if (width % 8 != 0) {
+		Helpers::warn("Y2R: Input line width %d is not a multiple of 8, skipping conversion\n", width);
+		return;
+	}
+
+	if (alignment == BlockAlignment::Block8x8 && height % 8 != 0) {
+		Helpers::warn("Y2R: 8x8 block alignment requires a line count of a multiple of 8, skipping conversion\n");
+		return;
+	}
+
+	// The conversion walks through the buffers as it moves data, but the service keeps them as they
+	// were configured, so each conversion starts at the beginning of the image again.
+	ConversionBuffer srcYBuf = srcY, srcUBuf = srcU, srcVBuf = srcV, srcYUYVBuf = srcYUYV, dstBuf = dst;
+
+	const u32 tileCount = width / 8;
+	// Holds the incoming YUV data and the outgoing RGB32 data of one strip
+	std::vector<u8> dataBuffer(size_t(width) * stripHeight * 4);
+	std::vector<ImageTile> tiles(tileCount);
+	ImageTile tmpTile;
+	const std::array<u8, tileSize>& tileMap = (alignment == BlockAlignment::Block8x8) ? mortonLut : linearLut;
+
+	for (u32 line = 0; line < height; line += stripHeight) {
+		const u32 rowHeight = std::min(stripHeight, height - line);
+		const u32 rowDataSize = rowHeight * width;  // Pixels in this strip
+
+		u8* inputY = dataBuffer.data();
+		u8* inputU = inputY + stripHeight * width;
+		u8* inputV = inputU + stripHeight * width / 2;
+
+		switch (inputFmt) {
+			case InputFormat::YUV422_Individual8:
+				receiveData<1>(mem, srcYBuf, inputY, rowDataSize);
+				receiveData<1>(mem, srcUBuf, inputU, rowDataSize / 2);
+				receiveData<1>(mem, srcVBuf, inputV, rowDataSize / 2);
+				convertStrip<InputFormat::YUV422_Individual8>(
+					inputY, inputU, inputV, tiles.data(), width, rowHeight, conversionCoefficients
+				);
+				break;
+
+			case InputFormat::YUV420_Individual8:
+				receiveData<1>(mem, srcYBuf, inputY, rowDataSize);
+				receiveData<1>(mem, srcUBuf, inputU, rowDataSize / 4);
+				receiveData<1>(mem, srcVBuf, inputV, rowDataSize / 4);
+				convertStrip<InputFormat::YUV420_Individual8>(
+					inputY, inputU, inputV, tiles.data(), width, rowHeight, conversionCoefficients
+				);
+				break;
+
+			case InputFormat::YUV422_Individual16:
+				receiveData<2>(mem, srcYBuf, inputY, rowDataSize);
+				receiveData<2>(mem, srcUBuf, inputU, rowDataSize / 2);
+				receiveData<2>(mem, srcVBuf, inputV, rowDataSize / 2);
+				convertStrip<InputFormat::YUV422_Individual16>(
+					inputY, inputU, inputV, tiles.data(), width, rowHeight, conversionCoefficients
+				);
+				break;
+
+			case InputFormat::YUV420_Individual16:
+				receiveData<2>(mem, srcYBuf, inputY, rowDataSize);
+				receiveData<2>(mem, srcUBuf, inputU, rowDataSize / 4);
+				receiveData<2>(mem, srcVBuf, inputV, rowDataSize / 4);
+				convertStrip<InputFormat::YUV420_Individual16>(
+					inputY, inputU, inputV, tiles.data(), width, rowHeight, conversionCoefficients
+				);
+				break;
+
+			case InputFormat::YUV422_Interleaved:
+				receiveData<1>(mem, srcYUYVBuf, inputY, rowDataSize * 2);
+				convertStrip<InputFormat::YUV422_Interleaved>(
+					inputY, nullptr, nullptr, tiles.data(), width, rowHeight, conversionCoefficients
+				);
+				break;
+		}
+
+		u32* outputBuffer = reinterpret_cast<u32*>(dataBuffer.data());
+
+		for (u32 i = 0; i < tileCount; i++) {
+			u32 stripWidth = 0;   // Width of the image the tile belongs to, in pixels
+			u32 outputStride = 0;
+
+			switch (rotation) {
+				case Rotation::None:
+					rotateTile0(tiles[i], tmpTile, rowHeight, tileMap);
+					stripWidth = width;
+					outputStride = 8;
+					break;
+
+				case Rotation::Rotate90:
+					rotateTile90(tiles[i], tmpTile, rowHeight, tileMap);
+					stripWidth = 8;
+					outputStride = 8 * rowHeight;
+					break;
+
+				case Rotation::Rotate180:
+					// The tiles are rotated individually, so their order in the strip has to be
+					// reversed as well for 180 and 270 degrees
+					rotateTile180(tiles[tileCount - i - 1], tmpTile, rowHeight, tileMap);
+					stripWidth = width;
+					outputStride = 8;
+					break;
+
+				case Rotation::Rotate270:
+					rotateTile270(tiles[tileCount - i - 1], tmpTile, rowHeight, tileMap);
+					stripWidth = 8;
+					outputStride = 8 * rowHeight;
+					break;
+			}
+
+			// Copy the tile's pixels out, either as part of a linearly stored image or as a single
+			// swizzled block
+			if (alignment == BlockAlignment::Block8x8) {
+				for (u32 y = 0; y < 8; y++) {
+					for (u32 x = 0; x < 8; x++) {
+						outputBuffer[y * 8 + x] = tmpTile[y * 8 + x];
+					}
+				}
+				outputBuffer += tileSize;
+			} else {
+				for (u32 y = 0; y < rowHeight; y++) {
+					for (u32 x = 0; x < 8; x++) {
+						outputBuffer[y * stripWidth + x] = tmpTile[y * 8 + x];
+					}
+				}
+				outputBuffer += outputStride;
+			}
+		}
+
+		sendData(mem, outputFmt, reinterpret_cast<const u32*>(dataBuffer.data()), dstBuf, static_cast<s32>(rowDataSize), alpha);
+	}
 }
 
 void Y2RService::handleSyncRequest(u32 messagePointer) {
@@ -70,6 +441,7 @@ void Y2RService::handleSyncRequest(u32 messagePointer) {
 		case Y2RCommands::DriverInitialize: driverInitialize(messagePointer); break;
 		case Y2RCommands::DriverFinalize: driverFinalize(messagePointer); break;
 		case Y2RCommands::GetBlockAlignment: getBlockAlignment(messagePointer); break;
+		case Y2RCommands::GetInputFormat: getInputFormat(messagePointer); break;
 		case Y2RCommands::GetInputLines: getInputLines(messagePointer); break;
 		case Y2RCommands::GetInputLineWidth: getInputLineWidth(messagePointer); break;
 		case Y2RCommands::GetOutputFormat: getOutputFormat(messagePointer); break;
@@ -166,7 +538,7 @@ void Y2RService::stopConversion(u32 messagePointer) {
 	mem.write32(messagePointer + 4, Result::Success);
 }
 
-// See above. Our Y2R conversion (when implemented) will be instant because there's really no point trying to delay it
+// See above. Our Y2R conversion is instant because there's really no point trying to delay it
 // This is a modern enough console for us to screw timings
 void Y2RService::isBusyConversion(u32 messagePointer) {
 	log("Y2R::IsBusyConversion\n");
@@ -210,6 +582,14 @@ void Y2RService::setInputFormat(u32 messagePointer) {
 
 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
+}
+
+void Y2RService::getInputFormat(u32 messagePointer) {
+	log("Y2R::GetInputFormat\n");
+
+	mem.write32(messagePointer, IPC::responseHeader(0x2, 2, 0));
+	mem.write32(messagePointer + 4, Result::Success);
+	mem.write32(messagePointer + 8, static_cast<u32>(inputFmt));
 }
 
 void Y2RService::setOutputFormat(u32 messagePointer) {
@@ -260,8 +640,8 @@ void Y2RService::setRotation(u32 messagePointer) {
 }
 
 void Y2RService::setAlpha(u32 messagePointer) {
-	alpha = mem.read16(messagePointer + 4);
-	log("Y2R::SetAlpha (value = %04X)\n", alpha);
+	alpha = static_cast<u8>(mem.read16(messagePointer + 4));
+	log("Y2R::SetAlpha (value = %02X)\n", alpha);
 
 	mem.write32(messagePointer, IPC::responseHeader(0x22, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -339,10 +719,8 @@ void Y2RService::setStandardCoeff(u32 messagePointer) {
 
 	if (coeff > 3) {  // Invalid coefficient, should have an error code
 		Helpers::panic("Y2R: Invalid standard coefficient (coefficient = %d)\n", coeff);
-	}
-
-	else {
-		Helpers::warn("Unimplemented: Y2R standard coefficient");
+	} else {
+		conversionCoefficients = standardCoefficients[coeff];
 		mem.write32(messagePointer + 4, Result::Success);
 	}
 }
@@ -395,7 +773,7 @@ void Y2RService::getCoefficientParams(u32 messagePointer) {
 
 void Y2RService::setSendingY(u32 messagePointer) {
 	log("Y2R::SetSendingY\n");
-	Helpers::warn("Unimplemented Y2R::SetSendingY");
+	srcY = {mem.read32(messagePointer + 4), mem.read32(messagePointer + 8), mem.read32(messagePointer + 12), mem.read32(messagePointer + 16)};
 
 	mem.write32(messagePointer, IPC::responseHeader(0x10, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -403,7 +781,7 @@ void Y2RService::setSendingY(u32 messagePointer) {
 
 void Y2RService::setSendingU(u32 messagePointer) {
 	log("Y2R::SetSendingU\n");
-	Helpers::warn("Unimplemented Y2R::SetSendingU");
+	srcU = {mem.read32(messagePointer + 4), mem.read32(messagePointer + 8), mem.read32(messagePointer + 12), mem.read32(messagePointer + 16)};
 
 	mem.write32(messagePointer, IPC::responseHeader(0x11, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -411,7 +789,7 @@ void Y2RService::setSendingU(u32 messagePointer) {
 
 void Y2RService::setSendingV(u32 messagePointer) {
 	log("Y2R::SetSendingV\n");
-	Helpers::warn("Unimplemented Y2R::SetSendingV");
+	srcV = {mem.read32(messagePointer + 4), mem.read32(messagePointer + 8), mem.read32(messagePointer + 12), mem.read32(messagePointer + 16)};
 
 	mem.write32(messagePointer, IPC::responseHeader(0x12, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -419,7 +797,7 @@ void Y2RService::setSendingV(u32 messagePointer) {
 
 void Y2RService::setSendingYUV(u32 messagePointer) {
 	log("Y2R::SetSendingYUV\n");
-	Helpers::warn("Unimplemented Y2R::SetSendingYUV");
+	srcYUYV = {mem.read32(messagePointer + 4), mem.read32(messagePointer + 8), mem.read32(messagePointer + 12), mem.read32(messagePointer + 16)};
 
 	mem.write32(messagePointer, IPC::responseHeader(0x13, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -427,7 +805,7 @@ void Y2RService::setSendingYUV(u32 messagePointer) {
 
 void Y2RService::setReceiving(u32 messagePointer) {
 	log("Y2R::SetReceiving\n");
-	Helpers::warn("Unimplemented Y2R::setReceiving");
+	dst = {mem.read32(messagePointer + 4), mem.read32(messagePointer + 8), mem.read32(messagePointer + 12), mem.read32(messagePointer + 16)};
 
 	mem.write32(messagePointer, IPC::responseHeader(0x18, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
@@ -436,7 +814,8 @@ void Y2RService::setReceiving(u32 messagePointer) {
 void Y2RService::startConversion(u32 messagePointer) {
 	log("Y2R::StartConversion\n");
 
-	// TODO: Actually launch conversion here
+	convert();
+
 	mem.write32(messagePointer, IPC::responseHeader(0x26, 1, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 
@@ -490,7 +869,7 @@ void Y2RService::isFinishedReceiving(u32 messagePointer) {
 	log("Y2R::IsFinishedSendingReceiving");
 	constexpr bool finished = true;  // For now, receiving components is also instant
 
-	mem.write32(messagePointer, IPC::responseHeader(0x17, 2, 0));
+	mem.write32(messagePointer, IPC::responseHeader(0x19, 2, 0));
 	mem.write32(messagePointer + 4, Result::Success);
 	mem.write32(messagePointer + 8, finished ? 1 : 0);
 }

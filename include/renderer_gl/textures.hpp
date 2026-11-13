@@ -22,6 +22,12 @@ struct Texture {
 	PICA::TextureFmt format;
 	OpenGL::uvec2 size;
 	bool valid;
+	// Set when something else wrote to the memory this texture was decoded from. The next time the
+	// texture is bound, it is decoded again so the GPU-side copy matches guest memory.
+	bool dirty = false;
+	// Guest write epoch at the time this texture was decoded. If the memory below it has a newer epoch
+	// when the texture is bound again, guest code has overwritten it and the decode has to be repeated.
+	u32 surfaceEpoch = 0;
 
 	// Range of VRAM taken up by buffer
 	Interval<u32> range;

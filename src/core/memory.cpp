@@ -15,6 +15,10 @@ CMRC_DECLARE(ConsoleFonts);
 
 using namespace KernelMemoryTypes;
 
+// Number of 4 KB pages of VRAM we can track, followed by the FCRAM pages
+static constexpr u32 trackedVramPageCount = VirtualAddrs::VramSize >> Memory::pageShift;
+static constexpr u32 trackedPageCount = trackedVramPageCount + Memory::FCRAM_PAGE_COUNT;
+
 Memory::Memory(KFcram& fcramManager, const EmulatorConfig& config) : fcramManager(fcramManager), config(config) {
 	const bool fastmemEnabled = config.fastmemEnabled;
 	arena = new Common::HostMemory(FASTMEM_BACKING_SIZE, FASTMEM_VIRTUAL_SIZE, fastmemEnabled);
@@ -26,6 +30,9 @@ Memory::Memory(KFcram& fcramManager, const EmulatorConfig& config) : fcramManage
 	fcram = arena->BackingBasePointer() + FASTMEM_FCRAM_OFFSET;
 	dspRam = arena->BackingBasePointer() + FASTMEM_DSP_RAM_OFFSET;
 	useFastmem = fastmemEnabled && arena->VirtualBasePointer() != nullptr;
+
+	trackedGuestPages.resize(trackedPageCount, 0);
+	trackedGuestPageEpochs.resize(trackedPageCount, 0);
 }
 
 void Memory::reset() {
@@ -211,6 +218,92 @@ u64 Memory::read64(u32 vaddr) {
 	return (top << 32) | bottom;
 }
 
+u32 Memory::guestPageIndex(u32 paddr) const {
+	if (paddr >= PhysicalAddrs::VRAM && paddr < PhysicalAddrs::VRAM + VirtualAddrs::VramSize) {
+		return (paddr - PhysicalAddrs::VRAM) >> pageShift;
+	}
+
+	if (paddr >= PhysicalAddrs::FCRAM && paddr < PhysicalAddrs::FCRAM + FCRAM_SIZE) {
+		return trackedVramPageCount + ((paddr - PhysicalAddrs::FCRAM) >> pageShift);
+	}
+
+	return trackedPageCount;
+}
+
+void Memory::trackGuestSurface(u32 paddrStart, u32 paddrEnd) {
+	if (paddrEnd <= paddrStart) return;
+
+	u32 first = guestPageIndex(paddrStart);
+	if (first >= trackedPageCount) return;
+	u32 last = guestPageIndex(paddrEnd - 1);
+	if (last >= trackedPageCount) return;
+
+	for (u32 i = first; i <= last; i++) trackedGuestPages[i] = 1;
+}
+
+void Memory::notifyGuestWrite(u32 vaddr) {
+	u32 paddr;
+	if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
+		paddr = PhysicalAddrs::VRAM + (vaddr - VirtualAddrs::VramStart);
+	} else {
+		const u32 page = vaddr >> pageShift;
+		const u32 blockPaddr = paddrTable[page];
+		// Only FCRAM is visible to the GPU as surface memory
+		if (writeTable[page] == 0 || blockPaddr >= FCRAM_SIZE) return;
+		paddr = PhysicalAddrs::FCRAM + blockPaddr + (vaddr & pageMask);
+	}
+
+	const u32 index = guestPageIndex(paddr);
+	if (index < trackedPageCount && trackedGuestPages[index] != 0) {
+		trackedGuestPageEpochs[index] = ++guestWriteEpoch;
+	}
+}
+
+void Memory::notifyGuestWriteRange(u32 vaddr, u32 bytes) {
+	if (bytes == 0) return;
+
+	const u32 lastVaddr = vaddr + bytes - 1;
+
+	// Walk the pages the range covers, so a write that crosses a page boundary is reported for both
+	for (u32 pageVaddr = vaddr & ~pageMask;; pageVaddr += pageSize) {
+		u32 paddr;
+		if (pageVaddr >= VirtualAddrs::VramStart && pageVaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
+			paddr = PhysicalAddrs::VRAM + (pageVaddr - VirtualAddrs::VramStart);
+		} else {
+			const u32 page = pageVaddr >> pageShift;
+			const u32 blockPaddr = paddrTable[page];
+			// Only FCRAM is visible to the GPU as surface memory
+			if (writeTable[page] == 0 || blockPaddr >= FCRAM_SIZE) {
+				if (lastVaddr - pageVaddr < pageSize) return;
+				continue;
+			}
+			paddr = PhysicalAddrs::FCRAM + blockPaddr;
+		}
+
+		const u32 index = guestPageIndex(paddr);
+		if (index < trackedPageCount && trackedGuestPages[index] != 0) {
+			trackedGuestPageEpochs[index] = ++guestWriteEpoch;
+		}
+
+		if (lastVaddr - pageVaddr < pageSize) return;
+	}
+}
+
+u32 Memory::getSurfaceWriteEpoch(u32 paddrStart, u32 paddrEnd) const {
+	if (paddrEnd <= paddrStart) return 0;
+
+	const u32 first = guestPageIndex(paddrStart);
+	const u32 last = guestPageIndex(paddrEnd - 1);
+	if (first >= trackedPageCount || last >= trackedPageCount) return 0;
+
+	u32 epoch = 0;
+	for (u32 i = first; i <= last; i++) {
+		epoch = std::max(epoch, trackedGuestPageEpochs[i]);
+	}
+
+	return epoch;
+}
+
 void Memory::write8(u32 vaddr, u8 value) {
 	const u32 page = vaddr >> pageShift;
 	const u32 offset = vaddr & pageMask;
@@ -218,11 +311,12 @@ void Memory::write8(u32 vaddr, u8 value) {
 	uintptr_t pointer = writeTable[page];
 	if (pointer != 0) [[likely]] {
 		*(u8*)(pointer + offset) = value;
+		notifyGuestWrite(vaddr);
 	} else {
 		// VRAM write
 		if (vaddr >= VirtualAddrs::VramStart && vaddr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) {
-			// TODO: Invalidate renderer caches here
 			vram[vaddr - VirtualAddrs::VramStart] = value;
+			notifyGuestWrite(vaddr);
 		}
 
 		else {
@@ -238,6 +332,7 @@ void Memory::write16(u32 vaddr, u16 value) {
 	uintptr_t pointer = writeTable[page];
 	if (pointer != 0) [[likely]] {
 		*(u16*)(pointer + offset) = value;
+		notifyGuestWrite(vaddr);
 	} else {
 		Helpers::panic("Unimplemented 16-bit write, addr: %08X, val: %08X", vaddr, value);
 	}
@@ -250,6 +345,7 @@ void Memory::write32(u32 vaddr, u32 value) {
 	uintptr_t pointer = writeTable[page];
 	if (pointer != 0) [[likely]] {
 		*(u32*)(pointer + offset) = value;
+		notifyGuestWrite(vaddr);
 	} else {
 		Helpers::panic("Unimplemented 32-bit write, addr: %08X, val: %08X", vaddr, value);
 	}

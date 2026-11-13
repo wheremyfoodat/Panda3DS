@@ -105,6 +105,7 @@ class GPU {
 	std::array<uint32_t, 128> fogLUT;
 
 	GPU(Memory& mem, EmulatorConfig& config);
+	Memory& getMemory() { return mem; }
 	void display() { renderer->display(); }
 	void screenshot(const std::string& name) { renderer->screenshot(name); }
 	void deinitGraphicsContext() { renderer->deinitGraphicsContext(); }

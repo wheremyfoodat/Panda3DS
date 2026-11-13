@@ -46,6 +46,9 @@ class Emulator {
 
 	Crypto::AESEngine aesEngine;
 	AudioDevice audioDevice;
+	// Set when the frontend supplies its own audio output (see the constructor). The built-in
+	// device is then neither initialized nor started.
+	AudioDeviceInterface* frontendAudioDevice = nullptr;
 	Cheats cheats;
 
   public:
@@ -82,7 +85,11 @@ class Emulator {
 	// Used in CPU::runFrame
 	bool frameDone = false;
 
-	Emulator();
+	// A non-null frontendAudioDevice replaces the built-in output device: the emulator then never opens one
+	// and the frontend is expected to pull samples from getDSP()->getSamples() and close the device itself.
+	// A non-empty configPath is used instead of the default config.toml lookup, so a frontend can keep its own
+	// settings (eg the renderer to use) out of the user's global Panda3DS configuration.
+	Emulator(AudioDeviceInterface* frontendAudioDevice = nullptr, const std::filesystem::path& configPath = {});
 	~Emulator();
 
 	void step();
@@ -125,7 +132,7 @@ class Emulator {
 	Cheats& getCheats() { return cheats; }
 	ServiceManager& getServiceManager() { return kernel.getServiceManager(); }
 	LuaManager& getLua() { return lua; }
-	AudioDeviceInterface& getAudioDevice() { return audioDevice; }
+	AudioDeviceInterface& getAudioDevice() { return activeAudioDevice(); }
 
 	RendererType getRendererType() const { return config.rendererType; }
 	Renderer* getRenderer() { return gpu.getRenderer(); }
@@ -139,5 +146,8 @@ class Emulator {
 	std::span<u8> getSMDH();
 
   private:
+	// The device that actually receives the emulated audio output
+	AudioDeviceInterface& activeAudioDevice() { return frontendAudioDevice ? *frontendAudioDevice : audioDevice; }
+
 	void loadRenderdoc();
 };

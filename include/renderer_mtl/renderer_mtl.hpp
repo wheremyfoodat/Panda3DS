@@ -30,6 +30,8 @@ class RendererMTL final : public Renderer {
 	void reset() override;
 	void display() override;
 	void initGraphicsContext(void* context) override;
+	void initGraphicsContextWithDevice(void* device) override;
+	void setPresentTexture(void* texture) override;
 	void clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 control) override;
 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) override;
 	void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) override;
@@ -41,9 +43,17 @@ class RendererMTL final : public Renderer {
 
   private:
 	CA::MetalLayer* metalLayer = nullptr;
+	// When set, display() renders into this texture instead of the layer's next drawable. Used by
+	// frontends that present through their own compositor (eg OpenEmu).
+	MTL::Texture* presentTexture = nullptr;
 
 	MTL::Device* device = nullptr;
+	// False when the device was handed to us by the frontend, in which case we must not release it.
+	bool ownsDevice = true;
 	MTL::CommandQueue* commandQueue = nullptr;
+
+	// Creates everything that depends on the device. Shared by both initGraphicsContext entry points.
+	void createContextObjects();
 
 	Metal::CommandEncoder commandEncoder;
 
@@ -103,6 +113,9 @@ class RendererMTL final : public Renderer {
 	void createCommandBufferIfNeeded() {
 		if (!commandBuffer) {
 			commandBuffer = commandQueue->commandBuffer();
+			// commandBuffer() returns an autoreleased object. Retain it because commitCommandBuffer()
+			// releases it; without this the autorelease pool of the calling frontend releases it again.
+			commandBuffer->retain();
 		}
 	}
 

@@ -43,6 +43,15 @@ void GLStateManager::resetColourMask() {
 	OpenGL::setColourMask(redMask, greenMask, blueMask, alphaMask);
 }
 
+void GLStateManager::resetCulling() {
+	cullEnabled = false;
+	cullFaceMode = GL_BACK;
+	OpenGL::disableCullFace();
+	OpenGL::setCullFace(GL_BACK);
+	// PICA's clip space has y pointing up, like OpenGL's, and its front faces are clockwise in that space
+	OpenGL::setFrontFace(GL_CW);
+}
+
 void GLStateManager::resetDepth() {
 	depthEnabled = false;
 	depthMask = true;
@@ -87,6 +96,7 @@ void GLStateManager::reset() {
 	resetClearing();
 	resetClipping();
 	resetColourMask();
+	resetCulling();
 	resetDepth();
 
 	resetVAO();

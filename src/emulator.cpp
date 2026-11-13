@@ -18,10 +18,10 @@ __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
-Emulator::Emulator()
-	: config(getConfigPath()), kernel(cpu, memory, gpu, config, lua), cpu(memory, kernel, *this), gpu(memory, config),
+Emulator::Emulator(AudioDeviceInterface* frontendAudioDevice, const std::filesystem::path& configPath)
+	: config(configPath.empty() ? getConfigPath() : configPath), kernel(cpu, memory, gpu, config, lua), cpu(memory, kernel, *this), gpu(memory, config),
 	  memory(kernel.fcramManager, config), cheats(memory, kernel.getServiceManager().getHID()), audioDevice(config.audioDeviceConfig), lua(*this),
-	  running(false)
+	  frontendAudioDevice(frontendAudioDevice), running(false)
 #ifdef PANDA3DS_ENABLE_HTTP_SERVER
 	  ,
 	  httpServer(this)
@@ -32,7 +32,12 @@ Emulator::Emulator()
 	dsp = Audio::makeDSPCore(config, memory, scheduler, dspService);
 	dspService.setDSPCore(dsp.get());
 
-	audioDevice.init(dsp->getSamples());
+	if (frontendAudioDevice) {
+		frontendAudioDevice->init(dsp->getSamples());
+	} else {
+		audioDevice.init(dsp->getSamples());
+	}
+
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	if (config.discordRpcEnabled) {
 		discordRpc.init();
@@ -47,7 +52,9 @@ Emulator::Emulator()
 Emulator::~Emulator() {
 	config.save();
 	lua.close();
-	audioDevice.close();
+	if (!frontendAudioDevice) {
+		audioDevice.close();
+	}
 
 #ifdef PANDA3DS_ENABLE_DISCORD_RPC
 	discordRpc.stop();
@@ -120,13 +127,13 @@ void Emulator::resume() {
 	running = (romType != ROMType::None);
 
 	if (running && config.audioEnabled) {
-		audioDevice.start();
+		activeAudioDevice().start();
 	}
 }
 
 void Emulator::pause() {
 	running = false;
-	audioDevice.stop();
+	activeAudioDevice().stop();
 }
 
 void Emulator::togglePause() { running ? pause() : resume(); }
@@ -439,14 +446,14 @@ RomFS::DumpingResult Emulator::dumpRomFS(const std::filesystem::path& path) {
 void Emulator::setAudioEnabled(bool enable) {
 	// Don't enable audio if we didn't manage to find an audio device and initialize it properly, otherwise audio sync will break,
 	// because the emulator will expect the audio device to drain the sample buffer, but there's no audio device running...
-	enable = enable && audioDevice.isInitialized();
+	enable = enable && activeAudioDevice().isInitialized();
 
 	if (!enable) {
-		audioDevice.stop();
+		activeAudioDevice().stop();
 	} else if (enable && romType != ROMType::None && running) {
 		// Don't start the audio device yet if there's no ROM loaded or the emulator is paused
 		// Resume and Pause will handle it
-		audioDevice.start();
+		activeAudioDevice().start();
 	}
 
 	dsp->setAudioEnabled(enable);

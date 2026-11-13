@@ -125,6 +125,14 @@ class Memory {
 	// Our dynarmic core uses page tables for reads and writes with 4096 byte pages
 	std::vector<uintptr_t> readTable, writeTable;
 
+	// Guest code can write into memory that the GPU has already decoded textures from, which is common for
+	// games that build UI or decode video in software. Those writes go through this class, so it keeps a
+	// per-page epoch that the renderer compares against the epoch it decoded a surface at. Only pages the
+	// renderer registered as holding GPU surfaces are tracked, which keeps the write path cheap.
+	std::vector<u8> trackedGuestPages;
+	std::vector<u32> trackedGuestPageEpochs;
+	u32 guestWriteEpoch = 0;
+
 	// vaddr->paddr translation table
 	std::vector<u32> paddrTable;
 
@@ -216,6 +224,11 @@ class Memory {
 
 	static constexpr std::array<u8, 6> MACAddress = {0x40, 0xF4, 0x07, 0xFF, 0xFF, 0xEE};
 
+	// Index of the page containing this physical address in trackedGuestPages, or a value >= page count
+	u32 guestPageIndex(u32 paddr) const;
+	// Records a guest write if it lands in a tracked page
+	void notifyGuestWrite(u32 vaddr);
+
 	void changeMemoryState(u32 vaddr, s32 pages, const Operation& op);
 	void queryPhysicalBlocks(std::list<FcramBlock>& outList, u32 vaddr, s32 pages);
 	void mapPhysicalMemory(u32 vaddr, u32 paddr, s32 pages, bool r, bool w, bool x);
@@ -246,6 +259,17 @@ class Memory {
 	void write16(u32 vaddr, u16 value);
 	void write32(u32 vaddr, u32 value);
 	void write64(u32 vaddr, u64 value);
+
+	// Code that writes through a raw pointer obtained from getWritePointer() bypasses the write functions
+	// below, so it has to report the range it touched for the renderer to notice the change
+	void notifyGuestWriteRange(u32 vaddr, u32 bytes);
+
+	// Tells us that the renderer keeps a GPU-side copy of this physical range and wants to know about writes to it
+	void trackGuestSurface(u32 paddrStart, u32 paddrEnd);
+	// Epoch of the latest guest write in this physical range. Unchanged as long as guests leave the range alone.
+	u32 getSurfaceWriteEpoch(u32 paddrStart, u32 paddrEnd) const;
+	// Current global epoch, for surfaces that are not written by guest code
+	u32 getGuestWriteEpoch() const { return guestWriteEpoch; }
 
 	u32 getLinearHeapVaddr();
 	u8* getFCRAM() { return fcram; }
